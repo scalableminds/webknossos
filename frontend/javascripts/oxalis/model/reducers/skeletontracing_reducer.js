@@ -39,6 +39,7 @@ import ColorGenerator from "libs/color_generator";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import { userSettings } from "libs/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;
@@ -220,9 +221,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "SET_NODE_RADIUS": {
           const { radius, nodeId, treeId } = action;
           const clampedRadius = Utils.clamp(
-            Constants.MIN_NODE_RADIUS,
+            userSettings.nodeRadius.minimum,
             radius,
-            Constants.MAX_NODE_RADIUS,
+            userSettings.nodeRadius.maximum,
           );
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .map(([tree, node]) => {

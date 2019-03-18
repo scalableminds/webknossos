@@ -1,20 +1,25 @@
 // @flow
-import { Form, Input, Select, Button, Card, Spin, Upload, Icon, Col, Row } from "antd";
+import { Form, Button, Spin, Upload, Icon, Col, Row } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
 import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { getDatastores, addDataset, isDatasetNameValid } from "admin/admin_rest_api";
+import { addDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import {
+  CardContainer,
+  DatasetNameFormItem,
+  DatastoreFormItem,
+} from "admin/dataset/dataset_components";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 
 type OwnProps = {|
+  datastores: Array<APIDataStore>,
   withoutCard?: boolean,
   onUploaded: (string, string) => void,
 |};
@@ -28,31 +33,13 @@ type PropsWithForm = {|
 |};
 
 type State = {
-  datastores: Array<APIDataStore>,
   isUploading: boolean,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
-    datastores: [],
     isUploading: false,
   };
-
-  componentDidMount() {
-    this.fetchData();
-  }
-
-  async fetchData() {
-    const datastores = await getDatastores();
-
-    this.setState({
-      datastores,
-    });
-
-    if (datastores.length > 0) {
-      this.props.form.setFieldsValue({ datastore: datastores[0].url });
-    }
-  }
 
   normFile = e => {
     if (Array.isArray(e)) {
@@ -99,77 +86,20 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   };
 
   render() {
-    const { getFieldDecorator } = this.props.form;
+    const { form, activeUser, withoutCard, datastores } = this.props;
+    const { getFieldDecorator } = form;
 
-    const Container = ({ children }) => {
-      if (this.props.withoutCard) {
-        return <React.Fragment>{children}</React.Fragment>;
-      } else {
-        return (
-          <Card
-            style={{ width: "85%", marginLeft: "auto", marginRight: "auto" }}
-            bordered={false}
-            title={<h3>Upload Dataset</h3>}
-          >
-            {children}
-          </Card>
-        );
-      }
-    };
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <Spin spinning={this.state.isUploading} size="large">
-          <Container>
+          <CardContainer withoutCard={withoutCard} title="Upload Dataset">
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <Row gutter={8}>
                 <Col span={12}>
-                  <FormItem label="Dataset Name" hasFeedback>
-                    {getFieldDecorator("name", {
-                      rules: [
-                        { required: true, message: messages["dataset.import.required.name"] },
-                        { min: 3 },
-                        { pattern: /[0-9a-zA-Z_-]+$/ },
-                        {
-                          validator: async (_rule, value, callback) => {
-                            if (!this.props.activeUser)
-                              throw new Error("Can't do operation if no user is logged in.");
-                            const reasons = await isDatasetNameValid({
-                              name: value,
-                              owningOrganization: this.props.activeUser.organization,
-                            });
-                            if (reasons != null) {
-                              callback(reasons);
-                            } else {
-                              callback();
-                            }
-                          },
-                        },
-                      ],
-                      validateFirst: true,
-                    })(<Input autoFocus />)}
-                  </FormItem>
+                  <DatasetNameFormItem form={form} activeUser={activeUser} />
                 </Col>
                 <Col span={12}>
-                  <FormItem label="Datastore" hasFeedback>
-                    {getFieldDecorator("datastore", {
-                      rules: [
-                        { required: true, message: messages["dataset.import.required.datastore"] },
-                      ],
-                    })(
-                      <Select
-                        showSearch
-                        placeholder="Select a Datastore"
-                        optionFilterProp="children"
-                        style={{ width: "100%" }}
-                      >
-                        {this.state.datastores.map((datastore: APIDataStore) => (
-                          <Option key={datastore.name} value={datastore.url}>
-                            {`${datastore.name}`}
-                          </Option>
-                        ))}
-                      </Select>,
-                    )}
-                  </FormItem>
+                  <DatastoreFormItem form={form} datastores={datastores} />
                 </Col>
               </Row>
               <FormItem label="Dataset ZIP File" hasFeedback>
@@ -181,7 +111,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   <Upload.Dragger
                     name="files"
                     beforeUpload={file => {
-                      this.props.form.setFieldsValue({ zipFile: [file] });
+                      form.setFieldsValue({ zipFile: [file] });
                       return false;
                     }}
                   >
@@ -201,7 +131,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 </Button>
               </FormItem>
             </Form>
-          </Container>
+          </CardContainer>
         </Spin>
       </div>
     );

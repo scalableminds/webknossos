@@ -44,6 +44,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
@@ -770,11 +771,24 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export async function addDataset(datasetConfig: DatasetConfig): Promise<void> {
-  await doWithToken(token =>
+export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+  return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datasetConfig,
       host: datasetConfig.datastore,
+    }),
+  );
+}
+
+export function addWkConnectDataset(
+  datastoreHost: string,
+  datasetConfig: WkConnectDatasetConfig,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datasetConfig,
+      host: datastoreHost,
+      method: "POST",
     }),
   );
 }
@@ -883,15 +897,15 @@ export async function findDataPositionForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<?Vector3> {
-  const { position } = await doWithToken(token =>
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),
   );
-  return position;
+  return { position, resolution };
 }
 
 export async function getMappingsForDatasetLayer(

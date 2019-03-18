@@ -32,6 +32,7 @@ import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view"
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import window, { document, location } from "libs/window";
+import ErrorHandling from "libs/error_handling";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -60,6 +61,7 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type State = {
   isSettingsCollapsed: boolean,
   activeLayout: string,
+  hasError: boolean,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -75,6 +77,12 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
 class TracingLayoutView extends React.PureComponent<Props, State> {
   currentLayoutConfig: Object;
   currentLayoutName: string;
+
+  static getDerivedStateFromError() {
+    // DO NOT set hasError back to false EVER as this will trigger a remount of the Controller
+    // with unforeseeable consequences
+    return { hasError: true };
+  }
 
   constructor(props: Props) {
     super(props);
@@ -93,10 +101,12 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     this.state = {
       isSettingsCollapsed: true,
       activeLayout: lastActiveLayout,
+      hasError: false,
     };
   }
 
-  componentDidCatch() {
+  componentDidCatch(error: Error) {
+    ErrorHandling.notify(error);
     Toast.error(messages["react.rendering_error"]);
   }
 
@@ -143,6 +153,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
   render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ marginTop: 50, textAlign: "center" }}>
+          {messages["react.rendering_error"]}
+        </div>
+      );
+    }
+
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;

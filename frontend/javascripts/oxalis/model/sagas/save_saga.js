@@ -8,6 +8,13 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
+import {
+  PUSH_THROTTLE_TIME,
+  SAVE_RETRY_WAITING_TIME,
+  MAX_SAVE_RETRY_WAITING_TIME,
+  UNDO_HISTORY_SIZE,
+  maximumActionCountPerSave,
+} from "oxalis/model/sagas/save_saga_constants";
 import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
 import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
@@ -33,7 +40,7 @@ import {
   shiftSaveQueueAction,
   setSaveBusyAction,
   setLastSaveTimestampAction,
-  pushSaveQueueAction,
+  pushSaveQueueTransaction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
 import Date from "libs/date";
@@ -41,17 +48,8 @@ import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
-import { getUid } from "libs/uid_generator";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
-
-const PUSH_THROTTLE_TIME = 30000; // 30s
-const SAVE_RETRY_WAITING_TIME = 2000;
-const MAX_SAVE_RETRY_WAITING_TIME = 300000; // 5m
-const UNDO_HISTORY_SIZE = 100;
-
-export const maximumActionCountPerBatch = 5000;
-const maximumActionCountPerSave = 15000;
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
@@ -106,13 +104,13 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   yield* put(setLastSaveTimestampAction(tracingType));
   while (true) {
     let saveQueue;
-    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
+    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
 
     saveQueue = yield* select(state => state.save.queue[tracingType]);
     if (saveQueue.length === 0) {
       // Save queue is empty, wait for push event
-      yield* take("PUSH_SAVE_QUEUE");
+      yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
     yield* race({
       timeout: _call(delay, PUSH_THROTTLE_TIME),
@@ -174,8 +172,6 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
-  compactedSaveQueue = addRequestIds(compactedSaveQueue, getUid());
-
   let retryCount = 0;
   while (true) {
     try {
@@ -228,13 +224,6 @@ export function addVersionNumbers(
   lastVersion: number,
 ): Array<SaveQueueEntry> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
-}
-
-export function addRequestIds(
-  updateActionsBatches: Array<SaveQueueEntry>,
-  requestId: string,
-): Array<SaveQueueEntry> {
-  return updateActionsBatches.map(batch => Object.assign({}, batch, { requestId }));
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {
@@ -484,11 +473,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       ),
     );
     if (items.length > 0) {
-      const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
-
-      for (const updateActionChunk of updateActionChunks) {
-        yield* put(pushSaveQueueAction(updateActionChunk, tracingType));
-      }
+      yield* put(pushSaveQueueTransaction(items, tracingType));
     }
     prevTracing = tracing;
     prevFlycam = flycam;

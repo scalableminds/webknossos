@@ -377,8 +377,11 @@ class BinaryDataController @Inject()(
           AllowRemoteOrigin {
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              positionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
-            } yield Ok(Json.obj("position" -> positionOpt))
+              positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+            } yield
+              Ok(
+                Json.obj("position" -> positionAndResolutionOpt.map(_._1),
+                         "resolution" -> positionAndResolutionOpt.map(_._2)))
           }
         }
   }

@@ -79,6 +79,7 @@ function CollapsibleMenuTitle({ title, collapse, icon }) {
 function AdministrationSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
+      className={"hide-on-small-screen"}
       key="adminMenu"
       title={
         <CollapsibleMenuTitle
@@ -114,6 +115,7 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
 function StatisticsSubMenu({ collapse, ...menuProps }) {
   return (
     <SubMenu
+      className={"hide-on-small-screen"}
       key="statisticMenu"
       title={
         <CollapsibleMenuTitle
@@ -279,7 +281,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
 
   if (_isAuthenticated) {
     menuItems.push(
-      <Menu.Item key="/dashboard">
+      <Menu.Item key="/dashboard" className={"hide-on-small-screen"}>
         <Link to="/dashboard">
           <CollapsibleMenuTitle
             title="Dashboard"

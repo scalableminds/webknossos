@@ -158,14 +158,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           <RenderToPortal portalId="navbarTracingSlot">
             <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
               <ButtonComponent
-                className={this.state.isSettingsCollapsed ? "" : "highlightBorder"}
+                className={this.state.isSettingsCollapsed ? "" : "highlightTogglableButton"}
                 onClick={this.handleSettingsCollapse}
                 shape="circle"
               >
                 <Icon
                   type="setting"
-                  theme={this.state.isSettingsCollapsed ? "filled" : "outlined"}
                   className="withoutMargin"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                 />
               </ButtonComponent>
               <ActionBarView
@@ -185,6 +185,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               {isDatasetOnScratchVolume ? (
                 <Tooltip title={messages["dataset.is_scratch"]}>
                   <Alert
+                    className="hide-on-small-screen"
                     style={{
                       height: 30,
                       paddingTop: 4,

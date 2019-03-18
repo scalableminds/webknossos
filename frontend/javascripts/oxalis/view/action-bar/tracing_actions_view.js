@@ -260,15 +260,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       ? [
           isSkeletonMode
             ? [
-                <ButtonComponent key="undo-button" title="Undo (Ctrl+Z)" onClick={this.handleUndo}>
+                <ButtonComponent
+                  className="narrow"
+                  key="undo-button"
+                  title="Undo (Ctrl+Z)"
+                  onClick={this.handleUndo}
+                >
                   <i className="fa fa-undo" aria-hidden="true" />
                 </ButtonComponent>,
-                <ButtonComponent key="redo-button" title="Redo (Ctrl+Y)" onClick={this.handleRedo}>
+                <ButtonComponent
+                  className="narrow hide-on-small-screen"
+                  key="redo-button"
+                  title="Redo (Ctrl+Y)"
+                  onClick={this.handleRedo}
+                >
                   <i className="fa fa-repeat" aria-hidden="true" />
                 </ButtonComponent>,
               ]
             : null,
-          <SaveButton key="save-button" onClick={this.handleSave} />,
+          <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />,
         ]
       : [
           <ButtonComponent key="read-only-button" type="danger" disabled>
@@ -375,7 +385,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {finishAndNextTaskButton}
           {modals}
           <Dropdown overlay={menu} trigger={["click"]}>
-            <ButtonComponent>
+            <ButtonComponent className="narrow">
               <Icon type="down" />
             </ButtonComponent>
           </Dropdown>

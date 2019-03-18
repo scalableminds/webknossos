@@ -51,7 +51,11 @@ class DatasetPositionView extends PureComponent<Props> {
       <div style={{ display: "flex" }}>
         <Input.Group compact style={{ whiteSpace: "nowrap" }}>
           <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
-            <ButtonComponent onClick={this.copyPositionToClipboard}>
+            <ButtonComponent
+              onClick={this.copyPositionToClipboard}
+              style={{ padding: "0 10px" }}
+              className="hide-on-small-screen"
+            >
               <Icon type="pushpin" style={positionIconStyle} />
             </ButtonComponent>
           </Tooltip>
@@ -65,7 +69,11 @@ class DatasetPositionView extends PureComponent<Props> {
         {isArbitraryMode ? (
           <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
             <Input.Group compact style={{ whiteSpace: "nowrap", marginLeft: 10 }}>
-              <ButtonComponent onClick={this.copyRotationToClipboard}>
+              <ButtonComponent
+                onClick={this.copyRotationToClipboard}
+                style={{ padding: "0 10px" }}
+                className="hide-on-small-screen"
+              >
                 <Icon type="reload" />
               </ButtonComponent>
               <Vector3Input

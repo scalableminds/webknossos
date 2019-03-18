@@ -131,7 +131,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const viewDropdown = (
       <div style={{ marginLeft: 10 }}>
         <Dropdown overlay={<Menu>{layoutMenu}</Menu>} trigger={["click"]}>
-          <ButtonComponent>
+          <ButtonComponent style={{ padding: "0 10px" }}>
             <Icon type="down" />
           </ButtonComponent>
         </Dropdown>

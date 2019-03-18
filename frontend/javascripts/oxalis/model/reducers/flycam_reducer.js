@@ -60,6 +60,9 @@ function rotateReducer(
   axis: Vector3,
   regardDistance: boolean,
 ): OxalisState {
+  if (Number.isNaN(angle)) {
+    return state;
+  }
   const { flycam } = state;
   if (regardDistance) {
     return update(state, {

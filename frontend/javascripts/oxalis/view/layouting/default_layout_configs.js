@@ -17,7 +17,6 @@ import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 8;
 export const layoutHeaderHeight = 20;
-export const headerHeight = 55;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
 
@@ -79,7 +78,7 @@ export const getGroundTruthLayoutRect = () => {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= headerHeight + navbarHeight;
+      height -= navbarHeight;
     } else {
       // use fallback values
       height = dummyExtent;

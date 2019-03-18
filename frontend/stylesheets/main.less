@@ -157,6 +157,13 @@ i {
   margin-right: 5px;
 }
 
+button.narrow {
+  padding: 0 10px;
+  i {
+    margin-right: 0 !important;
+  }
+}
+
 i.withoutMargin {
   // Allow to undo the above margin-right of 5px
   margin-right: 0 !important;
@@ -217,9 +224,11 @@ img.img-50 {
     width: auto;
     margin: 0 10px;
   }
+}
 
+@media screen and (max-width: 1024px) {
   .hide-on-small-screen {
-    display: none;
+    display: none !important;
   }
 }
 
@@ -373,6 +382,9 @@ img.img-50 {
   }
 }
 
-.highlightBorder {
-  border-color: #2098de !important;
+.highlightTogglableButton {
+  background-color: #2373c1 !important;
+  &:not(:hover) {
+    border-color: #2098de !important;
+  }
 }

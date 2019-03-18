@@ -53,6 +53,7 @@ test.beforeEach(async t => {
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
     ],
+    dumpio: true,
   });
   global.Headers = Headers;
   global.fetch = fetch;

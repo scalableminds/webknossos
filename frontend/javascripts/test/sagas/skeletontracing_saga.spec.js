@@ -1,4 +1,6 @@
 // @noflow
+
+import "test/sagas/skeletontracing_saga.mock.js";
 import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
@@ -28,7 +30,7 @@ const { saveTracingTypeAsync, compactUpdateActions, compactSaveQueue } = mockReq
 const SkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
-const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const { pushSaveQueueTransaction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
@@ -153,7 +155,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "skeleton")));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
 });
 
 test("SkeletonTracingSaga should emit createNode update actions", t => {

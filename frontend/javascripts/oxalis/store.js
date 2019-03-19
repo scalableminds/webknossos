@@ -287,9 +287,11 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  transactionId: string,
+  transactionGroupCount: number,
+  transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {

@@ -6,5 +6,5 @@ import play.api.http.HttpFilters
 import play.filters.headers.SecurityHeadersFilter
 
 class Filters @Inject()(securityHeadersFilter: SecurityHeadersFilter) extends HttpFilters {
-  def filters = Seq()
+  def filters = Seq(securityHeadersFilter)
 }

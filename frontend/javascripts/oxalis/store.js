@@ -287,9 +287,11 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  transactionId: string,
+  transactionGroupCount: number,
+  transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {
@@ -487,6 +489,8 @@ export const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
+      isForeign: false,
+      isConnector: false,
     },
     owningOrganization: "Connectomics department",
     description: null,

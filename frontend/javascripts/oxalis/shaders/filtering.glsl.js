@@ -10,16 +10,16 @@ export const getBilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords
+      vec3 coordsUVW
     ) {
-      coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
-      vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
-      coords = floor(coords);
+      coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
+      vec2 bifilteringParams = (coordsUVW - floor(coordsUVW)).xy;
+      coordsUVW = floor(coordsUVW);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)));
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)));
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)));
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0));
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0));
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0));
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
         // We need to check all four colors for a negative parts, because there will be black
         // lines at the borders otherwise (black gets mixed with data)
@@ -42,21 +42,21 @@ export const getTrilinearColorFor: ShaderModule = {
       float layerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 coords
+      vec3 coordsUVW
     ) {
-      coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
-      vec3 bifilteringParams = transDim((coords - floor(coords))).xyz;
-      coords = floor(coords);
+      coordsUVW = coordsUVW + vec3(-0.5, -0.5, 0.0);
+      vec3 bifilteringParams = (coordsUVW - floor(coordsUVW)).xyz;
+      coordsUVW = floor(coordsUVW);
 
-      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
-      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)));
-      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)));
-      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)));
+      vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW);
+      vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 0));
+      vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 0));
+      vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 0));
 
-      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)));
-      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)));
-      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)));
-      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)));
+      vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 0, 1));
+      vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 0, 1));
+      vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(0, 1, 1));
+      vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coordsUVW + vec3(1, 1, 1));
 
       if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
         a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {

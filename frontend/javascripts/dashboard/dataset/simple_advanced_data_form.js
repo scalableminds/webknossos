@@ -16,12 +16,12 @@ import { validateDatasourceJSON, isValidJSON, syncValidator } from "./validation
 const FormItem = Form.Item;
 
 export default function SimpleAdvancedDataForm({
-  isForeignDataset,
+  isReadOnlyDataset,
   form,
   activeDataSourceEditMode,
   onChange,
 }: {
-  isForeignDataset: boolean,
+  isReadOnlyDataset: boolean,
   form: Object,
   activeDataSourceEditMode: "simple" | "advanced",
   onChange: ("simple" | "advanced") => void,
@@ -48,7 +48,7 @@ export default function SimpleAdvancedDataForm({
             checkedChildren="Advanced"
             unCheckedChildren="Simple"
             checked={activeDataSourceEditMode === "advanced"}
-            disabled={isForeignDataset || isJSONInvalid}
+            disabled={isReadOnlyDataset || isJSONInvalid}
             style={{ marginBottom: 6 }}
             onChange={bool => {
               const key = bool ? "advanced" : "simple";
@@ -58,7 +58,7 @@ export default function SimpleAdvancedDataForm({
         </Tooltip>
       </div>
 
-      {isForeignDataset ? (
+      {isReadOnlyDataset ? (
         <Alert
           message="This dataset is read-only, therefore certain options are disabled."
           type="warning"
@@ -76,7 +76,7 @@ export default function SimpleAdvancedDataForm({
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm
-            isForeignDataset={isForeignDataset}
+            isReadOnlyDataset={isReadOnlyDataset}
             form={form}
             dataSource={dataSource}
           />
@@ -102,7 +102,7 @@ export default function SimpleAdvancedDataForm({
   );
 }
 
-function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
+function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
   const { getFieldDecorator } = form;
   return (
     <div>
@@ -125,7 +125,7 @@ function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
                   ),
                 },
               ],
-            })(<Vector3Input disabled={isForeignDataset} style={{ width: 400 }} allowDecimals />)}
+            })(<Vector3Input disabled={isReadOnlyDataset} style={{ width: 400 }} allowDecimals />)}
           </FormItemWithInfo>
         </List.Item>
       </List>
@@ -134,7 +134,7 @@ function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
         {(dataSource || { dataLayers: [] }).dataLayers.map((layer, idx) => (
           <List.Item key={`layer-${layer.name}`}>
             <SimpleLayerForm
-              isForeignDataset={isForeignDataset}
+              isReadOnlyDataset={isReadOnlyDataset}
               layer={layer}
               index={idx}
               form={form}
@@ -146,7 +146,7 @@ function SimpleDatasetForm({ isForeignDataset, form, dataSource }) {
   );
 }
 
-function SimpleLayerForm({ isForeignDataset, layer, index, form }) {
+function SimpleLayerForm({ isReadOnlyDataset, layer, index, form }) {
   const { getFieldDecorator } = form;
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
@@ -181,7 +181,7 @@ function SimpleLayerForm({ isForeignDataset, layer, index, form }) {
                 },
               ],
             },
-          )(<BoundingBoxInput disabled={isForeignDataset} style={{ width: 300 }} />)}
+          )(<BoundingBoxInput disabled={isReadOnlyDataset} style={{ width: 300 }} />)}
         </FormItemWithInfo>
 
         {isSegmentation ? (
@@ -206,7 +206,7 @@ function SimpleLayerForm({ isForeignDataset, layer, index, form }) {
                         ),
                 },
               ],
-            })(<InputNumber disabled={isForeignDataset} />)}
+            })(<InputNumber disabled={isReadOnlyDataset} />)}
           </FormItemWithInfo>
         ) : null}
       </Col>

@@ -77,6 +77,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   listenTo: Function;
   stopListening: Function;
 
+  static defaultProps = {
+    onRender: () => {},
+  };
+
   componentDidMount() {
     _.extend(this, BackboneEvents);
     this.input = {

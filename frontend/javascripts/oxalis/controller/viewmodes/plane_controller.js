@@ -111,6 +111,10 @@ class PlaneController extends React.PureComponent<Props> {
   listenTo: Function;
   stopListening: Function;
 
+  static defaultProps = {
+    onRender: () => {},
+  };
+
   constructor(...args: any) {
     super(...args);
     _.extend(this, BackboneEvents);

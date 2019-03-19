@@ -251,7 +251,7 @@ function AnonymousAvatar() {
       trigger="click"
     >
       <Badge dot>
-        <Avatar className="hover-effect-via-opacity" icon="user" />
+        <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
       </Badge>
     </Popover>
   );

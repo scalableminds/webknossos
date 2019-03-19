@@ -72,10 +72,10 @@ class SaveButton extends React.PureComponent<Props, State> {
         className={this.props.className}
       >
         {this.shouldShowProgress() ? (
-          <React.Fragment>
-            {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
+          <span style={{ marginLeft: 8 }}>
+            >{Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %
-          </React.Fragment>
+          </span>
         ) : (
           <span className="hide-on-small-screen">Save</span>
         )}

@@ -312,7 +312,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
-    isDatasetOnScratchVolume: state.dataset.name.includes("ROI2017"),
+    isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
   };
 }
 

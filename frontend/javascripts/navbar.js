@@ -190,6 +190,29 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
   );
 }
 
+function DashboardSubMenu({ collapse, ...other }) {
+  return (
+    <SubMenu
+      className={collapse ? "hide-on-small-screen" : ""}
+      key="dashboardMenu"
+      title={
+        <CollapsibleMenuTitle title="Dashboard" icon={<Icon type="home" />} collapse={collapse} />
+      }
+      {...other}
+    >
+      <Menu.Item>
+        <Link to="/dashboard/datasets">Datasets</Link>
+      </Menu.Item>
+      <Menu.Item>
+        <Link to="/dashboard/tasks">My Tasks</Link>
+      </Menu.Item>
+      <Menu.Item>
+        <Link to="/dashboard/annotations">My Explorative Annotations</Link>
+      </Menu.Item>
+    </SubMenu>
+  );
+}
+
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName } = activeUser;
   return (
@@ -276,28 +299,20 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
-    menuItems.push(
-      <Menu.Item key="/dashboard" className={collapseAllNavItems ? "hide-on-small-screen" : ""}>
-        <Link to="/dashboard">
-          <CollapsibleMenuTitle
-            title="Dashboard"
-            icon={<Icon type="home" />}
-            collapse={collapseAllNavItems}
-          />
-        </Link>
-      </Menu.Item>,
-    );
+    menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
     if (isAdmin) {
-      menuItems.push(<AdministrationSubMenu collapse={collapseAllNavItems} />);
-      menuItems.push(<StatisticsSubMenu collapse={collapseAllNavItems} />);
+      menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
+      menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
     }
 
-    trailingNavItems.push(<LoggedInAvatar activeUser={activeUser} handleLogout={handleLogout} />);
+    trailingNavItems.push(
+      <LoggedInAvatar key="logged-in-avatar" activeUser={activeUser} handleLogout={handleLogout} />,
+    );
   }
 
   if (!(_isAuthenticated || hideNavbarLogin)) {
-    trailingNavItems.push(<AnonymousAvatar />);
+    trailingNavItems.push(<AnonymousAvatar key="anonynous-avatar" />);
   }
 
   menuItems.push(

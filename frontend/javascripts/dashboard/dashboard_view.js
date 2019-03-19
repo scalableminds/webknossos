@@ -63,6 +63,12 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     this.fetchUser();
   }
 
+  componentWillReceiveProps(newProps: PropsWithRouter) {
+    if (newProps.initialTabKey != null && newProps.initialTabKey !== this.props.initialTabKey) {
+      this.setState({ activeTabKey: newProps.initialTabKey });
+    }
+  }
+
   async fetchUser(): Promise<void> {
     const user =
       this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;

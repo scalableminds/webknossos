@@ -216,7 +216,7 @@ Samplecountry
     dataStoreDAO.findOneByName("connect").futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         logger.info("inserting connect datastore")
-        dataStoreDAO.insertOne(DataStore("connect", "http://localhost:8000", "secret-key", isConnector=true))
+        dataStoreDAO.insertOne(DataStore("connect", "http://localhost:8000", "secret-key", isConnector = true))
       }
     }
 

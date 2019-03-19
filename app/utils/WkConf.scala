@@ -125,5 +125,16 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   val children =
-    List(Application, Http, Mail, WebKnossos, Datastore, Tracingstore, User, Braintracing, Features, Silhouette, Airbrake, Google)
+    List(Application,
+         Http,
+         Mail,
+         WebKnossos,
+         Datastore,
+         Tracingstore,
+         User,
+         Braintracing,
+         Features,
+         Silhouette,
+         Airbrake,
+         Google)
 }

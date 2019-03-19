@@ -144,8 +144,11 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     setTimeout(() => {
+      // Give wk (sagas and bucket loading) a bit time to catch air before
+      // showing the UI as "ready". The goal here is to avoid that the
+      // UI is still freezing after the loading indicator is gone.
       this.setState({ ready: true });
-    }, 500);
+    }, 200);
   }
 
   async initTaskScript() {

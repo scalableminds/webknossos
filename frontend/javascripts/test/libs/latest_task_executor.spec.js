@@ -1,7 +1,7 @@
 // @flow
 import Deferred from "libs/deferred";
 import test from "ava";
-import LatestTaskExecutor from "libs/latest_task_executor";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 
 test("LatestTaskExecutor: One task", async t => {
   const executor = new LatestTaskExecutor();
@@ -74,7 +74,7 @@ test("LatestTaskExecutor: three interleaving tasks", async t => {
   await scheduledPromise1.then(result => {
     t.is(result, 1);
   });
-  t.throwsAsync(scheduledPromise2, "Skipped task");
+  t.throwsAsync(scheduledPromise2, SKIPPED_TASK_REASON);
   await scheduledPromise3.then(result => {
     t.is(result, 3);
   });

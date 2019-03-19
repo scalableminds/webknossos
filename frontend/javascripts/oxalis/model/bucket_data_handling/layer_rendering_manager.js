@@ -16,7 +16,7 @@ import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_hand
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import LatestTaskExecutor from "libs/latest_task_executor";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
@@ -57,12 +57,12 @@ function consumeBucketsFromArrayBuffer(
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
-  // Consume priority queue until we maxed out the capacity
   const uint32Array = new Uint32Array(buffer);
 
   let currentElementIndex = 0;
   const intsPerItem = 5; // [x, y, z, zoomStep, priority]
 
+  // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
     const currentBufferIndex = currentElementIndex * intsPerItem;
     if (currentBufferIndex >= uint32Array.length) {
@@ -242,7 +242,7 @@ export default class LayerRenderingManager {
           this.pullQueue.pull();
         },
         reason => {
-          if (reason.message !== "Skipped task") {
+          if (reason.message !== SKIPPED_TASK_REASON) {
             throw reason;
           }
         },

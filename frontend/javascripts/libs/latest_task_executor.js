@@ -3,6 +3,7 @@
 import Deferred from "libs/deferred";
 
 type Task<T> = () => Promise<T>;
+export const SKIPPED_TASK_REASON = "Skipped task";
 
 /*
  * The LatestTaskExecutor class allows to schedule tasks
@@ -45,8 +46,8 @@ export default class LatestTaskExecutor<T> {
     // Discard the remaining queue
     this.taskQueue.forEach(queueObject => {
       // All other tasks are not executed, since
-      // there already become obsolete.
-      queueObject.deferred.reject(new Error("Skipped task"));
+      // they've already become obsolete.
+      queueObject.deferred.reject(new Error(SKIPPED_TASK_REASON));
     });
     this.taskQueue = [latestTask];
 

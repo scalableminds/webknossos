@@ -200,13 +200,13 @@ function DashboardSubMenu({ collapse, ...other }) {
       }
       {...other}
     >
-      <Menu.Item>
+      <Menu.Item key="/dashboard/datasets">
         <Link to="/dashboard/datasets">Datasets</Link>
       </Menu.Item>
-      <Menu.Item>
+      <Menu.Item key="/dashboard/tasks">
         <Link to="/dashboard/tasks">My Tasks</Link>
       </Menu.Item>
-      <Menu.Item>
+      <Menu.Item key="/dashboard/annotations">
         <Link to="/dashboard/annotations">My Explorative Annotations</Link>
       </Menu.Item>
     </SubMenu>
@@ -373,4 +373,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   isInAnnotationView: state.uiInformation.isInAnnotationView,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));
+export default withRouter(connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar));

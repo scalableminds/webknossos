@@ -73,7 +73,7 @@ class SaveButton extends React.PureComponent<Props, State> {
       >
         {this.shouldShowProgress() ? (
           <span style={{ marginLeft: 8 }}>
-            >{Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
+            {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %
           </span>
         ) : (

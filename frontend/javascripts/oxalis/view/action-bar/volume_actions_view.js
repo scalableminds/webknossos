@@ -46,7 +46,7 @@ class VolumeActionsView extends PureComponent<Props> {
         </RadioGroup>
         <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>
-            New <span style={{ textDecoration: "underline" }}>c</span>ell
+            New <span style={{ textDecoration: "underline" }}>C</span>ell
           </ButtonComponent>
         </ButtonGroup>
       </div>

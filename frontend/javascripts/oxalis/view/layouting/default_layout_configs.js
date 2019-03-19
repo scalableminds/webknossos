@@ -97,7 +97,6 @@ const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultViewportWidthInPercent = 33;
 
-  let OrthoViewsGrid;
   let OrthoLayout;
   let OrthoLayoutView;
   let VolumeTracingView;
@@ -112,7 +111,7 @@ const _getDefaultLayouts = () => {
     OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
     VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
   } else {
-    OrthoViewsGrid = [
+    const OrthoViewsGrid = [
       setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
       setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
     ];

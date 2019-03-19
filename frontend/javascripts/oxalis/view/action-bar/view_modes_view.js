@@ -22,6 +22,16 @@ class ViewModesView extends PureComponent<Props, {}> {
 
   handleChange = (mode: ViewMode) => {
     Store.dispatch(setViewModeAction(mode));
+
+    // Unfortunately, antd doesn't provide the original event here
+    // which is why we have to blur using document.activElement.
+    // Additionally, we need a timeout since the blurring would be done
+    // to early, otherwise.
+    setTimeout(() => {
+      if (document.activeElement != null) {
+        document.activeElement.blur();
+      }
+    }, 100);
   };
 
   isDisabled(mode: ViewMode) {
@@ -29,15 +39,8 @@ class ViewModesView extends PureComponent<Props, {}> {
   }
 
   render() {
-    // todo ?
-    // onClick={this.blurElement}
     return (
-      <Select
-        value={this.props.viewMode}
-        style={{ width: 120 }}
-        onChange={this.handleChange}
-        onClick={({ key }) => Store.dispatch(setViewModeAction(key))}
-      >
+      <Select value={this.props.viewMode} style={{ width: 120 }} onChange={this.handleChange}>
         {[
           constants.MODE_PLANE_TRACING,
           constants.MODE_ARBITRARY,

@@ -176,7 +176,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           <RenderToPortal portalId="navbarTracingSlot">
             <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
               <ButtonComponent
-                className={this.state.isSettingsCollapsed ? "" : "highlightTogglableButton"}
+                className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
                 onClick={this.handleSettingsCollapse}
                 shape="circle"
               >

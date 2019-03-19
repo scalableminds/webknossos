@@ -53,7 +53,7 @@ function UserInitials({ activeUser }) {
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
     <Avatar
-      className="hoverEffectViaOpacity"
+      className="hover-effect-via-opacity"
       style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
     >
       {initialOf(firstName) + initialOf(lastName)}
@@ -198,7 +198,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         key="loggedMenu"
         title={<UserInitials activeUser={activeUser} />}
         style={{ padding: 0 }}
-        className="subMenuWithoutPadding verticalCenterFlexFix"
+        className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
       >
         <Menu.Item disabled key="userName">
@@ -227,10 +227,8 @@ function AnonymousAvatar() {
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
     >
-      {/* Oh god, why -10? */}
-
       <Badge dot>
-        <Avatar className="hoverEffectViaOpacity" icon="user" />
+        <Avatar className="hover-effect-via-opacity" icon="user" />
       </Badge>
     </Popover>
   );
@@ -316,7 +314,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
   );
 
   return (
-    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsedNavHeader" : ""}>
+    <Header style={navbarStyle} className={collapseAllNavItems ? "collapsed-nav-header" : ""}>
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

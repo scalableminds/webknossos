@@ -173,7 +173,6 @@
 #portal-navbarTracingSlot {
   width: 100%;
   line-height: normal;
-  // filter: invert(100%) hue-rotate(180deg);
 }
 
 // Dark mode for UI within navbar
@@ -214,6 +213,10 @@
   .ant-radio-button-wrapper-checked:first-child {
     border-color: @primary-border;
     color: @primary-border;
+  }
+
+  .ant-radio-button-wrapper:not(:first-child)::before {
+    background-color: @dark-border;
   }
 
   // Primary button in button group

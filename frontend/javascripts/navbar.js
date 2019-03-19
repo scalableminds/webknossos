@@ -283,12 +283,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
     color: "rgba(255, 255, 255, 0.67)",
     background: "#001529",
   };
-  // used to adjust the height in login view
 
-  if (!activeUser) {
-    navbarStyle.paddingTop = 4;
-    navbarStyle.height = "auto";
-  }
   const _isAuthenticated = isAuthenticated && activeUser != null;
   const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
 

@@ -3,15 +3,15 @@
  * @flow
  */
 
-import { Layout, Icon } from "antd";
+import { Alert, Icon, Layout, Tooltip } from "antd";
+import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import * as React from "react";
-import classNames from "classnames";
-import type { Dispatch } from "redux";
 
 import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -35,10 +35,10 @@ import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
-import { determineLayout, headerHeight } from "./default_layout_configs";
+import { determineLayout } from "./default_layout_configs";
 import { storeLayoutConfig, setActiveLayout } from "./layout_persistence";
 
-const { Header, Sider } = Layout;
+const { Sider } = Layout;
 
 type OwnProps = {|
   initialAnnotationType: AnnotationType,
@@ -164,7 +164,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
-    const headerClassName = classNames({ construction: isDatasetOnScratchVolume });
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
@@ -174,29 +173,55 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header
-            className={headerClassName}
-            style={{ flex: "0 1 auto", zIndex: 210, height: headerHeight }}
-          >
-            <ButtonComponent onClick={this.handleSettingsCollapse}>
-              <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
-              <span className="hide-on-small-screen">Settings</span>
-            </ButtonComponent>
-            <ActionBarView
-              layoutProps={{
-                storedLayoutNamesForView: currentLayoutNames,
-                activeLayout: this.state.activeLayout,
-                layoutKey: layoutType,
-                setCurrentLayout: layoutName => {
-                  this.setState({ activeLayout: layoutName });
-                  setActiveLayout(layoutType, layoutName);
-                },
-                saveCurrentLayout: this.saveCurrentLayout,
-                setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                autoSaveLayouts: this.props.autoSaveLayouts,
-              }}
-            />
-          </Header>
+          <RenderToPortal portalId="navbarTracingSlot">
+            <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
+              <ButtonComponent
+                className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
+                onClick={this.handleSettingsCollapse}
+                shape="circle"
+              >
+                <Icon
+                  type="setting"
+                  className="withoutMargin"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                />
+              </ButtonComponent>
+              <ActionBarView
+                layoutProps={{
+                  storedLayoutNamesForView: currentLayoutNames,
+                  activeLayout: this.state.activeLayout,
+                  layoutKey: layoutType,
+                  setCurrentLayout: layoutName => {
+                    this.setState({ activeLayout: layoutName });
+                    setActiveLayout(layoutType, layoutName);
+                  },
+                  saveCurrentLayout: this.saveCurrentLayout,
+                  setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                  autoSaveLayouts: this.props.autoSaveLayouts,
+                }}
+              />
+              {isDatasetOnScratchVolume ? (
+                <Tooltip title={messages["dataset.is_scratch"]}>
+                  <Alert
+                    className="hide-on-small-screen"
+                    style={{
+                      height: 30,
+                      paddingTop: 4,
+                      backgroundColor: "#f17a27",
+                      color: "white",
+                    }}
+                    message={
+                      <span>
+                        Dataset is on tmpscratch!{" "}
+                        <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
+                      </span>
+                    }
+                    type="error"
+                  />
+                </Tooltip>
+              ) : null}
+            </div>
+          </RenderToPortal>
           <Layout style={{ display: "flex" }}>
             <Sider
               collapsible

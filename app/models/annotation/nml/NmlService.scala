@@ -22,8 +22,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
 
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult =
     NmlParser.parse(name, inputStream) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
-        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
+      case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
+        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
       case Empty              => NmlParseEmpty(name)
     }
@@ -52,12 +52,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
 
     if (parseResults.length > 1) {
-      parseResults.map(r =>
-        r match {
-          case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
-            NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingOpt, description)
-          case _ => r
-      })
+      parseResults.map {
+        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
+          NmlParseSuccess(name,
+                          Some(renameTrees(name, skeletonTracing)),
+                          volumeTracingOpt,
+                          description,
+                          organizationNameOpt)
+        case r => r
+      }
     } else {
       parseResults
     }
@@ -74,12 +77,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
 
     if (parseResults.length > 1) {
-      parseResults.map(r =>
-        r match {
-          case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
-            NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), volumeTracingOpt, description)
-          case _ => r
-      })
+      parseResults.map {
+        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
+          NmlParseSuccess(name,
+                          Some(wrapTreesInGroup(name, skeletonTracing)),
+                          volumeTracingOpt,
+                          description,
+                          organizationNameOpt)
+        case r => r
+      }
     } else {
       parseResults
     }

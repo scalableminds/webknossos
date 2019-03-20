@@ -15,10 +15,11 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${author/rschwanhold/<@robert>}
     author=${author/tmbo/<@tmbo>}
     author=${author/valentin-pinkau/<@valentin>}
+    author=${author/youri-k/<@youri>}
     channel="webknossos-bots"
-    commitmsg=$(git log --format=%s -n 1)
+    commitmsg="$(git log --format=%s -n 1)"
     pullregex="(.*)#([0-9]+)(.*)"
-    while [[ $commitmsg =~ $pullregex ]]
+    while [[ "$commitmsg" =~ $pullregex ]]
     do
         commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
     done

@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(36);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(41);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -68,10 +68,21 @@ CREATE TABLE webknossos.meshes(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.publications(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  publicationDate TIMESTAMPTZ,
+  imageUrl VARCHAR(2048),
+  title VARCHAR(2048),
+  description TEXT,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
+  _publication CHAR(24),
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -83,13 +94,14 @@ CREATE TABLE webknossos.dataSets(
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
+  details JSONB,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
-CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32');
+CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
 CREATE TABLE webknossos.dataSet_layers(
   _dataSet CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL,
@@ -127,7 +139,8 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isForeign BOOLEAN NOT NULL DEFAULT false
+  isForeign BOOLEAN NOT NULL DEFAULT false,
+  isConnector BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -161,6 +174,7 @@ CREATE TABLE webknossos.scripts(
 );
 
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _team CHAR(24) NOT NULL,
@@ -171,6 +185,7 @@ CREATE TABLE webknossos.taskTypes(
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
   recommendedConfiguration JSONB,
+  tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -227,6 +242,7 @@ CREATE TABLE webknossos.organizations(
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -298,6 +314,7 @@ INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
+CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;

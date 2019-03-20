@@ -1,5 +1,3 @@
-GET           /assets/*file                                                         controllers.Assets.at(path="/public", file)
-
 -> /api/      webknossos.versioned.Routes
 -> /data/     com.scalableminds.webknossos.datastore.Routes
 -> /tracings/ com.scalableminds.webknossos.tracingstore.Routes

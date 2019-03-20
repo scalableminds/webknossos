@@ -1,39 +1,69 @@
 @( conf: utils.WkConf )
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)">
-    <title>webKnossos</title>
-    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/vendors~main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
-    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
+    <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
+    <title>@(conf.Application.title)</title>
+    @if(conf.Features.enableFrontpage){
+    <meta
+      name="description"
+      content="Annotate and explore large 3D datasets with webKnossos. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."
+    />
+    <meta
+      name="keywords"
+      content="connectomics, data annotation, image segmentation, electron microscopy, light microscopy, fluorescence microscopy, skeletonization, webknossos"
+    />
+    } else {
+    <meta name="robot" content="noindex" />
+    }
+    <link rel="shortcut icon" type="image/png" href="/images/favicon.png" />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+    />
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     @if(conf.Application.Authentication.enableDevAutoLogin){
-      <script src="/api/auth/autoLogin"></script>
+    <script src="/api/auth/autoLogin"></script>
     }
-    <script type="text/javascript"
+    <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
-      data-airbrake-environment-name="@(conf.Airbrake.environment)"></script>
-    <script type="text/javascript" src="@routes.Assets.at("bundle/vendors~main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
-    <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+      data-airbrake-environment-name="@(conf.Airbrake.environment)"
+    ></script>
+    <script src="/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
   </head>
   <body>
     <main id="main-container"></main>
 
     @if(conf.Google.Analytics.trackingID.nonEmpty) {
-      <script>
-        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+    <script>
+      (function(i, s, o, g, r, a, m) {
+        i["GoogleAnalyticsObject"] = r;
+        (i[r] =
+          i[r] ||
+          function() {
+            (i[r].q = i[r].q || []).push(arguments);
+          }),
+          (i[r].l = 1 * new Date());
+        (a = s.createElement(o)), (m = s.getElementsByTagName(o)[0]);
+        a.async = 1;
+        a.src = g;
+        m.parentNode.insertBefore(a, m);
+      })(window, document, "script", "https://www.google-analytics.com/analytics.js", "ga");
 
-        ga('create', '@(conf.Google.Analytics.trackingID)', 'auto');
-        ga('set', 'anonymizeIp', true);
-        ga('send', 'pageview');
-
-      </script>
-    }
-    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingFooter)
+      ga("create", "@(conf.Google.Analytics.trackingID)", "auto");
+      ga("set", "anonymizeIp", true);
+      ga("send", "pageview");
+    </script>
+    } @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingFooter)
   </body>
 </html>

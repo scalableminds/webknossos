@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
-import oxalis.security.WkEnv
+import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{InjectedController, Request, Result}
@@ -19,6 +19,7 @@ trait Controller
     extends InjectedController
     with ExtendedController
     with ValidationHelpers
+    with UserAwareRequestLogging
     with I18nSupport
     with LazyLogging {
 

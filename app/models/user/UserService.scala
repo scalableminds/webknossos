@@ -17,6 +17,7 @@ import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
 import oxalis.user.UserCache
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
@@ -63,7 +64,7 @@ class UserService @Inject()(conf: WkConf,
              firstName: String,
              lastName: String,
              isActive: Boolean,
-             teamRole: Boolean = false,
+             isOrgTeamManager: Boolean = false,
              loginInfo: LoginInfo,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean = false): Fox[User] = {
@@ -71,7 +72,7 @@ class UserService @Inject()(conf: WkConf,
     for {
       organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
       orgTeam <- teamDAO.findOne(organizationTeamId)
-      teamMemberships = List(TeamMembership(orgTeam._id, teamRole))
+      teamMemberships = List(TeamMembership(orgTeam._id, false))
       user = User(
         ObjectId.generate,
         _organization,
@@ -138,10 +139,15 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(
-      implicit ctx: DBAccessContext) =
+  def updateDataSetConfiguration(
+      user: User,
+      dataSetName: String,
+      organizationName: String,
+      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
+        "dataSet.notFound",
+        dataSetName)
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
                                                                                    configuration.configuration)
@@ -198,9 +204,9 @@ class UserService @Inject()(conf: WkConf,
 
   def isTeamManagerInOrg(user: User,
                          _organization: ObjectId,
-                         teamMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
+                         teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
-      teamManagerMemberships <- Fox.fillOption(teamMemberships)(teamManagerMembershipsFor(user._id))
+      teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
     } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
 
   def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =

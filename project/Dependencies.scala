@@ -1,12 +1,11 @@
 import play.sbt.Play.autoImport._
 import sbt._
 
-
 object Dependencies {
   val akkaVersion = "2.5.11"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
-  val webknossosWrapVersion = "1.1.6"
+  val webknossosWrapVersion = "1.1.7"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
@@ -15,6 +14,7 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
+  val gson = "com.google.code.gson" % "gson" % "1.7.1"
   val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
@@ -22,7 +22,7 @@ object Dependencies {
   val liftCommon = "net.liftweb" %% "lift-common" % "3.0.2"
   val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
-  val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
+  val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
   val playFramework = "com.typesafe.play" %% "play" % "2.6.18"
@@ -42,12 +42,14 @@ object Dependencies {
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
+  val redis = "net.debasishg" %% "redisclient" % "3.9"
 
   val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.2.3",
     "com.typesafe.slick" %% "slick-codegen" % "3.2.3",
-    "org.postgresql" % "postgresql" % "42.2.2")
+    "org.postgresql" % "postgresql" % "42.2.2"
+  )
 
   val utilDependencies = Seq(
     akkaAgent,
@@ -69,6 +71,7 @@ object Dependencies {
   val webknossosDatastoreDependencies = Seq(
     akkaLogging,
     ehcache,
+    gson,
     newrelic,
     newrelicApi,
     webknossosWrap,
@@ -81,6 +84,7 @@ object Dependencies {
   val webknossosTracingstoreDependencies = Seq(
     grpc,
     grpcServices,
+    redis,
     scalapbRuntimeGrpc
   )
 
@@ -97,6 +101,7 @@ object Dependencies {
     triremeNode,
     urlHelper,
     xmlWriter,
-    woodstoxXml) ++ sql
+    woodstoxXml
+  ) ++ sql
 
 }

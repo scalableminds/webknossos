@@ -1,19 +1,28 @@
 version: '2.2'
 
 services:
+
+  # Production
   webknossos:
     build: .
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
     links:
-      - fossildb-persisted
-      - postgres-persisted
+      - "fossildb-persisted:fossildb"
+      - "postgres-persisted:postgres"
+      - redis
+    depends_on:
+      postgres-persisted:
+        condition: service_healthy
+      fossildb-persisted:
+        condition: service_healthy
     command:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
       - -Dapplication.authentication.enableDevAutoLogin=false
@@ -58,10 +67,16 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Dhttp.uri=http://webknossos-datastore:9050
       - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
-      - fossildb
+      - fossildb-persisted:fossildb
+      - redis
+    depends_on:
+      fossildb-persisted:
+        condition: service_healthy
 
+  # Development
   base:
     image: scalableminds/webknossos-dev
     build:
@@ -94,6 +109,9 @@ services:
       service: base
     links:
       - postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   dev:
     extends:
@@ -102,10 +120,16 @@ services:
       - "5005:5005"
       - "9000:9000"
     links:
-      - fossildb-dev
-      - postgres-dev
+      - "fossildb-dev:fossildb"
+      - "postgres-dev:postgres"
+      - redis
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
+      fossildb-dev:
+        condition: service_healthy
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     command:
       - bash
       - -c
@@ -115,9 +139,11 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dtracingstore.fossildb.address=fossildb-dev"
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis"
     stdin_open: true
 
+  # Tests
   backend-tests:
     extends:
       service: base
@@ -132,7 +158,7 @@ services:
     ports:
     - "5005:5005"
     - "9000:9000"
-    command: sbt -v ";scapegoat; scalafmtCheck"
+    command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
   e2e-tests:
     extends:
@@ -140,6 +166,12 @@ services:
     links:
       - postgres
       - fossildb
+      - redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fossildb:
+        condition: service_healthy
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
     command:
@@ -149,7 +181,8 @@ services:
         sbt
         -v
         "testOnly e2e.* --
-          -Dtracingstore.fossildb.address=fossildb"
+          -Dtracingstore.fossildb.address=fossildb
+          -Dtracingstore.redis.address=redis"
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
@@ -163,12 +196,18 @@ services:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
+  # Postgres
   postgres:
     image: postgres:10-alpine
     environment:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
   postgres-persisted:
     extends:
@@ -186,9 +225,12 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres-persisted -U postgres webknossos
+    command: psql -h postgres -U postgres webknossos
     links:
-      - postgres-persisted
+      - "postgres-persisted:postgres"
+    depends_on:
+      postgres-persisted:
+        condition: service_healthy
     environment:
       PGPASSWORD: postgres
     volumes:
@@ -196,15 +238,19 @@ services:
 
   drop-db:
     extends: postgres
-    command: psql -h postgres-persisted -U postgres postgres -c "DROP DATABASE webknossos"
+    command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
     links:
-      - postgres-persisted
+      - "postgres-persisted:postgres"
+    depends_on:
+      postgres-dev:
+        condition: service_healthy
     environment:
       PGPASSWORD: postgres
 
 
+  # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__337
+    image: scalableminds/fossildb:master__386
     command:
       - fossildb
       - -c
@@ -224,3 +270,9 @@ services:
     volumes:
       - "./fossildb-dev/data:/fossildb/data"
       - "./fossildb-dev/backup:/fossildb/backup"
+
+  # Redis
+  redis:
+    image: redis:5.0-alpine
+    command:
+      - redis-server

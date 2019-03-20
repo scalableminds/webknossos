@@ -53,7 +53,11 @@ jobs:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
-          name: Build webknossos (sbt and webpack)
+          name: Build webknossos (webpack)
+          command: |
+            docker-compose run base yarn build
+      - run:
+          name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker-compose run compile sbt clean compile stage
@@ -166,7 +170,7 @@ jobs:
       - run:
           name: Run webknossos-tracingstore smoke test
           command: |
-            sleep 10
+            sleep 30
             curl --fail --retry 3 --max-time 15 -v http://localhost:9050/tracings/health
       - run:
           name: Stop webknossos-tracingstore
@@ -261,7 +265,7 @@ jobs:
             (exit $s)
 
       - store_artifacts:
-          path: app/assets/javascripts/test/screenshots
+          path: frontend/javascripts/test/screenshots
 
 workflows:
   version: 2

@@ -82,6 +82,7 @@ dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
+dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
@@ -93,6 +94,8 @@ dataSet.list.failed=Failed to retrieve list of data sets.
 dataSet.url.missing=URL missing in the supplied json
 dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
+dataSet.downloadAlreadyRunning=Sample dataset download is already running.
+dataSet.alreadyPresent=Sample dataset is already present.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -105,6 +108,7 @@ tracingStore.list.failed=Failed to retrieve list of tracing stores.
 zip.file.notFound=No or invalid ZIP file specified
 
 dataLayer.notFound=DataLayer “{0}” not found
+dataLayer.mustBeSegmentation=DataLayer “{0}” is not a segmentation layer
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
@@ -159,6 +163,7 @@ annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
+annotation.cancelled=This annotation is marked as cancelled and can’t be viewed
 annotation.allFinished=All annotations are archived
 annotation.reopened=Annotation was reopened
 annotation.saved=Annotation was saved
@@ -182,10 +187,12 @@ annotation.transferee.noDataSetAccess=Cannot transfer annotation to a user who h
 annotation.timelogging.read.failed=Time
 annotation.write.failed=Could not convert annotation to json
 annotation.noSkeleton=No skeleton tracing found for this annotation
+annotation.needsEitherSkeletonOrVolume=Annotation needs at least one of skeleton or volume
 annotation.makeHybrid.explorationalsOnly=Could not convert annotation to hybrid annotation because it is only allowed for explorational annotations.
 annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
 annotationType.notFound=Could not find the specified annotation type.
+annotation.cantMergeVolumes=This annotation collection contains volume tracings. Merging volume tracings is not yet supported. Please use download instead.
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json
@@ -199,6 +206,8 @@ mesh.delete.failed=Failed to delete mesh
 task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.create.limitExceeded=Cannot create more than 1000 tasks in one request.
+task.create.needsEitherSkeletonOrVolume=Each task needs to either be skeleton or volume.
+task.create.fromFileVolume=Task creation with file upload is only supported for skeleton task types.
 task.finished=Task is finished
 task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
@@ -221,6 +230,9 @@ taskType.deleteSuccess=Task type “{0}” successfully deleted
 taskType.deleteFailure=Task type “{0}” deletion failed
 taskType.noAnnotations=We couldn’t find finished annotations for this task type
 taskType.id.invalid=The provided task type id is invalid.
+taskType.tracingTypeImmutable=Tracing types of task types are immutable. Consider creating a new task type.
+
+tracingType.invalid=The provided tracing type is invalid.
 
 mail.welcome.subject = Welcome to ScalableMinds
 

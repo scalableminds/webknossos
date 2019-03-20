@@ -39,8 +39,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String,
-            nmlInputStream: InputStream): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] =
+  def parse(name: String, nmlInputStream: InputStream)
+    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -59,6 +59,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
         val description = parseDescription(parameters \ "experiment")
+        val organizationName = parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val editPosition =
           parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
@@ -66,7 +67,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
         val userBoundingBox = parseBoundingBox(parameters \ "userBoundingBox")
-        val taskBoundingBox = parseBoundingBox(parameters \ "taskBoundingBox")
+        val taskBoundingBox: Option[BoundingBox] = parseBoundingBox(parameters \ "taskBoundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
@@ -74,17 +75,20 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           if (volumes.isEmpty) None
           else
             Some(
-              (VolumeTracing(None,
-                             BoundingBox.empty,
-                             time,
-                             dataSetName,
-                             editPosition,
-                             editRotation,
-                             ElementClass.uint32,
-                             volumes.head.fallbackLayer,
-                             0,
-                             0,
-                             zoomLevel),
+              (VolumeTracing(
+                 None,
+                 boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
+                 time,
+                 dataSetName,
+                 editPosition,
+                 editRotation,
+                 ElementClass.uint32,
+                 volumes.head.fallbackLayer,
+                 0,
+                 0,
+                 zoomLevel,
+                 userBoundingBox
+               ),
                volumes.head.location)
             )
 
@@ -105,7 +109,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
                               treeGroups)
             )
 
-        (skeletonTracing, volumeTracingWithDataLocation, description)
+        (skeletonTracing, volumeTracingWithDataLocation, description, organizationName)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -160,6 +164,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def parseDescription(node: NodeSeq) =
     (node \ "@description").text
+
+  private def parseOrganizationName(node: NodeSeq) =
+    (node \ "@organization").headOption.map(_.text)
 
   private def parseActiveNode(node: NodeSeq) =
     (node \ "@id").text.toIntOpt

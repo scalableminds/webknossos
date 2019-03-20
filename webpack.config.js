@@ -5,10 +5,11 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-  var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
+  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
   var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
 
@@ -61,7 +62,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/assets/bundle/",
+      publicPath: "/bundle/",
     },
     module: {
       rules: [
@@ -137,5 +138,11 @@ module.exports = function(env = {}) {
     // See https://webpack.js.org/configuration/devtool/
     devtool: env.production ? "source-map" : "eval-source-map",
     plugins,
+    devServer: {
+      contentBase: `${__dirname}/public`,
+      port: env.PORT ? env.PORT : 9002,
+      hot: false,
+      inline: false,
+    },
   };
 };

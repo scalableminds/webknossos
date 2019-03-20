@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
 }
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team._
@@ -22,7 +23,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.WSResponse
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
@@ -32,11 +33,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                dataSetLastUsedTimesDAO: DataSetLastUsedTimesDAO,
                                dataSetDataLayerDAO: DataSetDataLayerDAO,
                                teamDAO: TeamDAO,
+                               publicationDAO: PublicationDAO,
+                               publicationService: PublicationService,
                                dataStoreService: DataStoreService,
                                teamService: TeamService,
                                userService: UserService,
                                dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
-                               rpc: RPC)(implicit ec: ExecutionContext)
+                               val thumbnailCache: TemporaryStore[String, Array[Byte]],
+                               rpc: RPC,
+                               conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -51,10 +56,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore: DataStore,
       owningOrganization: String,
       dataSource: InboxDataSource,
+      publication: Option[ObjectId] = None,
       isActive: Boolean = false
   ) = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
+    val details =
+      Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
     organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) =>
         for {
@@ -63,6 +71,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
               newId,
               dataStore.name,
               organization._id,
+              publication,
               None,
               None,
               None,
@@ -72,7 +81,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
               dataSource.scaleOpt,
               None,
               dataSource.statusOpt.getOrElse(""),
-              None
+              None,
+              details = publication.map(_ => details)
             ))
           _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
           _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
@@ -98,7 +108,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       .getWithJsonResponse[InboxDataSource]
 
   def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val dataStore = DataStore(name, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+    val dataStore = DataStore(name, url, "", isForeign = true, isConnector = false) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
       _ <- dataStoreDAO.insertOne(dataStore)
     } yield ()
@@ -138,7 +148,17 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
             }
           }).flatten.futureBox
         case _ =>
-          createDataSet(dataSource.id.name, dataStore, dataSource.id.team, dataSource, isActive = dataSource.isUsable).futureBox
+          dataSetDAO.findAll(GlobalAccessContext).flatMap { datasets =>
+            val publication =
+              if (conf.Application.insertInitialData && datasets.isEmpty) Some(ObjectId("5c766bec6c01006c018c7459"))
+              else None
+            createDataSet(dataSource.id.name,
+                          dataStore,
+                          dataSource.id.team,
+                          dataSource,
+                          publication,
+                          dataSource.isUsable).futureBox
+          }
       }
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(
@@ -238,12 +258,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
     teamDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
 
-  def isEditableBy(dataSet: DataSet, userOpt: Option[User], userTeamMemberships: Option[List[TeamMembership]] = None)(
-      implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditableBy(
+      dataSet: DataSet,
+      userOpt: Option[User],
+      userTeamManagerMemberships: Option[List[TeamMembership]] = None)(implicit ctx: DBAccessContext): Fox[Boolean] =
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamMemberships)
+          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamManagerMemberships)
         } yield user.isAdminOf(dataSet._organization) || isTeamManagerInOrg
       case _ => Fox.successful(false)
     }
@@ -251,18 +273,20 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def publicWrites(dataSet: DataSet,
                    userOpt: Option[User],
                    skipResolutions: Boolean = false,
-                   requestingUserTeamMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
+                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       teams <- allowedTeamsFor(dataSet._id)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet, Some(organization))
-      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamMemberships)
+      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamManagerMemberships)
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
       dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
+      publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
+      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites(_))
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -279,6 +303,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataSet.sortingKey,
+        "details" -> dataSet.details,
+        "publication" -> publicationJson,
         "isForeign" -> dataStore.isForeign
       )
     }

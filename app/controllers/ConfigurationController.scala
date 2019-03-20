@@ -61,7 +61,10 @@ class ConfigurationController @Inject()(userService: UserService,
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
-        _ <- userService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
+        _ <- userService.updateDataSetConfiguration(request.identity,
+                                                    dataSetName,
+                                                    organizationName,
+                                                    DataSetConfiguration(conf))
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }
@@ -82,8 +85,8 @@ class ConfigurationController @Inject()(userService: UserService,
   def updateDataSetDefault(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound"
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed"
+        dataset <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound" ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed" ~> FORBIDDEN
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
         _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))

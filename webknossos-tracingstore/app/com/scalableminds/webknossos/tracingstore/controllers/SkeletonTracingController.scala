@@ -1,11 +1,15 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
+import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers
@@ -14,23 +18,28 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
                                           val webKnossosServer: TracingStoreWkRpcClient,
-                                          val accessTokenService: TracingStoreAccessTokenService)
-                                         (implicit val ec: ExecutionContext,
-                                          val bodyParsers: PlayBodyParsers)
-  extends TracingController[SkeletonTracing, SkeletonTracings] {
+                                          val accessTokenService: TracingStoreAccessTokenService)(
+    implicit val ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers)
+    extends TracingController[SkeletonTracing, SkeletonTracings] {
 
   implicit val tracingsCompanion = SkeletonTracings
 
-  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings)
+  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings =
+    SkeletonTracings(tracings.map(t => SkeletonTracingOpt(Some(t))))
 
-  implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
+  implicit def packMultipleOpt(tracings: List[Option[SkeletonTracing]]): SkeletonTracings =
+    SkeletonTracings(tracings.map(t => SkeletonTracingOpt(t)))
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
-    implicit request => {
+  implicit def unpackMultiple(tracings: SkeletonTracings): List[Option[SkeletonTracing]] =
+    tracings.tracings.toList.map(_.tracing)
+
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
-          val tracings = request.body.tracings
-          val mergedTracing = tracingService.merge(tracings)
+          val tracings: List[Option[SkeletonTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
           tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
             Ok(Json.toJson(newId))
           }
@@ -39,13 +48,13 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
+  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
-            mergedTracing = tracingService.merge(tracings)
+            mergedTracing = tracingService.merge(tracings.flatten)
             newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))
@@ -55,8 +64,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
-    implicit request => {
+  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
@@ -70,8 +79,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def updateActionLog(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionLog(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -81,10 +90,11 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
+    }
   }
 
-  def updateActionStatistics(tracingId: String) = Action.async {
-    implicit request =>
+  def updateActionStatistics(tracingId: String) = Action.async { implicit request =>
+    log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
@@ -94,5 +104,6 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
           }
         }
       }
+    }
   }
 }

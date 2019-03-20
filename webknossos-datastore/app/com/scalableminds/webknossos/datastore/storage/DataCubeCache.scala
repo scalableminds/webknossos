@@ -11,14 +11,14 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CachedCube(
-                       organization: String,
-                       dataSourceName: String,
-                       dataLayerName: String,
-                       resolution: Point3D,
-                       x: Int,
-                       y: Int,
-                       z: Int
-                     )
+    organization: String,
+    dataSourceName: String,
+    dataLayerName: String,
+    resolution: Point3D,
+    x: Int,
+    y: Int,
+    z: Int
+)
 
 object CachedCube {
 
@@ -30,22 +30,18 @@ object CachedCube {
       loadInstruction.cube.resolution,
       loadInstruction.cube.x,
       loadInstruction.cube.y,
-      loadInstruction.cube.z)
+      loadInstruction.cube.z
+    )
 }
 
-class FakeDataCubeCache extends FoxImplicits {
-
-  def withCache[T](cubeReadInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] =
-    loadF(cubeReadInstruction).flatMap(f(_).toFox)
-}
-
-class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcurrentCache[CachedCube, Fox[Cube]] {
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] with FoxImplicits {
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  override def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(f: Cube => Box[T]): Fox[T] = {
+  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(
+      f: Cube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
     def handleUncachedCube() = {
@@ -87,7 +83,6 @@ class DataCubeCache(val maxEntries: Int) extends FakeDataCubeCache with LRUConcu
     }
   }
 
-  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit = {
+  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit =
     value.map(_.scheduleForRemoval())
-  }
 }

@@ -12,6 +12,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Application {
 
     val insertInitialData = get[Boolean]("application.insertInitialData")
+    val title = get[String]("application.title")
 
     object Authentication {
       object DefaultUser {
@@ -20,8 +21,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
         val isSuperUser = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey = get[String]("application.authentication.ssoKey")
-      val enableDevAutoVerify = get[Boolean]("application.authentication.enableDevAutoVerify")
-      val enableDevAutoAdmin = get[Boolean]("application.authentication.enableDevAutoAdmin")
       val enableDevAutoLogin = get[Boolean]("application.authentication.enableDevAutoLogin")
       val children = List(DefaultUser)
     }
@@ -78,6 +77,9 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Braintracing {
     val active = get[Boolean]("braintracing.active")
+    val organizationName = get[String]("braintracing.organizationName")
+    val url = get[String]("braintracing.url")
+    val createUserScript = get[String]("braintracing.createUserScript")
     val user = get[String]("braintracing.user")
     val password = get[String]("braintracing.password")
     val license = get[String]("braintracing.license")
@@ -85,6 +87,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Features {
     val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
+    val enableFrontpage = get[Boolean]("features.enableFrontpage")
   }
 
   val operatorData = get[String]("operatorData")

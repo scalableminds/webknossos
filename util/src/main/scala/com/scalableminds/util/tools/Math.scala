@@ -15,7 +15,7 @@ object Math {
 
   def roundUp(x: Double) = {
     val c = x.ceil.toInt
-    if(c != x)
+    if (c != x)
       c + 1
     else
       c
@@ -23,7 +23,7 @@ object Math {
 
   def roundDown(x: Double) = {
     val c = x.floor.toInt
-    if(c != x)
+    if (c != x)
       c - 1
     else
       c

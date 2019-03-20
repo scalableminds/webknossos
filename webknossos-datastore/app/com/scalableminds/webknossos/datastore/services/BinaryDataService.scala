@@ -2,92 +2,77 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.{Path, Paths}
 
-import com.google.inject.Inject
-import com.newrelic.api.agent.NewRelic
+import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest, DataServiceMappingRequest, MappingReadInstruction}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  DataReadInstruction,
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  MappingReadInstruction
+}
 import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.Configuration
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int) extends FoxImplicits with LazyLogging {
+class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int)
+    extends FoxImplicits
+    with LazyLogging {
 
   lazy val cache = new DataCubeCache(maxCacheSize)
 
-  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
-    val requestsCount = requests.length
-    val requestData = requests.zipWithIndex.map { case (request, index) =>
-      getDataForRequest(request).map { data =>
-        if (request.settings.halfByte) {
-          (convertToHalfByte(data), index)
-        } else {
-          (data, index)
-        }
-      }
-    }
-
-    Fox.sequenceOfFulls(requestData).map{l =>
-      val bytesArrays = l.map{case (byteArray, _) => byteArray}
-      val foundIndices = l.map{case (_, index) => index}
-      val notFoundIndices = List.range(0,requestsCount).diff(foundIndices)
-      (bytesArrays.appendArrays, notFoundIndices)
-    }
-  }
-
-  def handleMappingRequest(request: DataServiceMappingRequest): Fox[Array[Byte]] = {
-    val readInstruction = MappingReadInstruction(dataBaseDir, request.dataSource, request.mapping)
-    request.dataLayer.mappingProvider.load(readInstruction)
-  }
-
-  private def getDataForRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
-
-    def isSingleBucketRequest = {
-      val bucketLength = DataLayer.bucketLength
-      request.cuboid.width == bucketLength &&
-        request.cuboid.height == bucketLength &&
-        request.cuboid.depth == bucketLength &&
-        request.cuboid.topLeft == request.cuboid.topLeft.toBucket.topLeft
-    }
-
+  def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
-    if (isSingleBucketRequest) {
+    if (!request.cuboid.hasValidDimensions) {
+      Fox.failure("Invalid cuboid dimensions (must be > 0 and <= 512).")
+    } else if (request.cuboid.isSingleBucket(DataLayer.bucketLength) && request.voxelDimensions == Vector3I(1, 1, 1)) {
       bucketQueue.headOption.toFox.flatMap { bucket =>
         handleBucketRequest(request, bucket)
       }
     } else {
-      Fox.serialCombined(bucketQueue.toList) { bucket =>
-        handleBucketRequest(request, bucket).map(r => bucket -> r)
-      }.map {
-        cutOutCuboid(request, _)
-      }
+      Fox
+        .serialSequence(bucketQueue.toList) { bucket =>
+          handleBucketRequest(request, bucket).map(r => bucket -> r)
+        }
+        .map(buckets => cutOutCuboid(request, buckets.flatten))
     }
   }
 
-  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] = {
+  def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+    val requestsCount = requests.length
+    val requestData = requests.zipWithIndex.map {
+      case (request, index) =>
+        handleDataRequest(request).map { data =>
+          if (request.settings.halfByte) {
+            (convertToHalfByte(data), index)
+          } else {
+            (data, index)
+          }
+        }
+    }
+
+    Fox.sequenceOfFulls(requestData).map { l =>
+      val bytesArrays = l.map { case (byteArray, _) => byteArray }
+      val foundIndices = l.map { case (_, index)    => index }
+      val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
+      (bytesArrays.appendArrays, notFoundIndices)
+    }
+  }
+
+  private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition): Fox[Array[Byte]] =
     if (request.dataLayer.doesContainBucket(bucket) && request.dataLayer.containsResolution(bucket.resolution)) {
-      val readInstruction = DataReadInstruction(
-        dataBaseDir,
-        request.dataSource,
-        request.dataLayer,
-        bucket,
-        request.settings.version)
+      val readInstruction =
+        DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
 
       request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
     } else {
       Fox.empty
     }
-  }
 
   /**
     * Given a list of loaded buckets, cutout the data of the cuboid
@@ -95,35 +80,59 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
   private def cutOutCuboid(request: DataServiceDataRequest, rs: List[(BucketPosition, Array[Byte])]): Array[Byte] = {
     val bytesPerElement = request.dataLayer.bytesPerElement
     val cuboid = request.cuboid
-    val result = new Array[Byte](cuboid.volume * bytesPerElement)
+    val voxelDimensions = request.voxelDimensions
+
+    val resultVolume = Point3D(
+      math.ceil(cuboid.width.toDouble / voxelDimensions.x.toDouble).toInt,
+      math.ceil(cuboid.height.toDouble / voxelDimensions.y.toDouble).toInt,
+      math.ceil(cuboid.depth.toDouble / voxelDimensions.z.toDouble).toInt
+    )
+    val result = new Array[Byte](resultVolume.x * resultVolume.y * resultVolume.z * bytesPerElement)
     val bucketLength = DataLayer.bucketLength
 
     rs.reverse.foreach {
       case (bucket, data) =>
-        val x = math.max(cuboid.topLeft.x, bucket.topLeft.x)
-        var y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
-        var z = math.max(cuboid.topLeft.z, bucket.topLeft.z)
+        val xRemainder = cuboid.topLeft.x % voxelDimensions.x
+        val yRemainder = cuboid.topLeft.y % voxelDimensions.y
+        val zRemainder = cuboid.topLeft.z % voxelDimensions.z
 
-        val xMax = math.min(bucket.topLeft.x + bucketLength, cuboid.bottomRight.x)
-        val yMax = math.min(bucket.topLeft.y + bucketLength, cuboid.bottomRight.y)
-        val zMax = math.min(bucket.topLeft.z + bucketLength, cuboid.bottomRight.z)
+        val xMin = math
+          .ceil((math.max(cuboid.topLeft.x, bucket.topLeft.x).toDouble - xRemainder) / voxelDimensions.x.toDouble)
+          .toInt * voxelDimensions.x + xRemainder
+        val yMin = math
+          .ceil((math.max(cuboid.topLeft.y, bucket.topLeft.y).toDouble - yRemainder) / voxelDimensions.y.toDouble)
+          .toInt * voxelDimensions.y + yRemainder
+        val zMin = math
+          .ceil((math.max(cuboid.topLeft.z, bucket.topLeft.z).toDouble - zRemainder) / voxelDimensions.z.toDouble)
+          .toInt * voxelDimensions.z + zRemainder
 
-        while (z < zMax) {
-          y = math.max(cuboid.topLeft.y, bucket.topLeft.y)
-          while (y < yMax) {
-            val dataOffset =
-              (x % bucketLength +
-                y % bucketLength * bucketLength +
-                z % bucketLength * bucketLength * bucketLength) * bytesPerElement
-            val rx = x - cuboid.topLeft.x
-            val ry = y - cuboid.topLeft.y
-            val rz = z - cuboid.topLeft.z
+        val xMax = math.min(cuboid.bottomRight.x, bucket.topLeft.x + bucketLength)
+        val yMax = math.min(cuboid.bottomRight.y, bucket.topLeft.y + bucketLength)
+        val zMax = math.min(cuboid.bottomRight.z, bucket.topLeft.z + bucketLength)
 
-            val resultOffset = (rx + ry * cuboid.width + rz * cuboid.width * cuboid.height) * bytesPerElement
+        for {
+          z <- zMin until zMax by voxelDimensions.z
+          y <- yMin until yMax by voxelDimensions.y
+          // if voxelDimensions.x == 1, we can bulk copy a row of voxels and do not need to iterate in the x dimension
+          x <- xMin until xMax by (if (voxelDimensions.x == 1) xMax else voxelDimensions.x)
+        } {
+          val dataOffset =
+            (x % bucketLength +
+              y % bucketLength * bucketLength +
+              z % bucketLength * bucketLength * bucketLength) * bytesPerElement
+
+          val rx = (x - cuboid.topLeft.x) / voxelDimensions.x
+          val ry = (y - cuboid.topLeft.y) / voxelDimensions.y
+          val rz = (z - cuboid.topLeft.z) / voxelDimensions.z
+
+          val resultOffset = (rx + ry * resultVolume.x + rz * resultVolume.x * resultVolume.y) * bytesPerElement
+          if (voxelDimensions.x == 1) {
+            // bulk copy a row of voxels
             System.arraycopy(data, dataOffset, result, resultOffset, (xMax - x) * bytesPerElement)
-            y += 1
+          } else {
+            // copy single voxel
+            System.arraycopy(data, dataOffset, result, resultOffset, bytesPerElement)
           }
-          z += 1
         }
     }
     result
@@ -145,9 +154,8 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
   }
 
   def clearCache(organizationName: String, dataSetName: String) = {
-    def matchingPredicate(cubeKey: CachedCube) = {
+    def matchingPredicate(cubeKey: CachedCube) =
       cubeKey.dataSourceName == dataSetName
-    }
 
     cache.clear(matchingPredicate)
   }

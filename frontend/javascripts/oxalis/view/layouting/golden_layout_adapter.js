@@ -155,6 +155,16 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     );
 
     gl.on("stateChanged", () => this.onStateChange());
+    gl.on("componentCreated", item => {
+      document.addEventListener("keyup", evt => {
+        const key = evt.keyCode != null ? evt.keyCode : evt.which;
+        // Early return unless Ctrl + M is pressed
+        if (!(key === 77 && evt.ctrlKey)) return;
+        // Only maximize the element the mouse is over
+        const isHovered = item.element[0].matches(":hover");
+        if (isHovered) item.toggleMaximise();
+      });
+    });
 
     this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];
 

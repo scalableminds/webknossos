@@ -206,7 +206,7 @@ services:
 
   # webKnossos-connect
   webknossos-connect:
-    image: scalableminds/webknossos-connect:master__188
+    image: scalableminds/webknossos-connect:master__190
     volumes:
       - "./conf/connect:/app/data"
     network_mode: host

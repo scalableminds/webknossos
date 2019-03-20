@@ -252,11 +252,16 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(0L)
     }
 
-  def allowedTeamIdsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
-    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
+  def allowedTeamIdsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+    dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
 
-  def allowedTeamsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext) =
-    teamDAO.findAllForDataSet(_dataSet)(GlobalAccessContext) ?~> "allowedTeams.notFound"
+  def allowedTeamsFor(_dataSet: ObjectId, requestingUser: Option[User])(
+      implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      teams <- teamDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
+      // dont leak team names of other organizations
+      teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
+    } yield teamsFiltered
 
   def isEditableBy(
       dataSet: DataSet,
@@ -271,22 +276,22 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def publicWrites(dataSet: DataSet,
-                   userOpt: Option[User],
+                   requestingUserOpt: Option[User],
                    skipResolutions: Boolean = false,
-                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+                   requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
-      teams <- allowedTeamsFor(dataSet._id)
+      organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      teams <- allowedTeamsFor(dataSet._id, requestingUserOpt)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
       logoUrl <- logoUrlFor(dataSet, Some(organization))
-      isEditable <- isEditableBy(dataSet, userOpt, requestingUserTeamManagerMemberships)
-      lastUsedByUser <- lastUsedTimeFor(dataSet._id, userOpt)
+      isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships)
+      lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)
       dataStore <- dataStoreFor(dataSet)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
-      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites(_))
+      publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
@@ -308,6 +313,5 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isForeign" -> dataStore.isForeign
       )
     }
-  }
 
 }

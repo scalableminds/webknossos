@@ -2,6 +2,7 @@
 import NanoEvents from "nanoevents";
 import _ from "lodash";
 
+import { getIsInIframe } from "libs/utils";
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -26,7 +27,7 @@ const localStorageKeys = {
 function readStoredLayoutConfigs() {
   const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
   const defaultLayoutConfig = getCurrentDefaultLayoutConfig();
-  if (!storedLayoutVersion || disableLayoutPersistance) {
+  if (getIsInIframe() || !storedLayoutVersion || disableLayoutPersistance) {
     return defaultLayoutConfig;
   }
   const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
@@ -82,6 +83,10 @@ function readStoredLayoutConfigs() {
 Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
 
 function persistLayoutConfigs() {
+  if (getIsInIframe()) {
+    // Don't persist layout in iframe
+    return;
+  }
   const { storedLayouts } = Store.getState().uiInformation;
   localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));

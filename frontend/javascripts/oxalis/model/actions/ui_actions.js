@@ -25,12 +25,18 @@ type SetIsInAnnotationViewAction = {
   value: boolean,
 };
 
+type SetHasOrganizationsAction = {
+  type: "SET_HAS_ORGANIZATIONS",
+  value: boolean,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction
   | SetStoredLayoutsAction
-  | SetIsInAnnotationViewAction;
+  | SetIsInAnnotationViewAction
+  | SetHasOrganizationsAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -58,5 +64,10 @@ export const setImportingMeshStateAction = (isImporting: boolean): SetImportingM
 
 export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationViewAction => ({
   type: "SET_IS_IN_ANNOTATION_VIEW",
+  value,
+});
+
+export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAction => ({
+  type: "SET_HAS_ORGANIZATIONS",
   value,
 });

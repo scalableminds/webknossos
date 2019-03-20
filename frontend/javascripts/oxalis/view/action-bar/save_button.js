@@ -10,6 +10,7 @@ import window from "libs/window";
 
 type OwnProps = {|
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
+  className?: string,
 |};
 type StateProps = {|
   progressInfo: ProgressInfo,
@@ -68,12 +69,13 @@ class SaveButton extends React.PureComponent<Props, State> {
         type="primary"
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
+        className={this.props.className}
       >
         {this.shouldShowProgress() ? (
-          <React.Fragment>
+          <span style={{ marginLeft: 8 }}>
             {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %
-          </React.Fragment>
+          </span>
         ) : (
           <span className="hide-on-small-screen">Save</span>
         )}

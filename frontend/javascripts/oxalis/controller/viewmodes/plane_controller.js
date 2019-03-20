@@ -84,13 +84,10 @@ const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) =
   }
 };
 
-type OwnProps = {|
-  onRender: () => void,
-|};
 type StateProps = {|
   tracing: Tracing,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -110,10 +107,6 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
-
-  static defaultProps = {
-    onRender: () => {},
-  };
 
   constructor(...args: any) {
     super(...args);
@@ -355,7 +348,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   onPlaneViewRender(): void {
     getSceneController().update();
-    this.props.onRender();
   }
 
   movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
@@ -601,4 +593,4 @@ export function mapStateToProps(state: OxalisState): StateProps {
 }
 
 export { PlaneController as PlaneControllerClass };
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(PlaneController);

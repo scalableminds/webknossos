@@ -20,11 +20,17 @@ type SetImportingMeshStateAction = {
   isImporting: boolean,
 };
 
+type SetIsInAnnotationViewAction = {
+  type: "SET_IS_IN_ANNOTATION_VIEW",
+  value: boolean,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction
-  | SetStoredLayoutsAction;
+  | SetStoredLayoutsAction
+  | SetIsInAnnotationViewAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -48,4 +54,9 @@ export const setStoredLayoutsAction = (storedLayouts: Object): SetStoredLayoutsA
 export const setImportingMeshStateAction = (isImporting: boolean): SetImportingMeshStateAction => ({
   type: "SET_IMPORTING_MESH_STATE",
   isImporting,
+});
+
+export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationViewAction => ({
+  type: "SET_IS_IN_ANNOTATION_VIEW",
+  value,
 });

@@ -624,3 +624,11 @@ export function convertBufferToImage(
     canvas.toBlob(blob => resolve(blob));
   });
 }
+
+export function getIsInIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}

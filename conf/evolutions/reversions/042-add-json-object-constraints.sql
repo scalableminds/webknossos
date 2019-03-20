@@ -14,4 +14,6 @@ ALTER TABLE webknossos.user_dataSetConfigurations
   DROP CONSTRAINT configurationIsJsonObject;
 
 UPDATE webknossos.tasktypes SET recommendedConfiguration = to_json(recommendedConfiguration::text);
+UPDATE webknossos.releaseInformation SET schemaVersion = 41;
+
 COMMIT TRANSACTION;

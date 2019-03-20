@@ -22,4 +22,7 @@ FROM  (SELECT REPLACE(CAST(jsonstring AS TEXT), '\n', '') AS oneLiner
                WHERE  CAST(recommendedconfiguration AS TEXT) LIKE '%\\%')
        AS JSON_CONVERTER )
 AS JSON_CONVERTING );
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 42;
+
 COMMIT TRANSACTION;

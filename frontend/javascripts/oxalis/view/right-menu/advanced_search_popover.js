@@ -2,10 +2,11 @@
 import { Icon, Input, Tooltip, Popover } from "antd";
 import * as React from "react";
 import memoizeOne from "memoize-one";
-import ButtonComponent from "oxalis/view/components/button_component";
 
+import ButtonComponent from "oxalis/view/components/button_component";
 import Shortcut from "libs/shortcut_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
+import { mod } from "libs/utils";
 
 const InputGroup = Input.Group;
 
@@ -30,25 +31,27 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     currentPosition: null,
   };
 
-  availableOptions: Array<S> = [];
-
   selectNextOptionWithOffset = (offset: number) => {
+    const { data, searchKey } = this.props;
+    const { searchQuery } = this.state;
     let { currentPosition } = this.state;
-    const numberOfAvailableOptions = this.availableOptions.length;
+
+    const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
+    const numberOfAvailableOptions = availableOptions.length;
     if (numberOfAvailableOptions === 0) {
       return;
     }
     if (currentPosition == null) {
       // If there was no previous currentPosition for the current search query,
-      // set currentPosition to an inital value.
+      // set currentPosition to an initial value.
       currentPosition = offset >= 0 ? -1 : numberOfAvailableOptions;
     }
-    currentPosition = (currentPosition + offset) % numberOfAvailableOptions;
-    if (currentPosition < 0) {
-      currentPosition = numberOfAvailableOptions + currentPosition;
-    }
+    // It can happen that currentPosition > availableOptions.length if trees are deleted.
+    // In that case adding the offset would not work as expected, so mod it before.
+    currentPosition = mod(currentPosition, numberOfAvailableOptions);
+    currentPosition = mod(currentPosition + offset, numberOfAvailableOptions);
     this.setState({ currentPosition });
-    this.props.onSelect(this.availableOptions[currentPosition]);
+    this.props.onSelect(availableOptions[currentPosition]);
   };
 
   selectNextOption = () => {
@@ -59,7 +62,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     this.selectNextOptionWithOffset(-1);
   };
 
-  getAvailableOptionsFrom = memoizeOne(
+  getAvailableOptions = memoizeOne(
     (data: Array<S>, searchQuery: string, searchKey: $Keys<S>): Array<S> =>
       searchQuery !== ""
         ? data.filter(
@@ -81,8 +84,8 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     const { searchQuery, isVisible } = this.state;
     let { currentPosition } = this.state;
     currentPosition = currentPosition == null ? -1 : currentPosition;
-    this.availableOptions = this.getAvailableOptionsFrom(data, searchQuery, searchKey);
-    const numberOfAvailableOptions = this.availableOptions.length;
+    const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
+    const numberOfAvailableOptions = availableOptions.length;
     const hasNoResults = numberOfAvailableOptions === 0;
     const hasMultipleResults = numberOfAvailableOptions > 1;
     const additionalInputStyle = hasNoResults && searchQuery !== "" ? { color: "red" } : {};

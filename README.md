@@ -1,15 +1,13 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis.
-Current solutions require an efficient integration of automated image analysis with massive manual data annotation.
-To scale such annotation efforts it is decisive to be able to crowd source data analysis online.
-Here we present **webKnossos**.
+<img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
+webKnossos is an open-source tool for annotating and exploring large 3D datasets.
 
-> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
-webKnossos: efficient online 3D data annotation for connectomics.
-[Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
+* Fly through your data for fast skeletonization and proof-reading
+* Create 3D training data for automated segmentations efficiently
+* Scale data reconstruction projects with crowdsourcing workflows
+* Share datasets and annotations with collaborating scientists
 
-![webKnossos logo](https://webknossos.org/images/oxalis.svg)
-
+[Start using webKnossos](https://webknossos.org) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
 
 [![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -28,7 +26,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
+* [Supported dataset formats: WKW, KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
@@ -36,8 +34,15 @@ webKnossos: efficient online 3D data annotation for connectomics.
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
 * [Detailed Documentation](https://docs.webknossos.org)
 
+## Publication
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
+> webKnossos: efficient online 3D data annotation for connectomics.  
+> [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
-## Development setup
+[Read more about the original publication.](https://publication.webknossos.org)
+
+
+## Development installation
 ### Docker
 This is the fastest way to try webKnossos.
 Docker CE 17+ and Docker Compose 1.18+ is required.
@@ -141,9 +146,7 @@ yarn start
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
-## Production setup
-[See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
-
+## Upgrades
 For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
 
 ## Tests

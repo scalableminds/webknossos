@@ -23,6 +23,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { isImportingMesh: action.isImporting });
     }
 
+    case "SET_IS_IN_ANNOTATION_VIEW": {
+      return updateKey(state, "uiInformation", { isInAnnotationView: action.value });
+    }
+
     default:
       return state;
   }

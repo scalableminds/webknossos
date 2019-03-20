@@ -287,9 +287,11 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  transactionId: string,
+  transactionGroupCount: number,
+  transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {
@@ -368,6 +370,7 @@ type UiInformation = {
   +showVersionRestore: boolean,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
+  +isInAnnotationView: boolean,
 };
 
 export type OxalisState = {|
@@ -566,6 +569,7 @@ export const defaultState: OxalisState = {
     showVersionRestore: false,
     storedLayouts: {},
     isImportingMesh: false,
+    isInAnnotationView: false,
   },
 };
 

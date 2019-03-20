@@ -12,6 +12,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Application {
 
     val insertInitialData = get[Boolean]("application.insertInitialData")
+    val title = get[String]("application.title")
 
     object Authentication {
       object DefaultUser {
@@ -86,6 +87,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Features {
     val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
+    val enableFrontpage = get[Boolean]("features.enableFrontpage")
   }
 
   val operatorData = get[String]("operatorData")

@@ -187,6 +187,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const layoutContainer = (
       <div key="layoutContainer" id={this.props.id} style={this.props.style} />
     );
+
     const portals = React.Children.toArray(this.props.children).map(child => (
       <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
         {child}

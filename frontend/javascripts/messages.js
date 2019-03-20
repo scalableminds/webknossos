@@ -71,8 +71,8 @@ In order to restore the current window, a reload is necessary.`,
   data black. This means that in case of missing data, data of lower quality is rendered
   instead. Only enable this option if you understand its effect. Please refresh
   this page so that the changes can take effect.`,
-  "tracing.copy_position": "Click this button to copy the position.",
-  "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_position": "Copy position to clipboard.",
+  "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",

@@ -359,11 +359,7 @@ class ReactRouter extends React.Component<Props> {
                 component={ScriptListView}
                 exact
               />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/help/keyboardshortcuts"
-                component={KeyboardShortcutView}
-              />
+              <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"

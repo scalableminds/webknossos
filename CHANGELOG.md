@@ -30,7 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed interpolation along z-axis. [#3888](https://github.com/scalableminds/webknossos/pull/3888)
 
 ### Removed
--
+- Removed FPS meter in Annotation View. [#3916](https://github.com/scalableminds/webknossos/pull/3916)
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04

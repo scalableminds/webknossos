@@ -371,6 +371,7 @@ type UiInformation = {
   +storedLayouts: Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
+  +hasOrganizations: boolean,
 };
 
 export type OxalisState = {|
@@ -570,6 +571,7 @@ export const defaultState: OxalisState = {
     storedLayouts: {},
     isImportingMesh: false,
     isInAnnotationView: false,
+    hasOrganizations: false,
   },
 };
 

@@ -75,7 +75,7 @@ class TimeLineView extends React.PureComponent<*, State> {
       const numberTasks = _.uniq(prevState.timeTrackingData.map(timeSpan => timeSpan.annotation))
         .length;
 
-      // prevent devision by zero
+      // prevent division by zero
       const averageTimePerTask = numberTasks === 0 ? 0 : totalTime / numberTasks;
 
       return {

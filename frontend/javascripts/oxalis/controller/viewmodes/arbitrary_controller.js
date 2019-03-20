@@ -52,7 +52,6 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {|
-  onRender: () => void,
   viewMode: ViewMode,
 |};
 
@@ -275,8 +274,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.props.onRender);
-
     const onBucketLoaded = () => {
       this.arbitraryView.draw();
       app.vent.trigger("rerender");

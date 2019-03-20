@@ -79,6 +79,7 @@ const viewOverrides: { [key: string]: string } = {
   e2006_knossos: "4736,4992,2176,0,0.6",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
   ROI2017_wkw_fallback: "535,536,600,0,1.18",
+  dsA_2: "1024,1024,64,0,0.424",
 };
 
 const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {

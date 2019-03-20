@@ -9,7 +9,7 @@ To manage access rights to certain datasets for webKnossos users check out [the 
 
 Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
 Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
-[Please contact us](mailto:hello@scalableminds.com) to feature your dataset on https://demo.webknossos.org.
+[Please contact us](mailto:hello@scalableminds.com) to feature your dataset on https://webknossos.org.
 
 Sharing a dataset is useful for multiple scenarios: 
 - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@scalableminds.com)).

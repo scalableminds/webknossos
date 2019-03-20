@@ -261,6 +261,12 @@ export type UserConfiguration = {|
   +tdViewDisplayPlanes: boolean,
 |};
 
+export type RecommendedConfiguration = $Shape<{
+  ...UserConfiguration,
+  ...DatasetConfiguration,
+  zoom: number,
+}>;
+
 export type Mapping = { [key: number]: number };
 
 export type TemporaryConfiguration = {

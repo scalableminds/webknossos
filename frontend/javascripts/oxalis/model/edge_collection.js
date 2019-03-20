@@ -54,7 +54,23 @@ export default class EdgeCollection {
   }
 
   addEdge(edge: Edge, mutate: boolean = false): EdgeCollection {
-    return this.addEdges([edge], mutate);
+    // This is a performance optimized version of addEdges for a single edge.
+    // In the single-edge case, it is faster to call .set on the diffable map which will
+    // clone only the affected chunk and not all chunks (as addEdges).
+    const newEdgeCount = this.edgeCount + 1;
+    const outgoingEdges = this.outMap.getNullable(edge.source) || [];
+    const ingoingEdges = this.inMap.getNullable(edge.target) || [];
+
+    if (mutate) {
+      this.outMap.mutableSet(edge.source, outgoingEdges.concat(edge));
+      this.inMap.mutableSet(edge.target, ingoingEdges.concat(edge));
+      this.edgeCount = newEdgeCount;
+      return this;
+    } else {
+      const newOutgoingEdges = this.outMap.set(edge.source, outgoingEdges.concat(edge));
+      const newIngoingEdges = this.inMap.set(edge.target, ingoingEdges.concat(edge));
+      return EdgeCollection.loadFromMaps(newOutgoingEdges, newIngoingEdges, newEdgeCount);
+    }
   }
 
   removeEdge(edge: Edge): EdgeCollection {

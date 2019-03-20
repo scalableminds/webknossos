@@ -5,13 +5,15 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
-- 
+- Redis is now needed for the tracingstore module. Make sure to install redis in your setup and adapt the config keys `tracingstore.redis.address` and `tracingstore.redis.port`.
+- To ensure that the existing behavior for loading data is preserved ("best quality first" as opposed to the new "progressive quality" default) execute: `update webknossos.user_datasetconfigurations set configuration = configuration || jsonb '{"loadingStrategy":"BEST_QUALITY_FIRST"}'`. See [#3801](https://github.com/scalableminds/webknossos/pull/3801) for additional context.
+- The config parameter `application.title` has been added. Make sure to set a title for your instance. 
 
 ### Postgres Evolutions:
-- 
+- [041-add-datastore-isconnector.sql](conf/evolutions/041-add-datastore-isconnector.sql)
 
 
-## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-02-25
+## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04
 - The config paramters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
 
 ### Postgres Evolutions:

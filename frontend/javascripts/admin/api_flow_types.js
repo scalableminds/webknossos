@@ -74,8 +74,9 @@ export type APIDataSource = APIDataSourceBase & {
 export type APIDataStore = {
   +name: string,
   +url: string,
-  +isForeign?: boolean,
+  +isForeign: boolean,
   +isScratch: boolean,
+  +isConnector: boolean,
 };
 
 export type APITracingStore = {
@@ -133,6 +134,12 @@ export type APIMaybeUnimportedDataset = APIDatasetBase & {
 export type APIDataset = APIDatasetBase & {
   +dataSource: APIDataSource,
   +isActive: true,
+};
+
+export type APISampleDataset = {
+  +name: string,
+  +description: string,
+  +status: "available" | "downloading" | "present",
 };
 
 export type APIDataSourceWithMessages = {
@@ -363,6 +370,22 @@ export type DatasetConfig = {
   +zipFile: File,
 };
 
+type WkConnectLayer = {
+  // This is the source URL of the layer, should start with gs://, http:// or https://
+  source: string,
+  type: "image" | "segmentation",
+};
+
+export type WkConnectDatasetConfig = {
+  neuroglancer: {
+    [organizationName: string]: {
+      [datasetName: string]: {
+        layers: { [layerName: string]: WkConnectLayer },
+      },
+    },
+  },
+};
+
 export type APITimeTracking = {
   time: string,
   timestamp: number,
@@ -445,6 +468,7 @@ export type APIFeatureToggles = {
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
+  +addMissingDatasetButtonEnabled: boolean,
   +enableFrontpage: boolean,
 };
 

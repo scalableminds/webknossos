@@ -10,10 +10,14 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 ![webKnossos logo](https://webknossos.org/images/oxalis.svg)
 
-[![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
+
+[![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
+[![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
+[![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
+[![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
 
 ## Demo
-[https://demo.webknossos.org/](https://demo.webknossos.org/)
+[https://webknossos.org/](https://webknossos.org/)
 
 ## Features
 * Exploration of large 3D image datasets
@@ -24,11 +28,13 @@ webKnossos: efficient online 3D data annotation for connectomics.
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets)
+* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
-* [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
+* [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
+* [Detailed Documentation](https://docs.webknossos.org)
 
 
 ## Development setup
@@ -51,6 +57,7 @@ See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for i
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
+* [Redis 5+](https://redis.io/)
 * [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
@@ -66,7 +73,7 @@ Or install Java manually and run:
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install git node postgresql sbt findutils coreutils gnu-sed
+brew install git node postgresql sbt findutils coreutils gnu-sed redis
 npm install -g yarn
 
 # Start postgres
@@ -98,7 +105,7 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
+sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn redis-server
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -119,6 +126,9 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install PostgreSQL from https://www.postgresql.org/download/
 * PostgreSQL version **10+ is required**
 
+##### Redis
+* Install Redis from https://redis.io/download
+
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
 * node version **9+ is required**
@@ -129,7 +139,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start the application.
+Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.

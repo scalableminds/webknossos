@@ -18,14 +18,16 @@ import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import Toast from "libs/toast";
-import { getOrganizations } from "admin/admin_rest_api";
+import renderIndependently from "libs/render_independently";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
+import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -37,8 +39,10 @@ type Props = StateProps;
 
 type State = {
   currentStep: number,
+  datastores: Array<APIDataStore>,
   organizationName: string,
   datasetNameToImport: ?string,
+  showDatasetUploadModal: boolean,
 };
 
 function StepHeader({
@@ -85,6 +89,36 @@ function FeatureCard({ icon, header, children }) {
         <p style={{ color: "gray" }}>{children}</p>
       </Card>
     </Col>
+  );
+}
+
+type OptionCardProps = {
+  icon: Node,
+  header: string,
+  children: Node,
+  action: Node,
+  height: number,
+};
+
+export function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
+  return (
+    <div style={{ padding: 12 }}>
+      <Card
+        bodyStyle={{
+          textAlign: "center",
+          height,
+          width: 350,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-around",
+        }}
+      >
+        <div style={{ fontSize: 30 }}>{icon}</div>
+        <p style={{ fontWeight: "bold" }}>{header}</p>
+        <p style={{ color: "gray" }}>{children}</p>
+        <p>{action}</p>
+      </Card>
+    </div>
   );
 }
 
@@ -211,15 +245,37 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 class OnboardingView extends React.PureComponent<Props, State> {
   state = {
     currentStep: 0,
+    datastores: [],
     organizationName: "",
+    showDatasetUploadModal: false,
     datasetNameToImport: null,
   };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    const datastores = (await getDatastores()).filter(ds => !ds.isForeign && !ds.isConnector);
+    this.setState({ datastores });
+  }
 
   advanceStep = () => {
     this.setState(prevState => ({
       currentStep: prevState.currentStep + 1,
+      showDatasetUploadModal: false,
       datasetNameToImport: null,
     }));
+  };
+
+  renderSampleDatasetsModal = () => {
+    renderIndependently(destroy => (
+      <SampleDatasetsModal
+        organizationName={this.state.organizationName}
+        destroy={destroy}
+        onOk={this.advanceStep}
+      />
+    ));
   };
 
   renderCreateOrganization() {
@@ -234,9 +290,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </React.Fragment>
         }
-        icon={
-          <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-        }
+        icon={<i className="fa fa-building icon-big" />}
       >
         <OrganizationForm
           onComplete={organizationName => {
@@ -259,7 +313,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             more.
           </React.Fragment>
         }
-        icon={<Icon type="user" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
+        icon={<Icon type="user" className="icon-big" />}
       >
         <RegistrationForm
           hidePrivacyStatement
@@ -276,26 +330,32 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets() {
     return (
       <StepHeader
-        header="Upload the first dataset into your organization."
+        header="Add the first dataset to your organization."
         subheader={
           <React.Fragment>
-            Upload your dataset via drag and drop or by directly copying the dataset on the hosting
-            server.{" "}
-            <a href="https://docs.webknossos.org/reference/data_formats">
-              Learn more about supported data formats.
-            </a>
+            Upload your dataset via drag and drop or add one of our sample datasets.
           </React.Fragment>
         }
-        icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
+        icon={<Icon type="file-add" className="icon-big" />}
       >
-        {this.state.datasetNameToImport == null ? (
-          <DatasetUploadView
-            onUploaded={datasetName => {
-              this.setState({ datasetNameToImport: datasetName });
-            }}
-            withoutCard
-          />
-        ) : (
+        {this.state.showDatasetUploadModal && (
+          <Modal
+            visible
+            width="85%"
+            footer={null}
+            maskClosable={false}
+            onCancel={() => this.setState({ showDatasetUploadModal: false })}
+          >
+            <DatasetUploadView
+              datastores={this.state.datastores}
+              onUploaded={(_organization: string, datasetName: string) => {
+                this.setState({ datasetNameToImport: datasetName, showDatasetUploadModal: false });
+              }}
+              withoutCard
+            />
+          </Modal>
+        )}
+        {this.state.datasetNameToImport != null && (
           <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
             <DatasetImportView
               isEditingMode={false}
@@ -308,19 +368,48 @@ class OnboardingView extends React.PureComponent<Props, State> {
             />
           </Modal>
         )}
-        <div style={{ textAlign: "center" }}>
-          <a
-            href="#"
-            onClick={this.advanceStep}
-            style={{
-              fontSize: 14,
-              color: "gray",
-              display: "inline-block",
-            }}
+        <Row type="flex" gutter={16} justify="center" align="bottom">
+          <OptionCard
+            header="Upload Dataset"
+            icon={<Icon type="cloud-upload-o" />}
+            action={
+              <Button onClick={() => this.setState({ showDatasetUploadModal: true })}>
+                Upload your dataset
+              </Button>
+            }
+            height={250}
           >
-            Or skip this step
-          </a>
-        </div>
+            You can also copy it directly onto the hosting server.{" "}
+            <a href="https://docs.webknossos.org/reference/data_formats">
+              Learn more about supported data formats.
+            </a>
+          </OptionCard>
+          <OptionCard
+            header="Add Sample Dataset"
+            icon={<Icon type="rocket" />}
+            action={
+              <Button type="primary" onClick={this.renderSampleDatasetsModal}>
+                Add Sample Dataset
+              </Button>
+            }
+            height={350}
+          >
+            This is the easiest way to try out webKnossos. Add one of our sample datasets and start
+            exploring in less than a minute.
+          </OptionCard>
+          <OptionCard
+            header="Skip"
+            icon={<Icon type="clock-circle-o" />}
+            action={
+              <a href="#" onClick={this.advanceStep}>
+                Skip this step
+              </a>
+            }
+            height={170}
+          >
+            You can always do this later!
+          </OptionCard>
+        </Row>
       </StepHeader>
     );
   }
@@ -337,7 +426,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             the features and concepts of webKnossos.
           </React.Fragment>
         }
-        icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
+        icon={<Icon type="rocket" className="icon-big" />}
       >
         <Row type="flex" gutter={50}>
           <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
@@ -409,7 +498,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
               <Step title="Create Organization" />
               <Step title="Create Account" />
-              <Step title="Upload Dataset" />
+              <Step title="Add Dataset" />
               <Step title="What's Next?" />
             </Steps>
           </Col>
@@ -418,7 +507,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
             <Col span={18}>
               <Row type="flex" justify="center" align="middle">
-                <Col span={18}>{currentStepContent}</Col>
+                <Col span={24}>{currentStepContent}</Col>
               </Row>
             </Col>
           </Row>

@@ -17,7 +17,6 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
-  OrthoViews,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
@@ -32,7 +31,6 @@ class Plane {
   baseScaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
-  renderer: THREE.WebGLRenderer;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -81,6 +79,10 @@ class Plane {
         crosshairGeometries[i],
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
+      // Objects are rendered according to their renderOrder (lowest to highest).
+      // The default renderOrder is 0. In order for the crosshairs to be shown
+      // render them AFTER the plane has been rendered.
+      this.crosshair[i].renderOrder = 1;
     }
 
     // create borders
@@ -150,16 +152,7 @@ class Plane {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
-
-    const offset = new THREE.Vector3(0, 0, 0);
-    if (this.planeID === OrthoViews.PLANE_XY) {
-      offset.z = 1;
-    } else if (this.planeID === OrthoViews.PLANE_YZ) {
-      offset.x = -1;
-    } else if (this.planeID === OrthoViews.PLANE_XZ) {
-      offset.y = -1;
-    }
-    this.plane.position.copy(offset.addVectors(posVec, offset));
+    this.plane.position.copy(posVec);
 
     const globalPosition = getPosition(Store.getState().flycam);
     this.plane.material.setGlobalPosition(globalPosition);

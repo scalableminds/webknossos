@@ -21,6 +21,7 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
+  type APISampleDataset,
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
@@ -43,6 +44,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
@@ -98,7 +100,7 @@ export function getSharingToken(): ?string {
 }
 
 let tokenPromise;
-export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<*> {
   const sharingToken = getSharingToken();
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -108,7 +110,10 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
     if (error.status === 403) {
       console.warn("Token expired. Requesting new token...");
       tokenPromise = requestUserToken();
-      return doWithToken(fn);
+      // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
+      if (tries < 3) {
+        return doWithToken(fn, tries + 1);
+      }
     }
     throw error;
   });
@@ -766,11 +771,24 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export async function addDataset(datasetConfig: DatasetConfig): Promise<void> {
-  await doWithToken(token =>
+export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+  return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datasetConfig,
       host: datasetConfig.datastore,
+    }),
+  );
+}
+
+export function addWkConnectDataset(
+  datastoreHost: string,
+  datasetConfig: WkConnectDatasetConfig,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datasetConfig,
+      host: datastoreHost,
+      method: "POST",
     }),
   );
 }
@@ -879,15 +897,15 @@ export async function findDataPositionForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<?Vector3> {
-  const { position } = await doWithToken(token =>
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),
   );
-  return position;
+  return { position, resolution };
 }
 
 export async function getMappingsForDatasetLayer(
@@ -900,6 +918,28 @@ export async function getMappingsForDatasetLayer(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/mappings?token=${token}`,
+    ),
+  );
+}
+
+export function getSampleDatasets(
+  datastoreUrl: string,
+  organizationName: string,
+): Promise<Array<APISampleDataset>> {
+  return doWithToken(token =>
+    Request.receiveJSON(`${datastoreUrl}/data/datasets/sample/${organizationName}?token=${token}`),
+  );
+}
+
+export async function triggerSampleDatasetDownload(
+  datastoreUrl: string,
+  organizationName: string,
+  datasetName: string,
+) {
+  await doWithToken(token =>
+    Request.triggerRequest(
+      `${datastoreUrl}/data/datasets/sample/${organizationName}/${datasetName}/download?token=${token}`,
+      { method: "POST" },
     ),
   );
 }

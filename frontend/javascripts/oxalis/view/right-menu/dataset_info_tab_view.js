@@ -9,10 +9,10 @@ import Markdown from "react-remarkable";
 import React from "react";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
-import { Unicode, ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
-import { formatScale } from "libs/format_utils";
+import { formatScale, formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
@@ -24,8 +24,6 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
 import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-
-const { ThinSpace } = Unicode;
 
 type OwnProps = {|
   portalKey: string,
@@ -93,16 +91,6 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
-export function formatNumberToLength(numberInNm: number): string {
-  if (numberInNm < 1000) {
-    return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
-  } else if (numberInNm < 1000000) {
-    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}μm`;
-  } else {
-    return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
-  }
-}
-
 function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
@@ -125,15 +113,6 @@ export function getDatasetExtentInLength(dataset: APIDataset) {
     depth: extentInVoxel.depth * scale[2],
   };
   return extent;
-}
-
-export function formatExtentWithLength(
-  extent: Object,
-  formattingFunction: number => string,
-): string {
-  return `${formattingFunction(extent.width)}\u2009×\u2009${formattingFunction(
-    extent.height,
-  )}\u2009×\u2009${formattingFunction(extent.depth)}`;
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props> {

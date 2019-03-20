@@ -215,6 +215,8 @@ export type DatasetLayerConfiguration = {|
   +alpha: number,
 |};
 
+export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
+
 export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
@@ -229,6 +231,7 @@ export type DatasetConfiguration = {|
   +zoom?: number,
   +rotation?: Vector3,
   +renderMissingDataBlack: boolean,
+  +loadingStrategy: LoadingStrategy,
 |};
 
 export type UserConfiguration = {|
@@ -265,6 +268,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
+  +hoveredIsosurfaceId: number,
   +activeMapping: {
     +mappingName: ?string,
     +mapping: ?Mapping,
@@ -283,9 +287,11 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  transactionId: string,
+  transactionGroupCount: number,
+  transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {
@@ -364,6 +370,7 @@ type UiInformation = {
   +showVersionRestore: boolean,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
+  +isInAnnotationView: boolean,
 };
 
 export type OxalisState = {|
@@ -412,10 +419,11 @@ const initialAnnotationInfo = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    fourBit: true,
+    fourBit: false,
     interpolation: false,
     layers: {},
     quality: 0,
+    loadingStrategy: "PROGRESSIVE_QUALITY",
     segmentationOpacity: 20,
     highlightHoveredCellId: true,
     renderIsosurfaces: false,
@@ -452,6 +460,7 @@ export const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
+    hoveredIsosurfaceId: 0,
     activeMapping: {
       mappingName: null,
       mapping: null,
@@ -481,6 +490,8 @@ export const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
+      isForeign: false,
+      isConnector: false,
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -558,6 +569,7 @@ export const defaultState: OxalisState = {
     showVersionRestore: false,
     storedLayouts: {},
     isImportingMesh: false,
+    isInAnnotationView: false,
   },
 };
 

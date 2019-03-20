@@ -20,8 +20,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer)(implicit m: MessagesProvider) =
     for {
-      positionOpt <- checkAllPositionsForData(dataSource, dataLayer)
-    } yield positionOpt
+      positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
+    } yield positionAndResolutionOpt
 
   private def checkAllPositionsForData(dataSource: DataSource, dataLayer: DataLayer) = {
 
@@ -63,19 +63,19 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       Point3D(0, 0, 0)
     }
 
-    def searchPositionIter(positions: List[Point3D]): Fox[Option[Point3D]] =
+    def searchPositionIter(positions: List[Point3D], resolution: Point3D): Fox[Option[Point3D]] =
       positions match {
         case List() => Fox.successful(None)
         case head :: tail =>
-          checkIfPositionHasData(head).futureBox.flatMap {
+          checkIfPositionHasData(head, resolution).futureBox.flatMap {
             case Full(pos) => Fox.successful(Some(pos))
-            case _         => searchPositionIter(tail)
+            case _         => searchPositionIter(tail, resolution)
           }
       }
 
-    def checkIfPositionHasData(position: Point3D) = {
+    def checkIfPositionHasData(position: Point3D, resolution: Point3D) = {
       val request = DataRequest(
-        new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(0)),
+        new VoxelPosition(position.x, position.y, position.z, resolution),
         DataLayer.bucketLength,
         DataLayer.bucketLength,
         DataLayer.bucketLength
@@ -87,7 +87,20 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       } yield position.move(getExactDataOffset(data))
     }
 
-    searchPositionIter(createPositions(dataLayer).distinct)
+    def resolutionIter(positions: List[Point3D], remainingResolutions: List[Point3D]): Fox[Option[(Point3D, Point3D)]] =
+      remainingResolutions match {
+        case List() => Fox.successful(None)
+        case head :: tail =>
+          (for {
+            foundPosition <- searchPositionIter(positions, head)
+          } yield
+            foundPosition match {
+              case Some(position) => Fox.successful(Some((position, head)))
+              case None           => resolutionIter(positions, tail)
+            }).flatten
+      }
+
+    resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
   private def createPositions(dataLayer: DataLayer) = {

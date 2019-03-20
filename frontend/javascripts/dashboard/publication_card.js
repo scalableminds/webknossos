@@ -6,17 +6,13 @@ import classNames from "classnames";
 import { Link } from "react-router-dom";
 
 import type { APIDataset, APIDatasetDetails } from "admin/api_flow_types";
-import { formatScale } from "libs/format_utils";
+import { formatScale, formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import {
   getThumbnailURL,
   hasSegmentation,
   getSegmentationThumbnailURL,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  formatExtentWithLength,
-  getDatasetExtentInLength,
-  formatNumberToLength,
-} from "oxalis/view/right-menu/dataset_info_tab_view";
+import { getDatasetExtentInLength } from "oxalis/view/right-menu/dataset_info_tab_view";
 import { compareBy } from "libs/utils";
 
 type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: string, extent: string };

@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col, Input } from "antd";
+import { Spin, Layout, Button, Row, Col, Card, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -48,7 +48,7 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={16}>
+          <Col span={20}>
             <p
               style={{
                 fontSize: 58,
@@ -126,6 +126,60 @@ const WelcomeHeader = ({ history }) => (
         </Row>
       </div>
     </div>
+  </div>
+);
+
+const MissingDatasetCard = () => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      marginTop: 80,
+    }}
+  >
+    <Col className="gallery-dataset-col">
+      <a
+        href="https://goo.gl/forms/QICmEcQyid6gb8Kw1"
+        title="Click to add your missing dataset"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="not-highlighted-link"
+      >
+        <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+          <div style={{ display: "flex", height: "100%" }}>
+            <div className="publication-description">
+              <h3>Your dataset is missing here?</h3>
+              <div className="publication-description-body nice-scrollbar">
+                If you want to add your own dataset to this publication library just click here. It
+                opens a form which will contact us so we can add your dataset.
+              </div>
+            </div>
+            <div className="dataset-thumbnail">
+              <div
+                style={{
+                  position: "relative",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "flex-end",
+                }}
+              >
+                <div
+                  className="dataset-click-hint absolute"
+                  style={{
+                    opacity: 1,
+                    backgroundColor: "rgba(0, 0, 0, 0.4)",
+                    fontSize: 220,
+                  }}
+                >
+                  ?
+                </div>
+                <div className="dataset-thumbnail-image absolute" id="add-missing-dataset-image" />
+              </div>
+            </div>
+          </div>
+        </Card>
+      </a>
+    </Col>
   </div>
 );
 
@@ -213,6 +267,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               )}
             </div>
           </Spin>
+          {features().addMissingDatasetButtonEnabled ? <MissingDatasetCard /> : null}
           <div id="spotlight-footnote">
             Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a> for
             the original webKnossos publication website.
@@ -249,7 +304,6 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                     className="img-responsive"
                     alt="scalable minds logo"
                     src="/images/scalableminds_logo.svg"
-                    style={{ filter: "contrast(0)" }}
                   />
                 </a>
               </p>

@@ -1,7 +1,4 @@
-/**
- * plane_view.js
- * @flow
- */
+// @flow
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
@@ -10,8 +7,8 @@ import _ from "lodash";
 import { getDesiredLayoutRect } from "oxalis/view/layouting/golden_layout_adapter";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import Constants, {
-  type OrthoView,
   OrthoViewColors,
   type OrthoViewMap,
   OrthoViewValues,
@@ -21,25 +18,7 @@ import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
-
-export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
-  x: number,
-  y: number,
-  viewportWidth: number,
-  viewportHeight: number,
-  color: number,
-) => {
-  renderer.setViewport(x, y, viewportWidth, viewportHeight);
-  renderer.setScissor(x, y, viewportWidth, viewportHeight);
-  renderer.setScissorTest(true);
-  renderer.setClearColor(color, 1);
-};
-
-export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
-  renderer.clear();
-};
+import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
 const createDirLight = (position, target, intensity, parent) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
@@ -51,6 +30,11 @@ const createDirLight = (position, target, intensity, parent) => {
   return dirLight;
 };
 
+const raycaster = new THREE.Raycaster();
+let oldRaycasterHit = null;
+
+const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -58,12 +42,17 @@ class PlaneView {
   unbindChangedScaleListener: () => void;
 
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  throttledPerformIsosurfaceHitTest: () => ?THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
 
   constructor() {
     _.extend(this, BackboneEvents);
+    this.throttledPerformIsosurfaceHitTest = _.throttle(
+      this.performIsosurfaceHitTest,
+      ISOSURFACE_HOVER_THROTTLING_DELAY,
+    );
 
     this.running = false;
     const { scene } = getSceneController();
@@ -75,6 +64,8 @@ class PlaneView {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       this.cameras[plane] = new THREE.OrthographicCamera(0, 0, 0, 0);
+      // This name can be used to retrieve the camera from the scene
+      this.cameras[plane].name = plane;
       scene.add(this.cameras[plane]);
     }
 
@@ -114,28 +105,6 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderOrthoViewToTexture(plane: OrthoView, scene: THREE.Scene): Uint8Array {
-    const SceneController = getSceneController();
-    const { renderer } = SceneController;
-
-    renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(Store.getState(), plane);
-    width = Math.round(width);
-    height = Math.round(height);
-
-    renderer.setViewport(0, 0, width, height);
-    renderer.setScissorTest(false);
-    renderer.setClearColor(0x000000, 1);
-
-    const renderTarget = new THREE.WebGLRenderTarget(width, height);
-    const buffer = new Uint8Array(width * height * 4);
-
-    SceneController.updateSceneForCam(plane);
-    renderer.render(scene, this.cameras[plane], renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
-    return buffer;
-  }
-
   renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
@@ -166,6 +135,8 @@ class PlaneView {
 
       clearCanvas(renderer);
 
+      this.throttledPerformIsosurfaceHitTest();
+
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
@@ -176,6 +147,71 @@ class PlaneView {
       }
 
       this.needsRerender = false;
+    }
+  }
+
+  performIsosurfaceHitTest(): ?THREE.Vector3 {
+    const storeState = Store.getState();
+    const SceneController = getSceneController();
+    const { isosurfacesRootGroup } = SceneController;
+    const tdViewport = getInputCatcherRect(storeState, "TDView");
+    const { mousePosition, hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+
+    if (mousePosition == null) {
+      return null;
+    }
+
+    // Outside of the 3D viewport, we don't do isosurface hit tests
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      if (hoveredIsosurfaceId !== 0) {
+        // Reset hoveredIsosurfaceId if we are outside of the 3D viewport,
+        // since that id takes precedence over the shader-calculated cell id
+        // under the mouse cursor
+        Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+      }
+      return null;
+    }
+
+    // Perform ray casting
+    const mouse = new THREE.Vector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1, // y is inverted
+    );
+
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    // The second parameter of intersectObjects is set to true to ensure that
+    // the groups which contain the actual meshes are traversed.
+    const intersections = raycaster.intersectObjects(isosurfacesRootGroup.children, true);
+    const hitObject = intersections.length > 0 ? intersections[0].object : null;
+
+    // Check whether we are hitting the same object as before, since we can return early
+    // in this case.
+    if (hitObject === oldRaycasterHit) {
+      return intersections.length > 0 ? intersections[0].point : null;
+    }
+
+    // Undo highlighting of old hit
+    if (oldRaycasterHit != null) {
+      oldRaycasterHit.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHex("#000000");
+      });
+      oldRaycasterHit = null;
+    }
+
+    oldRaycasterHit = hitObject;
+
+    // Highlight new hit
+    if (hitObject != null) {
+      const hoveredColor = [0.7, 0.5, 0.1];
+      hitObject.parent.children.forEach(meshPart => {
+        meshPart.material.emissive.setHSL(...hoveredColor);
+      });
+
+      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", hitObject.parent.cellId));
+      return intersections[0].point;
+    } else {
+      Store.dispatch(updateTemporarySettingAction("hoveredIsosurfaceId", 0));
+      return null;
     }
   }
 

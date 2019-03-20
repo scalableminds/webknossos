@@ -186,7 +186,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
     ],
     centerActiveNode,
   );
-  yield _throttle(5000, "PUSH_SAVE_QUEUE", watchTracingConsistency);
+  yield _throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
   yield* fork(watchVersionRestoreParam);

@@ -11,7 +11,7 @@ import {
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { parseAsMaybe } from "libs/utils";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
@@ -178,5 +178,5 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     const base64 = await byteArrayToBase64(bucketData);
     items.push(updateBucket(bucketInfo, base64));
   }
-  Store.dispatch(pushSaveQueueAction(items, "volume"));
+  Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

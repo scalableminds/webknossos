@@ -18,12 +18,6 @@ const DateMock = {
 };
 mockRequire("libs/date", DateMock);
 
-const REQUEST_ID = "sc5na1wy1r";
-const UidMock = {
-  getUid: () => REQUEST_ID,
-};
-mockRequire("libs/uid_generator", UidMock);
-
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
@@ -38,7 +32,6 @@ const {
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
-  addRequestIds,
   sendRequestWithToken,
 } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 
@@ -104,9 +97,9 @@ test("SaveSaga should send update actions", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueAction(updateActions));
+  saga.next(SaveActions.pushSaveQueueTransaction(updateActions));
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE));
   saga.next(); // select state
@@ -114,7 +107,7 @@ test("SaveSaga should send update actions", t => {
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -127,10 +120,7 @@ test("SaveSaga should send request to server", t => {
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addRequestIds(
-    addVersionNumbers(saveQueue, LAST_VERSION),
-    REQUEST_ID,
-  );
+  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -148,10 +138,7 @@ test("SaveSaga should retry update actions", t => {
     [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)],
     TIMESTAMP,
   );
-  const saveQueueWithVersions = addRequestIds(
-    addVersionNumbers(saveQueue, LAST_VERSION),
-    REQUEST_ID,
-  );
+  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   const requestWithTokenCall = call(
     sendRequestWithToken,
     `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`,
@@ -186,10 +173,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addRequestIds(
-    addVersionNumbers(saveQueue, LAST_VERSION),
-    REQUEST_ID,
-  );
+  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
   expectValueDeepEqual(
     t,
     saga.next(TRACINGSTORE_URL),
@@ -215,7 +199,7 @@ test("SaveSaga should send update actions right away", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
   saga.next(SaveActions.saveNowAction()); // put setSaveBusyAction
   saga.next(); // select state

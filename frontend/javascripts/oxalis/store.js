@@ -268,6 +268,7 @@ export type TemporaryConfiguration = {
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
+  +hoveredIsosurfaceId: number,
   +activeMapping: {
     +mappingName: ?string,
     +mapping: ?Mapping,
@@ -286,9 +287,11 @@ export type SaveQueueEntry = {
   version: number,
   timestamp: number,
   actions: Array<UpdateAction>,
+  transactionId: string,
+  transactionGroupCount: number,
+  transactionGroupIndex: number,
   stats: ?SkeletonTracingStats,
   info: string,
-  requestId: string,
 };
 
 export type ProgressInfo = {
@@ -367,6 +370,7 @@ type UiInformation = {
   +showVersionRestore: boolean,
   +storedLayouts: Object,
   +isImportingMesh: boolean,
+  +isInAnnotationView: boolean,
 };
 
 export type OxalisState = {|
@@ -456,6 +460,7 @@ export const defaultState: OxalisState = {
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
+    hoveredIsosurfaceId: 0,
     activeMapping: {
       mappingName: null,
       mapping: null,
@@ -485,6 +490,8 @@ export const defaultState: OxalisState = {
       name: "localhost",
       url: "http://localhost:9000",
       isScratch: false,
+      isForeign: false,
+      isConnector: false,
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -562,6 +569,7 @@ export const defaultState: OxalisState = {
     showVersionRestore: false,
     storedLayouts: {},
     isImportingMesh: false,
+    isInAnnotationView: false,
   },
 };
 

@@ -6,10 +6,8 @@ import * as React from "react";
 import { Tooltip } from "antd";
 import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import {
-  convertPixelsToNm,
-  formatNumberToLength,
-} from "oxalis/view/right-menu/dataset_info_tab_view";
+import { convertPixelsToNm } from "oxalis/view/right-menu/dataset_info_tab_view";
+import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Unicode, OUTER_CSS_BORDER, type OrthoView } from "oxalis/constants";

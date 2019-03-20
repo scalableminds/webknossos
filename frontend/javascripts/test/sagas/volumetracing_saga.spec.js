@@ -3,8 +3,9 @@ import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";
 
+import "test/sagas/volumetracing_saga.mock.js";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import mockRequire from "mock-require";
@@ -95,7 +96,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "volume")));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "volume")));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", t => {

@@ -31,7 +31,6 @@ class Plane {
   baseScaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
-  renderer: THREE.WebGLRenderer;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;

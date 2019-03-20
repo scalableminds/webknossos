@@ -19,7 +19,8 @@ case class DataStore(
     key: String,
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
-    isForeign: Boolean = false
+    isForeign: Boolean = false,
+    isConnector: Boolean = false
 )
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
@@ -32,7 +33,8 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "name" -> dataStore.name,
         "url" -> dataStore.url,
         "isForeign" -> dataStore.isForeign,
-        "isScratch" -> dataStore.isScratch
+        "isScratch" -> dataStore.isScratch,
+        "isConnector" -> dataStore.isConnector
       ))
 
   def validateAccess[A](name: String)(block: (DataStore) => Future[Result])(implicit request: Request[A],
@@ -61,7 +63,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.key,
         r.isscratch,
         r.isdeleted,
-        r.isforeign
+        r.isforeign,
+        r.isconnector
       ))
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -95,8 +98,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign)
-                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign, isConnector)
+                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
     } yield ()
 
 }

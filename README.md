@@ -57,6 +57,7 @@ See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for i
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
+* [Redis 5+](https://redis.io/)
 * [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
@@ -72,7 +73,7 @@ Or install Java manually and run:
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install git node postgresql sbt findutils coreutils gnu-sed
+brew install git node postgresql sbt findutils coreutils gnu-sed redis
 npm install -g yarn
 
 # Start postgres
@@ -104,7 +105,7 @@ echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/source
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
+sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn redis-server
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -125,6 +126,9 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install PostgreSQL from https://www.postgresql.org/download/
 * PostgreSQL version **10+ is required**
 
+##### Redis
+* Install Redis from https://redis.io/download
+
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
 * node version **9+ is required**
@@ -135,7 +139,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start the application.
+Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.

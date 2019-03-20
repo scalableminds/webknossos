@@ -25,7 +25,7 @@ Try webKnossos yourself on a large selection of publish community datasets: [htt
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets)
+* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [Mesh Visualization](./mesh_visualization.md)
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access

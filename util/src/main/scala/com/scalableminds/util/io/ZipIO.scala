@@ -4,9 +4,14 @@ import java.io._
 import java.nio.file.{Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
+import akka.stream.ActorMaterializer
+import akka.stream.javadsl.StreamConverters
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
+import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,6 +23,24 @@ object ZipIO {
     * @param stream output stream to write to
     */
   case class OpenZip(stream: ZipOutputStream) {
+
+    def addFileFromSource(name: String, source: Source[ByteString, _])
+                         (implicit ec: ExecutionContext, materializer: ActorMaterializer): Future[Unit] = {
+
+      stream.putNextEntry(new ZipEntry(name))
+
+      val inputStream = source.runWith(StreamConverters.asInputStream())
+
+      val dataEnumerator = Enumerator.fromStream(inputStream)
+
+      val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
+        stream.write(bytes)
+      }
+
+      val result: Future[Unit] = dataEnumerator |>>> iteratee
+
+      result.map(_ => stream.closeEntry())
+    }
 
     /**
       * Add a file to the zip

@@ -153,10 +153,14 @@ class VolumeTracingService @Inject()(
 
   def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+    val buckets: Iterator[NamedStream] = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
 
+    try {
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os)
+    }
+    } catch {
+      case e: Exception => {println("Exception in allData: " + e.getMessage); throw new Exception("Exception in allData: " + e.getMessage)}
     }
   }
 

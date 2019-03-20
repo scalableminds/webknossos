@@ -56,17 +56,16 @@ class VolumeTracingController @Inject()(
 
   def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      //accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
-            //_ <- Future.successful(Thread.sleep(1000*1000))
           } yield {
             val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
             Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
-      }
+      //}
     }
   }
 

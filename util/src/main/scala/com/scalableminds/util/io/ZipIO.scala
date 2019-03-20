@@ -10,6 +10,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+import scala.concurrent.duration._
 import org.apache.commons.io.IOUtils
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
@@ -29,15 +30,20 @@ object ZipIO {
 
       stream.putNextEntry(new ZipEntry(name))
 
-      val inputStream = source.runWith(StreamConverters.asInputStream())
+      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream(5 seconds))
 
-      val dataEnumerator = Enumerator.fromStream(inputStream)
+
+      /*val dataEnumerator = Enumerator.fromStream(inputStream)
 
       val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
         stream.write(bytes)
       }
 
-      val result: Future[Unit] = dataEnumerator |>>> iteratee
+      val result: Future[Unit] = dataEnumerator |>>> iteratee*/
+
+
+
+      val result = Future.successful(IOUtils.copy(inputStream, stream))
 
       result.map(_ => stream.closeEntry())
     }
@@ -80,8 +86,13 @@ object ZipIO {
     if (!sources.hasNext) {
       Future.successful(())
     } else {
-      val s = sources.next
-      zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
+      try {
+        println("sources.next")
+        val s = sources.next
+        zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
+      } catch {
+        case e: Exception => {println("exception in zipIterator: " + e.getMessage); throw new Exception(e.getMessage)}
+      }
     }
 
   def startZip(out: OutputStream)(implicit ec: ExecutionContext) =

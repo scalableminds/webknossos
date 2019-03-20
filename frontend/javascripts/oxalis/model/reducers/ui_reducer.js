@@ -27,6 +27,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { isInAnnotationView: action.value });
     }
 
+    case "SET_HAS_ORGANIZATIONS": {
+      return updateKey(state, "uiInformation", { hasOrganizations: action.value });
+    }
+
     default:
       return state;
   }

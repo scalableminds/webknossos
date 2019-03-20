@@ -25,6 +25,7 @@ type OwnProps = {|
 type StateProps = {|
   activeUser: ?APIUser,
   isInAnnotationView: boolean,
+  hasOrganizations: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -264,7 +265,7 @@ async function getAndTrackVersion() {
   return version;
 }
 
-function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
+function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasOrganizations }) {
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -288,7 +289,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
   const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
 
   const collapseAllNavItems = isInAnnotationView;
-  const { hideNavbarLogin } = features();
+  const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
 
   const menuItems = [];
   const trailingNavItems = [];
@@ -366,6 +367,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView }) {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   isInAnnotationView: state.uiInformation.isInAnnotationView,
+  hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
 export default withRouter(connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar));

@@ -109,16 +109,19 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
+  private def getStateQuery(isFinished: Option[Boolean]) =
+    isFinished match {
+      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
+      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
+      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
+    }
+
   def findAllFor(userId: ObjectId,
                  isFinished: Option[Boolean],
                  annotationType: AnnotationType,
                  limit: Int,
                  pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
-    val stateQuery = isFinished match {
-      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
-      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
-      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
-    }
+    val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select #${columns} from #${existingCollectionName}
@@ -130,11 +133,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
       implicit ctx: DBAccessContext) = {
-    val stateQuery = isFinished match {
-      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
-      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
-      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
-    }
+    val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
       r <- run(

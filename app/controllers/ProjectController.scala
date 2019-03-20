@@ -10,6 +10,7 @@ import net.liftweb.common.Empty
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import com.scalableminds.util.tools.DefaultConverters.BoolToOption
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import utils.ObjectId
@@ -120,17 +121,25 @@ class ProjectController @Inject()(projectService: ProjectService,
       Ok(js)
     }
 
-  def tasksForProject(projectName: String, limit: Option[Int] = None, pageNumber: Option[Int] = None) =
+  def tasksForProject(projectName: String,
+                      limit: Option[Int] = None,
+                      pageNumber: Option[Int] = None,
+                      includeTotalCount: Option[Boolean]) =
     sil.SecuredAction.async { implicit request =>
       for {
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
         tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))(
           GlobalAccessContext)
-        taskCount <- taskDAO.countAllByProject(project._id)(GlobalAccessContext)
+        taskCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+          taskDAO.countAllByProject(project._id)(GlobalAccessContext))
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {
-        Ok(Json.toJson(js)).withHeaders("X-Total-Count" -> taskCount.toString)
+        val result = Ok(Json.toJson(js))
+        taskCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
       }
     }
 

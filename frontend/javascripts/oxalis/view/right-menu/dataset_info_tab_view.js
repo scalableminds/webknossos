@@ -23,7 +23,7 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
-import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
+import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
 type OwnProps = {|
   portalKey: string,
@@ -31,7 +31,6 @@ type OwnProps = {|
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
-  flycam: Flycam,
   task: ?Task,
   activeUser: ?APIUser,
 |};
@@ -344,7 +343,6 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
-  flycam: state.flycam,
   task: state.task,
   activeUser: state.activeUser,
 });

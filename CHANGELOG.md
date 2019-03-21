@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 - Improved the flight mode performance for tracings with very large trees (>80.000 nodes). [#3880](https://github.com/scalableminds/webknossos/pull/3880)
 - Tweaked the highlighting of the active node. The inner node looks exactly as a non-active node and is not round, anymore. An active node is circled by a "halo". In arbitrary mode, the halo is hidden and the active node is round. [#3868](https://github.com/scalableminds/webknossos/pull/3868)
+- Improved the performance of moving through a dataset which should make the overall interaction smoother. [#3902](https://github.com/scalableminds/webknossos/pull/3902)
 - Brush size is independent of zoom value, now. This change simplifies volume annotations, as brush sizes can be adapted to certain structures (e.g., vesicles) and don't need to be changed when zooming. [#3868](https://github.com/scalableminds/webknossos/pull/3889)
 
 ### Fixed

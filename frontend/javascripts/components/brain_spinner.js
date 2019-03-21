@@ -19,7 +19,7 @@ export default function BrainSpinner() {
           <div style={{ width: 375 }}>
             <img
               src="/images/brain.png"
-              alt="Abstract brain"
+              alt=""
               style={{
                 width: 375,
                 height: 299,

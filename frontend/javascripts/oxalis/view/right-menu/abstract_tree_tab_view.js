@@ -30,6 +30,7 @@ type State = {
 
 class AbstractTreeView extends Component<Props, State> {
   canvas: ?HTMLCanvasElement;
+  nodeList: Array<NodeListItem> = [];
   state = {
     visible: false,
   };
@@ -47,7 +48,7 @@ class AbstractTreeView extends Component<Props, State> {
     window.removeEventListener("resize", this.drawTree, false);
   }
 
-  nodeList: Array<NodeListItem> = [];
+  // eslint-disable-next-line react/sort-comp
   drawTree = _.throttle(() => {
     if (!this.props.skeletonTracing || !this.state.visible) {
       return;

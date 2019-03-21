@@ -315,6 +315,21 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
+// Only use this function if you really need a busy wait (useful
+// for testing performance-related edge cases). Prefer `sleep`
+// otherwise.
+export function busyWaitDevHelper(time: number) {
+  const start = new Date();
+  let now;
+
+  while (true) {
+    now = new Date();
+    if (now - start >= time) {
+      break;
+    }
+  }
+}
+
 export function animationFrame(): Promise<void> {
   return new Promise(resolve => {
     window.requestAnimationFrame(resolve);

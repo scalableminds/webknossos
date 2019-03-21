@@ -43,6 +43,7 @@ import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
+import FeaturesView from "stuff/features_view";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import features from "features";
@@ -423,6 +424,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />
+              <Route path="/features" component={FeaturesView} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

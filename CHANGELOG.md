@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The dataset settings within the tracing view allow to select between different loading strategies now ("best quality first" and "progressive quality"). Additionally, the rendering can use different magnifications as a fallback (instead of only one magnification). [#3801](https://github.com/scalableminds/webknossos/pull/3801)
 - The mapping selection dropbown is now sorted alphabetically. [#3864](https://github.com/scalableminds/webknossos/pull/3864)
 - The HTML template now includes SEO tags for demo instances and hides internal instances from search engines.
+- [webknossos-connect](https://github.com/scalableminds/webknossos-connect) now starts with webknossos on local and development instances by default.
 
 ### Changed
 - Improved the flight mode performance for tracings with very large trees (>80.000 nodes). [#3880](https://github.com/scalableminds/webknossos/pull/3880)

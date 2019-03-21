@@ -1,6 +1,6 @@
 # webKnossos
 <img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
-webKnossos is an open-source tool for annotating and exploring large 3D datasets.
+webKnossos is an open-source tool for annotating and exploring large 3D image datasets.
 
 * Fly through your data for fast skeletonization and proof-reading
 * Create 3D training data for automated segmentations efficiently

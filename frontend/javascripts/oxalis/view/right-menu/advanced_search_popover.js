@@ -31,6 +31,15 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     currentPosition: null,
   };
 
+  getAvailableOptions = memoizeOne(
+    (data: Array<S>, searchQuery: string, searchKey: $Keys<S>): Array<S> =>
+      searchQuery !== ""
+        ? data.filter(
+            datum => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
+          )
+        : [],
+  );
+
   selectNextOptionWithOffset = (offset: number) => {
     const { data, searchKey } = this.props;
     const { searchQuery } = this.state;
@@ -62,15 +71,6 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   selectPreviousOption = () => {
     this.selectNextOptionWithOffset(-1);
   };
-
-  getAvailableOptions = memoizeOne(
-    (data: Array<S>, searchQuery: string, searchKey: $Keys<S>): Array<S> =>
-      searchQuery !== ""
-        ? data.filter(
-            datum => datum[searchKey].toLowerCase().indexOf(searchQuery.toLowerCase()) > -1,
-          )
-        : [],
-  );
 
   openSearchPopover = () => {
     this.setState({ isVisible: true });

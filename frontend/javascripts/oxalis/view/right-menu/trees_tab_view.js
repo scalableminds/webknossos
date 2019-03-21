@@ -155,6 +155,38 @@ class TreesTabView extends React.PureComponent<Props, State> {
     groupToDelete: null,
   };
 
+  getTreeAndTreeGroupList = memoizeOne(
+    (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
+      const groupToTreesMap = createGroupToTreesMap(trees);
+      const rootGroup = { name: "Root", groupId: MISSING_GROUP_ID, children: treeGroups };
+
+      const makeTree = tree => ({ name: tree.name, type: "TREE", id: tree.treeId });
+      const makeGroup = group => ({ name: group.name, type: "GROUP", id: group.groupId });
+
+      function* mapGroupsAndTreesSorted(
+        _groups: Array<TreeGroup>,
+        _groupToTreesMap: { [number]: Array<Tree> },
+        _sortBy: string,
+      ): Generator<TreeOrTreeGroup, void, void> {
+        for (const group of _groups) {
+          yield makeGroup(group);
+          if (group.children) {
+            // Groups are always sorted by name and appear before the trees
+            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
+            yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
+          }
+          if (_groupToTreesMap[group.groupId] != null) {
+            // Trees are sorted by the sortBy property
+            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
+            yield* sortedTrees.map(makeTree);
+          }
+        }
+      }
+
+      return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
+    },
+  );
+
   handleChangeTreeName = (evt: SyntheticInputEvent<>) => {
     if (!this.props.skeletonTracing) {
       return;
@@ -350,38 +382,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
   deselectAllTrees = () => {
     this.setState({ selectedTrees: [] });
   };
-
-  getTreeAndTreeGroupList = memoizeOne(
-    (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
-      const groupToTreesMap = createGroupToTreesMap(trees);
-      const rootGroup = { name: "Root", groupId: MISSING_GROUP_ID, children: treeGroups };
-
-      const makeTree = tree => ({ name: tree.name, type: "TREE", id: tree.treeId });
-      const makeGroup = group => ({ name: group.name, type: "GROUP", id: group.groupId });
-
-      function* mapGroupsAndTreesSorted(
-        _groups: Array<TreeGroup>,
-        _groupToTreesMap: { [number]: Array<Tree> },
-        _sortBy: string,
-      ): Generator<TreeOrTreeGroup, void, void> {
-        for (const group of _groups) {
-          yield makeGroup(group);
-          if (group.children) {
-            // Groups are always sorted by name and appear before the trees
-            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
-            yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
-          }
-          if (_groupToTreesMap[group.groupId] != null) {
-            // Trees are sorted by the sortBy property
-            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
-            yield* sortedTrees.map(makeTree);
-          }
-        }
-      }
-
-      return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
-    },
-  );
 
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
     if (selectedElement.type === "TREE") {

@@ -131,15 +131,15 @@ export function createNode(
     };
 
     // Create a new edge
-    const newEdges = activeNodeMaybe
-      .map(activeNode => [
-        {
+    const edges = activeNodeMaybe
+      .map(activeNode => {
+        const newEdge = {
           source: activeNode.id,
           target: nextNewId,
-        },
-      ])
-      .getOrElse([]);
-    const edges = tree.edges.addEdges(newEdges);
+        };
+        return tree.edges.addEdge(newEdge);
+      })
+      .getOrElse(tree.edges);
 
     return Maybe.Just([node, edges]);
   }

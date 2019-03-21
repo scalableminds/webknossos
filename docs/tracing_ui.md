@@ -19,7 +19,7 @@ The most common buttons are:
 - `Archive`: Only available for Explorative Annotations. Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Explorative Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. 
 - `Download`: Starts the download of the current annotation. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
-- `Add Script`: Using the [webKnossos frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
+- `Add Script`: Using the [webKnossos frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
 - `Restore Older Version`: Opens a view that shows all previous versions of a tracing. From this view, any older version can be selected, previewed, and restored.
 
 A user can directly jump to positions within their datasets by entering them in the position input field.

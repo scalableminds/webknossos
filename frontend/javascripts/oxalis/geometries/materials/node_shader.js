@@ -310,6 +310,12 @@ void main()
       vec4 inner = vec4(color, alphaInner);
       vec4 outer = vec4(color, alphaOuter);
       gl_FragColor = mix(inner, outer, alphaOuter);
+
+      if (gl_FragColor.a == 0.0) {
+        // Discard that texel to avoid that the transparent halo content
+        // overwrites other nodes.
+        discard;
+      }
     }
 }`;
   }

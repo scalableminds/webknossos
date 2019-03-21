@@ -18,6 +18,7 @@ import {
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
+import type { APIDataset } from "admin/api_flow_types";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -65,6 +66,7 @@ type UserSettingsViewProps = {
   isMergerModeEnabled: boolean,
   viewMode: ViewMode,
   controlMode: ControlMode,
+  dataset: APIDataset,
 };
 
 type State = {
@@ -238,6 +240,10 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
+      const isMergerModeSupported =
+        (this.props.dataset.dataSource.dataLayers || []).find(
+          layer => layer.category === "segmentation" && layer.elementClass === "uint32",
+        ) != null;
       panels.push(
         <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
@@ -288,11 +294,17 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             onChange={this.onChangeUser.highlightCommentedNodes}
           />
           <SwitchSetting
-            label="Enable Merger Mode"
+            label={settingsLabels.mergerMode}
             value={this.props.isMergerModeEnabled}
             onChange={value => {
               this.handleMergerModeChange(value);
             }}
+            disabled={!isMergerModeSupported}
+            tooltipText={
+              !isMergerModeSupported
+                ? "The merger mode is only available for datasets with uint32 segmentations"
+                : null
+            }
           />
         </Panel>,
       );
@@ -399,6 +411,7 @@ const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+  dataset: state.dataset,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

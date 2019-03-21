@@ -4,37 +4,37 @@ import React from "react";
 
 const FeatureHighlight = ({ title, imageUrl, docsUrl = null, mirrored = false, children }) => {
   return (
-    <Row gutter={16} style={{ marginTop: 60 }}>
-      {[
-        <Col
-          key={title}
-          lg={{ span: 10, offset: mirrored ? 0 : 2 }}
-          md={{ span: 12, offset: 0 }}
-          sm={{ span: 24, offset: 0 }}
-          xs={{ span: 24, offset: 0 }}
-        >
-          <img
-            src={imageUrl}
-            alt="Some Text"
-            style={{ objectFit: "contain", float: mirrored ? "right" : "left" }}
-          />
-        </Col>,
-        <Col
-          key={title}
-          lg={{ span: 10, offset: mirrored ? 2 : 0 }}
-          md={{ span: 12 }}
-          sm={{ span: 24 }}
-          xs={{ span: 24 }}
-        >
-          <h2>{title}</h2>
-          <p>{children}</p>
-          {docsUrl ? (
-            <p>
-              <a href={docsUrl}>Read More</a>
-            </p>
-          ) : null}
-        </Col>,
-      ].sort(() => (mirrored ? -1 : 1))}
+    <Row
+      gutter={16}
+      style={{ marginTop: 60 }}
+      type="flex"
+      justify="center"
+      className={mirrored ? "feature-highlight-row" : null}
+    >
+      <Col
+        key={title}
+        lg={{ span: 8, offset: mirrored ? 2 : 0 }}
+        md={{ span: 12, offset: 0 }}
+        sm={{ span: 24, offset: 0 }}
+        xs={{ span: 24, offset: 0 }}
+      >
+        <img src={imageUrl} alt="Some Text" style={{ objectFit: "contain" }} />
+      </Col>
+      <Col
+        key={title}
+        lg={{ span: 8, offset: mirrored ? 0 : 2 }}
+        md={{ span: 12 }}
+        sm={{ span: 24 }}
+        xs={{ span: 24 }}
+      >
+        <h2>{title}</h2>
+        <p>{children}</p>
+        {docsUrl ? (
+          <p>
+            <a href={docsUrl}>Read More</a>
+          </p>
+        ) : null}
+      </Col>
     </Row>
   );
 };
@@ -206,12 +206,14 @@ export default function FeaturesView() {
       <Row
         gutter={16}
         style={{
+          marginLeft: "auto",
+          marginRight: "auto",
           background:
             "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/images/background_main_1080.jpg')",
         }}
       >
         <Col
-          md={{ span: 12, offset: 2 }}
+          md={{ span: 12, offset: 4 }}
           style={{ backgroundColor: "white", margin: 80, padding: 40 }}
         >
           <h2>Looking for Automated AI Image Analysis?</h2>

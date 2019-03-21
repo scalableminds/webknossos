@@ -38,15 +38,16 @@ class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {
+    const far = 8000000;
     for (const cam of _.values(this.props.cameras)) {
-      cam.near = -1000000;
-      cam.far = 1000000;
+      cam.near = 0;
+      cam.far = far;
     }
 
     Store.dispatch(
       setTDCameraAction({
-        near: -1000000,
-        far: 1000000,
+        near: 0,
+        far,
       }),
     );
 
@@ -183,6 +184,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
+  // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
+  // are in front of it and thus visible.
+  const clippingOffsetFactor = 900000;
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {
@@ -221,9 +225,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const height = squareWidth / aspectRatio;
 
     to = {
-      dx: b[1] / diagonal,
-      dy: b[0] / diagonal,
-      dz: -1 / 2,
+      dx: (b[1] / diagonal) * clippingOffsetFactor,
+      dy: (b[0] / diagonal) * clippingOffsetFactor,
+      dz: (-1 / 2) * clippingOffsetFactor,
       upX: 0,
       upY: 0,
       upZ: -1,
@@ -246,9 +250,9 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const t = offsetY;
 
     const positionOffset: OrthoViewMap<Vector3> = {
-      [OrthoViews.PLANE_XY]: [0, 0, -1],
-      [OrthoViews.PLANE_YZ]: [1, 0, 0],
-      [OrthoViews.PLANE_XZ]: [0, 1, 0],
+      [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
+      [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
+      [OrthoViews.PLANE_XZ]: [0, clippingOffsetFactor, 0],
     };
     const upVector: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, -1, 0],

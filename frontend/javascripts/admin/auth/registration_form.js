@@ -9,6 +9,7 @@ import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
 import features from "features";
+import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -74,6 +75,8 @@ class RegistrationForm extends React.PureComponent<Props, State> {
           : "/api/auth/register",
         { data: formValues },
       );
+
+      Store.dispatch(setHasOrganizationsAction(true));
 
       const organization = this.state.organizations.find(
         org => org.name === formValues.organization,

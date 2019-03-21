@@ -108,7 +108,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       .getWithJsonResponse[InboxDataSource]
 
   def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val dataStore = DataStore(name, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+    val dataStore = DataStore(name, url, "", isForeign = true, isConnector = false) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
       _ <- dataStoreDAO.insertOne(dataStore)
     } yield ()

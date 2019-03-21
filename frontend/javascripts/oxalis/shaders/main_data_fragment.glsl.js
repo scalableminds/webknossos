@@ -98,6 +98,7 @@ uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float planeID;
 uniform vec3 addressSpaceDimensions;
+uniform vec4 hoveredIsosurfaceId;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -148,18 +149,21 @@ void main() {
     vec4 id = getSegmentationId(worldCoordUVW);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
-    vec4 cellIdUnderMouse = getSegmentationId(flooredMousePosUVW);
+
+    // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
+    // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
+    // Passing the mouse position from the 3D viewport is not an option here, since that position
+    // isn't on the orthogonal planes necessarily.
+    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
   <% } %>
 
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
   float fallbackZoomStep;
-  bool hasFallback;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
     fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
-    hasFallback = fallbackZoomStep > zoomStep;
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(

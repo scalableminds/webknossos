@@ -17,7 +17,8 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -31,8 +32,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     config: TracingStoreConfig,
-    val handledGroupCache: TemporaryStore[(String, String, Long), Unit],
-    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
+    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+    val handledGroupIdStore: RedisTemporaryStore,
+    val uncommittedUpdatesStore: RedisTemporaryStore
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper
@@ -44,7 +46,7 @@ class VolumeTracingService @Inject()(
 
   implicit val tracingCompanion = VolumeTracing
 
-  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionFormat
+  implicit val updateActionJsonFormat = VolumeUpdateAction.volumeUpdateActionFormat
 
   val tracingType = TracingType.volume
 

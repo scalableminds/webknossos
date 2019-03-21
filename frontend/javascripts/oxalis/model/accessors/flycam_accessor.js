@@ -44,8 +44,6 @@ function calculateTotalBucketCountForZoomLevel(
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
 
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
-  const fallbackZoomStep = logZoomStep + 1;
-  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
   const dummyMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
 
@@ -56,8 +54,6 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       matrix,
       logZoomStep,
-      fallbackZoomStep,
-      isFallbackAvailable,
       abortLimit,
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
@@ -68,8 +64,6 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       matrix,
       logZoomStep,
-      fallbackZoomStep,
-      isFallbackAvailable,
       abortLimit,
     );
   } else {

@@ -384,7 +384,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             onClick={this.nextComment}
             icon="arrow-right"
           />
-          <Dropdown overlay={this.renderSortDropdown()}>
+          <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
               {this.renderSortIcon()}
             </ButtonComponent>

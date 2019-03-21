@@ -1,6 +1,6 @@
 // @flow
 
-const defaultItemsPerBatch = 10000;
+const defaultItemsPerBatch = 1000;
 let idCounter = 0;
 const idSymbol = Symbol("id");
 
@@ -15,7 +15,6 @@ const idSymbol = Symbol("id");
 class DiffableMap<K: number, V> {
   chunks: Array<Map<K, V>>;
   entryCount: number;
-  existsCache: Map<K, boolean>;
   itemsPerBatch: number;
 
   constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch?: ?number) {
@@ -27,7 +26,6 @@ class DiffableMap<K: number, V> {
       writable: true,
     });
     this.chunks = [];
-    this.existsCache = new Map();
     this.entryCount = 0;
     this.itemsPerBatch = itemsPerBatch != null ? itemsPerBatch : defaultItemsPerBatch;
 
@@ -77,67 +75,60 @@ class DiffableMap<K: number, V> {
   }
 
   set(key: K, value: V): DiffableMap<K, V> {
-    if (this.existsCache.has(key)) {
-      let idx = 0;
-      while (this.chunks[idx] != null) {
-        if (this.chunks[idx].has(key)) {
-          const newMap = shallowCopy(this);
-          newMap.chunks[idx] = new Map(this.chunks[idx]);
-          newMap.chunks[idx].set(key, value);
-          return newMap;
-        }
-        idx++;
+    let idx = 0;
+    while (this.chunks[idx] != null) {
+      if (this.chunks[idx].has(key)) {
+        const newMap = shallowCopy(this);
+        newMap.chunks[idx] = new Map(this.chunks[idx]);
+        newMap.chunks[idx].set(key, value);
+        return newMap;
       }
-      // Satisfy flow.
-      throw new Error("This code path should never be reached due to the above logic.");
-    } else {
-      const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
-      const nonFullMapIdx =
-        isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+      idx++;
+    }
 
-      // Key didn't exist. Add it.
-      const newDiffableMap = shallowCopy(this);
-      newDiffableMap.existsCache.set(key, true);
-      newDiffableMap.entryCount = this.entryCount + 1;
-      if (nonFullMapIdx > -1) {
-        newDiffableMap.chunks[nonFullMapIdx] = new Map(this.chunks[nonFullMapIdx]);
-        newDiffableMap.chunks[nonFullMapIdx].set(key, value);
-        return newDiffableMap;
-      } else {
-        const freshMap = new Map();
-        freshMap.set(key, value);
-        newDiffableMap.chunks.push(freshMap);
-        return newDiffableMap;
-      }
+    // The key was not found in the existing chunks
+    const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
+    const nonFullMapIdx =
+      isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+
+    // Key didn't exist. Add it.
+    const newDiffableMap = shallowCopy(this);
+    newDiffableMap.entryCount = this.entryCount + 1;
+    if (nonFullMapIdx > -1) {
+      newDiffableMap.chunks[nonFullMapIdx] = new Map(this.chunks[nonFullMapIdx]);
+      newDiffableMap.chunks[nonFullMapIdx].set(key, value);
+      return newDiffableMap;
+    } else {
+      const freshMap = new Map();
+      freshMap.set(key, value);
+      newDiffableMap.chunks.push(freshMap);
+      return newDiffableMap;
     }
   }
 
   mutableSet(key: K, value: V): void {
-    if (this.existsCache.has(key)) {
-      let idx = 0;
-      while (this.chunks[idx] != null) {
-        if (this.chunks[idx].has(key)) {
-          this.chunks[idx].set(key, value);
-          return;
-        }
-        idx++;
+    let idx = 0;
+    while (this.chunks[idx] != null) {
+      if (this.chunks[idx].has(key)) {
+        this.chunks[idx].set(key, value);
+        return;
       }
-    } else {
-      // let idx = 0;
-      const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
-      const nonFullMapIdx =
-        isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+      idx++;
+    }
 
-      // Key didn't exist. Add it.
-      this.existsCache.set(key, true);
-      this.entryCount++;
-      if (nonFullMapIdx > -1) {
-        this.chunks[nonFullMapIdx].set(key, value);
-      } else {
-        const freshMap = new Map();
-        freshMap.set(key, value);
-        this.chunks.push(freshMap);
-      }
+    // The key was not found in the existing chunks
+    const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
+    const nonFullMapIdx =
+      isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
+
+    // Key didn't exist. Add it.
+    this.entryCount++;
+    if (nonFullMapIdx > -1) {
+      this.chunks[nonFullMapIdx].set(key, value);
+    } else {
+      const freshMap = new Map();
+      freshMap.set(key, value);
+      this.chunks.push(freshMap);
     }
   }
 
@@ -150,7 +141,6 @@ class DiffableMap<K: number, V> {
 
     // Clone other attributes
     newDiffableMap.setId(this.getId());
-    newDiffableMap.existsCache = new Map(this.existsCache);
     newDiffableMap.entryCount = this.entryCount;
     newDiffableMap.itemsPerBatch = this.itemsPerBatch;
 
@@ -158,14 +148,10 @@ class DiffableMap<K: number, V> {
   }
 
   delete(key: K): DiffableMap<K, V> {
-    if (!this.existsCache.has(key)) {
-      return this;
-    }
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {
         const newMap = shallowCopy(this);
-        newMap.existsCache.delete(key);
         newMap.entryCount--;
         newMap.chunks[idx] = new Map(this.chunks[idx]);
         newMap.chunks[idx].delete(key);
@@ -173,8 +159,8 @@ class DiffableMap<K: number, V> {
       }
       idx++;
     }
-    // Satisfy flow.
-    throw new Error("This code path should never be reached due to the above logic.");
+    // The key was not found in the existing chunks
+    return this;
   }
 
   map<T>(fn: (value: V) => T): Array<T> {
@@ -226,12 +212,10 @@ class DiffableMap<K: number, V> {
 // It creates a new DiffableMap on the basis of another one, while
 // shallowly copying the internal chunks.
 // When modifying a chunk, that chunk should be manually cloned.
-// The existsCache is safely cloned.
 function shallowCopy<K: number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();
   newMap.setId(template.getId());
   newMap.chunks = template.chunks.slice();
-  newMap.existsCache = new Map(template.existsCache);
   newMap.entryCount = template.entryCount;
   newMap.itemsPerBatch = template.itemsPerBatch;
   return newMap;

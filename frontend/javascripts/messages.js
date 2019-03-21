@@ -71,8 +71,8 @@ In order to restore the current window, a reload is necessary.`,
   data black. This means that in case of missing data, data of lower quality is rendered
   instead. Only enable this option if you understand its effect. Please refresh
   this page so that the changes can take effect.`,
-  "tracing.copy_position": "Click this button to copy the position.",
-  "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_position": "Copy position to clipboard.",
+  "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -129,8 +129,10 @@ In order to restore the current window, a reload is necessary.`,
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": "The dataset was reloaded successfully",
-  "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.upload_success": "The dataset was uploaded successfully.",
+  "dataset.add_success": "The dataset was added successfully.",
+  "dataset.add_error": "Could not reach the datastore.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
@@ -144,9 +146,10 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
-  "dataset.import.required.name": "Please provide a name for the dataset",
-  "dataset.import.required.datastore": "Please select a datastore for the dataset",
+  "dataset.import.required.name": "Please provide a name for the dataset.",
+  "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
+  "dataset.import.required.url": "Please provide a URL to a dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>

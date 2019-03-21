@@ -26,14 +26,17 @@ export class PortalTarget extends React.Component<*, *> {
     const child = getOrCreatePortalTargetNode(this.props.portalId);
     child.parentNode.removeChild(child);
   }
+
   render() {
+    const { portalId, style } = this.props;
     return (
       <div
+        style={style}
         ref={node => {
           if (!node) {
             return;
           }
-          const child = getOrCreatePortalTargetNode(this.props.portalId);
+          const child = getOrCreatePortalTargetNode(portalId);
           node.appendChild(child);
         }}
       />

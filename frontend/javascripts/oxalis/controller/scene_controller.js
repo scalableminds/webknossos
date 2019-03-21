@@ -192,6 +192,7 @@ class SceneController {
       const newGroup = new THREE.Group();
       this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
       this.isosurfacesRootGroup.add(newGroup);
+      newGroup.cellId = segmentationId;
     }
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
@@ -416,6 +417,9 @@ class SceneController {
     this.cube.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
+    if (this.isosurfacesRootGroup != null) {
+      this.isosurfacesRootGroup.visible = false;
+    }
   }
 
   startPlaneMode(): void {

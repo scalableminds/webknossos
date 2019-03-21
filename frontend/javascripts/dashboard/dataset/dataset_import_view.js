@@ -235,7 +235,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       await updateDatasetTeams(dataset, teamIds);
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      if (this.state.dataset != null && !this.state.dataset.isForeign) {
+      if (
+        this.state.dataset != null &&
+        !this.state.dataset.isForeign &&
+        !this.state.dataset.dataStore.isConnector
+      ) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       }
 
@@ -389,7 +393,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"
-                      isForeignDataset={this.state.dataset != null && this.state.dataset.isForeign}
+                      isReadOnlyDataset={
+                        this.state.dataset != null &&
+                        (this.state.dataset.isForeign || this.state.dataset.dataStore.isConnector)
+                      }
                       form={form}
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {

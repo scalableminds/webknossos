@@ -110,60 +110,88 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
         imageUrl="/images/brain.png"
-        docsUrl="https://docs.webknossos.org"
+        docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
-        Bacon ipsum dolor amet sausage rump beef, turducken cupim short ribs capicola cow. Chuck
-        tri-tip venison kevin, alcatra ham hock bacon filet mignon brisket. Buffalo drumstick
-        burgdoggen ground round ham picanha jerky pig short loin capicola jowl tail. Biltong
-        landjaeger tri-tip jowl pork chop, ham ground round strip steak ribeye boudin cow. Beef
-        shoulder picanha strip steak, kevin leberkas meatloaf t-bone sirloin swine.
+        <p>
+          Use our published <i>Flight mode</i> to quickly capture high-quality skeleton annotations.
+          Organize the UI to fit your needs and discover your data in the easy-to-use viewer.
+        </p>
+        <p>
+          Create fine-grained skeleton annotations: Mark branch points and overlay 3D mesh
+          structures on your data. Easily organize your skeletons into groups and highlight special
+          interest regions with comments.
+        </p>
       </FeatureHighlight>
 
       <FeatureHighlight
         title="Simple Collaboration"
         imageUrl="/images/brain.png"
-        docsUrl="https://docs.webknossos.org"
+        docsUrl="https://docs.webknossos.org/guides/sharing"
         mirrored
       >
-        Bacon ipsum dolor amet sausage rump beef, turducken cupim short ribs capicola cow. Chuck
-        tri-tip venison kevin, alcatra ham hock bacon filet mignon brisket. Buffalo drumstick
-        burgdoggen ground round ham picanha jerky pig short loin capicola jowl tail. Biltong
-        landjaeger tri-tip jowl pork chop, ham ground round strip steak ribeye boudin cow. Beef
-        shoulder picanha strip steak, kevin leberkas meatloaf t-bone sirloin swine.
+        <p>
+          As a web-based application, webKnossos makes it extremely easy to share links to your
+          datasets and annotations. Send private deep links to interesting regions within your
+          dataset directly to your colleagues for review.
+        </p>
+        <p>
+          Support your paper publications by publishing your datasets and annotations with
+          webKnossos for everyone to discover. No registration required and immediate access to
+          viewing the original data.
+        </p>
       </FeatureHighlight>
 
       <FeatureHighlight
         title="Efficient Volume Annotation"
         imageUrl="/images/brain.png"
-        docsUrl="https://docs.webknossos.org"
+        docsUrl="https://docs.webknossos.org/guides/tracing_ui#volume-annotations"
       >
-        Bacon ipsum dolor amet sausage rump beef, turducken cupim short ribs capicola cow. Chuck
-        tri-tip venison kevin, alcatra ham hock bacon filet mignon brisket. Buffalo drumstick
-        burgdoggen ground round ham picanha jerky pig short loin capicola jowl tail. Biltong
-        landjaeger tri-tip jowl pork chop, ham ground round strip steak ribeye boudin cow. Beef
-        shoulder picanha strip steak, kevin leberkas meatloaf t-bone sirloin swine.
+        <p>
+          Use webKnossos to create and proof-read dense 3D volume annotations. Our tools make it
+          simple to label volume data for training a machine learning model. Refine existing
+          annotations and correct mistakes created from automated segmentation systems.
+        </p>
+        <p>Explore your volume data in 3D through on-the-fly 3D isosurface visualizations.</p>
       </FeatureHighlight>
 
       <FeatureHighlight
         title="Dataset Management"
         imageUrl="/images/brain.png"
-        docsUrl="https://docs.webknossos.org"
+        docsUrl="https://docs.webknossos.org/reference/data_formats"
         mirrored
       >
-        Bacon ipsum dolor amet sausage rump beef, turducken cupim short ribs capicola cow. Chuck
-        tri-tip venison kevin, alcatra ham hock bacon filet mignon brisket. Buffalo drumstick
-        burgdoggen ground round ham picanha jerky pig short loin capicola jowl tail. Biltong
-        landjaeger tri-tip jowl pork chop, ham ground round strip steak ribeye boudin cow. Beef
-        shoulder picanha strip steak, kevin leberkas meatloaf t-bone sirloin swine.
+        <p>
+          webKnossos supports a wide range of common EM data formats. (Knossos cubes, WKW,
+          Neuroglancer Precomputed, BOSS DB, Tiff Stacks) Datasets can be hosted on-premise or in
+          our cloud for simplicity.
+        </p>
+        <p>
+          We support multi-channel dataset. From simple grayscale and RGB data to (multi-channel)
+          segmentation layers. webKnossos is optimized for working with 3D electron, light,
+          fluorescence microscopy datasets.
+        </p>
+        <p>
+          Datasets support access-level control and can easily be shared with colleagues and
+          published for review.
+        </p>
       </FeatureHighlight>
 
-      <FeatureHighlight title="Project & Task Management" imageUrl="/images/brain.png">
-        Bacon ipsum dolor amet sausage rump beef, turducken cupim short ribs capicola cow. Chuck
-        tri-tip venison kevin, alcatra ham hock bacon filet mignon brisket. Buffalo drumstick
-        burgdoggen ground round ham picanha jerky pig short loin capicola jowl tail. Biltong
-        landjaeger tri-tip jowl pork chop, ham ground round strip steak ribeye boudin cow. Beef
-        shoulder picanha strip steak, kevin leberkas meatloaf t-bone sirloin swine.
+      <FeatureHighlight
+        title="Project & Task Management"
+        imageUrl="/images/brain.png"
+        docsUrl="https://docs.webknossos.org/guides/tasks"
+      >
+        <p>
+          Reconstructing large-scale Connectomics datasets can be daunting. Our project and task
+          management features help you assign skeleton and volume reconstructions to your team for
+          crowd-sourcing. View and download the aggregated individual results as a whole project.
+        </p>
+        <p>
+          Fine-grained user access levels and subteams help you manage datasets and tasks within
+          your lab.
+        </p>
       </FeatureHighlight>
+
       <h2 style={{ textAlign: "center", marginTop: 80, marginBottom: 50 }}>Feature Summary</h2>
       <Row gutter={16}>
         <FeatureList title="Annotations">

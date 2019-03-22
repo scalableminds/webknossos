@@ -2,6 +2,7 @@
 import { withRouter, type RouterHistory } from "react-router-dom";
 import { Row, Col, Button } from "antd";
 import React, { type Node } from "react";
+import CreditsFooter from "components/credits_footer";
 
 const FeatureHighlight = ({
   title,
@@ -12,8 +13,8 @@ const FeatureHighlight = ({
 }: {
   title: string,
   imageUrl: string,
-  docsUrl: ?string,
-  mirrored: boolean,
+  docsUrl?: ?string,
+  mirrored?: boolean,
   children: Node,
 }) => (
   <Row
@@ -54,7 +55,7 @@ const FeatureList = ({ title, children }: { title: string, children: Array<Node>
   <Col md={{ span: 8 }} sm={{ span: 24 }}>
     <h3 style={{ textAlign: "center" }}>{title}</h3>
     {children.map((child: Node, i: number) => (
-      <div key={i} style={{ margin: 30 }}>
+      <div key={String(i)} style={{ margin: 30 }}>
         <img
           src="/images/feature-checkmark.svg"
           alt="checkmark"
@@ -80,7 +81,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%), url('/images/cover.jpg')",
       }}
     >
-      <Col md={{ span: 14 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
+      <Col md={{ span: 14 }} xs={{ span: 24 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
         <h1 style={{ color: "white" }}>webKnossos</h1>
         <h4 style={{ color: "white" }}>
           The leading in-browser annotation tool for 3D microscopy data for researchers
@@ -97,15 +98,16 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         <Button
           type="primary"
           size="large"
-          style={{ marginTop: 40, marginRight: 20 }}
+          style={{ marginTop: 40, marginRight: 20, marginBottom: 20 }}
           onClick={() => history.push("/onboarding")}
         >
-          Create Your Account
+          Create A Free Account
         </Button>
-        <Button size="large">Get In Contact</Button>
+        <a href="mailto:hello@scalableminds.com" style={{ color: "white" }}>
+          Get In Contact With Us
+        </a>
       </Col>
     </Row>
-
     <div className="container" style={{ paddingTop: 20 }}>
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
@@ -273,7 +275,6 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </FeatureList>
       </Row>
     </div>
-
     <Row
       gutter={16}
       style={{
@@ -301,6 +302,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         <a href="https://scalableminds.com/image-analysis">Learn more</a>
       </Col>
     </Row>
+    <CreditsFooter />
   </>
 );
 

@@ -14,7 +14,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 ![webKnossos logo](https://webknossos.org/images/oxalis.svg)
 
 ## Demo
-Try webKnossos yourself on a large selection of publish community datasets: [https://webknossos.org/](https://webknossos.org/)
+Try webKnossos on a large selection of published datasets: [https://webknossos.org/](https://webknossos.org/)
 
 ## Features
 * Exploration of large 3D image datasets

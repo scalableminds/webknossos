@@ -18,6 +18,8 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | 3                             | Toggle Segmentation Opacity                 |
 | H                             | Increase the Move Value                     |
 | G                             | Decrease the Move Value                     |
+| Q                             | Download Screenshot(s) of Viewport(s)       |
+| .                             | Toggle Viewport Maximization                |
 
 ## Skeleton Tracings
 

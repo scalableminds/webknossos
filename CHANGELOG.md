@@ -32,6 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed interpolation along z-axis. [#3888](https://github.com/scalableminds/webknossos/pull/3888)
 - Fixed that the halo of the active node could cover other nodes. [#3919](https://github.com/scalableminds/webknossos/pull/3919)
 - Fixed that the 3D viewport was partially occluded due to clipping distance issues. [#3919](https://github.com/scalableminds/webknossos/pull/3919)
+- Fixed that scrolling with the mouse wheel over a data viewport also scrolled the page. This bug appeared with the new Chrome version 73. [#3939](https://github.com/scalableminds/webknossos/pull/3939)
 
 ### Removed
 - Removed FPS meter in Annotation View. [#3916](https://github.com/scalableminds/webknossos/pull/3916)

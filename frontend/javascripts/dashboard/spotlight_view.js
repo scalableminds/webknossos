@@ -12,7 +12,7 @@ import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
 
-const { Content, Footer } = Layout;
+const { Content } = Layout;
 const { Search } = Input;
 
 const SimpleHeader = () => (

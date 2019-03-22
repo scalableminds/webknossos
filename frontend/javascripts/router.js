@@ -44,6 +44,7 @@ import TimeLineView from "admin/time/time_line_view";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
 import FeaturesView from "pages/frontpage/features_view";
+import PricingView from "pages/frontpage/pricing_view";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import features from "features";
@@ -425,6 +426,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />
               <Route path="/features" component={FeaturesView} />
+              <Route path="/pricing" component={PricingView} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

@@ -67,6 +67,33 @@ const FeatureList = ({ title, children }: { title: string, children: Array<Node>
   </Col>
 );
 
+export const ImageAnalysisBlock = () => (
+  <Row
+    gutter={16}
+    style={{
+      marginLeft: "auto",
+      marginRight: "auto",
+      marginTop: 80,
+      background:
+        "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/images/background_main_1080.jpg')",
+    }}
+  >
+    <Col md={{ span: 12, offset: 4 }} style={{ backgroundColor: "white", margin: 80, padding: 40 }}>
+      <h2>Looking for Automated Image Analysis?</h2>
+      <p>
+        webKnossos is excellent for viewing, managing and annotating large-scale image datasets but
+        sometimes you need more power to scale.
+      </p>
+      <p>
+        scalable minds offers a wide range of machine learning based image analysis services for
+        reconstructing rich information from microscope images. We can help with image alignment,
+        dense segmentation, and object detection.
+      </p>
+      <a href="https://scalableminds.com/image-analysis">Learn more</a>
+    </Col>
+  </Row>
+);
+
 const FeaturesView = ({ history }: { history: RouterHistory }) => (
   <>
     <Row
@@ -275,33 +302,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </FeatureList>
       </Row>
     </div>
-    <Row
-      gutter={16}
-      style={{
-        marginLeft: "auto",
-        marginRight: "auto",
-        marginTop: 80,
-        background:
-          "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/images/background_main_1080.jpg')",
-      }}
-    >
-      <Col
-        md={{ span: 12, offset: 4 }}
-        style={{ backgroundColor: "white", margin: 80, padding: 40 }}
-      >
-        <h2>Looking for Automated Image Analysis?</h2>
-        <p>
-          webKnossos is excellent for viewing, managing and annotating large-scale image datasets
-          but sometimes you need more power to scale.
-        </p>
-        <p>
-          scalable minds offers a wide range of machine learning based image analysis services for
-          reconstructing rich information from microscope images. We can help with image alignment,
-          dense segmentation, and object detection.
-        </p>
-        <a href="https://scalableminds.com/image-analysis">Learn more</a>
-      </Col>
-    </Row>
+    <ImageAnalysisBlock />
     <CreditsFooter />
   </>
 );

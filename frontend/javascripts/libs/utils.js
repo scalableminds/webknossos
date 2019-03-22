@@ -436,6 +436,27 @@ export function isNoElementFocussed(): boolean {
   return document.activeElement === document.body;
 }
 
+const arePassiveEventsSupported = _.once(() => {
+  let passiveSupported = false;
+
+  try {
+    const options = {
+      // $FlowIgnore
+      get passive() {
+        // This function will be called when the browser
+        //   attempts to access the passive property.
+        passiveSupported = true;
+      },
+    };
+
+    window.addEventListener("test", options, options);
+    window.removeEventListener("test", options, options);
+  } catch (err) {
+    passiveSupported = false;
+  }
+  return passiveSupported;
+});
+
 // https://stackoverflow.com/questions/25248286/native-js-equivalent-to-jquery-delegation#
 export function addEventListenerWithDelegation(
   element: HTMLElement,
@@ -453,7 +474,11 @@ export function addEventListenerWithDelegation(
       }
     }
   };
-  element.addEventListener(eventName, wrapperFunc, false);
+  element.addEventListener(
+    eventName,
+    wrapperFunc,
+    arePassiveEventsSupported ? { passive: false } : false,
+  );
   return { [eventName]: wrapperFunc };
 }
 

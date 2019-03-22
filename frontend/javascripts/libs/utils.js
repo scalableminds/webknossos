@@ -446,6 +446,7 @@ const arePassiveEventsSupported = _.once(() => {
         // This function will be called when the browser
         //   attempts to access the passive property.
         passiveSupported = true;
+        return true;
       },
     };
 

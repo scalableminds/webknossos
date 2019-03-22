@@ -99,7 +99,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "M",
-      action: "Toggle Mode (orthogonal, Flight, Oblique)",
+      action: "Toggle Mode (Orthogonal, Flight, Oblique)",
     },
     {
       keybinding: "1",
@@ -124,6 +124,14 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "Ctrl + Shift + F",
       action: "Open Tree Search (if Tree List is visible)",
+    },
+    {
+      keybinding: "Q",
+      action: "Download Screenshot(s) of Viewport(s)",
+    },
+    {
+      keybinding: ".",
+      action: "Toggle Viewport Maximization",
     },
   ];
 

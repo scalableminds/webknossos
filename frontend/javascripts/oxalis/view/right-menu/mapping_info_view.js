@@ -80,6 +80,8 @@ const convertCellIdToCSS = (id, customColors) =>
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class MappingInfoView extends React.Component<Props, State> {
+  isMounted: boolean = false;
+
   state = {
     shouldMappingBeEnabled: false,
     isRefreshingMappingList: false,
@@ -106,8 +108,7 @@ class MappingInfoView extends React.Component<Props, State> {
     cube.off("volumeLabeled", this._forceUpdate);
   }
 
-  isMounted: boolean = false;
-
+  // eslint-disable-next-line react/sort-comp
   _forceUpdate = _.throttle(() => {
     if (!this.isMounted) {
       return;

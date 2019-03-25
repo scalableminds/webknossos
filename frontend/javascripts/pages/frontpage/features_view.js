@@ -168,7 +168,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         <Button
           type="primary"
           size="large"
-          style={{ marginTop: 40, marginRight: 20, marginBottom: 20 }}
+          style={{ marginTop: 40, marginRight: 20, marginBottom: 20, fontSize: 18 }}
           onClick={() => history.push("/onboarding")}
         >
           Create a Free Account

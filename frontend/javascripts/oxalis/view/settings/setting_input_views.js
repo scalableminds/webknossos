@@ -159,6 +159,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
         </Col>
         <Col span={15}>
           <Tooltip title={tooltipText} placement="top">
+            {/* This div is necessary for the tooltip to be displayed */}
             <div style={{ display: "inline-block" }}>
               <Switch
                 onChange={onChange}

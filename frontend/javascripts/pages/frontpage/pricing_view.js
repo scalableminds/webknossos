@@ -1,5 +1,5 @@
 // @flow
-import { withRouter, type RouterHistory, Link } from "react-router-dom";
+import { withRouter, Link } from "react-router-dom";
 import { Row, Col, Button } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
@@ -18,7 +18,7 @@ const PricingColumn = ({
   children: Array<Node>,
   contentStyle?: Object,
 }) => (
-  <Col span={8}>
+  <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
     <div
       style={{
         backgroundColor: "#eee",
@@ -31,11 +31,11 @@ const PricingColumn = ({
       <h2>{title}</h2>
       <img src={iconUrl} style={{ height: 60 }} alt="icon" />
       {price === 0 ? (
-        <h1 style={{ margin: 20, marginBottom: 40 }}>Free</h1>
+        <h1 style={{ margin: 20, marginBottom: 60 }}>Free</h1>
       ) : (
         <>
           <h1 style={{ margin: 20, marginBottom: 5 }}>{price}€</h1>
-          <p style={{ marginBottom: 20 }}>per month*</p>
+          <p style={{ marginBottom: 40 }}>per month*</p>
         </>
       )}
       {children.map((child, i) => (
@@ -47,50 +47,27 @@ const PricingColumn = ({
   </Col>
 );
 
-const PricingView = ({ history }: { history: RouterHistory }) => (
-  <>
-    <Row
-      gutter={16}
-      type="flex"
-      align="center"
-      style={{
-        marginLeft: "auto",
-        marginRight: "auto",
-        color: "white",
-        background:
-          "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%), url('/images/cover.jpg')",
-      }}
-    >
-      <Col md={{ span: 14 }} xs={{ span: 24 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
-        <h1 style={{ color: "white" }}>webKnossos</h1>
-        <h4 style={{ color: "white" }}>
-          The leading in-browser annotation tool for 3D microscopy data for researchers
-        </h4>
-        <p style={{ marginTop: 40 }}>
-          webKnossos supports your research with efficient data management and advanced tools to
-          create skeleton and volume annotations. It is optimized to manage terabytes of 3D
-          microscopy image data, as required by Neuroscientists.
-        </p>
-        <p>
-          webKnossos is developed as an open-source project in collaboration with international
-          research partners.
-        </p>
-        <Button
-          type="primary"
-          size="large"
-          style={{ marginTop: 40, marginRight: 20, marginBottom: 20 }}
-          onClick={() => history.push("/onboarding")}
-        >
-          Create A Free Account
-        </Button>
-        <a href="mailto:hello@scalableminds.com" style={{ color: "white" }}>
-          Get In Contact With Us
-        </a>
-      </Col>
-    </Row>
+const FAQItem = ({ title, children }: { title: string, children: Node }) => (
+  <Col lg={{ span: 12 }} md={{ span: 12 }} sm={{ span: 24 }} xs={{ span: 24 }}>
+    <div style={{ margin: 20 }}>
+      <h4>{title}</h4>
+      <p>{children}</p>
+    </div>
+  </Col>
+);
 
-    <div className="container" style={{ paddingTop: 20 }}>
-      <Row gutter={16} type="flex">
+const PricingView = () => (
+  <>
+    <div className="container" style={{ marginTop: 50 }}>
+      <div style={{ textAlign: "center" }}>
+        <h1>Hosting Solutions</h1>
+        <h4>
+          Our webKnossos hosting solutions get you started with webKnossos today. Fast. Functional.
+          Flexible. Trusted by leading research labs.
+        </h4>
+      </div>
+
+      <Row gutter={16} type="flex" style={{ marginTop: 90, marginBottom: 100 }}>
         <PricingColumn title="Public Hosting" iconUrl="/images/public-hosting-icon.svg" price={0}>
           {[
             "Try out webKnossos for free with any published datasets on webknossos.org",
@@ -141,10 +118,62 @@ const PricingView = ({ history }: { history: RouterHistory }) => (
           ]}
         </PricingColumn>
       </Row>
+      <Row gutter={16}>
+        <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>
+        <FAQItem title="How do I get started?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="Why should I trust scalable minds with my data?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="Where is my data stored?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="Can I change my plan at a later time? Can I cancel anytime?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="Where can I learn more about webKnossos?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="What is the difference between Premium and Enterprise hosting?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="What about open-source?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+      </Row>
     </div>
     <ImageAnalysisBlock />
     <CreditsFooter />
   </>
 );
 
-export default withRouter(PricingView);
+export default PricingView;

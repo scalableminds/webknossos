@@ -7,6 +7,7 @@ import { Col, Collapse, Divider, Icon, Row, Select, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
+import { Chart } from "react-google-charts";
 import _ from "lodash";
 
 import type { APIDataset } from "admin/api_flow_types";
@@ -20,6 +21,7 @@ import { findDataPositionForLayer } from "admin/admin_rest_api";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { generateScreenshotsAsBuffers } from "oxalis/view/rendering_utils";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
@@ -39,8 +41,8 @@ import constants, {
 } from "oxalis/constants";
 import messages, { settings } from "messages";
 
-const Panel = Collapse.Panel;
-const Option = Select.Option;
+const { Panel } = Collapse;
+const { Option } = Select;
 
 type DatasetSettingsProps = {|
   datasetConfiguration: DatasetConfiguration,
@@ -58,7 +60,79 @@ type DatasetSettingsProps = {|
   onZoomToResolution: Vector3 => number,
 |};
 
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+type State = {
+  histogram: ?Array<Array<number>>,
+};
+
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  state = {
+    histogram: null,
+  };
+
+  componentDidMount() {
+    this.loadHistogram();
+  }
+
+  loadHistogram = async () => {
+    const screenshots = await generateScreenshotsAsBuffers();
+    // red, green, blue, alpha, avg of color
+    const histogram = Array(5).fill(Array(256).fill(0));
+    Object.keys(screenshots).forEach(planeId => {
+      const buffer = screenshots[planeId];
+      for (let pos = 0; pos + 3 < buffer.length; pos += 4) {
+        histogram[0][buffer[pos]] += 1;
+        histogram[1][buffer[pos + 1]] += 1;
+        histogram[2][buffer[pos + 2]] += 1;
+        histogram[3][buffer[pos + 3]] += 1;
+        const avg = Math.floor((buffer[pos] + buffer[pos + 1] + buffer[pos + 2]) / 3);
+        histogram[4][avg] += 1;
+      }
+      this.setState({ histogram });
+    });
+  };
+
+  renderHistogram = () => {
+    const { histogram } = this.state;
+    const histogramData = Array(255);
+    const maxValue = Math.max(
+      ...histogram[0].slice(1, 254),
+      ...histogram[1].slice(1, 254),
+      ...histogram[2].slice(1, 254),
+      ...histogram[3].slice(1, 254),
+      ...histogram[4].slice(1, 254),
+    );
+    histogramData[0] = ["value", "red", "green", "blue", "alpha", "avg"];
+    // Bug => max value does not work, so we dont render 0 and 255 as they are an edge case
+    for (let pos = 1; pos < 255; pos++) {
+      histogramData[pos] = [
+        pos.toString(),
+        histogram[0][pos],
+        histogram[1][pos],
+        histogram[2][pos],
+        histogram[3][pos],
+        histogram[4][pos],
+      ];
+    }
+    console.log("data", histogramData, maxValue);
+    return (
+      <Chart
+        width="300px"
+        height="300px"
+        chartType="AreaChart"
+        loader={<div>Loading Chart</div>}
+        data={histogramData}
+        options={{
+          title: "Histogram",
+          hAxis: { title: "value", titleTextStyle: { color: "#333" } },
+          vAxis: { minValue: 0, maxValue },
+          // For the legend to fit, we make the chart area smaller
+          chartArea: { width: "50%", height: "70%" },
+          // lineWidth: 25
+        }}
+      />
+    );
+  };
+
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
@@ -185,6 +259,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
+        {this.state.histogram != null ? this.renderHistogram() : null}
         <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>

@@ -63,7 +63,24 @@ export function renderToTexture(
   return buffer;
 }
 
+export async function generateScreenshotsAsBuffers() {
+  const { temporaryConfiguration } = Store.getState();
+  const { viewMode } = temporaryConfiguration;
+
+  const planeIds =
+    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValuesWithoutTDView : [ArbitraryViewport];
+  const screenshots = {};
+  for (const planeId of planeIds) {
+    const { width, height } = getInputCatcherRect(Store.getState(), planeId);
+    if (width === 0 || height === 0) continue;
+
+    const buffer = renderToTexture(planeId);
+    screenshots[planeId] = buffer;
+  }
+  return screenshots;
+}
 export async function downloadScreenshot() {
+  const screenshots = generateScreenshotsAsBuffers();
   const { dataset, flycam, temporaryConfiguration } = Store.getState();
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
@@ -71,18 +88,11 @@ export async function downloadScreenshot() {
 
   const baseName = `${datasetName}__${x}_${y}_${z}`;
 
-  const planeIds =
-    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValuesWithoutTDView : [ArbitraryViewport];
-
-  for (const planeId of planeIds) {
+  for (const planeId of Object.keys(screenshots)) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
-    if (width === 0 || height === 0) continue;
-
-    const buffer = renderToTexture(planeId);
-
-    // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(buffer, width, height);
     const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
+    // eslint-disable-next-line no-await-in-loop
+    const blob = await convertBufferToImage(screenshots[planeId], width, height);
     saveAs(blob, `${baseName}__${planeDescriptor}.png`);
   }
 }

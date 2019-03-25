@@ -94,6 +94,14 @@ type CommentTabState = {
 
 class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabState> {
   listRef: ?List;
+  storePropertyUnsubscribers: Array<() => void> = [];
+  keyboard = new InputKeyboard(
+    {
+      n: () => this.nextComment(),
+      p: () => this.previousComment(),
+    },
+    { delay: Store.getState().userConfiguration.keyboardDelay },
+  );
 
   state = {
     isSortedAscending: true,
@@ -150,16 +158,6 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
     this.keyboard.destroy();
     this.unsubscribeStoreListeners();
   }
-
-  storePropertyUnsubscribers: Array<() => void> = [];
-
-  keyboard = new InputKeyboard(
-    {
-      n: () => this.nextComment(),
-      p: () => this.previousComment(),
-    },
-    { delay: Store.getState().userConfiguration.keyboardDelay },
-  );
 
   nextComment = (forward: boolean = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
@@ -384,7 +382,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             onClick={this.nextComment}
             icon="arrow-right"
           />
-          <Dropdown overlay={this.renderSortDropdown()}>
+          <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
               {this.renderSortIcon()}
             </ButtonComponent>

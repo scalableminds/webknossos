@@ -43,20 +43,6 @@ export async function screenshotDataset(
   return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id, optionalViewOverride);
 }
 
-function removeFpsMeter(page: Page) {
-  // The parameter to page.evaluate will be evaluated in the puppeteer browser context
-  // When supplying a js function instead of the template string, babel will mess with the code
-  // which may lead to errors (e.g.: _window is not defined)
-  // See https://github.com/GoogleChrome/puppeteer/issues/1665
-  return page.evaluate(`() => {
-    const fpsMeter = document.querySelector("#stats");
-    if (fpsMeter != null) {
-      const { parentNode } = fpsMeter;
-      if (parentNode != null) parentNode.removeChild(fpsMeter);
-    }
-  }`);
-}
-
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   while (inputCatchers == null || inputCatchers.length < 4) {
@@ -66,9 +52,6 @@ async function waitForTracingViewLoad(page: Page) {
 }
 
 async function waitForRenderingFinish(page: Page) {
-  // Remove the FPS meter as it will update even after the rendering is finished
-  await removeFpsMeter(page);
-
   let currentShot;
   let lastShot = await page.screenshot({ fullPage: true });
   let changedPixels = Infinity;

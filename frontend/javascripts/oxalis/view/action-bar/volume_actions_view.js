@@ -45,7 +45,9 @@ class VolumeActionsView extends PureComponent<Props> {
           <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
         </RadioGroup>
         <ButtonGroup>
-          <ButtonComponent onClick={this.handleCreateCell}>Create new cell (C)</ButtonComponent>
+          <ButtonComponent onClick={this.handleCreateCell}>
+            New <span style={{ textDecoration: "underline" }}>C</span>ell
+          </ButtonComponent>
         </ButtonGroup>
       </div>
     );

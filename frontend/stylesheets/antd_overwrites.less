@@ -103,3 +103,28 @@ label.ant-checkbox-wrapper {
 .antd-no-border-list .ant-list-item {
   border-bottom: none;
 }
+
+.sub-menu-without-padding .ant-menu-submenu-title {
+  padding: 0;
+}
+
+.vertical-center-flex-fix .ant-menu-submenu-title {
+  display: flex;
+}
+
+.collapsed-nav-header {
+  .ant-menu-item,
+  .ant-menu-submenu-title {
+    padding: 0 6px;
+  }
+
+  .anticon {
+    margin-right: 0;
+  }
+}
+
+.ant-tooltip {
+  // Make all tooltips click-through so that they don't make the underlying
+  // UI unusable
+  pointer-events: none;
+}

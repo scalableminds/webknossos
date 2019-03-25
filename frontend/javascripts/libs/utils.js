@@ -478,7 +478,7 @@ export function addEventListenerWithDelegation(
   element.addEventListener(
     eventName,
     wrapperFunc,
-    arePassiveEventsSupported ? { passive: false } : false,
+    arePassiveEventsSupported() ? { passive: false } : false,
   );
   return { [eventName]: wrapperFunc };
 }

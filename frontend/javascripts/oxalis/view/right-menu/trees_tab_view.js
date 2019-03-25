@@ -255,9 +255,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
         this.props.onDeleteMultipleTrees(selectedTrees);
         this.setState({ selectedTrees: [] });
       };
-      this.showModalConfimWarning(
+      this.showModalConfirmWarning(
         "Delete all selected trees?",
-        messages["tracing.delete_mulitple_trees"]({
+        messages["tracing.delete_multiple_trees"]({
           countOfTrees: numbOfSelectedTrees,
         }),
         deleteAllSelectedTrees,
@@ -312,7 +312,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  showModalConfimWarning(title: string, content: string, onConfirm: () => void) {
+  showModalConfirmWarning(title: string, content: string, onConfirm: () => void) {
     Modal.confirm({
       title,
       content,

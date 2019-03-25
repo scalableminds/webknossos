@@ -114,7 +114,7 @@ async function withRetry(
 
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
-    withRetry(
+    await withRetry(
       3,
       async () => {
         const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };

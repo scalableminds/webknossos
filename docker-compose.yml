@@ -12,10 +12,13 @@ services:
       - "fossildb-persisted:fossildb"
       - "postgres-persisted:postgres"
       - redis
+      - webknossos-connect
     depends_on:
       postgres-persisted:
         condition: service_healthy
       fossildb-persisted:
+        condition: service_healthy
+      webknossos-connect:
         condition: service_healthy
     command:
       - -Dconfig.file=conf/application.conf
@@ -123,10 +126,13 @@ services:
       - "fossildb-dev:fossildb"
       - "postgres-dev:postgres"
       - redis
+      - webknossos-connect
     depends_on:
       postgres-dev:
         condition: service_healthy
       fossildb-dev:
+        condition: service_healthy
+      webknossos-connect:
         condition: service_healthy
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
@@ -167,10 +173,13 @@ services:
       - postgres
       - fossildb
       - redis
+      - webknossos-connect
     depends_on:
       postgres:
         condition: service_healthy
       fossildb:
+        condition: service_healthy
+      webknossos-connect:
         condition: service_healthy
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
@@ -195,6 +204,13 @@ services:
     volumes:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
+
+  # webKnossos-connect
+  webknossos-connect:
+    image: scalableminds/webknossos-connect:master__190
+    volumes:
+      - "./conf/connect:/app/data"
+    network_mode: host
 
   # Postgres
   postgres:

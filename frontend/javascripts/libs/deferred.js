@@ -15,10 +15,10 @@ class Deferred<T, U> {
   // ```
   // d = new Deferred()
   // setTimeout(
-  //   -> d.internalResolve()
+  //   () => d.resolve(),
   //   1000
   // )
-  // return d.internalPromise()
+  // d.promise().then(...)
   // ```
 
   constructor() {

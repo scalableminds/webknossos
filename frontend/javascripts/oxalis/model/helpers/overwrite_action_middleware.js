@@ -7,7 +7,7 @@ const overwrites = {};
 
 export function overwriteAction<S, A>(
   actionName: string,
-  overwriteFunction: (store: S, next: (action: A) => void, action: A) => void,
+  overwriteFunction: (store: S, next: (action: A) => void, action: A) => void | Promise<void>,
 ) {
   if (overwrites[actionName]) {
     console.warn(
@@ -18,6 +18,9 @@ export function overwriteAction<S, A>(
   }
 
   overwrites[actionName] = overwriteFunction;
+  return () => {
+    delete overwrites[actionName];
+  };
 }
 
 export function removeOverwrite(actionName: string) {

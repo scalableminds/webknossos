@@ -25,6 +25,7 @@ type State = {
 const SAVE_POLLING_INTERVAL = 1000;
 
 class SaveButton extends React.PureComponent<Props, State> {
+  savedPollingInterval: number = 0;
   state = {
     isStateSaved: false,
   };
@@ -38,7 +39,6 @@ class SaveButton extends React.PureComponent<Props, State> {
     window.clearInterval(this.savedPollingInterval);
   }
 
-  savedPollingInterval: number = 0;
   _forceUpdate = () => {
     const isStateSaved = Model.stateSaved();
     this.setState({

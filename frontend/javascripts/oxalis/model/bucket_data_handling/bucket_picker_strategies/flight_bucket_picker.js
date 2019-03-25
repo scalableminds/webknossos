@@ -42,14 +42,14 @@ export default function determineBucketsForFlight(
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
-  fallbackZoomStep: number,
-  isFallbackAvailable: boolean,
   abortLimit?: number,
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
   const width = constants.VIEWPORT_WIDTH;
   const halfWidth = width / 2;
   const cameraVertex = [0, 0, -sphericalCapRadius];
+  const fallbackZoomStep = logZoomStep + 1;
+  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
   const transformToSphereCap = _vec => {
     const vec = V3.sub(_vec, cameraVertex);
@@ -67,7 +67,7 @@ export default function determineBucketsForFlight(
   const cameraDirection = V3.sub(centerPosition, cameraPosition);
   V3.scale(cameraDirection, 1 / Math.abs(V3.length(cameraDirection)), cameraDirection);
 
-  const iterStep = 10;
+  const iterStep = 8;
   for (let y = -halfWidth; y <= halfWidth; y += iterStep) {
     const xOffset = y % iterStep;
     for (let x = -halfWidth - xOffset; x <= halfWidth + xOffset; x += iterStep) {

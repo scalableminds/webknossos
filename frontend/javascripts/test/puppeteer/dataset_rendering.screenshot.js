@@ -96,28 +96,54 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
   },
 };
 
+async function withRetry(
+  retryCount: number,
+  testFn: () => Promise<boolean>,
+  resolveFn: boolean => void,
+) {
+  for (let i = 0; i < retryCount; i++) {
+    // eslint-disable-next-line no-await-in-loop
+    const condition = await testFn();
+    if (condition || i === retryCount - 1) {
+      // Either the test passed or we executed the last attempt
+      resolveFn(condition);
+      return;
+    }
+  }
+}
+
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
-    const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
-    const { screenshot, width, height } = await screenshotDataset(
-      await getNewPage(t.context.browser),
-      URL,
-      datasetId,
-      viewOverrides[datasetName],
-      datasetConfigOverrides[datasetName],
-    );
-    const changedPixels = await compareScreenshot(
-      screenshot,
-      width,
-      height,
-      BASE_PATH,
-      datasetName,
-    );
+    withRetry(
+      3,
+      async () => {
+        const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
+        const { screenshot, width, height } = await screenshotDataset(
+          await getNewPage(t.context.browser),
+          URL,
+          datasetId,
+          viewOverrides[datasetName],
+          datasetConfigOverrides[datasetName],
+        );
+        const changedPixels = await compareScreenshot(
+          screenshot,
+          width,
+          height,
+          BASE_PATH,
+          datasetName,
+        );
 
-    t.is(
-      changedPixels,
-      0,
-      `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+        // There may be a difference of 0.1 %
+        const allowedThreshold = 0.1 / 100;
+        const allowedChangedPixel = allowedThreshold * width * height;
+        return changedPixels < allowedChangedPixel;
+      },
+      condition => {
+        t.true(
+          condition,
+          `Dataset with name: "${datasetName}" does not look the same, see ${datasetName}.diff.png for the difference and ${datasetName}.new.png for the new screenshot.`,
+        );
+      },
     );
   });
 });

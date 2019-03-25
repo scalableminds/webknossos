@@ -257,12 +257,8 @@ jobs:
       - run:
           name: Run screenshot-tests
           command: |
-            for i in {1..5}; do # retry
-              URL=https://master.webknossos.xyz/ \
-              yarn test-screenshot && s=0 && break || s=$?
-              sleep 30
-            done
-            (exit $s)
+            URL=https://master.webknossos.xyz/ \
+            yarn test-screenshot
 
       - store_artifacts:
           path: frontend/javascripts/test/screenshots

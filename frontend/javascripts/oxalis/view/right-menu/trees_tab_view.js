@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
-
+import memoizeOne from "memoize-one";
 import { binaryConfirm } from "libs/async_confirm";
 import {
   createGroupToTreesMap,
@@ -33,6 +33,7 @@ import {
   setActiveTreeAction,
   deselectActiveTreeAction,
   deselectActiveGroupAction,
+  setActiveGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
@@ -44,6 +45,8 @@ import Store, {
   type OxalisState,
   type SkeletonTracing,
   type Tracing,
+  type Tree,
+  type TreeMap,
   type TreeGroup,
   type UserConfiguration,
 } from "oxalis/store";
@@ -54,10 +57,16 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
-import SearchPopover from "./search_popover";
+import AdvancedSearchPopover from "./advanced_search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
+
+type TreeOrTreeGroup = {
+  name: string,
+  id: number,
+  type: string,
+};
 
 type OwnProps = {|
   portalKey: string,
@@ -79,6 +88,7 @@ type StateProps = {|
   userConfiguration: UserConfiguration,
   onSetActiveTree: number => void,
   onDeselectActiveTree: () => void,
+  onSetActiveGroup: number => void,
   onDeselectActiveGroup: () => void,
   showDropzoneModal: () => void,
 |};
@@ -144,6 +154,38 @@ class TreesTabView extends React.PureComponent<Props, State> {
     selectedTrees: [],
     groupToDelete: null,
   };
+
+  getTreeAndTreeGroupList = memoizeOne(
+    (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
+      const groupToTreesMap = createGroupToTreesMap(trees);
+      const rootGroup = { name: "Root", groupId: MISSING_GROUP_ID, children: treeGroups };
+
+      const makeTree = tree => ({ name: tree.name, type: "TREE", id: tree.treeId });
+      const makeGroup = group => ({ name: group.name, type: "GROUP", id: group.groupId });
+
+      function* mapGroupsAndTreesSorted(
+        _groups: Array<TreeGroup>,
+        _groupToTreesMap: { [number]: Array<Tree> },
+        _sortBy: string,
+      ): Generator<TreeOrTreeGroup, void, void> {
+        for (const group of _groups) {
+          yield makeGroup(group);
+          if (group.children) {
+            // Groups are always sorted by name and appear before the trees
+            const sortedGroups = _.orderBy(group.children, ["name"], ["asc"]);
+            yield* mapGroupsAndTreesSorted(sortedGroups, _groupToTreesMap, sortBy);
+          }
+          if (_groupToTreesMap[group.groupId] != null) {
+            // Trees are sorted by the sortBy property
+            const sortedTrees = _.orderBy(_groupToTreesMap[group.groupId], [_sortBy], ["asc"]);
+            yield* sortedTrees.map(makeTree);
+          }
+        }
+      }
+
+      return Array.from(mapGroupsAndTreesSorted([rootGroup], groupToTreesMap, sortBy));
+    },
+  );
 
   handleChangeTreeName = (evt: SyntheticInputEvent<>) => {
     if (!this.props.skeletonTracing) {
@@ -337,28 +379,22 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  getAllSubtreeIdsOfGroup = (groupId: number): Array<number> => {
-    if (!this.props.skeletonTracing) {
-      return [];
-    }
-    const { trees } = this.props.skeletonTracing;
-    const groupToTreesMap = createGroupToTreesMap(trees);
-    let subtreeIdsOfGroup = [];
-    if (groupToTreesMap[groupId]) {
-      subtreeIdsOfGroup = groupToTreesMap[groupId].map(node => node.treeId);
-    }
-    return subtreeIdsOfGroup;
-  };
-
   deselectAllTrees = () => {
     this.setState({ selectedTrees: [] });
   };
 
-  getTreesComponents() {
+  handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
+    if (selectedElement.type === "TREE") {
+      this.props.onSetActiveTree(selectedElement.id);
+    } else {
+      this.props.onSetActiveGroup(selectedElement.id);
+    }
+  };
+
+  getTreesComponents(sortBy: string) {
     if (!this.props.skeletonTracing) {
       return null;
     }
-    const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     return (
       <TreeHierarchyView
@@ -366,7 +402,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
-        sortBy={orderAttribute}
+        sortBy={sortBy}
         selectedTrees={this.state.selectedTrees}
         onSelectTree={this.onSelectTree}
         deselectAllTrees={this.deselectAllTrees}
@@ -453,6 +489,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const activeGroupName = getActiveGroup(skeletonTracing)
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
+    const { trees, treeGroups } = skeletonTracing;
+    const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
     let title = "";
@@ -476,12 +514,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
-          <SearchPopover
-            onSelect={this.props.onSetActiveTree}
-            data={skeletonTracing.trees}
-            idKey="treeId"
+          <AdvancedSearchPopover
+            onSelect={this.handleSearchSelect}
+            data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
             searchKey="name"
-            maxSearchResults={10}
             provideShortcut
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
@@ -489,7 +525,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
                 <Icon type="search" />
               </ButtonComponent>
             </Tooltip>
-          </SearchPopover>
+          </AdvancedSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -505,7 +541,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           >
             <i className="fa fa-toggle-off" /> Toggle Inactive
           </ButtonComponent>
-          <Dropdown overlay={this.getActionsDropdown()}>
+          <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
             <ButtonComponent>
               More
               <Icon type="down" />
@@ -524,7 +560,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
-          <Dropdown overlay={this.getSettingsDropdown()}>
+          <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort">
               <i className="fa fa-sort-alpha-asc" />
             </ButtonComponent>
@@ -532,7 +568,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </InputGroup>
         <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
           <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
-          {this.getTreesComponents()}
+          {this.getTreesComponents(orderAttribute)}
         </ul>
         {groupToDelete !== null ? (
           <DeleteGroupModalView
@@ -595,6 +631,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onDeselectActiveTree() {
     dispatch(deselectActiveTreeAction());
+  },
+  onSetActiveGroup(groupId) {
+    dispatch(setActiveGroupAction(groupId));
   },
   onDeselectActiveGroup() {
     dispatch(deselectActiveGroupAction());

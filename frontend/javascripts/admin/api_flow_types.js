@@ -74,8 +74,9 @@ export type APIDataSource = APIDataSourceBase & {
 export type APIDataStore = {
   +name: string,
   +url: string,
-  +isForeign?: boolean,
+  +isForeign: boolean,
   +isScratch: boolean,
+  +isConnector: boolean,
 };
 
 export type APITracingStore = {
@@ -368,6 +369,22 @@ export type DatasetConfig = {
   +organization: string,
   +datastore: string,
   +zipFile: File,
+};
+
+type WkConnectLayer = {
+  // This is the source URL of the layer, should start with gs://, http:// or https://
+  source: string,
+  type: "image" | "segmentation",
+};
+
+export type WkConnectDatasetConfig = {
+  neuroglancer: {
+    [organizationName: string]: {
+      [datasetName: string]: {
+        layers: { [layerName: string]: WkConnectLayer },
+      },
+    },
+  },
 };
 
 export type APITimeTracking = {

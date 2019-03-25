@@ -10,7 +10,10 @@ import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
 import { getUpdateActionLog, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import { pushSaveQueueAction, setVersionNumberAction } from "oxalis/model/actions/save_actions";
+import {
+  pushSaveQueueTransaction,
+  setVersionNumberAction,
+} from "oxalis/model/actions/save_actions";
 import { revertToVersion, serverCreateTracing } from "oxalis/model/sagas/update_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
@@ -99,7 +102,7 @@ class VersionList extends React.Component<Props, State> {
   handleRestoreVersion = async (version: number) => {
     if (this.props.allowUpdate) {
       Store.dispatch(setVersionNumberAction(this.getNewestVersion(), this.props.tracingType));
-      Store.dispatch(pushSaveQueueAction([revertToVersion(version)], this.props.tracingType));
+      Store.dispatch(pushSaveQueueTransaction([revertToVersion(version)], this.props.tracingType));
       await Model.ensureSavedState();
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
@@ -111,6 +114,7 @@ class VersionList extends React.Component<Props, State> {
 
   handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
 
+  // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(
     (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
       // This function first groups the versions by day, where the key is the output of the moment calendar function.

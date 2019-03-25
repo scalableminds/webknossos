@@ -94,6 +94,7 @@ Samplecountry
     for {
       _ <- insertLocalDataStoreIfEnabled
       _ <- insertLocalTracingStoreIfEnabled
+      _ <- insertConnectDataStoreIfEnabled
       _ <- assertInitialDataEnabled
       _ <- assertNoOrganizationsPresent
       _ <- insertOrganization
@@ -205,8 +206,18 @@ Samplecountry
     if (conf.Datastore.enabled) {
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          logger.info("inserting local datastore");
+          logger.info("inserting local datastore")
           dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
+        }
+      }
+    } else Fox.successful(())
+
+  def insertConnectDataStoreIfEnabled: Fox[Any] =
+    if (conf.Application.insertLocalConnectDatastore) {
+      dataStoreDAO.findOneByName("connect").futureBox.map { maybeStore =>
+        if (maybeStore.isEmpty) {
+          logger.info("inserting connect datastore")
+          dataStoreDAO.insertOne(DataStore("connect", "http://localhost:8000", "secret-key", isConnector = true))
         }
       }
     } else Fox.successful(())
@@ -215,7 +226,7 @@ Samplecountry
     if (conf.Tracingstore.enabled) {
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
-          logger.info("inserting local tracingstore");
+          logger.info("inserting local tracingstore")
           tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Tracingstore.key))
         }
       }

@@ -115,7 +115,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </h4>
         <p style={{ marginTop: 40 }}>
           webKnossos supports your research with efficient data management and advanced tools to
-          create skeleton and volume annotations. It is optimized to manage terabytes of 3D
+          create skeleton and volume annotations. It is optimized to manage petabytes of 3D
           microscopy image data, as required by Neuroscientists.
         </p>
         <p>

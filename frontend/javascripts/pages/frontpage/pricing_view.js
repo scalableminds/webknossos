@@ -49,7 +49,7 @@ const PricingColumn = ({
 
 const FAQItem = ({ title, children }: { title: string, children: Node }) => (
   <Col lg={{ span: 12 }} md={{ span: 12 }} sm={{ span: 24 }} xs={{ span: 24 }}>
-    <div style={{ margin: 20 }}>
+    <div style={{ margin: "30px 60px" }}>
       <h4>{title}</h4>
       <p>{children}</p>
     </div>
@@ -148,7 +148,7 @@ const PricingView = () => (
         >
           {[
             "Upload and work with your data hosted on scalable minds servers",
-            "From 100GB of data storage",
+            "From 100GB of data storage**",
             "Managed monitoring and backups",
             "Help with dataset upload and conversion ",
             "Email support",
@@ -175,9 +175,9 @@ const PricingView = () => (
             </a>,
           ]}
         </PricingColumn>
-        <Col span={4} push={20}>
+        <Col span={24}>
           <div style={{ fontSize: "0.8em", textAlign: "right", marginTop: 5 }}>
-            * VAT not included
+            * VAT not included ** higher storage tiers available
           </div>
         </Col>
       </Row>
@@ -198,6 +198,13 @@ const PricingView = () => (
           kevin bacon porchetta pig turkey pork loin ground round.
         </FAQItem>
         <FAQItem title="Where is my data stored?">
+          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
+          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
+          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
+          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
+          kevin bacon porchetta pig turkey pork loin ground round.
+        </FAQItem>
+        <FAQItem title="I need more than 100GB of storage for my dataset?">
           Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
           tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
           shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef

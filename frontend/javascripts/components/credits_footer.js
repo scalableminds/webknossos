@@ -56,7 +56,10 @@ const creditsFooter = () => (
           <a href="https://publication.webknossos.org">publication.webknossos.org</a>.
         </p>
         <p>
-          <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link>
+          <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link> &bull;{" "}
+          <a href="https://twitter.com/webknossos" target="_blank">
+            Twitter
+          </a>
         </p>
       </div>
     </div>

@@ -25,6 +25,7 @@ export type UpdateTreeUpdateAction = {|
     branchPoints: Array<BranchPoint>,
     groupId: ?number,
     timestamp: number,
+    isVisible: boolean,
   |},
 |};
 export type DeleteTreeUpdateAction = {|
@@ -186,6 +187,7 @@ export function createTree(tree: Tree): UpdateTreeUpdateAction {
       comments: tree.comments,
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
+      isVisible: tree.isVisible,
     },
   };
 }
@@ -209,6 +211,7 @@ export function updateTree(tree: Tree): UpdateTreeUpdateAction {
       comments: tree.comments,
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
+      isVisible: tree.isVisible,
     },
   };
 }

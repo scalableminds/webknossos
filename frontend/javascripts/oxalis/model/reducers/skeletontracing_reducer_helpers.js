@@ -790,7 +790,7 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
             ? [tree.color.r, tree.color.g, tree.color.b]
             : ColorGenerator.distinctColorForId(tree.treeId),
         branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
-        isVisible: true,
+        isVisible: tree.isVisible,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
       }),

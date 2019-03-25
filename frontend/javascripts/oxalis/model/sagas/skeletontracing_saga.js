@@ -261,7 +261,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId
+    prevTree.groupId !== tree.groupId ||
+    prevTree.isVisible !== tree.isVisible
   );
 }
 

@@ -200,63 +200,152 @@ const PricingView = () => (
         </Col>
       </Row>
 
-      <Row gutter={16}>
-        <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>
+      <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>
+      <Row gutter={16} type="flex" align="start">
         <FAQItem title="How do I get started?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            You can try webKnossos for free with any of public dataset here on webknossos.org.{" "}
+            <Link to="">Create a free account today.</Link>
+          </p>
+          <p>
+            All webKnossos features can be used with free accounts. Try it with the{" "}
+            <Link to="/">available published datasets.</Link> We are also happy to integrate your
+            dataset in the public dataset gallery. Alternatively, upgrade to the Premium plan and
+            start working with your unreleased, private data.
+          </p>
+          <p>
+            You can learn more about webKnosssos in the{" "}
+            <a href="https://docs.webknossos.org">user documentation</a>. Alternatively,{" "}
+            <a href="mailto:hello@scalableminds.com">get in touch with us</a> and one of our
+            webKnossos experts will help you get started.
+          </p>
         </FAQItem>
         <FAQItem title="Why should I trust scalable minds with my data?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            Security is one of our top priorities. All datasets uploaded on webknossos.org are
+            stored securely in the scalable minds cloud infrastructure and NOT shared with anyone.
+            webKnossos has fine-grained permissions for individual users, teams, and datasets to
+            control the access. Only authorized users within your organization will be able to
+            access your datasets and annotations. Read our{" "}
+            <Link to="privacy">privacy statement</Link>.
+          </p>
+          <p>
+            We offer a Custom hosting plan for enterprise solutions, where datasets can be directly
+            stored in your data center.
+            <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
+          </p>
         </FAQItem>
         <FAQItem title="Where is my data stored?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            All datasets uploaded on webknossos.org are stored securely in the scalable minds cloud
+            infrastructure in Germany.
+          </p>
+          <p>
+            We offer a Custom hosting plan for enterprise solutions, where datasets can be directly
+            stored in your data center.
+            <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
+          </p>
         </FAQItem>
-        <FAQItem title="I need more than 100GB of storage for my dataset?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+        <FAQItem title="I need more than 100GB of storage for my dataset.">
+          <p>
+            Our Premium plan includes 100GB of storage for datasets and annotations to get you
+            started. Each additional terabyte of storage costs an additional 50€ per month*.
+          </p>
+          <p>
+            For details and pricing{" "}
+            <a href="mailto:hello@scalableminds.com">get in touch with us</a>.
+          </p>
+        </FAQItem>
+        <FAQItem title="Which payment methods are available?">
+          <p>
+            We accept payment through credit card, PayPal and bank transfer. Billing is on an annual
+            basis.
+          </p>
         </FAQItem>
         <FAQItem title="Can I change my plan at a later time? Can I cancel anytime?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            Plans are billed annually. You can cancel your plan at the end of your billing cycle.
+            You can try webKnossos for free here on webKnossos.org.
+          </p>
+          <p>
+            You can always upgrade your plan later. We are happy to assist you with migrating your
+            data if necessary.
+          </p>
+        </FAQItem>
+        <FAQItem title="I am looking for a custom webKnossos setup.">
+          <p>
+            We are happy to help you find a custom solution for setting up webKnossos. Over the
+            years we have worked with different research institutes and have tackled a diverse set
+            of challenges. Custom data formats, petabyte-scale datasets, on-premise or cloud
+            storage...
+          </p>
+          <p>
+            Our Custom hosting plan is right for you.{" "}
+            <a href="mailto:hello@scalableminds.com">
+              Talk to our webKnossos experts about custom solutions.
+            </a>
+          </p>
         </FAQItem>
         <FAQItem title="Where can I learn more about webKnossos?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            webKnossos offers a wide array of tools to manage large 3D datasets and annotate them
+            efficiently. Learn more about webKnossos and its functionality on our{" "}
+            <Link to="features">features overview page.</Link>
+          </p>
+          <p>
+            Check out the webKnosssos <a href="https://docs.webknossos.org">user documentation</a>{" "}
+            to learn more about all annotation modes and their settings. Alternatively,{" "}
+            <a href="mailto:hello@scalableminds.com">get in touch with us</a> and one of our
+            webKnossos experts will help you get started.
+          </p>
+          <p>
+            Make sure to follow{" "}
+            <a href="https://twitter.com/webknossos" target="_blank" rel="noopener noreferrer">
+              webKnossos on Twitter
+            </a>{" "}
+            to get updates about the latest features.
+          </p>
         </FAQItem>
-        <FAQItem title="What is the difference between Premium and Enterprise hosting?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+        <FAQItem title="What is the difference between Premium and Custom hosting?">
+          <p>
+            Our Premium plan makes it simple for you to get started. We provide you with a fully
+            managed and preconfigured version of webKnossos that can grow with your needs. No
+            installation required. All data is hosted on the scalable minds cloud infrastructure.
+          </p>
+          <p>
+            Some clients prefer to store their datasets on-premise, within their infrastructure.
+            With our Custom plan, webKnossos can be configured to load data from a dedicated data
+            store on your servers.
+          </p>
+        </FAQItem>
+        <FAQItem title="I need a new functionality not yet available in webKnossos,">
+          <p>
+            We constantly develop new features and continuously improve webKnossos. As an
+            open-source project, you can extend webKnossos yourself. webKnossos also comes with a
+            rich <a href="https://webknossos.org/docs/frontend-api/index.html">frontend API</a> and{" "}
+            <a href="https://docs.webknossos.org/reference/rest_api">REST interface</a> for
+            scripting new workflows. Alternatively, you can hire us to help you with custom feature
+            development.
+          </p>
+          <p>
+            We are always interested in learning about new ideas and gathering feedback.{" "}
+            <a href="mailto:hello@scalableminds.com">get in touch with us and let us know.</a>
+          </p>
         </FAQItem>
         <FAQItem title="What about open-source?">
-          Bacon ipsum dolor amet tail ball tip fatback pork chicken. Venison boudin bresaola
-          tri-tip, flank leberkas brisket ribeye spare ribs tongue. Kielbasa fatback brisket
-          shankle, meatball sausage ham hock leberkas shank biltong ribeye jerky ham shoulder beef
-          ribs. Swine landjaeger sausage kielbasa. Spare ribs jerky hamburger filet mignon pancetta,
-          kevin bacon porchetta pig turkey pork loin ground round.
+          <p>
+            webKnossos is an open-source project developed by{" "}
+            <a href="https://scalableminds.com">scalable minds</a> with support from the{" "}
+            <a href="https://www.brain.mpg.de/connectomics">
+              Max-Planck-Institute for Brain Research
+            </a>
+            . webKnossos is methodically proven and published in{" "}
+            <a href="https://dx.doi.org/10.1038/nmeth.4331">Nature Methods (2017) 14, 691-694</a>.
+          </p>
+          <p>
+            All hosting plans on this website are executed and handled exclusively by scalable
+            minds.
+          </p>
         </FAQItem>
       </Row>
     </div>

@@ -170,7 +170,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           Create a Free Account
         </Button>
         <a href="mailto:hello@scalableminds.com" style={{ color: "white" }}>
-          Get In Touch With Us
+          Get in Touch With Us
         </a>
       </Col>
     </Row>

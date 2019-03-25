@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - Fixed the setting which enables to hide the planes within the 3D viewport. [#3857](https://github.com/scalableminds/webknossos/pull/3857)
 - Fixed a bug which allowed the brush size to become negative when using shortcuts. [#3861](https://github.com/scalableminds/webknossos/pull/3861)
+- Fixed that scrolling with the mouse wheel over a data viewport also scrolled the page. This bug appeared with the new Chrome version 73. [#3939](https://github.com/scalableminds/webknossos/pull/3939)
 
 ### Removed
 - 
@@ -78,7 +79,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added the possibility to use flight and oblique mode when viewing a dataset. [#3644](https://github.com/scalableminds/webknossos/pull/3644)
 - Added pagination to the REST API route `GET /projects/:name/tasks` (new optional parameters `limit` and `pageNumber`). [#3659](https://github.com/scalableminds/webknossos/pull/3659)
 - Added the possibility to open the version restore view for read-only tracings. Older versions can be previewed and be downloaded as NML. [#3660](https://github.com/scalableminds/webknossos/pull/3660)
->>>>>>> f4e956e20af7f5db60a11edb8a7cb0a0dac46a43
 
 ### Changed
 

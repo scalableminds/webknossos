@@ -9,6 +9,8 @@ type LoopProps = {
 };
 
 class Loop extends Component<LoopProps, {}> {
+  intervalId: ?number = null;
+
   componentDidMount() {
     this.intervalId = window.setInterval(this.props.onTick, this.props.interval);
   }
@@ -19,8 +21,6 @@ class Loop extends Component<LoopProps, {}> {
       this.intervalId = null;
     }
   }
-
-  intervalId: ?number = null;
 
   render() {
     return null;

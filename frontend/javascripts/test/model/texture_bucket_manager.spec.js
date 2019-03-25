@@ -72,7 +72,7 @@ const setActiveBucketsAndWait = (tbm, activeBuckets, anchorPoint) => {
 };
 
 const expectBucket = (t, tbm, bucket, expectedFirstByte) => {
-  const bucketIdx = tbm._getBucketIndex(bucket);
+  const bucketIdx = tbm._getBucketIndex(bucket.zoomedAddress);
   const bucketLocation =
     tbm.getPackedBucketSize() * tbm.lookUpBuffer[channelCountForLookupBuffer * bucketIdx];
   t.is(tbm.dataTextures[0].texture[bucketLocation], expectedFirstByte);

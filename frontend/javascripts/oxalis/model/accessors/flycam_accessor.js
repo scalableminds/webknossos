@@ -6,7 +6,7 @@ import memoizeOne from "memoize-one";
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
-import { clamp, map3 } from "libs/utils";
+import { clamp, map3, mod } from "libs/utils";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Dimensions from "oxalis/model/dimensions";
@@ -44,8 +44,6 @@ function calculateTotalBucketCountForZoomLevel(
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
 
   const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
-  const fallbackZoomStep = logZoomStep + 1;
-  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
   const dummyMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
   const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
 
@@ -56,8 +54,6 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       matrix,
       logZoomStep,
-      fallbackZoomStep,
-      isFallbackAvailable,
       abortLimit,
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
@@ -68,8 +64,6 @@ function calculateTotalBucketCountForZoomLevel(
       enqueueFunction,
       matrix,
       logZoomStep,
-      fallbackZoomStep,
-      isFallbackAvailable,
       abortLimit,
     );
   } else {
@@ -188,10 +182,6 @@ export function getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
-
-  // Fix JS modulo bug
-  // http://javascript.about.com/od/problemsolving/a/modulobug.htm
-  const mod = (x, n) => ((x % n) + n) % n;
 
   const rotation: Vector3 = [object.rotation.x, object.rotation.y, object.rotation.z - Math.PI];
   return [

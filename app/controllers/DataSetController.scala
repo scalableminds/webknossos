@@ -156,7 +156,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",
         dataSetName) ~> NOT_FOUND
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)

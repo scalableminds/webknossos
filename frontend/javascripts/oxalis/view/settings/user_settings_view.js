@@ -1,5 +1,4 @@
 /**
-
  * tracing_settings_view.js
  * @flow
  */
@@ -18,6 +17,7 @@ import {
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
+import type { APIDataset } from "admin/api_flow_types";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -30,6 +30,7 @@ import {
   setActiveNodeAction,
   setActiveTreeAction,
   setNodeRadiusAction,
+  setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
@@ -42,9 +43,11 @@ import Constants, {
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import { userSettings } from "libs/user_settings.schema";
+import MergerModeModalView from "./merger_mode_modal_view";
 
-const Panel = Collapse.Panel;
+const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
   userConfiguration: UserConfiguration,
@@ -58,12 +61,24 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
+  onChangeEnableMergerMode: (active: boolean) => void,
+  isMergerModeEnabled: boolean,
   viewMode: ViewMode,
   controlMode: ControlMode,
+  dataset: APIDataset,
 };
 
-class UserSettingsView extends PureComponent<UserSettingsViewProps> {
+type State = {
+  isMergerModeModalVisible: boolean,
+  isMergerModeModalClosable: boolean,
+};
+
+class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  state = {
+    isMergerModeModalVisible: false,
+    isMergerModeModalClosable: false,
+  };
 
   componentWillMount() {
     // cache onChange handler
@@ -71,6 +86,26 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       _.partial(this.props.onChangeUser, propertyName),
     );
   }
+
+  handleMergerModeChange = async (active: boolean) => {
+    this.props.onChangeEnableMergerMode(active);
+    if (active) {
+      this.setState({
+        isMergerModeModalVisible: true,
+        isMergerModeModalClosable: false,
+      });
+      await enableMergerMode();
+      // The modal is only closeable after the merger mode is fully enabled
+      // and finished preprocessing
+      this.setState({ isMergerModeModalClosable: true });
+    } else {
+      this.setState({
+        isMergerModeModalVisible: false,
+        isMergerModeModalClosable: false,
+      });
+      disableMergerMode();
+    }
+  };
 
   getViewportOptions = () => {
     switch (this.props.viewMode) {
@@ -204,6 +239,10 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
+      const isMergerModeSupported =
+        (this.props.dataset.dataSource.dataLayers || []).find(
+          layer => layer.category === "segmentation" && layer.elementClass === "uint32",
+        ) != null;
       panels.push(
         <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
@@ -253,6 +292,19 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
           />
+          <SwitchSetting
+            label={settingsLabels.mergerMode}
+            value={this.props.isMergerModeEnabled}
+            onChange={value => {
+              this.handleMergerModeChange(value);
+            }}
+            disabled={!isMergerModeSupported}
+            tooltipText={
+              !isMergerModeSupported
+                ? "The merger mode is only available for datasets with uint32 segmentations."
+                : null
+            }
+          />
         </Panel>,
       );
     }
@@ -282,6 +334,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   render() {
+    const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
         label={settingsLabels.moveValue3d}
@@ -303,40 +356,48 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
-        <Panel header="Controls" key="1">
-          <NumberSliderSetting
-            label={settingsLabels.keyboardDelay}
-            min={userSettings.keyboardDelay.minimum}
-            max={userSettings.keyboardDelay.maximum}
-            value={this.props.userConfiguration.keyboardDelay}
-            onChange={this.onChangeUser.keyboardDelay}
+      <React.Fragment>
+        <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
+          <Panel header="Controls" key="1">
+            <NumberSliderSetting
+              label={settingsLabels.keyboardDelay}
+              min={userSettings.keyboardDelay.minimum}
+              max={userSettings.keyboardDelay.maximum}
+              value={this.props.userConfiguration.keyboardDelay}
+              onChange={this.onChangeUser.keyboardDelay}
+            />
+            {moveValueSetting}
+            <SwitchSetting
+              label={settingsLabels.dynamicSpaceDirection}
+              value={this.props.userConfiguration.dynamicSpaceDirection}
+              onChange={this.onChangeUser.dynamicSpaceDirection}
+            />
+          </Panel>
+          {this.getViewportOptions()}
+          {this.getSkeletonOrVolumeOptions()}
+          <Panel header="Other" key="4">
+            <Vector6InputSetting
+              label={settingsLabels.userBoundingBox}
+              tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+              value={Utils.computeArrayFromBoundingBox(
+                getSomeTracing(this.props.tracing).userBoundingBox,
+              )}
+              onChange={this.props.onChangeBoundingBox}
+            />
+            <SwitchSetting
+              label={settingsLabels.tdViewDisplayPlanes}
+              value={this.props.userConfiguration.tdViewDisplayPlanes}
+              onChange={this.onChangeUser.tdViewDisplayPlanes}
+            />
+          </Panel>
+        </Collapse>
+        {isMergerModeModalVisible ? (
+          <MergerModeModalView
+            isCloseable={isMergerModeModalClosable}
+            onClose={() => this.setState({ isMergerModeModalVisible: false })}
           />
-          {moveValueSetting}
-          <SwitchSetting
-            label={settingsLabels.dynamicSpaceDirection}
-            value={this.props.userConfiguration.dynamicSpaceDirection}
-            onChange={this.onChangeUser.dynamicSpaceDirection}
-          />
-        </Panel>
-        {this.getViewportOptions()}
-        {this.getSkeletonOrVolumeOptions()}
-        <Panel header="Other" key="4">
-          <Vector6InputSetting
-            label={settingsLabels.userBoundingBox}
-            tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(
-              getSomeTracing(this.props.tracing).userBoundingBox,
-            )}
-            onChange={this.props.onChangeBoundingBox}
-          />
-          <SwitchSetting
-            label={settingsLabels.tdViewDisplayPlanes}
-            value={this.props.userConfiguration.tdViewDisplayPlanes}
-            onChange={this.onChangeUser.tdViewDisplayPlanes}
-          />
-        </Panel>
-      </Collapse>
+        ) : null}
+      </React.Fragment>
     );
   }
 }
@@ -348,6 +409,8 @@ const mapStateToProps = (state: OxalisState) => ({
   maxZoomStep: getMaxZoomValue(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
+  isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+  dataset: state.dataset,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -371,6 +434,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
+  },
+  onChangeEnableMergerMode(active: boolean) {
+    dispatch(setMergerModeEnabledAction(active));
   },
 });
 

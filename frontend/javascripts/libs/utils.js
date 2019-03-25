@@ -436,7 +436,8 @@ export function isNoElementFocussed(): boolean {
   return document.activeElement === document.body;
 }
 
-const arePassiveEventsSupported = _.once(() => {
+// https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
+const areEventListenerOptionsSupported = _.once(() => {
   let passiveSupported = false;
 
   try {
@@ -464,6 +465,7 @@ export function addEventListenerWithDelegation(
   eventName: string,
   delegateSelector: string,
   handlerFunc: Function,
+  options: Object = {},
 ) {
   const wrapperFunc = function(event: Event) {
     // $FlowFixMe Flow doesn't know native InputEvents
@@ -478,7 +480,7 @@ export function addEventListenerWithDelegation(
   element.addEventListener(
     eventName,
     wrapperFunc,
-    arePassiveEventsSupported() ? { passive: false } : false,
+    areEventListenerOptionsSupported() ? options : false,
   );
   return { [eventName]: wrapperFunc };
 }

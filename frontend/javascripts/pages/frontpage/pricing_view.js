@@ -56,16 +56,60 @@ const FAQItem = ({ title, children }: { title: string, children: Node }) => (
   </Col>
 );
 
+const FeatureItem = ({
+  title,
+  subTitle,
+  iconUrl,
+}: {
+  title: string,
+  subTitle: string,
+  iconUrl: string,
+}) => (
+  <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
+    <div style={{ padding: 40, textAlign: "center" }}>
+      <img src={iconUrl} alt="icon" style={{ width: 60, height: 60 }} />
+      <h4 style={{ marginTop: 20 }}>{title}</h4>
+      <p style={{ marginTop: 20 }}>{subTitle}</p>
+    </div>
+  </Col>
+);
+
 const PricingView = () => (
   <>
-    <div className="container" style={{ marginTop: 50 }}>
-      <div style={{ textAlign: "center" }}>
-        <h1>Hosting Solutions</h1>
-        <h4>
-          Our webKnossos hosting solutions get you started with webKnossos today. Fast. Functional.
-          Flexible. Trusted by leading research labs.
-        </h4>
-      </div>
+    <div className="container" style={{ paddingTop: 20 }}>
+      <Row gutter={16} type="flex" style={{ marginTop: 60, marginBottom: 60, textAlign: "center" }}>
+        <Col
+          lg={{ span: 16, offset: 4 }}
+          md={{ span: 16, offset: 4 }}
+          sm={{ span: 22, offset: 2 }}
+          xs={{ span: 22, offset: 2 }}
+        >
+          <h1>Hosting Solutions</h1>
+          <div>
+            <h4>
+              Our webKnossos hosting solutions get you started with webKnossos today. <br />
+              Fast. Functional. Flexible. Trusted by leading research labs.
+            </h4>
+          </div>
+        </Col>
+      </Row>
+      <Row gutter={16} type="flex">
+        <FeatureItem
+          title="High Speed Skeleton Annotations"
+          subTitle="Use our published Flight mode to quickly capture high-quality skeletons"
+          iconUrl="/images/high-speed-tracing-icon.svg"
+        />
+        <FeatureItem
+          title="Volume Annotation"
+          subTitle="Create and proof-read dense volume annotations"
+          iconUrl="/images/volume-annotation-icon.svg"
+        />
+        <FeatureItem
+          title="Simple Collaboration"
+          subTitle="webKnossos runs in the browser. Share links to annotations and publish datasets"
+          iconUrl="/images/collaboration-icon.svg"
+        />
+      </Row>
 
       <Row gutter={16} type="flex" style={{ marginTop: 90, marginBottom: 100 }}>
         <PricingColumn title="Public Hosting" iconUrl="/images/public-hosting-icon.svg" price={0}>

@@ -63,7 +63,7 @@ Samplecountry
   val defaultOrganization = Organization(ObjectId.generate,
                                          "Connectomics_Department",
                                          additionalInformation,
-                                         "/images/mpi-logos.svg",
+                                         "/assets/images/mpi-logos.svg",
                                          "MPI for Brain Research")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(
@@ -84,7 +84,7 @@ Samplecountry
   val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
     Some(System.currentTimeMillis()),
-    Some("https://webknossos.org/images/oxalis.svg"),
+    Some("https://webknossos.org/assets/images/oxalis.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")

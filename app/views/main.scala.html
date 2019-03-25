@@ -21,13 +21,13 @@
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <link
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     @if(conf.Application.Authentication.enableDevAutoLogin){
@@ -38,8 +38,8 @@
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
       data-airbrake-environment-name="@(conf.Airbrake.environment)"
     ></script>
-    <script src="/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
-    <script src="/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
   </head>
   <body>
     <main id="main-container"></main>

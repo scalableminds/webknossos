@@ -7,7 +7,6 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
-import Stats from "stats.js";
 import _ from "lodash";
 
 import { HANDLED_ERROR } from "oxalis/model_initialization";
@@ -54,7 +53,6 @@ type State = {
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
-  stats: Stats;
   isMounted: boolean;
 
   state = {
@@ -131,10 +129,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     UrlManager.startUrlUpdater();
     initializeSceneController();
-
-    // FPS stats
-    this.stats = new Stats();
-    document.body.append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -267,8 +261,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     });
   }
 
-  updateStats = () => this.stats.update();
-
   render() {
     if (!this.state.ready) {
       return <BrainSpinner />;
@@ -287,9 +279,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const isPlane = constants.MODES_PLANE.includes(mode);
 
     if (isArbitrary) {
-      return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
+      return <ArbitraryController viewMode={mode} />;
     } else if (isPlane) {
-      return <PlaneController onRender={this.updateStats} />;
+      return <PlaneController />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

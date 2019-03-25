@@ -35,19 +35,19 @@ export default function determineBucketsForOblique(
   enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
-  fallbackZoomStep: number,
-  isFallbackAvailable: boolean,
   abortLimit?: number,
 ): void {
   const uniqueBucketMap = new ThreeDMap();
   let currentCount = 0;
   const queryMatrix = M4x4.scale1(1, matrix);
+  const fallbackZoomStep = logZoomStep + 1;
+  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
   // Buckets adjacent to the current viewport are also loaded so that these
   // buckets are already on the GPU when the user moves a little.
   const enlargementFactor = 1.1;
   const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-  const steps = 25;
+  const steps = 30;
   const stepSize = enlargedExtent / steps;
   const enlargedHalfExtent = enlargedExtent / 2;
 

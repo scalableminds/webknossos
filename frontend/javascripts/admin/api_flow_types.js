@@ -111,6 +111,7 @@ export type APIDatasetDetails = {
 };
 
 type APIDatasetBase = APIDatasetId & {
+  +isUnreported: boolean,
   +allowedTeams: Array<APITeam>,
   +created: number,
   +dataStore: APIDataStore,

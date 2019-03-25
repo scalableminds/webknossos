@@ -259,7 +259,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       _ <- dataSetDataLayerDAO.updateLayers(old._id, source)
     } yield ()
 
-  def deactivateUnreported(names: List[String], organizationId: ObjectId, dataStoreName: String): Fox[Unit] = {
+  def deactivateUnreported(names: List[String],
+                           organizationId: ObjectId,
+                           dataStoreName: String,
+                           unreportedStatus: String): Fox[Unit] = {
     val inclusionPredicate =
       if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
     val deleteResolutionsQuery =
@@ -272,7 +275,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
              and #${inclusionPredicate})"""
     val setToUnusableQuery =
       sqlu"""update webknossos.datasets
-             set isUsable = false, status = 'No longer available on datastore.', scale = NULL
+             set isUsable = false, status = $unreportedStatus, scale = NULL
              where _dataStore = ${dataStoreName} and _organization = ${organizationId}
              and #${inclusionPredicate}"""
     for {

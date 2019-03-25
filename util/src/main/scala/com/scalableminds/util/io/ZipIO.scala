@@ -34,18 +34,7 @@ object ZipIO extends LazyLogging {
 
       stream.putNextEntry(new ZipEntry(name))
 
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream(5 seconds))
-
-
-      /*val dataEnumerator = Enumerator.fromStream(inputStream)
-
-      val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
-        stream.write(bytes)
-      }
-
-      val result: Future[Unit] = dataEnumerator |>>> iteratee*/
-
-
+      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
 
       val result = Future.successful(IOUtils.copy(inputStream, stream))
 

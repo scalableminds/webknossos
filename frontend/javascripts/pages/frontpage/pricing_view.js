@@ -5,6 +5,9 @@ import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
 import { ImageAnalysisBlock, SocialMediaBlock } from "pages/frontpage/features_view";
 
+export const bgColorLight = "hsl(208, 21%, 88%)";
+export const bgColorDark = "hsl(208, 100%, 46%)";
+
 const PricingColumn = ({
   title,
   price,
@@ -17,35 +20,43 @@ const PricingColumn = ({
   iconUrl: string,
   children: Array<Node>,
   contentStyle?: Object,
-}) => (
-  <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
-    <div
-      style={{
-        backgroundColor: "hsl(208, 21%, 88%)",
-        padding: 60,
-        textAlign: "center",
-        height: "100%",
-        ...contentStyle,
-      }}
-    >
-      <h2>{title}</h2>
-      <img src={iconUrl} style={{ height: 60 }} alt="icon" />
-      {price === 0 ? (
-        <h1 style={{ margin: 20, marginBottom: 60 }}>Free</h1>
-      ) : (
-        <>
-          <h1 style={{ margin: 20, marginBottom: 5 }}>{price}€</h1>
-          <p style={{ marginBottom: 40 }}>per month*</p>
-        </>
-      )}
-      {children.map((child, i) => (
-        <p style={{ marginBottom: 20 }} key={String(i)}>
-          {child}
-        </p>
-      ))}
-    </div>
-  </Col>
-);
+}) => {
+  const fontColor = contentStyle ? contentStyle.color : "inherit";
+
+  return (
+    <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
+      <div
+        style={{
+          backgroundColor: bgColorLight,
+          padding: 60,
+          textAlign: "center",
+          height: "100%",
+          ...contentStyle,
+        }}
+      >
+        <h2 style={{ color: fontColor }}>{title}</h2>
+        <img
+          src={iconUrl}
+          style={{ height: 60, filter: fontColor === "white" ? "invert(1)" : null }}
+          alt="icon"
+        />
+        {price === 0 ? (
+          <h1 style={{ margin: 20, marginBottom: 60, color: fontColor || "inherit" }}>Free</h1>
+        ) : (
+          <>
+            <h1 style={{ margin: 20, marginBottom: 5, color: fontColor || "inherit" }}>{price}€</h1>
+            <p style={{ marginBottom: 40 }}>per month*</p>
+          </>
+        )}
+        {children.map((child, i) => (
+          <p style={{ marginBottom: 20 }} key={String(i)}>
+            {child}
+          </p>
+        ))}
+      </div>
+    </Col>
+  );
+};
 
 const FAQItem = ({ title, children }: { title: string, children: Node }) => (
   <Col lg={{ span: 12 }} md={{ span: 12 }} sm={{ span: 24 }} xs={{ span: 24 }}>
@@ -71,7 +82,7 @@ const FeatureItem = ({
         style={{
           padding: 35,
           borderRadius: "50%",
-          backgroundColor: "hsl(208, 21%, 88%)",
+          backgroundColor: bgColorDark,
           width: 140,
           height: 140,
           margin: "0 auto",
@@ -80,7 +91,7 @@ const FeatureItem = ({
           lineHeight: "70px",
         }}
       >
-        <img src={iconUrl} alt="icon" style={{ width: 60, height: 60 }} />
+        <img src={iconUrl} alt="icon" style={{ width: 60, height: 60, filter: "invert(1)" }} />
       </div>
       <h4 style={{ marginTop: 20 }}>{title}</h4>
       <p style={{ marginTop: 20 }}>{subTitle}</p>
@@ -140,11 +151,17 @@ const PricingView = () => (
             </Link>,
           ]}
         </PricingColumn>
+
         <PricingColumn
           title="Premium Hosting"
           iconUrl="/images/premium-hosting-icon.svg"
           price={250}
-          contentStyle={{ marginTop: "-8%", height: "110%", backgroundColor: "hsl(208, 16%, 80%)" }}
+          contentStyle={{
+            marginTop: "-8%",
+            height: "110%",
+            backgroundColor: bgColorDark,
+            color: "white",
+          }}
         >
           {[
             "Upload and work with your data hosted on scalable minds servers",
@@ -154,12 +171,13 @@ const PricingView = () => (
             "Email support",
             "Everything from the Public Hosting",
             <a href="mailto:hello@scalableminds.com" key="email-button">
-              <Button size="large" style={{ marginTop: 20 }} type="primary">
+              <Button size="large" style={{ marginTop: 20 }}>
                 Get in Touch
               </Button>
             </a>,
           ]}
         </PricingColumn>
+
         <PricingColumn title="Custom Hosting" iconUrl="/images/custom-hosting-icon.svg" price={800}>
           {[
             "On-Premise hosting of your data",

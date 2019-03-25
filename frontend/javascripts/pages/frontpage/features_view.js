@@ -3,6 +3,7 @@ import { withRouter, type RouterHistory } from "react-router-dom";
 import { Row, Col, Button, Icon } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
+import { bgColorLight } from "pages/frontpage/pricing_view";
 
 const FeatureHighlight = ({
   title,
@@ -99,7 +100,7 @@ export const SocialMediaBlock = () => (
     gutter={16}
     type="flex"
     align="center"
-    style={{ backgroundColor: "hsl(208, 21%, 88%)", marginTop: 40 }}
+    style={{ backgroundColor: bgColorLight, marginTop: 40 }}
   >
     <Col md={{ span: 12 }} sm={{ span: 24 }}>
       <div

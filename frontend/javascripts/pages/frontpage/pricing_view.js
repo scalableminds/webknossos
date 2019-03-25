@@ -176,4 +176,4 @@ const PricingView = () => (
   </>
 );
 
-export default PricingView;
+export default withRouter(PricingView);

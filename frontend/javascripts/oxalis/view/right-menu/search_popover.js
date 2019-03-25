@@ -13,7 +13,7 @@ type Props<S> = {
   searchKey: $Keys<S>,
   idKey: $Keys<S>,
   onSelect: number => void,
-  children: *,
+  children: React.Node,
   provideShortcut?: boolean,
 };
 

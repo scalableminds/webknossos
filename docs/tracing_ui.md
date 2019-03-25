@@ -209,6 +209,10 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
+### Merging Segments
+
+Segments from e.g. automatic segmentations can be merged with the merger mode to refine the result. The merger mode is available in skeleton and hybrid tracings. Each tree represents a merged segment and its nodes define the segments that are merged together. So each new merged segment needs its own tree. The merger mode can be enabled in the settings in the category Nodes & Trees under the option Enable Merger Mode. As soon as you enable it, all already existing trees will be used to form merged segments.
+
 ## Hybrid Annotations
 
 Hybrid annotations combine the functionality of skeleton and volume annotations.
@@ -284,3 +288,4 @@ For multi-layer datasets, each layer can be adjusted separately.
 - `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zomed in very far).
 - `Render Missing Data Black`: If a dataset doesn't contain data at a specific position, webKnossos can either render "black" at that position or it can try to render data from another magnification.
+

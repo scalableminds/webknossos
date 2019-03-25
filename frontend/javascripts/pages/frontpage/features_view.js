@@ -86,8 +86,8 @@ export const ImageAnalysisBlock = () => (
       </p>
       <p>
         scalable minds offers a wide range of machine learning based image analysis services for
-        reconstructing rich information from microscope images. We can help with image alignment,
-        dense segmentation, and object detection.
+        reconstructing rich information from microscope images. We can help with image alignment /
+        registration, dense segmentation, and object detection.
       </p>
       <a href="https://scalableminds.com/image-analysis">Learn more</a>
     </Col>
@@ -205,8 +205,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       >
         <p>
           As a web-based application, webKnossos makes it extremely easy to share links to your
-          datasets and annotations. Send private deep links to interesting regions within your
-          dataset directly to your colleagues for review.
+          datasets and annotations. Send protected deep links to regions within your dataset for
+          your colleagues to review.
         </p>
         <p>
           Support your paper publications by publishing your datasets and annotations with
@@ -221,9 +221,9 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#volume-annotations"
       >
         <p>
-          Use webKnossos to create and proof-read dense 3D volume annotations. Our tools make it
-          simple to label volume data for training a machine learning model. Refine existing
-          annotations and correct mistakes created from automated segmentation systems.
+          Use webKnossos to create and proof-read dense 3D volume annotations. Advanced tools make
+          it easy to label volume data in order to train a machine learning model. Quickly refine
+          existing annotations and correct mistakes created from automated segmentation systems.
         </p>
         <p>Explore your volume data in 3D through on-the-fly 3D isosurface visualizations.</p>
       </FeatureHighlight>
@@ -235,12 +235,12 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         mirrored
       >
         <p>
-          webKnossos supports a wide range of common EM data formats. (Knossos cubes, WKW,
-          Neuroglancer Precomputed, BOSS DB, Tiff Stacks) Datasets can be hosted on-premise or in
-          our cloud for simplicity.
+          webKnossos supports a wide range of common 3D data formats. (Knossos cubes, WKW,
+          Neuroglancer Precomputed, BossDB, Tiff Stacks) Datasets can be hosted on-premise or in our
+          cloud for simplicity.
         </p>
         <p>
-          We support multi-channel datasets. From simple grayscale and RGB data to (multi-channel)
+          Work with multi-channel datasets. From simple grayscale and RGB data to (multi-channel)
           segmentation layers. webKnossos is optimized for working with 3D electron, light, and
           fluorescence microscopy datasets.
         </p>
@@ -256,9 +256,10 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         docsUrl="https://docs.webknossos.org/guides/tasks"
       >
         <p>
-          Reconstructing large-scale Connectomics datasets can be daunting. Our project and task
-          management features help you assign skeleton and volume reconstructions to your team for
-          crowd-sourcing. View and download the aggregated individual results as a whole project.
+          Reconstructing large-scale Connectomics datasets can be daunting. Manage skeleton and
+          volume annotations with advanced project and task management features. Leverage
+          auto-assignments within your team or crowd-sourcing. View and download the aggregated
+          individual results as a whole project.
         </p>
         <p>
           Fine-grained user access levels and subteams help you manage datasets and tasks within
@@ -321,7 +322,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
               </a>
               <a href="https://github.com/scalableminds/webknossos-connect/">
                 {" "}
-                Neuroglancer, BOSS)
+                Neuroglancer, BossDB)
               </a>
             </>,
             <a key="4" href="https://github.com/scalableminds/webknossos-wrap">

@@ -21,7 +21,7 @@ const PricingColumn = ({
   <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
     <div
       style={{
-        backgroundColor: "#eee",
+        backgroundColor: "hsl(208, 21%, 88%)",
         padding: 60,
         textAlign: "center",
         height: "100%",
@@ -67,7 +67,21 @@ const FeatureItem = ({
 }) => (
   <Col lg={{ span: 8 }} md={{ span: 8 }} sm={{ span: 24 }} xs={{ span: 24 }}>
     <div style={{ padding: 40, textAlign: "center" }}>
-      <img src={iconUrl} alt="icon" style={{ width: 60, height: 60 }} />
+      <div
+        style={{
+          padding: 35,
+          borderRadius: "50%",
+          backgroundColor: "hsl(208, 21%, 88%)",
+          width: 140,
+          height: 140,
+          margin: "0 auto",
+          textAlign: "center",
+          verticalAlign: "middle",
+          lineHeight: "70px",
+        }}
+      >
+        <img src={iconUrl} alt="icon" style={{ width: 60, height: 60 }} />
+      </div>
       <h4 style={{ marginTop: 20 }}>{title}</h4>
       <p style={{ marginTop: 20 }}>{subTitle}</p>
     </div>
@@ -130,7 +144,7 @@ const PricingView = () => (
           title="Premium Hosting"
           iconUrl="/images/premium-hosting-icon.svg"
           price={250}
-          contentStyle={{ marginTop: "-8%", height: "110%", backgroundColor: "#ddd" }}
+          contentStyle={{ marginTop: "-8%", height: "110%", backgroundColor: "hsl(208, 16%, 80%)" }}
         >
           {[
             "Upload and work with your data hosted on scalable minds servers",

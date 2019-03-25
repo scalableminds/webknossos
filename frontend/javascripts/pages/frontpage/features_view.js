@@ -128,10 +128,10 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           style={{ marginTop: 40, marginRight: 20, marginBottom: 20 }}
           onClick={() => history.push("/onboarding")}
         >
-          Create A Free Account
+          Create a Free Account
         </Button>
         <a href="mailto:hello@scalableminds.com" style={{ color: "white" }}>
-          Get In Contact With Us
+          Get In Touch With Us
         </a>
       </Col>
     </Row>
@@ -196,8 +196,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           our cloud for simplicity.
         </p>
         <p>
-          We support multi-channel dataset. From simple grayscale and RGB data to (multi-channel)
-          segmentation layers. webKnossos is optimized for working with 3D electron, light,
+          We support multi-channel datasets. From simple grayscale and RGB data to (multi-channel)
+          segmentation layers. webKnossos is optimized for working with 3D electron, light, and
           fluorescence microscopy datasets.
         </p>
         <p>
@@ -271,7 +271,10 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
               <a href="https://docs.webknossos.org/reference/data_formats">
                 Wide range of data sources (WKW, Knossos cubes, Tiff,
               </a>
-              <a href="https://github.com/scalableminds/webknossos-connect/">Neuroglancer, BOSS)</a>
+              <a href="https://github.com/scalableminds/webknossos-connect/">
+                {" "}
+                Neuroglancer, BOSS)
+              </a>
             </>,
             <a key="4" href="https://github.com/scalableminds/webknossos-wrap">
               Python and MATLAB libraries

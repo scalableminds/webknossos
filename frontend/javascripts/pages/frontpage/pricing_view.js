@@ -88,7 +88,7 @@ const PricingView = () => (
           <div>
             <h4>
               Our webKnossos hosting solutions get you started with webKnossos today. <br />
-              Fast. Functional. Flexible. Trusted by leading research labs.
+              Fast, functional, and flexible. Trusted by leading research labs.
             </h4>
           </div>
         </Col>
@@ -121,7 +121,7 @@ const PricingView = () => (
             "All other wK features",
             <Link to="/onboarding" key="link-to-onboarding">
               <Button size="large" style={{ marginTop: 20 }}>
-                Create A Free Account
+                Create a Free Account
               </Button>
             </Link>,
           ]}
@@ -161,6 +161,11 @@ const PricingView = () => (
             </a>,
           ]}
         </PricingColumn>
+        <Col span={4} push={20}>
+          <div style={{ fontSize: "0.8em", textAlign: "right", marginTop: 5 }}>
+            * VAT not included
+          </div>
+        </Col>
       </Row>
       <Row gutter={16}>
         <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>

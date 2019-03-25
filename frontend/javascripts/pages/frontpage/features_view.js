@@ -74,7 +74,6 @@ export const ImageAnalysisBlock = () => (
     style={{
       marginLeft: "auto",
       marginRight: "auto",
-      marginTop: 80,
       background:
         "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/images/background_main_1080.jpg')",
     }}
@@ -351,7 +350,9 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       </Row>
     </div>
 
-    <ImageAnalysisBlock />
+    <div style={{ marginTop: 80 }}>
+      <ImageAnalysisBlock />
+    </div>
 
     <CreditsFooter />
   </>

@@ -1,8 +1,8 @@
 // @flow
 
-import PriorityQueue from "js-priority-queue";
 import * as THREE from "three";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 
 import {
   type Area,
@@ -11,8 +11,12 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
@@ -24,12 +28,12 @@ import constants, {
   type Vector4,
   addressSpaceDimensions,
 } from "oxalis/constants";
-import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal, {
-  getAnchorPositionToCenterDistance,
-} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+
+const asyncBucketPick = memoizeOne(createWorker(AsyncBucketPickerWorker), (oldArgs, newArgs) =>
+  _.isEqual(oldArgs, newArgs),
+);
+const dummyBuffer = new ArrayBuffer(0);
 
 export type EnqueueFunction = (Vector4, number) => void;
 
@@ -47,24 +51,41 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
-function consumeBucketsFromPriorityQueue(
-  queue: PriorityQueue<{ bucketAddress: Vector4, priority: number }>,
+function consumeBucketsFromArrayBuffer(
+  buffer: ArrayBuffer,
   cube: DataCube,
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
   const bucketsWithPriorities = [];
+  const uint32Array = new Uint32Array(buffer);
+
+  let currentElementIndex = 0;
+  const intsPerItem = 5; // [x, y, z, zoomStep, priority]
+
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
-    if (queue.length === 0) {
+    const currentBufferIndex = currentElementIndex * intsPerItem;
+    if (currentBufferIndex >= uint32Array.length) {
       break;
     }
-    const { bucketAddress, priority } = queue.dequeue();
+
+    const bucketAddress = [
+      uint32Array[currentBufferIndex],
+      uint32Array[currentBufferIndex + 1],
+      uint32Array[currentBufferIndex + 2],
+      uint32Array[currentBufferIndex + 3],
+    ];
+    const priority = uint32Array[currentBufferIndex + 4];
+
     const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       bucketsWithPriorities.push({ bucket, priority });
     }
+
+    currentElementIndex++;
   }
+
   return bucketsWithPriorities;
 }
 
@@ -88,6 +109,7 @@ export default class LayerRenderingManager {
   isSegmentation: boolean;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
+  latestTaskExecutor: LatestTaskExecutor<Function> = new LatestTaskExecutor();
 
   constructor(
     name: string,
@@ -136,8 +158,6 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
-    const fallbackZoomStep = logZoomStep + 1;
-    const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
@@ -145,7 +165,8 @@ export default class LayerRenderingManager {
       return this.cachedAnchorPoint;
     }
 
-    const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
+    const resolutions = getResolutions(dataset);
+    const subBucketLocality = getSubBucketLocality(position, resolutions[logZoomStep]);
     const areas = getAreasFromState(state);
 
     const matrix = getZoomedMatrix(state.flycam);
@@ -153,7 +174,8 @@ export default class LayerRenderingManager {
     const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = state.userConfiguration;
-    const isInvisible = this.isSegmentation && datasetConfiguration.segmentationOpacity === 0;
+    const isInvisible =
+      this.isSegmentation && (datasetConfiguration.segmentationOpacity === 0 || isArbitrary);
     if (
       isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
@@ -174,71 +196,57 @@ export default class LayerRenderingManager {
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
 
-      const bucketQueue = new PriorityQueue({
-        // small priorities take precedence
-        comparator: (b, a) => b.priority - a.priority,
-      });
-      const enqueueFunction = (bucketAddress, priority) => {
-        bucketQueue.queue({ bucketAddress, priority });
-      };
+      let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (!isInvisible) {
-        const resolutions = getResolutions(dataset);
-        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-          determineBucketsForOblique(
-            resolutions,
-            position,
-            enqueueFunction,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else if (viewMode === constants.MODE_ARBITRARY) {
-          determineBucketsForFlight(
+        pickingPromise = this.latestTaskExecutor.schedule(() =>
+          asyncBucketPick(
+            viewMode,
             resolutions,
             position,
             sphericalCapRadius,
-            enqueueFunction,
             matrix,
             logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else {
-          determineBucketsForOrthogonal(
-            resolutions,
-            enqueueFunction,
             datasetConfiguration.loadingStrategy,
-            logZoomStep,
             this.cachedAnchorPoint,
             areas,
             subBucketLocality,
-          );
-        }
+          ),
+        );
       }
 
-      const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
-        bucketQueue,
-        this.cube,
-        this.textureBucketManager.maximumCapacity,
+      this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
+
+      pickingPromise.then(
+        buffer => {
+          const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
+            buffer,
+            this.cube,
+            this.textureBucketManager.maximumCapacity,
+          );
+
+          const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+          this.cube.markBucketsAsUnneeded();
+          // This tells the bucket collection, that the buckets are necessary for rendering
+          buckets.forEach(b => b.markAsNeeded());
+
+          this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
+
+          // In general, pull buckets which are not available but should be sent to the GPU
+          const missingBuckets = bucketsWithPriorities
+            .filter(({ bucket }) => !bucket.hasData())
+            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+            .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+
+          this.pullQueue.addAll(missingBuckets);
+          this.pullQueue.pull();
+        },
+        reason => {
+          if (reason.message !== SKIPPED_TASK_REASON) {
+            throw reason;
+          }
+        },
       );
-
-      const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-      this.cube.markBucketsAsUnneeded();
-      // This tells the bucket collection, that the buckets are necessary for rendering
-      buckets.forEach(b => b.markAsNeeded());
-
-      this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
-
-      // In general, pull buckets which are not available but should be sent to the GPU
-      const missingBuckets = bucketsWithPriorities
-        .filter(({ bucket }) => !bucket.hasData())
-        .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-        .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
-
-      this.pullQueue.addAll(missingBuckets);
-      this.pullQueue.pull();
     }
 
     return this.cachedAnchorPoint;

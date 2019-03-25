@@ -11,6 +11,7 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
+import type { DatasetFilteringMode } from "../dataset_view";
 
 const { Column } = Table;
 
@@ -21,6 +22,7 @@ type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
   isUserAdmin: boolean,
+  datasetFilteringMode: DatasetFilteringMode,
 };
 
 type State = {
@@ -59,14 +61,45 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
+  getFilteredDatasets() {
+    const filterByMode = datasets => {
+      const { datasetFilteringMode } = this.props;
+      if (datasetFilteringMode === "onlyShowReported") {
+        return datasets.filter(el => !el.isUnreported);
+      } else if (datasetFilteringMode === "onlyShowUnreported") {
+        return datasets.filter(el => el.isUnreported);
+      } else {
+        return datasets;
+      }
+    };
+
+    const filterByQuery = datasets =>
+      Utils.filterWithSearchQueryAND<APIMaybeUnimportedDataset, "name" | "description">(
+        datasets,
+        ["name", "description"],
+        this.props.searchQuery,
+      );
+
+    const filterByHasLayers = datasets =>
+      this.props.isUserAdmin
+        ? datasets
+        : datasets.filter(dataset => dataset.dataSource.dataLayers != null);
+
+    return filterByQuery(filterByMode(filterByHasLayers(this.props.datasets)));
+  }
+
+  renderEmptyText() {
+    const maybeWarning =
+      this.props.datasetFilteringMode !== "showAllDatasets"
+        ? "Note that datasets are currently filtered according to whether they are available on the datastore. You can change the filtering via the menu next to the search input."
+        : null;
+
+    return <span>No Datasets found. {maybeWarning}</span>;
+  }
+
   render() {
     const { isUserAdmin } = this.props;
-    const isImported = dataset => dataset.dataSource.dataLayers != null;
-    const filteredDataSource = Utils.filterWithSearchQueryAND(
-      isUserAdmin ? this.props.datasets : this.props.datasets.filter(isImported),
-      ["name", "description"],
-      this.props.searchQuery,
-    );
+    const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
     const dataSourceSortedByRank = useLruRank
@@ -110,6 +143,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           isUserAdmin ? dataset => <DatasetAccessListView dataset={dataset} /> : null
         }
         onChange={this.handleChange}
+        locale={{ emptyText: this.renderEmptyText() }}
       >
         <Column
           title="Name"

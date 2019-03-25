@@ -385,7 +385,13 @@ export class InputMouse {
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel),
+      Utils.addEventListenerWithDelegation(
+        document,
+        "wheel",
+        this.targetSelector,
+        this.mouseWheel,
+        { passive: false },
+      ),
     );
 
     this.hammerManager = new Hammer(this.domElement, {

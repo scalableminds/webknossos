@@ -144,7 +144,6 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
 function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
   return (
     <SubMenu
-      key="helpMenu"
       title={
         <CollapsibleMenuTitle
           title="Help"
@@ -327,7 +326,12 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   }
 
   menuItems.push(
-    <HelpSubMenu version={version} isAdmin={isAdmin} collapse={collapseAllNavItems} />,
+    <HelpSubMenu
+      key="helpMenu"
+      version={version}
+      isAdmin={isAdmin}
+      collapse={collapseAllNavItems}
+    />,
   );
 
   // Don't highlight active menu items, when showing the narrow version of the navbar,

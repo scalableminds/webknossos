@@ -64,7 +64,12 @@ module.exports = function(env = {}) {
       rules: [
         {
           test: /\.worker\.js$/,
-          use: { loader: "worker-loader" },
+          use: {
+            loader: "worker-loader",
+            options: {
+              name: "[name].[hash].worker.js",
+            },
+          },
         },
         {
           test: /\.js$/,

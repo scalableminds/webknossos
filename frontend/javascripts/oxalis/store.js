@@ -476,6 +476,7 @@ export const defaultState: OxalisState = {
   task: null,
   dataset: {
     name: "Test Dataset",
+    isUnreported: false,
     created: 123,
     dataSource: {
       dataLayers: [],

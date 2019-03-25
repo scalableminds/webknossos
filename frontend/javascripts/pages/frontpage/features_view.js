@@ -186,9 +186,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
         <p>
-          Use our published <em>Flight mode</em> to quickly capture high-quality skeleton
-          annotations. Organize the UI to fit your needs and discover your data in the easy-to-use
-          viewer.
+          Use <em>Flight mode</em> to quickly capture high-quality skeleton annotations. Organize
+          the UI to fit your needs and discover your data in the easy-to-use viewer.
         </p>
         <p>
           Create fine-grained skeleton annotations: Mark branch points and overlay 3D mesh

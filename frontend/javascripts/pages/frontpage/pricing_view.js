@@ -44,7 +44,9 @@ const PricingColumn = ({
           <h1 style={{ margin: 20, marginBottom: 60, color: fontColor || "inherit" }}>Free</h1>
         ) : (
           <>
-            <h1 style={{ margin: 20, marginBottom: 5, color: fontColor || "inherit" }}>{price}€</h1>
+            <h1 style={{ margin: 20, marginBottom: 5, color: fontColor || "inherit" }}>
+              From {price}€
+            </h1>
             <p style={{ marginBottom: 40 }}>per month*</p>
           </>
         )}
@@ -143,7 +145,7 @@ const PricingView = () => (
             "Unlimited accounts for your organization",
             "Suggest new datasets for publication",
             "Community Support",
-            "All other wK features",
+            "All webKnossos features",
             <Link to="/onboarding" key="link-to-onboarding">
               <Button size="large" style={{ marginTop: 20 }}>
                 Create a Free Account
@@ -169,7 +171,7 @@ const PricingView = () => (
             "Managed monitoring and backups",
             "Help with dataset upload and conversion ",
             "Email support",
-            "Everything from the Public Hosting",
+            "+ Everything from the Public Hosting",
             <a href="mailto:hello@scalableminds.com" key="email-button">
               <Button size="large" style={{ marginTop: 20 }}>
                 Get in Touch
@@ -185,7 +187,7 @@ const PricingView = () => (
             "Priority Email & Slack Support",
             "Insights about the development roadmap",
             "Custom hosting solutions",
-            "Everything from Premium Hosting",
+            "+ Everything from Premium Hosting",
             <a href="mailto:hello@scalableminds.com" key="email-button">
               <Button size="large" style={{ marginTop: 20 }}>
                 Get in Touch
@@ -210,8 +212,8 @@ const PricingView = () => (
           <p>
             All webKnossos features can be used with free accounts. Try it with the{" "}
             <Link to="/">available published datasets.</Link> We are also happy to integrate your
-            dataset in the public dataset gallery. Alternatively, upgrade to the Premium plan and
-            start working with your unreleased, private data.
+            dataset in the publication gallery. Alternatively, upgrade to the Premium plan and start
+            working with your unreleased, private data.
           </p>
           <p>
             You can learn more about webKnosssos in the{" "}
@@ -222,7 +224,7 @@ const PricingView = () => (
         </FAQItem>
         <FAQItem title="Why should I trust scalable minds with my data?">
           <p>
-            Security is one of our top priorities. All datasets uploaded on webknossos.org are
+            Data security is one of our top priorities. All datasets uploaded on webknossos.org are
             stored securely in the scalable minds cloud infrastructure and NOT shared with anyone.
             webKnossos has fine-grained permissions for individual users, teams, and datasets to
             control the access. Only authorized users within your organization will be able to
@@ -230,8 +232,8 @@ const PricingView = () => (
             <Link to="privacy">privacy statement</Link>.
           </p>
           <p>
-            We offer a Custom hosting plan for enterprise solutions, where datasets can be directly
-            stored in your data center.
+            We offer a Custom hosting plan, where datasets can be directly stored in your data
+            center.
             <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
           </p>
         </FAQItem>
@@ -241,8 +243,8 @@ const PricingView = () => (
             infrastructure in Germany.
           </p>
           <p>
-            We offer a Custom hosting plan for enterprise solutions, where datasets can be directly
-            stored in your data center.
+            We offer a Custom hosting plan, where datasets can be directly stored in your data
+            center.
             <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
           </p>
         </FAQItem>
@@ -277,7 +279,7 @@ const PricingView = () => (
             We are happy to help you find a custom solution for setting up webKnossos. Over the
             years we have worked with different research institutes and have tackled a diverse set
             of challenges. Custom data formats, petabyte-scale datasets, on-premise or cloud
-            storage...
+            storage, file system tuning, monitoring...
           </p>
           <p>
             Our Custom hosting plan is right for you.{" "}
@@ -313,9 +315,9 @@ const PricingView = () => (
             installation required. All data is hosted on the scalable minds cloud infrastructure.
           </p>
           <p>
-            Some clients prefer to store their datasets on-premise, within their infrastructure.
-            With our Custom plan, webKnossos can be configured to load data from a dedicated data
-            store on your servers.
+            Some clients prefer to store their datasets on-premise, within their infrastructure or
+            have exceptional data needs. With our Custom plan, webKnossos can be configured to load
+            data from a dedicated data store on your servers.
           </p>
         </FAQItem>
         <FAQItem title="I need a new functionality not yet available in webKnossos,">
@@ -335,12 +337,38 @@ const PricingView = () => (
         <FAQItem title="What about open-source?">
           <p>
             webKnossos is an open-source project developed by{" "}
-            <a href="https://scalableminds.com">scalable minds</a> with support from the{" "}
+            <a href="https://scalableminds.com">scalable minds</a> in collaboration with the{" "}
             <a href="https://www.brain.mpg.de/connectomics">
               Max-Planck-Institute for Brain Research
             </a>
             . webKnossos is methodically proven and published in{" "}
             <a href="https://dx.doi.org/10.1038/nmeth.4331">Nature Methods (2017) 14, 691-694</a>.
+          </p>
+          <p>
+            All hosting plans on this website are executed and handled exclusively by scalable
+            minds.
+          </p>
+        </FAQItem>
+        <FAQItem title="What is the difference between Knossos and webKnossos?">
+          <p>
+            While webKnossos and Knossos share some of the roots, they are two distinct software
+            tools for viewing and annotating 3D datasets developed by different teams.
+          </p>
+          <p>
+            webKnossos supports a wide array of popular data formats (Knossos cubes, WKW,
+            Neuroglancer Precomputed, BossDB, Tiff Stacks) and is used for creating both skeleton
+            and volume annotations. As browser-based application, it is easy to share links to
+            datasets and publish datasets for other to review.
+          </p>
+        </FAQItem>
+
+        <FAQItem title="Who develops and runs webKnossos?">
+          <p>
+            webKnossos is an open-source project developed by{" "}
+            <a href="https://scalableminds.com">scalable minds</a> in collaboration with the{" "}
+            <a href="https://www.brain.mpg.de/connectomics">
+              Max-Planck-Institute for Brain Research.
+            </a>
           </p>
           <p>
             All hosting plans on this website are executed and handled exclusively by scalable

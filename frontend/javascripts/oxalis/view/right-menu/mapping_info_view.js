@@ -44,6 +44,7 @@ type StateProps = {|
   setAvailableMappingsForLayer: (string, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
+  isMergerModeEnabled: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -252,44 +253,47 @@ class MappingInfoView extends React.Component<Props, State> {
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
+        {/* Only display the mapping selection when merger mode is not active 
+            to avoid conflicts in the logic of the UI. */
+        !this.props.isMergerModeEnabled ? (
+          <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
+            <div style={{ marginBottom: 6 }}>
+              <label className="setting-label">
+                ID Mapping
+                <Switch
+                  onChange={this.handleSetMappingEnabled}
+                  checked={this.state.shouldMappingBeEnabled}
+                  style={{ float: "right" }}
+                  loading={this.state.isRefreshingMappingList}
+                />
+              </label>
+            </div>
 
-        <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
-          <div style={{ marginBottom: 6 }}>
-            <label className="setting-label">
-              ID Mapping
-              <Switch
-                onChange={this.handleSetMappingEnabled}
-                checked={this.state.shouldMappingBeEnabled}
-                style={{ float: "right" }}
-                loading={this.state.isRefreshingMappingList}
-              />
-            </label>
-          </div>
-
-          {/*
+            {/*
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-          {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
-            <Select
-              placeholder="Select mapping"
-              defaultActiveFirstOption={false}
-              style={{ width: "100%" }}
-              {...selectValueProp}
-              onChange={this.handleChangeMapping}
-              notFoundContent="No mappings found."
-            >
-              {availableMappings
-                .slice()
-                .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
-                .map(mapping => (
-                  <Option key={mapping} value={mapping}>
-                    {mapping}
-                  </Option>
-                ))}
-            </Select>
-          ) : null}
-        </div>
+            {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
+              <Select
+                placeholder="Select mapping"
+                defaultActiveFirstOption={false}
+                style={{ width: "100%" }}
+                {...selectValueProp}
+                onChange={this.handleChangeMapping}
+                notFoundContent="No mappings found."
+              >
+                {availableMappings
+                  .slice()
+                  .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
+                  .map(mapping => (
+                    <Option key={mapping} value={mapping}>
+                      {mapping}
+                    </Option>
+                  ))}
+              </Select>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -319,6 +323,7 @@ function mapStateToProps(state: OxalisState) {
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
+    isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
   };
 }
 

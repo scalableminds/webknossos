@@ -1,5 +1,4 @@
 /**
-
  * tracing_settings_view.js
  * @flow
  */
@@ -302,7 +301,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             disabled={!isMergerModeSupported}
             tooltipText={
               !isMergerModeSupported
-                ? "The merger mode is only available for datasets with uint32 segmentations"
+                ? "The merger mode is only available for datasets with uint32 segmentations."
                 : null
             }
           />

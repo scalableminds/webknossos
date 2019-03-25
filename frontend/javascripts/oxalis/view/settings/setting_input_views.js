@@ -152,23 +152,23 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
 
   render() {
     const { label, onChange, value, disabled, tooltipText } = this.props;
-    const switchButton = (
-      <Col span={15}>
-        <Switch onChange={onChange} checked={value} defaultChecked={value} disabled={disabled} />
-      </Col>
-    );
     return (
       <Row className="margin-bottom" type="flex" align="top">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        {tooltipText != null ? (
-          <Tooltip title={tooltipText} placement="topLeft">
-            {switchButton}
+        <Col span={15}>
+          <Tooltip title={tooltipText} placement="top">
+            <div style={{ display: "inline-block" }}>
+              <Switch
+                onChange={onChange}
+                checked={value}
+                defaultChecked={value}
+                disabled={disabled}
+              />
+            </div>
           </Tooltip>
-        ) : (
-          switchButton
-        )}
+        </Col>
       </Row>
     );
   }

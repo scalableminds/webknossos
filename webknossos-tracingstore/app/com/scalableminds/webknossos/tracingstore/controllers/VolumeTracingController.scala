@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -8,7 +7,11 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, V
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{
+  TracingStoreAccessTokenService,
+  TracingStoreConfig,
+  TracingStoreWkRpcClient
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.JsonHelper.boxFormat
@@ -20,7 +23,7 @@ import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(
     val tracingService: VolumeTracingService,
@@ -57,17 +60,16 @@ class VolumeTracingController @Inject()(
 
   def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      //accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
             val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
-            val source: Source[Array[Byte], NotUsed] = Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator))
-            Ok.chunked(source)
+            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
           }
         }
-      //}
+      }
     }
   }
 

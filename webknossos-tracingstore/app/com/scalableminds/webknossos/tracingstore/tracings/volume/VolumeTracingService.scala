@@ -154,35 +154,6 @@ class VolumeTracingService @Inject()(
       byte == 0
     }
 
-  private def outputStream(a: java.io.OutputStream => Unit)(implicit ec: ExecutionContext): Enumerator[Array[Byte]] = {
-
-    def onStart(channel: Channel[Array[Byte]]): Unit = {
-      val outputStream = new java.io.OutputStream() {
-        override def close() {
-          channel.end()
-        }
-        override def flush() {}
-        override def write(value: Int) {
-          channel.push(Array(value.toByte))
-        }
-        override def write(buffer: Array[Byte]) {
-          write(buffer, 0, buffer.length)
-        }
-        override def write(buffer: Array[Byte], start: Int, count: Int) {
-          channel.push(buffer.slice(start, start + count))
-        }
-      }
-      a(outputStream)
-    }
-
-    def onError(error: String, input: Input[Array[Byte]]): Unit = {
-      println("outputStream onerror: ", error)
-      throw new Exception("outputStream onerror: " +  error)
-    }
-
-    Concurrent.unicast[Array[Byte]](onStart, onError=onError)(ec)
-  }
-
   def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
@@ -191,7 +162,7 @@ class VolumeTracingService @Inject()(
       logger.debug(s"No buckets found to send as zipped volume data for $tracingId.")
     }
 
-    outputStream { os =>
+    Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os).onComplete {
         case failure: scala.util.Failure[Unit] => logger.debug(s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
         case success: scala.util.Success[Unit]  => logger.debug(s"Successfully sent zipped volume data for $tracingId")

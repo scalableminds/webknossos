@@ -118,13 +118,6 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: O
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next
-    val r = scala.util.Random
-    if (r.nextInt(100) > 50) {
-      println("boom")
-      throw new Exception("Boom")
-    } else {
-      println("sending bucket")
-    }
     (tuple._1, tuple._2)
   }
 

@@ -10,7 +10,7 @@ const { promisify } = require("util");
 
 const fileStatAsync = promisify(fs.stat);
 
-const proxy = httpProxy.createProxyServer({timeout: 1000*1000*1000, proxyTimeout: 1000*1000*1000});
+const proxy = httpProxy.createProxyServer();
 const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));

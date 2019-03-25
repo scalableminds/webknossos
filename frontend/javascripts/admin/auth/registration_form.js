@@ -103,7 +103,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
   checkPassword = (rule, value, callback) => {
     const { form } = this.props;
     if (value && value !== form.getFieldValue("password.password1")) {
-      callback(messages["auth.registration_password_missmatch"]);
+      callback(messages["auth.registration_password_mismatch"]);
     } else {
       callback();
     }

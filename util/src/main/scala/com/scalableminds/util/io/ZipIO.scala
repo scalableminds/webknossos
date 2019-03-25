@@ -8,15 +8,19 @@ import akka.stream.ActorMaterializer
 import akka.stream.javadsl.StreamConverters
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.scalableminds.util.tools.TextUtils
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
+
 import scala.concurrent.duration._
 import org.apache.commons.io.IOUtils
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
-object ZipIO {
+object ZipIO extends LazyLogging {
 
   /**
     * Representation of an opened zip file
@@ -70,28 +74,31 @@ object ZipIO {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit =
+  def zip(sources: List[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     zip(sources.toIterator, out)
 
-  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Unit =
+  def zip(sources: Iterator[NamedStream], out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
     if (sources.nonEmpty) {
       val zip = startZip(out)
-      zipIterator(sources, zip).onComplete { _ =>
+      val zipWrittenFuture = zipIterator(sources, zip)
+      zipWrittenFuture.onComplete { _ =>
         zip.close()
       }
-    } else
+      zipWrittenFuture
+    } else {
       out.close()
+      Future.successful(())
+    }
 
   private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Future[Unit] =
     if (!sources.hasNext) {
       Future.successful(())
     } else {
       try {
-        println("sources.next")
         val s = sources.next
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
-        case e: Exception => {println("exception in zipIterator: " + e.getMessage); throw new Exception(e.getMessage)}
+        case e: Exception => {logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e)); throw new Exception(e.getMessage)}
       }
     }
 

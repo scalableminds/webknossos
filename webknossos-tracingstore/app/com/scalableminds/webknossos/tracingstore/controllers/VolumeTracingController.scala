@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -62,7 +63,8 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
             val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
-            Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
+            val source: Source[Array[Byte], NotUsed] = Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator))
+            Ok.chunked(source)
           }
         }
       //}

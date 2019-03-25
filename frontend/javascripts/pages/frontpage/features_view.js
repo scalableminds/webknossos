@@ -99,7 +99,12 @@ export const SocialMediaBlock = () => (
     gutter={16}
     type="flex"
     align="center"
-    style={{ backgroundColor: bgColorLight, marginTop: 40 }}
+    style={{
+      marginLeft: "auto",
+      marginRight: "auto",
+      backgroundColor: bgColorLight,
+      marginTop: 40,
+    }}
   >
     <Col md={{ span: 12 }} sm={{ span: 24 }}>
       <div

@@ -98,6 +98,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               contrast: 1,
               color: [255, 255, 255],
               alpha: 100,
+              isVisible: true,
             },
             initialLayerSettings[layer.name],
           );

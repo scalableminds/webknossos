@@ -503,7 +503,7 @@ class PlaneMaterialFactory {
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
     this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
     this.uniforms[`${name}_contrast`].value = settings.contrast;
-    this.uniforms[`${name}_alpha`].value = settings.alpha / 100;
+    this.uniforms[`${name}_alpha`].value = settings.isVisible ? settings.alpha / 100 : 0;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);

@@ -39,8 +39,8 @@ import constants, {
 } from "oxalis/constants";
 import messages, { settings } from "messages";
 
-const Panel = Collapse.Panel;
-const Option = Select.Option;
+const { Panel } = Collapse;
+const { Option } = Select;
 
 type DatasetSettingsProps = {|
   datasetConfiguration: DatasetConfiguration,
@@ -65,7 +65,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color } = layer;
+    const { brightness, contrast, alpha, color, isVisible } = layer;
     return (
       <div key={layerName}>
         <Row>
@@ -74,6 +74,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
+            {alpha > 0 && isVisible ? (
+              <Tooltip title="Make this color layer invisible.">
+                <Icon
+                  type="eye"
+                  onClick={() => this.props.onChangeLayer(layerName, "isVisible", false)}
+                  style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
+                />
+              </Tooltip>
+            ) : (
+              <Tooltip title="Make this color layer visible.">
+                <Icon
+                  type="eye-o"
+                  onClick={() => this.props.onChangeLayer(layerName, "isVisible", true)}
+                  style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
+                />
+              </Tooltip>
+            )}
             <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
               <Icon
                 type="scan"

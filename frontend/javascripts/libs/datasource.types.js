@@ -72,5 +72,6 @@ export type LayerUserConfiguration = {
     brightness: number,
     contrast: number,
     color: Vector3,
+    isVisible: boolean,
   },
 };

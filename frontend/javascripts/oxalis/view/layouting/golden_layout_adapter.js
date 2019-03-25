@@ -10,6 +10,7 @@ import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import window, { document } from "libs/window";
+import { InputKeyboardNoLoop } from "libs/input";
 
 import { PortalTarget, RenderToPortal } from "./portal_utils";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
@@ -69,7 +70,8 @@ const updateSizeForGl = gl => {
 
 export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   gl: GoldenLayout;
-  unbindListeners: Array<() => void>;
+  maximizedItem: ?Object = null;
+  unbindListeners: Array<() => void> = [];
 
   componentDidMount() {
     this.setupLayout();
@@ -90,6 +92,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
 
   unbind() {
     this.unbindListeners.forEach(unbind => unbind());
+    this.unbindListeners = [];
   }
 
   rebuildLayout() {
@@ -102,7 +105,53 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const { onLayoutChange } = this.props;
     if (onLayoutChange != null && this.gl.isInitialised) {
       onLayoutChange(this.gl.toConfig(), this.props.activeLayoutName);
+      // Only when the maximized item changed, adjust css classes to not show hidden gl items.
+      if (this.maximizedItem !== this.gl._maximisedItem) {
+        // Gl needs a forced update when returning from maximized viewing
+        // mode to render stacked components correctly.
+        const needsUpdatedSize = this.gl._maximisedItem === null && this.maximizedItem != null;
+        this.maximizedItem = this.gl._maximisedItem;
+        const allGlHeaderElements = document.getElementsByClassName("lm_item");
+        for (const element of allGlHeaderElements) {
+          if (this.maximizedItem) {
+            // Show only the maximized item and do not hide the gl root component.
+            if (
+              !element.classList.contains("lm_maximised") &&
+              !element.classList.contains("lm_root")
+            ) {
+              element.classList.add("hidden-gl-item");
+            }
+          } else {
+            // If there is no maximized component, remove the css class to show everything as usual.
+            element.classList.remove("hidden-gl-item");
+          }
+        }
+        // Force gl to update again when returning from maximized viewing mode.
+        if (needsUpdatedSize) {
+          updateSizeForGl(this.gl);
+        }
+      }
     }
+  }
+
+  attachMaximizeListener() {
+    const toggleMaximize = () => {
+      // Only maximize the element the mouse is over
+      const hoveredComponents = this.gl.root.getItemsByFilter(
+        item => item.isComponent && item.element[0].matches(":hover"),
+      );
+      if (hoveredComponents.length > 0) {
+        const hoveredItem = hoveredComponents[0];
+        // Maximize the container of the item not only the item itself, otherwise the header is not visible
+        hoveredItem.parent.toggleMaximise();
+      }
+    };
+
+    const keyboardNoLoop = new InputKeyboardNoLoop(
+      { ".": toggleMaximize },
+      { supportInputElements: false },
+    );
+    return () => keyboardNoLoop.destroy();
   }
 
   setupLayout() {
@@ -126,10 +175,16 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       },
       true,
     );
+    const unbindMaximizeListener = this.attachMaximizeListener();
 
     gl.on("stateChanged", () => this.onStateChange());
 
-    this.unbindListeners = [unbindResetListener, unbindChangedScaleListener, unbindResizeListener];
+    this.unbindListeners = [
+      unbindResetListener,
+      unbindChangedScaleListener,
+      unbindResizeListener,
+      unbindMaximizeListener,
+    ];
 
     updateSize();
     // The timeout is necessary since react cannot deal with react.render calls (which goldenlayout executes)

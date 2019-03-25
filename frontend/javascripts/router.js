@@ -51,6 +51,7 @@ const { Content } = Layout;
 
 type StateProps = {|
   activeUser: ?APIUser,
+  hasOrganizations: boolean,
 |};
 
 type Props = StateProps;
@@ -131,6 +132,7 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
+                  if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
                   if (enableFrontpage) return <SpotlightView />;
 
                   return isAuthenticated ? (
@@ -432,6 +434,7 @@ class ReactRouter extends React.Component<Props> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
 export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ReactRouter);

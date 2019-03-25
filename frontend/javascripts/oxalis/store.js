@@ -277,6 +277,7 @@ export type TemporaryConfiguration = {
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
+  +isMergerModeEnabled: boolean,
 };
 
 export type Script = APIScript;
@@ -371,6 +372,7 @@ type UiInformation = {
   +storedLayouts: Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
+  +hasOrganizations: boolean,
 };
 
 export type OxalisState = {|
@@ -469,10 +471,12 @@ export const defaultState: OxalisState = {
       isMappingEnabled: false,
       mappingSize: 0,
     },
+    isMergerModeEnabled: false,
   },
   task: null,
   dataset: {
     name: "Test Dataset",
+    isUnreported: false,
     created: 123,
     dataSource: {
       dataLayers: [],
@@ -570,6 +574,7 @@ export const defaultState: OxalisState = {
     storedLayouts: {},
     isImportingMesh: false,
     isInAnnotationView: false,
+    hasOrganizations: false,
   },
 };
 

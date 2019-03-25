@@ -1,6 +1,6 @@
 // @flow
 import { withRouter, type RouterHistory } from "react-router-dom";
-import { Row, Col, Button } from "antd";
+import { Row, Col, Button, Icon } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
 
@@ -94,6 +94,44 @@ export const ImageAnalysisBlock = () => (
   </Row>
 );
 
+export const SocialMediaBlock = () => (
+  <Row
+    gutter={16}
+    type="flex"
+    align="center"
+    style={{ backgroundColor: "hsl(208, 21%, 88%)", marginTop: 40 }}
+  >
+    <Col md={{ span: 12 }} sm={{ span: 24 }}>
+      <div
+        style={{
+          padding: 60,
+          textAlign: "center",
+        }}
+      >
+        <h2 style={{ marginTop: 20 }}>Follow us</h2>
+        <h4 style={{ marginTop: 30 }}>
+          Join us on social media and stay up-to-date on the latest webKnossos features.
+        </h4>
+        <div style={{ marginTop: 30 }}>
+          <a href="https://twitter.com/webknossos" target="_blank" rel="noopener noreferrer">
+            <Icon type="twitter" style={{ marginRight: 40, fontSize: 40 }} />
+          </a>
+          <a href="https://medium.com/scalableminds" target="_blank" rel="noopener noreferrer">
+            <Icon type="medium" style={{ marginRight: 40, fontSize: 40 }} />
+          </a>
+          <a
+            href="https://github.com/scalableminds/webknossos"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon type="github" style={{ marginRight: 40, fontSize: 40 }} />
+          </a>
+        </div>
+      </div>
+    </Col>
+  </Row>
+);
+
 const FeaturesView = ({ history }: { history: RouterHistory }) => (
   <>
     <Row
@@ -135,7 +173,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </a>
       </Col>
     </Row>
-    <div className="container" style={{ paddingTop: 20 }}>
+
+    <div className="container">
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
         imageUrl="/images/brain.png"
@@ -221,7 +260,11 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           your lab.
         </p>
       </FeatureHighlight>
+    </div>
 
+    <SocialMediaBlock />
+
+    <div className="container">
       <h2 style={{ textAlign: "center", marginTop: 80, marginBottom: 50 }}>Feature Summary</h2>
       <Row gutter={16}>
         <FeatureList title="Annotations">
@@ -306,7 +349,9 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </FeatureList>
       </Row>
     </div>
+
     <ImageAnalysisBlock />
+
     <CreditsFooter />
   </>
 );

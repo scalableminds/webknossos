@@ -3,7 +3,7 @@ import { withRouter, Link } from "react-router-dom";
 import { Row, Col, Button } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
-import { ImageAnalysisBlock } from "pages/frontpage/features_view";
+import { ImageAnalysisBlock, SocialMediaBlock } from "pages/frontpage/features_view";
 
 const PricingColumn = ({
   title,
@@ -181,6 +181,7 @@ const PricingView = () => (
           </div>
         </Col>
       </Row>
+
       <Row gutter={16}>
         <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>
         <FAQItem title="How do I get started?">
@@ -241,6 +242,9 @@ const PricingView = () => (
         </FAQItem>
       </Row>
     </div>
+
+    <SocialMediaBlock />
+
     <ImageAnalysisBlock />
     <CreditsFooter />
   </>

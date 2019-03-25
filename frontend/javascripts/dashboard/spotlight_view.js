@@ -96,7 +96,7 @@ const WelcomeHeader = ({ history }) => (
                 style={{ marginRight: 50 }}
                 onClick={() => history.push("/onboarding")}
               >
-                Create A Free Account
+                Create a Free Account
               </Button>
               <Link to="/features" className="spotlight-hero-button">
                 Learn More About the Features

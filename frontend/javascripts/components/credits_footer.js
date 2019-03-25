@@ -57,7 +57,7 @@ const creditsFooter = () => (
         </p>
         <p>
           <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link> &bull;{" "}
-          <a href="https://twitter.com/webknossos" target="_blank">
+          <a href="https://twitter.com/webknossos" target="_blank" rel="noopener noreferrer">
             Twitter
           </a>
         </p>

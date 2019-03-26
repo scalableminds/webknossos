@@ -7,32 +7,16 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.util.tools.Math
 import net.liftweb.common.Full
-import play.api.i18n.MessagesProvider
+import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
-import Numeric.Implicits._
 
-
-
-trait NumericTools {
-
-  def mean[T: Numeric](xs: Iterable[T]): Double = xs.sum.toDouble / xs.size
-
-  def variance[T: Numeric](xs: Iterable[T]): Double = {
-    val avg = mean(xs)
-
-    xs.map(_.toDouble).map(a => math.pow(a - avg, 2)).sum / xs.size
-  }
-
-  def stdDev[T: Numeric](xs: Iterable[T]): Double = math.sqrt(variance(xs))
-
-}
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
-    extends FoxImplicits
-    with NumericTools {
+    extends FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
   var i = 0
 
@@ -40,22 +24,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     for {
       positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
     } yield positionAndResolutionOpt
-
-  private def convertDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] = {
-    elementClass match {
-      case ElementClass.uint8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte)).map(_.toDouble)
-      case ElementClass.uint16 =>
-        convertDataImpl[Short, ShortBuffer](
-          data,
-          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)).map(_.toDouble)
-      case ElementClass.uint32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt)).map(_.toDouble)
-      case ElementClass.uint64 =>
-        convertDataImpl[Long, LongBuffer](data,
-          DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity)).map(_.toDouble)
-    }
-  }
 
   private def convertData(data: Array[Byte], elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long] =
     elementClass match {
@@ -175,13 +143,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     }
 
     positionCreationIter((1 to iterationCount).toList, List[Point3D]())
-
   }
 
-
-
-
-  def meanAndStdev(dataSource: DataSource, dataLayer: DataLayer)(implicit m: MessagesProvider): Fox[(Double, Double)] = {
+  def meanAndStdDev(dataSource: DataSource, dataLayer: DataLayer)(implicit m: MessagesProvider): Fox[(Double, Double)] = {
 
     def getDataFor(position: Point3D, resolution: Point3D): Fox[Array[Byte]] = {
       val request = DataRequest(
@@ -197,33 +161,42 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] = {
       buckets.foldLeft(Array[Byte]()) {
         (acc, i) => {
-          println("concatenating bucket")
           acc ++ i
         }
       }
     }
 
-    def filterValues(byte: Byte) = {
-      //TODO
-      true
+    def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] = {
+      elementClass match {
+        case ElementClass.uint8 =>
+          convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+            .filter(_ != 0).map(spire.math.UByte(_).toDouble)
+        case ElementClass.uint16 =>
+          convertDataImpl[Short, ShortBuffer](
+            data,
+            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+            .filter(_ != 0).map(spire.math.UShort(_).toDouble)
+        case ElementClass.uint32 =>
+          convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+            .filter(_ != 0).map(spire.math.UInt(_).toDouble)
+        case ElementClass.uint64 =>
+          convertDataImpl[Long, LongBuffer](data,
+            DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+            .filter(_ != 0).map(spire.math.ULong(_).toDouble)
+      }
     }
 
-    def meanAndStdDevFor(positions: List[Point3D], resolution: Point3D): Fox[(Double, Double)] =
+    def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D)(implicit m: MessagesProvider): Fox[(Double, Double)] =
       for {
         dataBucketWise: Seq[Array[Byte]] <- Fox.serialCombined(positions)(pos => getDataFor(pos, resolution))
-        _ = println(s"fetched ${dataBucketWise.length} buckets")
         dataConcatenated = concatenateBuckets(dataBucketWise)
-        _ = println("concatenated data")
-        dataFiltered = dataConcatenated.filter(filterValues)
-        _ = println("filtered data")
-        dataAsDoubles = convertDataToDouble(dataConcatenated, dataLayer.elementClass)
-        dataAsInts = convertData(dataConcatenated, dataLayer.elementClass)
-        _ = println("converted data to double")
-      } yield (mean(dataAsDoubles), stdDev(dataAsDoubles))
+        dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
+        _ <- Fox.bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataSet.sampledOnlyBlack"
+      } yield (Math.mean(dataAsDoubles), Math.stdDev(dataAsDoubles))
 
     for {
-      highestResolution <- dataLayer.resolutions.sortBy(_.maxDim).headOption.toFox
-      meanAndStdDev <- meanAndStdDevFor(createPositions(dataLayer, 2).distinct, highestResolution)
+      _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataSet.noResolutions"
+      meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.maxBy(_.maxDim))
     } yield meanAndStdDev
   }
 }

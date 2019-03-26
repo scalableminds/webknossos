@@ -378,11 +378,11 @@ class BinaryDataController @Inject()(
           AllowRemoteOrigin {
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              meanAndStdev <- findDataService.meanAndStdev(dataSource, dataLayer)
+              meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
             } yield
               Ok(
-                Json.obj("mean" -> meanAndStdev._1,
-                  "stdev" -> meanAndStdev._2)
+                Json.obj("mean" -> meanAndStdDev._1,
+                  "stdDev" -> meanAndStdDev._2)
               )
           }
         }

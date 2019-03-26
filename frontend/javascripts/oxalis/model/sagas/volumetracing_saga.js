@@ -51,6 +51,11 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
+import mainThreadPredict from "oxalis/workers/tensorflow.impl";
+
+const workerPredict = createWorker(TensorFlowWorker);
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -247,15 +252,14 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 }
 
-let segmentationModel = null;
-function* getSegmentationModel(): Saga<Object> {
-  if (segmentationModel == null) {
-    console.time("fetch model");
-    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/seg-model.json");
-    console.timeEnd("fetch model");
-  }
-  return segmentationModel;
-}
+const configureTensorFlow = (useWebworker, useGPU) => {
+  window.useWebworker = useWebworker;
+  window.useGPU = useGPU;
+  console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+};
+
+configureTensorFlow(true, true);
+window.configureTensorFlow = configureTensorFlow;
 
 function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
@@ -346,19 +350,23 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   }
   console.timeEnd("get-data");
   console.time("predict");
-  let tensor = tf.tensor4d(tensorArray, [
-    tileCounts[0] * tileCounts[1],
-    inputExtent,
-    inputExtent,
-    1,
-  ]);
-  tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
-  const model = yield* call(getSegmentationModel);
-  const inferredTensor = model.predict(tensor);
+  const useWebworker = window.useWebworker != null ? window.useWebworker : false;
+  const useGPU = window.useGPU != null ? window.useGPU : false;
+  console.log("useWebworker", useWebworker);
+  console.log("useGPU", useGPU);
+  console.log("tileCounts", tileCounts);
+  const payload = useWebworker
+    ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
+      yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
+    : // $FlowIgnore
+      yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
+  const inferredTensor = tf.tensor(payload.data, payload.shape);
+
   console.timeEnd("predict");
   console.time("get tensor data");
   const inferredData = yield* call([inferredTensor, inferredTensor.data]);
+
   console.timeEnd("get tensor data");
   const getter = (x, y) => {
     if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {

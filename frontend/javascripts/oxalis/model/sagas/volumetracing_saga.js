@@ -24,7 +24,7 @@ import {
   take,
 } from "oxalis/model/sagas/effect-generators";
 import { type UpdateAction, updateVolumeTracing } from "oxalis/model/sagas/update_actions";
-import { V3 } from "libs/mjs";
+import { V2, V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
@@ -51,7 +51,6 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
-import { V2 } from "libs/mjs";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -252,7 +251,7 @@ let segmentationModel = null;
 function* getSegmentationModel(): Saga<Object> {
   if (segmentationModel == null) {
     console.time("fetch model");
-    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/model.json");
+    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/seg-model.json");
     console.timeEnd("fetch model");
   }
   return segmentationModel;
@@ -305,6 +304,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     Dimensions.roundCoordinate(action.position),
     activeViewport,
   );
+
   const z = tz;
   // const min = V3.sub(position, halfVec);
   // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);

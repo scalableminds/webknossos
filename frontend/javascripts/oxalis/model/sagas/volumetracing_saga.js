@@ -352,9 +352,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       );
 
       tensorArray.set(
-        new Float32Array(new Uint8Array(cuboidData)).map(
-          el => ((el + brightness - 128) * contrast) / 128,
-        ),
+        new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev),
         inputExtent ** 2 * sliceCounter,
       );
       sliceCounter++;

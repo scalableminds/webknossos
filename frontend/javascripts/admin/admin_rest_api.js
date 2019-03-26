@@ -948,7 +948,7 @@ export async function getMeanAndStdDevFromDataset(
   datastoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
-): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+): Promise<{ mean: number, stdDev: number }> {
   return doWithToken(token =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${

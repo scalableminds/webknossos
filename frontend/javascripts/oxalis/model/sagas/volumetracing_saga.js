@@ -52,6 +52,7 @@ import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
 import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
+import type { APIDataset } from "admin/api_flow_types";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -259,7 +260,7 @@ function* getSegmentationModel(): Saga<Object> {
 }
 
 function* meanAndStdDevFromDataset(
-  dataset: string,
+  dataset: APIDataset,
   layerName: string,
 ): Saga<{ mean: number, stdDev: number }> {
   let info;
@@ -296,9 +297,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   console.log("viewport extent", scaledViewportExtents);
 
-  const { brightness, contrast } = (yield* select(state => state.datasetConfiguration.layers))[
-    colorLayer.name
-  ];
   const [halfViewportWidthX, halfViewportWidthY] = scaledViewportExtents.map(extent =>
     Math.round(extent / 2),
   );

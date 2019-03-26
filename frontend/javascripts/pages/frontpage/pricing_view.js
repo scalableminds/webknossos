@@ -6,7 +6,7 @@ import CreditsFooter from "components/credits_footer";
 import { ImageAnalysisBlock, SocialMediaBlock } from "pages/frontpage/features_view";
 import { trackAction } from "oxalis/model/helpers/analytics";
 
-export const bgColorLight = "hsl(208, 21%, 88%)";
+export const bgColorLight = "hsl(208, 30%, 88%)";
 export const bgColorDark = "hsl(208, 100%, 46%)";
 
 const PricingColumn = ({

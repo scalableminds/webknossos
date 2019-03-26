@@ -41,7 +41,7 @@ const FeatureHighlight = ({
       sm={{ span: 24 }}
       xs={{ span: 24 }}
     >
-      <h2>{title}</h2>
+      <h3>{title}</h3>
       <p>{children}</p>
       {docsUrl ? (
         <p>
@@ -146,16 +146,11 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       style={{
         marginLeft: "auto",
         marginRight: "auto",
-        color: "white",
-        background:
-          "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%), url('/images/cover.jpg')",
+        background: bgColorLight,
       }}
     >
       <Col md={{ span: 14 }} xs={{ span: 24 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
-        <h1 style={{ color: "white" }}>webKnossos</h1>
-        <h4 style={{ color: "white" }}>
-          The leading in-browser annotation tool for 3D microscopy data for researchers
-        </h4>
+        <h2>The leading in-browser annotation tool for 3D microscopy data for researchers</h2>
         <p style={{ marginTop: 40 }}>
           webKnossos supports your research with efficient data management and advanced tools to
           create skeleton and volume annotations. It is optimized to manage petabytes of 3D
@@ -168,13 +163,16 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         <Button
           type="primary"
           size="large"
-          style={{ marginTop: 40, marginRight: 20, marginBottom: 20, fontSize: 18 }}
+          style={{ marginTop: 40, marginRight: 50, marginBottom: 20 }}
           onClick={() => history.push("/onboarding")}
         >
           Create a Free Account
         </Button>
-        <a href="mailto:hello@scalableminds.com" style={{ color: "white" }}>
-          Get in Touch With Us
+        <a
+          href="mailto:hello@scalableminds.com"
+          style={{ fontSize: 16, color: "hsla(209, 100%, 30%, 1)" }}
+        >
+          Ask a Question
         </a>
       </Col>
     </Row>

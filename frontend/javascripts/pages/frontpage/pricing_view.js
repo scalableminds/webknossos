@@ -4,6 +4,7 @@ import { Row, Col, Button } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
 import { ImageAnalysisBlock, SocialMediaBlock } from "pages/frontpage/features_view";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const bgColorLight = "hsl(208, 21%, 88%)";
 export const bgColorDark = "hsl(208, 100%, 46%)";
@@ -64,7 +65,7 @@ const FAQItem = ({ title, children }: { title: string, children: Node }) => (
   <Col lg={{ span: 12 }} md={{ span: 12 }} sm={{ span: 24 }} xs={{ span: 24 }}>
     <div style={{ margin: "30px 60px" }}>
       <h4>{title}</h4>
-      <p>{children}</p>
+      {children}
     </div>
   </Col>
 );
@@ -147,7 +148,11 @@ const PricingView = () => (
             "Community Support",
             "All webKnossos features",
             <Link to="/onboarding" key="link-to-onboarding">
-              <Button size="large" style={{ marginTop: 20 }}>
+              <Button
+                size="large"
+                style={{ marginTop: 20 }}
+                onClick={() => trackAction("[Pricing] CreateFreeAccount")}
+              >
                 Create a Free Account
               </Button>
             </Link>,
@@ -173,7 +178,11 @@ const PricingView = () => (
             "Email support",
             "+ Everything from the Public Hosting",
             <a href="mailto:hello@scalableminds.com" key="email-button">
-              <Button size="large" style={{ marginTop: 20 }}>
+              <Button
+                size="large"
+                style={{ marginTop: 20 }}
+                onClick={() => trackAction("[Pricing] PremiumHosting")}
+              >
                 Get in Touch
               </Button>
             </a>,
@@ -189,7 +198,11 @@ const PricingView = () => (
             "Custom hosting solutions",
             "+ Everything from Premium Hosting",
             <a href="mailto:hello@scalableminds.com" key="email-button">
-              <Button size="large" style={{ marginTop: 20 }}>
+              <Button
+                size="large"
+                style={{ marginTop: 20 }}
+                onClick={() => trackAction("[Pricing] CustomHosting")}
+              >
                 Get in Touch
               </Button>
             </a>,
@@ -207,19 +220,23 @@ const PricingView = () => (
         <FAQItem title="How do I get started?">
           <p>
             You can try webKnossos for free with any of public dataset here on webknossos.org.{" "}
-            <Link to="">Create a free account today.</Link>
+            <Link to="/onboarding" onClick={() => trackAction("[Pricing] CreateFreeAccount")}>
+              Create a free account today.
+            </Link>
           </p>
           <p>
             All webKnossos features can be used with free accounts. Try it with the{" "}
-            <Link to="/">available published datasets.</Link> We are also happy to integrate your
-            dataset in the publication gallery. Alternatively, upgrade to the Premium plan and start
-            working with your unreleased, private data.
+            <Link to="/spotlight">available published datasets.</Link> We are also happy to
+            integrate your dataset in the publication gallery. Alternatively, upgrade to the Premium
+            plan and start working with your unreleased, private data.
           </p>
           <p>
             You can learn more about webKnosssos in the{" "}
             <a href="https://docs.webknossos.org">user documentation</a>. Alternatively,{" "}
-            <a href="mailto:hello@scalableminds.com">get in touch with us</a> and one of our
-            webKnossos experts will help you get started.
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              get in touch with us
+            </a>{" "}
+            and one of our webKnossos experts will help you get started.
           </p>
         </FAQItem>
         <FAQItem title="Why should I trust scalable minds with my data?">
@@ -233,8 +250,11 @@ const PricingView = () => (
           </p>
           <p>
             We offer a Custom hosting plan, where datasets can be directly stored in your data
-            center.
-            <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
+            center.{" "}
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              Get in touch with us
+            </a>{" "}
+            to learn more.
           </p>
         </FAQItem>
         <FAQItem title="Where is my data stored?">
@@ -244,8 +264,11 @@ const PricingView = () => (
           </p>
           <p>
             We offer a Custom hosting plan, where datasets can be directly stored in your data
-            center.
-            <a href="mailto:hello@scalableminds.com">Get in touch with us</a> to learn more.
+            center.{" "}
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              Get in touch with us
+            </a>{" "}
+            to learn more.
           </p>
         </FAQItem>
         <FAQItem title="I need more than 100GB of storage for my dataset.">
@@ -255,7 +278,10 @@ const PricingView = () => (
           </p>
           <p>
             For details and pricing{" "}
-            <a href="mailto:hello@scalableminds.com">get in touch with us</a>.
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              get in touch with us
+            </a>
+            .
           </p>
         </FAQItem>
         <FAQItem title="Which payment methods are available?">
@@ -283,7 +309,7 @@ const PricingView = () => (
           </p>
           <p>
             Our Custom hosting plan is right for you.{" "}
-            <a href="mailto:hello@scalableminds.com">
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
               Talk to our webKnossos experts about custom solutions.
             </a>
           </p>
@@ -297,8 +323,10 @@ const PricingView = () => (
           <p>
             Check out the webKnosssos <a href="https://docs.webknossos.org">user documentation</a>{" "}
             to learn more about all annotation modes and their settings. Alternatively,{" "}
-            <a href="mailto:hello@scalableminds.com">get in touch with us</a> and one of our
-            webKnossos experts will help you get started.
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              get in touch with us
+            </a>{" "}
+            and one of our webKnossos experts will help you get started.
           </p>
           <p>
             Make sure to follow{" "}
@@ -331,7 +359,9 @@ const PricingView = () => (
           </p>
           <p>
             We are always interested in learning about new ideas and gathering feedback.{" "}
-            <a href="mailto:hello@scalableminds.com">get in touch with us and let us know.</a>
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              get in touch with us and let us know.
+            </a>
           </p>
         </FAQItem>
         <FAQItem title="What about open-source?">

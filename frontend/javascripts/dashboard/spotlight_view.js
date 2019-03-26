@@ -8,6 +8,7 @@ import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
@@ -94,7 +95,10 @@ const WelcomeHeader = ({ history }) => (
                 type="primary"
                 size="large"
                 style={{ marginRight: 50 }}
-                onClick={() => history.push("/onboarding")}
+                onClick={() => {
+                  history.push("/onboarding");
+                  trackAction("[Spotlight] CreateFreeAccount");
+                }}
               >
                 Create a Free Account
               </Button>

@@ -32,8 +32,7 @@ export default async function predict(
   const model = segmentationModel;
   const inferredTensor = model.predict(tensor);
   const data = await inferredTensor.data();
-  return {
-    data,
-    shape: inferredTensor.shape,
-  };
+  tensor.dispose();
+  inferredTensor.dispose();
+  return data;
 }

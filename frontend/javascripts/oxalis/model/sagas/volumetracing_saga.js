@@ -57,6 +57,9 @@ import { createWorker } from "oxalis/workers/comlink_wrapper";
 import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
 import mainThreadPredict from "oxalis/workers/tensorflow.impl";
 
+// Will remove model validation, NaN checks, and other correctness checks in favor of performance
+// tf.enableProdMode();
+
 const workerPredict = createWorker(TensorFlowWorker);
 
 export function* watchVolumeTracingAsync(): Saga<void> {
@@ -313,7 +316,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   // TODO maybe use memoized one as caching => ansonsten ne extra func dafeur
   const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
 
-  console.time("get-data");
   const centerPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
@@ -371,7 +373,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
         sliceCounter++;
       }
     }
-    console.timeEnd("get-data");
     console.time("predict");
 
     const useWebworker = window.useWebworker != null ? window.useWebworker : false;
@@ -379,17 +380,12 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     console.log("useWebworker", useWebworker);
     console.log("useGPU", useGPU);
     console.log("tileCounts", tileCounts);
-    const payload = useWebworker
+    const inferredData = useWebworker
       ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
         yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
       : // $FlowIgnore
         yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
-    const inferredTensor = tf.tensor(payload.data, payload.shape);
-
     console.timeEnd("predict");
-    console.time("get tensor data");
-    const inferredData = yield* call([inferredTensor, inferredTensor.data]);
-    console.timeEnd("get tensor data");
     const getter = (x, y) => {
       if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
         return false;

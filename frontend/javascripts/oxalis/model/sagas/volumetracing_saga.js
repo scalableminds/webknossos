@@ -286,17 +286,19 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
   const colorLayer = colorLayers[0];
-  const zoom = yield* select(state => state.flycam.zoomStep);
+  // const zoom = yield* select(state => state.flycam.zoomStep);
   const baseVoxelFactors = yield* select(state =>
     Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
   );
-  const viewportExtents = yield* select(state =>
-    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
-  );
+  // Performance ;)
+  // const viewportExtents = yield* select(state =>
+  //   getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
+  // );
+  const viewportExtents = [100, 100];
   const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const outputExtent = 244;
-  const overflowBufferSize = 92;
+  const outputExtent = 100;
+  const overflowBufferSize = 20;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
 
   console.log("viewport extent", scaledViewportExtents);
@@ -322,7 +324,16 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     activeViewport,
   );
 
-  for (let z = tz; z <= tz + 5; z++) {
+  function* xx(max) {
+    yield 0;
+    for (let i = 1; i < max; i++) {
+      yield i;
+      yield -i;
+    }
+  }
+
+  for (let z of xx(10)) {
+    z += tz;
     const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
     // const min = V3.sub(position, halfVec);
     // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
@@ -390,7 +401,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       const relY = y % outputExtent;
       return (
         inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
-        0.9
+        0.7
       );
     };
     const seed = [

@@ -46,5 +46,4 @@ object Math {
 
   def stdDev[T: Numeric](xs: Iterable[T]): Double = math.sqrt(variance(xs))
 
-
 }

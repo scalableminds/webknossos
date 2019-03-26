@@ -74,23 +74,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            {alpha > 0 && isVisible ? (
-              <Tooltip title="Make this color layer invisible.">
-                <Icon
-                  type="eye"
-                  onClick={() => this.props.onChangeLayer(layerName, "isVisible", false)}
-                  style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
-                />
-              </Tooltip>
-            ) : (
-              <Tooltip title="Make this color layer visible.">
-                <Icon
-                  type="eye-o"
-                  onClick={() => this.props.onChangeLayer(layerName, "isVisible", true)}
-                  style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
-                />
-              </Tooltip>
-            )}
+            {/* TODO change adjust types of the icons when upgrading antd. */}
+            <Tooltip title={isVisible ? "Hide" : "Show"}>
+              <Icon
+                type={isVisible ? "eye" : "eye-o"}
+                onClick={() => this.props.onChangeLayer(layerName, "isVisible", !isVisible)}
+                style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
+              />
+            </Tooltip>
             <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
               <Icon
                 type="scan"
@@ -199,10 +190,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
-
+    const hasInvisibleLayers = Object.entries(layers).find(layer => !layer.isVisible) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel header="Color Layers" key="1">
+        <Panel
+          header={
+            hasInvisibleLayers ? (
+              <span>
+                Color Layers
+                <Tooltip title="Not all layers are currently visible.">
+                  <Icon type="exclamation-circle-o" style={{ marginLeft: 16 }} />
+                </Tooltip>
+              </span>
+            ) : (
+              "Color Layers"
+            )
+          }
+          key="1"
+        >
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}

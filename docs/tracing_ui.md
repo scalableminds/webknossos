@@ -275,7 +275,7 @@ For multi-layer datasets, each layer can be adjusted separately.
 #### Colors
 - `Brightness`: Increase / Decrease the brightness of the data layer.
 - `Contrast`: Increase / Decrease the contrast of the data layer.
-- `Opacity`: Increase / Decrease the opacityof the data layer.
+- `Opacity`: Increase / Decrease the opacity of the data layer.
 - `Color`: Every data layer can be colored to make them easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data.
 - `Visibility`: Use the eye icon on the right side of the name of the data layer to toggle its visibility.
 

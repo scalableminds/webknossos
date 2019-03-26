@@ -243,7 +243,7 @@ let segmentationModel = null;
 function* getSegmentationModel(): Saga<Object> {
   if (segmentationModel == null) {
     console.time("fetch model");
-    segmentationModel = yield* call([tf, tf.loadModel], "/bundle/tf-models/seg-model.json");
+    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/seg-model.json");
     console.timeEnd("fetch model");
   }
   return segmentationModel;

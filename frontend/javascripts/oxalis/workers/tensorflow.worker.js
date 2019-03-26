@@ -18,9 +18,6 @@ if (typeof OffscreenCanvas !== "undefined") {
   self.HTMLCanvasElement = function() {};
 }
 
-// const orgRaf = self.requestAnimationFrame;
-self.requestAnimationFrame = cb => cb();
-
 const tf = require("@tensorflow/tfjs");
 
 function predictWrapper(

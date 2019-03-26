@@ -370,6 +370,25 @@ class BinaryDataController @Inject()(
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
+
+  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              meanAndStdev <- findDataService.meanAndStdev(dataSource, dataLayer)
+            } yield
+              Ok(
+                Json.obj("mean" -> meanAndStdev._1,
+                  "stdev" -> meanAndStdev._2)
+              )
+          }
+        }
+  }
+
+
   def findData(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
     implicit request =>
       accessTokenService

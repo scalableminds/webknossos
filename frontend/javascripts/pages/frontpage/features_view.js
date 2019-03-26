@@ -242,8 +242,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           fluorescence microscopy datasets.
         </p>
         <p>
-          Datasets support access-level control and can easily be shared with colleagues and
-          published for review.
+          Datasets support access-level control and can be securely shared with colleagues and made
+          available for reviewers.
         </p>
       </FeatureHighlight>
 

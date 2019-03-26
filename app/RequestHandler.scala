@@ -23,7 +23,7 @@ class RequestHandler @Inject()(router: Router,
     with InjectedController
     with LazyLogging {
 
-  override def routeRequest(request: RequestHeader): Option[Handler] = {
+  override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
@@ -32,5 +32,4 @@ class RequestHandler @Inject()(router: Router,
     } else {
       Some(Action { Ok(views.html.main(conf)) })
     }
-  }
 }

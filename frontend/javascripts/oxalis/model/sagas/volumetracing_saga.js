@@ -51,6 +51,8 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
+import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
+import type { APIDataset } from "admin/api_flow_types";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -263,6 +265,17 @@ function* getSegmentationModel(): Saga<Object> {
   return segmentationModel;
 }
 
+function* meanAndStdDevFromDataset(
+  dataset: APIDataset,
+  layerName: string,
+): Saga<{ mean: number, stdDev: number }> {
+  let info;
+  if (!info) {
+    info = yield* call(getMeanAndStdDevFromDataset, dataset.dataStore.url, dataset, layerName);
+  }
+  return info;
+}
+
 function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -290,15 +303,16 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   console.log("viewport extent", scaledViewportExtents);
 
-  const { brightness, contrast } = (yield* select(state => state.datasetConfiguration.layers))[
-    colorLayer.name
-  ];
   const [halfViewportWidthX, halfViewportWidthY] = scaledViewportExtents.map(extent =>
     Math.round(extent / 2),
   );
   const tileCounts = scaledViewportExtents.map(viewportExtent =>
     Math.ceil(viewportExtent / outputExtent),
   );
+  const dataset = yield* select(state => state.dataset);
+  // TODO maybe use memoized one as caching => ansonsten ne extra func dafeur
+  const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
+
   console.time("get-data");
   const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
   const centerPosition = Dimensions.transDim(
@@ -342,9 +356,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
         );
 
         tensorArray.set(
-          new Float32Array(new Uint8Array(cuboidData)).map(
-            el => ((el + brightness - 128) * contrast) / 128,
-          ),
+          new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev),
           inputExtent ** 2 * sliceCounter,
         );
         sliceCounter++;

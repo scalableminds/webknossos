@@ -37,6 +37,9 @@ import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
+// TODO later remove me
+window.isMagicWandToolEnabled = true;
+
 // eslint-disable-next-line no-unused-vars
 const simulateTracing = async (): Promise<void> => {
   Store.dispatch(setToolAction(VolumeToolEnum.TRACE));

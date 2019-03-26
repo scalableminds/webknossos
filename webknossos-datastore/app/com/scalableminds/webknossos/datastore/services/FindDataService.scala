@@ -196,7 +196,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     for {
       _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataSet.noResolutions"
-      meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.maxBy(_.maxDim))
+      meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     } yield meanAndStdDev
   }
 }

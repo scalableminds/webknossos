@@ -1,7 +1,7 @@
 // @flow
 import { withRouter, type RouterHistory } from "react-router-dom";
 import { Row, Col, Button, Icon } from "antd";
-import React, { type Node } from "react";
+import React, { type Node, Fragment } from "react";
 import CreditsFooter from "components/credits_footer";
 import { bgColorLight } from "pages/frontpage/pricing_view";
 
@@ -26,23 +26,23 @@ const FeatureHighlight = ({
     className={mirrored ? "feature-highlight-row" : null}
   >
     <Col
-      key={title}
+      key={`${title}-image`}
       lg={{ span: 8, offset: mirrored ? 2 : 0 }}
       md={{ span: 12, offset: 0 }}
       sm={{ span: 24, offset: 0 }}
       xs={{ span: 24, offset: 0 }}
     >
-      <img src={imageUrl} alt="Some Text" style={{ objectFit: "contain" }} />
+      <img src={imageUrl} alt={title} style={{ objectFit: "contain", maxWidth: "100%" }} />
     </Col>
     <Col
-      key={title}
+      key={`${title}-text`}
       lg={{ span: 8, offset: mirrored ? 0 : 2 }}
       md={{ span: 12 }}
       sm={{ span: 24 }}
       xs={{ span: 24 }}
     >
       <h3>{title}</h3>
-      <p>{children}</p>
+      {children}
       {docsUrl ? (
         <p>
           <a href={docsUrl}>Read More</a>
@@ -180,7 +180,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
     <div className="container">
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
-        imageUrl="/images/brain.png"
+        imageUrl="/images/feature-skeleton.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
         <p>
@@ -196,7 +196,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Simple Collaboration"
-        imageUrl="/images/brain.png"
+        imageUrl="/images/feature-sharing.png"
         docsUrl="https://docs.webknossos.org/guides/sharing"
         mirrored
       >
@@ -214,7 +214,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Efficient Volume Annotation"
-        imageUrl="/images/brain.png"
+        imageUrl="/images/feature-volume.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#volume-annotations"
       >
         <p>
@@ -227,7 +227,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Dataset Management"
-        imageUrl="/images/brain.png"
+        imageUrl="/images/feature-datasets.png"
         docsUrl="https://docs.webknossos.org/reference/data_formats"
         mirrored
       >
@@ -249,7 +249,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Project & Task Management"
-        imageUrl="/images/brain.png"
+        imageUrl="/images/feature-projects.png"
         docsUrl="https://docs.webknossos.org/guides/tasks"
       >
         <p>
@@ -272,29 +272,29 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       <Row gutter={16}>
         <FeatureList title="Annotations">
           {[
-            <>
-              <a key="1" href="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations">
+            <Fragment key="1">
+              <a href="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations">
                 Skeleton
               </a>{" "}
               &{" "}
-              <a key="2" href="https://docs.webknossos.org/guides/tracing_ui#volume-annotations">
+              <a href="https://docs.webknossos.org/guides/tracing_ui#volume-annotations">
                 volume annotations
               </a>
-            </>,
-            <a key="3" href="https://docs.webknossos.org/guides/tracing_ui#flight-mode">
+            </Fragment>,
+            <a key="2" href="https://docs.webknossos.org/guides/tracing_ui#flight-mode">
               High-speed Flight mode
             </a>,
             "Segmentation proofreading",
-            <a key="4" href="https://docs.webknossos.org/guides/tracing_ui#nodes-and-trees">
+            <a key="3" href="https://docs.webknossos.org/guides/tracing_ui#nodes-and-trees">
               Comments, trees & groups
             </a>,
             "Measurement tools",
-            <a key="5" href="https://docs.webknossos.org/guides/mesh_visualization#stl-import">
+            <a key="4" href="https://docs.webknossos.org/guides/mesh_visualization#stl-import">
               3D mesh support
             </a>,
             "Mapping support for volumes",
             <a
-              key="6"
+              key="5"
               href="https://docs.webknossos.org/guides/mesh_visualization#live-isosurface-generation"
             >
               3D isosurface visualization
@@ -313,7 +313,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
               On-premise data stores
             </a>,
             "Works with electron, light and fluorescence microscopes",
-            <>
+            <Fragment key="4">
               <a href="https://docs.webknossos.org/reference/data_formats">
                 Wide range of data sources (WKW, Knossos cubes, Tiff,
               </a>
@@ -321,8 +321,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
                 {" "}
                 Neuroglancer, BossDB)
               </a>
-            </>,
-            <a key="4" href="https://github.com/scalableminds/webknossos-wrap">
+            </Fragment>,
+            <a key="5" href="https://github.com/scalableminds/webknossos-wrap">
               Python and MATLAB libraries
             </a>,
           ]}

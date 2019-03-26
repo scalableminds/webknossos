@@ -3,12 +3,7 @@ const express = require("express");
 const httpProxy = require("http-proxy");
 const { spawn } = require("child_process");
 const path = require("path");
-const fs = require("fs");
 const prefixLines = require("prefix-stream-lines");
-const url = require("url");
-const { promisify } = require("util");
-
-const fileStatAsync = promisify(fs.stat);
 
 const proxy = httpProxy.createProxyServer();
 const app = express();

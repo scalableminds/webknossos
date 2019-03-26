@@ -20,7 +20,8 @@ class RequestHandler @Inject()(router: Router,
       httpConfiguration,
       filters
     )
-    with InjectedController with LazyLogging {
+    with InjectedController
+    with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] = {
     println("##############routeRequest at " + request.uri)

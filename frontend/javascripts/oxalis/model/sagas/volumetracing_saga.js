@@ -31,10 +31,14 @@ import {
   isVolumeTracingDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotation,
+  getPlaneExtentInVoxelFromStore,
+} from "oxalis/model/accessors/flycam_accessor";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { map2 } from "libs/utils";
-import Constants, {
+import {
   type BoundingBoxType,
   type ContourMode,
   ContourModeEnum,
@@ -47,6 +51,7 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
+import { V2 } from "libs/mjs";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -203,8 +208,12 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const baseVoxelFactors = yield* select(state =>
     Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
   );
-  const halfViewportWidth = Math.round((Constants.VIEWPORT_WIDTH / 2) * zoom);
-  const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
+  const viewportExtents = yield* select(state =>
+    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
+  );
+  const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map((factor, index) =>
+    Math.round((viewportExtents[index] / 2) * factor),
+  );
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
@@ -243,7 +252,7 @@ let segmentationModel = null;
 function* getSegmentationModel(): Saga<Object> {
   if (segmentationModel == null) {
     console.time("fetch model");
-    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/seg-model.json");
+    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/model.json");
     console.timeEnd("fetch model");
   }
   return segmentationModel;
@@ -265,25 +274,28 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const baseVoxelFactors = yield* select(state =>
     Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
   );
-  const baseViewportWidth = Math.round(Constants.VIEWPORT_WIDTH * zoom);
-  const [viewportWidthX, viewportWidthY] = baseVoxelFactors.map(f => baseViewportWidth * f);
+  const viewportExtents = yield* select(state =>
+    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
+  );
+  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const outputExtent = 244;
   const overflowBufferSize = 92;
   const inputExtent = outputExtent + 2 * overflowBufferSize;
 
-  console.log("viewport width", viewportWidthX);
+  console.log("viewport extent", scaledViewportExtents);
 
   const { brightness, contrast } = (yield* select(state => state.datasetConfiguration.layers))[
     colorLayer.name
   ];
-  const halfViewportWidthX = Math.round(viewportWidthX / 2);
-  const halfViewportWidthY = Math.round(viewportWidthY / 2);
-  const tileCount = Math.ceil(viewportWidthX / outputExtent);
-  console.time("get-data");
-  const tensorArray = new Float32Array(
-    inputExtent ** 2 * tileCount * Math.ceil(viewportWidthY / outputExtent),
+  const [halfViewportWidthX, halfViewportWidthY] = scaledViewportExtents.map(extent =>
+    Math.round(extent / 2),
   );
+  const tileCounts = scaledViewportExtents.map(viewportExtent =>
+    Math.ceil(viewportExtent / outputExtent),
+  );
+  console.time("get-data");
+  const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
   const centerPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
@@ -334,25 +346,31 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   }
   console.timeEnd("get-data");
   console.time("predict");
-  let tensor = tf.tensor4d(tensorArray, [tileCount ** 2, inputExtent, inputExtent, 1]);
+  let tensor = tf.tensor4d(tensorArray, [
+    tileCounts[0] * tileCounts[1],
+    inputExtent,
+    inputExtent,
+    1,
+  ]);
   tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
   const model = yield* call(getSegmentationModel);
   const inferredTensor = model.predict(tensor);
-
-  const inferredData = yield* call([inferredTensor, inferredTensor.data]);
   console.timeEnd("predict");
+  console.time("get tensor data");
+  const inferredData = yield* call([inferredTensor, inferredTensor.data]);
+  console.timeEnd("get tensor data");
   const getter = (x, y) => {
-    if (x < 0 || y < 0 || x >= viewportWidthX || y >= viewportWidthY) {
+    if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
       return false;
     }
     const tileX = Math.floor(x / outputExtent);
     const tileY = Math.floor(y / outputExtent);
-    const numTiles = Math.ceil(viewportWidthX / outputExtent);
+    const numTilesY = Math.ceil(scaledViewportExtents[1] / outputExtent);
     const relX = x % outputExtent;
     const relY = y % outputExtent;
     return (
-      inferredData[(tileX * numTiles + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
+      inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
       0.9
     );
   };

@@ -65,7 +65,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color, isVisible } = layer;
+    const { brightness, contrast, alpha, color, isDisabled } = layer;
     return (
       <div key={layerName}>
         <Row>
@@ -75,10 +75,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
             {/* TODO change adjust types of the icons when upgrading antd. */}
-            <Tooltip title={isVisible ? "Hide" : "Show"}>
+            <Tooltip title={isDisabled ? "Hide" : "Show"}>
               <Icon
-                type={isVisible ? "eye" : "eye-o"}
-                onClick={() => this.props.onChangeLayer(layerName, "isVisible", !isVisible)}
+                type={isDisabled ? "eye" : "eye-o"}
+                onClick={() => this.props.onChangeLayer(layerName, "isDisabled", !isDisabled)}
                 style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
               />
             </Tooltip>
@@ -184,30 +184,30 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   }
 
+  renderPanelHeader = (hasDisabledLayers: boolean) =>
+    hasDisabledLayers ? (
+      <span>
+        Color Layers
+        <Tooltip title="Not all layers are currently visible.">
+          <Icon type="exclamation-circle-o" style={{ marginLeft: 16, color: "coral" }} />
+        </Tooltip>
+      </span>
+    ) : (
+      "Color Layers"
+    );
+
   render() {
     const { layers } = this.props.datasetConfiguration;
     const colorSettings = Object.entries(layers).map((entry, index) =>
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
-    const hasInvisibleLayers = Object.entries(layers).find(layer => !layer.isVisible) != null;
+    const hasDisabledLayers =
+      Object.keys(layers).find(layerName => !layers[layerName].isDisabled) != null;
+      console.log("hasDisbaledLayers", hasDisabledLayers);
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel
-          header={
-            hasInvisibleLayers ? (
-              <span>
-                Color Layers
-                <Tooltip title="Not all layers are currently visible.">
-                  <Icon type="exclamation-circle-o" style={{ marginLeft: 16 }} />
-                </Tooltip>
-              </span>
-            ) : (
-              "Color Layers"
-            )
-          }
-          key="1"
-        >
+        <Panel header={this.renderPanelHeader(hasDisabledLayers)} key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}

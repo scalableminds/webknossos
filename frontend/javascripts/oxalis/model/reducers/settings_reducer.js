@@ -98,7 +98,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               contrast: 1,
               color: [255, 255, 255],
               alpha: 100,
-              isVisible: true,
+              isDisabled: false,
             },
             initialLayerSettings[layer.name],
           );
@@ -123,7 +123,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       };
     }
     case "SET_VIEW_MODE": {
-      const allowedModes = state.tracing.restrictions.allowedModes;
+      const { allowedModes } = state.tracing.restrictions;
       if (allowedModes.includes(action.viewMode)) {
         return updateTemporaryConfig(state, { viewMode: action.viewMode });
       } else {

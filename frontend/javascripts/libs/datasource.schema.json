@@ -69,19 +69,7 @@
             "name": { "type": "string" },
             "category": { "enum": ["color", "segmentation"] },
             "elementClass": {
-              "enum": [
-                "uint8",
-                "uint16",
-                "uint24",
-                "uint32",
-                "uint64",
-                "float,",
-                "double",
-                "int8",
-                "int16",
-                "int32",
-                "int64"
-              ]
+              "enum": ["uint8", "uint16", "uint24", "uint32", "uint64", "float,", "double", "int8", "int16", "int32", "int64"]
             }
           },
           "required": ["name", "category", "elementClass"]
@@ -143,9 +131,9 @@
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
           "color": { "$ref": "#/definitions/types::Vector3" },
-          "isVisible": { "type": "boolean" }
+          "isDisabled": { "type": "boolean" }
         },
-        "required": ["brightness", "contrast", "color", "isVisible"]
+        "required": ["brightness", "contrast", "color", "isDisabled"]
       }
     }
   }

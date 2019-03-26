@@ -183,7 +183,7 @@ const PricingView = () => (
                 style={{ marginTop: 20 }}
                 onClick={() => trackAction("[Pricing] PremiumHosting")}
               >
-                Get in Touch
+                Book Now
               </Button>
             </a>,
           ]}
@@ -203,7 +203,7 @@ const PricingView = () => (
                 style={{ marginTop: 20 }}
                 onClick={() => trackAction("[Pricing] CustomHosting")}
               >
-                Get in Touch
+                Book Now
               </Button>
             </a>,
           ]}

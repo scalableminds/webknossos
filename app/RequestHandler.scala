@@ -24,12 +24,10 @@ class RequestHandler @Inject()(router: Router,
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] = {
-    println("##############routeRequest at " + request.uri)
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.split('/').filter(_ != "assets").mkString("/")
-      println("########### asset " + path)
       Some(assets.at(path = "/public", file = path))
     } else {
       Some(Action { Ok(views.html.main(conf)) })

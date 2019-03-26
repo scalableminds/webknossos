@@ -253,7 +253,13 @@ let segmentationModel = null;
 function* getSegmentationModel(): Saga<Object> {
   if (segmentationModel == null) {
     console.time("fetch model");
-    segmentationModel = yield* call([tf, tf.loadLayersModel], "/bundle/tf-models/seg-model.json");
+    segmentationModel = yield* call(
+      [tf, tf.loadLayersModel],
+      "/bundle/tf-models/seg-model-working.json",
+      {
+        strict: true,
+      },
+    );
     console.timeEnd("fetch model");
   }
   return segmentationModel;
@@ -319,89 +325,90 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     activeViewport,
   );
 
-  const z = tz;
-  // const min = V3.sub(position, halfVec);
-  // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
-  let sliceCounter = 0;
-  for (
-    let tileX = tx - halfViewportWidthX;
-    tileX < tx + halfViewportWidthX;
-    tileX += outputExtent
-  ) {
+  for (let z = tz; z <= tz + 5; z++) {
+    // const min = V3.sub(position, halfVec);
+    // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
+    let sliceCounter = 0;
     for (
-      let tileY = ty - halfViewportWidthY;
-      tileY < ty + halfViewportWidthY;
-      tileY += outputExtent
+      let tileX = tx - halfViewportWidthX;
+      tileX < tx + halfViewportWidthX;
+      tileX += outputExtent
     ) {
-      const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, z];
-      const max = [
-        tileX - overflowBufferSize + inputExtent,
-        tileY - overflowBufferSize + inputExtent,
-        z + 1,
-      ];
+      for (
+        let tileY = ty - halfViewportWidthY;
+        tileY < ty + halfViewportWidthY;
+        tileY += outputExtent
+      ) {
+        const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, z];
+        const max = [
+          tileX - overflowBufferSize + inputExtent,
+          tileY - overflowBufferSize + inputExtent,
+          z + 1,
+        ];
 
-      const cuboidData = yield* call(
-        [api.data, api.data.getDataFor2DBoundingBox],
-        colorLayer.name,
-        {
-          min,
-          max,
-        },
-      );
+        const cuboidData = yield* call(
+          [api.data, api.data.getDataFor2DBoundingBox],
+          colorLayer.name,
+          {
+            min,
+            max,
+          },
+        );
 
-      tensorArray.set(
-        new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev),
-        inputExtent ** 2 * sliceCounter,
-      );
-      sliceCounter++;
+        tensorArray.set(
+          new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev),
+          inputExtent ** 2 * sliceCounter,
+        );
+        sliceCounter++;
+      }
     }
-  }
-  console.timeEnd("get-data");
-  console.time("predict");
-  let tensor = tf.tensor4d(tensorArray, [
-    tileCounts[0] * tileCounts[1],
-    inputExtent,
-    inputExtent,
-    1,
-  ]);
-  tensor = tf.transpose(tensor, [0, 2, 1, 3]);
+    console.timeEnd("get-data");
+    console.time("predict");
+    let tensor = tf.tensor4d(tensorArray, [
+      tileCounts[0] * tileCounts[1],
+      inputExtent,
+      inputExtent,
+      1,
+    ]);
+    tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
-  const model = yield* call(getSegmentationModel);
-  const inferredTensor = model.predict(tensor);
-  console.timeEnd("predict");
-  console.time("get tensor data");
-  const inferredData = yield* call([inferredTensor, inferredTensor.data]);
-  console.timeEnd("get tensor data");
-  const getter = (x, y) => {
-    if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
-      return false;
+    const model = yield* call(getSegmentationModel);
+    const inferredTensor = model.predict(tensor);
+    console.timeEnd("predict");
+    console.time("get tensor data");
+    const inferredData = yield* call([inferredTensor, inferredTensor.data]);
+    console.timeEnd("get tensor data");
+    const getter = (x, y) => {
+      if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
+        return false;
+      }
+      const tileX = Math.floor(x / outputExtent);
+      const tileY = Math.floor(y / outputExtent);
+      const numTilesY = Math.ceil(scaledViewportExtents[1] / outputExtent);
+      const relX = x % outputExtent;
+      const relY = y % outputExtent;
+      return (
+        inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
+        0.9
+      );
+    };
+    const seed = [
+      halfViewportWidthX + clickPosition[0] - centerPosition[0],
+      halfViewportWidthY + clickPosition[1] - centerPosition[1],
+    ];
+    if (!getter(...seed)) return;
+    console.time("flood");
+    const segmentedData = floodfill({ getter, seed }).flooded;
+    console.timeEnd("flood");
+    console.time("label");
+    for (const [xRel, yRel] of segmentedData) {
+      const x = tx - halfViewportWidthX + xRel;
+      const y = ty - halfViewportWidthY + yRel;
+      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+      api.data.labelVoxels([voxelAddress], activeCellId);
     }
-    const tileX = Math.floor(x / outputExtent);
-    const tileY = Math.floor(y / outputExtent);
-    const numTilesY = Math.ceil(scaledViewportExtents[1] / outputExtent);
-    const relX = x % outputExtent;
-    const relY = y % outputExtent;
-    return (
-      inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
-      0.9
-    );
-  };
-  console.time("flood");
-  const seed = [
-    halfViewportWidthX + clickPosition[0] - centerPosition[0],
-    halfViewportWidthY + clickPosition[1] - centerPosition[1],
-  ];
-  if (!getter(...seed)) return;
-  const segmentedData = floodfill({ getter, seed }).flooded;
-  console.timeEnd("flood");
-  console.time("label");
-  for (const [xRel, yRel] of segmentedData) {
-    const x = tx - halfViewportWidthX + xRel;
-    const y = ty - halfViewportWidthY + yRel;
-    const voxelAddress = Dimensions.transDim([x, y, tz], activeViewport);
-    api.data.labelVoxels([voxelAddress], activeCellId);
+    console.timeEnd("label");
   }
-  console.timeEnd("label");
 }
 
 export function* finishLayer(

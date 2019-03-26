@@ -26,6 +26,8 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");

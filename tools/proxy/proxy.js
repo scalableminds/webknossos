@@ -92,9 +92,7 @@ function toWebpackDev(req, res) {
   proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
 }
 
-app.all("/api/*", toBackend);
-app.all("/data/*", toBackend);
-app.all("/assets/*", toWebpackDev);
+app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 
 app.listen(PORT);

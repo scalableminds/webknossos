@@ -1,3 +1,4 @@
+import com.typesafe.scalalogging.LazyLogging
 import controllers.Assets
 import javax.inject.Inject
 import play.api.Environment
@@ -19,14 +20,18 @@ class RequestHandler @Inject()(router: Router,
       httpConfiguration,
       filters
     )
-    with InjectedController {
+    with InjectedController with LazyLogging {
 
-  override def routeRequest(request: RequestHeader): Option[Handler] =
+  override def routeRequest(request: RequestHeader): Option[Handler] = {
+    println("##############routeRequest at " + request.uri)
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
-      Some(assets.at(path = "/public", file = request.path.split('/').filter(_ == "assets").mkString("/", "/", "")))
+      val path = request.path.split('/').filter(_ != "assets").mkString("/")
+      println("########### asset " + path)
+      Some(assets.at(path = "/public", file = path))
     } else {
       Some(Action { Ok(views.html.main(conf)) })
     }
+  }
 }

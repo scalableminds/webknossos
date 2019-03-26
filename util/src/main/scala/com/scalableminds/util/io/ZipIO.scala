@@ -29,8 +29,9 @@ object ZipIO extends LazyLogging {
     */
   case class OpenZip(stream: ZipOutputStream) {
 
-    def addFileFromSource(name: String, source: Source[ByteString, _])
-                         (implicit ec: ExecutionContext, materializer: ActorMaterializer): Future[Unit] = {
+    def addFileFromSource(name: String, source: Source[ByteString, _])(
+        implicit ec: ExecutionContext,
+        materializer: ActorMaterializer): Future[Unit] = {
 
       stream.putNextEntry(new ZipEntry(name))
 
@@ -87,7 +88,9 @@ object ZipIO extends LazyLogging {
         val s = sources.next
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
-        case e: Exception => {logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e)); throw new Exception(e.getMessage)}
+        case e: Exception => {
+          logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e)); throw new Exception(e.getMessage)
+        }
       }
     }
 

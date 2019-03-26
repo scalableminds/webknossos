@@ -156,7 +156,8 @@ class VolumeTracingService @Inject()(
 
   def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets: Iterator[NamedStream] = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+    val buckets: Iterator[NamedStream] =
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
 
     if (buckets.isEmpty) {
       logger.debug(s"No buckets found to send as zipped volume data for $tracingId.")
@@ -164,8 +165,10 @@ class VolumeTracingService @Inject()(
 
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets, os).onComplete {
-        case failure: scala.util.Failure[Unit] => logger.debug(s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-        case success: scala.util.Success[Unit]  => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+        case failure: scala.util.Failure[Unit] =>
+          logger.debug(
+            s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
+        case success: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
       }
     }
   }

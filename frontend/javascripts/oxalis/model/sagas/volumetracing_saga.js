@@ -51,6 +51,8 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
+import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
+import type { APIDataset } from "admin/api_flow_types";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
 import mainThreadPredict from "oxalis/workers/tensorflow.impl";
@@ -261,6 +263,17 @@ const configureTensorFlow = (useWebworker, useGPU) => {
 configureTensorFlow(true, true);
 window.configureTensorFlow = configureTensorFlow;
 
+function* meanAndStdDevFromDataset(
+  dataset: APIDataset,
+  layerName: string,
+): Saga<{ mean: number, stdDev: number }> {
+  let info;
+  if (!info) {
+    info = yield* call(getMeanAndStdDevFromDataset, dataset.dataStore.url, dataset, layerName);
+  }
+  return info;
+}
+
 function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
@@ -288,17 +301,17 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   console.log("viewport extent", scaledViewportExtents);
 
-  const { brightness, contrast } = (yield* select(state => state.datasetConfiguration.layers))[
-    colorLayer.name
-  ];
   const [halfViewportWidthX, halfViewportWidthY] = scaledViewportExtents.map(extent =>
     Math.round(extent / 2),
   );
   const tileCounts = scaledViewportExtents.map(viewportExtent =>
     Math.ceil(viewportExtent / outputExtent),
   );
+  const dataset = yield* select(state => state.dataset);
+  // TODO maybe use memoized one as caching => ansonsten ne extra func dafeur
+  const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
+
   console.time("get-data");
-  const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
   const centerPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
@@ -309,95 +322,94 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     activeViewport,
   );
 
-  const z = tz;
-  // const min = V3.sub(position, halfVec);
-  // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
-  let sliceCounter = 0;
-  for (
-    let tileX = tx - halfViewportWidthX;
-    tileX < tx + halfViewportWidthX;
-    tileX += outputExtent
-  ) {
+  for (let z = tz; z <= tz + 5; z++) {
+    const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
+    // const min = V3.sub(position, halfVec);
+    // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
+    let sliceCounter = 0;
     for (
-      let tileY = ty - halfViewportWidthY;
-      tileY < ty + halfViewportWidthY;
-      tileY += outputExtent
+      let tileX = tx - halfViewportWidthX;
+      tileX < tx + halfViewportWidthX;
+      tileX += outputExtent
     ) {
-      const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, z];
-      const max = [
-        tileX - overflowBufferSize + inputExtent,
-        tileY - overflowBufferSize + inputExtent,
-        z + 1,
-      ];
+      for (
+        let tileY = ty - halfViewportWidthY;
+        tileY < ty + halfViewportWidthY;
+        tileY += outputExtent
+      ) {
+        const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, z];
+        const max = [
+          tileX - overflowBufferSize + inputExtent,
+          tileY - overflowBufferSize + inputExtent,
+          z + 1,
+        ];
 
-      const cuboidData = yield* call(
-        [api.data, api.data.getDataFor2DBoundingBox],
-        colorLayer.name,
-        {
-          min,
-          max,
-        },
-      );
+        const cuboidData = yield* call(
+          [api.data, api.data.getDataFor2DBoundingBox],
+          colorLayer.name,
+          {
+            min,
+            max,
+          },
+        );
 
-      tensorArray.set(
-        new Float32Array(new Uint8Array(cuboidData)).map(
-          el => ((el + brightness - 128) * contrast) / 128,
-        ),
-        inputExtent ** 2 * sliceCounter,
-      );
-      sliceCounter++;
+        tensorArray.set(
+          new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev),
+          inputExtent ** 2 * sliceCounter,
+        );
+        sliceCounter++;
+      }
     }
-  }
-  console.timeEnd("get-data");
-  console.time("predict");
+    console.timeEnd("get-data");
+    console.time("predict");
 
-  const useWebworker = window.useWebworker != null ? window.useWebworker : false;
-  const useGPU = window.useGPU != null ? window.useGPU : false;
-  console.log("useWebworker", useWebworker);
-  console.log("useGPU", useGPU);
-  console.log("tileCounts", tileCounts);
-  const payload = useWebworker
-    ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
-      yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
-    : // $FlowIgnore
-      yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
-  const inferredTensor = tf.tensor(payload.data, payload.shape);
+    const useWebworker = window.useWebworker != null ? window.useWebworker : false;
+    const useGPU = window.useGPU != null ? window.useGPU : false;
+    console.log("useWebworker", useWebworker);
+    console.log("useGPU", useGPU);
+    console.log("tileCounts", tileCounts);
+    const payload = useWebworker
+      ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
+        yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
+      : // $FlowIgnore
+        yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
+    const inferredTensor = tf.tensor(payload.data, payload.shape);
 
-  console.timeEnd("predict");
-  console.time("get tensor data");
-  const inferredData = yield* call([inferredTensor, inferredTensor.data]);
-
-  console.timeEnd("get tensor data");
-  const getter = (x, y) => {
-    if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
-      return false;
+    console.timeEnd("predict");
+    console.time("get tensor data");
+    const inferredData = yield* call([inferredTensor, inferredTensor.data]);
+    console.timeEnd("get tensor data");
+    const getter = (x, y) => {
+      if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
+        return false;
+      }
+      const tileX = Math.floor(x / outputExtent);
+      const tileY = Math.floor(y / outputExtent);
+      const numTilesY = Math.ceil(scaledViewportExtents[1] / outputExtent);
+      const relX = x % outputExtent;
+      const relY = y % outputExtent;
+      return (
+        inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
+        0.9
+      );
+    };
+    const seed = [
+      halfViewportWidthX + clickPosition[0] - centerPosition[0],
+      halfViewportWidthY + clickPosition[1] - centerPosition[1],
+    ];
+    if (!getter(...seed)) return;
+    console.time("flood");
+    const segmentedData = floodfill({ getter, seed }).flooded;
+    console.timeEnd("flood");
+    console.time("label");
+    for (const [xRel, yRel] of segmentedData) {
+      const x = tx - halfViewportWidthX + xRel;
+      const y = ty - halfViewportWidthY + yRel;
+      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+      api.data.labelVoxels([voxelAddress], activeCellId);
     }
-    const tileX = Math.floor(x / outputExtent);
-    const tileY = Math.floor(y / outputExtent);
-    const numTilesY = Math.ceil(scaledViewportExtents[1] / outputExtent);
-    const relX = x % outputExtent;
-    const relY = y % outputExtent;
-    return (
-      inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
-      0.9
-    );
-  };
-  console.time("flood");
-  const seed = [
-    halfViewportWidthX + clickPosition[0] - centerPosition[0],
-    halfViewportWidthY + clickPosition[1] - centerPosition[1],
-  ];
-  if (!getter(...seed)) return;
-  const segmentedData = floodfill({ getter, seed }).flooded;
-  console.timeEnd("flood");
-  console.time("label");
-  for (const [xRel, yRel] of segmentedData) {
-    const x = tx - halfViewportWidthX + xRel;
-    const y = ty - halfViewportWidthY + yRel;
-    const voxelAddress = Dimensions.transDim([x, y, tz], activeViewport);
-    api.data.labelVoxels([voxelAddress], activeCellId);
+    console.timeEnd("label");
   }
-  console.timeEnd("label");
 }
 
 export function* finishLayer(

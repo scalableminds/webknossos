@@ -944,6 +944,20 @@ export async function triggerSampleDatasetDownload(
   );
 }
 
+export async function getMeanAndStdDevFromDataset(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<{ mean: number, stdDev: number }> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/colorStatistics?token=${token}`,
+    ),
+  );
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStore>> {
   const datastores = await Request.receiveJSON("/api/datastores");

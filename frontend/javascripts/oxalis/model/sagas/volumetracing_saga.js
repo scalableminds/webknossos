@@ -53,6 +53,11 @@ import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
 import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
 import type { APIDataset } from "admin/api_flow_types";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
+import mainThreadPredict from "oxalis/workers/tensorflow.impl";
+
+const workerPredict = createWorker(TensorFlowWorker);
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -249,21 +254,14 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 }
 
-let segmentationModel = null;
-function* getSegmentationModel(): Saga<Object> {
-  if (segmentationModel == null) {
-    console.time("fetch model");
-    segmentationModel = yield* call(
-      [tf, tf.loadLayersModel],
-      "/bundle/tf-models/seg-model-working.json",
-      {
-        strict: true,
-      },
-    );
-    console.timeEnd("fetch model");
-  }
-  return segmentationModel;
-}
+const configureTensorFlow = (useWebworker, useGPU) => {
+  window.useWebworker = useWebworker;
+  window.useGPU = useGPU;
+  console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
+};
+
+configureTensorFlow(true, true);
+window.configureTensorFlow = configureTensorFlow;
 
 function* meanAndStdDevFromDataset(
   dataset: APIDataset,
@@ -314,7 +312,6 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
 
   console.time("get-data");
-  const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
   const centerPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
@@ -326,6 +323,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   );
 
   for (let z = tz; z <= tz + 5; z++) {
+    const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
     // const min = V3.sub(position, halfVec);
     // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
     let sliceCounter = 0;
@@ -364,16 +362,19 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     }
     console.timeEnd("get-data");
     console.time("predict");
-    let tensor = tf.tensor4d(tensorArray, [
-      tileCounts[0] * tileCounts[1],
-      inputExtent,
-      inputExtent,
-      1,
-    ]);
-    tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
-    const model = yield* call(getSegmentationModel);
-    const inferredTensor = model.predict(tensor);
+    const useWebworker = window.useWebworker != null ? window.useWebworker : false;
+    const useGPU = window.useGPU != null ? window.useGPU : false;
+    console.log("useWebworker", useWebworker);
+    console.log("useGPU", useGPU);
+    console.log("tileCounts", tileCounts);
+    const payload = useWebworker
+      ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
+        yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
+      : // $FlowIgnore
+        yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
+    const inferredTensor = tf.tensor(payload.data, payload.shape);
+
     console.timeEnd("predict");
     console.time("get tensor data");
     const inferredData = yield* call([inferredTensor, inferredTensor.data]);

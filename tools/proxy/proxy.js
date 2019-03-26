@@ -97,7 +97,7 @@ async function toStaticRessource(req, res) {
   });
 
   if (await isFile(filepath)) proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
-  else if (pathname.match(/^.+\..+$/))
+  else if (pathname.match(/^.+\..+$/) || pathname.includes("group1-shard"))
     proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
   else toBackend(req, res);
 }

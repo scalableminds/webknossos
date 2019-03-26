@@ -241,11 +241,11 @@ const PricingView = () => (
         </FAQItem>
         <FAQItem title="Why should I trust scalable minds with my data?">
           <p>
-            Data security is one of our top priorities. All datasets uploaded on webknossos.org are
-            stored securely in the scalable minds cloud infrastructure and NOT shared with anyone.
-            webKnossos has fine-grained permissions for individual users, teams, and datasets to
-            control the access. Only authorized users within your organization will be able to
-            access your datasets and annotations. Read our{" "}
+            Data security is one of our top priorities. All private datasets uploaded on
+            webknossos.org are stored securely in the scalable minds cloud infrastructure and NOT
+            shared with anyone. webKnossos has fine-grained permissions for individual users, teams,
+            and datasets to control the access. Only authorized users within your organization will
+            be able to access your datasets and annotations. Read our{" "}
             <Link to="privacy">privacy statement</Link>.
           </p>
           <p>

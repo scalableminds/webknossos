@@ -11,11 +11,10 @@ const creditsFooter = () => (
       <div className="container">
         <h3>webKnossos Credits</h3>
         <p>
-          Developed by{" "}
+          Developed by <a href="https://scalableminds.com">scalable minds</a> and{" "}
           <a href="https://www.brain.mpg.de/connectomics">
-            Max Planck Institute for Brain Research
-          </a>{" "}
-          and <a href="https://scalableminds.com">scalable minds</a>.
+            Max Planck Institute for Brain Research.
+          </a>
         </p>
         <p>
           <a href="https://www.brain.mpg.de/connectomics">
@@ -47,9 +46,7 @@ const creditsFooter = () => (
           <a href="https://dx.doi.org/10.1038/nmeth.4331">Nat. Meth. (2017) 14, 691–694</a>.
         </p>
         <p>
-          The webKnossos frontend was inspired by Knossos: Helmstaedter, M., K.L. Briggman, and W.
-          Denk, High-accuracy neurite reconstruction for high-throughput neuroanatomy.{" "}
-          <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>.
+          The webKnossos frontend was inspired by <a href="https://knossos.app">Knossos</a>.
         </p>
         <p>
           More information about the webKnossos publication and full credits at{" "}

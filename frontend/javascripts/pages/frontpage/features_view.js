@@ -114,22 +114,22 @@ export const SocialMediaBlock = () => (
         }}
       >
         <h2 style={{ marginTop: 20 }}>Follow us</h2>
-        <h4 style={{ marginTop: 30 }}>
+        <h4 style={{ marginTop: 30, maxWidth: 560, marginLeft: "auto", marginRight: "auto" }}>
           Join us on social media and stay up-to-date on the latest webKnossos features.
         </h4>
         <div style={{ marginTop: 30 }}>
           <a href="https://twitter.com/webknossos" target="_blank" rel="noopener noreferrer">
-            <Icon type="twitter" style={{ marginRight: 40, fontSize: 40 }} />
+            <Icon type="twitter" style={{ marginRight: 20, marginLeft: 20, fontSize: 40 }} />
           </a>
           <a href="https://medium.com/scalableminds" target="_blank" rel="noopener noreferrer">
-            <Icon type="medium" style={{ marginRight: 40, fontSize: 40 }} />
+            <Icon type="medium" style={{ marginRight: 20, marginLeft: 20, fontSize: 40 }} />
           </a>
           <a
             href="https://github.com/scalableminds/webknossos"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Icon type="github" style={{ marginRight: 40, fontSize: 40 }} />
+            <Icon type="github" style={{ marginRight: 20, marginLeft: 20, fontSize: 40 }} />
           </a>
         </div>
       </div>

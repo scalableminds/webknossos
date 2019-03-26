@@ -204,7 +204,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
     const hasDisabledLayers =
       Object.keys(layers).find(layerName => !layers[layerName].isDisabled) != null;
-      console.log("hasDisbaledLayers", hasDisabledLayers);
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasDisabledLayers)} key="1">

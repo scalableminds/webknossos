@@ -207,6 +207,14 @@ export const getColorForCoords: ShaderModule = {
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
 
+      if (packingDegree == 2.0) {
+        if (rgbaIndex == 0.0) {
+          return vec4(bucketColor.r, bucketColor.g, bucketColor.r, bucketColor.g);
+        } else if (rgbaIndex == 1.0) {
+          return vec4(bucketColor.b, bucketColor.a, bucketColor.b, bucketColor.a);
+        }
+      }
+
       if (rgbaIndex == 0.0) {
         return vec4(bucketColor.r);
       } else if (rgbaIndex == 1.0) {

@@ -44,8 +44,10 @@ export function validateMinimumRequirements(specs: GpuSpecs): void {
 export type DataTextureSizeAndCount = { textureSize: number, textureCount: number };
 
 export function getPackingDegree(byteCount: number) {
-  // If the layer only holds one byte per voxel, we can pack 4 bytes using rgba channels
-  return byteCount === 1 ? 4 : 1;
+  // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
+  if (byteCount === 1) return 4;
+  if (byteCount === 2) return 2;
+  return 1;
 }
 
 function getNecessaryVoxelCount() {

@@ -139,10 +139,8 @@ export const SocialMediaBlock = () => (
 
 const FeaturesView = ({ history }: { history: RouterHistory }) => (
   <>
-    <Row
-      gutter={16}
-      type="flex"
-      align="center"
+    <div
+      className="container"
       style={{
         marginLeft: "auto",
         marginRight: "auto",
@@ -150,40 +148,61 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         color: "white",
       }}
     >
-      <Col md={{ span: 14 }} xs={{ span: 24 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
-        <h2 style={{ color: "white" }}>
-          The leading in-browser annotation tool for 3D microscopy data for researchers
-        </h2>
-        <p style={{ marginTop: 40 }}>
-          webKnossos supports your research with efficient data management and advanced tools to
-          create skeleton and volume annotations. It is optimized to manage petabytes of 3D
-          microscopy image data, as required by Neuroscientists.
-        </p>
-        <p>
-          webKnossos is developed as an open-source project in collaboration with international
-          research partners.
-        </p>
-        <Button
-          type="primary"
-          size="large"
-          style={{ marginTop: 40, marginRight: 50, marginBottom: 20 }}
-          onClick={() => history.push("/onboarding")}
+      <Row gutter={16} type="flex" align="center">
+        <Col
+          lg={{ span: 8 }}
+          md={{ span: 12 }}
+          sm={{ span: 24 }}
+          xs={{ span: 24 }}
+          style={{ marginTop: 80, marginBottom: 80, padding: 40, fontSize: 18 }}
         >
-          Create a Free Account
-        </Button>
-        <a
-          href="mailto:hello@scalableminds.com"
-          style={{ fontSize: 16, color: "hsla(209, 100%, 95%, 1)" }}
+          <h2 style={{ color: "white" }}>
+            The leading in-browser annotation tool for 3D microscopy data for researchers
+          </h2>
+          <p style={{ marginTop: 40 }}>
+            webKnossos supports your research with efficient data management and advanced tools to
+            create skeleton and volume annotations. It is optimized to manage petabytes of 3D
+            microscopy image data, as required by Neuroscientists.
+          </p>
+          <p>
+            webKnossos is developed as an open-source project in collaboration with international
+            research partners.
+          </p>
+          <Button
+            type="primary"
+            size="large"
+            style={{ marginTop: 40, marginRight: 50, marginBottom: 20 }}
+            onClick={() => history.push("/onboarding")}
+          >
+            Create a Free Account
+          </Button>
+          <a
+            href="mailto:hello@scalableminds.com"
+            style={{ fontSize: 16, color: "hsla(209, 100%, 95%, 1)" }}
+          >
+            Ask a Question
+          </a>
+        </Col>
+        <Col
+          lg={{ span: 8, offset: 2 }}
+          md={{ span: 12 }}
+          sm={{ span: 24 }}
+          xs={{ span: 24 }}
+          style={{ display: "flex", alignItems: "center" }}
         >
-          Ask a Question
-        </a>
-      </Col>
-    </Row>
+          <img
+            src="/assets/images/feature-skeleton.png"
+            alt=""
+            style={{ objectFit: "contain", maxWidth: "100%" }}
+          />
+        </Col>
+      </Row>
+    </div>
 
     <div className="container">
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
-        imageUrl="/assets/images/feature-skeleton.png"
+        imageUrl="/assets/images/feature-flightmode.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
         <p>

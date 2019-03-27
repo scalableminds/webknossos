@@ -146,11 +146,14 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
       style={{
         marginLeft: "auto",
         marginRight: "auto",
-        background: bgColorLight,
+        background: "linear-gradient(hsl(208, 100%, 46%), hsl(208, 30%, 38%))",
+        color: "white",
       }}
     >
       <Col md={{ span: 14 }} xs={{ span: 24 }} style={{ margin: 80, padding: 40, fontSize: 18 }}>
-        <h2>The leading in-browser annotation tool for 3D microscopy data for researchers</h2>
+        <h2 style={{ color: "white" }}>
+          The leading in-browser annotation tool for 3D microscopy data for researchers
+        </h2>
         <p style={{ marginTop: 40 }}>
           webKnossos supports your research with efficient data management and advanced tools to
           create skeleton and volume annotations. It is optimized to manage petabytes of 3D
@@ -170,7 +173,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         </Button>
         <a
           href="mailto:hello@scalableminds.com"
-          style={{ fontSize: 16, color: "hsla(209, 100%, 30%, 1)" }}
+          style={{ fontSize: 16, color: "hsla(209, 100%, 95%, 1)" }}
         >
           Ask a Question
         </a>

@@ -65,7 +65,7 @@ const FAQItem = ({ title, children }: { title: string, children: Node }) => (
   <Col lg={{ span: 12 }} md={{ span: 12 }} sm={{ span: 24 }} xs={{ span: 24 }}>
     <div style={{ margin: "30px 60px" }}>
       <h4>{title}</h4>
-      {children}
+      <div style={{ color: "hsl(0, 0%, 50%)" }}>{children}</div>
     </div>
   </Col>
 );

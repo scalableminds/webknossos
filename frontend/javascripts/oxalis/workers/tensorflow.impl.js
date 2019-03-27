@@ -16,7 +16,7 @@ export default async function predict(
 
   const tensorArray = new Float32Array(buffer);
   if (segmentationModel == null) {
-    segmentationModel = await tf.loadLayersModel("/bundle/tf-models/seg-model.json", {
+    segmentationModel = await tf.loadLayersModel("/assets/bundle/tf-models/seg-model.json", {
       strict: true,
     });
   }

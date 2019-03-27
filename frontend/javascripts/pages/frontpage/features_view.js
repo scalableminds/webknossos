@@ -86,7 +86,7 @@ export const ImageAnalysisBlock = () => (
       </p>
       <p>
         scalable minds offers a wide range of machine learning based image analysis services for
-        reconstructing rich information from microscope images. We can help with image alignment /
+        reconstructing rich information from microscopy images. We can help with image alignment /
         registration, dense segmentation, and object detection.
       </p>
       <a href="https://scalableminds.com/image-analysis">Learn more</a>

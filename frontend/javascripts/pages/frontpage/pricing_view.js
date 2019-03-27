@@ -3,7 +3,7 @@ import { withRouter, Link } from "react-router-dom";
 import { Row, Col, Button } from "antd";
 import React, { type Node } from "react";
 import CreditsFooter from "components/credits_footer";
-import { ImageAnalysisBlock, SocialMediaBlock } from "pages/frontpage/features_view";
+import { SocialMediaBlock } from "pages/frontpage/features_view";
 import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const bgColorLight = "hsl(208, 30%, 88%)";
@@ -222,7 +222,59 @@ const PricingView = () => (
           </div>
         </Col>
       </Row>
+    </div>
 
+    <div
+      className="container"
+      style={{
+        marginLeft: "auto",
+        marginRight: "auto",
+        marginBottom: 100,
+        background:
+          "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/assets/images/background_main_1080.jpg')",
+        paddingTop: 40,
+        paddingBottom: 40,
+      }}
+    >
+      <Row gutter={16} type="flex">
+        <Col
+          xs={{ span: 24, offset: 0 }}
+          sm={{ span: 18, offset: 0 }}
+          md={{ span: 14, offset: 2 }}
+          lg={{ span: 14, offset: 3 }}
+          xl={{ span: 12, offset: 4 }}
+          style={{ background: "white", padding: 40 }}
+        >
+          <h2>Looking for Automated Image Analysis?</h2>
+          <p>
+            Check out the BioVision tools and services from scalable minds. Reconstruct rich
+            information from microscopy images with machine learning-based tools. Automate tasks
+            such as image alignment, registration, dense segmentation, and object detection.
+          </p>
+        </Col>
+        <Col
+          xs={{ span: 24 }}
+          sm={{ span: 6 }}
+          md={{ span: 6 }}
+          lg={{ span: 4 }}
+          xl={{ span: 4 }}
+          style={{
+            background: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            paddingTop: 20,
+            paddingBottom: 20,
+          }}
+        >
+          <Button size="large" type="primary" href="https://scalableminds.com/image-analysis">
+            Learn More
+          </Button>
+        </Col>
+      </Row>
+    </div>
+
+    <div className="container">
       <h1 style={{ textAlign: "center" }}>Frequently Asked Questions</h1>
       <Row gutter={16} type="flex" align="start">
         <FAQItem title="How do I get started?">
@@ -417,8 +469,6 @@ const PricingView = () => (
     </div>
 
     <SocialMediaBlock />
-
-    <ImageAnalysisBlock />
     <CreditsFooter />
   </>
 );

@@ -74,7 +74,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            {/* TODO change adjust types of the icons when upgrading antd. */}
+            {/* TODO adjust types of the icons when upgrading antd. */}
             <Tooltip title={isDisabled ? "Enable" : "Disable"}>
               <Icon
                 type={isDisabled ? "eye-o" : "eye"}

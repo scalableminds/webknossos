@@ -49,7 +49,7 @@ export type APISegmentationLayer = {|
   +category: "segmentation",
   +largestSegmentId: number,
   +mappings?: Array<string>,
-  +fallbackLayer: ?string,
+  +fallbackLayer?: ?string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;

@@ -75,9 +75,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
             {/* TODO change adjust types of the icons when upgrading antd. */}
-            <Tooltip title={isDisabled ? "Hide" : "Show"}>
+            <Tooltip title={isDisabled ? "Enable" : "Disable"}>
               <Icon
-                type={isDisabled ? "eye" : "eye-o"}
+                type={isDisabled ? "eye-o" : "eye"}
                 onClick={() => this.props.onChangeLayer(layerName, "isDisabled", !isDisabled)}
                 style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
               />
@@ -85,8 +85,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
               <Icon
                 type="scan"
-                onClick={() => this.handleFindData(layerName)}
-                style={{ float: "right", marginTop: 4, cursor: "pointer" }}
+                onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+                style={{
+                  float: "right",
+                  marginTop: 4,
+                  cursor: !isDisabled ? "pointer" : "not-allowed",
+                }}
               />
             </Tooltip>
           </Col>
@@ -98,6 +102,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           step={5}
           value={brightness}
           onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
+          disabled={isDisabled}
         />
         <NumberSliderSetting
           label="Contrast"
@@ -106,6 +111,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           step={0.1}
           value={contrast}
           onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
+          disabled={isDisabled}
         />
         <NumberSliderSetting
           label="Opacity"
@@ -113,12 +119,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           max={100}
           value={alpha}
           onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+          disabled={isDisabled}
         />
         <ColorSetting
           label="Color"
           value={Utils.rgbToHex(color)}
           onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
           className="ant-btn"
+          disabled={isDisabled}
         />
         {!isLastLayer && <Divider />}
       </div>
@@ -203,7 +211,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
     const hasDisabledLayers =
-      Object.keys(layers).find(layerName => !layers[layerName].isDisabled) != null;
+      Object.keys(layers).find(layerName => layers[layerName].isDisabled) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasDisabledLayers)} key="1">

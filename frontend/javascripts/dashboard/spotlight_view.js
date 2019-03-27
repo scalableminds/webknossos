@@ -16,7 +16,11 @@ const { Search } = Input;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
-    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />
+    <img
+      src="/assets/images/oxalis.svg"
+      alt="webKnossos Logo"
+      style={{ verticalAlign: "middle" }}
+    />
     webKnossos
   </div>
 );
@@ -24,7 +28,7 @@ const SimpleHeader = () => (
 const WelcomeHeader = ({ history }) => (
   <div
     style={{
-      backgroundImage: "url(/images/cover.jpg)",
+      backgroundImage: "url(/assets/images/cover.jpg)",
     }}
   >
     <div
@@ -43,7 +47,7 @@ const WelcomeHeader = ({ history }) => (
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col span={4}>
             <img
-              src="/images/oxalis.svg"
+              src="/assets/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />
@@ -289,21 +293,21 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   <img
                     className="img-responsive"
                     alt="Max Planck Gesellschaft logo"
-                    src="/images/Max-Planck-Gesellschaft.svg"
+                    src="/assets/images/Max-Planck-Gesellschaft.svg"
                   />
                 </a>
                 <a href="https://www.brain.mpg.de/connectomics">
                   <img
                     className="img-responsive"
                     alt="Max Planck Institute for Brain Research logo"
-                    src="/images/MPI-brain-research.svg"
+                    src="/assets/images/MPI-brain-research.svg"
                   />
                 </a>
                 <a href="https://scalableminds.com">
                   <img
                     className="img-responsive"
                     alt="scalable minds logo"
-                    src="/images/scalableminds_logo.svg"
+                    src="/assets/images/scalableminds_logo.svg"
                   />
                 </a>
               </p>

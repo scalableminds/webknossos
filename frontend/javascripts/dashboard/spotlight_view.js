@@ -47,14 +47,14 @@ const WelcomeHeader = ({ history }) => (
         }}
       >
         <Row type="flex" align="middle" style={{ color: "white" }}>
-          <Col span={4}>
+          <Col xs={{ span: 0 }} md={{ span: 4 }}>
             <img
               src="/assets/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={20}>
+          <Col xs={{ span: 24 }} md={{ span: 20 }}>
             <p
               style={{
                 fontSize: 58,
@@ -233,7 +233,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
-        <Content style={{ padding: 50, minWidth: 900, maxWidth: 1500, margin: "auto" }}>
+        <Content style={{ padding: 50, maxWidth: 1500, margin: "auto" }}>
           <div className="pull-right">{this.state.datasets.length > 0 && search}</div>
           <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />

@@ -23,6 +23,9 @@ export default class SimpleHistogram extends React.PureComponent<Props, State> {
   }
 
   componentDidMount() {
+    const ctx = this.canvasRef.getContext("2d");
+    ctx.translate(0, canvasHeight);
+    ctx.scale(1, -1);
     this.updateCanvas();
   }
 
@@ -35,8 +38,6 @@ export default class SimpleHistogram extends React.PureComponent<Props, State> {
     ctx.lineJoin = "round";
     ctx.fillStyle = "grey";
     ctx.strokeStyle = "coral";
-    ctx.translate(0, canvasHeight);
-    ctx.scale(1, -1);
     const maxValue = Math.max(...this.props.data);
     const downscaledData = this.props.data.map(
       value => (Math.log(value) / Math.log(maxValue)) * canvasHeight,

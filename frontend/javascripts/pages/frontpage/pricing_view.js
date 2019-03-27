@@ -140,7 +140,11 @@ const PricingView = () => (
       </Row>
 
       <Row gutter={16} type="flex" style={{ marginTop: 90, marginBottom: 100 }}>
-        <PricingColumn title="Public Hosting" iconUrl="/assets/images/public-hosting-icon.svg" price={0}>
+        <PricingColumn
+          title="Public Hosting"
+          iconUrl="/assets/images/public-hosting-icon.svg"
+          price={0}
+        >
           {[
             "Try out webKnossos for free with any published datasets on webknossos.org",
             "Unlimited accounts for your organization",
@@ -189,7 +193,11 @@ const PricingView = () => (
           ]}
         </PricingColumn>
 
-        <PricingColumn title="Custom Hosting" iconUrl="/assets/images/custom-hosting-icon.svg" price={800}>
+        <PricingColumn
+          title="Custom Hosting"
+          iconUrl="/assets/images/custom-hosting-icon.svg"
+          price={800}
+        >
           {[
             "On-Premise hosting of your data",
             "Unlimited data storage",

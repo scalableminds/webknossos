@@ -125,22 +125,26 @@ const PricingView = () => (
         <FeatureItem
           title="High Speed Skeleton Annotations"
           subTitle="Use our published Flight mode to quickly capture high-quality skeletons"
-          iconUrl="/images/high-speed-tracing-icon.svg"
+          iconUrl="/assets/images/high-speed-tracing-icon.svg"
         />
         <FeatureItem
           title="Volume Annotation"
           subTitle="Create and proof-read dense volume annotations"
-          iconUrl="/images/volume-annotation-icon.svg"
+          iconUrl="/assets/images/volume-annotation-icon.svg"
         />
         <FeatureItem
           title="Simple Collaboration"
           subTitle="webKnossos runs in the browser. Share links to annotations and publish datasets"
-          iconUrl="/images/collaboration-icon.svg"
+          iconUrl="/assets/images/collaboration-icon.svg"
         />
       </Row>
 
       <Row gutter={16} type="flex" style={{ marginTop: 90, marginBottom: 100 }}>
-        <PricingColumn title="Public Hosting" iconUrl="/images/public-hosting-icon.svg" price={0}>
+        <PricingColumn
+          title="Public Hosting"
+          iconUrl="/assets/images/public-hosting-icon.svg"
+          price={0}
+        >
           {[
             "Try out webKnossos for free with any published datasets on webknossos.org",
             "Unlimited accounts for your organization",
@@ -161,7 +165,7 @@ const PricingView = () => (
 
         <PricingColumn
           title="Premium Hosting"
-          iconUrl="/images/premium-hosting-icon.svg"
+          iconUrl="/assets/images/premium-hosting-icon.svg"
           price={250}
           contentStyle={{
             marginTop: "-8%",
@@ -189,7 +193,11 @@ const PricingView = () => (
           ]}
         </PricingColumn>
 
-        <PricingColumn title="Custom Hosting" iconUrl="/images/custom-hosting-icon.svg" price={800}>
+        <PricingColumn
+          title="Custom Hosting"
+          iconUrl="/assets/images/custom-hosting-icon.svg"
+          price={800}
+        >
           {[
             "On-Premise hosting of your data",
             "Unlimited data storage",

@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added the possibility to filter datasets in the dashboard according to their availability. By default, datasets which are missing on disk (e.g., when the datastore was deleted) are not shown anymore. This behavior can be configured via the settings icon next to the search box in the dashboard. [#3883](https://github.com/scalableminds/webknossos/pull/3883)
 - Added merger mode for skeleton and hybrid tracings. It allows to merge segments from e.g. generated segmentations. [#3619](https://github.com/scalableminds/webknossos/pull/3619)
 - The HTML template now includes SEO tags for demo instances and hides internal instances from search engines.
+- Segmentation ID mappings can now be used in volume and hybrid tracings. [#3949](https://github.com/scalableminds/webknossos/pull/3949)
 - A maximize-button was added to the viewports in the annotation view. Maximization can also be toggled with the `.` shortcut. [#3876](https://github.com/scalableminds/webknossos/pull/3876)
 - [webknossos-connect](https://github.com/scalableminds/webknossos-connect) now starts with webKnossos on local and development instances by default. [#3913](https://github.com/scalableminds/webknossos/pull/3913)
 

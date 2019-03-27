@@ -62,7 +62,7 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/bundle/",
+      publicPath: "/assets/bundle/",
     },
     module: {
       rules: [
@@ -145,6 +145,7 @@ module.exports = function(env = {}) {
     plugins,
     devServer: {
       contentBase: `${__dirname}/public`,
+      publicPath: "/assets/bundle/",
       port: env.PORT ? env.PORT : 9002,
       hot: false,
       inline: false,

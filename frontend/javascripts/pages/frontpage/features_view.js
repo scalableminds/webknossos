@@ -58,7 +58,7 @@ const FeatureList = ({ title, children }: { title: string, children: Array<Node>
     {children.map((child: Node, i: number) => (
       <div key={String(i)} style={{ margin: 30 }}>
         <img
-          src="/images/feature-checkmark.svg"
+          src="/assets/images/feature-checkmark.svg"
           alt="checkmark"
           style={{ width: 30, height: 30, marginRight: 20, float: "left", maxWidth: "100%" }}
         />
@@ -75,7 +75,7 @@ export const ImageAnalysisBlock = () => (
       marginLeft: "auto",
       marginRight: "auto",
       background:
-        "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/images/background_main_1080.jpg')",
+        "linear-gradient(rgba(120, 120, 120, 0.45), rgba(120, 120, 120, 0.45)), url('/assets/images/background_main_1080.jpg')",
     }}
   >
     <Col md={{ span: 12, offset: 4 }} style={{ backgroundColor: "white", margin: 80, padding: 40 }}>
@@ -180,7 +180,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
     <div className="container">
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
-        imageUrl="/images/feature-skeleton.png"
+        imageUrl="/assets/images/feature-skeleton.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
         <p>
@@ -196,7 +196,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Simple Collaboration"
-        imageUrl="/images/feature-sharing.png"
+        imageUrl="/assets/images/feature-sharing.png"
         docsUrl="https://docs.webknossos.org/guides/sharing"
         mirrored
       >
@@ -214,7 +214,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Efficient Volume Annotation"
-        imageUrl="/images/feature-volume.png"
+        imageUrl="/assets/images/feature-volume.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#volume-annotations"
       >
         <p>
@@ -227,7 +227,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Dataset Management"
-        imageUrl="/images/feature-datasets.png"
+        imageUrl="/assets/images/feature-datasets.png"
         docsUrl="https://docs.webknossos.org/reference/data_formats"
         mirrored
       >
@@ -249,7 +249,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
       <FeatureHighlight
         title="Project & Task Management"
-        imageUrl="/images/feature-projects.png"
+        imageUrl="/assets/images/feature-projects.png"
         docsUrl="https://docs.webknossos.org/guides/tasks"
       >
         <p>

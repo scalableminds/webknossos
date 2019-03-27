@@ -18,7 +18,11 @@ const { Search } = Input;
 
 const SimpleHeader = () => (
   <div id="oxalis-header">
-    <img src="/images/oxalis.svg" alt="webKnossos Logo" style={{ verticalAlign: "middle" }} />
+    <img
+      src="/assets/images/oxalis.svg"
+      alt="webKnossos Logo"
+      style={{ verticalAlign: "middle" }}
+    />
     webKnossos
   </div>
 );
@@ -26,7 +30,7 @@ const SimpleHeader = () => (
 const WelcomeHeader = ({ history }) => (
   <div
     style={{
-      backgroundImage: "url(/images/cover.jpg)",
+      backgroundImage: "url(/assets/images/cover.jpg)",
     }}
   >
     <div
@@ -45,7 +49,7 @@ const WelcomeHeader = ({ history }) => (
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col span={4}>
             <img
-              src="/images/oxalis.svg"
+              src="/assets/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />

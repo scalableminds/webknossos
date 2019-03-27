@@ -191,8 +191,8 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           style={{ display: "flex", alignItems: "center" }}
         >
           <img
-            src="/assets/images/feature-skeleton.png"
-            alt=""
+            src="/assets/images/brain_hd.svg"
+            alt="Brain illustration"
             style={{ objectFit: "contain", maxWidth: "100%" }}
           />
         </Col>
@@ -202,7 +202,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
     <div className="container">
       <FeatureHighlight
         title="High Speed Skeleton Tracing"
-        imageUrl="/assets/images/feature-flightmode.png"
+        imageUrl="/assets/images/feature-skeleton.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >
         <p>

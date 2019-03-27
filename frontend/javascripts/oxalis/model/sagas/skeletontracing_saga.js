@@ -27,12 +27,17 @@ import {
   deleteNode,
   deleteTree,
   toggleTree,
+  toggleTreeGroup,
   updateNode,
   updateSkeletonTracing,
   updateTree,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
+import {
+  callDeepWithChildren,
+  createGroupToTreesMap,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import {
   deleteBranchPointAction,
   setTreeNameAction,
@@ -61,6 +66,7 @@ import Store, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
+import compactToggleActions from "oxalis/model/helpers/compact_toggle_actions";
 import messages from "messages";
 
 function* centerActiveNode(action: Action): Saga<void> {
@@ -261,8 +267,7 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId ||
-    prevTree.isVisible !== tree.isVisible
+    prevTree.groupId !== tree.groupId
   );
 }
 
@@ -306,12 +311,21 @@ export function* diffTrees(
 
 const diffTreeCache = {};
 
-export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
+export function cachedDiffTrees(
+  prevSkeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
+): Array<UpdateAction> {
+  const { trees } = skeletonTracing;
+  const prevTrees = prevSkeletonTracing.trees;
   // Try to use the cached version of the diff if available to increase performance
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
     diffTreeCache.prevTrees = prevTrees;
     diffTreeCache.trees = trees;
-    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
+    diffTreeCache.diff = compactToggleActions(
+      Array.from(diffTrees(prevTrees, trees)),
+      prevSkeletonTracing,
+      skeletonTracing,
+    );
   }
   return diffTreeCache.diff;
 }
@@ -323,7 +337,7 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    yield* cachedDiffTrees(prevSkeletonTracing, skeletonTracing);
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);
     }

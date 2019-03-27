@@ -59,6 +59,14 @@ type ToggleTreeUpdateAction = {|
   name: "toggleTree",
   value: {|
     id: number,
+    isVisible: boolean,
+  |},
+|};
+type UpdateTreeGroupVisibilityUpdateAction = {|
+  name: "updateTreeGroupVisibility",
+  value: {|
+    treeGroupId: number,
+    isVisible: boolean,
   |},
 |};
 export type DeleteNodeUpdateAction = {|
@@ -138,6 +146,7 @@ export type UpdateAction =
   | UpdateVolumeTracingUpdateAction
   | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction
+  | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
 
@@ -171,6 +180,7 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateVolumeTracingUpdateAction>
   | AsServerAction<UpdateBucketUpdateAction>
   | AsServerAction<ToggleTreeUpdateAction>
+  | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
   | AsServerAction<CreateTracingUpdateAction>;
@@ -220,6 +230,19 @@ export function toggleTree(tree: Tree): ToggleTreeUpdateAction {
     name: "toggleTree",
     value: {
       id: tree.treeId,
+      isVisible: tree.isVisible,
+    },
+  };
+}
+export function updateTreeGroupVisibility(
+  groupId: number,
+  isVisible: boolean,
+): UpdateTreeGroupVisibilityUpdateAction {
+  return {
+    name: "updateTreeGroupVisibility",
+    value: {
+      treeGroupId: groupId,
+      isVisible,
     },
   };
 }

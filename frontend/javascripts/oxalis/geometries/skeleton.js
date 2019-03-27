@@ -274,7 +274,7 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
+    const diff = cachedDiffTrees(this.prevTracing, skeletonTracing);
 
     for (const update of diff) {
       switch (update.name) {
@@ -316,6 +316,16 @@ class Skeleton {
           const treeId = update.value.id;
           const tree = skeletonTracing.trees[treeId];
           this.updateTreeColor(treeId, tree.color, tree.isVisible);
+          break;
+        }
+        case "toggleTreeGroup": {
+          console.warn("TODO!");
+
+          // callDeepWithChildren(skeletonTracing.groups, update.value.id, (treeGroup))
+
+          // const treeId = update.value.id;
+          // const tree = skeletonTracing.trees[treeId];
+          // this.updateTreeColor(treeId, tree.color, tree.isVisible);
           break;
         }
         case "updateTree": {

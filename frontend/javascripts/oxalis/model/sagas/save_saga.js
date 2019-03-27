@@ -227,6 +227,8 @@ export function addVersionNumbers(
 }
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {
+  // todo: clean up
+  // return updateActions;
   // This functions removes update actions that should not be sent to the server.
   return updateActions.filter(ua => ua.name !== "toggleTree");
 }

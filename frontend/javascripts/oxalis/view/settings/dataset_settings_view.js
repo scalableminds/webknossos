@@ -7,7 +7,6 @@ import { Col, Collapse, Divider, Icon, Row, Select, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
-import { Chart } from "react-google-charts";
 import _ from "lodash";
 
 import type { APIDataset } from "admin/api_flow_types";
@@ -40,6 +39,7 @@ import constants, {
   type Vector3,
 } from "oxalis/constants";
 import messages, { settings } from "messages";
+import Histogram from "./histogram_view";
 
 const { Panel } = Collapse;
 const { Option } = Select;
@@ -115,10 +115,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     console.log("data", histogramData, maxValue);
     return (
-      <Chart
-        width="300px"
-        height="300px"
-        chartType="AreaChart"
+      /* <Chart
+        width="350px"
+        height="350px"
+        chartType="Line"
         loader={<div>Loading Chart</div>}
         data={histogramData}
         options={{
@@ -128,8 +128,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           // For the legend to fit, we make the chart area smaller
           chartArea: { width: "50%", height: "70%" },
           // lineWidth: 25
+          colors: ["red", "green", "blue", "grey", "black"],
         }}
-      />
+      /> */
+      <Histogram data={histogram[4]} />
     );
   };
 

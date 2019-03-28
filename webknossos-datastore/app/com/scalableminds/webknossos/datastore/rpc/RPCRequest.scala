@@ -15,7 +15,7 @@ import play.api.libs.json._
 import play.api.libs.ws._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxImplicits with LazyLogging {
 
@@ -47,6 +47,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   def getWithProtoResponse[T <: GeneratedMessage with Message[T]](companion: GeneratedMessageCompanion[T]): Fox[T] = {
     request = request.withMethod("GET")
     parseProtoResponse(performRequest)(companion)
+  }
+
+  def getWithBytesResponse: Fox[Array[Byte]] = {
+    request = request.withMethod("GET")
+      .withRequestTimeout(30 minutes)
+    extractBytesResponse(performRequest)
   }
 
   def post(file: File): Fox[WSResponse] = {
@@ -117,7 +123,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   def getStream: Fox[Source[ByteString, _]] = {
     logger.debug(
       s"Sending WS request to $url (ID: $id). " +
-        s"RequestBody: '${requestBodyPreview}'")
+        s"RequestBody: '$requestBodyPreview'")
     request
       .withMethod("GET")
       .withRequestTimeout(Duration.Inf)
@@ -135,7 +141,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   private def performRequest: Fox[WSResponse] = {
     logger.debug(
       s"Sending WS request to $url (ID: $id). " +
-        s"RequestBody: '${requestBodyPreview}'")
+        s"RequestBody: '$requestBodyPreview'")
     request
       .execute()
       .map { result =>
@@ -157,6 +163,23 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       }
   }
 
+  private def extractBytesResponse(r: Fox[WSResponse]): Fox[Array[Byte]] =
+    r.flatMap { response =>
+      if (response.status == OK) {
+        val responseBytes = response.bodyAsBytes
+        logger.debug(
+          s"Successful request (ID: $id). " +
+            s"Body: '<${responseBytes.length} raw bytes>'")
+        Fox.successful(responseBytes.toArray)
+      } else {
+        logger.error(
+          s"Failed to send WS request to $url (ID: $id). " +
+            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
+            s"ResponseBody: '${response.body.take(100)}'")
+        Fox.failure("Unsuccessful WS request to $url (ID: $id)")
+      }
+    }
+
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
       if (response.status == OK) {
@@ -166,7 +189,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       } else {
         logger.error(
           s"Failed to send WS request to $url (ID: $id). " +
-            s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +
+            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
             s"ResponseBody: '${response.body.take(100)}'")
       }
       Json.parse(response.body).validate[T] match {
@@ -189,7 +212,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       } else {
         logger.error(
           s"Failed to send WS request to $url (ID: $id). " +
-            s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +
+            s"RequestBody: '$requestBodyPreview'. Status ${response.status}. " +
             s"ResponseBody: '${response.body.take(100)}'")
       }
       try {
@@ -206,7 +229,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   private def requestBodyPreview: String =
     request.body match {
       case body: InMemoryBody
-          if request.headers.get(HeaderNames.CONTENT_TYPE).getOrElse(List()).contains("application/x-protobuf") =>
+          if request.headers.getOrElse(HeaderNames.CONTENT_TYPE, List()).contains("application/x-protobuf") =>
         s"<${body.bytes.length} bytes of protobuf data>"
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"

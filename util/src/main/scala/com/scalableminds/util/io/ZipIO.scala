@@ -4,8 +4,8 @@ import java.io._
 import java.nio.file.{Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
-import akka.stream.ActorMaterializer
-import akka.stream.javadsl.StreamConverters
+import akka.stream.{ActorMaterializer, scaladsl}
+import akka.stream.javadsl.{Sink, StreamConverters}
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.tools.TextUtils
@@ -35,11 +35,22 @@ object ZipIO extends LazyLogging {
 
       stream.putNextEntry(new ZipEntry(name))
 
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
+      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream
 
       val result = Future.successful(IOUtils.copy(inputStream, stream))
 
       result.map(_ => stream.closeEntry())
+    }
+
+    def addFileFromBytes(name: String, data: Array[Byte]): Unit = {
+      stream.putNextEntry(new ZipEntry(name))
+      stream.write(data)
+      stream.closeEntry()
+    }
+
+    def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(implicit ec: ExecutionContext): Future[Unit] = {
+      stream.putNextEntry(new ZipEntry(name))
+      NamedEnumeratorStream("", data).writeTo(stream).map(_ => stream.closeEntry())
     }
 
     /**

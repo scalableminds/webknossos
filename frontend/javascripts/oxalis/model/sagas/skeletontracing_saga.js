@@ -34,10 +34,6 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import {
-  callDeepWithChildren,
-  createGroupToTreesMap,
-} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import {
   deleteBranchPointAction,
   setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";

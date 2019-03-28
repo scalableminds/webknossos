@@ -4,6 +4,7 @@
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
+import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -27,7 +28,6 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
-  compactSaveQueue,
   pushTracingTypeAsync,
   sendRequestToServer,
   toggleErrorHighlighting,

@@ -1,10 +1,13 @@
 // @noflow
 
 import "test/sagas/skeletontracing_saga.mock.js";
+
 import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import compactSaveQueue from "oxalis/model/helpers/update_action_compaction/compact_save_queue";
+import compactUpdateActions from "oxalis/model/helpers/update_action_compaction/compact_update_actions";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -24,9 +27,7 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 });
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { saveTracingTypeAsync, compactUpdateActions, compactSaveQueue } = mockRequire.reRequire(
-  "oxalis/model/sagas/save_saga",
-);
+const { saveTracingTypeAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 const SkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );

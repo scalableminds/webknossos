@@ -27,7 +27,7 @@ class RequestHandler @Inject()(router: Router,
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
-      val path = request.path.split('/').filter(_ != "assets").mkString("/")
+      val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
     } else {
       Some(Action { Ok(views.html.main(conf)) })

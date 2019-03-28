@@ -52,7 +52,10 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  def annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+  def annotations(isFinished: Option[Boolean],
+                  limit: Option[Int],
+                  pageNumber: Option[Int] = None,
+                  includeTotalCount: Option[Boolean] = None) =
     sil.SecuredAction.async { implicit request =>
       for {
         annotations <- annotationDAO.findAllFor(request.identity._id,
@@ -60,24 +63,38 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Explorational,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+          annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
-        Ok(Json.toJson(jsonList))
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
       }
     }
 
-  def tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        annotations <- annotationDAO.findAllFor(request.identity._id,
-                                                isFinished,
-                                                AnnotationType.Task,
-                                                limit.getOrElse(defaultAnnotationLimit),
-                                                pageNumber.getOrElse(0))
-        jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-      } yield {
-        Ok(Json.toJson(jsonList))
+  def tasks(isFinished: Option[Boolean],
+            limit: Option[Int],
+            pageNumber: Option[Int] = None,
+            includeTotalCount: Option[Boolean] = None) = sil.SecuredAction.async { implicit request =>
+    for {
+      annotations <- annotationDAO.findAllFor(request.identity._id,
+                                              isFinished,
+                                              AnnotationType.Task,
+                                              limit.getOrElse(defaultAnnotationLimit),
+                                              pageNumber.getOrElse(0))
+      annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+        annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
+      jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
+    } yield {
+      val result = Ok(Json.toJson(jsonList))
+      annotationCount match {
+        case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+        case None        => result
       }
+    }
   }
 
   def userLoggedTime(userId: String) = sil.SecuredAction.async { implicit request =>
@@ -132,7 +149,11 @@ class UserController @Inject()(userService: UserService,
       .map(loggedTime => Ok(Json.toJson(loggedTime)))
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+  def userAnnotations(userId: String,
+                      isFinished: Option[Boolean],
+                      limit: Option[Int],
+                      pageNumber: Option[Int] = None,
+                      includeTotalCount: Option[Boolean] = None) =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -143,13 +164,23 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Explorational,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+          annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Explorational))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.compactWrites(a))
       } yield {
-        Ok(Json.toJson(jsonList))
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
       }
     }
 
-  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int] = None) =
+  def userTasks(userId: String,
+                isFinished: Option[Boolean],
+                limit: Option[Int],
+                pageNumber: Option[Int] = None,
+                includeTotalCount: Option[Boolean] = None) =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -160,9 +191,15 @@ class UserController @Inject()(userService: UserService,
                                                 AnnotationType.Task,
                                                 limit.getOrElse(defaultAnnotationLimit),
                                                 pageNumber.getOrElse(0))
+        annotationCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
+          annotationDAO.countAllFor(userIdValidated, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
       } yield {
-        Ok(Json.toJson(jsonList))
+        val result = Ok(Json.toJson(jsonList))
+        annotationCount match {
+          case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
+          case None        => result
+        }
       }
     }
 

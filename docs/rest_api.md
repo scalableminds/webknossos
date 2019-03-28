@@ -60,9 +60,12 @@ List your own task annotations
    - return only the first x results (defaults to 1000)
  - Optional GET parameter `pageNumber=[INT]`
    - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
+ - Optional GET parameter `includeTotalCount=[BOOLEAN]`
+    - if true returns the total count of entries (defaults to false)
 
 #### Returns
  - JSON list of objects containing annotation information about your own task annotations, also including task and task type information
+ - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
 
 
 ---
@@ -78,9 +81,12 @@ List your own explorative annotations
    - return only the first x results (defaults to 1000)
  - Optional GET parameter `pageNumber=[INT]`
    - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
+ - Optional GET parameter `includeTotalCount=[BOOLEAN]`
+     - if true returns the total count of entries (defaults to false)
 
 #### Returns
  - JSON list of objects containing annotation information about your own explorative annotations
+ - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
 
 
@@ -109,10 +115,13 @@ List the task annotations of a user
    - return only the first x results (defaults to 1000)
  - Optional GET parameter `pageNumber=[INT]`
    - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
+ - Optional GET parameter `includeTotalCount=[BOOLEAN]`
+     - if true returns the total count of entries (defaults to false)
 
 #### Returns
  - JSON list of objects containing annotation information about the task annotations of the user, also including task and task type information
-
+ - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
+ - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
 
 ---
 ### `GET /users/:id/annotations`
@@ -128,9 +137,12 @@ List the explorative annotations of a uaser
    - return only the first x results (defaults to 1000)
  - Optional GET parameter `pageNumber=[INT]`
    - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
+ - Optional GET parameter `includeTotalCount=[BOOLEAN]`
+     - if true returns the total count of entries (defaults to false)
 
 #### Returns
  - JSON list of objects containing annotation information about the explorative annotations of the user
+ - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
 
 
@@ -528,9 +540,12 @@ List all tasks of a project
    - return only the first x results (defaults to infinity)
  - Optional GET parameter `pageNumber=[INT]`
    - return the results starting at offset `limit` * `pageNumber` (defaults to 0)
+ - Optional GET parameter `includeTotalCount=[BOOLEAN]`
+     - if true returns the total count of entries (defaults to false)
 
 #### Returns
  - JSON list of objects containing task information
+ - total count of tasks in the HTTP header `X-Total-Count` if parameter is set
 
 #### Note
  - For smoother backwards compatibility, the limit defaults to infinity. However, to ease server load and improve response time, we suggest using a limit of 1000

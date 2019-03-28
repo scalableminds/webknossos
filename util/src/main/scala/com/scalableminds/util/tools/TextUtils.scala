@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import java.io.{PrintWriter, StringWriter}
+
 import org.apache.commons.lang3.StringUtils
 
 object TextUtils extends TextUtils
@@ -14,4 +16,10 @@ trait TextUtils {
     else {
       StringUtils.replaceEachRepeatedly(s, searchList, replaceList)
     }
+
+  def stackTraceAsString(t: Throwable): String = {
+    val sw = new StringWriter
+    t.printStackTrace(new PrintWriter(sw))
+    sw.toString
+  }
 }

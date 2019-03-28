@@ -8,17 +8,16 @@ services:
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
+      - "8000:8000" # from webknossos-connect
     links:
       - "fossildb-persisted:fossildb"
       - "postgres-persisted:postgres"
-      - redis
-      - webknossos-connect
     depends_on:
       postgres-persisted:
         condition: service_healthy
       fossildb-persisted:
         condition: service_healthy
-      webknossos-connect:
+      redis:
         condition: service_healthy
     command:
       - -Dconfig.file=conf/application.conf
@@ -73,9 +72,10 @@ services:
       - -Dtracingstore.redis.address=redis
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
-      - fossildb-persisted:fossildb
-      - redis
+      - "fossildb-persisted:fossildb"
     depends_on:
+      redis:
+        condition: service_healthy
       fossildb-persisted:
         condition: service_healthy
 
@@ -109,8 +109,6 @@ services:
   compile:
     extends:
       service: base
-    links:
-      - postgres
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,9 +122,9 @@ services:
     links:
       - "fossildb-dev:fossildb"
       - "postgres-dev:postgres"
-      - redis
-      - webknossos-connect
     depends_on:
+      redis:
+        condition: service_healthy
       postgres-dev:
         condition: service_healthy
       fossildb-dev:
@@ -168,12 +166,9 @@ services:
   e2e-tests:
     extends:
       service: backend-tests
-    links:
-      - postgres
-      - fossildb
-      - redis
-      - webknossos-connect
     depends_on:
+      redis:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       fossildb:
@@ -209,7 +204,8 @@ services:
     image: scalableminds/webknossos-connect:master__190
     volumes:
       - "./conf/connect:/app/data"
-    network_mode: host
+    # Publish webknossos-connect ports in webknossos container
+    network_mode: service:webknossos
 
   # Postgres
   postgres:
@@ -227,6 +223,8 @@ services:
   postgres-persisted:
     extends:
       service: postgres
+    ports:
+      - "5434:5432"
     volumes:
       - "./pg/db:/var/lib/postgresql/data/"
 
@@ -288,6 +286,16 @@ services:
 
   # Redis
   redis:
-    image: redis:5.0-alpine
+    image: redis:5.0
     command:
       - redis-server
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - bash
+        - -c
+        - 'ping="$$(redis-cli -h 127.0.0.1 ping)" && [ "$$ping" = "PONG" ] || exit 1'
+      timeout: 1s
+      interval: 2s
+      retries: 30
+

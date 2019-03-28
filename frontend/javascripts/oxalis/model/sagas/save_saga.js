@@ -46,6 +46,7 @@ import {
 import Date from "libs/date";
 import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
+import compactToggleActions from "oxalis/model/helpers/compact_toggle_actions";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 
@@ -228,9 +229,9 @@ export function addVersionNumbers(
 
 function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {
   // todo: clean up
-  // return updateActions;
+  return updateActions;
   // This functions removes update actions that should not be sent to the server.
-  return updateActions.filter(ua => ua.name !== "toggleTree");
+  // return updateActions.filter(ua => ua.name !== "toggleTree");
 }
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
 function cantor(a, b) {
@@ -364,9 +365,13 @@ function compactDeletedTrees(updateActions: Array<UpdateAction>) {
   );
 }
 
-export function compactUpdateActions(updateActions: Array<UpdateAction>): Array<UpdateAction> {
-  return compactDeletedTrees(
-    compactMovedNodesAndEdges(removeUnrelevantUpdateActions(updateActions)),
+export function compactUpdateActions(
+  updateActions: Array<UpdateAction>,
+  tracing: Tracing,
+): Array<UpdateAction> {
+  return compactToggleActions(
+    compactDeletedTrees(compactMovedNodesAndEdges(removeUnrelevantUpdateActions(updateActions))),
+    tracing,
   );
 }
 
@@ -473,6 +478,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       Array.from(
         yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
       ),
+      tracing,
     );
     if (items.length > 0) {
       yield* put(pushSaveQueueTransaction(items, tracingType));

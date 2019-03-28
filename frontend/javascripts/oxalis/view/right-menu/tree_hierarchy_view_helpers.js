@@ -148,9 +148,12 @@ export function createGroupToTreesMap(trees: TreeMap): { [number]: Array<Tree> }
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 
-export function getGroupByIdWithSubgroups(treeGroups: Array<TreeGroup>, groupId: number) {
+export function getGroupByIdWithSubgroups(
+  treeGroups: Array<TreeGroup>,
+  groupId: number,
+): Array<number> {
   const groupWithSubgroups = [];
-  callDeepWithChildren(treeGroups, groupId, (treeGroup, index, treeGroups, parentGroupId) => {
+  callDeepWithChildren(treeGroups, groupId, treeGroup => {
     groupWithSubgroups.push(treeGroup.groupId);
   });
   return groupWithSubgroups;

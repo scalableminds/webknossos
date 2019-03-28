@@ -2,11 +2,12 @@
 
 import _ from "lodash";
 
-import type { SkeletonTracing } from "oxalis/store";
+import type { SkeletonTracing, Tree } from "oxalis/store";
 import {
   type UpdateAction,
-  toggleTree,
+  type UpdateTreeVisibilityUpdateAction,
   updateTreeGroupVisibility,
+  updateTreeVisibility,
 } from "oxalis/model/sagas/update_actions";
 import {
   createGroupToTreesMap,
@@ -58,7 +59,12 @@ function buildTreeGroupTree(
 }
 
 // Finds the id of the common group for the used trees in the toggleActions
-function findCommonAncestor(treeGroupTree, treeIdMap, groupIdMap, toggleActions) {
+function findCommonAncestor(
+  treeGroupTree,
+  treeIdMap,
+  groupIdMap,
+  toggleActions: UpdateTreeVisibilityUpdateAction,
+) {
   function getAncestorPath(groupId) {
     const path = [];
     let currentGroupNode = groupIdMap[groupId == null ? null : groupId];
@@ -75,7 +81,7 @@ function findCommonAncestor(treeGroupTree, treeIdMap, groupIdMap, toggleActions)
 
   let commonPath = null;
   for (const toggleAction of toggleActions) {
-    const ancestorPath = getAncestorPath(treeIdMap[toggleAction.value.id].groupId);
+    const ancestorPath = getAncestorPath(treeIdMap[toggleAction.value.treeId].groupId);
     if (commonPath == null) {
       commonPath = ancestorPath;
     } else {
@@ -102,9 +108,9 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
   const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
   const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);
 
-  const allTreesOfAncestor =
+  const allTreesOfAncestor: Array<Tree> =
     groupWithSubgroups.length === 0
-      ? Array.from(Object.values(skeletonTracing.trees))
+      ? _.values(skeletonTracing.trees)
       : _.flatMap(groupWithSubgroups, groupId => groupToTreesMap[groupId]);
 
   const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, tree => tree.isVisible);
@@ -114,32 +120,26 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
     commonVisibility = false;
   } else if (invisibleTrees.length === 0) {
     commonVisibility = true;
+  } else if (visibleTrees.length > invisibleTrees.length) {
+    commonVisibility = true;
+    exceptions = invisibleTrees;
   } else {
-    if (visibleTrees.length > invisibleTrees.length) {
-      commonVisibility = true;
-      exceptions = invisibleTrees;
-    } else {
-      commonVisibility = false;
-      exceptions = visibleTrees;
-    }
+    commonVisibility = false;
+    exceptions = visibleTrees;
   }
 
   return [commonVisibility, exceptions, affectedTreeCount];
 }
 
-export default function compactToggleActions(
-  updateActions: Array<UpdateAction>,
-  prevSkeletonTracing: SkeletonTracing,
-  skeletonTracing: SkeletonTracing,
-) {
-  if (skeletonTracing.treeGroups !== prevSkeletonTracing.treeGroups) {
-    // Don't make any compactations if the treeGroups changed in between
+export default function compactToggleActions(updateActions: Array<UpdateAction>, tracing: Tracing) {
+  const skeletonTracing = tracing.skeleton;
+  if (skeletonTracing == null) {
     return updateActions;
   }
 
   const [toggleActions, remainingActions] = _.partition(
     updateActions,
-    ua => ua.name === "toggleTree",
+    ua => ua.name === "updateTreeVisibility",
   );
 
   if (toggleActions.length <= 1) {
@@ -180,7 +180,9 @@ export default function compactToggleActions(
 
   if (commonAncestor != null && shouldUseToggleGroup) {
     finalToggleActions.push(updateTreeGroupVisibility(commonAncestor, commonVisibility));
-    finalToggleActions = finalToggleActions.concat(exceptions.map(tree => toggleTree(tree)));
+    finalToggleActions = finalToggleActions.concat(
+      exceptions.map(tree => updateTreeVisibility(tree)),
+    );
   } else {
     finalToggleActions = toggleActions;
   }

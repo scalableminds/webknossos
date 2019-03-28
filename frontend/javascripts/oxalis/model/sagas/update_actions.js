@@ -55,10 +55,10 @@ type UpdateNodeUpdateAction = {|
   name: "updateNode",
   value: NodeWithTreeId,
 |};
-type ToggleTreeUpdateAction = {|
-  name: "toggleTree",
+export type UpdateTreeVisibilityUpdateAction = {|
+  name: "updateTreeVisibility",
   value: {|
-    id: number,
+    treeId: number,
     isVisible: boolean,
   |},
 |};
@@ -145,7 +145,7 @@ export type UpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
   | UpdateBucketUpdateAction
-  | ToggleTreeUpdateAction
+  | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
@@ -179,7 +179,7 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateSkeletonTracingUpdateAction>
   | AsServerAction<UpdateVolumeTracingUpdateAction>
   | AsServerAction<UpdateBucketUpdateAction>
-  | AsServerAction<ToggleTreeUpdateAction>
+  | AsServerAction<UpdateTreeVisibilityUpdateAction>
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
@@ -225,12 +225,13 @@ export function updateTree(tree: Tree): UpdateTreeUpdateAction {
     },
   };
 }
-export function toggleTree(tree: Tree): ToggleTreeUpdateAction {
+export function updateTreeVisibility(tree: Tree): UpdateTreeVisibilityUpdateAction {
+  const { treeId, isVisible } = tree;
   return {
-    name: "toggleTree",
+    name: "updateTreeVisibility",
     value: {
-      id: tree.treeId,
-      isVisible: tree.isVisible,
+      treeId,
+      isVisible,
     },
   };
 }

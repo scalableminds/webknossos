@@ -26,8 +26,7 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
-  toggleTree,
-  toggleTreeGroup,
+  updateTreeVisibility,
   updateNode,
   updateSkeletonTracing,
   updateTree,
@@ -303,7 +302,7 @@ export function* diffTrees(
         yield updateTree(tree);
       }
       if (prevTree.isVisible !== tree.isVisible) {
-        yield toggleTree(tree);
+        yield updateTreeVisibility(tree);
       }
     }
   }
@@ -321,11 +320,7 @@ export function cachedDiffTrees(
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
     diffTreeCache.prevTrees = prevTrees;
     diffTreeCache.trees = trees;
-    diffTreeCache.diff = compactToggleActions(
-      Array.from(diffTrees(prevTrees, trees)),
-      prevSkeletonTracing,
-      skeletonTracing,
-    );
+    diffTreeCache.diff = Array.from(diffTrees(prevTrees, trees));
   }
   return diffTreeCache.diff;
 }

@@ -1,35 +1,45 @@
 // @flow
 
+import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Button, Icon, Row, Col } from "antd";
 import React from "react";
 
 import type { APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import AdvancedDatasetView from "dashboard/advanced_dataset/dataset_table";
-import Persistence from "libs/persistence";
-import * as Utils from "libs/utils";
-import renderIndependently from "libs/render_independently";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { OptionCard } from "admin/onboarding";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import DatasetTable from "dashboard/advanced_dataset/dataset_table";
+import Persistence from "libs/persistence";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
+import * as Utils from "libs/utils";
+import renderIndependently from "libs/render_independently";
 
-const { Search } = Input;
+const { Search, Group: InputGroup } = Input;
 
 type Props = {
   user: APIUser,
   history: RouterHistory,
 };
 
+export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
+
 type State = {
   datasets: Array<APIMaybeUnimportedDataset>,
   isLoading: boolean,
   searchQuery: string,
+  datasetFilteringMode: DatasetFilteringMode,
 };
 
 const persistence: Persistence<State> = new Persistence(
-  { searchQuery: PropTypes.string },
+  {
+    searchQuery: PropTypes.string,
+    datasetFilteringMode: PropTypes.oneOf([
+      "showAllDatasets",
+      "onlyShowReported",
+      "onlyShowUnreported",
+    ]),
+  },
   "datasetList",
 );
 
@@ -51,6 +61,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     searchQuery: "",
     datasets: datasetCache.get(),
     isLoading: false,
+    datasetFilteringMode: "onlyShowReported",
   };
 
   componentWillMount() {
@@ -172,43 +183,83 @@ class DatasetView extends React.PureComponent<Props, State> {
 
   renderTable() {
     return (
-      <AdvancedDatasetView
+      <DatasetTable
         datasets={this.state.datasets}
         searchQuery={this.state.searchQuery}
         isUserAdmin={Utils.isUserAdmin(this.props.user)}
+        datasetFilteringMode={this.state.datasetFilteringMode}
       />
     );
   }
 
   render() {
     const margin = { marginRight: 5 };
-    const search = (
+    const isUserAdmin = Utils.isUserAdmin(this.props.user);
+    const createFilteringModeRadio = (key, label) => (
+      <Radio
+        onChange={() => this.setState({ datasetFilteringMode: key })}
+        checked={this.state.datasetFilteringMode === key}
+      >
+        {label}
+      </Radio>
+    );
+
+    const filterMenu = (
+      <Menu onClick={() => {}}>
+        <Menu.Item>{createFilteringModeRadio("showAllDatasets", "Show all datasets")}</Menu.Item>
+        <Menu.Item>
+          {createFilteringModeRadio("onlyShowReported", "Only show available datasets")}
+        </Menu.Item>
+        <Menu.Item>
+          {createFilteringModeRadio("onlyShowUnreported", "Only show missing datasets")}
+        </Menu.Item>
+      </Menu>
+    );
+    const searchBox = (
       <Search
-        style={{ width: 200, float: "right" }}
+        style={{ width: 200 }}
         onPressEnter={this.handleSearch}
         onChange={this.handleSearch}
         value={this.state.searchQuery}
       />
     );
-
-    const adminHeader = Utils.isUserAdmin(this.props.user) ? (
-      <div className="pull-right">
-        <Button
-          icon={this.state.isLoading ? "loading" : "reload"}
-          style={margin}
-          onClick={this.handleCheckDatasets}
-        >
-          Refresh
-        </Button>
-        <Link to="/datasets/upload" style={margin}>
-          <Button type="primary" icon="plus">
-            Add Dataset
+    const search = isUserAdmin ? (
+      <InputGroup compact>
+        {searchBox}
+        <Dropdown overlay={filterMenu} trigger={["click"]}>
+          <Button>
+            <Badge dot={this.state.datasetFilteringMode !== "showAllDatasets"}>
+              <Icon type="setting" />
+            </Badge>
           </Button>
-        </Link>
-        {search}
-      </div>
+        </Dropdown>
+      </InputGroup>
     ) : (
-      search
+      searchBox
+    );
+
+    const adminHeader = (
+      <div className="pull-right" style={{ display: "flex" }}>
+        {isUserAdmin ? (
+          <React.Fragment>
+            <Button
+              icon={this.state.isLoading ? "loading" : "reload"}
+              style={margin}
+              onClick={this.handleCheckDatasets}
+            >
+              Refresh
+            </Button>
+            <Link to="/datasets/upload" style={margin}>
+              <Button type="primary" icon="plus">
+                Add Dataset
+              </Button>
+            </Link>
+            {search}
+          </React.Fragment>
+        ) : (
+          search
+        )}
+      </div>
     );
 
     const isEmpty = this.state.datasets.length === 0;
@@ -219,6 +270,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
+
         <Spin size="large" spinning={this.state.datasets.length === 0 && this.state.isLoading}>
           {content}
         </Spin>

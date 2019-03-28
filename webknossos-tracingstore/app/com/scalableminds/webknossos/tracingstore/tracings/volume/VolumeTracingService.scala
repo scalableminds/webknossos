@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.io.File
+import java.io.{File, PrintWriter, StringWriter}
 import java.nio.file.Paths
 
 import com.google.inject.Inject
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, Ele
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -22,12 +22,15 @@ import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingSt
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.libs.iteratee.Concurrent.Channel
 
 import scala.concurrent.duration._
-import play.api.libs.iteratee.Enumerator
+import play.api.libs.iteratee.{Concurrent, Enumerator, Input}
 import play.api.libs.json.{JsObject, Json}
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -153,10 +156,20 @@ class VolumeTracingService @Inject()(
 
   def allData(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+    val buckets: Iterator[NamedStream] =
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+
+    if (buckets.isEmpty) {
+      logger.debug(s"No buckets found to send as zipped volume data for $tracingId.")
+    }
 
     Enumerator.outputStream { os =>
-      ZipIO.zip(buckets, os)
+      ZipIO.zip(buckets, os).onComplete {
+        case failure: scala.util.Failure[Unit] =>
+          logger.debug(
+            s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
+        case success: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+      }
     }
   }
 

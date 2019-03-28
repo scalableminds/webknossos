@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Divider, Icon, Row, Select, Tag, Tooltip } from "antd";
+import { Col, Collapse, Divider, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -70,18 +70,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       <div key={layerName}>
         <Row>
           <Col span={24}>
+            {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */}
+              <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
+            {/* This div is necessary for the tooltip to be displayed */}
+            <div style={{ display: "inline-block", marginRight: 8 }}>
+              <Switch
+              size="small"
+                onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                checked={!isDisabled}
+              />
+            </div>
+          </Tooltip>
             <span style={{ fontWeight: 700 }}>{layerName}</span>
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            {/* TODO adjust types of the icons when upgrading antd. */}
-            <Tooltip title={isDisabled ? "Enable" : "Disable"}>
-              <Icon
-                type={isDisabled ? "eye-o" : "eye"}
-                onClick={() => this.props.onChangeLayer(layerName, "isDisabled", !isDisabled)}
-                style={{ marginTop: 4, marginLeft: 8, cursor: "pointer" }}
-              />
-            </Tooltip>
             <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
               <Icon
                 type="scan"
@@ -192,8 +195,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   }
 
-  renderPanelHeader = (hasDisabledLayers: boolean) =>
-    hasDisabledLayers ? (
+  renderPanelHeader = (hasInvisibleLayers: boolean) =>
+  hasInvisibleLayers ? (
       <span>
         Color Layers
         <Tooltip title="Not all layers are currently visible.">
@@ -210,11 +213,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
-    const hasDisabledLayers =
-      Object.keys(layers).find(layerName => layers[layerName].isDisabled) != null;
+    const hasInvisibleLayers =
+      Object.keys(layers).find(layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel header={this.renderPanelHeader(hasDisabledLayers)} key="1">
+        <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}

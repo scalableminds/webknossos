@@ -2,7 +2,7 @@
 
 import _ from "lodash";
 
-import type { SkeletonTracing, Tree } from "oxalis/store";
+import type { SkeletonTracing, Tracing, Tree } from "oxalis/store";
 import {
   type UpdateAction,
   type UpdateTreeVisibilityUpdateAction,
@@ -63,7 +63,7 @@ function findCommonAncestor(
   treeGroupTree,
   treeIdMap,
   groupIdMap,
-  toggleActions: UpdateTreeVisibilityUpdateAction,
+  toggleActions: Array<UpdateTreeVisibilityUpdateAction>,
 ) {
   function getAncestorPath(groupId) {
     const path = [];

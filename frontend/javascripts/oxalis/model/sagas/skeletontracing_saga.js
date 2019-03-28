@@ -65,7 +65,6 @@ import Store, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
-import compactToggleActions from "oxalis/model/helpers/compact_toggle_actions";
 import messages from "messages";
 
 function* centerActiveNode(action: Action): Saga<void> {

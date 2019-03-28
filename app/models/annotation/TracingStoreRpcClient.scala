@@ -157,5 +157,4 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     } yield data
   }
 
-
 }

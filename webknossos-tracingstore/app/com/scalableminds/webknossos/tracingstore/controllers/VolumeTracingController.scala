@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, V
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{
+  TracingStoreAccessTokenService,
+  TracingStoreConfig,
+  TracingStoreWkRpcClient
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.JsonHelper.boxFormat

@@ -157,11 +157,10 @@ class VolumeTracingService @Inject()(
       byte == 0
     }
 
-  def allDataEnumerator(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
+  def allDataEnumerator(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] =
     Enumerator.outputStream { os =>
       allDataToOutputStream(tracingId, tracing, os)
     }
-  }
 
   def allDataFile(tracingId: String, tracing: VolumeTracing): Future[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")

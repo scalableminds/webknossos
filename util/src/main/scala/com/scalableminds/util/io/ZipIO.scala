@@ -35,7 +35,7 @@ object ZipIO extends LazyLogging {
 
       stream.putNextEntry(new ZipEntry(name))
 
-      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream
+      val inputStream: InputStream = source.runWith(StreamConverters.asInputStream)
 
       val result = Future.successful(IOUtils.copy(inputStream, stream))
 
@@ -48,7 +48,8 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
-    def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(implicit ec: ExecutionContext): Future[Unit] = {
+    def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
+        implicit ec: ExecutionContext): Future[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       NamedEnumeratorStream("", data).writeTo(stream).map(_ => stream.closeEntry())
     }

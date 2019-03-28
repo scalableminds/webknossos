@@ -50,8 +50,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   }
 
   def getWithBytesResponse: Fox[Array[Byte]] = {
-    request = request.withMethod("GET")
-      .withRequestTimeout(30 minutes)
+    request = request.withMethod("GET").withRequestTimeout(30 minutes)
     extractBytesResponse(performRequest)
   }
 

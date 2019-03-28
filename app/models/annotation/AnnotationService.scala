@@ -449,8 +449,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-    def getVolumeDataObjects(dataSetId: ObjectId,
-                             tracingIds: List[Option[String]]): Fox[List[Option[Array[Byte]]]] =
+    def getVolumeDataObjects(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[Array[Byte]]]] =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
@@ -512,8 +511,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       nmls match {
         case head :: tail => {
           head._3.foreach(volumeData => zipper.addFileFromBytes(head._2 + "_data.zip", volumeData))
-          zipper.addFileFromEnumerator(head._2 + ".nml", head._1)
-            .flatMap(_ => addToZip(tail))
+          zipper.addFileFromEnumerator(head._2 + ".nml", head._1).flatMap(_ => addToZip(tail))
         }
         case _ =>
           Future.successful(true)

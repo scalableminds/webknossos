@@ -82,7 +82,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0], false);
   }
 
   freeBucket(bucket: DataBucket): void {

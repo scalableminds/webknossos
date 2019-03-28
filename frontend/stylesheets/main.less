@@ -54,14 +54,22 @@ body {
   background: repeating-linear-gradient(45deg, #ffdc00, #ffdc00 20px, #111111 20px, #111111 40px);
 }
 
-.logo {
-  background: url(/assets/images/oxalis.svg) 15px center no-repeat;
-  padding-left: 43px;
-  height: 40px;
-  float: left;
-  margin-top: 6px;
-  background-size: 20px 20px;
-  filter: invert(1);
+.ant-layout-header {
+  .logo {
+    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    padding-left: 43px;
+    height: 40px;
+    float: left;
+    margin-top: 6px;
+    background-size: 20px 20px;
+    filter: invert(1);
+  }
+
+  @media @smartphones {
+    a[href="/"] span {
+      font-size: 0px; // hide text
+    }
+  }
 }
 
 .bold {

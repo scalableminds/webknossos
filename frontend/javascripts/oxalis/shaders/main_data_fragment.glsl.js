@@ -59,6 +59,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -176,8 +178,10 @@ void main() {
         fallbackGray
       ).xyz;
 
-    // Brightness / Contrast Transformation for <%= name %>
-    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+    // Keep the color in bounds of min and max
+    color_value = clamp(color_value, <%= name %>_min, <%= name %>_max); 
+    // Scale interval between min and max up to interval from 0 to 255 
+    color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
 
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;

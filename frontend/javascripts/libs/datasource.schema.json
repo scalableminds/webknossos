@@ -128,9 +128,10 @@
         "properties": {
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
-          "color": { "$ref": "#/definitions/types::Vector3" }
+          "color": { "$ref": "#/definitions/types::Vector3" },
+          "bounds": { "$ref": "#/definitions/types::Vector2" }
         },
-        "required": ["brightness", "contrast", "color"]
+        "required": ["brightness", "contrast", "color", "bounds"]
       }
     }
   }

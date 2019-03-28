@@ -7,6 +7,8 @@
 // Add minItems=3 and maxItems=3
 type Vector3 = Array<number>;
 
+type Vector2 = Array<number>;
+
 type BoundingBox = {
   topLeft: Vector3,
   width: number,
@@ -72,5 +74,6 @@ export type LayerUserConfiguration = {
     brightness: number,
     contrast: number,
     color: Vector3,
+    bounds: Vector2,
   },
 };

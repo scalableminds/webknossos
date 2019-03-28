@@ -58,6 +58,7 @@ type DatasetSettingsProps = {|
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
+  position: Vector3,
 |};
 
 type State = {
@@ -102,11 +103,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color } = layer;
+    const { brightness, contrast, alpha, color, bounds } = layer;
+    const { histogram } = this.state;
     return (
       <div key={layerName}>
         <Row>
           <Col span={24}>
+            {histogram != null ? (
+              <Histogram data={histogram} min={bounds[0]} max={bounds[1]} layerName={layerName} />
+            ) : null}
             <span style={{ fontWeight: 700 }}>{layerName}</span>
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
@@ -219,10 +224,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
-    const { histogram } = this.state;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        {histogram != null ? <Histogram data={histogram} /> : null}
         <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>

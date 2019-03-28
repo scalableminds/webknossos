@@ -80,7 +80,7 @@ export async function generateScreenshotsAsBuffers() {
   return screenshots;
 }
 export async function downloadScreenshot() {
-  const screenshots = generateScreenshotsAsBuffers();
+  const screenshots = await generateScreenshotsAsBuffers();
   const { dataset, flycam, temporaryConfiguration } = Store.getState();
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;

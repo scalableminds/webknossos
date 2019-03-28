@@ -215,6 +215,14 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1.0,
       };
+      this.uniforms[`${name}_min`] = {
+        type: "f",
+        value: 0.0,
+      };
+      this.uniforms[`${name}_max`] = {
+        type: "f",
+        value: 1.0,
+      };
     }
   }
 
@@ -504,6 +512,8 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
     this.uniforms[`${name}_contrast`].value = settings.contrast;
     this.uniforms[`${name}_alpha`].value = settings.alpha / 100;
+    this.uniforms[`${name}_min`].value = settings.bounds[0] / 255;
+    this.uniforms[`${name}_max`].value = settings.bounds[1] / 255;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);

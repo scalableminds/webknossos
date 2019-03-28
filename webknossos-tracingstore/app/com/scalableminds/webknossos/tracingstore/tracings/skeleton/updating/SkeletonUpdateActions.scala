@@ -51,7 +51,6 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     branchPoints: List[UpdateActionBranchPoint],
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
-                                    isVisible: Option[Boolean],
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
@@ -65,7 +64,6 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
-        isVisible = isVisible.orElse(tree.isVisible)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -312,6 +310,23 @@ case class RevertToVersionAction(sourceVersion: Long, actionTimestamp: Option[Lo
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
+case class UpdateTreeVisibility(treeId: Int,
+                                isVisible: Boolean,
+                                actionTimestamp: Option[Long] = None,
+                                info: Option[String] = None)
+    extends UpdateAction.SkeletonUpdateAction
+    with SkeletonUpdateActionHelper {
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(tree: Tree) = tree.copy(isVisible = Some(isVisible))
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
+  }
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+}
+
 case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
                                      isVisible: Boolean,
                                      actionTimestamp: Option[Long] = None,
@@ -345,6 +360,7 @@ object UpdateNodeSkeletonAction { implicit val jsonFormat = Json.format[UpdateNo
 object UpdateTreeGroupsSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeGroupsSkeletonAction] }
 object UpdateTracingSkeletonAction { implicit val jsonFormat = Json.format[UpdateTracingSkeletonAction] }
 object RevertToVersionAction { implicit val jsonFormat = Json.format[RevertToVersionAction] }
+object UpdateTreeVisibility { implicit val jsonFormat = Json.format[UpdateTreeVisibility] }
 object UpdateTreeGroupVisibility { implicit val jsonFormat = Json.format[UpdateTreeGroupVisibility] }
 
 object SkeletonUpdateAction {
@@ -366,6 +382,7 @@ object SkeletonUpdateAction {
         case "updateTreeGroups"          => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
         case "updateTracing"             => deserialize[UpdateTracingSkeletonAction](jsonValue)
         case "revertToVersion"           => deserialize[RevertToVersionAction](jsonValue)
+        case "updateTreeVisibility"      => deserialize[UpdateTreeVisibility](jsonValue)
         case "updateTreeGroupVisibility" => deserialize[UpdateTreeGroupVisibility](jsonValue)
       }
     }
@@ -406,6 +423,8 @@ object SkeletonUpdateAction {
         Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
       case s: RevertToVersionAction =>
         Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAction.jsonFormat))
+      case s: UpdateTreeVisibility =>
+        Json.obj("name" -> "updateTreeVisibility", "value" -> Json.toJson(s)(UpdateTreeVisibility.jsonFormat))
       case s: UpdateTreeGroupVisibility =>
         Json.obj("name" -> "updateTreeGroupVisibility", "value" -> Json.toJson(s)(UpdateTreeGroupVisibility.jsonFormat))
     }

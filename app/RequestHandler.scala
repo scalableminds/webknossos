@@ -1,6 +1,5 @@
-import java.nio.file.Paths
-
-import controllers.{Assets, AssetsFinder}
+import com.typesafe.scalalogging.LazyLogging
+import controllers.Assets
 import javax.inject.Inject
 import play.api.Environment
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
@@ -14,7 +13,6 @@ class RequestHandler @Inject()(router: Router,
                                filters: HttpFilters,
                                conf: WkConf,
                                assets: Assets,
-                               af: AssetsFinder,
                                env: Environment)
     extends DefaultHttpRequestHandler(
       router,
@@ -22,17 +20,16 @@ class RequestHandler @Inject()(router: Router,
       httpConfiguration,
       filters
     )
-    with InjectedController {
+    with InjectedController
+    with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
+    } else if (request.uri.matches("^(/assets/).*$")) {
+      val path = request.path.split('/').filter(_ != "assets").mkString("/")
+      Some(assets.at(path = "/public", file = path))
     } else {
-      val file =
-        Paths.get(env.rootPath + af.assetsBasePath + request.path).toFile
-      if (request.path.matches("^.+\\..+$") || (file.exists && file.isFile))
-        Some(assets.at(path = "/public", file = request.path))
-      else
-        Some(Action { Ok(views.html.main(conf)) })
+      Some(Action { Ok(views.html.main(conf)) })
     }
 }

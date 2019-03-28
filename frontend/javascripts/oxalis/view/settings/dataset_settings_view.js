@@ -17,7 +17,7 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { findDataPositionForLayer } from "admin/admin_rest_api";
-import { getMaxZoomValueForResolution, getPosition} from "oxalis/model/accessors/flycam_accessor";
+import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import { generateScreenshotsAsBuffers } from "oxalis/view/rendering_utils";
@@ -61,21 +61,27 @@ type DatasetSettingsProps = {|
 |};
 
 type State = {
-  histogram: Array<number>,
+  histogram: ?Array<number>,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state = {
-    histogram: [],
+    histogram: null,
   };
 
   componentDidMount() {
     this.loadHistogram();
   }
 
+  componentWillReceiveProps(newProps: DatasetSettingsProps) {
+    if (_.isEqual(this.props.position, newProps.position)) {
+      return;
+    }
+    this.loadHistogramThrottled();
+  }
+
   loadHistogram = async () => {
     const screenshots = await generateScreenshotsAsBuffers();
-    // red, green, blue, alpha, avg of color
     const histogram = Array(256).fill(0);
     Object.keys(screenshots).forEach(planeId => {
       const buffer = screenshots[planeId];
@@ -83,9 +89,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         const avg = Math.floor((buffer[pos] + buffer[pos + 1] + buffer[pos + 2]) / 3);
         histogram[avg] += 1;
       }
-      this.setState({ histogram });
     });
+    this.setState({ histogram });
   };
+
+  // eslint-disable-next-line react/sort-comp
+  loadHistogramThrottled = _.throttle(this.loadHistogram, 1000);
 
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
@@ -210,10 +219,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
-
+    const { histogram } = this.state;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        {this.state.histogram != null ?  <Histogram data={this.state.histogram} /> : null}
+        {histogram != null ? <Histogram data={histogram} /> : null}
         <Panel header="Color Layers" key="1">
           {colorSettings}
         </Panel>

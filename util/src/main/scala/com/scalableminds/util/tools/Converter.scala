@@ -46,6 +46,11 @@ object DefaultConverters {
       }
   }
 
+  implicit object BoolToOption extends Converter[Boolean, Unit] {
+    override def convert(a: Boolean): Option[Unit] =
+      if (a) Some(()) else None
+  }
+
   implicit object IntArrayToByteArrayConverter extends ArrayConverter[Array[Int], Array[Byte]] {
     def convert(a: Array[Int], bytesPerElement: Int): Array[Byte] =
       a.flatMap { value =>

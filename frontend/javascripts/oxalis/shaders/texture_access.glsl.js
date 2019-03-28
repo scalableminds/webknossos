@@ -207,6 +207,18 @@ export const getColorForCoords: ShaderModule = {
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
 
+      if (packingDegree == 2.0) {
+        // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
+        if (rgbaIndex == 0.0) {
+          return vec4(bucketColor.r, bucketColor.g, bucketColor.r, bucketColor.g);
+        } else if (rgbaIndex == 1.0) {
+          return vec4(bucketColor.b, bucketColor.a, bucketColor.b, bucketColor.a);
+        }
+      }
+
+      // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
         return vec4(bucketColor.r);
       } else if (rgbaIndex == 1.0) {

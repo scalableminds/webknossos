@@ -167,7 +167,7 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
         </Menu.Item>
       ) : null}
       <Menu.Item key="frontend-api">
-        <a target="_blank" href="/docs/frontend-api/index.html">
+        <a target="_blank" href="/assets/docs/frontend-api/index.html">
           Frontend API Documentation
         </a>
       </Menu.Item>
@@ -303,6 +303,21 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
 
     trailingNavItems.push(
       <LoggedInAvatar key="logged-in-avatar" activeUser={activeUser} handleLogout={handleLogout} />,
+    );
+  }
+
+  if (!_isAuthenticated && features().enableFrontpage) {
+    menuItems.push(
+      <Menu.Item key="features">
+        <Link to="/features" style={{ fontWeight: 400 }}>
+          <Icon type="rocket" /> Features
+        </Link>
+      </Menu.Item>,
+      <Menu.Item key="pricing">
+        <Link to="/pricing" style={{ fontWeight: 400 }}>
+          <Icon type="trophy" /> Pricing
+        </Link>
+      </Menu.Item>,
     );
   }
 

@@ -1,5 +1,11 @@
 // @flow
 
+// This module is used to compact the updateTreeVisibility updateActions
+// in a way which reduces the amount of such actions. This is done by
+// replacing the actions with updateTree*Group*Visibility actions where
+// appropriate.
+// See compactToggleActions for the high-level logic of the compaction.
+
 import _ from "lodash";
 
 import type { SkeletonTracing, Tracing, Tree } from "oxalis/store";
@@ -65,8 +71,8 @@ function findCommonAncestor(
   treeIdMap,
   groupIdMap,
   toggleActions: Array<UpdateTreeVisibilityUpdateAction>,
-) {
-  function getAncestorPath(groupId) {
+): number {
+  function getAncestorPath(groupId): Array<number> {
     const path = [];
     let currentGroupNode = groupIdMap[groupId == null ? -1 : groupId];
 
@@ -138,9 +144,11 @@ export default function compactToggleActions(
 ): Array<UpdateAction> {
   const skeletonTracing = tracing.skeleton;
   if (skeletonTracing == null) {
+    // Don't do anything if this is not a skeleton tracing
     return updateActions;
   }
 
+  // Extract the toggleActions which we are interested in
   const [_toggleActions, remainingActions] = _.partition(
     updateActions,
     ua => ua.name === "updateTreeVisibility",
@@ -152,7 +160,9 @@ export default function compactToggleActions(
     return updateActions;
   }
 
+  // Build up some helper data structures
   const [treeGroupTree, hashMap] = buildTreeGroupTree(skeletonTracing);
+  // Find the group id of the common ancestor of all toggled trees
   const commonAncestor = findCommonAncestor(
     treeGroupTree,
     skeletonTracing.trees,
@@ -160,19 +170,21 @@ export default function compactToggleActions(
     toggleActions,
   );
 
+  // commonVisibility is the new visibility which should by applied to all ascendants
+  // of the common ancestor. The exceptions array lists all trees which differ from
+  // that common visibility. These will receive separate updateActions.
   const [commonVisibility, exceptions, affectedTreeCount] = isCommonAncestorToggler(
     skeletonTracing,
     commonAncestor,
   );
-  // If less than 50% of the toggled trees are exceptions, we can use the compactation
+
+  // If less than 50% of the toggled trees are exceptions, we should use the compactation
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
 
-  const finalToggleActions =
-    commonAncestor != null && shouldUseToggleGroup
-      ? [updateTreeGroupVisibility(commonAncestor, commonVisibility)].concat(
-          exceptions.map(tree => updateTreeVisibility(tree)),
-        )
-      : toggleActions;
+  const compactedToggleActions = [
+    updateTreeGroupVisibility(commonAncestor, commonVisibility),
+  ].concat(exceptions.map(tree => updateTreeVisibility(tree)));
+  const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
 
   return remainingActions.concat(finalToggleActions);
 }

@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The HTML template now includes SEO tags for demo instances and hides internal instances from search engines.
 - A maximize-button was added to the viewports in the annotation view. Maximization can also be toggled with the `.` shortcut. [#3876](https://github.com/scalableminds/webknossos/pull/3876)
 - [webknossos-connect](https://github.com/scalableminds/webknossos-connect) now starts with webKnossos on local and development instances by default. [#3913](https://github.com/scalableminds/webknossos/pull/3913)
+- The visibilities of trees in a skeleton tracing is now persisted across page loads. [#3942](https://github.com/scalableminds/webknossos/pull/3942)
 
 ### Changed
 - Improved the flight mode performance for tracings with very large trees (>80.000 nodes). [#3880](https://github.com/scalableminds/webknossos/pull/3880)

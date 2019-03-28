@@ -71,16 +71,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         <Row>
           <Col span={24}>
             {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */}
-              <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
-            {/* This div is necessary for the tooltip to be displayed */}
-            <div style={{ display: "inline-block", marginRight: 8 }}>
-              <Switch
-              size="small"
-                onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
-                checked={!isDisabled}
-              />
-            </div>
-          </Tooltip>
+            <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
+              {/* This div is necessary for the tooltip to be displayed */}
+              <div style={{ display: "inline-block", marginRight: 8 }}>
+                <Switch
+                  size="small"
+                  onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                  checked={!isDisabled}
+                />
+              </div>
+            </Tooltip>
             <span style={{ fontWeight: 700 }}>{layerName}</span>
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
@@ -196,7 +196,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   }
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>
-  hasInvisibleLayers ? (
+    hasInvisibleLayers ? (
       <span>
         Color Layers
         <Tooltip title="Not all layers are currently visible.">
@@ -214,7 +214,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
     const hasInvisibleLayers =
-      Object.keys(layers).find(layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0) != null;
+      Object.keys(layers).find(
+        layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
+      ) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">

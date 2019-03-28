@@ -384,7 +384,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
                 opacity: 0,
                 display: "block",
                 border: "none",
-                cursor: disabled ? "not-allowed":"pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
               }}
               onChange={this.onColorChange}
               value={value}

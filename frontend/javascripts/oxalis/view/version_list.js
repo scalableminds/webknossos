@@ -114,6 +114,7 @@ class VersionList extends React.Component<Props, State> {
 
   handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
 
+  // eslint-disable-next-line react/sort-comp
   getGroupedAndChunkedVersions = _.memoize(
     (versions: Array<APIUpdateActionBatch>): GroupedAndChunkedVersions => {
       // This function first groups the versions by day, where the key is the output of the moment calendar function.

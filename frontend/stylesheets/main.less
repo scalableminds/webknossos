@@ -17,6 +17,7 @@
 @import "_general.less";
 @import "_dashboard.less";
 @import "trace_view/_tracing_view.less";
+@import "trace_view/_user_settings_view.less";
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
 @import "_help.less";
@@ -54,7 +55,7 @@ body {
 }
 
 .logo {
-  background: url(/images/oxalis.svg) 15px center no-repeat;
+  background: url(/assets/images/oxalis.svg) 15px center no-repeat;
   padding-left: 43px;
   height: 40px;
   float: left;
@@ -380,4 +381,13 @@ img.img-50 {
   &:not(:hover) {
     border-color: #2098de !important;
   }
+}
+
+.feature-highlight-row {
+  flex-direction: row-reverse;
+}
+
+@smartphones .feature-highlight-row {
+  flex-direction: row;
+  float: none;
 }

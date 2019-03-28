@@ -18,8 +18,8 @@ export default function BrainSpinner() {
         <div className="Aligner-item Aligner-item--fixed">
           <div style={{ width: 375 }}>
             <img
-              src="/images/brain.png"
-              alt="Abstract brain"
+              src="/assets/images/brain.png"
+              alt=""
               style={{
                 width: 375,
                 height: 299,

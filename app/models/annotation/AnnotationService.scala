@@ -511,11 +511,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])]): Future[Boolean] =
       nmls match {
         case head :: tail => {
-          val dataEnumeratorOpt: Option[Enumerator[Array[Byte]]] =
-            head._3.map(volumeData => Enumerator.fromStream(volumeData.runWith(StreamConverters.asInputStream())))
-          val writeVolumeDataResult = dataEnumeratorOpt match {
-            case Some(dataEnumerator) =>
-              zipper.withFile(head._2 + "_data.zip")(NamedEnumeratorStream("", dataEnumerator).writeTo)
+          val writeVolumeDataResult = head._3 match {
+            case Some(volumeData) =>
+              zipper.addFileFromSource(head._2 + "_data.zip", volumeData)
             case None => Future.successful(())
           }
           writeVolumeDataResult

@@ -140,18 +140,35 @@ type SwitchSettingProps = {
   onChange: (value: boolean) => void,
   value: boolean,
   label: string | React.Node,
+  disabled: boolean,
+  tooltipText: ?string,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
+  static defaultProps = {
+    disabled: false,
+    tooltipText: null,
+  };
+
   render() {
-    const { label, onChange, value } = this.props;
+    const { label, onChange, value, disabled, tooltipText } = this.props;
     return (
       <Row className="margin-bottom" type="flex" align="top">
         <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={15}>
-          <Switch onChange={onChange} checked={value} defaultChecked={value} />
+          <Tooltip title={tooltipText} placement="top">
+            {/* This div is necessary for the tooltip to be displayed */}
+            <div style={{ display: "inline-block" }}>
+              <Switch
+                onChange={onChange}
+                checked={value}
+                defaultChecked={value}
+                disabled={disabled}
+              />
+            </div>
+          </Tooltip>
         </Col>
       </Row>
     );

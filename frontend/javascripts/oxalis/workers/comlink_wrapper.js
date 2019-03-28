@@ -44,11 +44,6 @@ export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
   }
 
   return proxy(
-    // When importing a worker module, flow doesn't know that a special Worker class
-    // is imported. Instead, flow thinks that the declared function is
-    // directly imported. We exploit this by simply typing this createWorker function as an identity function
-    // (T => T). That way, we gain proper flow typing for functions executed in web workers. However,
-    // we need to suppress the following flow error for that to work.
     // $FlowIgnore
     new WorkerClass(),
   );
@@ -61,4 +56,15 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   }
   // $FlowIgnore
   return fn;
+}
+
+export function pretendPromise<T>(t: T): Promise<T> {
+  // The top level function within a webworker doesn't necessarily
+  // need to return a promise. However, when called from the main thread
+  // we will always get a promise. Since, flow isn't able to express this
+  // for variadic function types, we have to cheat with the return type on
+  // the call side. For this scenario, this function can be used (see
+  // async_bucket_picker.worker.js as an example).
+  // $FlowIgnore
+  return t;
 }

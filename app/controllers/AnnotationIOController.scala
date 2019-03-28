@@ -125,10 +125,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
-            organizationDAO.findOneByName(_).map(_._id)
-          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
+            organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
+          } ?~> Messages("dataSet.notFound", dataSetName) ~> FORBIDDEN
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataSet(dataSetName)
+            dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
             "dataSet.noAccess",

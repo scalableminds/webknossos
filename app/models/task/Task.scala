@@ -166,6 +166,15 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select count(*) from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"""
+          .as[Int])
+      parsed <- r.headOption
+    } yield parsed
+
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
     s"""
         select ${columnsWithPrefix("webknossos.tasks_.")}

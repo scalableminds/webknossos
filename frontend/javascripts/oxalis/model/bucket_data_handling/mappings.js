@@ -64,13 +64,15 @@ class Mappings {
   mappingColorTexture: UpdatableTexture;
   progressCallback: ProgressCallback;
 
-  constructor(layerName: string) {
+  constructor(layerName: string, fallbackLayerName: ?string) {
     const { dataset } = Store.getState();
     const organizationName = dataset.owningOrganization;
     const datasetName = dataset.name;
     const dataStoreUrl = dataset.dataStore.url;
+    // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+    const mappingLayerName = fallbackLayerName != null ? fallbackLayerName : layerName;
     this.layerName = layerName;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${layerName}/mappings/`;
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${mappingLayerName}/mappings/`;
     this.progressCallback = noopProgressCallback;
   }
 

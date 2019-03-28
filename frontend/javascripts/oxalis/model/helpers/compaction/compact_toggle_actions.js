@@ -25,8 +25,8 @@ type GroupNode = {
 // - an Object which maps from group id to group node
 function buildTreeGroupTree(
   skeletonTracing: SkeletonTracing,
-): [GroupNode, { [key: number | null]: GroupNode }] {
-  const root = {
+): [GroupNode, { [key: number]: GroupNode }] {
+  const root: GroupNode = {
     children: [],
     groupId: null,
     parent: null,
@@ -47,7 +47,8 @@ function buildTreeGroupTree(
   createSubTree(root, skeletonTracing.treeGroups);
 
   function buildHashMap(subTreeRoot, hashMap) {
-    hashMap[subTreeRoot.groupId] = subTreeRoot;
+    const groupId = subTreeRoot.groupId != null ? subTreeRoot.groupId : -1;
+    hashMap[groupId] = subTreeRoot;
     for (const child of subTreeRoot.children) {
       buildHashMap(child, hashMap);
     }
@@ -67,13 +68,13 @@ function findCommonAncestor(
 ) {
   function getAncestorPath(groupId) {
     const path = [];
-    let currentGroupNode = groupIdMap[groupId == null ? null : groupId];
+    let currentGroupNode = groupIdMap[groupId == null ? -1 : groupId];
 
-    while (true) {
+    while (currentGroupNode != null) {
       if (currentGroupNode.parent == null && currentGroupNode.groupId == null) {
         break;
       }
-      path.unshift(currentGroupNode.groupId);
+      path.unshift(currentGroupNode.groupId != null ? currentGroupNode.groupId : -1);
       currentGroupNode = currentGroupNode.parent;
     }
     return path;
@@ -111,7 +112,7 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
   const allTreesOfAncestor: Array<Tree> =
     groupWithSubgroups.length === 0
       ? _.values(skeletonTracing.trees)
-      : _.flatMap(groupWithSubgroups, groupId => groupToTreesMap[groupId]);
+      : _.flatMap(groupWithSubgroups, (groupId: number): Array<Tree> => groupToTreesMap[groupId]);
 
   const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, tree => tree.isVisible);
   const affectedTreeCount = allTreesOfAncestor.length;
@@ -131,16 +132,20 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
   return [commonVisibility, exceptions, affectedTreeCount];
 }
 
-export default function compactToggleActions(updateActions: Array<UpdateAction>, tracing: Tracing) {
+export default function compactToggleActions(
+  updateActions: Array<UpdateAction>,
+  tracing: Tracing,
+): Array<UpdateAction> {
   const skeletonTracing = tracing.skeleton;
   if (skeletonTracing == null) {
     return updateActions;
   }
 
-  const [toggleActions, remainingActions] = _.partition(
+  const [_toggleActions, remainingActions] = _.partition(
     updateActions,
     ua => ua.name === "updateTreeVisibility",
   );
+  const toggleActions = ((_toggleActions: any): Array<UpdateTreeVisibilityUpdateAction>);
 
   if (toggleActions.length <= 1) {
     // Don't try to compact actons if there are no or only one toggleAction(s)
@@ -162,30 +167,12 @@ export default function compactToggleActions(updateActions: Array<UpdateAction>,
   // If less than 50% of the toggled trees are exceptions, we can use the compactation
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
 
-  if (shouldUseToggleGroup) {
-    console.log(
-      "using commonAncestor",
-      commonAncestor,
-      "with visibility",
-      commonVisibility,
-      "and",
-      exceptions.length,
-      "exceptions",
-    );
-  } else {
-    console.log("using normal toggle actions");
-  }
-
-  let finalToggleActions = [];
-
-  if (commonAncestor != null && shouldUseToggleGroup) {
-    finalToggleActions.push(updateTreeGroupVisibility(commonAncestor, commonVisibility));
-    finalToggleActions = finalToggleActions.concat(
-      exceptions.map(tree => updateTreeVisibility(tree)),
-    );
-  } else {
-    finalToggleActions = toggleActions;
-  }
+  const finalToggleActions =
+    commonAncestor != null && shouldUseToggleGroup
+      ? [updateTreeGroupVisibility(commonAncestor, commonVisibility)].concat(
+          exceptions.map(tree => updateTreeVisibility(tree)),
+        )
+      : toggleActions;
 
   return remainingActions.concat(finalToggleActions);
 }

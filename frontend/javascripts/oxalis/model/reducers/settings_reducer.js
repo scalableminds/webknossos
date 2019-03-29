@@ -99,6 +99,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               color: [255, 255, 255],
               alpha: 100,
               bounds: [0, 255],
+              isDisabled: false,
             },
             initialLayerSettings[layer.name],
           );

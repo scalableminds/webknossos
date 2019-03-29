@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Divider, Icon, Row, Select, Tag, Tooltip } from "antd";
+import { Col, Collapse, Divider, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -103,15 +103,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color, bounds } = layer;
+    const { brightness, contrast, alpha, color, bounds, isDisabled } = layer;
     const { histogram } = this.state;
+
     return (
       <div key={layerName}>
         <Row>
           <Col span={24}>
-            {histogram != null ? (
-              <Histogram data={histogram} min={bounds[0]} max={bounds[1]} layerName={layerName} />
-            ) : null}
+            {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */}
+            <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
+              {/* This div is necessary for the tooltip to be displayed */}
+              <div style={{ display: "inline-block", marginRight: 8 }}>
+                <Switch
+                  size="small"
+                  onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                  checked={!isDisabled}
+                />
+              </div>
+            </Tooltip>
             <span style={{ fontWeight: 700 }}>{layerName}</span>
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
@@ -119,12 +128,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
               <Icon
                 type="scan"
-                onClick={() => this.handleFindData(layerName)}
-                style={{ float: "right", marginTop: 4, cursor: "pointer" }}
+                onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+                style={{
+                  float: "right",
+                  marginTop: 4,
+                  cursor: !isDisabled ? "pointer" : "not-allowed",
+                }}
               />
             </Tooltip>
           </Col>
         </Row>
+            {histogram != null ? (
+              <Histogram data={histogram} min={bounds[0]} max={bounds[1]} layerName={layerName} />
+            ) : null}
         <NumberSliderSetting
           label="Brightness"
           min={-255}
@@ -132,6 +148,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           step={5}
           value={brightness}
           onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
+          disabled={isDisabled}
         />
         <NumberSliderSetting
           label="Contrast"
@@ -140,6 +157,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           step={0.1}
           value={contrast}
           onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
+          disabled={isDisabled}
         />
         <NumberSliderSetting
           label="Opacity"
@@ -147,12 +165,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           max={100}
           value={alpha}
           onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+          disabled={isDisabled}
         />
         <ColorSetting
           label="Color"
           value={Utils.rgbToHex(color)}
           onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
           className="ant-btn"
+          disabled={isDisabled}
         />
         {!isLastLayer && <Divider />}
       </div>
@@ -218,15 +238,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   }
 
+  renderPanelHeader = (hasInvisibleLayers: boolean) =>
+    hasInvisibleLayers ? (
+      <span>
+        Color Layers
+        <Tooltip title="Not all layers are currently visible.">
+          <Icon type="exclamation-circle-o" style={{ marginLeft: 16, color: "coral" }} />
+        </Tooltip>
+      </span>
+    ) : (
+      "Color Layers"
+    );
+
   render() {
     const { layers } = this.props.datasetConfiguration;
     const colorSettings = Object.entries(layers).map((entry, index) =>
       // $FlowFixMe Object.entries returns mixed for Flow
       this.getColorSettings(entry, index, index === _.size(layers) - 1),
     );
+    const hasInvisibleLayers =
+      Object.keys(layers).find(
+        layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
+      ) != null;
+    
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
-        <Panel header="Color Layers" key="1">
+        <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
           {colorSettings}
         </Panel>
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}

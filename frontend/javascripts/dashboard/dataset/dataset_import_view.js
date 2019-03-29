@@ -117,6 +117,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         contrast: 1,
         color: [255, 255, 255],
         bounds: [0, 255],
+        isDisabled: false,
       };
       const datasetDefaultConfiguration = (await getDatasetDefaultConfiguration(
         this.props.datasetId,

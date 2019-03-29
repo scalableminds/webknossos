@@ -68,7 +68,9 @@
           "properties": {
             "name": { "type": "string" },
             "category": { "enum": ["color", "segmentation"] },
-            "elementClass": { "enum": ["uint8", "uint16", "uint24", "uint32", "uint64", "float,", "double", "int8", "int16", "int32", "int64"] }
+            "elementClass": {
+              "enum": ["uint8", "uint16", "uint24", "uint32", "uint64", "float,", "double", "int8", "int16", "int32", "int64"]
+            }
           },
           "required": ["name", "category", "elementClass"]
         },
@@ -129,9 +131,10 @@
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
           "color": { "$ref": "#/definitions/types::Vector3" },
-          "bounds": { "$ref": "#/definitions/types::Vector2" }
+          "bounds": { "$ref": "#/definitions/types::Vector2" },
+          "isDisabled": { "type": "boolean" }
         },
-        "required": ["brightness", "contrast", "color", "bounds"]
+        "required": ["brightness", "contrast", "color", "bounds", "isDisabled"]
       }
     }
   }

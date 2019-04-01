@@ -306,6 +306,21 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     );
   }
 
+  if (!_isAuthenticated && features().enableFrontpage) {
+    menuItems.push(
+      <Menu.Item key="features">
+        <Link to="/features" style={{ fontWeight: 400 }}>
+          <Icon type="rocket" /> Features
+        </Link>
+      </Menu.Item>,
+      <Menu.Item key="pricing">
+        <Link to="/pricing" style={{ fontWeight: 400 }}>
+          <Icon type="trophy" /> Pricing
+        </Link>
+      </Menu.Item>,
+    );
+  }
+
   if (!(_isAuthenticated || hideNavbarLogin)) {
     trailingNavItems.push(<AnonymousAvatar key="anonynous-avatar" />);
   }

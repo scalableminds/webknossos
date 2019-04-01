@@ -8,10 +8,12 @@ import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
+import CreditsFooter from "components/credits_footer";
 import features from "features";
 
-const { Content, Footer } = Layout;
+const { Content } = Layout;
 const { Search } = Input;
 
 const SimpleHeader = () => (
@@ -97,34 +99,19 @@ const WelcomeHeader = ({ history }) => (
                 type="primary"
                 size="large"
                 style={{ marginRight: 50 }}
-                onClick={() => history.push("/onboarding")}
+                onClick={() => {
+                  history.push("/onboarding");
+                  trackAction("[Spotlight] CreateFreeAccount");
+                }}
               >
-                Get Started
+                Create a Free Account
               </Button>
-              <a
-                href="https://docs.webknossos.org/"
-                className="spotlight-hero-button"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Read the Documentation
-              </a>
-              <a
-                href="https://support.webknossos.org/"
-                target="_blank"
-                className="spotlight-hero-button"
-                rel="noopener noreferrer"
-              >
-                Join the Community
-              </a>
-              <a
-                href="https://github.com/scalableminds/webknossos/"
-                target="_blank"
-                className="spotlight-hero-button"
-                rel="noopener noreferrer"
-              >
-                Get the Code
-              </a>
+              <Link to="/features" className="spotlight-hero-button">
+                Learn More About the Features
+              </Link>
+              <Link to="/pricing" className="spotlight-hero-button">
+                Get Your Own webKnossos
+              </Link>
             </div>
           </Col>
         </Row>
@@ -277,62 +264,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
             the original webKnossos publication website.
           </div>
         </Content>
-        <Footer style={{ backgroundColor: "#ececec" }}>
-          <div id="credits">
-            <div className="container">
-              <h3>webKnossos Credits</h3>
-              <p>
-                Developed by{" "}
-                <a href="https://www.brain.mpg.de/connectomics">
-                  Max Planck Institute for Brain Research
-                </a>{" "}
-                and <a href="https://scalableminds.com">scalable minds</a>.
-              </p>
-              <p>
-                <a href="https://www.brain.mpg.de/connectomics">
-                  <img
-                    className="img-responsive"
-                    alt="Max Planck Gesellschaft logo"
-                    src="/assets/images/Max-Planck-Gesellschaft.svg"
-                  />
-                </a>
-                <a href="https://www.brain.mpg.de/connectomics">
-                  <img
-                    className="img-responsive"
-                    alt="Max Planck Institute for Brain Research logo"
-                    src="/assets/images/MPI-brain-research.svg"
-                  />
-                </a>
-                <a href="https://scalableminds.com">
-                  <img
-                    className="img-responsive"
-                    alt="scalable minds logo"
-                    src="/assets/images/scalableminds_logo.svg"
-                  />
-                </a>
-              </p>
-              <p>
-                webKnossos has been published in: Boergens Berning Bocklisch Bräunlein Drawitsch
-                Frohnhofen Herold Otto Rzepka Werkmeister Werner Wiese Wissler & Helmstaedter,
-                webKnossos: efficient online 3D data annotation for connectomics.{" "}
-                <a href="https://dx.doi.org/10.1038/nmeth.4331">Nat. Meth. (2017) 14, 691–694</a>.
-              </p>
-              <p>
-                The webKnossos frontend was inspired by Knossos: Helmstaedter, M., K.L. Briggman,
-                and W. Denk, High-accuracy neurite reconstruction for high-throughput neuroanatomy.{" "}
-                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>
-                .
-              </p>
-              <p>
-                More information about the webKnossos publication and full credits at{" "}
-                <a href="https://publication.webknossos.org">publication.webknossos.org</a>.
-              </p>
-              <p>
-                <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link>
-              </p>
-            </div>
-          </div>
-        </Footer>
+        <CreditsFooter />
       </Layout>
     );
   }

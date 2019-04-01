@@ -381,6 +381,8 @@ function setupLayerForVolumeTracing(
     // volume tracing can only be done for the first resolution
     resolutions: [[1, 1, 1]],
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
+    // remember the name of the original layer, used to request mappings
+    fallbackLayer: tracing.fallbackLayer,
   };
 
   if (fallbackLayer != null) {

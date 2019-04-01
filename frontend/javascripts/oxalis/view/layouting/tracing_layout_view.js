@@ -33,6 +33,7 @@ import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
+import CrossOriginApi from "oxalis/api/cross_origin_api";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -171,7 +172,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
         />
-
+        <CrossOriginApi />
         <Layout className="tracing-layout">
           <RenderToPortal portalId="navbarTracingSlot">
             <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>

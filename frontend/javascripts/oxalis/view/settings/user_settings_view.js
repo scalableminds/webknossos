@@ -18,6 +18,7 @@ import {
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
 import type { APIDataset } from "admin/api_flow_types";
+import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -239,10 +240,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
-      const isMergerModeSupported =
-        (this.props.dataset.dataSource.dataLayers || []).find(
-          layer => layer.category === "segmentation" && layer.elementClass === "uint32",
-        ) != null;
+      const isMergerModeSupported = hasSegmentation(this.props.dataset);
       panels.push(
         <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
@@ -301,7 +299,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             disabled={!isMergerModeSupported}
             tooltipText={
               !isMergerModeSupported
-                ? "The merger mode is only available for datasets with uint32 segmentations."
+                ? "The merger mode is only available for datasets with a segmentation layer."
                 : null
             }
           />

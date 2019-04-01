@@ -7,7 +7,34 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.03.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...HEAD)
+
+### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+### Removed
+- 
+
+
+## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01
+[Commits](https://github.com/scalableminds/webknossos/compare/19.03.0...19.04.0)
+
+### Highlights
+This release multiple new interactions are expanding webKnossos:
+- Added merger mode for skeleton and hybrid tracings. It allows to merge segments from e.g. generated oversegmentations. [#3619](https://github.com/scalableminds/webknossos/pull/3619)
+- Added a shortcut (Q) and button to screenshot the tracing views. [#3834](https://github.com/scalableminds/webknossos/pull/3834)
+- Rendered isosurfaces in the 3D viewport can now be interacted with. Shift+Click on an isosurface will jump exactly to where you clicked. Also, hovering over an isosurface will highlight that cell in all viewports. [#3858](https://github.com/scalableminds/webknossos/pull/3858)
+- Neuroglancer precomputed datasets can now be added to webKnossos using the webknossos-connect service. [#3843](https://github.com/scalableminds/webknossos/pull/3843)
+
+Also the data viewing and tracing workflow is smoothed further:
+- Different loading strategies are now supported ("best quality first" and "progressive quality"). Additionally, the rendering can use different magnifications as a fallback. [#3801](https://github.com/scalableminds/webknossos/pull/3801)
+- Performance improvements :racing_car: [#3880](https://github.com/scalableminds/webknossos/pull/3880) & [#3902](https://github.com/scalableminds/webknossos/pull/3902)
 
 ### Added
 - Rendered isosurfaces in the 3D viewport can now be interacted with. Shift+Click on an isosurface will jump exactly to where you clicked. Also, hovering over an isosurface will highlight that cell in all viewports. [#3858](https://github.com/scalableminds/webknossos/pull/3858)
@@ -16,7 +43,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Neuroglancer precomputed datasets can now be added to webKnossos using the webknossos-connect (wk-connect) service. To setup a wk-connect datastore follow the instructions in the [Readme](https://github.com/scalableminds/webknossos-connect). Afterwards, datasets can be added through "Add Dataset" - "Add Dataset via wk-connect". [#3843](https://github.com/scalableminds/webknossos/pull/3843)
 - Added support for mappings for 8-bit and 16-bit segmentation layers. [#3953](https://github.com/scalableminds/webknossos/pull/3953)
 - The dataset settings within the tracing view allow to select between different loading strategies now ("best quality first" and "progressive quality"). Additionally, the rendering can use different magnifications as a fallback (instead of only one magnification). [#3801](https://github.com/scalableminds/webknossos/pull/3801)
-- The mapping selection dropbown is now sorted alphabetically. [#3864](https://github.com/scalableminds/webknossos/pull/3864)
+- The mapping selection dropdown is now sorted alphabetically. [#3864](https://github.com/scalableminds/webknossos/pull/3864)
 - Added the possibility to filter datasets in the dashboard according to their availability. By default, datasets which are missing on disk (e.g., when the datastore was deleted) are not shown anymore. This behavior can be configured via the settings icon next to the search box in the dashboard. [#3883](https://github.com/scalableminds/webknossos/pull/3883)
 - Added merger mode for skeleton and hybrid tracings. It allows to merge segments from e.g. generated segmentations. [#3619](https://github.com/scalableminds/webknossos/pull/3619)
 - The HTML template now includes SEO tags for demo instances and hides internal instances from search engines.

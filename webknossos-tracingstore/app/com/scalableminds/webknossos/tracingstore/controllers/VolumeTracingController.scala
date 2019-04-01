@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -17,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
@@ -65,8 +67,23 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
+            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
             Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
+          }
+        }
+      }
+    }
+  }
+
+  def allDataBlocking(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+            data <- tracingService.allDataFile(tracingId, tracing)
+          } yield {
+            Ok.sendFile(data)
           }
         }
       }

@@ -249,6 +249,7 @@ function AnonymousAvatar() {
       placement="bottomRight"
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
+      style={{position: "fixed"}}
     >
       <Badge dot>
         <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />

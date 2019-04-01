@@ -328,7 +328,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     activeViewport,
   );
 
-  function* xx(max) {
+  function* alternatingOffset(max) {
     yield 0;
     for (let i = 1; i < max; i++) {
       yield i;
@@ -336,8 +336,9 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     }
   }
 
-  for (let z of xx(10)) {
-    z += tz;
+  const predictions = {};
+  for (const offset of alternatingOffset(10)) {
+    const curZ = tz + offset;
     const tensorArray = new Float32Array(inputExtent ** 2 * tileCounts[0] * tileCounts[1]);
     // const min = V3.sub(position, halfVec);
     // const max = V3.add(V3.add(position, halfVec), [0, 0, 1]);
@@ -352,11 +353,11 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
         tileY < ty + halfViewportWidthY;
         tileY += outputExtent
       ) {
-        const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, z];
+        const min = [tileX - overflowBufferSize, tileY - overflowBufferSize, curZ];
         const max = [
           tileX - overflowBufferSize + inputExtent,
           tileY - overflowBufferSize + inputExtent,
-          z + 1,
+          curZ + 1,
         ];
 
         const cuboidData = yield* call(
@@ -382,14 +383,20 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     console.log("useWebworker", useWebworker);
     console.log("useGPU", useGPU);
     console.log("tileCounts", tileCounts);
-    const inferredData = useWebworker
+    predictions[curZ] = useWebworker
       ? // $FlowIgnore Using yield call*(workerPredict, ...) leads to runtime exceptions
         yield workerPredict(useGPU, tensorArray.buffer, tileCounts, inputExtent)
       : // $FlowIgnore
         yield mainThreadPredict(useGPU, tf, tensorArray.buffer, tileCounts, inputExtent);
     console.timeEnd("predict");
-    const getter = (x, y) => {
-      if (x < 0 || y < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
+    const getter = (x, y, z) => {
+      if (
+        x < 0 ||
+        y < 0 ||
+        x >= scaledViewportExtents[0] ||
+        y >= scaledViewportExtents[1] ||
+        !(z in predictions)
+      ) {
         return false;
       }
       const tileX = Math.floor(x / outputExtent);
@@ -398,24 +405,32 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       const relX = x % outputExtent;
       const relY = y % outputExtent;
       return (
-        inferredData[(tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY] >
-        0.7
+        predictions[z][
+          (tileX * numTilesY + tileY) * outputExtent ** 2 + relX * outputExtent + relY
+        ] > 0.7
       );
     };
+    console.time("flood");
+    // We're doing a 3d floodfill starting from the initial click position.
+    // In the first iteration, only one z-slice is predicted, so it essentially is a 2d-floodfill.
+    // However, in the following iterations more and more z-slices will be part of predictions.
     const seed = [
       halfViewportWidthX + clickPosition[0] - centerPosition[0],
       halfViewportWidthY + clickPosition[1] - centerPosition[1],
+      tz,
     ];
     if (!getter(...seed)) return;
-    console.time("flood");
     const segmentedData = floodfill({ getter, seed }).flooded;
     console.timeEnd("flood");
     console.time("label");
-    for (const [xRel, yRel] of segmentedData) {
+    for (const [xRel, yRel, zAbs] of segmentedData) {
       const x = tx - halfViewportWidthX + xRel;
       const y = ty - halfViewportWidthY + yRel;
-      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-      api.data.labelVoxels([voxelAddress], activeCellId);
+      // Only label the voxels of the current z slice
+      if (zAbs === curZ) {
+        const voxelAddress = Dimensions.transDim([x, y, curZ], activeViewport);
+        api.data.labelVoxels([voxelAddress], activeCellId);
+      }
     }
     console.timeEnd("label");
   }

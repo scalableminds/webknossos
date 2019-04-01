@@ -42,7 +42,7 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*toggle_actions.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests

@@ -87,7 +87,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
     fourBit: false,
     interpolation: true,
     layers: {
-      color: { color: [255, 255, 255], contrast: 1, brightness: 0, alpha: 100, isDisabled: true },
+      color: { color: [255, 255, 255], contrast: 1, brightness: 0, alpha: 100, isDisabled: false },
     },
     quality: 0,
     segmentationOpacity: 0,

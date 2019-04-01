@@ -161,7 +161,7 @@ export default class LayerRenderingManager {
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
-      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint);
+      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
       return this.cachedAnchorPoint;
     }
 
@@ -230,7 +230,11 @@ export default class LayerRenderingManager {
           // This tells the bucket collection, that the buckets are necessary for rendering
           buckets.forEach(b => b.markAsNeeded());
 
-          this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
+          this.textureBucketManager.setActiveBuckets(
+            buckets,
+            this.cachedAnchorPoint,
+            isAnchorPointNew,
+          );
 
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities

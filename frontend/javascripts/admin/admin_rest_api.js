@@ -588,8 +588,6 @@ export async function getTracingForAnnotations(
   const skeleton = ((_skeleton: any): ?ServerSkeletonTracing);
   const volume = ((_volume: any): ?ServerVolumeTracing);
 
-  console.log("skeleton", skeleton);
-
   return {
     skeleton,
     volume,

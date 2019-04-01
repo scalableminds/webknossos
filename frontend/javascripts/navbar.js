@@ -250,7 +250,7 @@ function AnonymousAvatar() {
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
     >
-        <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
+      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
     </Popover>
   );
 }

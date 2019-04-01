@@ -83,7 +83,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0], false);
   }
 
   freeBucket(bucket: DataBucket): void {
@@ -107,7 +107,11 @@ export default class TextureBucketManager {
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
+  setActiveBuckets(
+    buckets: Array<DataBucket>,
+    anchorPoint: Vector4,
+    isAnchorPointNew: boolean,
+  ): void {
     this.currentAnchorPoint = anchorPoint;
     window.currentAnchorPoint = anchorPoint;
     // Find out which buckets are not needed anymore
@@ -122,6 +126,7 @@ export default class TextureBucketManager {
       this.freeBucket(freeBucket);
     }
 
+    let needsNewBucket = false;
     const freeIndexArray = Array.from(this.freeIndexSet);
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
@@ -130,10 +135,15 @@ export default class TextureBucketManager {
         }
         const freeBucketIdx = freeIndexArray.shift();
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
+        needsNewBucket = true;
       }
     }
 
-    this._refreshLookUpBuffer();
+    // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
+    // or if new buckets are needed or if the anchorPoint changed. Otherwise we may end up in an endless loop.
+    if (freeBuckets.length > 0 || needsNewBucket || isAnchorPointNew) {
+      this._refreshLookUpBuffer();
+    }
   }
 
   getPackedBucketSize() {

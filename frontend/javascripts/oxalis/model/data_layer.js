@@ -40,6 +40,7 @@ class DataLayer {
 
     const { dataset } = Store.getState();
     const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
+    const isSegmentation = layerInfo.category === "segmentation";
 
     ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
@@ -47,7 +48,7 @@ class DataLayer {
       getLayerBoundaries(dataset, this.name).upperBoundary,
       this.resolutions.length,
       bitDepth,
-      layerInfo.category === "segmentation",
+      isSegmentation,
     );
 
     this.pullQueue = new PullQueue(
@@ -58,15 +59,15 @@ class DataLayer {
     );
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(layerInfo.name);
-    this.activeMapping = null;
+    const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
+    this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,
       this.cube,
       textureWidth,
       dataTextureCount,
-      layerInfo.category === "segmentation",
+      isSegmentation,
     );
   }
 

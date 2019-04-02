@@ -6,6 +6,7 @@ import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handl
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
@@ -57,7 +58,7 @@ export default class TextureBucketManager {
   constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
-    this.packingDegree = bytes === 1 ? 4 : 1;
+    this.packingDegree = getPackingDegree(bytes);
 
     this.maximumCapacity =
       (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
@@ -82,7 +83,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0], false);
   }
 
   freeBucket(bucket: DataBucket): void {
@@ -106,7 +107,11 @@ export default class TextureBucketManager {
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
+  setActiveBuckets(
+    buckets: Array<DataBucket>,
+    anchorPoint: Vector4,
+    isAnchorPointNew: boolean,
+  ): void {
     this.currentAnchorPoint = anchorPoint;
     window.currentAnchorPoint = anchorPoint;
     // Find out which buckets are not needed anymore
@@ -121,6 +126,7 @@ export default class TextureBucketManager {
       this.freeBucket(freeBucket);
     }
 
+    let needsNewBucket = false;
     const freeIndexArray = Array.from(this.freeIndexSet);
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
@@ -129,10 +135,15 @@ export default class TextureBucketManager {
         }
         const freeBucketIdx = freeIndexArray.shift();
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
+        needsNewBucket = true;
       }
     }
 
-    this._refreshLookUpBuffer();
+    // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
+    // or if new buckets are needed or if the anchorPoint changed. Otherwise we may end up in an endless loop.
+    if (freeBuckets.length > 0 || needsNewBucket || isAnchorPointNew) {
+      this._refreshLookUpBuffer();
+    }
   }
 
   getPackedBucketSize() {

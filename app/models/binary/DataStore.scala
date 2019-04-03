@@ -44,7 +44,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
       key <- request.getQueryString("key").toFox
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
-    } yield result).getOrElse(Forbidden(Messages("dataStore.notFound")))
+    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 
 }
 

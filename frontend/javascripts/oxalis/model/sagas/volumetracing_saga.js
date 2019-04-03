@@ -383,6 +383,19 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     throw new Error("This should never happen, prediction was set, but geting it failed.");
   };
 
+  const onFlood = floodedVoxels => {
+    console.time("label");
+    const voxelAddresses = floodedVoxels.map(([xRel, yRel, zRel]) => {
+      const x = tx - halfViewportWidthX + xRel;
+      const y = ty - halfViewportWidthY + yRel;
+      const z = tz + zRel;
+      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
+      return voxelAddress;
+    });
+    api.data.labelVoxels(voxelAddresses, activeCellId);
+    console.timeEnd("label");
+  };
+
   const seed = [
     halfViewportWidthX + clickPosition[0] - centerPosition[0],
     halfViewportWidthY + clickPosition[1] - centerPosition[1],
@@ -395,17 +408,8 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   }
 
   console.time("flood and predict");
-  const segmentedData = (yield floodfill({ getter, seed })).flooded;
+  yield floodfill({ getter, seed, onFlood });
   console.timeEnd("flood and predict");
-  console.time("label");
-  for (const [xRel, yRel, zRel] of segmentedData) {
-    const x = tx - halfViewportWidthX + xRel;
-    const y = ty - halfViewportWidthY + yRel;
-    const z = tz + zRel;
-    const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-    api.data.labelVoxels([voxelAddress], activeCellId);
-  }
-  console.timeEnd("label");
 }
 
 export function* finishLayer(

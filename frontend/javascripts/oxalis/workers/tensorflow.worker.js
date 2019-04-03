@@ -20,13 +20,8 @@ if (typeof OffscreenCanvas !== "undefined") {
 
 const tf = require("@tensorflow/tfjs");
 
-function predictWrapper(
-  useGPU,
-  buffer: ArrayBuffer,
-  tileCounts: [number, number],
-  inputExtent: number,
-) {
-  return predict(useGPU, tf, buffer, tileCounts, inputExtent);
+function predictWrapper(useGPU, buffer: ArrayBuffer, inputExtent: number) {
+  return predict(useGPU, tf, buffer, inputExtent);
 }
 
 export default expose<typeof predictWrapper>(predictWrapper);

@@ -5,7 +5,6 @@ export default async function predict(
   useGPU: boolean,
   tf: Object,
   buffer: ArrayBuffer,
-  tileCounts: [number, number],
   inputExtent: number,
 ) {
   if (useGPU) {
@@ -21,12 +20,7 @@ export default async function predict(
     });
   }
 
-  let tensor = tf.tensor4d(tensorArray, [
-    tileCounts[0] * tileCounts[1],
-    inputExtent,
-    inputExtent,
-    1,
-  ]);
+  let tensor = tf.tensor4d(tensorArray, [1, inputExtent, inputExtent, 1]);
   tensor = tf.transpose(tensor, [0, 2, 1, 3]);
 
   const model = segmentationModel;

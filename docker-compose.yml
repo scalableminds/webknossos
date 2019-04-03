@@ -27,6 +27,7 @@ services:
       - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
+      - -Dapplication.insertLocalConnectDatastore=true
       - -Dapplication.authentication.enableDevAutoLogin=false
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"

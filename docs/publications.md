@@ -20,18 +20,6 @@ The following publications used webKnossos for for exploring large 3D electron-m
   Dense connectomic reconstruction in layer 4 of the somatosensory cortex.  
   [bioRxiv (2018) DOI:10.1101/460618.](https://www.biorxiv.org/content/10.1101/460618v1.abstract)
 
-* Daniel R. Berge,  H. Sebastian Seung, and Jeff W. Lichtman.  
-  VAST (Volume Annotation and Segmentation Tool): Efficient Manual and Semi-Automatic Labeling of Large 3D Image Stacks.  
-  [Front. Neural Circuits (2018) DOI:10.3389/fncir.2018.00088.](https://www.frontiersin.org/articles/10.3389/fncir.2018.00088/full)
-
-* Ting Zhao, Donald J. Olbris, Yang Yu,† and Stephen M. Plaza.  
-  NeuTu: Software for Collaborative, Large-Scale, Segmentation-Based Connectome Reconstruction.  
-  [Front. Neural Circuits (2018) DOI:10.3389/fncir.2018.00101.](https://www.frontiersin.org/articles/10.3389/fncir.2018.00101/full)
-
-* Adrian A. Wanner and Ashwin Vishwanathan.  
-  Methods for Mapping Neuronal Activity to Synaptic Connectivity: Lessons From Larval Zebrafish.  
-  [Front. Neural Circuits (2018) DOI:10.3389/fncir.2018.00089.](https://www.frontiersin.org/articles/10.3389/fncir.2018.00089/full)
-
 ## 2017
 * Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and     Helmstaedter.    
   webKnossos: efficient online 3D data annotation for connectomics.  
@@ -44,10 +32,6 @@ The following publications used webKnossos for for exploring large 3D electron-m
 * Benedikt Staffler, Manuel Berning, Kevin M Boergens, Anjali Gour, Patrick van der Smagt & Moritz Helmstaedter.  
   SynEM, automated synapse detection for connectomics.  
   [eLife (2017) DOI:10.7554/eLife.26414.](https://elifesciences.org/articles/26414)
-
-* Philipp Schlegel, Marta Costa, Gregory SXE Jefferis.  
-  Learning from connectomics on the fly.  
-  [Current Opinion in Insect Science Volume 24 (2017) DOI:10.1016/j.cois.2017.09.011](https://www.sciencedirect.com/science/article/pii/S2214574517301578)
 
 ## 2015
 * Manuel Berning, Kevin M.Boergens & Moritz Helmstaedter.  

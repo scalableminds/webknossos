@@ -287,15 +287,14 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   if (!allowUpdate) return;
 
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-  if (activeViewport === "TDView") {
-    // Cannot copy labels from 3D view
-    return;
-  }
+  if (activeViewport === "TDView") return;
 
   const outputExtent = 100;
-  const overflowBufferSize = 20;
-  const inputExtent = outputExtent + 2 * overflowBufferSize;
+  const inputContextExtent = 20;
+  const inputExtent = outputExtent + 2 * inputContextExtent;
   const NUM_PREDICT_SLICES = 3;
+  const FLOODFILL_THRESHOLD = 0.7;
+
   let aborted = false;
   const toastConfig = {
     onClose: () => {
@@ -350,8 +349,14 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     const x = tileX * outputExtent;
     const y = tileY * outputExtent;
     const z = tileZ;
-    const min = [x - overflowBufferSize, y - overflowBufferSize, z];
-    const max = [x - overflowBufferSize + inputExtent, y - overflowBufferSize + inputExtent, z + 1];
+    const min = Dimensions.transDim(
+      [x - inputContextExtent, y - inputContextExtent, z],
+      activeViewport,
+    );
+    const max = Dimensions.transDim(
+      [x - inputContextExtent + inputExtent, y - inputContextExtent + inputExtent, z + 1],
+      activeViewport,
+    );
 
     const cuboidData = await api.data.getDataFor2DBoundingBox(colorLayer.name, {
       min,
@@ -398,7 +403,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     const tileZ = z;
 
     if (predictions.get([tileX, tileY, tileZ]) == null) {
-      // No new predictions if the magic wand has been aborted
+      // Do not make new predictions if the magic wand has been aborted
       if (aborted) return false;
       console.time("predict");
       Toast.info(`Magic Wand is active. Labeling slice ${z}.`, toastConfig);
@@ -409,7 +414,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     const relX = x % outputExtent;
     const relY = y % outputExtent;
     const prediction = predictions.get([tileX, tileY, tileZ]);
-    if (prediction != null) return prediction[relX * outputExtent + relY] > 0.7;
+    if (prediction != null) return prediction[relX * outputExtent + relY] > FLOODFILL_THRESHOLD;
     throw new Error("This should never happen, prediction was set, but geting it failed.");
   };
 

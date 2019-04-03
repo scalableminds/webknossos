@@ -333,7 +333,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
   );
-  const [tx, ty, tz] = centerPosition;
+  let [curX, curY, curZ] = centerPosition;
   const clickPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(action.position),
     activeViewport,
@@ -367,32 +367,31 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       : mainThreadPredict(useGPU, tf, tensorArray.buffer, inputExtent);
   };
 
-  let zCur = tz;
-  function* zUpdater(): Saga<void> {
+  function* currentPositionUpdater(): Saga<void> {
     while (!aborted) {
       yield* take(FlycamActions);
       const curPosition = Dimensions.transDim(
         Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
         activeViewport,
       );
-      [, , zCur] = curPosition;
+      [curX, curY, curZ] = curPosition;
     }
   }
 
   const getter = async (x, y, z): Promise<boolean> => {
     if (
-      x < tx - halfViewportWidthX ||
-      y < ty - halfViewportWidthY ||
-      z < tz ||
-      x >= tx + halfViewportWidthX ||
-      y >= ty + halfViewportWidthY
+      x < curX - halfViewportWidthX ||
+      y < curY - halfViewportWidthY ||
+      z < curZ ||
+      x >= curX + halfViewportWidthX ||
+      y >= curY + halfViewportWidthY
     ) {
       return false;
     }
 
     // If the current z-slice is too far ahead, wait
     // eslint-disable-next-line no-await-in-loop
-    while (z - zCur >= NUM_PREDICT_SLICES && !aborted) await sleep(500);
+    while (z >= curZ + NUM_PREDICT_SLICES && !aborted) await sleep(500);
 
     const tileX = Math.floor(x / outputExtent);
     const tileY = Math.floor(y / outputExtent);
@@ -402,7 +401,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       // No new predictions if the magic wand has been aborted
       if (aborted) return false;
       console.time("predict");
-      Toast.info(`Magic Wand is active. Labeling slice ${tz + z}.`, toastConfig);
+      Toast.info(`Magic Wand is active. Labeling slice ${z}.`, toastConfig);
       predictions.set([tileX, tileY, tileZ], await getPredictionForTile(tileX, tileY, tileZ));
       console.timeEnd("predict");
     }
@@ -430,8 +429,8 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     // The floodfill will run until aborted
     floodfill({ getter, seed, onFlood });
 
-    // Keep updating the current z value
-    yield* call(zUpdater);
+    // Keep updating the current position
+    yield* call(currentPositionUpdater);
   } else {
     Toast.warning("Click position is classified as border, please click inside a segment instead.");
   }

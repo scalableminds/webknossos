@@ -1,25 +1,35 @@
-// @noflow
+// @flow
 
 // Adapted from https://github.com/tuzz/n-dimensional-flood-fill
 // This floodfill is highly customized to work well for the magic wand feature.
 // It's a forward-only 3D floodfill that will first fill a whole 2d slice, then call onFlood
 // with the result, and then go on and fill the next 2d slice.
 
-export default function(options) {
+type Vector3 = [number, number, number];
+
+type FloodfillOptions = {
+  getter: (number, number, number) => Promise<boolean>,
+  seed: Vector3,
+  onFlood: (Array<Vector3>) => void,
+};
+
+export default function(options: FloodfillOptions) {
   const noop = () => {};
 
   const { getter, seed } = options;
   const onFlood = options.onFlood || noop;
   // Disallow negative z
-  const permutations = [[-1, 0, 0], [0, -1, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
-  let stack = [];
-  let nextStack = [];
+  const permutations: Array<Vector3> = [[-1, 0, 0], [0, -1, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
+  let stack: Array<Vector3> = [];
+  let nextStack: Array<Vector3> = [];
   let flooded = [];
   const visits = {};
 
+  // $FlowFixMe Flow doesn't allow to use an array as the key
   const visited = key => visits[key] === true;
 
   const markAsVisited = key => {
+    // $FlowFixMe Flow doesn't allow to use an array as the key
     visits[key] = true;
   };
 
@@ -32,28 +42,22 @@ export default function(options) {
   const pushAdjacent = getArgs => {
     for (let i = 0; i < permutations.length; i += 1) {
       const perm = permutations[i];
-      const nextArgs = getArgs.slice(0);
+      const nextArgs = [...getArgs];
 
       for (let j = 0; j < getArgs.length; j += 1) {
         nextArgs[j] += perm[j];
       }
 
-      const fullArgs = {
-        currentArgs: nextArgs,
-        previousArgs: getArgs,
-      };
       if (perm[2] === 0) {
-        stack.push(fullArgs);
+        stack.push(nextArgs);
       } else {
         // Push permutations for the next z-slice to a separate stack
-        nextStack.push(fullArgs);
+        nextStack.push(nextArgs);
       }
     }
   };
 
-  const flood = async job => {
-    const getArgs = job.currentArgs;
-
+  const flood = async getArgs => {
     if (visited(getArgs)) {
       return;
     }
@@ -66,7 +70,7 @@ export default function(options) {
   };
 
   const main = async () => {
-    stack.push({ currentArgs: seed });
+    stack.push(seed);
 
     while (stack.length > 0) {
       // eslint-disable-next-line no-await-in-loop

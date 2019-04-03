@@ -40,6 +40,7 @@ import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { map2 } from "libs/utils";
 import {
   type BoundingBoxType,
+  type Vector3,
   type ContourMode,
   ContourModeEnum,
   type OrthoView,
@@ -355,7 +356,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       : mainThreadPredict(useGPU, tf, tensorArray.buffer, inputExtent);
   };
 
-  const getter = async (x, y, z): Promise<?boolean> => {
+  const getter = async (x, y, z): Promise<boolean> => {
     if (
       x < 0 ||
       y < 0 ||
@@ -383,7 +384,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     throw new Error("This should never happen, prediction was set, but geting it failed.");
   };
 
-  const onFlood = floodedVoxels => {
+  const onFlood = (floodedVoxels: Array<Vector3>) => {
     console.time("label");
     const voxelAddresses = floodedVoxels.map(([xRel, yRel, zRel]) => {
       const x = tx - halfViewportWidthX + xRel;
@@ -408,7 +409,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   }
 
   console.time("flood and predict");
-  yield floodfill({ getter, seed, onFlood });
+  yield* call(floodfill, { getter, seed, onFlood });
   console.timeEnd("flood and predict");
 }
 

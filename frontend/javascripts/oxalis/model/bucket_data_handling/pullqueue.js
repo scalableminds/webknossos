@@ -150,29 +150,6 @@ class PullQueue {
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
       bucket.setVisualizationColor(0x00ff00);
-      if (
-        zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP &&
-        Constants.DOWNSAMPLED_ZOOM_STEP_COUNT === 1
-      ) {
-        const higherAddress = zoomedAddressToAnotherZoomStep(
-          bucketAddress,
-          resolutions,
-          zoomStep + 1,
-        );
-
-        const resolutionsFactors = getResolutionsFactors(
-          resolutions[zoomStep + 1],
-          resolutions[zoomStep],
-        );
-        const higherBucket = this.cube.getOrCreateBucket(higherAddress);
-        if (higherBucket.type === "data") {
-          higherBucket.downsampleFromLowerBucket(
-            bucket,
-            resolutionsFactors,
-            layerInfo.category === "segmentation",
-          );
-        }
-      }
     }
   }
 

@@ -57,9 +57,3 @@ export function isSegmentationMissingForZoomstep(
   return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
 }
 
-export function displaysDownsampledVolumeData(
-  state: OxalisState,
-  maxUnsampledZoomStepForSegmentation: number,
-): boolean {
-  return getRequestLogZoomStep(state) === maxUnsampledZoomStepForSegmentation + 1;
-}

@@ -31,12 +31,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 
   const lastResolution = _.last(mostExtensiveResolutions);
 
-  // We add another level of resolutions to allow zooming out even further
-  const extendedResolutions = _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).map(idx =>
-    map3(el => 2 ** (idx + 1) * el, lastResolution),
-  );
-
-  return mostExtensiveResolutions.concat(extendedResolutions);
+  return mostExtensiveResolutions;
 }
 
 // _getResolutions itself is not very performance intensive, but other functions which rely
@@ -53,7 +48,7 @@ function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
         Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
       ),
     )
-    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
+    .getOrElse(2 ** (minimumZoomStepCount - 1));
   return maxZoomstep;
 }
 

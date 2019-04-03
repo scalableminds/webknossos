@@ -4,6 +4,7 @@
  */
 import _ from "lodash";
 import * as tf from "@tensorflow/tfjs";
+import memoizeOne from "memoize-one";
 
 import floodfill from "libs/floodfill";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -37,10 +38,10 @@ import {
   getRotation,
   getPlaneExtentInVoxelFromStore,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { map2, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import {
   type BoundingBoxType,
+  type Vector2,
   type Vector3,
   type ContourMode,
   ContourModeEnum,
@@ -86,6 +87,20 @@ function* warnOfTooLowOpacity(): Saga<void> {
       'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',
     );
   }
+}
+
+function* getHalfViewportExtents(activeViewport): Saga<Vector2> {
+  const zoom = yield* select(state => state.flycam.zoomStep);
+  const baseVoxelFactors = yield* select(state =>
+    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
+  );
+  const viewportExtents = yield* select(state =>
+    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
+  );
+  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
+
+  const halfViewportExtents = scaledViewportExtents.map(extent => Math.round(extent / 2));
+  return halfViewportExtents;
 }
 
 export function* editVolumeLayerAsync(): Generator<any, any, any> {
@@ -152,24 +167,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
 function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-  const zoom = yield* select(state => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select(state =>
-    getBaseVoxelFactors(state.dataset.dataSource.scale),
-  );
-  const halfViewportExtentXY = yield* select(state => {
-    const extents = getViewportExtents(state)[currentViewport];
-    return map2(el => (el / 2) * zoom, extents);
-  });
-  const halfViewportExtentUVW = Dimensions.transDim([...halfViewportExtentXY, 0], currentViewport);
-
-  const halfViewportBounds = V3.ceil([
-    halfViewportExtentUVW[0] * baseVoxelFactors[0],
-    halfViewportExtentUVW[1] * baseVoxelFactors[1],
-    halfViewportExtentUVW[2] * baseVoxelFactors[2],
-  ]);
+  const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
+  const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   return {
-    min: V3.sub(position, halfViewportBounds),
-    max: V3.add(position, halfViewportBounds),
+    min: V3.sub(position, halfViewportExtentsUVW),
+    max: V3.add(position, halfViewportExtentsUVW),
   };
 }
 
@@ -216,15 +218,9 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-  const zoom = yield* select(state => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select(state =>
-    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
-  );
-  const viewportExtents = yield* select(state =>
-    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
-  );
-  const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map((factor, index) =>
-    Math.round((viewportExtents[index] / 2) * factor),
+  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+    getHalfViewportExtents,
+    activeViewport,
   );
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
@@ -250,8 +246,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
-  for (let x = tx - scaledOffsetX; x < tx + scaledOffsetX; x++) {
-    for (let y = ty - scaledOffsetY; y < ty + scaledOffsetY; y++) {
+  for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
+    for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
       copyVoxelLabel(
         Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),
@@ -271,16 +267,10 @@ const isOffscreenCanvasSupported = typeof OffscreenCanvas !== "undefined";
 configureTensorFlow(isOffscreenCanvasSupported, true);
 window.configureTensorFlow = configureTensorFlow;
 
-function* meanAndStdDevFromDataset(
-  dataset: APIDataset,
-  layerName: string,
-): Saga<{ mean: number, stdDev: number }> {
-  let info;
-  if (!info) {
-    info = yield* call(getMeanAndStdDevFromDataset, dataset.dataStore.url, dataset, layerName);
-  }
-  return info;
-}
+const meanAndStdDevFromDataset = memoizeOne(
+  (dataset: APIDataset, layerName: string): Promise<{ mean: number, stdDev: number }> =>
+    getMeanAndStdDevFromDataset(dataset.dataStore.url, dataset, layerName),
+);
 
 function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
@@ -309,24 +299,13 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const colorLayers = yield* call([Model, Model.getColorLayers]);
   // TODO: Which color layer to pick?
   const colorLayer = colorLayers[0];
-  const zoom = yield* select(state => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select(state =>
-    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
-  );
-  const viewportExtents = yield* select(state =>
-    getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
-  );
-  const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-
-  console.log("viewport extent", scaledViewportExtents);
-
-  const [halfViewportWidthX, halfViewportWidthY] = scaledViewportExtents.map(extent =>
-    Math.round(extent / 2),
+  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+    getHalfViewportExtents,
+    activeViewport,
   );
   const dataset = yield* select(state => state.dataset);
-  // TODO maybe use memoized one as caching => ansonsten ne extra func dafeur
   const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
   const centerPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
@@ -385,11 +364,11 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   const getter = async (x, y, z): Promise<boolean> => {
     if (
-      x < curX - halfViewportWidthX ||
-      y < curY - halfViewportWidthY ||
+      x < curX - halfViewportExtentX ||
+      y < curY - halfViewportExtentY ||
       z < curZ ||
-      x >= curX + halfViewportWidthX ||
-      y >= curY + halfViewportWidthY
+      x >= curX + halfViewportExtentX ||
+      y >= curY + halfViewportExtentY
     ) {
       return false;
     }

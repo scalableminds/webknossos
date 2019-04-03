@@ -6,6 +6,7 @@ import _ from "lodash";
 import * as tf from "@tensorflow/tfjs";
 
 import floodfill from "libs/floodfill";
+import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   type CopySegmentationLayerAction,
   resetContourAction,
@@ -37,7 +38,7 @@ import {
   getPlaneExtentInVoxelFromStore,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { map2 } from "libs/utils";
+import { map2, sleep } from "libs/utils";
 import {
   type BoundingBoxType,
   type Vector3,
@@ -291,23 +292,33 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     return;
   }
 
-  const NUM_PREDICT_SLICES = 5;
+  const outputExtent = 100;
+  const overflowBufferSize = 20;
+  const inputExtent = outputExtent + 2 * overflowBufferSize;
+  const NUM_PREDICT_SLICES = 3;
+  let aborted = false;
+  const toastConfig = {
+    onClose: () => {
+      aborted = true;
+    },
+    sticky: true,
+    key: "magic-wand",
+  };
+
+  Toast.info("Magic Wand is active.", toastConfig);
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
+  // TODO: Which color layer to pick?
   const colorLayer = colorLayers[0];
   const zoom = yield* select(state => state.flycam.zoomStep);
   const baseVoxelFactors = yield* select(state =>
     Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
   );
-  // Performance ;)
   const viewportExtents = yield* select(state =>
     getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
   );
   const scaledViewportExtents = V2.scale2(viewportExtents, baseVoxelFactors);
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const outputExtent = 100;
-  const overflowBufferSize = 20;
-  const inputExtent = outputExtent + 2 * overflowBufferSize;
 
   console.log("viewport extent", scaledViewportExtents);
 
@@ -356,23 +367,36 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       : mainThreadPredict(useGPU, tf, tensorArray.buffer, inputExtent);
   };
 
+  let zCur = tz;
+  function* zUpdater(): Saga<void> {
+    while (!aborted) {
+      yield* take(FlycamActions);
+      const curPosition = Dimensions.transDim(
+        Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
+        activeViewport,
+      );
+      [, , zCur] = curPosition;
+    }
+  }
+
   const getter = async (x, y, z): Promise<boolean> => {
-    if (
-      x < 0 ||
-      y < 0 ||
-      z < 0 ||
-      x >= scaledViewportExtents[0] ||
-      y >= scaledViewportExtents[1] ||
-      z >= NUM_PREDICT_SLICES
-    ) {
+    if (x < 0 || y < 0 || z < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
       return false;
     }
+
+    // If the current z-slice is too far ahead, wait
+    // eslint-disable-next-line no-await-in-loop
+    while (tz + z - zCur >= NUM_PREDICT_SLICES && !aborted) await sleep(500);
+
     const tileX = Math.floor(x / outputExtent);
     const tileY = Math.floor(y / outputExtent);
     const tileZ = z;
 
     if (predictions.get([tileX, tileY, tileZ]) == null) {
+      // No new predictions if the magic wand has been aborted
+      if (aborted) return false;
       console.time("predict");
+      Toast.info(`Magic Wand is active. Labeling slice ${tz + z}.`, toastConfig);
       predictions.set([tileX, tileY, tileZ], await getPredictionForTile(tileX, tileY, tileZ));
       console.timeEnd("predict");
     }
@@ -384,7 +408,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     throw new Error("This should never happen, prediction was set, but geting it failed.");
   };
 
-  const onFlood = (floodedVoxels: Array<Vector3>) => {
+  const onFlood = async (floodedVoxels: Array<Vector3>) => {
     console.time("label");
     const voxelAddresses = floodedVoxels.map(([xRel, yRel, zRel]) => {
       const x = tx - halfViewportWidthX + xRel;
@@ -395,6 +419,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     });
     api.data.labelVoxels(voxelAddresses, activeCellId);
     console.timeEnd("label");
+    await sleep(500);
   };
 
   const seed = [
@@ -403,14 +428,17 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     0,
   ];
   const seedPrediction = yield* call(getter, ...seed);
-  if (!seedPrediction) {
-    console.log("Click position is classified as border, aborting");
-    return;
+  if (seedPrediction) {
+    // The floodfill will run until aborted
+    floodfill({ getter, seed, onFlood });
+
+    // Keep updating the current z value
+    yield* call(zUpdater);
+  } else {
+    Toast.warning("Click position is classified as border, please click inside a segment instead.");
   }
 
-  console.time("flood and predict");
-  yield* call(floodfill, { getter, seed, onFlood });
-  console.timeEnd("flood and predict");
+  Toast.close(toastConfig.key);
 }
 
 export function* finishLayer(

@@ -10,7 +10,7 @@ type Vector3 = [number, number, number];
 type FloodfillOptions = {
   getter: (number, number, number) => Promise<boolean>,
   seed: Vector3,
-  onFlood: (Array<Vector3>) => void,
+  onFlood: (Array<Vector3>) => Promise<void>,
 };
 
 export default function(options: FloodfillOptions) {
@@ -42,7 +42,7 @@ export default function(options: FloodfillOptions) {
   const pushAdjacent = getArgs => {
     for (let i = 0; i < permutations.length; i += 1) {
       const perm = permutations[i];
-      const nextArgs = [...getArgs];
+      const nextArgs = [getArgs[0], getArgs[1], getArgs[2]];
 
       for (let j = 0; j < getArgs.length; j += 1) {
         nextArgs[j] += perm[j];
@@ -77,7 +77,8 @@ export default function(options: FloodfillOptions) {
       await flood(stack.pop());
 
       if (stack.length === 0) {
-        onFlood(flooded);
+        // eslint-disable-next-line no-await-in-loop
+        await onFlood(flooded);
         stack = nextStack;
         nextStack = [];
         flooded = [];

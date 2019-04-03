@@ -293,8 +293,9 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     sticky: true,
     key: "magic-wand",
   };
+  const toastDescription = "Magic Wand is active. Close the toast to stop using it.";
 
-  Toast.info("Magic Wand is active.", toastConfig);
+  Toast.info(toastDescription, toastConfig);
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
   // TODO: Which color layer to pick?
@@ -307,18 +308,16 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const { mean, stdDev } = yield* call(meanAndStdDevFromDataset, dataset, colorLayer.name);
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
-  const centerPosition = Dimensions.transDim(
+  let [curX, curY, curZ] = Dimensions.transDim(
     Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
     activeViewport,
   );
-  let [curX, curY, curZ] = centerPosition;
   const clickPosition = Dimensions.transDim(
     Dimensions.roundCoordinate(action.position),
     activeViewport,
   );
 
   const predictions = new ThreeDMap();
-
   const useWebworker = window.useWebworker != null ? window.useWebworker : false;
   const useGPU = window.useGPU != null ? window.useGPU : false;
   console.log("useWebworker", useWebworker);
@@ -385,7 +384,7 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       // Do not make new predictions if the magic wand has been aborted
       if (aborted) return false;
       console.time("predict");
-      Toast.info(`Magic Wand is active. Labeling slice ${z}.`, toastConfig);
+      Toast.info(`${toastDescription}\nLabeling slice ${z}.`, toastConfig);
       predictions.set([tileX, tileY, tileZ], await getPredictionForTile(tileX, tileY, tileZ));
       console.timeEnd("predict");
     }
@@ -399,11 +398,12 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   const onFlood = async (floodedVoxels: Array<Vector3>) => {
     console.time("label");
-    const voxelAddresses = floodedVoxels.map(([x, y, z]) =>
-      Dimensions.transDim([x, y, z], activeViewport),
+    const voxelAddresses = floodedVoxels.map(addressUVW =>
+      Dimensions.transDim(addressUVW, activeViewport),
     );
     api.data.labelVoxels(voxelAddresses, activeCellId);
     console.timeEnd("label");
+    // Do not block the main thread and allow for some interactivity after labeling a slice
     await sleep(500);
   };
 

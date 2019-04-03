@@ -216,7 +216,10 @@ class MappingInfoView extends React.Component<Props, State> {
     const mappings = await getMappingsForDatasetLayer(
       this.props.dataset.dataStore.url,
       this.props.dataset,
-      segmentationLayer.name,
+      // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+      segmentationLayer.fallbackLayer != null
+        ? segmentationLayer.fallbackLayer
+        : segmentationLayer.name,
     );
 
     this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings);
@@ -254,7 +257,7 @@ class MappingInfoView extends React.Component<Props, State> {
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
-        {/* Only display the mapping selection when merger mode is not active 
+        {/* Only display the mapping selection when merger mode is not active
             to avoid conflicts in the logic of the UI. */
         !this.props.isMergerModeEnabled ? (
           <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>

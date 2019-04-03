@@ -213,6 +213,7 @@ export type DatasetLayerConfiguration = {|
   +brightness: number,
   +contrast: number,
   +alpha: number,
+  +isDisabled: boolean,
 |};
 
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";

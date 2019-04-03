@@ -347,9 +347,9 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   console.log("useGPU", useGPU);
 
   const getPredictionForTile = async (tileX, tileY, tileZ) => {
-    const x = tx - halfViewportWidthX + tileX * outputExtent;
-    const y = ty - halfViewportWidthY + tileY * outputExtent;
-    const z = tz + tileZ;
+    const x = tileX * outputExtent;
+    const y = tileY * outputExtent;
+    const z = tileZ;
     const min = [x - overflowBufferSize, y - overflowBufferSize, z];
     const max = [x - overflowBufferSize + inputExtent, y - overflowBufferSize + inputExtent, z + 1];
 
@@ -380,13 +380,19 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   }
 
   const getter = async (x, y, z): Promise<boolean> => {
-    if (x < 0 || y < 0 || z < 0 || x >= scaledViewportExtents[0] || y >= scaledViewportExtents[1]) {
+    if (
+      x < tx - halfViewportWidthX ||
+      y < ty - halfViewportWidthY ||
+      z < tz ||
+      x >= tx + halfViewportWidthX ||
+      y >= ty + halfViewportWidthY
+    ) {
       return false;
     }
 
     // If the current z-slice is too far ahead, wait
     // eslint-disable-next-line no-await-in-loop
-    while (tz + z - zCur >= NUM_PREDICT_SLICES && !aborted) await sleep(500);
+    while (z - zCur >= NUM_PREDICT_SLICES && !aborted) await sleep(500);
 
     const tileX = Math.floor(x / outputExtent);
     const tileY = Math.floor(y / outputExtent);
@@ -410,23 +416,15 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
 
   const onFlood = async (floodedVoxels: Array<Vector3>) => {
     console.time("label");
-    const voxelAddresses = floodedVoxels.map(([xRel, yRel, zRel]) => {
-      const x = tx - halfViewportWidthX + xRel;
-      const y = ty - halfViewportWidthY + yRel;
-      const z = tz + zRel;
-      const voxelAddress = Dimensions.transDim([x, y, z], activeViewport);
-      return voxelAddress;
-    });
+    const voxelAddresses = floodedVoxels.map(([x, y, z]) =>
+      Dimensions.transDim([x, y, z], activeViewport),
+    );
     api.data.labelVoxels(voxelAddresses, activeCellId);
     console.timeEnd("label");
     await sleep(500);
   };
 
-  const seed = [
-    halfViewportWidthX + clickPosition[0] - centerPosition[0],
-    halfViewportWidthY + clickPosition[1] - centerPosition[1],
-    0,
-  ];
+  const seed = clickPosition;
   const seedPrediction = yield* call(getter, ...seed);
   if (seedPrediction) {
     // The floodfill will run until aborted

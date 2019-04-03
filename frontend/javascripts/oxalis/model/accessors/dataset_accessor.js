@@ -5,7 +5,6 @@ import memoizeOne from "memoize-one";
 
 import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
-import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import messages from "messages";
@@ -28,8 +27,6 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
   if (!mostExtensiveResolutions) {
     return [];
   }
-
-  const lastResolution = _.last(mostExtensiveResolutions);
 
   return mostExtensiveResolutions;
 }

@@ -16,9 +16,8 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import { type Vector4 } from "oxalis/constants";
 import window from "libs/window";
 
 export const BucketStateEnum = {

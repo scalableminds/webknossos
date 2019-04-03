@@ -6,14 +6,10 @@
 import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
 
-import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getResolutionsFactors,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import { type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
 
@@ -103,8 +99,6 @@ class PullQueue {
         _.sum(bucketBuffers.map(buffer => (buffer != null ? buffer.length : 0))),
       );
 
-      const resolutions = getResolutions(dataset);
-
       for (const [index, bucketAddress] of batch.entries()) {
         const bucketBuffer = bucketBuffers[index];
         const bucket = this.cube.getBucket(bucketAddress);
@@ -115,7 +109,7 @@ class PullQueue {
           bucket.pullFailed(true);
         } else {
           const bucketData = bucketBuffer || new Uint8Array(bucket.BUCKET_LENGTH);
-          this.handleBucket(layerInfo, bucketAddress, bucketData, resolutions);
+          this.handleBucket(layerInfo, bucketAddress, bucketData);
         }
       }
     } catch (error) {
@@ -138,13 +132,7 @@ class PullQueue {
     }
   }
 
-  handleBucket(
-    layerInfo: DataLayerType,
-    bucketAddress: Vector4,
-    bucketData: Uint8Array,
-    resolutions: Array<Vector3>,
-  ): void {
-    const zoomStep = bucketAddress[3];
+  handleBucket(layerInfo: DataLayerType, bucketAddress: Vector4, bucketData: Uint8Array): void {
     const bucket = this.cube.getBucket(bucketAddress);
     this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {

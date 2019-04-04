@@ -236,7 +236,7 @@ export function updateTreeVisibility(tree: Tree): UpdateTreeVisibilityUpdateActi
   };
 }
 export function updateTreeGroupVisibility(
-  groupId: number,
+  groupId: ?number,
   isVisible: boolean,
 ): UpdateTreeGroupVisibilityUpdateAction {
   return {

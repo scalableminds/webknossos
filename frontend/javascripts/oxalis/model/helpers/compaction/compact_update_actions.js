@@ -6,12 +6,6 @@ import type { Tracing } from "oxalis/store";
 import { type UpdateAction, moveTreeComponent } from "oxalis/model/sagas/update_actions";
 import compactToggleActions from "oxalis/model/helpers/compaction/compact_toggle_actions";
 
-function removeUnrelevantUpdateActions(updateActions: Array<UpdateAction>) {
-  // todo: clean up
-  return updateActions;
-  // This functions removes update actions that should not be sent to the server.
-  // return updateActions.filter(ua => ua.name !== "toggleTree");
-}
 // The Cantor pairing function assigns one natural number to each pair of natural numbers
 function cantor(a, b) {
   return 0.5 * (a + b) * (a + b + 1) + b;
@@ -149,7 +143,7 @@ export default function compactUpdateActions(
   tracing: Tracing,
 ): Array<UpdateAction> {
   return compactToggleActions(
-    compactDeletedTrees(compactMovedNodesAndEdges(removeUnrelevantUpdateActions(updateActions))),
+    compactDeletedTrees(compactMovedNodesAndEdges(updateActions)),
     tracing,
   );
 }

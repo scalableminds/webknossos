@@ -4,7 +4,7 @@ import { Modal, Table } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
+import type { RecommendedConfiguration } from "oxalis/store";
 import { settingComments } from "admin/tasktype/recommended_configuration_view";
 import messages, { settings } from "messages";
 
@@ -24,7 +24,7 @@ const columns = [
 ];
 
 type Props = {
-  config: $Shape<{ ...UserConfiguration, ...DatasetConfiguration }>,
+  config: RecommendedConfiguration,
   onOk: () => void,
   destroy: () => void,
 };

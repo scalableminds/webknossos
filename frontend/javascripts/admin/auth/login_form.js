@@ -85,11 +85,11 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
           </Button>
         </FormItem>
         {hideFooter ? null : (
-          <FormItem style={{ marginBottom: 4 }}>
-            <Link to="/auth/register" style={{ ...linkStyle, marginRight: 10 }}>
+          <FormItem style={{ marginBottom: 4, display: "flex" }}>
+            <Link to="/auth/register" style={{ ...linkStyle, marginRight: 10, flexGrow: 1 }}>
               Register Now
             </Link>
-            <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
+            <Link to="/auth/resetPassword" style={Object.assign({flexGrow: 1}, linkStyle, resetStyle)}>
               Forgot Password
             </Link>
           </FormItem>

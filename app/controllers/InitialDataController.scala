@@ -117,8 +117,7 @@ Samplecountry
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
-  def insertDefaultUser = {
-    println(defaultUser.layoutConfiguration.toString)
+  def insertDefaultUser =
     userService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -129,7 +128,6 @@ Samplecountry
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox
-  }
 
   def insertToken = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis

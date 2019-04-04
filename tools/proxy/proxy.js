@@ -47,10 +47,6 @@ const processes = {
       shell: true,
     },
   ),
-  connect: spawnIfNotSpecified("noConnect", "docker-compose run --rm webknossos-connect", [], {
-    cwd: ROOT,
-    shell: true,
-  }),
 };
 
 function spawnIfNotSpecified(keyword, command, args, options) {

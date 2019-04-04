@@ -56,6 +56,6 @@ If you need help with webKnossos, there is a [Community Support forum](https://s
 * [Briggman Lab, Caesar Institute](https://www.caesar.de/en/our-research/computational-neuroethology/research-focus.html)
 * [Schaefer Lab, The Francis Crick Institute](https://www.crick.ac.uk/research/labs/andreas-schaefer)
 * [Singer Lab, University of Maryland](http://biology.umd.edu/joshua-singer.html)
-
+[See All Publications Using webKnossos](./publications.md)
 [Please let us know](mailto:hello@scalableminds.com), if you'd like to add your lab to the list.
 -->

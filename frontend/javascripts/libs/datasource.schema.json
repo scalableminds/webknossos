@@ -131,9 +131,10 @@
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
           "color": { "$ref": "#/definitions/types::Vector3" },
-          "isDisabled": { "type": "boolean" }
+          "isDisabled": { "type": "boolean" },
+          "alpha": {"type": "number"}
         },
-        "required": ["brightness", "contrast", "color", "isDisabled"]
+        "required": ["brightness", "contrast", "color"]
       }
     }
   }

@@ -439,7 +439,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target);
     }
 
-    this.updateTreeColor(tree.treeId, tree.color);
+    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible);
   }
 
   /**

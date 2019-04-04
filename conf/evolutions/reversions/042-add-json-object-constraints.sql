@@ -1,4 +1,5 @@
 START TRANSACTION;
+
 ALTER TABLE webknossos.analytics
   DROP CONSTRAINT valueIsJsonObject;
 ALTER TABLE webknossos.annotations

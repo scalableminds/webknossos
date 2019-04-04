@@ -56,4 +56,3 @@ export function isSegmentationMissingForZoomstep(
 ): boolean {
   return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
 }
-

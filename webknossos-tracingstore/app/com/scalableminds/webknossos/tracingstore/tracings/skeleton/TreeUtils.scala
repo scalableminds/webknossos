@@ -118,10 +118,10 @@ object TreeUtils {
     t1.withNodes((t1.nodes ++ t2.nodes).toSet.toSeq).withEdges((t1.edges ++ t2.edges).toSet.toSeq)
 
   def getAllChildrenGroups(rootGroup: TreeGroup) = {
-    def childIter(curr: Seq[TreeGroup]): Seq[TreeGroup] =
-      curr match {
+    def childIter(currentGroup: Seq[TreeGroup]): Seq[TreeGroup] =
+      currentGroup match {
         case Seq() => Seq.empty
-        case _     => curr ++ curr.flatMap(group => childIter(group.children))
+        case _     => currentGroup ++ currentGroup.flatMap(group => childIter(group.children))
       }
 
     childIter(Seq(rootGroup))

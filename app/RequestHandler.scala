@@ -29,7 +29,10 @@ class RequestHandler @Inject()(router: Router,
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
-    } else {
+    } else if(request.uri.matches("^sitemap\.xml$")) {
+
+    }
+    else {
       Some(Action { Ok(views.html.main(conf)) })
     }
 }

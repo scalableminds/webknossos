@@ -122,7 +122,12 @@ export async function initialize(
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
     initializationInformation = initializeDataLayerInstances();
-    if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
+    if (tracing != null) {
+      Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
+    } else {
+      // If there is no tracing, fall back to the zoom of the dataset.
+      Store.dispatch(setZoomStepAction(Store.getState().datasetConfiguration.zoom));
+    }
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).

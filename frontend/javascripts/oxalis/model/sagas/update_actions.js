@@ -65,7 +65,7 @@ export type UpdateTreeVisibilityUpdateAction = {|
 type UpdateTreeGroupVisibilityUpdateAction = {|
   name: "updateTreeGroupVisibility",
   value: {|
-    treeGroupId: number,
+    treeGroupId: ?number,
     isVisible: boolean,
   |},
 |};

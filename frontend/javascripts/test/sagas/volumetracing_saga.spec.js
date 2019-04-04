@@ -1,13 +1,15 @@
 // @flow
+import "test/sagas/volumetracing_saga.mock.js";
+
 import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";
 
-import "test/sagas/volumetracing_saga.mock.js";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -29,7 +31,6 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
-const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",

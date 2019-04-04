@@ -173,7 +173,7 @@ export default function compactToggleActions(
     commonAncestor,
   );
 
-  // If less than 50% of the toggled trees are exceptions, we should use the compactation
+  // If less than 50% of the toggled trees are exceptions, we should use the compaction
   const shouldUseToggleGroup = exceptions.length < 0.5 * affectedTreeCount;
 
   const compactedToggleActions = [

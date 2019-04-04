@@ -334,12 +334,25 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
-    def treeTransform(tree: Tree) =
-      if (tree.groupId == treeGroupId)
-        tree.copy(isVisible = Some(isVisible))
-      else tree
+    def updateTreeGroups(treeGroups: Seq[TreeGroup]) = {
+      def treeTransform(tree: Tree) =
+        if (treeGroups.exists(group => tree.groupId.contains(group.groupId)))
+          tree.copy(isVisible = Some(isVisible))
+        else tree
 
-    tracing.withTrees(mapAllTrees(tracing, treeTransform))
+      tracing.withTrees(mapAllTrees(tracing, treeTransform))
+    }
+
+    def allTreeTransform(tree: Tree) = tree.copy(isVisible = Some(isVisible))
+
+    treeGroupId match {
+      case None => tracing.withTrees(mapAllTrees(tracing, allTreeTransform))
+      case Some(groupId) =>
+        tracing.treeGroups
+          .find(_.groupId == groupId)
+          .map(group => updateTreeGroups(TreeUtils.getAllChildrenGroups(group)))
+          .getOrElse(tracing)
+    }
   }
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =

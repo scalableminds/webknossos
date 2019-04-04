@@ -48,7 +48,7 @@ message Tree {
      required string name = 7;
      required int64 createdTimestamp = 8;
      optional int32 groupId = 9;
-     optional bool isVisible = 10;
+     optional bool isVisible = 10; // in this case `None` means `true`
 }
 
 message TreeGroup {

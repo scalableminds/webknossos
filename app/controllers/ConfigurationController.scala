@@ -94,4 +94,20 @@ class ConfigurationController @Inject()(userService: UserService,
         JsonOk(Messages("user.configuration.dataset.updated"))
       }
     }
+
+  def readLayouts = sil.SecuredAction.async { implicit request =>
+    for {
+      userConfig <- request.identity.userConfigurationStructured
+    } yield Ok(toJson(userConfig.configurationOrDefaults))
+  }
+
+  def updateLayouts = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+    for {
+      jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.invalid"
+      conf = jsConfiguration.fields.toMap
+      _ <- userService.updateUserConfiguration(request.identity, UserConfiguration(conf))
+    } yield {
+      JsonOk(Messages("user.configuration.updated"))
+    }
+  }
 }

@@ -148,7 +148,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const tab = match.params.tab;
+                  const {tab} = match.params;
                   const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
@@ -422,6 +422,10 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
+               <Route
+                path="/publication/:id"
+                render={({ match, location }: ContextRouter) => {}}
+                  />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />

@@ -10,6 +10,7 @@ import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
+import PublicationDetailsView from "dashboard/publication_details_view"
 import CreditsFooter from "components/credits_footer";
 import features from "features";
 
@@ -229,7 +230,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
         value={this.state.searchQuery}
       />
     );
-
+      console.log(this.state.datasets);
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
@@ -251,10 +252,11 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   </p>
                 </React.Fragment>
               ) : (
-                <PublicationView
+                /* <PublicationView
                   datasets={this.state.datasets}
                   searchQuery={this.state.searchQuery}
-                />
+                /> */
+                <PublicationDetailsView datasets={this.state.datasets} publicationId="5c766bec6c01006c018c7459"/> 
               )}
             </div>
           </Spin>

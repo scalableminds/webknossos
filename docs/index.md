@@ -20,6 +20,7 @@
 * [Code Readme](../README.md)
 * [Changelog](../CHANGELOG.md)
 * [Migration Guide](../MIGRATIONS.md)
+* [Publications](./publications.md) 
 
 ## Getting Help
 * [Community Support](https://support.webknossos.org)

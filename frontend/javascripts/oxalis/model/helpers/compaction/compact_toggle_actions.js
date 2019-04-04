@@ -109,9 +109,6 @@ function findCommonAncestor(
 }
 
 function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncestor: number) {
-  let commonVisibility;
-  let exceptions = [];
-
   const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
   const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);
 
@@ -123,11 +120,9 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
   const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, tree => tree.isVisible);
   const affectedTreeCount = allTreesOfAncestor.length;
 
-  if (visibleTrees.length === 0) {
-    commonVisibility = false;
-  } else if (invisibleTrees.length === 0) {
-    commonVisibility = true;
-  } else if (visibleTrees.length > invisibleTrees.length) {
+  let commonVisibility;
+  let exceptions;
+  if (visibleTrees.length > invisibleTrees.length) {
     commonVisibility = true;
     exceptions = invisibleTrees;
   } else {

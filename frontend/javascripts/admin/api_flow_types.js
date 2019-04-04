@@ -41,14 +41,15 @@ type APIDataLayerBase = {|
 
 type APIColorLayer = {|
   ...APIDataLayerBase,
-  category: "color",
+  +category: "color",
 |};
 
 export type APISegmentationLayer = {|
   ...APIDataLayerBase,
-  category: "segmentation",
-  largestSegmentId: number,
+  +category: "segmentation",
+  +largestSegmentId: number,
   +mappings?: Array<string>,
+  +fallbackLayer?: ?string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
@@ -111,6 +112,7 @@ export type APIDatasetDetails = {
 };
 
 type APIDatasetBase = APIDatasetId & {
+  +isUnreported: boolean,
   +allowedTeams: Array<APITeam>,
   +created: number,
   +dataStore: APIDataStore,

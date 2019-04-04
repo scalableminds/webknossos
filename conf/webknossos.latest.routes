@@ -40,16 +40,16 @@ GET           /user/tasks/peek                                                  
 
 GET           /users                                                            controllers.UserController.list
 GET           /user                                                             controllers.UserController.current
-GET           /user/tasks                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
-GET           /user/annotations                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /user/tasks                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /user/annotations                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/loggedTime                                                  controllers.UserController.loggedTime
 GET           /users/:id                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                             controllers.UserController.updateLastTaskTypeId(id: String)
-GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                 controllers.UserController.usersLoggedTime
-GET           /users/:id/annotations                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /users/:id/annotations                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # Team
 GET           /teams                                                            controllers.TeamController.list
@@ -150,7 +150,7 @@ POST          /projects                                                         
 GET           /projects/:name                                                   controllers.ProjectController.read(name: String)
 DELETE        /projects/:name                                                   controllers.ProjectController.delete(name: String)
 PUT           /projects/:name                                                   controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int])
+GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 PATCH         /projects/:name/incrementEachTasksInstances                       controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 PATCH         /projects/:name/pause                                             controllers.ProjectController.pause(name: String)
 PATCH         /projects/:name/resume                                            controllers.ProjectController.resume(name: String)

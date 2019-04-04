@@ -38,15 +38,16 @@ class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {
+    const far = 8000000;
     for (const cam of _.values(this.props.cameras)) {
       cam.near = 0;
-      cam.far = 1000000;
+      cam.far = far;
     }
 
     Store.dispatch(
       setTDCameraAction({
         near: 0,
-        far: 1000000,
+        far,
       }),
     );
 
@@ -185,7 +186,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
-  const clippingOffsetFactor = 100000;
+  const clippingOffsetFactor = 900000;
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {

@@ -34,13 +34,14 @@ export const settings = {
     (will take longer until you see data) or alternatively,
     improving the quality progressively (data will be loaded faster,
     but it will take more time until the best quality is shown).`,
+  mergerMode: "Enable Merger Mode",
 };
 
 export default {
   yes: "Yes",
   no: "No",
   unknown_error:
-    "An unknown error occured. Please try again or check the console for more details.",
+    "An unknown error occurred. Please try again or check the console for more details.",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
@@ -71,8 +72,8 @@ In order to restore the current window, a reload is necessary.`,
   data black. This means that in case of missing data, data of lower quality is rendered
   instead. Only enable this option if you understand its effect. Please refresh
   this page so that the changes can take effect.`,
-  "tracing.copy_position": "Click this button to copy the position.",
-  "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_position": "Copy position to clipboard.",
+  "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -91,7 +92,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
-  "tracing.delete_mulitple_trees": _.template(
+  "tracing.delete_multiple_trees": _.template(
     "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),
   "tracing.group_deletion_message": "Do you want to delete the selected group?",
@@ -168,9 +169,9 @@ In order to restore the current window, a reload is necessary.`,
     "Do you really want to add one additional instance to all tasks of this project?",
   "project.none_selected": "No currently selected project found.",
   "project.successful_active_tasks_transfer":
-    "All active tasks were transfered to the selected user",
+    "All active tasks were transferred to the selected user",
   "project.unsuccessful_active_tasks_transfer":
-    "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
+    "An error occurred while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
@@ -178,7 +179,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_email_invalid": "The input is not valid E-mail!",
   "auth.registration_password_input": "Please input your password!",
   "auth.registration_password_confirm": "Please confirm your password!",
-  "auth.registration_password_missmatch": "Passwords do not match!",
+  "auth.registration_password_mismatch": "Passwords do not match!",
   "auth.registration_password_length": "Passwords needs min. 8 characters.",
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",

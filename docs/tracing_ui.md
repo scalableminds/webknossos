@@ -19,7 +19,7 @@ The most common buttons are:
 - `Archive`: Only available for Explorative Annotations. Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Explorative Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. 
 - `Download`: Starts the download of the current annotation. Skeleton annotations are downloaded as [NML](./data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](./data_formats.md#wkw) files.
 - `Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about this feature in the [Sharing guide](./sharing.md).  
-- `Add Script`: Using the [webKnossos frontend API](https://demo.webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
+- `Add Script`: Using the [webKnossos frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can interact with webKnossos programmatically. User scripts can be executed from here. Admins can add often used scripts to webKnossos to make them available to all users for easy access.
 - `Restore Older Version`: Opens a view that shows all previous versions of a tracing. From this view, any older version can be selected, previewed, and restored.
 
 A user can directly jump to positions within their datasets by entering them in the position input field.
@@ -118,7 +118,7 @@ All operations and information regarding trees are organized under a tab called 
 A typical skeleton annotation consists of one or more trees.
 Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
-Trees can be dragged and dropped between tree groups. This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse. 
+Trees can be dragged and dropped between tree groups. This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
 Hover over existing tree groups to bring up a little menu for creating new groups and deletion. Renaming of a group can be done by selecting a group and then entering the new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpg)
@@ -209,6 +209,10 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
+### Merging Segments
+
+Segments from e.g. automatic segmentations can be merged with the merger mode to refine the result. The merger mode is available in skeleton and hybrid tracings. Each tree represents a merged segment and its nodes define the segments that are merged together. So each new merged segment needs its own tree. The merger mode can be enabled in the settings in the category Nodes & Trees under the option Enable Merger Mode. As soon as you enable it, all already existing trees will be used to form merged segments.
+
 ## Hybrid Annotations
 
 Hybrid annotations combine the functionality of skeleton and volume annotations.
@@ -271,7 +275,9 @@ For multi-layer datasets, each layer can be adjusted separately.
 #### Colors
 - `Brightness`: Increase / Decrease the brightness of the data layer.
 - `Contrast`: Increase / Decrease the contrast of the data layer.
+- `Opacity`: Increase / Decrease the opacity of the data layer.
 - `Color`: Every data layer can be colored to make them easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data.
+- `Visibility`: Use the eye icon on the right side of the name of the data layer to enable/disable this layer.
 
 #### Segmentation
 - `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segmentation layer. Only possible if your dataset has a segmentation layer.
@@ -284,3 +290,4 @@ For multi-layer datasets, each layer can be adjusted separately.
 - `4 Bit`: Toggles data download from the server using only 4 Bit instead of 8 Bit for each pixel. Use this to reduce the amount of necessary internet bandwidth for webKnossos. Useful for showcasing data on the go over cellular networks, e.g 3G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zomed in very far).
 - `Render Missing Data Black`: If a dataset doesn't contain data at a specific position, webKnossos can either render "black" at that position or it can try to render data from another magnification.
+

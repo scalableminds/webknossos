@@ -137,13 +137,23 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     }
   }
 
-  def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Source[ByteString, _]] = {
-    logger.debug("Called to get volume data." + baseInfo)
+  def getVolumeDataStream(tracingId: String, version: Option[Long] = None): Fox[Source[ByteString, _]] = {
+    logger.debug("Called to get volume data (stream)." + baseInfo)
     for {
       data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
         .getStream
+    } yield data
+  }
+
+  def getVolumeData(tracingId: String, version: Option[Long] = None): Fox[Array[Byte]] = {
+    logger.debug("Called to get volume data." + baseInfo)
+    for {
+      data <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allDataBlocking")
+        .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryStringOptional("version", version.map(_.toString))
+        .getWithBytesResponse
     } yield data
   }
 

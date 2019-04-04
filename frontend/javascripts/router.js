@@ -43,6 +43,8 @@ import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
+import FeaturesView from "pages/frontpage/features_view";
+import PricingView from "pages/frontpage/pricing_view";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import features from "features";
@@ -51,6 +53,7 @@ const { Content } = Layout;
 
 type StateProps = {|
   activeUser: ?APIUser,
+  hasOrganizations: boolean,
 |};
 
 type Props = StateProps;
@@ -131,6 +134,7 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
+                  if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
                   if (enableFrontpage) return <SpotlightView />;
 
                   return isAuthenticated ? (
@@ -359,11 +363,7 @@ class ReactRouter extends React.Component<Props> {
                 component={ScriptListView}
                 exact
               />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/help/keyboardshortcuts"
-                component={KeyboardShortcutView}
-              />
+              <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
@@ -425,6 +425,8 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />
+              <Route path="/features" component={FeaturesView} />
+              <Route path="/pricing" component={PricingView} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>
@@ -436,6 +438,7 @@ class ReactRouter extends React.Component<Props> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
 export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ReactRouter);

@@ -131,6 +131,23 @@ export const getColorForCoords: ShaderModule = {
       float bucketAddress = bucketAddressWithZoomStep.x;
       float renderedZoomStep = bucketAddressWithZoomStep.y;
 
+      if (bucketAddress == -2.0) {
+        // The bucket is out of bounds. Render black
+        // In flight mode, it can happen that buckets were not passed to the GPU
+        // since the approximate implementation of the bucket picker missed the bucket.
+        // We simply handle this case as if the bucket was not yet loaded which means
+        // that fallback data is loaded.
+        // The downside is that data which does not exist, will be rendered gray instead of black.
+        // Issue to track progress: #3446
+        float alpha = isFlightMode() ? -1.0 : 0.0;
+        return vec4(0.0, 0.0, 0.0, alpha);
+      }
+
+      if (bucketAddress < 0. || isNan(bucketAddress)) {
+        // Not-yet-existing data is encoded with a = -1.0
+        return vec4(0.0, 0.0, 0.0, -1.0);
+      }
+
       if (renderedZoomStep != zoomStep) {
         /* We already know which fallback bucket we have to look into. However,
          * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.
@@ -155,23 +172,6 @@ export const getColorForCoords: ShaderModule = {
           (offsetInBucket + vec3(bucketWidth) * subVolumeIndex)
           / magnificationFactors
         );
-      }
-
-      if (bucketAddress == -2.0) {
-        // The bucket is out of bounds. Render black
-        // In flight mode, it can happen that buckets were not passed to the GPU
-        // since the approximate implementation of the bucket picker missed the bucket.
-        // We simply handle this case as if the bucket was not yet loaded which means
-        // that fallback data is loaded.
-        // The downside is that data which does not exist, will be rendered gray instead of black.
-        // Issue to track progress: #3446
-        float alpha = isFlightMode() ? -1.0 : 0.0;
-        return vec4(0.0, 0.0, 0.0, alpha);
-      }
-
-      if (bucketAddress < 0. || isNan(bucketAddress)) {
-        // Not-yet-existing data is encoded with a = -1.0
-        return vec4(0.0, 0.0, 0.0, -1.0);
       }
 
       // bucketAddress can span multiple data textures. If the address is higher
@@ -207,6 +207,18 @@ export const getColorForCoords: ShaderModule = {
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
 
+      if (packingDegree == 2.0) {
+        // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
+        if (rgbaIndex == 0.0) {
+          return vec4(bucketColor.r, bucketColor.g, bucketColor.r, bucketColor.g);
+        } else if (rgbaIndex == 1.0) {
+          return vec4(bucketColor.b, bucketColor.a, bucketColor.b, bucketColor.a);
+        }
+      }
+
+      // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
         return vec4(bucketColor.r);
       } else if (rgbaIndex == 1.0) {

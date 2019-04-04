@@ -417,10 +417,7 @@ function determineDefaultState(
     ({ position } = urlState);
   }
 
-  let zoomStep = datasetConfiguration.zoom;
-  if (urlState.zoomStep != null) {
-    ({ zoomStep } = urlState);
-  }
+  const {zoomStep}  = urlState;
 
   let { rotation } = datasetConfiguration;
   if (tracing) {

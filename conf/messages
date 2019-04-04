@@ -60,6 +60,7 @@ user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
 user.configuration.invalid=Couldn’t parse configuration
 user.configuration.updated=Your configuration was updated
+user.layouts.updated=Your layout configuration was updated
 user.configuration.dataset.invalid=Dataset configuration is invalid
 user.configuration.dataset.updated=Dataset configuration updated
 user.experience.set=Set experience of {0}

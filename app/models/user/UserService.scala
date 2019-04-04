@@ -140,6 +140,12 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
+  def updateLayoutConfiguration(user: User, configuration: JsValue)(implicit ctx: DBAccessContext) =
+    userDAO.updateLayoutConfiguration(user._id, configuration).map { result =>
+      userCache.invalidateUser(user._id)
+      result
+    }
+
   def updateDataSetConfiguration(
       user: User,
       dataSetName: String,

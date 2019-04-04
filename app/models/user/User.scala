@@ -179,6 +179,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                where _id = ${userId}""")
     } yield ()
 
+  def updateLayoutConfiguration(userId: ObjectId, layoutConfiguration: JsValue)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(sqlu"""update webknossos.users
+               set layoutConfiguration = '#${sanitize(layoutConfiguration.toString)}'
+               where _id = ${userId}""")
+    } yield ()
+
   def updateValues(userId: ObjectId,
                    firstName: String,
                    lastName: String,

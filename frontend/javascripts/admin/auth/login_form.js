@@ -21,7 +21,6 @@ type Props = {
 
 function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   const { getFieldDecorator } = form;
-  const resetStyle = layout === "horizontal" ? { float: "right" } : null;
   const linkStyle = layout === "inline" ? { paddingLeft: 10 } : null;
 
   const handleSubmit = (event: SyntheticInputEvent<>) => {
@@ -87,10 +86,16 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
         {hideFooter ? null : (
           <FormItem style={{ marginBottom: 4 }}>
             <div style={{ display: "flex" }}>
-              <Link to="/auth/register" style={{ ...linkStyle, marginRight: 10, flexGrow: 1 }}>
+              <Link
+                to="/auth/register"
+                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+              >
                 Register Now
               </Link>
-              <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
+              <Link
+                to="/auth/resetPassword"
+                style={Object.assign({ whiteSpace: "nowrap" }, linkStyle)}
+              >
                 Forgot Password
               </Link>
             </div>

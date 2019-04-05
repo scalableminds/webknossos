@@ -13,21 +13,21 @@ import {
   Card,
   AutoComplete,
 } from "antd";
+import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
 import renderIndependently from "libs/render_independently";
-import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
-import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -35,7 +35,8 @@ const FormItem = Form.Item;
 type StateProps = {|
   activeUser: ?APIUser,
 |};
-type Props = StateProps;
+
+type Props = { ...StateProps, history: RouterHistory };
 
 type State = {
   currentStep: number,
@@ -252,6 +253,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
+    if (this.props.activeUser != null) {
+      this.props.history.push("/dashboard");
+      return;
+    }
+
     this.fetchData();
   }
 
@@ -455,7 +461,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
           </FeatureCard>
           <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-            Use the <a href="/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+            Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
             <a href="/scripts">scriptable workflows</a>.{" "}
             <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
           </FeatureCard>
@@ -521,4 +527,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(OnboardingView);
+export default connect<StateProps, {||}, _, _, _, _>(mapStateToProps)(withRouter(OnboardingView));

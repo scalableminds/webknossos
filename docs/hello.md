@@ -7,11 +7,11 @@ Powerful [user](./users.md) and [task](./tasks.md) management features automatic
 There are a lot of productivity improvements to make the human part as efficient as possible.
 webKnossos is also a platform for [showcasing datasets](https://webknossos.org) alongside a paper publication.
 
-> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
-webKnossos: efficient online 3D data annotation for connectomics.  
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
+webKnossos: efficient online 3D data annotation for connectomics.
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
-![webKnossos logo](https://webknossos.org/images/oxalis.svg)
+![webKnossos logo](https://static.webknossos.org/images/oxalis.svg)
 
 ## Demo
 Try webKnossos on a large selection of published datasets: [https://webknossos.org/](https://webknossos.org/)
@@ -56,6 +56,6 @@ If you need help with webKnossos, there is a [Community Support forum](https://s
 * [Briggman Lab, Caesar Institute](https://www.caesar.de/en/our-research/computational-neuroethology/research-focus.html)
 * [Schaefer Lab, The Francis Crick Institute](https://www.crick.ac.uk/research/labs/andreas-schaefer)
 * [Singer Lab, University of Maryland](http://biology.umd.edu/joshua-singer.html)
-
+[See All Publications Using webKnossos](./publications.md)
 [Please let us know](mailto:hello@scalableminds.com), if you'd like to add your lab to the list.
 -->

@@ -213,6 +213,7 @@ export type DatasetLayerConfiguration = {|
   +brightness: number,
   +contrast: number,
   +alpha: number,
+  +isDisabled: boolean,
 |};
 
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
@@ -260,6 +261,12 @@ export type UserConfiguration = {|
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
 |};
+
+export type RecommendedConfiguration = $Shape<{
+  ...UserConfiguration,
+  ...DatasetConfiguration,
+  zoom: number,
+}>;
 
 export type Mapping = { [key: number]: number };
 
@@ -476,6 +483,7 @@ export const defaultState: OxalisState = {
   task: null,
   dataset: {
     name: "Test Dataset",
+    isUnreported: false,
     created: 123,
     dataSource: {
       dataLayers: [],

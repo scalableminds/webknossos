@@ -25,7 +25,6 @@ object UserConfiguration {
       "clippingDistanceArbitrary" -> JsNumber(64),
       "dynamicSpaceDirection" -> JsBoolean(true),
       "displayCrosshair" -> JsBoolean(true),
-      "zoom" -> JsNumber(2),
       "scale" -> JsNumber(1),
       "tdViewDisplayPlanes" -> JsBoolean(true),
       "isosurfaceDisplay" -> JsBoolean(false),

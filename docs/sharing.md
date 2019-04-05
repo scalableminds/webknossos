@@ -1,4 +1,4 @@
-# Sharing
+# Collaboration & Sharing
 webKnossos is built for working collaboratively and sharing your work with the community.
 webKnossos can share both skeleton annotations of large structures as well as raw datasets and segmentations for showcasing the data.
 The sharing features discussed here refer to sharing scenarios with colleagues, reviewers, and publishers outside of your webKnossos organization or your lab.

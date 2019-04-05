@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Badge, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Icon, Layout, Menu, Popover } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -167,7 +167,7 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
         </Menu.Item>
       ) : null}
       <Menu.Item key="frontend-api">
-        <a target="_blank" href="/docs/frontend-api/index.html">
+        <a target="_blank" href="/assets/docs/frontend-api/index.html">
           Frontend API Documentation
         </a>
       </Menu.Item>
@@ -250,9 +250,7 @@ function AnonymousAvatar() {
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
     >
-      <Badge dot>
-        <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
-      </Badge>
+      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
     </Popover>
   );
 }
@@ -303,6 +301,21 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
 
     trailingNavItems.push(
       <LoggedInAvatar key="logged-in-avatar" activeUser={activeUser} handleLogout={handleLogout} />,
+    );
+  }
+
+  if (!_isAuthenticated && features().enableFrontpage) {
+    menuItems.push(
+      <Menu.Item key="features">
+        <Link to="/features" style={{ fontWeight: 400 }}>
+          <Icon type="rocket" /> Features
+        </Link>
+      </Menu.Item>,
+      <Menu.Item key="pricing">
+        <Link to="/pricing" style={{ fontWeight: 400 }}>
+          <Icon type="trophy" /> Pricing
+        </Link>
+      </Menu.Item>,
     );
   }
 

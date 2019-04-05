@@ -171,12 +171,12 @@ class PublicationCard extends React.PureComponent<Props, State> {
               {publication.title}
               {showDetailedLink ? (
                 <Link to={`/publication/${publication.id}`}>
-                  <Tooltip title="Show detailed view for this publication.">
+                  <Tooltip title="Open permalink">
                     <Icon
-                      type="info-circle-o"
+                      type="link"
                       style={{
                         fontSize: 16,
-                        color: "rgba(0, 0, 0, 0.85)",
+                        color: "#555",
                         marginBottom: 18,
                         marginLeft: 8,
                       }}

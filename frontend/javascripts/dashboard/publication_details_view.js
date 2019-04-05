@@ -61,7 +61,7 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
                   <Tooltip title="Back to the frontpage.">
                     <Icon
                       type="arrow-left"
-                      style={{ fontSize: 24, color: "rgba(0, 0, 0, 0.85)", marginBottom: 18 }}
+                      style={{ fontSize: 24, color: "#555", marginBottom: 18 }}
                     />
                   </Tooltip>
                 </Link>

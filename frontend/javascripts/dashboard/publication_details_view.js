@@ -16,7 +16,6 @@ class PublicationVDetailiew extends React.PureComponent<Props> {
     const activeDatasets: Array<APIDataset> = this.props.datasets.filter(ds => 
       ds.isActive);
       const theChosenDatasets = activeDatasets.filter(ds => ds.publication != null && ds.publication.id === this.props.publicationId);
-      console.log("chosen", theChosenDatasets);
     return (
               theChosenDatasets.length > 0 ? <PublicationCard className="dataset-panel" datasets={theChosenDatasets} /> : null
     );

@@ -126,7 +126,8 @@ export async function initialize(
       Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
     } else {
       // If there is no tracing, fall back to the zoom of the dataset.
-      Store.dispatch(setZoomStepAction(Store.getState().datasetConfiguration.zoom));
+      const { zoom } = Store.getState().datasetConfiguration;
+      if (zoom != null) Store.dispatch(setZoomStepAction(zoom));
     }
   }
 

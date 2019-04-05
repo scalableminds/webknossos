@@ -92,10 +92,7 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
               >
                 Register Now
               </Link>
-              <Link
-                to="/auth/resetPassword"
-                style={Object.assign({ whiteSpace: "nowrap" }, linkStyle)}
-              >
+              <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>
             </div>

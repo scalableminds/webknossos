@@ -17,6 +17,7 @@ import ChangePasswordView from "admin/auth/change_password_view";
 import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
+import PublicationDetailView from "dashboard/publication_details_view";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
@@ -148,7 +149,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const {tab} = match.params;
+                  const { tab } = match.params;
                   const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
@@ -422,10 +423,12 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
-               <Route
+              <Route
                 path="/publication/:id"
-                render={({ match, location }: ContextRouter) => {}}
-                  />
+                render={({ match }: ContextRouter) => (
+                  <PublicationDetailView publicationId={match.params.id || ""} />
+                )}
+              />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/onboarding" component={Onboarding} />

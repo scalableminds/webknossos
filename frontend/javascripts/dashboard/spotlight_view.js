@@ -10,14 +10,13 @@ import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
-import PublicationDetailsView from "dashboard/publication_details_view"
 import CreditsFooter from "components/credits_footer";
 import features from "features";
 
 const { Content } = Layout;
 const { Search } = Input;
 
-const SimpleHeader = () => (
+export const SimpleHeader = () => (
   <div id="oxalis-header">
     <img
       src="/assets/images/oxalis.svg"
@@ -230,11 +229,11 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
         value={this.state.searchQuery}
       />
     );
-      console.log(this.state.datasets);
+
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
-        <Content style={{ padding: 50, minWidth: 900, maxWidth: 1500, margin: "auto" }}>
+        <Content className="centered-content">
           <div className="pull-right">{this.state.datasets.length > 0 && search}</div>
           <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
@@ -252,11 +251,10 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                   </p>
                 </React.Fragment>
               ) : (
-                /* <PublicationView
+                <PublicationView
                   datasets={this.state.datasets}
                   searchQuery={this.state.searchQuery}
-                /> */
-                <PublicationDetailsView datasets={this.state.datasets} publicationId="5c766bec6c01006c018c7459"/> 
+                />
               )}
             </div>
           </Spin>

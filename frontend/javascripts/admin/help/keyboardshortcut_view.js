@@ -22,6 +22,10 @@ const KeyboardShortcutView = () => {
       action: "Move",
     },
     {
+      keybinding: "Alt + Mouse Move",
+      action: "Move",
+    },
+    {
       keybinding: "I, O, or Alt + Mousewheel",
       action: "Zoom In/out",
     },
@@ -210,6 +214,10 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "Ctrl + Right Mouse Drag",
       action: "Remove Voxels From Any Cell",
+    },
+    {
+      keybinding: "Alt + Mouse Move",
+      action: "Move",
     },
     {
       keybinding: "C",

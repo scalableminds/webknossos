@@ -62,7 +62,7 @@ import mainThreadPredict from "oxalis/workers/tensorflow.impl";
 import ThreeDMap from "libs/ThreeDMap";
 
 // Will remove model validation, NaN checks, and other correctness checks in favor of performance
-// tf.enableProdMode();
+if (process.env.NODE_ENV === "production") tf.enableProdMode();
 
 const workerPredict = createWorker(TensorFlowWorker);
 
@@ -298,8 +298,12 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   Toast.info(toastDescription, toastConfig);
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
-  // TODO: Which color layer to pick?
   const colorLayer = colorLayers[0];
+  if (colorLayers.length > 1) {
+    Toast.warning(
+      `There are multiple color layers. Using ${colorLayer.name} for automatic segmentation.`,
+    );
+  }
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,

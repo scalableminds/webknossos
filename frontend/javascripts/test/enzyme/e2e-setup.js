@@ -50,51 +50,51 @@ export function replaceVolatileValues(obj: ?Object) {
   return newObj;
 }
 
-// global.fetch = function fetchWrapper(url, options) {
-//   let newUrl = url;
-//   if (url.indexOf("http:") === -1) {
-//     newUrl = `http://localhost:9000${url}`;
-//   }
-//   options.headers.set("X-Auth-Token", currToken);
-//   const promise = fetch(newUrl, options);
-//   requests.push(promise);
-//   console.log("Fetching", newUrl);
-//   return promise;
-// };
-// global.Headers = Headers;
-// global.Request = Request;
-// global.Response = Response;
-// global.FetchError = FetchError;
+global.fetch = function fetchWrapper(url, options) {
+  let newUrl = url;
+  if (url.indexOf("http:") === -1) {
+    newUrl = `http://localhost:9000${url}`;
+  }
+  options.headers.set("X-Auth-Token", currToken);
+  const promise = fetch(newUrl, options);
+  requests.push(promise);
+  console.log("Fetching", newUrl);
+  return promise;
+};
+global.Headers = Headers;
+global.Request = Request;
+global.Response = Response;
+global.FetchError = FetchError;
 
-// const { JSDOM } = require("jsdom");
+const { JSDOM } = require("jsdom");
 
-// // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
-// const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
-//   pretendToBeVisual: true,
-//   url: "http://example.org/",
-// });
-// const { window } = jsdom;
+// set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
+const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
+  pretendToBeVisual: true,
+  url: "http://example.org/",
+});
+const { window } = jsdom;
 
-// function copyProps(src, target) {
-//   const props = {};
-//   Object.getOwnPropertyNames(src)
-//     .filter(prop => typeof target[prop] === "undefined")
-//     .forEach(prop => {
-//       props[prop] = Object.getOwnPropertyDescriptor(src, prop);
-//     });
-//   Object.defineProperties(target, props);
-// }
+function copyProps(src, target) {
+  const props = {};
+  Object.getOwnPropertyNames(src)
+    .filter(prop => typeof target[prop] === "undefined")
+    .forEach(prop => {
+      props[prop] = Object.getOwnPropertyDescriptor(src, prop);
+    });
+  Object.defineProperties(target, props);
+}
 
-// global.window = window;
-// global.document = window.document;
-// global.localStorage = {
-//   getItem: () => undefined,
-//   setItem: () => undefined,
-// };
-// global.navigator = {
-//   userAgent: "node.js",
-// };
-// copyProps(window, global);
+global.window = window;
+global.document = window.document;
+global.localStorage = {
+  getItem: () => undefined,
+  setItem: () => undefined,
+};
+global.navigator = {
+  userAgent: "node.js",
+};
+copyProps(window, global);
 
 export async function writeFlowCheckingFile(
   object: Array<any> | Object,

@@ -26,7 +26,7 @@ import {
   deleteEdge,
   deleteNode,
   deleteTree,
-  toggleTree,
+  updateTreeVisibility,
   updateNode,
   updateSkeletonTracing,
   updateTree,
@@ -297,7 +297,7 @@ export function* diffTrees(
         yield updateTree(tree);
       }
       if (prevTree.isVisible !== tree.isVisible) {
-        yield toggleTree(tree);
+        yield updateTreeVisibility(tree);
       }
     }
   }
@@ -305,7 +305,12 @@ export function* diffTrees(
 
 const diffTreeCache = {};
 
-export function cachedDiffTrees(prevTrees: TreeMap, trees: TreeMap): Array<UpdateAction> {
+export function cachedDiffTrees(
+  prevSkeletonTracing: SkeletonTracing,
+  skeletonTracing: SkeletonTracing,
+): Array<UpdateAction> {
+  const { trees } = skeletonTracing;
+  const prevTrees = prevSkeletonTracing.trees;
   // Try to use the cached version of the diff if available to increase performance
   if (prevTrees !== diffTreeCache.prevTrees || trees !== diffTreeCache.trees) {
     diffTreeCache.prevTrees = prevTrees;
@@ -322,7 +327,7 @@ export function* diffSkeletonTracing(
   flycam: Flycam,
 ): Generator<UpdateAction, void, void> {
   if (prevSkeletonTracing !== skeletonTracing) {
-    yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    yield* cachedDiffTrees(prevSkeletonTracing, skeletonTracing);
     if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
       yield updateTreeGroups(skeletonTracing.treeGroups);
     }

@@ -274,7 +274,7 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
+    const diff = cachedDiffTrees(this.prevTracing, skeletonTracing);
 
     for (const update of diff) {
       switch (update.name) {
@@ -312,8 +312,8 @@ class Skeleton {
         case "createTree":
           this.updateTreeColor(update.value.id, update.value.color);
           break;
-        case "toggleTree": {
-          const treeId = update.value.id;
+        case "updateTreeVisibility": {
+          const { treeId } = update.value;
           const tree = skeletonTracing.trees[treeId];
           this.updateTreeColor(treeId, tree.color, tree.isVisible);
           break;
@@ -355,7 +355,7 @@ class Skeleton {
           // Unused for now
           break;
         default:
-          throw new Error("[Skeleton] Unhandled skeletontracing diff action");
+          throw new Error(`[Skeleton] Unhandled skeletontracing diff action: ${update.name}`);
       }
     }
 
@@ -441,7 +441,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target);
     }
 
-    this.updateTreeColor(tree.treeId, tree.color);
+    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible);
   }
 
   /**

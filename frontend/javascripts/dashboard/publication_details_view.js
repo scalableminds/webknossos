@@ -44,18 +44,15 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
 
   render() {
     const { isLoading, datasets } = this.state;
-    const activeDatasets: Array<APIDataset> = ((datasets.filter(
-      ds => ds.isActive,
+    const datasetsOfPublication = ((datasets.filter(
+      ds => ds.isActive && ds.publication != null && ds.publication.id === this.props.publicationId,
     ): any): Array<APIDataset>);
-    const theChosenDatasets = activeDatasets.filter(
-      ds => ds.publication != null && ds.publication.id === this.props.publicationId,
-    );
     return (
       <Layout>
         <SimpleHeader />
         <Content className="centered-content">
           <Spin size="large" spinning={isLoading}>
-            {theChosenDatasets.length > 0 ? (
+            {datasetsOfPublication.length > 0 ? (
               <React.Fragment>
                 <Link to="/">
                   <Tooltip title="Back to the frontpage.">
@@ -65,15 +62,15 @@ class PublicationDetailView extends React.PureComponent<Props, State> {
                     />
                   </Tooltip>
                 </Link>
-                Back
+                <div style={{ display: "inline-block", verticalAlign: "top" }}>Back</div>
                 <PublicationCard
                   className="dataset-panel"
-                  datasets={theChosenDatasets}
+                  datasets={datasetsOfPublication}
                   showDetailedLink={false}
                 />
               </React.Fragment>
             ) : null}
-            {!isLoading && theChosenDatasets.length === 0 ? (
+            {!isLoading && datasetsOfPublication.length === 0 ? (
               <p style={{ textAlign: "center" }}>There are not datasets for this publication.</p>
             ) : null}
           </Spin>

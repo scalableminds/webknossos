@@ -115,7 +115,10 @@ function isCommonAncestorToggler(skeletonTracing: SkeletonTracing, commonAncesto
   const allTreesOfAncestor: Array<Tree> =
     groupWithSubgroups.length === 0
       ? _.values(skeletonTracing.trees)
-      : _.flatMap(groupWithSubgroups, (groupId: number): Array<Tree> => groupToTreesMap[groupId]);
+      : _.flatMap(
+          groupWithSubgroups,
+          (groupId: number): Array<Tree> => groupToTreesMap[groupId] || [],
+        );
 
   const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, tree => tree.isVisible);
   const affectedTreeCount = allTreesOfAncestor.length;

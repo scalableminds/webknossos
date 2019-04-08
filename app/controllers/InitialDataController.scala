@@ -16,7 +16,7 @@ import net.liftweb.common.Full
 import org.joda.time.DateTime
 import oxalis.security._
 import play.api.i18n.MessagesApi
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNull, Json}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
@@ -74,6 +74,7 @@ Samplecountry
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
+    JsNull,
     userService.createLoginInfo(defaultUserEmail),
     userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,

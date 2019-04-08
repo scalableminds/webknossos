@@ -25,6 +25,7 @@ case class User(
     lastName: String,
     lastActivity: Long = System.currentTimeMillis(),
     userConfiguration: JsValue,
+    layoutConfiguration: JsValue,
     loginInfo: LoginInfo,
     passwordInfo: PasswordInfo,
     isAdmin: Boolean,
@@ -70,6 +71,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.lastname,
         r.lastactivity.getTime,
         Json.parse(r.userconfiguration),
+        Json.parse(r.layoutconfiguration),
         LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
         r.isadmin,
@@ -145,12 +147,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
+        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, layoutConfiguration, loginInfo_providerID,
                                             loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isSuperUser, created, isDeleted)
                                             values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
           u.lastActivity)},
                                                    '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(
-          u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+          u.layoutConfiguration.toString)}','#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                                                    '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isSuperUser},
                                                    ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
@@ -174,6 +176,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- assertUpdateAccess(userId)
       _ <- run(sqlu"""update webknossos.users
                set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'
+               where _id = ${userId}""")
+    } yield ()
+
+  def updateLayoutConfiguration(userId: ObjectId, layoutConfiguration: JsValue)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(sqlu"""update webknossos.users
+               set layoutConfiguration = '#${sanitize(layoutConfiguration.toString)}'
                where _id = ${userId}""")
     } yield ()
 

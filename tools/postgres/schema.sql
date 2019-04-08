@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(42);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(43);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -262,6 +262,7 @@ CREATE TABLE webknossos.users(
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
+  layoutConfiguration JSONB NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',

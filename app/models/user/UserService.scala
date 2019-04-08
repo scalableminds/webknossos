@@ -81,6 +81,7 @@ class UserService @Inject()(conf: WkConf,
         lastName,
         System.currentTimeMillis(),
         Json.toJson(UserConfiguration.default),
+        JsNull,
         loginInfo,
         passwordInfo,
         isAdmin,
@@ -135,6 +136,12 @@ class UserService @Inject()(conf: WkConf,
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
+      userCache.invalidateUser(user._id)
+      result
+    }
+
+  def updateLayoutConfiguration(user: User, configuration: JsValue)(implicit ctx: DBAccessContext) =
+    userDAO.updateLayoutConfiguration(user._id, configuration).map { result =>
       userCache.invalidateUser(user._id)
       result
     }

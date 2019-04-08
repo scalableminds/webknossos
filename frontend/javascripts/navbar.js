@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Badge, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Icon, Layout, Menu, Popover } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -249,10 +249,9 @@ function AnonymousAvatar() {
       placement="bottomRight"
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
+      style={{ position: "fixed" }}
     >
-      <Badge dot>
-        <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
-      </Badge>
+      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
     </Popover>
   );
 }

@@ -3,7 +3,8 @@
 import _ from "lodash";
 import update from "immutability-helper";
 
-import { type Node, defaultState } from "oxalis/store";
+import { type Node } from "oxalis/store";
+import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import mock from "mock-require";

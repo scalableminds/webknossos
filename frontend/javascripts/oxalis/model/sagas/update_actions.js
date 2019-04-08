@@ -25,6 +25,7 @@ export type UpdateTreeUpdateAction = {|
     branchPoints: Array<BranchPoint>,
     groupId: ?number,
     timestamp: number,
+    isVisible: boolean,
   |},
 |};
 export type DeleteTreeUpdateAction = {|
@@ -54,10 +55,18 @@ type UpdateNodeUpdateAction = {|
   name: "updateNode",
   value: NodeWithTreeId,
 |};
-type ToggleTreeUpdateAction = {|
-  name: "toggleTree",
+export type UpdateTreeVisibilityUpdateAction = {|
+  name: "updateTreeVisibility",
   value: {|
-    id: number,
+    treeId: number,
+    isVisible: boolean,
+  |},
+|};
+type UpdateTreeGroupVisibilityUpdateAction = {|
+  name: "updateTreeGroupVisibility",
+  value: {|
+    treeGroupId: ?number,
+    isVisible: boolean,
   |},
 |};
 export type DeleteNodeUpdateAction = {|
@@ -136,7 +145,8 @@ export type UpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
   | UpdateBucketUpdateAction
-  | ToggleTreeUpdateAction
+  | UpdateTreeVisibilityUpdateAction
+  | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction;
 
@@ -169,7 +179,8 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateSkeletonTracingUpdateAction>
   | AsServerAction<UpdateVolumeTracingUpdateAction>
   | AsServerAction<UpdateBucketUpdateAction>
-  | AsServerAction<ToggleTreeUpdateAction>
+  | AsServerAction<UpdateTreeVisibilityUpdateAction>
+  | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
   | AsServerAction<CreateTracingUpdateAction>;
@@ -186,6 +197,7 @@ export function createTree(tree: Tree): UpdateTreeUpdateAction {
       comments: tree.comments,
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
+      isVisible: tree.isVisible,
     },
   };
 }
@@ -209,14 +221,29 @@ export function updateTree(tree: Tree): UpdateTreeUpdateAction {
       comments: tree.comments,
       branchPoints: tree.branchPoints,
       groupId: tree.groupId,
+      isVisible: tree.isVisible,
     },
   };
 }
-export function toggleTree(tree: Tree): ToggleTreeUpdateAction {
+export function updateTreeVisibility(tree: Tree): UpdateTreeVisibilityUpdateAction {
+  const { treeId, isVisible } = tree;
   return {
-    name: "toggleTree",
+    name: "updateTreeVisibility",
     value: {
-      id: tree.treeId,
+      treeId,
+      isVisible,
+    },
+  };
+}
+export function updateTreeGroupVisibility(
+  groupId: ?number,
+  isVisible: boolean,
+): UpdateTreeGroupVisibilityUpdateAction {
+  return {
+    name: "updateTreeGroupVisibility",
+    value: {
+      treeGroupId: groupId,
+      isVisible,
     },
   };
 }

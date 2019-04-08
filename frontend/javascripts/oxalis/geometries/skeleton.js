@@ -359,12 +359,14 @@ class Skeleton {
       }
     }
 
-    // compute bounding sphere to make ThreeJS happy
-    for (const nodes of this.nodes.buffers) {
-      nodes.geometry.computeBoundingSphere();
-    }
-    for (const edges of this.edges.buffers) {
-      edges.geometry.computeBoundingSphere();
+    if (diff.length > 0) {
+      // compute bounding sphere to make ThreeJS happy
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.computeBoundingSphere();
+      }
+      for (const edges of this.edges.buffers) {
+        edges.geometry.computeBoundingSphere();
+      }
     }
 
     // Uniforms

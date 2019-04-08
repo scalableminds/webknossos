@@ -117,6 +117,25 @@ export function callDeep(
   });
 }
 
+export function callDeepWithChildren(
+  groups: Array<TreeGroup>,
+  groupId: number,
+  callback: (TreeGroup, number, Array<TreeGroup>, ?number) => void,
+  parentGroupId: ?number = MISSING_GROUP_ID,
+  isWithinTargetGroup: boolean = false,
+) {
+  // Deeply traverse the group hierarchy and execute the callback function when the treeNode with id groupId is found
+  groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
+    const shouldVisit = isWithinTargetGroup || group.groupId === groupId;
+    if (shouldVisit) {
+      callback(group, index, array, parentGroupId);
+    }
+    if (group.children) {
+      callDeepWithChildren(group.children, groupId, callback, group.groupId, shouldVisit);
+    }
+  });
+}
+
 export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup {
   let foundGroup = null;
   callDeep(groups, groupId, group => {
@@ -127,4 +146,15 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup
 
 export function createGroupToTreesMap(trees: TreeMap): { [number]: Array<Tree> } {
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
+}
+
+export function getGroupByIdWithSubgroups(
+  treeGroups: Array<TreeGroup>,
+  groupId: number,
+): Array<number> {
+  const groupWithSubgroups = [];
+  callDeepWithChildren(treeGroups, groupId, treeGroup => {
+    groupWithSubgroups.push(treeGroup.groupId);
+  });
+  return groupWithSubgroups;
 }

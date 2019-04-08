@@ -84,7 +84,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
   ): Array<PullQueueItem> {
-    const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
+    const zoomStep = Math.min(currentZoomStep, cube.MAX_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
@@ -100,7 +100,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     );
 
     let queueItemsForFallbackZoomStep = [];
-    const fallbackZoomStep = Math.min(cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
+    const fallbackZoomStep = Math.min(cube.MAX_ZOOM_STEP, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
       queueItemsForFallbackZoomStep = this.prefetchImpl(
         cube,

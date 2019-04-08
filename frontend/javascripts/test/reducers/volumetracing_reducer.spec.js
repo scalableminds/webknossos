@@ -9,9 +9,9 @@ import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_action
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
+import defaultState from "oxalis/default_state";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",

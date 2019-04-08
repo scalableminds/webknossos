@@ -159,12 +159,6 @@ const Constants = {
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
 
-  // !Currently disabled!
-  // We always add another (read: one) zoomstep level by downsampling buckets from the highest
-  // available zoomstep. This allows to zoom out far enough while still being able to load enough
-  // buckets to the GPU.
-  DOWNSAMPLED_ZOOM_STEP_COUNT: 0,
-
   RESIZE_THROTTLE_TIME: 250,
 
   MIN_TREE_ID: 1,

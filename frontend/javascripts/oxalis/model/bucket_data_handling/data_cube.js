@@ -48,7 +48,6 @@ class DataCube {
   bucketCount: number = 0;
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
-  MAX_UNSAMPLED_ZOOM_STEP: number;
   BYTE_OFFSET: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
@@ -84,11 +83,8 @@ class DataCube {
     this.upperBoundary = upperBoundary;
     this.isSegmentation = isSegmentation;
 
-    this.MAX_UNSAMPLED_ZOOM_STEP = resolutionsLength - 1;
+    this.ZOOM_STEP_COUNT = resolutionsLength;
 
-    // Always add another layer of downsampled buckets, so that we support
-    // zooming out to maxZoomStep + 1
-    this.ZOOM_STEP_COUNT = resolutionsLength + constants.DOWNSAMPLED_ZOOM_STEP_COUNT;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
 
     this.BIT_DEPTH = bitDepth;

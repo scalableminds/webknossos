@@ -239,7 +239,7 @@ export default class LayerRenderingManager {
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
-            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_ZOOM_STEP)
             .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
 
           this.pullQueue.addAll(missingBuckets);

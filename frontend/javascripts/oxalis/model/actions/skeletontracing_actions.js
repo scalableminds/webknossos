@@ -166,6 +166,10 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
+  "TOGGLE_TREE",
+  "TOGGLE_TREE_GROUP",
+  "TOGGLE_ALL_TREES",
+  "TOGGLE_INACTIVE_TREES",
 ];
 
 const noAction = (): NoAction => ({

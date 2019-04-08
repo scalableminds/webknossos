@@ -6,7 +6,6 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import org.scalatest.FlatSpec
 
-
 class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
 
   def applyUpdateAction(action: UpdateAction.SkeletonUpdateAction) =
@@ -18,7 +17,6 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       return false
     return joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
   }
-
 
   "CreateTreeSkeletonAction" should "add the specified tree" in {
     val createTreeAction = new CreateTreeSkeletonAction(
@@ -47,7 +45,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
     assert(result.trees.length == Dummies.tracing.trees.length - 1)
     result.trees.find(_.treeId == deleteTreeAction.id) match {
       case Some(_) => throw new Exception
-      case None =>
+      case None    =>
     }
   }
 
@@ -77,7 +75,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
     val targetTree = Dummies.tree2
     val result = applyUpdateAction(mergeTreeAction)
 
-    assert(result.trees.length == Dummies.tracing.trees.length-1)
+    assert(result.trees.length == Dummies.tracing.trees.length - 1)
     val tree = result.trees.find(_.treeId == 2).get
     assert(tree.name == targetTree.name)
     assert(tree.color == targetTree.color)
@@ -90,7 +88,8 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
   }
 
   "MoveTreeComponentSkeletonAction" should "move the specified (seperate) nodes" in {
-    val moveTreeComponentSkeletonAction = new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList, sourceId = 3, targetId = 4)
+    val moveTreeComponentSkeletonAction =
+      new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList, sourceId = 3, targetId = 4)
     val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentTracing)
 
     assert(result.trees.length == Dummies.componentTracing.trees.length)
@@ -129,7 +128,10 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       newNode.id,
       Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
       Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.radius),
+      Option(newNode.viewport),
+      Option(newNode.resolution),
+      Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
       Dummies.timestamp
@@ -148,7 +150,10 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       newNode.id,
       Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
       Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.radius),
+      Option(newNode.viewport),
+      Option(newNode.resolution),
+      Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
       Dummies.timestamp
@@ -167,7 +172,10 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       newNode.id,
       Point3D(newNode.position.x, newNode.position.y, newNode.position.z),
       Option(Vector3D(newNode.rotation.x, newNode.rotation.y, newNode.rotation.z)),
-      Option(newNode.radius), Option(newNode.viewport), Option(newNode.resolution), Option(newNode.bitDepth),
+      Option(newNode.radius),
+      Option(newNode.viewport),
+      Option(newNode.resolution),
+      Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
       Dummies.timestamp

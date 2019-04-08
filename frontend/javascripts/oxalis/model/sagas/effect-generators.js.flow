@@ -17,6 +17,7 @@ import {
   takeEvery as typedTakeEvery,
   throttle as typedThrottle,
   cancel as typedCancel,
+  debounce as typedDebounce,
 } from 'redux-saga/effects';
 
 import type { Action } from "oxalis/model/actions/actions";
@@ -172,4 +173,5 @@ declare export var _call : typeof typedCall;
 declare export var _takeEvery : typeof typedTakeEvery;
 declare export var _throttle : typeof typedThrottle;
 declare export var _cancel : typeof typedCancel;
+declare export var _debounce : typeof typedDebounce;
 export type Saga<T> = _Saga<T>;

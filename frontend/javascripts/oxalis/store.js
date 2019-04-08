@@ -376,7 +376,7 @@ export type ViewModeData = {
 type UiInformation = {
   +showDropzoneModal: boolean,
   +showVersionRestore: boolean,
-  +storedLayouts: Object,
+  +storedLayouts: ?Object,
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
@@ -578,7 +578,7 @@ export const defaultState: OxalisState = {
   uiInformation: {
     showDropzoneModal: false,
     showVersionRestore: false,
-    storedLayouts: {},
+    storedLayouts: null,
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,

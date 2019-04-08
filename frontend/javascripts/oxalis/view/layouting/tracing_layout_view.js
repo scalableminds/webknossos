@@ -12,12 +12,15 @@ import * as React from "react";
 import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { getCurrentDefaultLayoutConfig } from "oxalis/view/layouting/default_layout_configs";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import ButtonComponent from "oxalis/view/components/button_component";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
+import CrossOriginApi from "oxalis/api/cross_origin_api";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+import ErrorHandling from "libs/error_handling";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import MeshesView from "oxalis/view/right-menu/meshes_view";
@@ -32,8 +35,6 @@ import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view"
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import window, { document, location } from "libs/window";
-import ErrorHandling from "libs/error_handling";
-import CrossOriginApi from "oxalis/api/cross_origin_api";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -95,7 +96,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     ) {
       lastActiveLayout = props.storedLayouts.LastActiveLayouts[layoutType];
     } else {
-      // added as a valide fallback when there are no stored last active layouts
+      // added as a valid fallback when there are no stored last active layouts
       const firstStoredLayout = Object.keys(props.storedLayouts[layoutType])[0];
       lastActiveLayout = firstStoredLayout;
     }
@@ -312,7 +313,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,
-    storedLayouts: state.uiInformation.storedLayouts,
+    storedLayouts: state.uiInformation.storedLayouts || getCurrentDefaultLayoutConfig(),
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
   };
 }

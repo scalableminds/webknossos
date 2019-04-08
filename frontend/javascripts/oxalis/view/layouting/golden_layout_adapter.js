@@ -84,6 +84,11 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     ) {
       this.rebuildLayout();
     }
+
+    setTimeout(() => {
+      console.log("rebuilding layout");
+      this.rebuildLayout();
+    }, 10000);
   }
 
   componentWillUnmount() {

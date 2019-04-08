@@ -975,6 +975,18 @@ export function updateUserConfiguration(userConfiguration: Object): Object {
   });
 }
 
+export function getLayoutConfiguration(): ?Object {
+  console.log("Request", Request, Request.receiveJSON);
+  return Request.receiveJSON("/api/user/layoutConfiguration");
+}
+
+export function updateLayoutConfiguration(layoutConfiguration: Object): Object {
+  return Request.sendJSONReceiveJSON("/api/user/layoutConfiguration", {
+    method: "PUT",
+    data: layoutConfiguration,
+  });
+}
+
 // ### TimeTracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,

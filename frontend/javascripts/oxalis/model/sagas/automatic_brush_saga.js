@@ -144,7 +144,7 @@ export default function* inferSegmentInViewport(
       `There are multiple color layers. Using ${colorLayerName} for automatic segmentation.`,
     );
   }
-  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+  let [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,
   );
@@ -165,14 +165,17 @@ export default function* inferSegmentInViewport(
   console.log("useWebworker", useWebworker);
   console.log("useGPU", useGPU);
 
-  function* currentPositionUpdater(): Saga<void> {
+  function* currentPositionAndViewportUpdater(): Saga<void> {
     while (true) {
       yield* take(FlycamActions);
-      const curPosition = Dimensions.transDim(
+      [curX, curY, curZ] = Dimensions.transDim(
         Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam))),
         activeViewport,
       );
-      [curX, curY, curZ] = curPosition;
+      [halfViewportExtentX, halfViewportExtentY] = yield* call(
+        getHalfViewportExtents,
+        activeViewport,
+      );
     }
   }
 
@@ -199,7 +202,11 @@ export default function* inferSegmentInViewport(
       // Do not make new predictions if the automatic brush has been aborted
       if (aborted) return false;
       console.time("predict");
-      Toast.info(`${toastDescription}\nLabeling slice ${z}.`, toastConfig);
+      const thirdDimension = Dimensions.thirdDimensionForPlane(activeViewport);
+      Toast.info(
+        `${toastDescription}\nLabeling ${["x", "y", "z"][thirdDimension]}=${z}.`,
+        toastConfig,
+      );
       predictions.set(
         [tileZ, tileY, tileX],
         await getPredictionForTile(tileX, tileY, tileZ, activeViewport, dataset, colorLayerName),
@@ -218,14 +225,14 @@ export default function* inferSegmentInViewport(
   const seedPrediction = yield* call(getter, ...seed);
   if (seedPrediction) {
     // Keep updating the current position
-    const positionUpdaterTask = yield* fork(currentPositionUpdater);
+    const updaterTask = yield* fork(currentPositionAndViewportUpdater);
 
     // Do not use _.partial in order to keep type information
     const onFlood = voxels => labelFloodedVoxels(predictions, activeViewport, activeCellId, voxels);
     // This call will block until the automatic brush is aborted or the floodfill is exhausted
     yield* call(floodfill, { getter, seed, onFlood });
 
-    yield _cancel(positionUpdaterTask);
+    yield _cancel(updaterTask);
   } else {
     Toast.warning("Click position is classified as border, please click inside a segment instead.");
   }

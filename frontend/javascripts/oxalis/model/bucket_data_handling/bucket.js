@@ -197,7 +197,7 @@ export class DataBucket {
     }
   }
 
-  pullFailed(isMissing: boolean): void {
+  markAsFailed(isMissing: boolean): void {
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;

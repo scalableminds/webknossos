@@ -1,7 +1,7 @@
 // @flow
 
 // Adapted from https://github.com/tuzz/n-dimensional-flood-fill
-// This floodfill is highly customized to work well for the magic wand feature.
+// This floodfill is highly customized to work well for the automatic brush feature.
 // It's a forward-only 3D floodfill that will first fill a whole 2d slice, then call onFlood
 // with the result, and then go on and fill the next 2d slice.
 

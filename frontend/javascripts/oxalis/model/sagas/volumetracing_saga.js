@@ -293,9 +293,9 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
       aborted = true;
     },
     sticky: true,
-    key: "magic-wand",
+    key: "automatic-brush",
   };
-  const toastDescription = "Magic Wand is active. Close the toast to stop using it.";
+  const toastDescription = "Automatic brush is active. Close the toast to stop using it.";
 
   Toast.info(toastDescription, toastConfig);
 
@@ -388,24 +388,29 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     const tileY = Math.floor(y / outputExtent);
     const tileZ = z;
 
-    if (predictions.get([tileX, tileY, tileZ]) == null) {
-      // Do not make new predictions if the magic wand has been aborted
+    if (predictions.get([tileZ, tileY, tileX]) == null) {
+      // Do not make new predictions if the automatic brush has been aborted
       if (aborted) return false;
       console.time("predict");
       Toast.info(`${toastDescription}\nLabeling slice ${z}.`, toastConfig);
-      predictions.set([tileX, tileY, tileZ], await getPredictionForTile(tileX, tileY, tileZ));
+      predictions.set([tileZ, tileY, tileX], await getPredictionForTile(tileX, tileY, tileZ));
       console.timeEnd("predict");
     }
 
     const relX = x % outputExtent;
     const relY = y % outputExtent;
-    const prediction = predictions.get([tileX, tileY, tileZ]);
+    const prediction = predictions.get([tileZ, tileY, tileX]);
     if (prediction != null) return prediction[relX * outputExtent + relY] > FLOODFILL_THRESHOLD;
     throw new Error("This should never happen, prediction was set, but geting it failed.");
   };
 
   const onFlood = async (floodedVoxels: Array<Vector3>) => {
     console.time("label");
+    if (floodedVoxels.length > 0) {
+      // Clean up - If the whole z slice has been flooded, the prediction is no longer needed
+      const [, , tileZ] = floodedVoxels[0];
+      predictions.delete(tileZ);
+    }
     const voxelAddresses = floodedVoxels.map(addressUVW =>
       Dimensions.transDim(addressUVW, activeViewport),
     );

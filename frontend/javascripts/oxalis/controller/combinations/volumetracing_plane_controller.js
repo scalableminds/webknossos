@@ -38,7 +38,7 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
 // TODO later remove me
-window.isMagicWandToolEnabled = true;
+window.isAutomaticBrushEnabled = true;
 
 // eslint-disable-next-line no-unused-vars
 const simulateTracing = async (): Promise<void> => {
@@ -95,7 +95,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
-          if (window.isMagicWandToolEnabled) {
+          if (window.isAutomaticBrushEnabled) {
             return;
           }
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW));
@@ -169,7 +169,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
           Store.dispatch(setActiveCellAction(cellId));
         }
       } else if (event.ctrlKey) {
-        if (window.isMagicWandToolEnabled) {
+        if (window.isAutomaticBrushEnabled) {
           Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }
       }

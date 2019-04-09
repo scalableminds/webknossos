@@ -27,6 +27,7 @@ class DataLayer {
   activeMapping: ?string;
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
+  fallbackLayer: ?string;
 
   constructor(
     layerInfo: DataLayerType,
@@ -36,6 +37,7 @@ class DataLayer {
   ) {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
+    this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();

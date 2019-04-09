@@ -1130,7 +1130,7 @@ export function computeIsosurface(
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.name
+        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
       }/isosurface?token=${token}`,
       {
         data: {

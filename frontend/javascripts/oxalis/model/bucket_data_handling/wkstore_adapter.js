@@ -81,13 +81,12 @@ export async function requestWithFallback(
   const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch).catch(() =>
-    // TODO: This catch prevents that the catch clause of pullqueue.pullBatch is ever called
-    // This is likely the cause of buckets not being pulled again if their first request failed.
-    batch.map(() => null),
-  );
+  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch);
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
+  // The request will only be retried for
+  // volume annotations with a fallback layer, for buckets that are missing
+  // on the tracing store (buckets that were not annotated)
   const retry =
     !shouldUseDataStore &&
     missingBucketIndices.length > 0 &&

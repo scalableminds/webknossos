@@ -90,7 +90,7 @@ function getNeighborPosition(
 // for datasets is limited in volume tracings etc.), we use another state
 // variable for the "active cell" in view mode. The cell can be changed via
 // shift+click (similar to the volume tracing mode).
-let currentIsosurfaceCellId = 0;
+let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
@@ -98,22 +98,34 @@ const batchCounterPerSegment: { [key: number]: number } = {};
 const MAXIMUM_BATCH_SIZE = 30;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
-  currentIsosurfaceCellId = action.cellId;
+  currentViewIsosurfaceCellId = action.cellId;
 
   yield* call(ensureSuitableIsosurface, null, action.seedPosition);
+}
+
+// This function either returns the activeCellId of the current volume tracing
+// or the view-only active cell id
+function* getCurrentCellId(): Saga<number> {
+  const volumeTracing = yield* select(state => state.tracing.volume);
+  if (volumeTracing != null) {
+    return volumeTracing.activeCellId;
+  }
+
+  return currentViewIsosurfaceCellId;
 }
 
 function* ensureSuitableIsosurface(
   maybeFlycamAction: ?FlycamAction,
   seedPosition?: Vector3,
 ): Saga<void> {
-  const segmentId = currentIsosurfaceCellId;
+  const segmentId = yield* call(getCurrentCellId);
   if (segmentId === 0) {
     return;
   }
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
   const isControlModeSupported = yield* select(
-    state => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+    state =>
+      state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces,
   );
   if (!renderIsosurfaces || !isControlModeSupported) {
     return;
@@ -214,8 +226,9 @@ function* maybeLoadIsosurface(
 }
 
 function* downloadActiveIsosurfaceCell(): Saga<void> {
+  const currentId = yield* call(getCurrentCellId);
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometry(currentIsosurfaceCellId);
+  const geometry = sceneController.getIsosurfaceGeometry(currentId);
 
   const stl = exportToStl(geometry);
 
@@ -224,10 +237,10 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   isosurfaceMarker.forEach((marker, index) => {
     stl.setUint8(index, marker);
   });
-  stl.setUint32(cellIdIndex, currentIsosurfaceCellId, true);
+  stl.setUint32(cellIdIndex, currentId, true);
 
   const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `isosurface-${currentIsosurfaceCellId}.stl`);
+  yield* call(saveAs, blob, `isosurface-${currentId}.stl`);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -242,7 +255,10 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
+  yield _takeEvery(
+    ["CHANGE_ACTIVE_ISOSURFACE_CELL", "SET_ACTIVE_CELL"],
+    changeActiveIsosurfaceCell,
+  );
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
 }

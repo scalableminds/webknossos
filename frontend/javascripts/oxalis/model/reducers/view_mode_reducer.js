@@ -7,6 +7,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import type { OxalisState, PartialCameraData } from "oxalis/store";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
+import { zoomReducer } from "oxalis/model/reducers/flycam_reducer";
 
 function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -38,7 +39,8 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
       return moveTDViewByVectorReducer(state, action.x, action.y);
     }
     case "SET_INPUT_CATCHER_RECT": {
-      return setInputCatcherRect(state, action.viewport, action.rect);
+      const newState = setInputCatcherRect(state, action.viewport, action.rect);
+      return zoomReducer(newState, newState.flycam.zoomStep);
     }
     case "SET_INPUT_CATCHER_RECTS": {
       const { viewportRects } = action;
@@ -47,7 +49,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
         newState = setInputCatcherRect(newState, viewport, viewportRects[viewport]);
       }
 
-      return newState;
+      return zoomReducer(newState, newState.flycam.zoomStep);
     }
     default:
       return state;

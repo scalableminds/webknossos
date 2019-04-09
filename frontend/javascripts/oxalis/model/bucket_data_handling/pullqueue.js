@@ -106,7 +106,7 @@ class PullQueue {
           continue;
         }
         if (bucketBuffer == null && !renderMissingDataBlack) {
-          bucket.pullFailed(true);
+          bucket.markAsFailed(true);
         } else {
           const bucketData = bucketBuffer || new Uint8Array(bucket.BUCKET_LENGTH);
           this.handleBucket(layerInfo, bucketAddress, bucketData);
@@ -116,7 +116,7 @@ class PullQueue {
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
         if (bucket.type === "data") {
-          bucket.pullFailed(false);
+          bucket.markAsFailed(false);
           if (bucket.dirty) {
             this.add({
               bucket: bucketAddress,

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { type Saga, delay } from "redux-saga";
+import { type Saga } from "redux-saga";
 import Maybe from "data.maybe";
 
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -19,6 +19,7 @@ import { type UpdateAction } from "oxalis/model/sagas/update_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
+  _delay,
   take,
   _take,
   _call,
@@ -114,7 +115,7 @@ export function* pushTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
     yield* race({
-      timeout: _call(delay, PUSH_THROTTLE_TIME),
+      timeout: _delay(PUSH_THROTTLE_TIME),
       forcePush: _take("SAVE_NOW"),
     });
     yield* put(setSaveBusyAction(true, tracingType));
@@ -201,7 +202,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         return;
       }
       yield* race({
-        timeout: _call(delay, getRetryWaitTime(retryCount)),
+        timeout: _delay(getRetryWaitTime(retryCount)),
         forcePush: _take("SAVE_NOW"),
       });
       retryCount++;

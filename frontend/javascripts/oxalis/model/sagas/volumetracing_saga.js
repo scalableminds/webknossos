@@ -18,6 +18,7 @@ import {
   type Saga,
   _take,
   _takeEvery,
+  _takeLeading,
   call,
   fork,
   put,
@@ -70,7 +71,7 @@ const workerPredict = createWorker(TensorFlowWorker);
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
-  yield _takeEvery("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
+  yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
 

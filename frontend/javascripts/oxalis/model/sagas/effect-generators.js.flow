@@ -14,7 +14,9 @@ import {
   race as typedRace,
   take as typedTake,
   call as typedCall,
+  delay as typedDelay,
   takeEvery as typedTakeEvery,
+  takeLeading as typedTakeLeading,
   throttle as typedThrottle,
   cancel as typedCancel,
 } from 'redux-saga/effects';
@@ -143,7 +145,7 @@ declare type CallFn =
 
 declare type PutFn = {
   <T: Action>(action: T): Generator<*, void, *>;
-  <T: Action>(channel: Channel, action: T): Generator<*, void, *>;
+  <T: Action>(channel: Channel<T>, action: T): Generator<*, void, *>;
 }
 
 type ExtractReturnType = <R>((...args: any) => R) => R;
@@ -170,6 +172,8 @@ declare export var _all : typeof typedAll;
 declare export var _take : typeof typedTake;
 declare export var _call : typeof typedCall;
 declare export var _takeEvery : typeof typedTakeEvery;
+declare export var _takeLeading : typeof typedTakeLeading;
 declare export var _throttle : typeof typedThrottle;
 declare export var _cancel : typeof typedCancel;
+declare export var _delay : typeof typedDelay;
 export type Saga<T> = _Saga<T>;

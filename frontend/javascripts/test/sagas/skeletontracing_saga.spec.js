@@ -127,7 +127,7 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", t 
   saga.next();
   saga.next({ tracing: { trees: {} } });
   saga.next(initialState.flycam);
-  t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
+  t.is(saga.next(true).value.payload.action.type, "CREATE_TREE");
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {

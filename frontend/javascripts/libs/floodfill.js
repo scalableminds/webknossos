@@ -25,12 +25,10 @@ export default function(options: FloodfillOptions) {
   let flooded = [];
   const visits = {};
 
-  // $FlowFixMe Flow doesn't allow to use an array as the key
-  const visited = key => visits[key] === true;
+  const visited = key => visits[key.toString()] === true;
 
   const markAsVisited = key => {
-    // $FlowFixMe Flow doesn't allow to use an array as the key
-    visits[key] = true;
+    visits[key.toString()] = true;
   };
 
   const member = getArgs => getter(getArgs[0], getArgs[1], getArgs[2]);

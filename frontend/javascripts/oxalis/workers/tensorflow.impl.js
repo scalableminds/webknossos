@@ -6,6 +6,7 @@ export default async function predict(
   tf: Object,
   buffer: ArrayBuffer,
   inputExtent: number,
+  isXYflipped: boolean,
 ) {
   if (useGPU) {
     tf.setBackend("webgl");
@@ -21,7 +22,10 @@ export default async function predict(
   }
 
   let tensor = tf.tensor4d(tensorArray, [1, inputExtent, inputExtent, 1]);
-  tensor = tf.transpose(tensor, [0, 2, 1, 3]);
+  // The tensorflow model expects a flipped x/y-axis
+  if (!isXYflipped) {
+    tensor = tf.transpose(tensor, [0, 2, 1, 3]);
+  }
 
   const model = segmentationModel;
   const inferredTensor = model.predict(tensor);

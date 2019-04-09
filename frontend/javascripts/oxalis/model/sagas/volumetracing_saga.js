@@ -45,6 +45,7 @@ import {
   type Vector3,
   type ContourMode,
   ContourModeEnum,
+  OrthoViews,
   type OrthoView,
   type VolumeTool,
   VolumeToolEnum,
@@ -348,10 +349,12 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
     const tensorArray = new Float32Array(new Uint8Array(cuboidData)).map(
       el => (el - mean) / stdDev,
     );
+    // When interpreting the 3d data slice as a 2d slice, the x and y axis are flipped only on the YZ plane
+    const isXYflipped = activeViewport === OrthoViews.PLANE_YZ;
 
     return useWebworker
-      ? workerPredict(useGPU, tensorArray.buffer, inputExtent)
-      : mainThreadPredict(useGPU, tf, tensorArray.buffer, inputExtent);
+      ? workerPredict(useGPU, tensorArray.buffer, inputExtent, isXYflipped)
+      : mainThreadPredict(useGPU, tf, tensorArray.buffer, inputExtent, isXYflipped);
   };
 
   function* currentPositionUpdater(): Saga<void> {
@@ -414,11 +417,11 @@ function* inferSegmentInViewport(action: InferSegmentationInViewportAction): Sag
   const seed = clickPosition;
   const seedPrediction = yield* call(getter, ...seed);
   if (seedPrediction) {
-    // The floodfill will run until aborted
-    floodfill({ getter, seed, onFlood });
-
     // Keep updating the current position
-    yield* call(currentPositionUpdater);
+    yield* fork(currentPositionUpdater);
+
+    // The floodfill will run until aborted or exhausted
+    yield* call(floodfill, { getter, seed, onFlood });
   } else {
     Toast.warning("Click position is classified as border, please click inside a segment instead.");
   }

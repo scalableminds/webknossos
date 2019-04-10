@@ -38,7 +38,7 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
 // TODO: Build proper UI for this
-window.isAutomaticBrushEnabled = true;
+window.isAutomaticBrushEnabled = false;
 
 // eslint-disable-next-line no-unused-vars
 const simulateTracing = async (): Promise<void> => {

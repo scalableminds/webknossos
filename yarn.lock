@@ -7746,11 +7746,6 @@ mute-stream@0.0.7:
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.7.tgz#3075ce93bc21b8fab43e1bc4da7e8115ed1e7bab"
   integrity sha1-MHXOk7whuPq0PhvE2n6BFe0ee6s=
 
-n-dimensional-flood-fill@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/n-dimensional-flood-fill/-/n-dimensional-flood-fill-1.0.0.tgz#c1b99ed55901f9edcd50e86997ee355109b3601b"
-  integrity sha1-wbme1VkB+e3NUOhpl+41UQmzYBs=
-
 n-gram@^1.0.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/n-gram/-/n-gram-1.1.0.tgz#c07fb7d6d59aa42d10fbf680fc4c46a30766c1ee"

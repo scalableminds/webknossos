@@ -30,7 +30,6 @@ const outputExtent = 100;
 const inputContextExtent = 20;
 const inputExtent = outputExtent + 2 * inputContextExtent;
 const NUM_PREDICT_SLICES = 3;
-const FLOODFILL_THRESHOLD = 0.7;
 
 // Will remove model validation, NaN checks, and other correctness checks in favor of performance
 if (process.env.NODE_ENV === "production") tf.enableProdMode();
@@ -85,7 +84,10 @@ const getPredictionForTile = async (
   });
 
   const { mean, stdDev } = await meanAndStdDevFromDataset(dataset, colorLayerName);
-  const tensorArray = new Float32Array(new Uint8Array(cuboidData)).map(el => (el - mean) / stdDev);
+  const tensorArray = new Float32Array(new Uint8Array(cuboidData)).map(
+    // This is how the model was trained
+    el => ((el - mean) / stdDev) * (1 / 3) ** 0.5,
+  );
   // When interpreting the 3d data slice as a 2d slice, the x and y axis are flipped only on the YZ plane
   const isXYflipped = activeViewport === OrthoViews.PLANE_YZ;
   const { useWebworker, useGPU } = getUseWebworkerAndGPU();
@@ -124,6 +126,8 @@ export default function* inferSegmentInViewport(
 
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") return;
+
+  const FLOODFILL_THRESHOLD = window.floodfillThreshold || 0.6;
 
   let aborted = false;
   const toastConfig = {

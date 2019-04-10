@@ -43,6 +43,7 @@ object Dependencies {
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
   val redis = "net.debasishg" %% "redisclient" % "3.9"
+  val spire = "org.typelevel" %% "spire" % "0.14.1"
 
   val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -78,7 +79,8 @@ object Dependencies {
     playIterateesStreams,
     filters,
     ws,
-    guice
+    guice,
+    spire
   )
 
   val webknossosTracingstoreDependencies = Seq(

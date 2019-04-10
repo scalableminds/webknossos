@@ -99,6 +99,7 @@ services:
       - HOME=/root
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
+      - NODE_OPTIONS=--max_old_space_size=2048
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"

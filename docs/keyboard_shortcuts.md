@@ -38,6 +38,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
 | Left Mouse Drag or Arrow Keys | Move                                        |
+| Alt + Mouse Move              | Move                                        |
 | SPACE                         | Move Forward by a Single Slice              |
 | Scroll Mousewheel (3D View)   | Zoom In And Out                             |
 | Right Click Drag (3D View)    | Rotate 3D View                              |
@@ -78,6 +79,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode)    |
 | Right Mouse Drag                  | Remove Voxels From Current Cell                             |
 | CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
+| Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Cell                                             |
 | W, 1                              | Toggle Modes (Move / Trace / Brush)                         |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                              |

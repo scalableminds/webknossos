@@ -461,7 +461,9 @@ class PlaneController extends React.PureComponent<Props> {
     if (isBrushActive) {
       const currentBrushSize = Store.getState().userConfiguration.brushSize;
       const newBrushSize =
-        Math.min(Math.ceil(currentBrushSize * BRUSH_CHANGING_CONSTANT), MAX_BRUSH_CHANGE_VALUE) * factor + currentBrushSize;
+        Math.min(Math.ceil(currentBrushSize * BRUSH_CHANGING_CONSTANT), MAX_BRUSH_CHANGE_VALUE) *
+          factor +
+        currentBrushSize;
       Store.dispatch(updateUserSettingAction("brushSize", newBrushSize));
     }
   }

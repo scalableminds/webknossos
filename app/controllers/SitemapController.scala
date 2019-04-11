@@ -12,8 +12,8 @@ import scala.concurrent.ExecutionContext
 class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
-  def getSitemap() = sil.UserAwareAction { implicit request =>
-    val downloadStream = sitemapWriter.toSitemapStream()
+  def getSitemap(prefix: Option[String] = None) = sil.UserAwareAction { implicit request =>
+    val downloadStream = sitemapWriter.toSitemapStream(prefix)
 
     Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
       .as("application/xml")

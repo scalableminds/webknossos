@@ -120,6 +120,24 @@ td.nowrap * {
   }
 }
 
+.centered-content{
+  padding: 50px; 
+  min-width: 900px;
+  max-width: 1500px;
+  margin: auto; 
+}
+
+.container-with-hidden-icon{
+  .hidden-icon{
+    visibility:hidden;
+  }
+  &:hover{
+    .hidden-icon{
+      visibility: visible;
+    }
+  }
+}
+
 #spotlight-footnote {
   text-align: center;
   margin: 30px 0;

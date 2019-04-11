@@ -1,5 +1,5 @@
 import com.typesafe.scalalogging.LazyLogging
-import controllers.Assets
+import controllers.{Assets, SitemapController}
 import javax.inject.Inject
 import play.api.Environment
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
@@ -13,7 +13,8 @@ class RequestHandler @Inject()(router: Router,
                                filters: HttpFilters,
                                conf: WkConf,
                                assets: Assets,
-                               env: Environment)
+                               env: Environment,
+                               sitemapController: SitemapController)
     extends DefaultHttpRequestHandler(
       router,
       errorHandler,
@@ -29,10 +30,9 @@ class RequestHandler @Inject()(router: Router,
     } else if (request.uri.matches("^(/assets/).*$")) {
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
-    } else if(request.uri.matches("^sitemap\.xml$")) {
-
-    }
-    else {
+    } else if (request.uri.matches("""^/sitemap.xml$""")) {
+      Some(sitemapController.getSitemap())
+    } else {
       Some(Action { Ok(views.html.main(conf)) })
     }
 }

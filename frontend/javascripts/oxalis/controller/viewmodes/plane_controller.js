@@ -163,8 +163,12 @@ class PlaneController extends React.PureComponent<Props> {
         Store.dispatch(setViewportAction(planeId));
       },
       pinch: delta => this.zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2) => {
-        Store.dispatch(setMousePositionAction([position.x, position.y]));
+      mouseMove: (delta: Point2, position: Point2, id, event) => {
+        if (event.altKey) {
+          this.movePlane([-delta.x, -delta.y, 0]);
+        } else {
+          Store.dispatch(setMousePositionAction([position.x, position.y]));
+        }
       },
     };
     // TODO: Find a nicer way to express this, while satisfying flow

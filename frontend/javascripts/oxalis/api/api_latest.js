@@ -5,17 +5,21 @@
 
 import TWEEN from "tween.js";
 import _ from "lodash";
+import { V3 } from "libs/mjs";
 
 import {
+  type BoundingBoxType,
   type ControlMode,
   ControlModeEnum,
   OrthoViews,
   type Vector3,
+  type Vector4,
   type VolumeTool,
   VolumeToolEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
 import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
@@ -39,6 +43,10 @@ import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetra
 import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBaseBucket,
+} from "oxalis/model/helpers/position_converter";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -76,6 +84,7 @@ import Store, {
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
+import Request from "libs/request";
 import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
@@ -756,6 +765,8 @@ class DataApi {
 
     if (bucket.type === "null") return 0;
 
+    // todo: use new getBucket api here instead
+
     let needsToAwaitBucket = false;
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
@@ -771,6 +782,108 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return cube.getDataValue(position, null, zoomStep);
+  }
+
+  async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
+    const cube = this.model.getCubeByLayerName(layerName);
+    const pullQueue = this.model.getPullQueueByLayerName(layerName);
+    const bucket = cube.getOrCreateBucket(bucketAddress);
+
+    if (bucket.type === "null") return bucket;
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise(resolve => {
+        bucket.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
+    return bucket;
+  }
+
+  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {
+    const bucketAddresses = this.getBucketAddressesInCuboid(bbox);
+    const buckets = await Promise.all(
+      bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
+    );
+    return this.cutOutCuboid(buckets, bbox);
+  }
+
+  getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
+    const buckets = [];
+    const bottomRight = bbox.max;
+    const minBucket = globalPositionToBaseBucket(bbox.min);
+    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, [[1, 1, 1]]);
+    const nextBucketInDim = (bucket, dim) => {
+      const copy = bucket.slice();
+      copy[dim]++;
+      return ((copy: any): Vector4);
+    };
+
+    let bucket = minBucket;
+    while (topLeft(bucket)[0] < bottomRight[0]) {
+      const prevX = bucket.slice();
+      while (topLeft(bucket)[1] < bottomRight[1]) {
+        const prevY = bucket.slice();
+        while (topLeft(bucket)[2] < bottomRight[2]) {
+          buckets.push(bucket);
+          bucket = nextBucketInDim(bucket, 2);
+        }
+        bucket = nextBucketInDim(prevY, 1);
+      }
+
+      bucket = nextBucketInDim(prevX, 0);
+    }
+    return buckets;
+  }
+
+  cutOutCuboid(buckets: Array<Bucket>, bbox: BoundingBoxType): Uint8Array {
+    const extent = V3.sub(bbox.max, bbox.min);
+    const result = new Uint8Array(extent[0] * extent[1] * extent[2]);
+    const bucketLength = 32;
+    buckets.reverse();
+
+    for (const bucket of buckets) {
+      if (bucket.type === "null") {
+        continue;
+      }
+      const bucketTopLeft = bucketPositionToGlobalAddress(bucket.zoomedAddress, [[1, 1, 1]]);
+      const x = Math.max(bbox.min[0], bucketTopLeft[0]);
+      let y = Math.max(bbox.min[1], bucketTopLeft[1]);
+      let z = Math.max(bbox.min[2], bucketTopLeft[2]);
+
+      const xMax = Math.min(bucketTopLeft[0] + bucketLength, bbox.max[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketLength, bbox.max[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketLength, bbox.max[2]);
+
+      while (z < zMax) {
+        y = Math.max(bbox.min[1], bucketTopLeft[1]);
+        while (y < yMax) {
+          const dataOffset =
+            (x % bucketLength) +
+            (y % bucketLength) * bucketLength +
+            (z % bucketLength) * bucketLength * bucketLength;
+          const rx = x - bbox.min[0];
+          const ry = y - bbox.min[1];
+          const rz = z - bbox.min[2];
+
+          const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
+          const data = bucket.type !== "null" ? bucket.getData() : new Uint8Array(32 ** 3);
+          const length = xMax - x;
+          result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
+          y += 1;
+        }
+        z += 1;
+      }
+    }
+    return result;
   }
 
   /**
@@ -799,6 +912,28 @@ class DataApi {
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
+    });
+  }
+
+  getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+    const dataset = Store.getState().dataset;
+
+    return doWithToken(token => {
+      const downloadUrl =
+        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+          dataset.name
+        }/layers/${layerName}/data?resolution=0&` +
+        `token=${token}&` +
+        `x=${topLeft[0]}&` +
+        `y=${topLeft[1]}&` +
+        `z=${topLeft[2]}&` +
+        `width=${bottomRight[0] - topLeft[0]}&` +
+        `height=${bottomRight[1] - topLeft[1]}&` +
+        `depth=${bottomRight[2] - topLeft[2]}`;
+
+      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+
+      return Request.receiveArraybuffer(downloadUrl);
     });
   }
 

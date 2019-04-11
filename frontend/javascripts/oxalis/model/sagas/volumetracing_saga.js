@@ -1,7 +1,4 @@
-/**
- * volumetracing_saga.js
- * @flow
- */
+// @flow
 import _ from "lodash";
 
 import {
@@ -13,6 +10,7 @@ import {
   type Saga,
   _take,
   _takeEvery,
+  _takeLeading,
   call,
   fork,
   put,
@@ -27,11 +25,8 @@ import {
   enforceVolumeTracing,
   isVolumeTracingDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
-import { map2 } from "libs/utils";
-import Constants, {
+import {
   type BoundingBoxType,
   type ContourMode,
   ContourModeEnum,
@@ -44,10 +39,14 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import api from "oxalis/api/internal_api";
+import inferSegmentInViewport, {
+  getHalfViewportExtents,
+} from "oxalis/model/sagas/automatic_brush_saga";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
+  yield _takeLeading("INFER_SEGMENT_IN_VIEWPORT", inferSegmentInViewport);
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -131,24 +130,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
 function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-  const zoom = yield* select(state => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select(state =>
-    getBaseVoxelFactors(state.dataset.dataSource.scale),
-  );
-  const halfViewportExtentXY = yield* select(state => {
-    const extents = getViewportExtents(state)[currentViewport];
-    return map2(el => (el / 2) * zoom, extents);
-  });
-  const halfViewportExtentUVW = Dimensions.transDim([...halfViewportExtentXY, 0], currentViewport);
-
-  const halfViewportBounds = V3.ceil([
-    halfViewportExtentUVW[0] * baseVoxelFactors[0],
-    halfViewportExtentUVW[1] * baseVoxelFactors[1],
-    halfViewportExtentUVW[2] * baseVoxelFactors[2],
-  ]);
+  const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
+  const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   return {
-    min: V3.sub(position, halfViewportBounds),
-    max: V3.add(position, halfViewportBounds),
+    min: V3.sub(position, halfViewportExtentsUVW),
+    max: V3.add(position, halfViewportExtentsUVW),
   };
 }
 
@@ -195,12 +181,10 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-  const zoom = yield* select(state => state.flycam.zoomStep);
-  const baseVoxelFactors = yield* select(state =>
-    Dimensions.transDim(getBaseVoxelFactors(state.dataset.dataSource.scale), activeViewport),
+  const [halfViewportExtentX, halfViewportExtentY] = yield* call(
+    getHalfViewportExtents,
+    activeViewport,
   );
-  const halfViewportWidth = Math.round((Constants.VIEWPORT_WIDTH / 2) * zoom);
-  const [scaledOffsetX, scaledOffsetY] = baseVoxelFactors.map(f => halfViewportWidth * f);
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
 
@@ -225,8 +209,8 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
-  for (let x = tx - scaledOffsetX; x < tx + scaledOffsetX; x++) {
-    for (let y = ty - scaledOffsetY; y < ty + scaledOffsetY; y++) {
+  for (let x = tx - halfViewportExtentX; x < tx + halfViewportExtentX; x++) {
+    for (let y = ty - halfViewportExtentY; y < ty + halfViewportExtentY; y++) {
       copyVoxelLabel(
         Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
         Dimensions.transDim([x, y, z], activeViewport),

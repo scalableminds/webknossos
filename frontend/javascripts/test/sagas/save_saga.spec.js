@@ -22,6 +22,9 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
@@ -187,7 +190,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
 
   saga.throw({ status: 409 });
   const alertEffect = saga.next().value;
-  t.is(alertEffect.CALL.fn, alert);
+  t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);
 });
 

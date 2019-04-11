@@ -117,11 +117,18 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 }
 
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
-  return update(state, {
+  let newZoomStep = Utils.clamp(userSettings.zoom.minimum, zoomStep, getMaxZoomValue(state));
+  if (isNaN(newZoomStep)) {
+    newZoomStep = 1;
+  }
+
+  const newState = update(state, {
     flycam: {
-      zoomStep: { $set: Utils.clamp(userSettings.zoom.minimum, zoomStep, getMaxZoomValue(state)) },
+      zoomStep: { $set: newZoomStep },
     },
   });
+
+  return newState;
 }
 
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {

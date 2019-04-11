@@ -43,4 +43,10 @@ export default class ThreeDMap<T> {
       .get(y)
       .set(z, value);
   }
+
+  // This could be extended so the key is a Vector1 | Vector2
+  // if needed in the future
+  delete(key: number): boolean {
+    return this.map.delete(key);
+  }
 }

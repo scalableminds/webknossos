@@ -216,7 +216,8 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 
 export function getMaxZoomValue(state: OxalisState): number {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
-  return _.last(maximumZoomSteps);
+  const lastZoomStep = _.last(maximumZoomSteps);
+  return lastZoomStep != null ? lastZoomStep : 1;
 }
 
 export function getMaxZoomValueForResolution(

@@ -25,6 +25,9 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
 const { saveTracingTypeAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
@@ -124,7 +127,7 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", t 
   saga.next();
   saga.next({ tracing: { trees: {} } });
   saga.next(initialState.flycam);
-  t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
+  t.is(saga.next(true).value.payload.action.type, "CREATE_TREE");
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {

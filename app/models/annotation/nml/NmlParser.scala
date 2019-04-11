@@ -242,7 +242,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     (node \ "@groupId").text.toIntOpt
 
   private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Option[Tree] =
-    (tree \ "@id").text.toIntOpt.flatMap { id =>
+    (tree \ "@id").text.toIntOpt.map { id =>
       val color = parseColor(tree)
       val name = parseName(tree)
       val groupId = parseGroupId(tree)
@@ -254,7 +254,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
       val createdTimestamp =
         if (nodes.isEmpty) System.currentTimeMillis() else nodes.minBy(_.createdTimestamp).createdTimestamp
-      Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId))
+      Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId)
     }
 
   private def parseComments(comments: NodeSeq) =

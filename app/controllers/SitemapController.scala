@@ -15,6 +15,9 @@ class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[
   def getSitemap() = sil.UserAwareAction { implicit request =>
     val downloadStream = sitemapWriter.toSitemapStream()
 
-    Ok(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream))).as("application/xml")
+    Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(downloadStream)))
+      .as("application/xml")
+      .withHeaders(CONTENT_DISPOSITION ->
+        """sitemap.xml""")
   }
 }

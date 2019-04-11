@@ -39,11 +39,11 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
       .map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
-  def findPositionWithData(organizationName: String, dataLayerName: String) = {
-    rpc(s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
+  def findPositionWithData(organizationName: String, dataLayerName: String) =
+    rpc(
+      s"${dataStore.url}/data/datasets/${urlEncode(organizationName)}/${dataSet.urlEncodedName}/layers/$dataLayerName/findData")
       .addQueryString("token" -> DataStoreRpcClient.webKnossosToken)
       .getWithJsonResponse[JsObject]
-  }
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 

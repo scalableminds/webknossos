@@ -7,6 +7,7 @@ import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { clamp, map3, mod } from "libs/utils";
+import { getAddressSpaceDimensionsTable } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Dimensions from "oxalis/model/dimensions";
@@ -17,7 +18,6 @@ import constants, {
   OrthoViews,
   type Vector3,
   type ViewMode,
-  addressSpaceDimensions,
 } from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
@@ -33,6 +33,7 @@ function calculateTotalBucketCountForZoomLevel(
   zoomFactor: number,
   viewportRects: OrthoViewRects,
   abortLimit: number,
+  initializedGpuFactor: number,
 ) {
   let counter = 0;
   let minPerDim = [Infinity, Infinity, Infinity];
@@ -81,9 +82,11 @@ function calculateTotalBucketCountForZoomLevel(
       areas,
       subBucketLocality,
       abortLimit,
+      initializedGpuFactor,
     );
   }
 
+  const addressSpaceDimensions = getAddressSpaceDimensionsTable(initializedGpuFactor);
   const volumeDimension = V3.sub(maxPerDim, minPerDim);
   if (
     volumeDimension[0] > addressSpaceDimensions[0] ||
@@ -114,6 +117,7 @@ export function _getMaximumZoomForAllResolutions(
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
+  initializedGpuFactor: number,
 ): Array<number> {
   // maximumIterationCount is used as an upper limit to avoid an endless loop, in case
   // the following while loop causes havoc for some reason (e.g., because
@@ -148,6 +152,7 @@ export function _getMaximumZoomForAllResolutions(
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
+      initializedGpuFactor,
     );
     if (nextCapacity > maximumCapacity) {
       maxZoomValueThresholds.push(maxZoomValue);
@@ -170,7 +175,8 @@ function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<num
     state.dataset.dataSource.scale,
     getResolutions(state.dataset),
     getViewportRects(state),
-    state.temporaryConfiguration.smallestCommonBucketCapacity,
+    state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
+    state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
   );
 }
 

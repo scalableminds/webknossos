@@ -70,7 +70,7 @@ const defaultState: OxalisState = {
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
-    bucketsPerLayerOnGPU: Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -87,7 +87,11 @@ const defaultState: OxalisState = {
       mappingSize: 0,
     },
     isMergerModeEnabled: false,
-    smallestCommonBucketCapacity: Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    gpuSetup: {
+      smallestCommonBucketCapacity:
+        Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,
+      initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
+    },
   },
   task: null,
   dataset: {

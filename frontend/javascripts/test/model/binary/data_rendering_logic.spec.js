@@ -8,7 +8,9 @@ import {
 import test from "ava";
 import constants from "oxalis/constants";
 
-const { MINIMUM_REQUIRED_BUCKET_CAPACITY } = constants;
+const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
+
+const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 
 const minSpecs = {
   supportedTextureSize: 4096,
@@ -32,7 +34,7 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     grayscaleByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -42,7 +44,7 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     grayscaleByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -52,7 +54,7 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", t => 
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     grayscaleByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -62,7 +64,7 @@ test("calculateTextureSizeAndCountForLayer: color data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     volumeByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 3);
@@ -72,7 +74,7 @@ test("calculateTextureSizeAndCountForLayer: color data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     volumeByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -82,7 +84,7 @@ test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     volumeByteCount,
-    MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -107,7 +109,7 @@ function computeDataTexturesSetupCurried(spec, hasSegmentation): * {
       layers,
       getByteCount,
       hasSegmentation,
-      MINIMUM_REQUIRED_BUCKET_CAPACITY,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
     );
 }
 

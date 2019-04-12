@@ -25,6 +25,7 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
@@ -125,23 +126,17 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
               onChange={this.props.onChangeZoomStep}
             />
             <DropdownSetting
-              label={settingsLabels.bucketsPerLayerOnGPU}
+              label={settingsLabels.gpuMemoryFactor}
               value={(
-                this.props.userConfiguration.bucketsPerLayerOnGPU ||
-                Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY
+                this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
               ).toString()}
-              onChange={this.onChangeUser.bucketsPerLayerOnGPU}
+              onChange={this.onChangeUser.gpuMemoryFactor}
             >
-              <Option value={(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * 4).toString()}>
-                Very High
-              </Option>
-              <Option value={(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * 2).toString()}>
-                High
-              </Option>
-              <Option value={Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY.toString()}>Medium</Option>
-              <Option value={Math.floor(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY / 2).toString()}>
-                Low
-              </Option>
+              {getGpuFactorsWithLabels().map(([factor, label]) => (
+                <Option key={label} value={factor.toString()}>
+                  {label}
+                </Option>
+              ))}
             </DropdownSetting>
             <LogSliderSetting
               label={settingsLabels.clippingDistance}

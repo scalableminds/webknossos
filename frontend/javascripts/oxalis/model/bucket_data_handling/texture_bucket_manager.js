@@ -4,18 +4,20 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
-import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import {
+  getAddressSpaceDimensionsTable,
   getBucketCapacity,
+  getLookupBufferSize,
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -29,8 +31,6 @@ import window from "libs/window";
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
-
-const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -57,6 +57,8 @@ export default class TextureBucketManager {
   dataTextureCount: number;
   maximumCapacity: number;
   packingDegree: number;
+  addressSpaceDimensions: Vector3;
+  lookUpBufferWidth: number;
 
   constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
@@ -64,8 +66,12 @@ export default class TextureBucketManager {
     this.packingDegree = getPackingDegree(bytes);
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
+    const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
+    this.addressSpaceDimensions = getAddressSpaceDimensionsTable(initializedGpuFactor);
+    this.lookUpBufferWidth = getLookupBufferSize(initializedGpuFactor);
+
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
-    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * channelCountForLookupBuffer;
+    const lookUpBufferSize = Math.pow(this.lookUpBufferWidth, 2) * channelCountForLookupBuffer;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -227,7 +233,7 @@ export default class TextureBucketManager {
     }
 
     const lookUpTexture = createUpdatableTexture(
-      lookUpBufferWidth,
+      this.lookUpBufferWidth,
       channelCountForLookupBuffer,
       THREE.FloatType,
       getRenderer(),
@@ -364,7 +370,13 @@ export default class TextureBucketManager {
       }
     }
 
-    this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
+    this.lookUpTexture.update(
+      this.lookUpBuffer,
+      0,
+      0,
+      this.lookUpBufferWidth,
+      this.lookUpBufferWidth,
+    );
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;
   }
@@ -376,7 +388,7 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    const [xMax, yMax, zMax] = addressSpaceDimensions;
+    const [xMax, yMax, zMax] = this.addressSpaceDimensions;
 
     if (x > xMax || y > yMax || z > zMax || x < 0 || y < 0 || z < 0) {
       // The bucket is outside of the addressable space.

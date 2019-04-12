@@ -7,8 +7,8 @@ import {
   OrthoViewValuesWithoutTDView,
   type Vector3,
   type Vector4,
-  addressSpaceDimensions,
 } from "oxalis/constants";
+import { getAddressSpaceDimensionsTable } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getMaxZoomStepDiff,
   getPriorityWeightForZoomStepDiff,
@@ -36,7 +36,8 @@ export default function determineBucketsForOrthogonal(
   anchorPoint: Vector4,
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
-  abortLimit?: number,
+  abortLimit?: ?number,
+  gpuFactor: number,
 ) {
   let zoomStepDiff = 0;
 
@@ -54,6 +55,7 @@ export default function determineBucketsForOrthogonal(
       areas,
       subBucketLocality,
       abortLimit,
+      gpuFactor,
     );
     zoomStepDiff++;
   }
@@ -69,6 +71,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMap<Area>,
   subBucketLocality: Vector3,
   abortLimit: ?number,
+  gpuFactor: number,
 ): void {
   const logZoomStep = nonFallbackLogZoomStep + zoomStepDiff;
   const isFallback = zoomStepDiff > 0;
@@ -97,6 +100,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
+    const addressSpaceDimensions = getAddressSpaceDimensionsTable(gpuFactor);
     const renderedBucketsPerDimension = addressSpaceDimensions[w];
 
     let topLeftBucket = ((nonFallbackAnchorPoint.slice(): any): Vector4);

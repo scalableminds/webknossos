@@ -260,7 +260,7 @@ export type UserConfiguration = {|
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
-  +bucketsPerLayerOnGPU: number,
+  +gpuMemoryFactor: number,
 |};
 
 export type RecommendedConfiguration = $Shape<{
@@ -286,7 +286,10 @@ export type TemporaryConfiguration = {
     +mappingSize: number,
   },
   +isMergerModeEnabled: boolean,
-  +smallestCommonBucketCapacity: number,
+  +gpuSetup: {
+    +smallestCommonBucketCapacity: number,
+    +initializedGpuFactor: number,
+  },
 };
 
 export type Script = APIScript;

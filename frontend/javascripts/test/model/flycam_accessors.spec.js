@@ -8,6 +8,9 @@ import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import constants from "oxalis/constants";
 import test from "ava";
 
+const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
+const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
+
 // $FlowFixMe
 const initialState: OxalisState = {
   dataset: {
@@ -94,7 +97,8 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     scale,
     resolutions,
     rects,
-    constants.MINIMUM_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_GPU_MEMORY_FACTOR,
   );
 
   // If this test case should fail at some point, the following values may be updated appropriately

@@ -39,7 +39,7 @@ import {
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 import {
   initializeSettingsAction,
-  initializeSmallestCommonBucketCapacityAction,
+  initializeGpuSetupAction,
   setControlModeAction,
   setViewModeAction,
 } from "oxalis/model/actions/settings_actions";
@@ -122,12 +122,11 @@ export async function initialize(
   let initializationInformation = null;
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
-    initializationInformation = initializeDataLayerInstances(
-      initialUserSettings.bucketsPerLayerOnGPU,
-    );
+    const { gpuMemoryFactor } = initialUserSettings;
+    initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
     const { smallestCommonBucketCapacity } = initializationInformation;
-    Store.dispatch(initializeSmallestCommonBucketCapacityAction(smallestCommonBucketCapacity));
+    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -328,7 +327,7 @@ function initializeSettings(initialUserSettings: Object, initialDatasetSettings:
 }
 
 function initializeDataLayerInstances(
-  optRequiredBucketCapacity: ?number,
+  gpuFactor: ?number,
 ): {
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
@@ -340,9 +339,8 @@ function initializeDataLayerInstances(
   const layers = dataset.dataSource.dataLayers;
 
   const requiredBucketCapacity =
-    optRequiredBucketCapacity != null
-      ? optRequiredBucketCapacity
-      : constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
+    constants.GPU_FACTOR_MULTIPLIER *
+    (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
 
   console.log("demanding requiredBucketCapacity:", requiredBucketCapacity);
   const {

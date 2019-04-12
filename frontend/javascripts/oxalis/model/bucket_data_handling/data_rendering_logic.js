@@ -2,7 +2,7 @@
 import _ from "lodash";
 
 import { document } from "libs/window";
-import constants from "oxalis/constants";
+import constants, { type Vector3 } from "oxalis/constants";
 
 type GpuSpecs = {
   supportedTextureSize: number,
@@ -209,4 +209,38 @@ export function computeDataTexturesSetup<Layer>(
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
   };
+}
+
+export function getGpuFactorsWithLabels() {
+  return [["12", "Very High"], ["6", "High"], ["3", "Medium"], ["1", "Low"]];
+}
+
+export function getLookupBufferSize(gpuMultiplier: number): number {
+  switch (gpuMultiplier) {
+    case 1:
+    case 3:
+      return 256;
+    case 6:
+      return 512;
+    case 12:
+      return 1024;
+    default:
+      return 512;
+  }
+}
+
+// A look up buffer with the size [key]**2 is able to represent
+// a volume with the dimensions of [value].
+// The values were chosen so that value[0]*value[1]*value[2] / key**2
+// approaches ~ 1 (i.e., the utilization ratio of the buffer is close to
+// 100%).
+const addressSpaceDimensionsTable = {
+  "256": [36, 36, 50],
+  "512": [61, 61, 70],
+  "1024": [96, 96, 112],
+};
+
+export function getAddressSpaceDimensionsTable(gpuMultiplier: number): Vector3 {
+  const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
+  return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

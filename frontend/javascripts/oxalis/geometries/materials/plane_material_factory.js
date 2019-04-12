@@ -2,18 +2,21 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import app from "app";
 import {
   ViewModeValues,
   type OrthoView,
   OrthoViewValues,
   OrthoViews,
   type Vector3,
-  addressSpaceDimensions,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getAddressSpaceDimensionsTable,
+  getLookupBufferSize,
+  getPackingDegree,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
   getResolutions,
@@ -22,11 +25,11 @@ import {
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import * as Utils from "libs/utils";
+import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
@@ -92,6 +95,9 @@ class PlaneMaterialFactory {
   }
 
   setupUniforms(): void {
+    const addressSpaceDimensions = getAddressSpaceDimensionsTable(
+      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
     this.uniforms = {
       alpha: {
         type: "f",
@@ -529,6 +535,10 @@ class PlaneMaterialFactory {
       ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
       : 0;
 
+    const lookupTextureWidth = getLookupBufferSize(
+      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
+
     const code = getMainFragmentShader({
       colorLayerNames,
       isRgbLayerLookup,
@@ -541,6 +551,7 @@ class PlaneMaterialFactory {
       resolutions: getResolutions(dataset),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
+      lookupTextureWidth,
     });
 
     return code;

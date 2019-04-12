@@ -136,9 +136,12 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_CONTROL_MODE": {
       return updateTemporaryConfig(state, { controlMode: action.controlMode });
     }
-    case "INITIALIZE_SMALLEST_COMMON_BUCKET_CAPACITY": {
+    case "INITIALIZE_GPU_SETUP": {
       return updateTemporaryConfig(state, {
-        smallestCommonBucketCapacity: action.bucketCapacity,
+        gpuSetup: {
+          smallestCommonBucketCapacity: action.bucketCapacity,
+          initializedGpuFactor: action.gpuFactor,
+        },
       });
     }
     case "SET_MAPPING_ENABLED": {

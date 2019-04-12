@@ -27,6 +27,7 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
+import features from "features";
 import renderIndependently from "libs/render_independently";
 
 const { Step } = Steps;
@@ -204,6 +205,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
           >
             {getFieldDecorator("organizationName", {
               rules: [{ required: true, message: "Please enter an organization name!" }],
+              initialValue: features().defaultOnboardingOrganization,
             })(
               <AutoComplete
                 size="large"

@@ -410,10 +410,7 @@ class BinaryDataController @Inject()(
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
               histogramAndCount <- findDataService.createHistogram(dataSource, dataLayer)
-            } yield
-              Ok(
-                Json.obj("histogram" -> histogramAndCount._1,
-                  "count" -> histogramAndCount._2))
+            } yield Ok(Json.obj("histogram" -> histogramAndCount._1, "count" -> histogramAndCount._2))
           }
         }
   }

@@ -120,6 +120,19 @@ export const getColorForCoords: ShaderModule = {
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
+      if (relativeBucketPosition.x > addressSpaceDimensions.x ||
+          relativeBucketPosition.y > addressSpaceDimensions.y ||
+          relativeBucketPosition.z > addressSpaceDimensions.z ||
+          relativeBucketPosition.x < 0.0 ||
+          relativeBucketPosition.y < 0.0 ||
+          relativeBucketPosition.z < 0.0) {
+        // In theory, the current magnification should always be selected
+        // so that we won't have to address data outside of the addresSpaceDimensions.
+        // Nevertheless, we explicitly guard against this situation here to avoid
+        // potential rendering artifacts.
+        return vec4(1.0, 0.0, 0.0, 1.0);
+      }
+
       float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 
       vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
@@ -143,7 +156,8 @@ export const getColorForCoords: ShaderModule = {
         return vec4(0.0, 0.0, 0.0, alpha);
       }
 
-      if (bucketAddress < 0. || isNan(bucketAddress)) {
+      if (bucketAddress < 0. ||
+          isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
         return vec4(0.0, 0.0, 0.0, -1.0);
       }

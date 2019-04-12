@@ -4,7 +4,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import { M4x4, type Matrix4x4 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { clamp, map3, mod } from "libs/utils";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
@@ -17,6 +17,7 @@ import constants, {
   OrthoViews,
   type Vector3,
   type ViewMode,
+  addressSpaceDimensions,
 } from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
@@ -34,7 +35,11 @@ function calculateTotalBucketCountForZoomLevel(
   abortLimit: number,
 ) {
   let counter = 0;
-  const enqueueFunction = () => {
+  let minPerDim = [Infinity, Infinity, Infinity];
+  let maxPerDim = [0, 0, 0];
+  const enqueueFunction = bucketAddress => {
+    minPerDim = minPerDim.map((el, index) => Math.min(el, bucketAddress[index]));
+    maxPerDim = maxPerDim.map((el, index) => Math.max(el, bucketAddress[index]));
     counter++;
   };
   // Define dummy values
@@ -77,6 +82,15 @@ function calculateTotalBucketCountForZoomLevel(
       subBucketLocality,
       abortLimit,
     );
+  }
+
+  const volumeDimension = V3.sub(maxPerDim, minPerDim);
+  if (
+    volumeDimension[0] > addressSpaceDimensions[0] ||
+    volumeDimension[1] > addressSpaceDimensions[1] ||
+    volumeDimension[2] > addressSpaceDimensions[2]
+  ) {
+    return Infinity;
   }
 
   return counter;

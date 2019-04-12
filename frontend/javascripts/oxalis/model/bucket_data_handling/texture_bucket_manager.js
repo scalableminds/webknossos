@@ -335,17 +335,20 @@ export default class TextureBucketManager {
         }
 
         const lookUpIdx = this._getBucketIndex(bucket.zoomedAddress);
-        const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-        this.lookUpBuffer[posInBuffer] = address;
-        this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+        if (lookUpIdx !== -1) {
+          const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          this.lookUpBuffer[posInBuffer] = address;
+          this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+        }
       } else if (isFirstFallback) {
         if (address !== -1) {
           const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
           for (const baseBucketAddress of baseBucketAddresses) {
             const lookUpIdx = this._getBucketIndex(baseBucketAddress);
             const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-            if (this.lookUpBuffer[posInBuffer] !== -2) {
-              // Another bucket was already placed here. Skip the entire loop
+            if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
+              // Either, another bucket was already placed here. Or, the lookUpIdx is
+              // invalid. Skip the entire loop
               break;
             }
             this.lookUpBuffer[posInBuffer] = address;
@@ -373,16 +376,17 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    // if (x < 0) console.warn("x should be greater than 0. is currently:", x);
-    // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
-    // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
+    const [xMax, yMax, zMax] = addressSpaceDimensions;
 
-    const [sx, sy] = addressSpaceDimensions;
+    if (x > xMax || y > yMax || z > zMax || x < 0 || y < 0 || z < 0) {
+      // The bucket is outside of the addressable space.
+      return -1;
+    }
 
     // prettier-ignore
     return (
-      sx * sy * z +
-      sx * y +
+      xMax * yMax * z +
+      xMax * y +
       x
     );
   }

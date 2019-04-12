@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Collapse, Select } from "antd";
+import { Collapse, Icon, Select, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -47,6 +47,7 @@ import Constants, {
   type ViewMode,
   type Vector6,
 } from "oxalis/constants";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
 import MergerModeModalView from "./merger_mode_modal_view";
@@ -112,6 +113,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     }
   };
 
+  onChangeGpuFactor = (gpuFactor: number) => {
+    Toast.warning("Please reload the page to allow the changes to take effect.");
+    this.onChangeUser.gpuMemoryFactor(gpuFactor);
+  };
+
   getViewportOptions = () => {
     switch (this.props.viewMode) {
       case Constants.MODE_PLANE_TRACING:
@@ -126,11 +132,18 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
               onChange={this.props.onChangeZoomStep}
             />
             <DropdownSetting
-              label={settingsLabels.gpuMemoryFactor}
+              label={
+                <React.Fragment>
+                  {settingsLabels.gpuMemoryFactor}{" "}
+                  <Tooltip title="The more memory is allocated on the GPU, the better the rendered quality is. Adapt this setting to your hardware, so that quality and speed are balanced.">
+                    <Icon type="info-circle" />
+                  </Tooltip>
+                </React.Fragment>
+              }
               value={(
                 this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
               ).toString()}
-              onChange={this.onChangeUser.gpuMemoryFactor}
+              onChange={this.onChangeGpuFactor}
             >
               {getGpuFactorsWithLabels().map(([factor, label]) => (
                 <Option key={label} value={factor.toString()}>

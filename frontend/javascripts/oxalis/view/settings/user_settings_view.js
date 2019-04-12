@@ -3,22 +3,23 @@
  * @flow
  */
 
-import { Collapse } from "antd";
+import { Collapse, Select } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
 
+import type { APIDataset } from "admin/api_flow_types";
 import {
-  NumberInputSetting,
-  SwitchSetting,
-  NumberSliderSetting,
-  Vector6InputSetting,
+  DropdownSetting,
   LogSliderSetting,
+  NumberInputSetting,
+  NumberSliderSetting,
+  SwitchSetting,
+  Vector6InputSetting,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
-import type { APIDataset } from "admin/api_flow_types";
-import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -26,6 +27,7 @@ import {
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -37,6 +39,7 @@ import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_action
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import { settings as settingsLabels } from "messages";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { userSettings } from "libs/user_settings.schema";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
@@ -44,10 +47,10 @@ import Constants, {
   type Vector6,
 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
-import { userSettings } from "libs/user_settings.schema";
+
 import MergerModeModalView from "./merger_mode_modal_view";
 
+const { Option } = Select;
 const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
@@ -121,6 +124,25 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
+            <DropdownSetting
+              label={settingsLabels.bucketsPerLayerOnGPU}
+              value={(
+                this.props.userConfiguration.bucketsPerLayerOnGPU ||
+                Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY
+              ).toString()}
+              onChange={this.onChangeUser.bucketsPerLayerOnGPU}
+            >
+              <Option value={(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * 4).toString()}>
+                Very High
+              </Option>
+              <Option value={(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * 2).toString()}>
+                High
+              </Option>
+              <Option value={Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY.toString()}>Medium</Option>
+              <Option value={Math.floor(Constants.MINIMUM_REQUIRED_BUCKET_CAPACITY / 2).toString()}>
+                Low
+              </Option>
+            </DropdownSetting>
             <LogSliderSetting
               label={settingsLabels.clippingDistance}
               roundTo={3}

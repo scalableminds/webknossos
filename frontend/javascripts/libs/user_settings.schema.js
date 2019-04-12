@@ -36,6 +36,7 @@ export const userSettings = {
   brushSize: { type: "number", minimum: 5, maximum: 5000 },
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
+  bucketsPerLayerOnGPU: { type: "number" },
 };
 
 export default {

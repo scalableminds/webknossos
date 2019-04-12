@@ -136,6 +136,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_CONTROL_MODE": {
       return updateTemporaryConfig(state, { controlMode: action.controlMode });
     }
+    case "INITIALIZE_SMALLEST_COMMON_BUCKET_CAPACITY": {
+      return updateTemporaryConfig(state, {
+        smallestCommonBucketCapacity: action.bucketCapacity,
+      });
+    }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled } = action;
       return updateActiveMapping(state, {

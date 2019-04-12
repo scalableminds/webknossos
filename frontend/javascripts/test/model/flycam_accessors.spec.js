@@ -94,6 +94,7 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     scale,
     resolutions,
     rects,
+    constants.MINIMUM_REQUIRED_BUCKET_CAPACITY,
   );
 
   // If this test case should fail at some point, the following values may be updated appropriately

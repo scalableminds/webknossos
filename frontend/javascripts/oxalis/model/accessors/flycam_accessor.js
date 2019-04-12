@@ -99,8 +99,8 @@ export function _getMaximumZoomForAllResolutions(
   datasetScale: Vector3,
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
+  maximumCapacity: number,
 ): Array<number> {
-  const maximumCapacity = constants.MINIMUM_REQUIRED_BUCKET_CAPACITY;
   // maximumIterationCount is used as an upper limit to avoid an endless loop, in case
   // the following while loop causes havoc for some reason (e.g., because
   // the calculated bucket size isn't strictly increasing anymore). It means,
@@ -156,6 +156,7 @@ function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<num
     state.dataset.dataSource.scale,
     getResolutions(state.dataset),
     getViewportRects(state),
+    state.temporaryConfiguration.smallestCommonBucketCapacity,
   );
 }
 

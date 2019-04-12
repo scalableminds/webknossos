@@ -5,8 +5,11 @@ import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
+import {
+  getBucketCapacity,
+  getPackingDegree,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
@@ -59,9 +62,8 @@ export default class TextureBucketManager {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getPackingDegree(bytes);
+    this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
-    this.maximumCapacity =
-      (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * channelCountForLookupBuffer;
     this.textureWidth = textureWidth;

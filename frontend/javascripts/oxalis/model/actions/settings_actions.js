@@ -41,6 +41,10 @@ export type InitializeSettingsAction = {
 type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
+type InitializeSmallestCommonBucketCapacityAction = {
+  type: "INITIALIZE_SMALLEST_COMMON_BUCKET_CAPACITY",
+  bucketCapacity: number,
+};
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
   type: "SET_MAPPING",
@@ -60,7 +64,8 @@ export type SettingAction =
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
-  | SetMappingAction;
+  | SetMappingAction
+  | InitializeSmallestCommonBucketCapacityAction;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfiguration>,
@@ -147,4 +152,11 @@ export const setMappingAction = (
   mapping,
   mappingColors,
   hideUnmappedIds,
+});
+
+export const initializeSmallestCommonBucketCapacityAction = (
+  bucketCapacity: number,
+): InitializeSmallestCommonBucketCapacityAction => ({
+  type: "INITIALIZE_SMALLEST_COMMON_BUCKET_CAPACITY",
+  bucketCapacity,
 });

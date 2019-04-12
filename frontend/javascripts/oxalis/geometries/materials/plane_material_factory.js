@@ -536,6 +536,7 @@ class PlaneMaterialFactory {
       segmentationName,
       segmentationPackingDegree,
       isMappingSupported: Model.isMappingSupported,
+      // todo: this is not computed per layer
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,

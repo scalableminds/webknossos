@@ -204,4 +204,46 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                                  dataLayer.resolutions.minBy(_.maxDim))
     } yield meanAndStdDev
   }
+
+  def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
+
+    def getDataFor(position: Point3D, resolution: Point3D): Fox[Array[Byte]] = {
+      val request = DataRequest(
+        new VoxelPosition(position.x, position.y, position.z, resolution),
+        DataLayer.bucketLength,
+        DataLayer.bucketLength,
+        DataLayer.bucketLength
+      )
+      binaryDataService.handleDataRequest(
+        DataServiceDataRequest(dataSource, dataLayer, None, request.cuboid(dataLayer), request.settings))
+    }
+
+    def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =
+      buckets.foldLeft(Array[Byte]()) { (acc, i) =>
+        {
+          acc ++ i
+        }
+      }
+
+    def createHistogram(data: Array[Int], width: Int = 256) = {
+      val counts = Array.ofDim[Long](width)
+      data.foreach(el => counts(el + 128) = counts(el + 128) + 1)
+      counts
+    }
+
+    def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
+      for {
+        dataBucketWise: Seq[Array[Byte]] <- Fox.serialCombined(positions)(pos => getDataFor(pos, resolution))
+        dataConcatenated = concatenateBuckets(dataBucketWise)
+
+        // TODO data conversion
+        histogramValues = createHistogram(dataConcatenated.map(_.toInt))
+      } yield (histogramValues, dataConcatenated.length)
+
+    for {
+      _ <- bool2Fox(dataLayer.resolutions.nonEmpty)
+      histogramAndCount <- histogramForPositions(createPositions(dataLayer, 2).distinct,
+                                                 dataLayer.resolutions.minBy(_.maxDim))
+    } yield histogramAndCount
+  }
 }

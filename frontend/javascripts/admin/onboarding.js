@@ -27,6 +27,7 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
+import features from "features";
 import renderIndependently from "libs/render_independently";
 
 const { Step } = Steps;
@@ -475,6 +476,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    const skipAddingDatasets = features().skipAddingDatasetsInOnboarding;
     const currentStepContent = (() => {
       switch (this.state.currentStep) {
         case 0:
@@ -482,7 +484,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         case 1:
           return this.renderCreateAccount();
         case 2:
-          return this.renderUploadDatasets();
+          return skipAddingDatasets ? this.renderWhatsNext() : this.renderUploadDatasets();
         case 3:
           return this.renderWhatsNext();
         default:
@@ -504,7 +506,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
               <Step title="Create Organization" />
               <Step title="Create Account" />
-              <Step title="Add Dataset" />
+              {!skipAddingDatasets ? <Step title="Add Dataset" /> : null}
               <Step title="What's Next?" />
             </Steps>
           </Col>

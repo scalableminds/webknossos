@@ -13,7 +13,7 @@ import {
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  getAddressSpaceDimensionsTable,
+  getAddressSpaceDimensions,
   getLookupBufferSize,
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
@@ -95,7 +95,7 @@ class PlaneMaterialFactory {
   }
 
   setupUniforms(): void {
-    const addressSpaceDimensions = getAddressSpaceDimensionsTable(
+    const addressSpaceDimensions = getAddressSpaceDimensions(
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
@@ -546,7 +546,7 @@ class PlaneMaterialFactory {
       segmentationName,
       segmentationPackingDegree,
       isMappingSupported: Model.isMappingSupported,
-      // todo: this is not computed per layer
+      // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,

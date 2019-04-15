@@ -8,7 +8,7 @@ import {
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
-import { getAddressSpaceDimensionsTable } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getMaxZoomStepDiff,
   getPriorityWeightForZoomStepDiff,
@@ -100,7 +100,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
       logZoomStep,
     );
 
-    const addressSpaceDimensions = getAddressSpaceDimensionsTable(gpuFactor);
+    const addressSpaceDimensions = getAddressSpaceDimensions(gpuFactor);
     const renderedBucketsPerDimension = addressSpaceDimensions[w];
 
     let topLeftBucket = ((nonFallbackAnchorPoint.slice(): any): Vector4);

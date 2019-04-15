@@ -12,7 +12,7 @@ import {
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-import { getAddressSpaceDimensionsTable } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
@@ -262,7 +262,7 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const resolutions = getResolutions(state.dataset);
     const resolution = resolutions[logZoomStep];
-    const addressSpaceDimensions = getAddressSpaceDimensionsTable(
+    const addressSpaceDimensions = getAddressSpaceDimensions(
       state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
 

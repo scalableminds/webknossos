@@ -287,6 +287,10 @@ export type TemporaryConfiguration = {
   },
   +isMergerModeEnabled: boolean,
   +gpuSetup: {
+    // These rendering-related variables are set up
+    // during startup and cannot change (with the current
+    // implementation). That's why, we are explicitly saving
+    // these gpu setup variables here.
     +smallestCommonBucketCapacity: number,
     +initializedGpuFactor: number,
   },

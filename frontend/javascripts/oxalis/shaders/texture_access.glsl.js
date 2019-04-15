@@ -129,7 +129,7 @@ export const getColorForCoords: ShaderModule = {
         // In theory, the current magnification should always be selected
         // so that we won't have to address data outside of the addresSpaceDimensions.
         // Nevertheless, we explicitly guard against this situation here to avoid
-        // potential rendering artifacts.
+        // rendering wrong data.
         return vec4(1.0, 0.0, 0.0, 1.0);
       }
 

@@ -240,7 +240,7 @@ const addressSpaceDimensionsTable = {
   "1024": [96, 96, 112],
 };
 
-export function getAddressSpaceDimensionsTable(gpuMultiplier: number): Vector3 {
+export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
   const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
   return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

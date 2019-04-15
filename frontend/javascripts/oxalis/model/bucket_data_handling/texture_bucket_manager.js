@@ -5,7 +5,7 @@ import _ from "lodash";
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import {
-  getAddressSpaceDimensionsTable,
+  getAddressSpaceDimensions,
   getBucketCapacity,
   getLookupBufferSize,
   getPackingDegree,
@@ -67,7 +67,7 @@ export default class TextureBucketManager {
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
     const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
-    this.addressSpaceDimensions = getAddressSpaceDimensionsTable(initializedGpuFactor);
+    this.addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
     this.lookUpBufferWidth = getLookupBufferSize(initializedGpuFactor);
 
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made

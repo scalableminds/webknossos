@@ -39,7 +39,7 @@ Mapping files are in JSON and need to follow this schema:
 }
 ```
 
-![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.png)
+![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4)
 
 
 ## Hybrid Annotations

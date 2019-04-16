@@ -5,6 +5,8 @@
 
 ## Guides
 * [Dashboard](./dashboard.md)
+* [Skeleton Annotations](./skeleton_annotation.md)
+* [Volume Annotations & Proof-Reading](./volume_annotation.md)
 * [Tracing UI](./tracing_ui.md)
 * [Mesh Visualization](./mesh_visualization.md)
 * [Managing Datasets](./datasets.md)

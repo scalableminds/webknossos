@@ -1,4 +1,4 @@
-# Tracing UI
+# Understanding the User Interface
 
 The main webKnossos user interface for viewing and annotating datasets is divided into four sections.
 

@@ -33,6 +33,14 @@ With webKnossos it is possible to apply a precomputed agglomeration file to comb
 Mapping files are automatically identified by webKnossos when being placed in the same directory as the data. All available mappings can be activated from a dropwdown in the "Segmentation" information pane, typically on the right-hand side of the screen. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
 
 Mapping files are in JSON and need to follow this schema:
+```
+{
+  TODO
+}
+```
+
+![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.png)
+
 
 ## Hybrid Annotations
 

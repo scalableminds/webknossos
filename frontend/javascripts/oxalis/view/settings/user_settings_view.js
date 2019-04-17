@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Collapse, Icon, Select, Tooltip } from "antd";
+import { Collapse } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -11,7 +11,6 @@ import _ from "lodash";
 
 import type { APIDataset } from "admin/api_flow_types";
 import {
-  DropdownSetting,
   LogSliderSetting,
   NumberInputSetting,
   NumberSliderSetting,
@@ -25,7 +24,6 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
@@ -47,12 +45,10 @@ import Constants, {
   type ViewMode,
   type Vector6,
 } from "oxalis/constants";
-import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
 import MergerModeModalView from "./merger_mode_modal_view";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
@@ -113,11 +109,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     }
   };
 
-  onChangeGpuFactor = (gpuFactor: number) => {
-    Toast.warning("Please reload the page to allow the changes to take effect.");
-    this.onChangeUser.gpuMemoryFactor(gpuFactor);
-  };
-
   getViewportOptions = () => {
     switch (this.props.viewMode) {
       case Constants.MODE_PLANE_TRACING:
@@ -131,26 +122,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
-            <DropdownSetting
-              label={
-                <React.Fragment>
-                  {settingsLabels.gpuMemoryFactor}{" "}
-                  <Tooltip title="The more memory is allocated on the GPU, the better the rendered quality is. Adapt this setting to your hardware, so that quality and speed are balanced.">
-                    <Icon type="info-circle" />
-                  </Tooltip>
-                </React.Fragment>
-              }
-              value={(
-                this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
-              ).toString()}
-              onChange={this.onChangeGpuFactor}
-            >
-              {getGpuFactorsWithLabels().map(([factor, label]) => (
-                <Option key={label} value={factor.toString()}>
-                  {label}
-                </Option>
-              ))}
-            </DropdownSetting>
             <LogSliderSetting
               label={settingsLabels.clippingDistance}
               roundTo={3}

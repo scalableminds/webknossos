@@ -6,7 +6,7 @@ import memoizeOne from "memoize-one";
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
-import { clamp, map3, mod } from "libs/utils";
+import { map3, mod } from "libs/utils";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -230,9 +230,7 @@ export function getRequestLogZoomStep(state: OxalisState): number {
     return maxLogZoomStep;
   }
 
-  const qualityAdaptedZoomStep = zoomStep + state.datasetConfiguration.quality;
-  const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
-  return clamp(min, qualityAdaptedZoomStep, maxLogZoomStep);
+  return Math.min(zoomStep, maxLogZoomStep);
 }
 
 export function getMaxZoomValue(state: OxalisState): number {

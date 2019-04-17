@@ -35,7 +35,7 @@ export const settings = {
     improving the quality progressively (data will be loaded faster,
     but it will take more time until the best quality is shown).`,
   mergerMode: "Enable Merger Mode",
-  gpuMemoryFactor: "GPU Memory Consumption",
+  gpuMemoryFactor: "Quality",
 };
 
 export default {

@@ -1,5 +1,5 @@
 // @flow
-import { Card, Button } from "antd";
+import { Card, Button, Tooltip, Icon } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
@@ -138,7 +138,7 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
 
 const typeHint: Array<APIDataset> = [];
 
-type Props = { datasets: Array<APIDataset> };
+type Props = { datasets: Array<APIDataset>, showDetailedLink: boolean };
 type State = { activeDataset: APIDataset };
 
 class PublicationCard extends React.PureComponent<Props, State> {
@@ -147,7 +147,7 @@ class PublicationCard extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { datasets } = this.props;
+    const { datasets, showDetailedLink } = this.props;
     const { activeDataset } = this.state;
     const { publication } = activeDataset;
     // This method will only be called for datasets with a publication, but Flow doesn't know that
@@ -167,7 +167,25 @@ class PublicationCard extends React.PureComponent<Props, State> {
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
         <div style={{ display: "flex", height: "100%" }}>
           <div className="publication-description">
-            <h3>{publication.title}</h3>
+            <h3 className="container-with-hidden-icon">
+              {publication.title}
+              {showDetailedLink ? (
+                <Link to={`/publication/${publication.id}`}>
+                  <Tooltip title="Open permalink">
+                    <Icon
+                      type="link"
+                      style={{
+                        fontSize: 16,
+                        color: "#555",
+                        marginBottom: 18,
+                        marginLeft: 8,
+                      }}
+                      className="hidden-icon"
+                    />
+                  </Tooltip>
+                </Link>
+              ) : null}
+            </h3>
             <div className="publication-description-body nice-scrollbar">
               <Markdown
                 source={publication.description}

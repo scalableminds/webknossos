@@ -103,9 +103,11 @@ dataSource.notFound=Datasource not found on datastore server
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
+dataStore.unavailable=DataStore couldn't be reached.
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.
+tracingStore.unavailable=TracingStore couldn't be reached.
 
 zip.file.notFound=No or invalid ZIP file specified
 

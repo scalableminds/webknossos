@@ -72,8 +72,8 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
       }
 
     for {
-      _ <- checkDatastoreHealthIfEnabled
-      _ <- checkTracingstoreHealthIfEnabled
+      _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"
+      _ <- checkTracingstoreHealthIfEnabled ?~> "tracingStore.unavailable"
     } yield Ok
   }
 

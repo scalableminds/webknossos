@@ -32,7 +32,7 @@ class RequestHandler @Inject()(router: Router,
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
       var httpScheme = "https://"
-      if(!request.secure) httpScheme = "http://"
+      if (!request.secure) httpScheme = "http://"
       Some(sitemapController.getSitemap(Some(httpScheme + request.host)))
     } else {
       Some(Action { Ok(views.html.main(conf)) })

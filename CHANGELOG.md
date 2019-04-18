@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Changed
-- 
+- Improved performance for large tracings. [#3995](https://github.com/scalableminds/webknossos/pull/3995)
 
 ### Fixed
 - Fixed a missing redirect after registering for an existing organization (with autoVerify=true) via the onboarding flow. [#3984](https://github.com/scalableminds/webknossos/pull/3984)
@@ -50,6 +50,7 @@ Also the data viewing and tracing workflow is smoothed further:
 - Segmentation ID mappings can now be used in volume and hybrid tracings. [#3949](https://github.com/scalableminds/webknossos/pull/3949)
 - A maximize-button was added to the viewports in the annotation view. Maximization can also be toggled with the `.` shortcut. [#3876](https://github.com/scalableminds/webknossos/pull/3876)
 - [webknossos-connect](https://github.com/scalableminds/webknossos-connect) now starts with webKnossos on local and development instances by default. [#3913](https://github.com/scalableminds/webknossos/pull/3913)
+- The visibilities of trees in a skeleton tracing is now persisted across page loads. [#3942](https://github.com/scalableminds/webknossos/pull/3942)
 - Added a button for each color layer to enable/disable the layer. [#3943](https://github.com/scalableminds/webknossos/pull/3943)
 - Paginated routes now send a `X-Total-Count` HTTP header which shows how many entries were found in total. [#3899](https://github.com/scalableminds/webknossos/pull/3899)
 

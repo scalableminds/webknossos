@@ -3,7 +3,6 @@ import { type EditableAnnotation, editAnnotation } from "admin/admin_rest_api";
 import { type Saga, _takeEvery, call, select, take } from "oxalis/model/sagas/effect-generators";
 import {
   isVolumeTracingDisallowed,
-  displaysDownsampledVolumeData,
   isSegmentationMissingForZoomstep,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Model from "oxalis/model";
@@ -51,14 +50,6 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
       Toast.error(messages["tracing.segmentation_zoom_warning"], { sticky: false, timeout: 3000 });
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
-    }
-    const displaysDownsampled = yield* select(state =>
-      displaysDownsampledVolumeData(state, segmentationLayer.cube.MAX_UNSAMPLED_ZOOM_STEP),
-    );
-    if (shouldDisplaySegmentationData() && displaysDownsampled) {
-      Toast.warning(messages["tracing.segmentation_downsampled_data_warning"]);
-    } else {
-      Toast.close(messages["tracing.segmentation_downsampled_data_warning"]);
     }
   }
 

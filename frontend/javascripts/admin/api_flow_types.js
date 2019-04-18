@@ -527,6 +527,7 @@ export type ServerSkeletonTracingTree = {
   treeId: number,
   createdTimestamp: number,
   groupId?: ?number,
+  isVisible?: boolean,
 };
 
 export type ServerTracingBase = {|

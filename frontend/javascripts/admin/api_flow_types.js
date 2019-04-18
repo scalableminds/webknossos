@@ -474,7 +474,6 @@ export type APIFeatureToggles = {
   +discussionBoardRequiresAdmin: boolean,
   +allowOrganizationCreation: boolean,
   +defaultOrganization: string,
-  +defaultOnboardingOrganization: ?string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +addMissingDatasetButtonEnabled: boolean,

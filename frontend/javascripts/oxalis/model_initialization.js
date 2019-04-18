@@ -418,6 +418,9 @@ function determineDefaultState(
   }
 
   let zoomStep = datasetConfiguration.zoom;
+  if (tracing != null) {
+    zoomStep = getSomeServerTracing(tracing).zoomLevel;
+  }
   if (urlState.zoomStep != null) {
     ({ zoomStep } = urlState);
   }

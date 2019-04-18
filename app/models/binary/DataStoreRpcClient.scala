@@ -40,7 +40,7 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
   }
 
   def healthCheck = {
-    rpc
+    rpc(s"${dataStore.url}/data/health").get
   }
 
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")

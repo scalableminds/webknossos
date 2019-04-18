@@ -1,12 +1,13 @@
 package controllers
 
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreRpcClient
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import models.annotation.TracingStoreRpcClient
 import play.api.libs.json.Json
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
@@ -16,7 +17,9 @@ import scala.concurrent.ExecutionContext
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                            sil: Silhouette[WkEnv],
+                            dataStoreRpc: DataStoreRpcClient,
+                            tracingStoreRpc: TracingStoreRpcClient)(implicit ec: ExecutionContext)
     extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
@@ -45,16 +48,25 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
   }
 
-  def health = sil.UserAwareAction { implicit request =>
-    if(conf.Tracingstore.enabled) {
-      // TODO tracingstore health check
-    }
-    if(conf.Datastore.enabled) {
-      // TODO datastore health check
+  def health = sil.UserAwareAction.async { implicit request =>
+    def checkDatastoreHealthIfEnabled: Fox[Unit] =
+      if (conf.Datastore.enabled) {
+        dataStoreRpc.healthCheck.map(response => bool2Fox(response.status == 200))
+      } else {
+        Fox.successful(())
+      }
 
-    }
+    def checkTracingstoreHealthIfEnabled: Fox[Unit] =
+      if (conf.Tracingstore.enabled) {
+        tracingStoreRpc.healthCheck.map(response => bool2Fox(response.status == 200))
+      } else {
+        Fox.successful(())
+      }
 
-    Ok()
+    for {
+      _ <- checkDatastoreHealthIfEnabled
+      _ <- checkTracingstoreHealthIfEnabled
+    } yield Ok
   }
 
 }

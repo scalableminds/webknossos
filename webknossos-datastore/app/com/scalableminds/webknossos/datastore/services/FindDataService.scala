@@ -211,11 +211,32 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
     def createHistogram(data: Array[_ >: Byte with Short with Int with Long], width: Int = 256) = {
       val counts = Array.ofDim[Long](width)
+      var min = Long.MaxValue
+      var max = Long.MinValue
       data match {
-        case byteData: Array[Byte]   => byteData.foreach(el => counts(el + 128) += 1)
-        case shortData: Array[Short] => shortData.foreach(el => counts(el / math.pow(2, 8).toInt + 128) += 1)
-        case intData: Array[Int]     => intData.foreach(el => counts(el / math.pow(2, 24).toInt + 128) += 1)
-        case longData: Array[Long]   => longData.foreach(el => counts((el / math.pow(2, 56).toInt + 128).toInt) += 1)
+        case byteData: Array[Byte] =>
+          byteData.foreach { el =>
+            min = math.min(el, min); max = math.max(el, max)
+          }
+        case shortData: Array[Short] =>
+          shortData.foreach { el =>
+            min = math.min(el, min); max = math.max(el, max)
+          }
+        case intData: Array[Int] =>
+          intData.foreach { el =>
+            min = math.min(el, min); max = math.max(el, max)
+          }
+        case longData: Array[Long] =>
+          longData.foreach { el =>
+            min = math.min(el, min); max = math.max(el, max)
+          }
+      }
+      val bucketWidth = math.ceil((max - min + 1) / width.toDouble).toInt
+      data match {
+        case byteData: Array[Byte]   => byteData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case shortData: Array[Short] => shortData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case intData: Array[Int]     => intData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case longData: Array[Long]   => longData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
       }
       counts
     }
@@ -224,10 +245,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
         convertedData = convertData(dataConcatenated, dataLayer.elementClass)
-
-        // TODO data conversion
-        histogramValues = createHistogram(convertedData)
-      } yield (histogramValues, convertedData.length)
+      } yield (createHistogram(convertedData), convertedData.length)
 
     for {
       _ <- bool2Fox(dataLayer.resolutions.nonEmpty)

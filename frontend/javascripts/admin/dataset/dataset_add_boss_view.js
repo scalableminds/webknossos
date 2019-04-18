@@ -19,9 +19,14 @@ import {
 
 const FormItem = Form.Item;
 
+const Slash = () => (
+  <Col span={1} style={{ textAlign: "center" }}>
+    <div style={{ marginTop: 35 }}>/</div>
+  </Col>
+);
+
 type OwnProps = {|
   datastores: Array<APIDataStore>,
-  withoutCard?: boolean,
   onAdded: (string, string) => void,
 |};
 type StateProps = {|
@@ -33,26 +38,7 @@ type PropsWithForm = {|
   form: Object,
 |};
 
-class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
-  validateAndParseUrl(url: string) {
-    const delimiterIndex = url.indexOf("#!");
-    if (delimiterIndex < 0) {
-      throw new Error("The URL doesn't contain the #! delimiter. Please insert the full URL.");
-    }
-
-    const jsonConfig = url.slice(delimiterIndex + 2);
-    // This will throw an error if the URL did not contain valid JSON. The error will be handled by the caller.
-    const config = JSON.parse(decodeURIComponent(jsonConfig));
-    config.layers.forEach(layer => {
-      if (!layer.source.startsWith("precomputed://")) {
-        throw new Error(
-          "This dataset contains layers that are not supported by wk-connect. wk-connect supports only 'precomputed://' neuroglancer layers.",
-        );
-      }
-    });
-    return config;
-  }
-
+class DatasetAddBossView extends React.PureComponent<PropsWithForm> {
   handleSubmit = evt => {
     evt.preventDefault();
     const { activeUser } = this.props;
@@ -60,25 +46,25 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
     this.props.form.validateFields(async (err, formValues) => {
       if (err || activeUser == null) return;
 
-      const neuroglancerConfig = this.validateAndParseUrl(formValues.url);
-      const fullLayers = _.keyBy(neuroglancerConfig.layers, "name");
-      // Remove unnecessary attributes of the layer, the precomputed source prefix needs to be removed as well
-      const layers = _.mapValues(fullLayers, ({ source, type }) => ({
-        type,
-        source: source.replace(/^(precomputed:\/\/)/, ""),
-      }));
-
+      const { name, domain, collection, experiment, username, password } = formValues;
+      const httpsDomain = domain.startsWith("bossdb://")
+        ? domain.replace(/^bossdb/, "https")
+        : domain;
       const datasetConfig = {
-        neuroglancer: {
+        boss: {
           [activeUser.organization]: {
-            [formValues.name]: {
-              layers,
+            [name]: {
+              domain: httpsDomain,
+              collection,
+              experiment,
+              username,
+              password,
             },
           },
         },
       };
 
-      trackAction("Add wk-connect dataset");
+      trackAction("Add BossDB dataset");
       await addWkConnectDataset(formValues.datastore, datasetConfig);
 
       Toast.success(messages["dataset.add_success"]);
@@ -88,14 +74,12 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
   };
 
   render() {
-    const { form, activeUser, withoutCard, datastores } = this.props;
+    const { form, activeUser, datastores } = this.props;
     const { getFieldDecorator } = form;
 
     return (
       <div style={{ padding: 5 }}>
-        <CardContainer withoutCard={withoutCard} title="Add wk-connect Dataset">
-          Currently wk-connect supports adding Neuroglancer datasets. Simply set a dataset name,
-          select the wk-connect datastore and paste the URL to the Neuroglancer dataset.
+        <CardContainer title="Add BossDB Dataset">
           <Form style={{ marginTop: 20 }} onSubmit={this.handleSubmit} layout="vertical">
             <Row gutter={8}>
               <Col span={12}>
@@ -105,24 +89,52 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
                 <DatastoreFormItem form={form} datastores={datastores} />
               </Col>
             </Row>
-            <FormItem label="Dataset URL" hasFeedback>
-              {getFieldDecorator("url", {
-                rules: [
-                  { required: true, message: messages["dataset.import.required.url"] },
-                  {
-                    validator: async (_rule, value, callback) => {
-                      try {
-                        this.validateAndParseUrl(value);
-                        callback();
-                      } catch (error) {
-                        callback(error);
-                      }
-                    },
-                  },
-                ],
-                validateFirst: true,
-              })(<Input />)}
-            </FormItem>
+            <Row gutter={8}>
+              <Col span={12}>
+                <FormItem label="Domain" hasFeedback>
+                  {getFieldDecorator("domain", {
+                    rules: [{ required: true }],
+                    validateFirst: true,
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+              <Slash />
+              <Col span={5}>
+                <FormItem label="Collection" hasFeedback>
+                  {getFieldDecorator("collection", {
+                    rules: [{ required: true }],
+                    validateFirst: true,
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+              <Slash />
+              <Col span={5}>
+                <FormItem label="Experiment" hasFeedback>
+                  {getFieldDecorator("experiment", {
+                    rules: [{ required: true }],
+                    validateFirst: true,
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+            </Row>
+            <Row gutter={8}>
+              <Col span={12}>
+                <FormItem label="Username" hasFeedback>
+                  {getFieldDecorator("username", {
+                    rules: [{ required: true }],
+                    validateFirst: true,
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+              <Col span={12}>
+                <FormItem label="Password" hasFeedback>
+                  {getFieldDecorator("password", {
+                    rules: [{ required: true }],
+                    validateFirst: true,
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+            </Row>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Add
@@ -140,5 +152,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  Form.create()(DatasetAddWkConnectView),
+  Form.create()(DatasetAddBossView),
 );

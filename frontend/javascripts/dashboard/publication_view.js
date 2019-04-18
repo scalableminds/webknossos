@@ -43,7 +43,7 @@ class PublicationView extends React.PureComponent<Props> {
           className="antd-no-border-list"
           renderItem={datasets => (
             <List.Item key={datasets[0].publication.id}>
-              <PublicationCard className="dataset-panel" datasets={datasets} />
+              <PublicationCard className="dataset-panel" datasets={datasets} showDetailedLink />
             </List.Item>
           )}
         />

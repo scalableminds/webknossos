@@ -2,18 +2,21 @@
 import { Chart } from "react-google-charts";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import * as React from "react";
+import { connect } from "react-redux";
 import _ from "lodash";
 import moment from "moment";
 
+import { type OxalisState} from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
-const RangePicker = DatePicker.RangePicker;
+const { Option } = Select;
+const { RangePicker } = DatePicker;
 
 type TimeTrackingStats = {
   totalTime: number,
@@ -23,6 +26,12 @@ type TimeTrackingStats = {
 
 type DateRange = [moment$Moment, moment$Moment];
 
+type StateProps = {|
+  activeUser: APIUser,
+|};
+
+type Props = {| ...StateProps |};
+
 type State = {
   user: ?APIUser,
   users: Array<APIUser>,
@@ -31,7 +40,7 @@ type State = {
   stats: TimeTrackingStats,
 };
 
-class TimeLineView extends React.PureComponent<*, State> {
+class TimeLineView extends React.PureComponent<Props, State> {
   state = {
     user: null,
     users: [],
@@ -45,7 +54,11 @@ class TimeLineView extends React.PureComponent<*, State> {
   };
 
   componentDidMount() {
-    this.fetchData();
+    if (this.props.activeUser.isAdmin) {
+      this.fetchData();
+    } else {
+      this.fetchDataFromLoggedInUser();
+    }
   }
 
   async fetchData() {
@@ -87,6 +100,11 @@ class TimeLineView extends React.PureComponent<*, State> {
       };
     });
   }
+
+  fetchDataFromLoggedInUser = async () => {
+    await this.setState({ user: this.props.activeUser });
+    this.fetchTimeTrackingData();
+  };
 
   handleUserChange = async (userId: number) => {
     await this.setState(prevState => ({ user: prevState.users.find(u => u.id === userId) }));
@@ -140,6 +158,8 @@ class TimeLineView extends React.PureComponent<*, State> {
       paddingBottom: 5,
     };
 
+    const { isAdmin, firstName, lastName, email } = this.props.activeUser;
+
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -147,22 +167,35 @@ class TimeLineView extends React.PureComponent<*, State> {
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a User"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  onChange={this.handleUserChange}
-                >
-                  {this.state.users
-                    .filter(u => u.isActive)
-                    .map((user: APIUser) => (
-                      <Option key={user.id} value={user.id}>
-                        {`${user.lastName}, ${user.firstName} (${user.email})`}
-                      </Option>
-                    ))}
-                </Select>
+                {isAdmin ? (
+                  <Select
+                    allowClear
+                    showSearch
+                    placeholder="Select a User"
+                    optionFilterProp="children"
+                    style={{ width: "100%" }}
+                    onChange={this.handleUserChange}
+                  >
+                    {this.state.users
+                      .filter(u => u.isActive)
+                      .map((user: APIUser) => (
+                        <Option key={user.id} value={user.id}>
+                          {`${user.lastName}, ${user.firstName} (${user.email})`}
+                        </Option>
+                      ))}
+                  </Select>
+                ) : (
+                  <table style={{ width: "100%" }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ width: "50%" }}>
+                          {lastName}, {firstName}
+                        </td>
+                        <td style={{ width: "50%" }}> {email}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
@@ -227,4 +260,8 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 }
 
-export default TimeLineView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: enforceActiveUser(state.activeUser),
+});
+
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(TimeLineView);

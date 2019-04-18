@@ -191,7 +191,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     }
 
   def writeSkeletonThings(skeletonTracing: SkeletonTracing)(implicit writer: XMLStreamWriter): Unit = {
-    writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
+    writeTreesAsXml(skeletonTracing.trees)
     Xml.withinElementSync("branchpoints")(
       writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
     Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))

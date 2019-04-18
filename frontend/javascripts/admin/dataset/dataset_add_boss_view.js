@@ -18,6 +18,7 @@ import {
 } from "admin/dataset/dataset_components";
 
 const FormItem = Form.Item;
+const { Password } = Input;
 
 const Slash = () => (
   <Col span={1} style={{ textAlign: "center" }}>
@@ -131,7 +132,7 @@ class DatasetAddBossView extends React.PureComponent<PropsWithForm> {
                   {getFieldDecorator("password", {
                     rules: [{ required: true }],
                     validateFirst: true,
-                  })(<Input />)}
+                  })(<Password />)}
                 </FormItem>
               </Col>
             </Row>

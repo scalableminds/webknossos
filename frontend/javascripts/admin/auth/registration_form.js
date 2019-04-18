@@ -13,6 +13,7 @@ import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
 const { Option } = Select;
+const { Password } = Input;
 
 type Props = {|
   form: Object,
@@ -240,8 +241,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Password"
                 />,
@@ -265,8 +265,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   onBlur={this.handleConfirmBlur}
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Confirm Password"

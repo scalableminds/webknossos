@@ -24,10 +24,12 @@ declare module "antd" {
   declare export class Dropdown<P> extends React$Component<P> {}
   declare export class Icon<P> extends React$Component<P> {}
   declare class InputGroup<P> extends React$Component<P> {}
+  declare class InputPassword<P> extends React$Component<P> {}
   declare class InputSearch<P> extends React$Component<P> {}
   declare class InputTextArea<P> extends React$Component<P> {}
   declare export class Input<P> extends React$Component<P> {
     static Group: typeof InputGroup;
+    static Password: typeof InputPassword;
     static Search: typeof InputSearch;
     static TextArea: typeof InputTextArea;
     focus: () => void;

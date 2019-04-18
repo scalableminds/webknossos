@@ -28,18 +28,52 @@ The "merger mode" is available in skeleton and hybrid tracing mode. Mark connect
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 
 ### Mappings / On-Demand Agglomeration
-With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmentated volume annotations on demand. This eleviates the demand to materialize agglomeration results prematurely and allows researchs to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on diffent thresholds and methods and use webKnossos to quickly review theses results on subsets of a dataset in an interactive session.
+With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.
 
-Mapping files are automatically identified by webKnossos when being placed in the same directory as the data. All available mappings can be activated from a dropwdown in the "Segmentation" information pane, typically on the right-hand side of the screen. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
+Mapping files are automatically identified by webKnossos when being placed in a "mappings" folder within the [segmentation folder](./data_formats#wkw-folder-structure). All available mappings can be activated from a dropdown in the "Segmentation" information pane, typically on the right-hand side of the screen. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
 
-Mapping files are in JSON and need to follow this schema:
+Mapping files are in JSON and need to follow this schema. All segment IDs belonging to the same super-voxel need to be listed in an array:
 ```
 {
-  TODO
+  {
+
+   "name": "astrocytes",
+
+   "classes": [
+
+                [
+
+                        69381,
+
+                        69445,
+
+                        138248
+
+                ], [
+
+                        138307,
+
+                        343831
+
+                ], [
+
+                        348348,
+
+                        132432,
+
+                        387433,
+
+                        338330
+
+                ]
+
+    ]
+
+  }
 }
 ```
 
-![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4)
+<!-- ![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
 
 ## Hybrid Annotations

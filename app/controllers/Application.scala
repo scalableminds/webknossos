@@ -4,10 +4,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
-import models.binary.DataStoreRpcClient
+import models.binary.{DataStoreDAO, DataStoreRpcClient}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import models.annotation.TracingStoreRpcClient
+import com.scalableminds.webknossos.datastore.rpc.RPC
+import models.annotation.{TracingStoreDAO, TracingStoreRpcClient}
 import play.api.libs.json.Json
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
@@ -18,8 +19,9 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             sil: Silhouette[WkEnv],
-                            dataStoreRpc: DataStoreRpcClient,
-                            tracingStoreRpc: TracingStoreRpcClient)(implicit ec: ExecutionContext)
+                            rpc: RPC,
+                            dataStoreDAO: DataStoreDAO,
+                            tracingStoreDAO: TracingStoreDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
@@ -51,14 +53,22 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
   def health = sil.UserAwareAction.async { implicit request =>
     def checkDatastoreHealthIfEnabled: Fox[Unit] =
       if (conf.Datastore.enabled) {
-        dataStoreRpc.healthCheck.map(response => bool2Fox(response.status == 200))
+        for {
+          dataStore <- dataStoreDAO.findOneByName("localhost")
+          response <- rpc(s"${dataStore.url}/data/health").get
+          if response.status == 200
+        } yield ()
       } else {
         Fox.successful(())
       }
 
     def checkTracingstoreHealthIfEnabled: Fox[Unit] =
       if (conf.Tracingstore.enabled) {
-        tracingStoreRpc.healthCheck.map(response => bool2Fox(response.status == 200))
+        for {
+          tracingStore <- tracingStoreDAO.findOneByName("localhost")
+          response <- rpc(s"${tracingStore.url}/tracings/health").get
+          if response.status == 200
+        } yield ()
       } else {
         Fox.successful(())
       }

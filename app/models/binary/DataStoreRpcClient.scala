@@ -39,6 +39,10 @@ class DataStoreRpcClient(dataStore: DataStore, dataSet: DataSet, rpc: RPC)(impli
       .map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
+  def healthCheck = {
+    rpc
+  }
+
   private def urlEncode(text: String) = UriEncoding.encodePathSegment(text, "UTF-8")
 
 }

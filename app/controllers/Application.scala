@@ -1,6 +1,5 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
@@ -44,6 +43,18 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 
   def features = sil.UserAwareAction { implicit request =>
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
+  }
+
+  def health = sil.UserAwareAction { implicit request =>
+    if(conf.Tracingstore.enabled) {
+      // TODO tracingstore health check
+    }
+    if(conf.Datastore.enabled) {
+      // TODO datastore health check
+
+    }
+
+    Ok()
   }
 
 }

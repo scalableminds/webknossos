@@ -54,8 +54,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
     def checkDatastoreHealthIfEnabled: Fox[Unit] =
       if (conf.Datastore.enabled) {
         for {
-          dataStore <- dataStoreDAO.findOneByName("localhost")
-          response <- rpc(s"${dataStore.url}/data/health").get
+          response <- rpc(s"${conf.Http.uri}/data/health").get
           if response.status == 200
         } yield ()
       } else {
@@ -65,8 +64,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
     def checkTracingstoreHealthIfEnabled: Fox[Unit] =
       if (conf.Tracingstore.enabled) {
         for {
-          tracingStore <- tracingStoreDAO.findOneByName("localhost")
-          response <- rpc(s"${tracingStore.url}/tracings/health").get
+          response <- rpc(s"${conf.Http.uri}/tracings/health").get
           if response.status == 200
         } yield ()
       } else {

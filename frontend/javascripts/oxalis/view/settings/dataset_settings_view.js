@@ -59,6 +59,20 @@ type DatasetSettingsProps = {|
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+  getFindDataButton = (layerName: string, isDisabled: boolean) => (
+    <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
+      <Icon
+        type="scan"
+        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+        style={{
+          float: "right",
+          marginTop: 4,
+          cursor: !isDisabled ? "pointer" : "not-allowed",
+        }}
+      />
+    </Tooltip>
+  );
+
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
@@ -85,17 +99,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
-              <Icon
-                type="scan"
-                onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
-                style={{
-                  float: "right",
-                  marginTop: 4,
-                  cursor: !isDisabled ? "pointer" : "not-allowed",
-                }}
-              />
-            </Tooltip>
+            {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
         <NumberSliderSetting
@@ -171,6 +175,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getSegmentationPanel() {
     return (
       <Panel header="Segmentation" key="2">
+        <div style={{ overflow: "auto" }}>{this.getFindDataButton("segmentation", false)}</div>
         <NumberSliderSetting
           label={settings.segmentationOpacity}
           min={0}

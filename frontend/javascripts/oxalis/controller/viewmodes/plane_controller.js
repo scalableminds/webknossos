@@ -101,6 +101,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
+
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   zoomPos: Vector3;
@@ -137,16 +138,16 @@ class PlaneController extends React.PureComponent<Props> {
     // newest input catchers. We should refactor the
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
-    const tdSelector = `#inputcatcher_${OrthoViews.TDView}`;
-    Utils.waitForSelector(tdSelector).then(() => {
+    const tdSelector = `inputcatcher_${OrthoViews.TDView}`;
+    Utils.waitForElementWithId(tdSelector).then(() => {
       OrthoViewValuesWithoutTDView.forEach(id => {
-        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-        Utils.waitForSelector(inputcatcherSelector).then(el => {
+        const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
+        Utils.waitForElementWithId(inputcatcherId).then(el => {
           if (!document.body.contains(el)) {
             console.error("el is not attached anymore");
           }
           this.input.mouseControllers[id] = new InputMouse(
-            inputcatcherSelector,
+            inputcatcherId,
             this.getPlaneMouseControls(id),
             id,
           );

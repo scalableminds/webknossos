@@ -242,24 +242,19 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     (node \ "@groupId").text.toIntOpt
 
   private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Option[Tree] =
-    (tree \ "@id").text.toIntOpt.flatMap { id =>
+    (tree \ "@id").text.toIntOpt.map { id =>
       val color = parseColor(tree)
       val name = parseName(tree)
       val groupId = parseGroupId(tree)
       logger.trace("Parsing tree Id: %d".format(id))
-      (tree \ "nodes" \ "node").flatMap(parseNode) match {
-        case parsedNodes if parsedNodes.nonEmpty =>
-          val edges = (tree \ "edges" \ "edge").flatMap(parseEdge)
-          val nodes = parsedNodes
-          val nodeIds = nodes.map(_.id)
-          val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
-          val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
-          val createdTimestamp =
-            if (nodes.isEmpty) System.currentTimeMillis() else parsedNodes.minBy(_.createdTimestamp).createdTimestamp
-          Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId))
-        case _ =>
-          None
-      }
+      val nodes = (tree \ "nodes" \ "node").flatMap(parseNode)
+      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge)
+      val nodeIds = nodes.map(_.id)
+      val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
+      val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
+      val createdTimestamp =
+        if (nodes.isEmpty) System.currentTimeMillis() else nodes.minBy(_.createdTimestamp).createdTimestamp
+      Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId)
     }
 
   private def parseComments(comments: NodeSeq) =

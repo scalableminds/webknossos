@@ -27,7 +27,6 @@ export const userSettings = {
   hideTreeRemovalWarning: { type: "boolean" },
   fourBit: { type: "boolean" },
   interpolation: { type: "boolean" },
-  quality: { type: "number", enum: [0, 1, 2] },
   loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
   highlightHoveredCellId: { type: "boolean" },
@@ -37,6 +36,8 @@ export const userSettings = {
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },
+  // Deprecated keys kept for compatibility reasons
+  quality: { type: "number", enum: [0, 1, 2] },
 };
 
 export default {

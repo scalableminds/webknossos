@@ -342,7 +342,6 @@ function initializeDataLayerInstances(
     constants.GPU_FACTOR_MULTIPLIER *
     (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
 
-  console.log("demanding requiredBucketCapacity:", requiredBucketCapacity);
   const {
     textureInformationPerLayer,
     isMappingSupported,
@@ -352,7 +351,7 @@ function initializeDataLayerInstances(
     Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
   );
 
-  console.log("supporting smallestCommonBucketCapacity", smallestCommonBucketCapacity);
+  console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
   const connectionInfo = new ConnectionInfo();
   const dataLayers = {};
@@ -451,6 +450,9 @@ function determineDefaultState(
   }
 
   let zoomStep = datasetConfiguration.zoom;
+  if (tracing != null) {
+    zoomStep = getSomeServerTracing(tracing).zoomLevel;
+  }
   if (urlState.zoomStep != null) {
     ({ zoomStep } = urlState);
   }

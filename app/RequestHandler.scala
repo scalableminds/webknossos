@@ -31,8 +31,7 @@ class RequestHandler @Inject()(router: Router,
       val path = request.path.replaceFirst("^(/assets/)", "")
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
-      val httpScheme = if (request.secure) "https://" else "http://"
-      Some(sitemapController.getSitemap(Some(httpScheme + request.host)))
+      Some(sitemapController.getSitemap(Some(conf.Http.uri)))
     } else {
       Some(Action { Ok(views.html.main(conf)) })
     }

@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:sbt-ivy-cache__110
+FROM scalableminds/sbt:sbt-ivy-cache__111
 ARG VERSION_NODE="8.x"
 
 ENV DEBIAN_FRONTEND noninteractive

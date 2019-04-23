@@ -1,5 +1,5 @@
 // @flow
-import { Form, Input, Button, Col, Row } from "antd";
+import { Form, Input, Button, Col, Row, Upload, Icon, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -16,6 +16,7 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import { readFileAsText } from "libs/read_file";
 
 const FormItem = Form.Item;
 
@@ -32,7 +33,15 @@ type PropsWithForm = {|
   form: Object,
 |};
 
-class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm> {
+type State = {
+  fileList: Array<{ originFileObj: File }>,
+};
+
+class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm, State> {
+  state = {
+    fileList: [],
+  };
+
   validateAndParseUrl(url: string) {
     const delimiterIndex = url.indexOf("#!");
     if (delimiterIndex < 0) {
@@ -52,9 +61,21 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm> {
     return config;
   }
 
+  handleChange = info => {
+    // Restrict the upload list to the latest file
+    const fileList = info.fileList.slice(-1);
+    this.setState({ fileList });
+  };
+
+  async parseCredentials(file: File) {
+    const jsonString = await readFileAsText(file);
+    return JSON.parse(jsonString);
+  }
+
   handleSubmit = evt => {
     evt.preventDefault();
     const { activeUser } = this.props;
+    const { fileList } = this.state;
 
     this.props.form.validateFields(async (err, formValues) => {
       if (err || activeUser == null) return;
@@ -66,12 +87,15 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm> {
         type,
         source: source.replace(/^(precomputed:\/\/)/, ""),
       }));
+      const credentials =
+        fileList.length > 0 ? await this.parseCredentials(fileList[0].originFileObj) : null;
 
       const datasetConfig = {
         neuroglancer: {
           [activeUser.organization]: {
             [formValues.name]: {
               layers,
+              ...(credentials != null ? { credentials } : {}),
             },
           },
         },
@@ -94,7 +118,8 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm> {
       <div style={{ padding: 5 }}>
         <CardContainer title="Add Neuroglancer Dataset">
           Currently we only support Neuroglancer precomputed datasets. Simply set a dataset name,
-          select the wk-connect datastore and paste the URL to the Neuroglancer dataset.
+          select the wk-connect datastore and paste the URL to the Neuroglancer dataset. Optionally,
+          a credentials file to a Google Cloud Storage instance can be supplied.
           <Form style={{ marginTop: 20 }} onSubmit={this.handleSubmit} layout="vertical">
             <Row gutter={8}>
               <Col span={12}>
@@ -121,6 +146,38 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm> {
                 ],
                 validateFirst: true,
               })(<Input />)}
+            </FormItem>
+            <FormItem
+              label={
+                <React.Fragment>
+                  Google{" "}
+                  <a
+                    href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Service Account
+                  </a>{" "}
+                  Key
+                </React.Fragment>
+              }
+              hasFeedback
+            >
+              {getFieldDecorator("authFile")(
+                <Upload.Dragger
+                  name="files"
+                  fileList={this.state.fileList}
+                  onChange={this.handleChange}
+                  beforeUpload={() => false}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <Icon type="inbox" style={{ margin: 0 }} />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or Drag your Google Cloud Authentication File to this Area to Upload
+                  </p>
+                </Upload.Dragger>,
+              )}
             </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>

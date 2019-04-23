@@ -4,6 +4,7 @@
 
 const oldDocument = typeof document === "undefined" ? undefined : document;
 const oldWindow = typeof window === "undefined" ? undefined : window;
+let mockedWindow = false;
 if (!global.window) {
   global.window = {
     location: {
@@ -13,11 +14,15 @@ if (!global.window) {
   global.document = {
     createElement: () => ({ style: {} }),
   };
+  mockedWindow = true;
 }
 
 const Hammer = require("hammerjs");
-// Reset to old values, otherwise other libs may not detect a test environment
-global.document = oldDocument;
-global.window = oldWindow;
+
+if (mockedWindow) {
+  // Reset to old values, otherwise other libs may not detect a test environment
+  global.document = oldDocument;
+  global.window = oldWindow;
+}
 
 export default Hammer;

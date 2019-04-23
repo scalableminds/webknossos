@@ -305,7 +305,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     );
   }
 
-  if (!_isAuthenticated && features().enableFrontpage) {
+  if (!_isAuthenticated && features().enableFrontpage && !Utils.getIsInIframe()) {
     menuItems.push(
       <Menu.Item key="features">
         <Link to="/features" style={{ fontWeight: 400 }}>

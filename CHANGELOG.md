@@ -14,9 +14,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Improved performance for large tracings. [#3995](https://github.com/scalableminds/webknossos/pull/3995)
+- Improved how the rendering quality can be adapted in the settings. The setting can now be used to tune the quality to your hardware specification. [#4015](https://github.com/scalableminds/webknossos/pull/4015)
 
 ### Fixed
 - Fixed a missing redirect after registering for an existing organization (with autoVerify=true) via the onboarding flow. [#3984](https://github.com/scalableminds/webknossos/pull/3984)
+- Fixed rendering artifacts which could occur under certain conditions. [#4015](https://github.com/scalableminds/webknossos/pull/4015)
 
 ### Removed
 - 

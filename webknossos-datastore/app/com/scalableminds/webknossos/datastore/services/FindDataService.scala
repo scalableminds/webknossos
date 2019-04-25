@@ -225,17 +225,17 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong], width: UInt = UInt(256)) = {
-      val counts = Array.ofDim[Long](width.toInt)
+    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong]) = {
+      val counts = Array.ofDim[Long](256)
       data match {
         case byteData: Array[UByte] =>
-          byteData.foreach(el => counts((el / (UByte.MaxValue / UByte(width.toInt - 1))).toInt) += 1)
+          byteData.foreach(el => counts(el.toInt) += 1)
         case shortData: Array[UShort] =>
-          shortData.foreach(el => counts((el / (UShort.MaxValue / UShort(width.toInt - 1))).toInt) += 1)
+          shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
         case intData: Array[UInt] =>
-          intData.foreach(el => counts((el / (UInt.MaxValue / (width - UInt(1)))).toInt) += 1)
+          intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
         case longData: Array[ULong] =>
-          longData.foreach(el => counts((el / (ULong.MaxValue / ULong(width.toInt - 1))).toInt) += 1)
+          longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
       }
       counts
     }

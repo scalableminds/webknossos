@@ -4,11 +4,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
-import models.binary.{DataStoreDAO, DataStoreRpcClient}
+import models.binary.DataStoreRpcClient
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import models.annotation.{TracingStoreDAO, TracingStoreRpcClient}
 import play.api.libs.json.Json
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
@@ -19,9 +18,7 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
                             sil: Silhouette[WkEnv],
-                            rpc: RPC,
-                            dataStoreDAO: DataStoreDAO,
-                            tracingStoreDAO: TracingStoreDAO)(implicit ec: ExecutionContext)
+                            rpc: RPC)(implicit ec: ExecutionContext)
     extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>

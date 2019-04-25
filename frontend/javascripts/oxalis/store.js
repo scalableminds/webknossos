@@ -260,6 +260,7 @@ export type UserConfiguration = {|
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
+  +gpuMemoryFactor: number,
 |};
 
 export type RecommendedConfiguration = $Shape<{
@@ -285,6 +286,14 @@ export type TemporaryConfiguration = {
     +mappingSize: number,
   },
   +isMergerModeEnabled: boolean,
+  +gpuSetup: {
+    // These rendering-related variables are set up
+    // during startup and cannot change (with the current
+    // implementation). That's why, we are explicitly saving
+    // these gpu setup variables here.
+    +smallestCommonBucketCapacity: number,
+    +initializedGpuFactor: number,
+  },
 };
 
 export type Script = APIScript;

@@ -17,17 +17,20 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { findDataPositionForLayer } from "admin/admin_rest_api";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
+  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import Store, {
   type DatasetConfiguration,
   type DatasetLayerConfiguration,
   type OxalisState,
+  type UserConfiguration,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -44,6 +47,7 @@ const { Panel } = Collapse;
 const { Option } = Select;
 
 type DatasetSettingsProps = {|
+  userConfiguration: UserConfiguration,
   datasetConfiguration: DatasetConfiguration,
   dataset: APIDataset,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
@@ -57,6 +61,7 @@ type DatasetSettingsProps = {|
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
+  onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -141,8 +146,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
-  onChangeQuality = (propertyName: $Keys<DatasetConfiguration>, value: string) => {
-    this.props.onChange(propertyName, parseInt(value));
+  onChangeGpuFactor = (gpuFactor: number) => {
+    Toast.warning("Please reload the page to allow the changes to take effect.");
+    this.props.onChangeUser("gpuMemoryFactor", gpuFactor);
   };
 
   handleFindData = async (layerName: string) => {
@@ -237,13 +243,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
-            label={settings.quality}
-            value={this.props.datasetConfiguration.quality}
-            onChange={_.partial(this.onChangeQuality, "quality")}
+            label={
+              <React.Fragment>
+                {settings.gpuMemoryFactor}{" "}
+                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and speed are balanced. Medium is the default.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={(
+              this.props.userConfiguration.gpuMemoryFactor || constants.DEFAULT_GPU_MEMORY_FACTOR
+            ).toString()}
+            onChange={this.onChangeGpuFactor}
           >
-            <Option value="0">High</Option>
-            <Option value="1">Medium</Option>
-            <Option value="2">Low</Option>
+            {getGpuFactorsWithLabels().map(([factor, label]) => (
+              <Option key={label} value={factor.toString()}>
+                {label}
+              </Option>
+            ))}
           </DropdownSetting>
           <DropdownSetting
             label={
@@ -298,6 +315,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
+  userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
@@ -308,6 +326,9 @@ const mapStateToProps = (state: OxalisState) => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChange(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
+  },
+  onChangeUser(propertyName, value) {
+    dispatch(updateUserSettingAction(propertyName, value));
   },
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));

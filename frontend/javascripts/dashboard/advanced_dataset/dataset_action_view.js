@@ -46,11 +46,11 @@ type State = {};
 class DatasetActionView extends React.PureComponent<Props, State> {
   createTracing = async (
     dataset: APIMaybeUnimportedDataset,
-    typ: TracingType,
+    type: TracingType,
     withFallback: boolean,
   ) => {
-    const annotation = await createExplorational(dataset, typ, withFallback);
-    trackAction(`Create ${typ} tracing`);
+    const annotation = await createExplorational(dataset, type, withFallback);
+    trackAction(`Create ${type} tracing`);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 

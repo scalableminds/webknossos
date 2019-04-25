@@ -58,6 +58,7 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isNewLayoutModalVisible: boolean,
   isAuthenticationModalVisible: boolean,
+  useExistingSegmentation: boolean
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
@@ -92,11 +93,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   createTracing = async (
     dataset: APIMaybeUnimportedDataset,
-    type: TracingType,
     useExistingSegmentation: boolean,
   ) => {
-    const annotation = await createExplorational(dataset, type, useExistingSegmentation);
-    trackAction(`Create ${type} tracing (from view mode)`);
+    const annotation = await createExplorational(dataset, "hybrid", useExistingSegmentation);
+    trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
       location.hash
     }`;
@@ -106,23 +106,20 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const needsAuthentication = activeUser == null;
 
-    const handleCreateTracing = async () => {
+    const handleCreateTracing = async ( _dataset: APIMaybeUnimportedDataset,
+      _type: TracingType,
+      useExistingSegmentation: boolean) => {
       if (needsAuthentication) {
-        this.setState({ isAuthenticationModalVisible: true });
+        this.setState({ isAuthenticationModalVisible: true, useExistingSegmentation });
+      } else{
+        this.createTracing(dataset, useExistingSegmentation);
       }
     };
 
     return (
       <Dropdown
-        overlay={
-          needsAuthentication ? (
-            <React.Fragment />
-          ) : (
-            createTracingOverlayMenu(dataset, "hybrid", this.createTracing)
-          )
-        }
+        overlay={createTracingOverlayMenu(dataset, "hybrid", handleCreateTracing)}
         trigger={["click"]}
-        onClick={handleCreateTracing}
       >
         <ButtonComponent style={{ marginLeft: 12 }} type="primary">
           Create Tracing
@@ -182,6 +179,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         <AuthenticationModal
           onLoggedIn={() => {
             this.setState({ isAuthenticationModalVisible: false });
+            this.createTracing(this.props.dataset, this.state.useExistingSegmentation);
           }}
           onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
           visible={this.state.isAuthenticationModalVisible}

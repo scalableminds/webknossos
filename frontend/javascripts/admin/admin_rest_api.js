@@ -566,14 +566,14 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetId: APIDatasetId,
-  type: TracingType,
+  typ: TracingType,
   withFallback: boolean,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const url = `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/createExplorational`;
   return Request.sendJSONReceiveJSON(
     url,
-    Object.assign({}, { data: { type, withFallback } }, options),
+    Object.assign({}, { data: { typ, withFallback } }, options),
   );
 }
 

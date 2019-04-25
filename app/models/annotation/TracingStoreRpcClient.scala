@@ -26,8 +26,6 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
 
   def baseInfo = s"Dataset: ${dataSet.name} Tracingstore: ${tracingStore.url}"
 
-  def healthCheck = rpc(s"${tracingStore.url}/tracings/health").get
-
   def getSkeletonTracing(tracingId: String, version: Option[Long]): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/${tracingId}")

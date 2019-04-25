@@ -9,7 +9,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.util.tools.Math
 import net.liftweb.common.Full
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.MessagesProvider
+import spire.math._
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -19,20 +20,31 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
   private def convertData(data: Array[Byte],
-                          elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long] =
+                          elementClass: ElementClass.Value,
+                          filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong] =
     elementClass match {
       case ElementClass.uint8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+          .map(UByte(_))
+          .filter(filterZeroes && _ != UByte(0))
       case ElementClass.uint16 =>
         convertDataImpl[Short, ShortBuffer](data,
                                             DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+          .map(UShort(_))
+          .filter(filterZeroes && _ != UShort(0))
       case ElementClass.uint24 =>
         convertDataImpl[Byte, ByteBuffer](combineBytes(data),
                                           DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+          .map(UByte(_))
+          .filter(filterZeroes && _ != UByte(0))
       case ElementClass.uint32 =>
         convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+          .map(UInt(_))
+          .filter(filterZeroes && _ != UInt(0))
       case ElementClass.uint64 =>
         convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+          .map(ULong(_))
+          .filter(filterZeroes && _ != ULong(0))
     }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
@@ -189,26 +201,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       implicit m: MessagesProvider): Fox[(Double, Double)] = {
 
     def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] =
-      elementClass match {
-        case ElementClass.uint8 =>
-          convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-            .filter(_ != 0)
-            .map(spire.math.UByte(_).toDouble)
-        case ElementClass.uint16 =>
-          convertDataImpl[Short, ShortBuffer](data,
-                                              DataTypeFunctors[Short, ShortBuffer](
-                                                _.asShortBuffer,
-                                                _.get(_),
-                                                _.toShort)).filter(_ != 0).map(spire.math.UShort(_).toDouble)
-        case ElementClass.uint32 =>
-          convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-            .filter(_ != 0)
-            .map(spire.math.UInt(_).toDouble)
-        case ElementClass.uint64 =>
-          convertDataImpl[Long, LongBuffer](data,
-                                            DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-            .filter(_ != 0)
-            .map(spire.math.ULong(_).toDouble)
+      convertData(data, elementClass, filterZeroes = true) match {
+        case d: Array[UByte]  => d.map(_.toDouble)
+        case d: Array[UShort] => d.map(_.toDouble)
+        case d: Array[UInt]   => d.map(_.toDouble)
+        case d: Array[ULong]  => d.map(_.toDouble)
       }
 
     def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D)(
@@ -227,37 +224,18 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   }
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
-    def createHistogram(data: Array[_ >: Byte with Short with Int with Long], width: Int = 256) = {
-      val counts = Array.ofDim[Long](width)
-      var min = Long.MaxValue
-      var max = Long.MinValue
+
+    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong], width: UInt = UInt(256)) = {
+      val counts = Array.ofDim[Long](width.toInt)
       data match {
-        case byteData: Array[Byte] =>
-          byteData.foreach { el =>
-            min = math.min(el, min); max = math.max(el, max)
-          }
-        case shortData: Array[Short] =>
-          shortData.foreach { el =>
-            min = math.min(el, min); max = math.max(el, max)
-          }
-        case intData: Array[Int] =>
-          intData.foreach { el =>
-            min = math.min(el, min); max = math.max(el, max)
-          }
-        case longData: Array[Long] =>
-          longData.foreach { el =>
-            min = math.min(el, min); max = math.max(el, max)
-          }
-      }
-      val bucketWidth = math.ceil((max - min + 1) / width.toDouble).toInt
-      data match {
-        case byteData: Array[Byte] =>
-          byteData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case shortData: Array[Short] =>
-          shortData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case intData: Array[Int] => intData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case longData: Array[Long] =>
-          longData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case byteData: Array[UByte] =>
+          byteData.foreach(el => counts((el / (UByte.MaxValue / UByte(width.toInt - 1))).toInt) += 1)
+        case shortData: Array[UShort] =>
+          shortData.foreach(el => counts((el / (UShort.MaxValue / UShort(width.toInt - 1))).toInt) += 1)
+        case intData: Array[UInt] =>
+          intData.foreach(el => counts((el / (UInt.MaxValue / (width - UInt(1)))).toInt) += 1)
+        case longData: Array[ULong] =>
+          longData.foreach(el => counts((el / (ULong.MaxValue / ULong(width.toInt - 1))).toInt) += 1)
       }
       counts
     }
@@ -265,13 +243,12 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
-        convertedData = convertData(dataConcatenated, dataLayer.elementClass)
-      } yield (createHistogram(convertedData), convertedData.length)
+        convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = true)
+      } yield (calculateHistogramValues(convertedData), convertedData.length)
 
-    for {
-      _ <- bool2Fox(dataLayer.resolutions.nonEmpty)
-      histogramAndCount <- histogramForPositions(createPositions(dataLayer, 2).distinct,
-                                                 dataLayer.resolutions.minBy(_.maxDim))
-    } yield histogramAndCount
+    if (dataLayer.resolutions.nonEmpty)
+      histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
+    else
+      Fox.empty
   }
 }

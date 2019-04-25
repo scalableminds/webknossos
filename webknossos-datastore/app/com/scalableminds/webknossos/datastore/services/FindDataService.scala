@@ -25,42 +25,22 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
     } yield positionAndResolutionOpt
 
-  private def convertData(data: Array[Byte],
-                          elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long] =
-    elementClass match {
-      case ElementClass.uint8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-      case ElementClass.uint16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-      case ElementClass.uint32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-      case ElementClass.uint64 =>
-        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-    }
-
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
-    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-    srcBuffer.rewind()
-    val dstArray = Array.ofDim[T](srcBuffer.remaining())
-    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
-    dstArray
-  }
-
   private def checkAllPositionsForData(dataSource: DataSource,
                                        dataLayer: DataLayer): Fox[Option[(Point3D, Point3D)]] = {
 
     def getExactDataOffset(data: Array[Byte]): Point3D = {
-      val cubeLength = DataLayer.bucketLength / dataLayer.bytesPerElement
-      val convertedData = convertData(data, dataLayer.elementClass)
+      val bytesPerElement = dataLayer.bytesPerElement
+      val cubeLength = DataLayer.bucketLength / bytesPerElement
       for {
         z <- 0 until cubeLength
         y <- 0 until cubeLength
         x <- 0 until cubeLength
+        scaledX = x * bytesPerElement
+        scaledY = y * bytesPerElement
+        scaledZ = z * bytesPerElement
       } {
-        val voxelOffset = x + y * cubeLength + z * cubeLength * cubeLength
-        if (convertedData(voxelOffset) != 0) return Point3D(x, y, z)
+        val voxelOffset = scaledX + scaledY * cubeLength + scaledZ * cubeLength * cubeLength
+        if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Point3D(x, y, z)
       }
       Point3D(0, 0, 0)
     }
@@ -203,5 +183,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct,
                                                  dataLayer.resolutions.minBy(_.maxDim))
     } yield meanAndStdDev
+  }
+
+  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
+                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
+    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
+    srcBuffer.rewind()
+    val dstArray = Array.ofDim[T](srcBuffer.remaining())
+    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
+    dstArray
   }
 }

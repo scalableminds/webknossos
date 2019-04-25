@@ -37,6 +37,7 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
+import Model from "oxalis/model";
 import messages, { settings } from "messages";
 
 const { Panel } = Collapse;
@@ -173,9 +174,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   getSegmentationPanel() {
+    const segmentation = Model.getSegmentationLayer();
+    const segmentationLayerName = segmentation != null ? segmentation.name : null;
     return (
       <Panel header="Segmentation" key="2">
-        <div style={{ overflow: "auto" }}>{this.getFindDataButton("segmentation", false)}</div>
+        {segmentationLayerName ? (
+          <div style={{ overflow: "auto" }}>
+            {this.getFindDataButton(segmentationLayerName, false)}
+          </div>
+        ) : null}
         <NumberSliderSetting
           label={settings.segmentationOpacity}
           min={0}

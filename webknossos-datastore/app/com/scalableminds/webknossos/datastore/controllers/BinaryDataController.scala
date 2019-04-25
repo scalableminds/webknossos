@@ -402,21 +402,17 @@ class BinaryDataController @Inject()(
         }
   }
 
-  def createHistogram(organizationName: String, dataSetName: String) = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
-      AllowRemoteOrigin {
-        for {
-          dataSource <- dataSourceRepository.findUsable(DataSourceId(dataSetName, organizationName)).toFox ?~> Messages(
-            "dataSource.notFound") ~> 404
-          histograms <- Fox.serialCombined(dataSource.dataLayers)(layer =>
-            findDataService.createHistogram(dataSource, layer))
-          jsList = dataSource.dataLayers
-            .map(layer => layer.name)
-            .zip(histograms)
-            .map(tuple => Json.obj(tuple._1 -> Json.obj("histogram" -> tuple._2._1, "count" -> tuple._2._2)))
-        } yield Ok(Json.toJson(jsList))
-      }
-    }
+  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              (histogram, count) <- findDataService.createHistogram(dataSource, dataLayer)
+            } yield Ok(Json.obj("histogram" -> histogram, "count" -> count))
+          }
+        }
   }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(

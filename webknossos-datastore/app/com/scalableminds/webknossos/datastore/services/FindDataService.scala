@@ -26,6 +26,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       case ElementClass.uint16 =>
         convertDataImpl[Short, ShortBuffer](data,
                                             DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+      case ElementClass.uint24 =>
+        convertDataImpl[Byte, ByteBuffer](combineBytes(data),
+                                          DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint32 =>
         convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
       case ElementClass.uint64 =>
@@ -39,6 +42,18 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     val dstArray = Array.ofDim[T](srcBuffer.remaining())
     dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
     dstArray
+  }
+
+  private def combineBytes(data: Array[Byte], numBytes: Int = 3) = {
+    val result = Array.ofDim[Byte](data.length / numBytes)
+    for (i <- data.indices by numBytes) {
+      var sum = 0
+      for (j <- 0 until numBytes) {
+        sum += data(i + j)
+      }
+      result(i / numBytes) = (sum / numBytes).toByte
+    }
+    result
   }
 
   private def getDataFor(dataSource: DataSource,
@@ -233,10 +248,13 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
       val bucketWidth = math.ceil((max - min + 1) / width.toDouble).toInt
       data match {
-        case byteData: Array[Byte]   => byteData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case shortData: Array[Short] => shortData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case intData: Array[Int]     => intData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
-        case longData: Array[Long]   => longData.foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case byteData: Array[Byte] =>
+          byteData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case shortData: Array[Short] =>
+          shortData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case intData: Array[Int] => intData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
+        case longData: Array[Long] =>
+          longData.filter(_ != 0).foreach(el => counts(((el - min) / bucketWidth).toInt) += 1)
       }
       counts
     }

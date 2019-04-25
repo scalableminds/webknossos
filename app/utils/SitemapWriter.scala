@@ -63,6 +63,6 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO)(implicit ec: Execu
   def getAllURLs =
     for {
       publications <- publicationDAO.findAll(GlobalAccessContext)
-    } yield standardURLs ::: publications.map(pub => SitemapURL("/publication" + pub._id.id, None, Some("weekly")))
+    } yield standardURLs ::: publications.map(pub => SitemapURL("/publication/" + pub._id.id, None, Some("weekly")))
 
 }

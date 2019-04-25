@@ -52,6 +52,9 @@ import * as skeletonController from "oxalis/controller/combinations/skeletontrac
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
+const MAX_BRUSH_CHANGE_VALUE = 5;
+const BRUSH_CHANGING_CONSTANT = 0.02;
+
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(
     Object.keys(skeletonControls),
@@ -101,6 +104,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
+
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   zoomPos: Vector3;
@@ -232,8 +236,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
         "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
 
-        "shift + i": () => this.changeBrushSizeIfBrushIsActive(-5),
-        "shift + o": () => this.changeBrushSizeIfBrushIsActive(5),
+        "shift + i": () => this.changeBrushSizeIfBrushIsActiveBy(-1),
+        "shift + o": () => this.changeBrushSizeIfBrushIsActiveBy(1),
 
         "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
@@ -450,13 +454,17 @@ class PlaneController extends React.PureComponent<Props> {
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
   }
 
-  changeBrushSizeIfBrushIsActive(changeValue: number) {
+  changeBrushSizeIfBrushIsActiveBy(factor: number) {
     const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
       .map(tool => tool === VolumeToolEnum.BRUSH)
       .getOrElse(false);
     if (isBrushActive) {
-      const brushSize = Store.getState().userConfiguration.brushSize + changeValue;
-      Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+      const currentBrushSize = Store.getState().userConfiguration.brushSize;
+      const newBrushSize =
+        Math.min(Math.ceil(currentBrushSize * BRUSH_CHANGING_CONSTANT), MAX_BRUSH_CHANGE_VALUE) *
+          factor +
+        currentBrushSize;
+      Store.dispatch(updateUserSettingAction("brushSize", newBrushSize));
     }
   }
 
@@ -476,8 +484,11 @@ class PlaneController extends React.PureComponent<Props> {
           .getOrElse(false);
         if (isBrushActive) {
           // Different browsers send different deltas, this way the behavior is comparable
-          const brushSize = Store.getState().userConfiguration.brushSize + (delta > 0 ? 5 : -5);
-          Store.dispatch(updateUserSettingAction("brushSize", brushSize));
+          if (delta > 0) {
+            this.changeBrushSizeIfBrushIsActiveBy(1);
+          } else {
+            this.changeBrushSizeIfBrushIsActiveBy(-1);
+          }
         } else if (this.props.tracing.skeleton) {
           // Different browsers send different deltas, this way the behavior is comparable
           api.tracing.setNodeRadius(delta > 0 ? 5 : -5);

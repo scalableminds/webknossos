@@ -87,8 +87,10 @@ Now you know the basics of webKnossos.
 Feel free to explore more features of webKnossos in this documentation.
 
 * [Dashboard](./dashboard.md)
+* [Skeleton Annotations](./skeleton_annotation.md)
+* [Volume Annotations & Proof-Reading](./volume_annotation.md)
 * [Keyboard Shortcuts](./keyboard_shortcuts.md)
-* [Tracing UI](./tracing_ui.md)
+* [Understanding the User Interface](./tracing_ui.md)
 * [Sharing](./sharing.md)
 * [Datasets](./datasets.md) and [Data Formats](./data_formats.md)
 * [User and Permission Management](./users.md)

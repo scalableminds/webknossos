@@ -145,7 +145,7 @@ jobs:
           name: Run webknossos smoke test
           command: |
             sleep 10
-            ./test/infrastructure/deployment.bash
+            curl --fail --retry 3 --max-time 15 -v http://localhost:9000/api/health
       - run:
           name: Stop webknossos
           command: docker-compose down --volumes --remove-orphans

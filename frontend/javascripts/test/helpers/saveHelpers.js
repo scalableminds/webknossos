@@ -17,3 +17,7 @@ export function createSaveQueueFromUpdateActions(updateActions, timestamp, stats
 export function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
   return items.filter(item => item.name !== "updateTracing");
 }
+
+export function withoutUpdateTree(items: Array<UpdateAction>): Array<UpdateAction> {
+  return items.filter(item => item.name !== "updateTree");
+}

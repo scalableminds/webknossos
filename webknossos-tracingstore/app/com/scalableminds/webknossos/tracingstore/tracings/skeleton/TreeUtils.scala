@@ -116,4 +116,14 @@ object TreeUtils {
 
   def add(t1: Tree, t2: Tree) =
     t1.withNodes((t1.nodes ++ t2.nodes).toSet.toSeq).withEdges((t1.edges ++ t2.edges).toSet.toSeq)
+
+  def getAllChildrenGroups(rootGroup: TreeGroup) = {
+    def childIter(currentGroup: Seq[TreeGroup]): Seq[TreeGroup] =
+      currentGroup match {
+        case Seq() => Seq.empty
+        case _     => currentGroup ++ currentGroup.flatMap(group => childIter(group.children))
+      }
+
+    childIter(Seq(rootGroup))
+  }
 }

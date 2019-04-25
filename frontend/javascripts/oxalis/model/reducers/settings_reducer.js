@@ -98,6 +98,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               contrast: 1,
               color: [255, 255, 255],
               alpha: 100,
+              isDisabled: false,
             },
             initialLayerSettings[layer.name],
           );
@@ -122,7 +123,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       };
     }
     case "SET_VIEW_MODE": {
-      const allowedModes = state.tracing.restrictions.allowedModes;
+      const { allowedModes } = state.tracing.restrictions;
       if (allowedModes.includes(action.viewMode)) {
         return updateTemporaryConfig(state, { viewMode: action.viewMode });
       } else {
@@ -134,6 +135,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
     case "SET_CONTROL_MODE": {
       return updateTemporaryConfig(state, { controlMode: action.controlMode });
+    }
+    case "INITIALIZE_GPU_SETUP": {
+      return updateTemporaryConfig(state, {
+        gpuSetup: {
+          smallestCommonBucketCapacity: action.bucketCapacity,
+          initializedGpuFactor: action.gpuFactor,
+        },
+      });
     }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled } = action;

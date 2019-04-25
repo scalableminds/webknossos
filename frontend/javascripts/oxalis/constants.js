@@ -121,11 +121,6 @@ export const OUTER_CSS_BORDER = 2;
 const VIEWPORT_WIDTH = 376;
 export const ensureSmallerEdge = false;
 
-// Using the following dimensions for the address space,
-// the look up buffer (256**2) is used at a rate of ~ 99%
-// ((36 × 36 × 50) / 256^2 = 0.98877)
-export const addressSpaceDimensions = [36, 36, 50];
-
 export const Unicode = {
   ThinSpace: "\u202f",
   MultiplicationSymbol: "×",
@@ -146,24 +141,19 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
 
-  // We require at least 3 * 512 === 1536 buckets per data layer to fit onto the GPU.
-  // This number is used during setup to pick appropriate data texture sizes.
-  // Previously, a minimum of 1200 buckets was enforced. Since, this limit required at least
-  // three 4096**2 textures, a minimum of capacity of 1536 is actually reasonable.
-  MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
-  LOOK_UP_TEXTURE_WIDTH: 256,
+  // The amount of buckets which is required per layer can be customized
+  // via the settings. The value which we expose for customization is a factor
+  // which will be multiplied with GPU_FACTOR_MULTIPLIER to calculate the
+  // the actual amount of buckets.
+  GPU_FACTOR_MULTIPLIER: 512,
+  DEFAULT_GPU_MEMORY_FACTOR: 3,
+  DEFAULT_LOOK_UP_TEXTURE_WIDTH: 256,
 
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
 
   FPS: 50,
 
   DEFAULT_SPHERICAL_CAP_RADIUS: 140,
-
-  // !Currently disabled!
-  // We always add another (read: one) zoomstep level by downsampling buckets from the highest
-  // available zoomstep. This allows to zoom out far enough while still being able to load enough
-  // buckets to the GPU.
-  DOWNSAMPLED_ZOOM_STEP_COUNT: 0,
 
   RESIZE_THROTTLE_TIME: 250,
 

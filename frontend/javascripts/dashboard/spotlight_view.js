@@ -16,7 +16,7 @@ import features from "features";
 const { Content } = Layout;
 const { Search } = Input;
 
-const SimpleHeader = () => (
+export const SimpleHeader = () => (
   <div id="oxalis-header">
     <img
       src="/assets/images/oxalis.svg"
@@ -233,7 +233,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
-        <Content style={{ padding: 50, maxWidth: 1500, margin: "auto" }}>
+        <Content className="centered-content">
           <div className="pull-right">{this.state.datasets.length > 0 && search}</div>
           <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />

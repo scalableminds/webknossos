@@ -4,7 +4,13 @@
  */
 import Enum from "Enumjs";
 
-import type { BoundingBoxObject, Edge, CommentType, TreeGroup } from "oxalis/store";
+import type {
+  BoundingBoxObject,
+  Edge,
+  CommentType,
+  TreeGroup,
+  RecommendedConfiguration,
+} from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
@@ -41,14 +47,15 @@ type APIDataLayerBase = {|
 
 type APIColorLayer = {|
   ...APIDataLayerBase,
-  category: "color",
+  +category: "color",
 |};
 
 export type APISegmentationLayer = {|
   ...APIDataLayerBase,
-  category: "segmentation",
-  largestSegmentId: number,
+  +category: "segmentation",
+  +largestSegmentId: number,
   +mappings?: Array<string>,
+  +fallbackLayer?: ?string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
@@ -230,7 +237,7 @@ export type APITaskType = {
   +teamId: string,
   +teamName: string,
   +settings: APISettings,
-  +recommendedConfiguration: ?string,
+  +recommendedConfiguration: ?RecommendedConfiguration,
   +tracingType: "skeleton" | "volume",
 };
 
@@ -520,6 +527,7 @@ export type ServerSkeletonTracingTree = {
   treeId: number,
   createdTimestamp: number,
   groupId?: ?number,
+  isVisible?: boolean,
 };
 
 export type ServerTracingBase = {|

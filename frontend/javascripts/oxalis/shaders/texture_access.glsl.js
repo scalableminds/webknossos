@@ -120,6 +120,19 @@ export const getColorForCoords: ShaderModule = {
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
 
+      if (relativeBucketPosition.x > addressSpaceDimensions.x ||
+          relativeBucketPosition.y > addressSpaceDimensions.y ||
+          relativeBucketPosition.z > addressSpaceDimensions.z ||
+          relativeBucketPosition.x < 0.0 ||
+          relativeBucketPosition.y < 0.0 ||
+          relativeBucketPosition.z < 0.0) {
+        // In theory, the current magnification should always be selected
+        // so that we won't have to address data outside of the addresSpaceDimensions.
+        // Nevertheless, we explicitly guard against this situation here to avoid
+        // rendering wrong data.
+        return vec4(1.0, 0.0, 0.0, 1.0);
+      }
+
       float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
 
       vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
@@ -143,7 +156,8 @@ export const getColorForCoords: ShaderModule = {
         return vec4(0.0, 0.0, 0.0, alpha);
       }
 
-      if (bucketAddress < 0. || isNan(bucketAddress)) {
+      if (bucketAddress < 0. ||
+          isNan(bucketAddress)) {
         // Not-yet-existing data is encoded with a = -1.0
         return vec4(0.0, 0.0, 0.0, -1.0);
       }
@@ -207,6 +221,18 @@ export const getColorForCoords: ShaderModule = {
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
 
+      if (packingDegree == 2.0) {
+        // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
+        if (rgbaIndex == 0.0) {
+          return vec4(bucketColor.r, bucketColor.g, bucketColor.r, bucketColor.g);
+        } else if (rgbaIndex == 1.0) {
+          return vec4(bucketColor.b, bucketColor.a, bucketColor.b, bucketColor.a);
+        }
+      }
+
+      // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
         return vec4(bucketColor.r);
       } else if (rgbaIndex == 1.0) {

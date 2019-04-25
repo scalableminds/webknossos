@@ -53,6 +53,7 @@ export default function generateDummyTrees(
       comments: [],
       name: "explorative_2017-10-09_SCM_Boy_023",
       createdTimestamp: 1507550576213,
+      isVisible: true,
     };
   }
   return _.range(treeCount).map(() => generateDummyTree());

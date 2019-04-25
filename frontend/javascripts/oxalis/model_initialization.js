@@ -9,7 +9,6 @@ import type {
   HybridServerTracing,
   ServerVolumeTracing,
 } from "admin/api_flow_types";
-import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import {
   type DataTextureSizeAndCount,
   computeDataTexturesSetup,
@@ -38,6 +37,12 @@ import {
   getDatasetConfiguration,
 } from "admin/admin_rest_api";
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
+import {
+  initializeSettingsAction,
+  initializeGpuSetupAction,
+  setControlModeAction,
+  setViewModeAction,
+} from "oxalis/model/actions/settings_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import { serverTracingAsSkeletonTracingMaybe } from "oxalis/model/accessors/skeletontracing_accessor";
 import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
@@ -52,11 +57,6 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
-import {
-  setViewModeAction,
-  setControlModeAction,
-  initializeSettingsAction,
-} from "oxalis/model/actions/settings_actions";
 import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataLayer from "oxalis/model/data_layer";
@@ -65,6 +65,7 @@ import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/stor
 import Toast from "libs/toast";
 import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
+import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
 
@@ -121,8 +122,11 @@ export async function initialize(
   let initializationInformation = null;
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
-    initializationInformation = initializeDataLayerInstances();
+    const { gpuMemoryFactor } = initialUserSettings;
+    initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
+    const { smallestCommonBucketCapacity } = initializationInformation;
+    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -154,9 +158,11 @@ async function fetchParallel(
 
 function validateSpecsForLayers(
   layers: Array<APIDataLayer>,
+  requiredBucketCapacity: number,
 ): {
   textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
   isMappingSupported: boolean,
+  smallestCommonBucketCapacity: number,
 } {
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
@@ -166,7 +172,14 @@ function validateSpecsForLayers(
     isMappingSupported,
     textureInformationPerLayer,
     isBasicRenderingSupported,
-  } = computeDataTexturesSetup(specs, layers, layer => getBitDepth(layer) >> 3, hasSegmentation);
+    smallestCommonBucketCapacity,
+  } = computeDataTexturesSetup(
+    specs,
+    layers,
+    layer => getBitDepth(layer) >> 3,
+    hasSegmentation,
+    requiredBucketCapacity,
+  );
 
   if (!isBasicRenderingSupported) {
     const message = `Not enough textures available for rendering ${layers.length} layers`;
@@ -181,7 +194,7 @@ function validateSpecsForLayers(
 
   maybeWarnAboutUnsupportedLayers(layers);
 
-  return { isMappingSupported, textureInformationPerLayer };
+  return { isMappingSupported, textureInformationPerLayer, smallestCommonBucketCapacity };
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -313,19 +326,32 @@ function initializeSettings(initialUserSettings: Object, initialDatasetSettings:
   Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
 }
 
-function initializeDataLayerInstances(): {
+function initializeDataLayerInstances(
+  gpuFactor: ?number,
+): {
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
   maximumDataTextureCountForLayer: number,
+  smallestCommonBucketCapacity: number,
 } {
   const { dataset } = Store.getState();
   const layers = dataset.dataSource.dataLayers;
 
-  const { textureInformationPerLayer, isMappingSupported } = validateSpecsForLayers(layers);
+  const requiredBucketCapacity =
+    constants.GPU_FACTOR_MULTIPLIER *
+    (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
+
+  const {
+    textureInformationPerLayer,
+    isMappingSupported,
+    smallestCommonBucketCapacity,
+  } = validateSpecsForLayers(layers, requiredBucketCapacity);
   const maximumDataTextureCountForLayer = _.max(
     Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
   );
+
+  console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
   const connectionInfo = new ConnectionInfo();
   const dataLayers = {};
@@ -352,7 +378,13 @@ function initializeDataLayerInstances(): {
     throw HANDLED_ERROR;
   }
 
-  return { dataLayers, connectionInfo, isMappingSupported, maximumDataTextureCountForLayer };
+  return {
+    dataLayers,
+    connectionInfo,
+    isMappingSupported,
+    maximumDataTextureCountForLayer,
+    smallestCommonBucketCapacity,
+  };
 }
 
 function setupLayerForVolumeTracing(
@@ -381,6 +413,8 @@ function setupLayerForVolumeTracing(
     // volume tracing can only be done for the first resolution
     resolutions: [[1, 1, 1]],
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
+    // remember the name of the original layer, used to request mappings
+    fallbackLayer: tracing.fallbackLayer,
   };
 
   if (fallbackLayer != null) {
@@ -416,6 +450,9 @@ function determineDefaultState(
   }
 
   let zoomStep = datasetConfiguration.zoom;
+  if (tracing != null) {
+    zoomStep = getSomeServerTracing(tracing).zoomLevel;
+  }
   if (urlState.zoomStep != null) {
     ({ zoomStep } = urlState);
   }

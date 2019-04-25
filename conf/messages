@@ -96,6 +96,8 @@ dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
 dataSet.downloadAlreadyRunning=Sample dataset download is already running.
 dataSet.alreadyPresent=Sample dataset is already present.
+dataSet.noResolutions=Data layer does not contain resolutions
+dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 
 dataSource.notFound=Datasource not found on datastore server
 

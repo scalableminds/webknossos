@@ -78,6 +78,15 @@ export const getSegmentationId: ShaderModule = {
 
       <% if (isMappingSupported) { %>
         if (isMappingEnabled) {
+          // Depending on the packing degree, the returned volume color contains extra values
+          // which would make the binary search fail
+
+          <% if (segmentationPackingDegree === "4.0") { %>
+            volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
+          <% } else if (segmentationPackingDegree === "2.0") { %>
+            volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+          <% } %>
+
           float index = binarySearchIndex(
             <%= segmentationName %>_mapping_lookup_texture,
             mappingSize,

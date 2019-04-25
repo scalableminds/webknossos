@@ -4,6 +4,7 @@
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
+import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -21,13 +22,15 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
-  compactSaveQueue,
   pushTracingTypeAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
@@ -187,7 +190,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
 
   saga.throw({ status: 409 });
   const alertEffect = saga.next().value;
-  t.is(alertEffect.CALL.fn, alert);
+  t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);
 });
 

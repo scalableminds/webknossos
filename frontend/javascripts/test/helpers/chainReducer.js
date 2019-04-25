@@ -13,6 +13,13 @@ class ChainReducerClass<S, A> {
     return new ChainReducerClass(reducer(this.state, action));
   }
 
+  applyAll(reducer: (S, A) => S, actionGetters: Array<A | (S => A)>): ChainReducerClass<S, A> {
+    return actionGetters.reduce(
+      (acc, currentActionGetter) => this.apply(reducer, currentActionGetter),
+      this,
+    );
+  }
+
   unpack(): S {
     return this.state;
   }

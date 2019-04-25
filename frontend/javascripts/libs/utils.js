@@ -554,9 +554,9 @@ export function waitForCondition(pred: () => boolean): Promise<void> {
   return new Promise(tryToResolve);
 }
 
-export function waitForElementWithId(selector: string): Promise<*> {
+export function waitForElementWithId(elementId: string): Promise<*> {
   const tryToResolve = resolve => {
-    const el = document.getElementById(selector);
+    const el = document.getElementById(elementId);
     if (el) {
       resolve(el);
     } else {

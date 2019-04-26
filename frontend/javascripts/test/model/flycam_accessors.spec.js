@@ -8,6 +8,9 @@ import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import constants from "oxalis/constants";
 import test from "ava";
 
+const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
+const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
+
 // $FlowFixMe
 const initialState: OxalisState = {
   dataset: {
@@ -41,24 +44,15 @@ test("Flycam Accessors should calculate the max zoom step", t => {
   t.is(getMaxZoomStep(initialState.dataset), 16);
 });
 
-test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {
+test("Flycam Accessors should calculate the request log zoom step (1/2)", t => {
   t.is(accessors.getRequestLogZoomStep(initialState), 0);
 });
 
-test("Flycam Accessors should calculate the request log zoom step (2/3)", t => {
+test("Flycam Accessors should calculate the request log zoom step (2/2)", t => {
   const state = _.cloneDeep(initialState);
-  // $FlowFixMe
-  state.datasetConfiguration.quality = 1;
-  t.is(accessors.getRequestLogZoomStep(state), 1);
-});
-
-test("Flycam Accessors should calculate the request log zoom step (3/3)", t => {
-  const state = _.cloneDeep(initialState);
-  // $FlowFixMe
-  state.datasetConfiguration.quality = 1;
   // $FlowFixMe
   state.flycam.zoomStep = 8;
-  t.is(accessors.getRequestLogZoomStep(state), 4);
+  t.is(accessors.getRequestLogZoomStep(state), 3);
 });
 
 test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", t => {
@@ -94,6 +88,8 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     scale,
     resolutions,
     rects,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_GPU_MEMORY_FACTOR,
   );
 
   // If this test case should fail at some point, the following values may be updated appropriately

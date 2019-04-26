@@ -144,7 +144,7 @@ jobs:
       - run:
           name: Run webknossos smoke test
           command: |
-            for i in {1..5}; do # retry
+            for i in {1..10}; do # retry
               sleep 10
               curl --fail -v http://localhost:9000/api/health && s=0 && break || s=$?
             done

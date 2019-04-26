@@ -58,13 +58,14 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isNewLayoutModalVisible: boolean,
   isAuthenticationModalVisible: boolean,
-  useExistingSegmentation: boolean
+  useExistingSegmentation: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
     isAuthenticationModalVisible: false,
+    useExistingSegmentation: true,
   };
 
   handleResetLayout = () => {
@@ -91,10 +92,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async (
-    dataset: APIMaybeUnimportedDataset,
-    useExistingSegmentation: boolean,
-  ) => {
+  createTracing = async (dataset: APIMaybeUnimportedDataset, useExistingSegmentation: boolean) => {
     const annotation = await createExplorational(dataset, "hybrid", useExistingSegmentation);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
@@ -106,12 +104,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const needsAuthentication = activeUser == null;
 
-    const handleCreateTracing = async ( _dataset: APIMaybeUnimportedDataset,
+    const handleCreateTracing = async (
+      _dataset: APIMaybeUnimportedDataset,
       _type: TracingType,
-      useExistingSegmentation: boolean) => {
+      useExistingSegmentation: boolean,
+    ) => {
       if (needsAuthentication) {
         this.setState({ isAuthenticationModalVisible: true, useExistingSegmentation });
-      } else{
+      } else {
         this.createTracing(dataset, useExistingSegmentation);
       }
     };

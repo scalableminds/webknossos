@@ -41,6 +41,11 @@ export type InitializeSettingsAction = {
 type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
+type InitializeGpuSetupAction = {
+  type: "INITIALIZE_GPU_SETUP",
+  bucketCapacity: number,
+  gpuFactor: number,
+};
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
   type: "SET_MAPPING",
@@ -60,7 +65,8 @@ export type SettingAction =
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
-  | SetMappingAction;
+  | SetMappingAction
+  | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfiguration>,
@@ -147,4 +153,13 @@ export const setMappingAction = (
   mapping,
   mappingColors,
   hideUnmappedIds,
+});
+
+export const initializeGpuSetupAction = (
+  bucketCapacity: number,
+  gpuFactor: number,
+): InitializeGpuSetupAction => ({
+  type: "INITIALIZE_GPU_SETUP",
+  bucketCapacity,
+  gpuFactor,
 });

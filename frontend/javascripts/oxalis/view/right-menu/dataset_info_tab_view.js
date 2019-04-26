@@ -10,11 +10,11 @@ import React from "react";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
-import { aggregateBoundingBox } from "libs/utils";
 import { convertToHybridTracing } from "admin/admin_rest_api";
-import { formatScale, formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { formatScale, } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import { location } from "libs/window";
 import {
   setAnnotationNameAction,
@@ -88,30 +88,6 @@ export function convertPixelsToNm(
   dataset: APIDataset,
 ): number {
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
-}
-
-function getDatasetExtentInVoxel(dataset: APIDataset) {
-  const datasetLayers = dataset.dataSource.dataLayers;
-  const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
-  const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
-  const { min, max } = unifiedBoundingBoxes;
-  const extent = {
-    width: max[0] - min[0],
-    height: max[1] - min[1],
-    depth: max[2] - min[2],
-  };
-  return extent;
-}
-
-export function getDatasetExtentInLength(dataset: APIDataset) {
-  const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const { scale } = dataset.dataSource;
-  const extent = {
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
-  };
-  return extent;
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props> {
@@ -304,8 +280,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
-    const extent = getDatasetExtentInLength(this.props.dataset);
+    const extentInVoxel = getDatasetExtentAsString(this.props.dataset, true);
+    const extentInLength = getDatasetExtentAsString(this.props.dataset, false);
 
     return (
       <div className="flex-overflow padded-tab-content">
@@ -322,11 +298,11 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             <tbody>
               <tr>
                 <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
+                <td>{extentInVoxel} Voxel³</td>
               </tr>
               <tr>
                 <td />
-                <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
+                <td>{extentInLength}</td>
               </tr>
             </tbody>
           </table>

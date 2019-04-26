@@ -3,10 +3,12 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type { APIAllowedMode, APIDataset, APIMaybeUnimportedDataset, APISegmentationLayer } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import { aggregateBoundingBox } from "libs/utils";
+import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 
 export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
@@ -119,6 +121,41 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
     (lowerBoundary[1] + upperBoundary[1]) / 2,
     (lowerBoundary[2] + upperBoundary[2]) / 2,
   ];
+}
+
+function getDatasetExtentInVoxel(dataset: APIDataset) {
+  const datasetLayers = dataset.dataSource.dataLayers;
+  const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
+  const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
+  const { min, max } = unifiedBoundingBoxes;
+  const extent = {
+    width: max[0] - min[0],
+    height: max[1] - min[1],
+    depth: max[2] - min[2],
+  };
+  return extent;
+}
+
+function getDatasetExtentInLength(dataset: APIDataset) {
+  const extentInVoxel = getDatasetExtentInVoxel(dataset);
+  const { scale } = dataset.dataSource;
+  const extent = {
+    width: extentInVoxel.width * scale[0],
+    height: extentInVoxel.height * scale[1],
+    depth: extentInVoxel.depth * scale[2],
+  };
+  return extent;
+}
+export function getDatasetExtentAsString(dataset: APIMaybeUnimportedDataset, inVoxel: boolean = true): string {
+  if(!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive){
+    return "";
+  }
+  if (inVoxel) {
+    const extentInVoxel = getDatasetExtentInVoxel(dataset);
+    return formatExtentWithLength(extentInVoxel, x => `${x}`);
+  }
+  const extent = getDatasetExtentInLength(dataset);
+  return formatExtentWithLength(extent, formatNumberToLength);
 }
 
 export function determineAllowedModes(

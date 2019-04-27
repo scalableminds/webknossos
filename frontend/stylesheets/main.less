@@ -66,6 +66,8 @@ body {
   }
 
   @media @smartphones {
+    height: 54px !important;
+
     a[href="/"] span {
       font-size: 0px; // hide text
     }
@@ -118,6 +120,7 @@ td.nowrap * {
   vertical-align: middle;
   display: inline-block;
   font-size: 80px;
+  font-size: 80px;
   line-height: normal;
   color: #000;
   margin-left: 30px;
@@ -125,6 +128,15 @@ td.nowrap * {
   img {
     height: 100px;
     width: 100px;
+  }
+
+  @media @smartphones {
+    font-size: 2rem;
+
+    img {
+      height: 60px;
+      width: 60px;
+    }
   }
 }
 

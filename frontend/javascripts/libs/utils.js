@@ -666,3 +666,11 @@ export function getIsInIframe() {
     return true;
   }
 }
+
+export function disableViewportMetatag() {
+  const viewport = document.querySelector("meta[name=viewport]");
+  if (!viewport) {
+    return;
+  }
+  viewport.setAttribute("content", "");
+}

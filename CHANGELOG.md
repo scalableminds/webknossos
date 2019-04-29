@@ -33,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - Fixed a missing redirect after registering for an existing organization (with autoVerify=true) via the onboarding flow. [#3984](https://github.com/scalableminds/webknossos/pull/3984)
 - Fixed rendering artifacts which could occur under certain conditions. [#4015](https://github.com/scalableminds/webknossos/pull/4015)
+- Fixed that the zoom step was reset after switching to a new task. [#4049](https://github.com/scalableminds/webknossos/pull/4049)
 
 
 ## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01

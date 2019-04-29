@@ -475,7 +475,7 @@ export function addEventListenerWithDelegation(
 ) {
   const wrapperFunc = function(event: Event) {
     // $FlowFixMe Flow doesn't know native InputEvents
-    for (let target = event.target; target && target !== this; target = target.parentNode) {
+    for (let { target } = event; target && target !== this; target = target.parentNode) {
       // $FlowFixMe Flow doesn't know native InputEvents
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
@@ -554,9 +554,9 @@ export function waitForCondition(pred: () => boolean): Promise<void> {
   return new Promise(tryToResolve);
 }
 
-export function waitForSelector(selector: string): Promise<*> {
+export function waitForElementWithId(elementId: string): Promise<*> {
   const tryToResolve = resolve => {
-    const el = document.querySelector(selector);
+    const el = document.getElementById(elementId);
     if (el) {
       resolve(el);
     } else {

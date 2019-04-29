@@ -136,21 +136,21 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    // Workaround: We are only waiting for tdview since this
-    // introduces the necessary delay to attach the events to the
-    // newest input catchers. We should refactor the
+    // Workaround: We are only waiting for tdview since this introduces
+    // the necessary delay to attach the events to the newest input
+    // catchers (only necessary for HammerJS). We should refactor the
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
-    const tdSelector = `#inputcatcher_${OrthoViews.TDView}`;
-    Utils.waitForSelector(tdSelector).then(() => {
+    const tdId = `inputcatcher_${OrthoViews.TDView}`;
+    Utils.waitForElementWithId(tdId).then(() => {
       OrthoViewValuesWithoutTDView.forEach(id => {
-        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-        Utils.waitForSelector(inputcatcherSelector).then(el => {
+        const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
+        Utils.waitForElementWithId(inputcatcherId).then(el => {
           if (!document.body.contains(el)) {
             console.error("el is not attached anymore");
           }
           this.input.mouseControllers[id] = new InputMouse(
-            inputcatcherSelector,
+            inputcatcherId,
             this.getPlaneMouseControls(id),
             id,
           );

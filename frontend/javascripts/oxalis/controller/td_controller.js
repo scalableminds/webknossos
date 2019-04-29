@@ -85,16 +85,12 @@ class TDController extends React.PureComponent<Props> {
 
   initMouse(): void {
     const tdView = OrthoViews.TDView;
-    const inputcatcherSelector = `#inputcatcher_${tdView}`;
-    Utils.waitForSelector(inputcatcherSelector).then(view => {
+    const inputcatcherId = `inputcatcher_${tdView}`;
+    Utils.waitForElementWithId(inputcatcherId).then(view => {
       if (!this.isStarted) {
         return;
       }
-      this.mouseController = new InputMouse(
-        inputcatcherSelector,
-        this.getTDViewMouseControls(),
-        tdView,
-      );
+      this.mouseController = new InputMouse(inputcatcherId, this.getTDViewMouseControls(), tdView);
       this.initTrackballControls(view);
     });
   }

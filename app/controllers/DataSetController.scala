@@ -196,7 +196,8 @@ class DataSetController @Inject()(userService: UserService,
         datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataSet.noLayers"
         _ <- dataSetService
           .clientFor(dataSet)
-          .flatMap(_.requestDataLayerThumbnail(organizationName, datalayer.name, 100, 100, None, None)) ?~> "dataSet.loadingDataFailed"
+          .flatMap(_.findPositionWithData(organizationName, datalayer.name).flatMap(posWithData =>
+            bool2Fox(posWithData.value("position") != JsNull))) ?~> "dataSet.loadingDataFailed"
       } yield {
         Ok("Ok")
       }

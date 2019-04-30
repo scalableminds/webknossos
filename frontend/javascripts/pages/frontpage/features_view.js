@@ -295,19 +295,19 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
         <FeatureList title="Annotations">
           {[
             <Fragment key="1">
-              <a href="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations">
+              <a href="https://docs.webknossos.org/guides/skeleton_annotation">
                 Skeleton
               </a>{" "}
               &{" "}
-              <a href="https://docs.webknossos.org/guides/tracing_ui#volume-annotations">
+              <a href="https://docs.webknossos.org/guides/volume_annotation">
                 volume annotations
               </a>
             </Fragment>,
-            <a key="2" href="https://docs.webknossos.org/guides/tracing_ui#flight-mode">
+            <a key="2" href="https://docs.webknossos.org/guides/skeleton_annotation#flight-mode">
               High-speed Flight mode
             </a>,
             "Segmentation proofreading",
-            <a key="3" href="https://docs.webknossos.org/guides/tracing_ui#nodes-and-trees">
+            <a key="3" href="https://docs.webknossos.org/guides/skeleton_annotation#nodes-and-trees">
               Comments, trees & groups
             </a>,
             "Measurement tools",

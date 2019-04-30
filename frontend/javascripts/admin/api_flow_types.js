@@ -390,6 +390,7 @@ type NeuroglancerDatasetConfig = {
   [organizationName: string]: {
     [datasetName: string]: {
       layers: { [layerName: string]: NeuroglancerLayer },
+      credentials?: Object,
     },
   },
 };

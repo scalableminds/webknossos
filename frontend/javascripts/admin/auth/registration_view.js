@@ -32,7 +32,8 @@ class RegistrationView extends React.PureComponent<Props> {
           <Link to="/onboarding">Create a new organization.</Link>
         ) : (
           <React.Fragment>
-            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on setting up webKnossos.
+            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
+            setting up webKnossos.
           </React.Fragment>
         )}
       </Card>

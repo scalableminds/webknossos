@@ -120,7 +120,10 @@ label.ant-checkbox-wrapper {
   padding: 0;
 }
 
-.vertical-center-flex-fix .ant-menu-submenu-title {
+.ant-menu-submenu.vertical-center-flex-fix {
+  .ant-menu-submenu-title {
+    display: flex;
+  }
   display: flex;
 }
 
@@ -139,4 +142,9 @@ label.ant-checkbox-wrapper {
   // Make all tooltips click-through so that they don't make the underlying
   // UI unusable
   pointer-events: none;
+}
+
+// Otherwise the "Show Password" icon will collide with the hasFeedback form validation icon
+.ant-input-password-icon {
+  margin-right: 16px;
 }

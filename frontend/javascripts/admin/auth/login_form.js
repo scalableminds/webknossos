@@ -10,6 +10,7 @@ import Store from "oxalis/store";
 import messages from "messages";
 
 const FormItem = Form.Item;
+const { Password } = Input;
 
 type Props = {
   layout: "horizontal" | "vertical" | "inline",
@@ -71,9 +72,8 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
           {getFieldDecorator("password", {
             rules: [{ required: true, message: messages["auth.registration_password_input"] }],
           })(
-            <Input
+            <Password
               prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
-              type="password"
               placeholder="Password"
             />,
           )}

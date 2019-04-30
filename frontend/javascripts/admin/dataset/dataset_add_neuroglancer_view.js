@@ -158,7 +158,7 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm, Stat
                   >
                     Service Account
                   </a>{" "}
-                  Key
+                  Key (Optional)
                 </React.Fragment>
               }
               hasFeedback
@@ -171,10 +171,14 @@ class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm, Stat
                   beforeUpload={() => false}
                 >
                   <p className="ant-upload-drag-icon">
-                    <Icon type="inbox" style={{ margin: 0 }} />
+                    <Icon type="unlock" style={{ margin: 0, fontSize: 35 }} />
                   </p>
                   <p className="ant-upload-text">
                     Click or Drag your Google Cloud Authentication File to this Area to Upload
+                  </p>
+                  <p className="ant-upload-text-hint">
+                    This is only needed if the dataset is located in a non-public Google Cloud
+                    Storage bucket
                   </p>
                 </Upload.Dragger>,
               )}

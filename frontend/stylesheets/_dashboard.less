@@ -200,6 +200,10 @@
 
   @media @smartphones {
     height: 700px;
+
+    & > div > div {
+      flex-direction: column;
+    }
   }
 
   .ant-card-body {
@@ -262,6 +266,8 @@
 
 .spotlight-hero-button {
   margin-right: 50px;
+  margin-top: 30px;
+  display: inline-block;
   color: rgba(255, 255, 255, 0.8);
 
   &:hover {

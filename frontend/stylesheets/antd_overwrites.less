@@ -1,6 +1,14 @@
 .ant-layout-header {
   padding: 0 20px;
   background: white;
+
+  @media @smartphones {
+    & .ant-menu-item,
+    & .ant-menu-submenu-title {
+      padding: 0;
+      padding-right: 10px;
+    }
+  }
 }
 
 .ant-layout-sider {

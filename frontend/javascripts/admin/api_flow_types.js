@@ -241,6 +241,8 @@ export type APITaskType = {
   +tracingType: "skeleton" | "volume",
 };
 
+export type TracingType = "skeleton" | "volume" | "hybrid";
+
 export type TaskStatus = { +open: number, +active: number, +finished: number };
 
 type APIScriptTypeBase = {

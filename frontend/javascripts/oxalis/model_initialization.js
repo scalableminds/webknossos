@@ -135,7 +135,9 @@ export async function initialize(
   }
 
   const defaultState = determineDefaultState(UrlManager.initialState, tracing);
-  applyState(defaultState);
+
+  // Don't override zoom when swapping the task
+  applyState(defaultState, !initialFetch);
 
   return initializationInformation;
 }
@@ -470,7 +472,7 @@ function determineDefaultState(
   return { position, zoomStep, rotation, activeNode };
 }
 
-export function applyState(state: $Shape<UrlManagerState>) {
+export function applyState(state: $Shape<UrlManagerState>, ignoreZoom: boolean = false) {
   if (state.activeNode != null) {
     // Set the active node (without animating to its position) before setting the
     // position, since the position should take precedence.
@@ -479,7 +481,7 @@ export function applyState(state: $Shape<UrlManagerState>) {
   if (state.position != null) {
     Store.dispatch(setPositionAction(state.position));
   }
-  if (state.zoomStep != null) {
+  if (!ignoreZoom && state.zoomStep != null) {
     Store.dispatch(setZoomStepAction(state.zoomStep));
   }
   if (state.rotation != null) {

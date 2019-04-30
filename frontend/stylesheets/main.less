@@ -54,14 +54,24 @@ body {
   background: repeating-linear-gradient(45deg, #ffdc00, #ffdc00 20px, #111111 20px, #111111 40px);
 }
 
-.logo {
-  background: url(/assets/images/oxalis.svg) 15px center no-repeat;
-  padding-left: 43px;
-  height: 40px;
-  float: left;
-  margin-top: 6px;
-  background-size: 20px 20px;
-  filter: invert(1);
+.ant-layout-header {
+  .logo {
+    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    padding-left: 43px;
+    height: 40px;
+    float: left;
+    margin-top: 6px;
+    background-size: 20px 20px;
+    filter: invert(1);
+  }
+
+  @media @smartphones {
+    height: 54px !important;
+
+    a[href="/"] span {
+      font-size: 0px; // hide text
+    }
+  }
 }
 
 .bold {
@@ -110,6 +120,7 @@ td.nowrap * {
   vertical-align: middle;
   display: inline-block;
   font-size: 80px;
+  font-size: 80px;
   line-height: normal;
   color: #000;
   margin-left: 30px;
@@ -118,11 +129,19 @@ td.nowrap * {
     height: 100px;
     width: 100px;
   }
+
+  @media @smartphones {
+    font-size: 2rem;
+
+    img {
+      height: 60px;
+      width: 60px;
+    }
+  }
 }
 
 .centered-content {
   padding: 50px;
-  min-width: 900px;
   max-width: 1500px;
   margin: auto;
 }

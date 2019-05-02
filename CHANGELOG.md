@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Changed
-- 
+- The NML parser now rounds floating point values in node coordinates. [#4045](https://github.com/scalableminds/webknossos/pull/4045)
 
 ### Fixed
 - 

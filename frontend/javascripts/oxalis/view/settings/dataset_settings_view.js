@@ -96,7 +96,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               <div style={{ display: "inline-block", marginRight: 8 }}>
                 <Switch
                   size="small"
-                  onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                  onChange={(val, event) => {
+                    if (event.ctrlKey) {
+                      // If ctrl is pressed, make the visibility of all other layers
+                      // the negated visibility of the just changed layer.
+                      const { layers } = this.props.datasetConfiguration;
+                      Object.keys(layers).forEach(otherLayerName =>
+                        this.props.onChangeLayer(otherLayerName, "isDisabled", val),
+                      );
+                    }
+                    this.props.onChangeLayer(layerName, "isDisabled", !val);
+                  }}
                   checked={!isDisabled}
                 />
               </div>

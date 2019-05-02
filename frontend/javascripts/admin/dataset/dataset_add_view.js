@@ -9,7 +9,8 @@ import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
-import DatasetAddWkConnectView from "admin/dataset/dataset_add_wk_connect_view";
+import DatasetAddNeuroglancerView from "admin/dataset/dataset_add_neuroglancer_view";
+import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
@@ -74,16 +75,29 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           <TabPane
             tab={
               <span>
-                <Icon type="plus" />
-                Add Dataset via wk-connect
+                <Icon type="google" />
+                Add Neuroglancer Dataset
               </span>
             }
             key="2"
           >
-            <DatasetAddWkConnectView
+            <DatasetAddNeuroglancerView
               datastores={datastores.wkConnect}
               onAdded={handleDatasetAdded}
             />
+          </TabPane>
+        )}
+        {datastores.wkConnect.length > 0 && (
+          <TabPane
+            tab={
+              <span>
+                <Icon type="database" />
+                Add BossDB Dataset
+              </span>
+            }
+            key="3"
+          >
+            <DatasetAddBossView datastores={datastores.wkConnect} onAdded={handleDatasetAdded} />
           </TabPane>
         )}
         {features().addForeignDataset && (
@@ -94,7 +108,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
                 Add Foreign Dataset
               </span>
             }
-            key="3"
+            key="4"
           >
             <DatasetAddForeignView onAdded={() => history.push("/dashboard")} />
           </TabPane>

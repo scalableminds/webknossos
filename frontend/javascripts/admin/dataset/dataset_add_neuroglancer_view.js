@@ -1,5 +1,5 @@
 // @flow
-import { Form, Input, Button, Col, Row } from "antd";
+import { Form, Input, Button, Col, Row, Upload, Icon } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -16,12 +16,12 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import { readFileAsText } from "libs/read_file";
 
 const FormItem = Form.Item;
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
-  withoutCard?: boolean,
   onAdded: (string, string) => void,
 |};
 type StateProps = {|
@@ -33,7 +33,15 @@ type PropsWithForm = {|
   form: Object,
 |};
 
-class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
+type State = {
+  fileList: Array<{ originFileObj: File }>,
+};
+
+class DatasetAddNeuroglancerView extends React.PureComponent<PropsWithForm, State> {
+  state = {
+    fileList: [],
+  };
+
   validateAndParseUrl(url: string) {
     const delimiterIndex = url.indexOf("#!");
     if (delimiterIndex < 0) {
@@ -46,16 +54,28 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
     config.layers.forEach(layer => {
       if (!layer.source.startsWith("precomputed://")) {
         throw new Error(
-          "This dataset contains layers that are not supported by wk-connect. wk-connect supports only 'precomputed://' neuroglancer layers.",
+          "This dataset contains layers that are not supported. wk-connect supports only 'precomputed://' neuroglancer layers.",
         );
       }
     });
     return config;
   }
 
+  handleChange = info => {
+    // Restrict the upload list to the latest file
+    const fileList = info.fileList.slice(-1);
+    this.setState({ fileList });
+  };
+
+  async parseCredentials(file: File) {
+    const jsonString = await readFileAsText(file);
+    return JSON.parse(jsonString);
+  }
+
   handleSubmit = evt => {
     evt.preventDefault();
     const { activeUser } = this.props;
+    const { fileList } = this.state;
 
     this.props.form.validateFields(async (err, formValues) => {
       if (err || activeUser == null) return;
@@ -67,18 +87,21 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
         type,
         source: source.replace(/^(precomputed:\/\/)/, ""),
       }));
+      const credentials =
+        fileList.length > 0 ? await this.parseCredentials(fileList[0].originFileObj) : null;
 
       const datasetConfig = {
         neuroglancer: {
           [activeUser.organization]: {
             [formValues.name]: {
               layers,
+              ...(credentials != null ? { credentials } : {}),
             },
           },
         },
       };
 
-      trackAction("Add wk-connect dataset");
+      trackAction("Add Neuroglancer dataset");
       await addWkConnectDataset(formValues.datastore, datasetConfig);
 
       Toast.success(messages["dataset.add_success"]);
@@ -88,14 +111,15 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
   };
 
   render() {
-    const { form, activeUser, withoutCard, datastores } = this.props;
+    const { form, activeUser, datastores } = this.props;
     const { getFieldDecorator } = form;
 
     return (
       <div style={{ padding: 5 }}>
-        <CardContainer withoutCard={withoutCard} title="Add wk-connect Dataset">
-          Currently wk-connect supports adding Neuroglancer datasets. Simply set a dataset name,
-          select the wk-connect datastore and paste the URL to the Neuroglancer dataset.
+        <CardContainer title="Add Neuroglancer Dataset">
+          Currently we only support Neuroglancer precomputed datasets. Simply set a dataset name,
+          select the wk-connect datastore and paste the URL to the Neuroglancer dataset. Optionally,
+          a credentials file to a Google Cloud Storage instance can be supplied.
           <Form style={{ marginTop: 20 }} onSubmit={this.handleSubmit} layout="vertical">
             <Row gutter={8}>
               <Col span={12}>
@@ -123,6 +147,42 @@ class DatasetAddWkConnectView extends React.PureComponent<PropsWithForm> {
                 validateFirst: true,
               })(<Input />)}
             </FormItem>
+            <FormItem
+              label={
+                <React.Fragment>
+                  Google{" "}
+                  <a
+                    href="https://cloud.google.com/iam/docs/creating-managing-service-account-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Service Account
+                  </a>{" "}
+                  Key (Optional)
+                </React.Fragment>
+              }
+              hasFeedback
+            >
+              {getFieldDecorator("authFile")(
+                <Upload.Dragger
+                  name="files"
+                  fileList={this.state.fileList}
+                  onChange={this.handleChange}
+                  beforeUpload={() => false}
+                >
+                  <p className="ant-upload-drag-icon">
+                    <Icon type="unlock" style={{ margin: 0, fontSize: 35 }} />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or Drag your Google Cloud Authentication File to this Area to Upload
+                  </p>
+                  <p className="ant-upload-text-hint">
+                    This is only needed if the dataset is located in a non-public Google Cloud
+                    Storage bucket
+                  </p>
+                </Upload.Dragger>,
+              )}
+            </FormItem>
             <FormItem style={{ marginBottom: 0 }}>
               <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Add
@@ -140,5 +200,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  Form.create()(DatasetAddWkConnectView),
+  Form.create()(DatasetAddNeuroglancerView),
 );

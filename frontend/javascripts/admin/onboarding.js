@@ -476,21 +476,26 @@ class OnboardingView extends React.PureComponent<Props, State> {
     );
   }
 
-  render() {
-    const currentStepContent = (() => {
-      switch (this.state.currentStep) {
-        case 0:
-          return this.renderCreateOrganization();
-        case 1:
-          return this.renderCreateAccount();
-        case 2:
-          return this.renderUploadDatasets();
-        case 3:
-          return this.renderWhatsNext();
-        default:
-          return null;
-      }
-    })();
+  getAvailableSteps() {
+    if (features().isDemoInstance) {
+      return [
+        { title: "Create Organization", component: this.renderCreateOrganization },
+        { title: "Create Account", component: this.renderCreateAccount },
+        { title: "What's Next?", component: this.renderWhatsNext },
+      ];
+    } else {
+      return [
+        { title: "Create Organization", component: this.renderCreateOrganization },
+        { title: "Create Account", component: this.renderCreateAccount },
+        { title: "Add Dataset", component: this.renderUploadDatasets },
+        { title: "What's Next?", component: this.renderWhatsNext },
+      ];
+    }
+  }
+
+  render = () => {
+    const availableSteps = this.getAvailableSteps();
+    const currentStepContent = availableSteps[this.state.currentStep].component();
 
     return (
       <div
@@ -504,10 +509,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
-              <Step title="Create Organization" />
-              <Step title="Create Account" />
-              <Step title="Add Dataset" />
-              <Step title="What's Next?" />
+              {availableSteps.map(({ title }) => (
+                <Step title={title} key={title} />
+              ))}
             </Steps>
           </Col>
         </Row>
@@ -522,7 +526,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </div>
       </div>
     );
-  }
+  };
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

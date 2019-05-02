@@ -79,6 +79,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     </Tooltip>
   );
 
+  setVisibilityForAllLayers = (isVisible: boolean) => {
+    const { layers } = this.props.datasetConfiguration;
+    Object.keys(layers).forEach(otherLayerName =>
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
+    );
+  };
+
+  isLayerExclusivelyVisible = (layerName: string): boolean => {
+    const { layers } = this.props.datasetConfiguration;
+    return Object.keys(layers).every(otherLayerName => {
+      const { isDisabled } = layers[otherLayerName];
+      return layerName === otherLayerName ? !isDisabled : isDisabled;
+    });
+  };
+
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
@@ -97,15 +112,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 <Switch
                   size="small"
                   onChange={(val, event) => {
-                    if (event.ctrlKey) {
-                      // If ctrl is pressed, make the visibility of all other layers
-                      // the negated visibility of the just changed layer.
-                      const { layers } = this.props.datasetConfiguration;
-                      Object.keys(layers).forEach(otherLayerName =>
-                        this.props.onChangeLayer(otherLayerName, "isDisabled", val),
-                      );
+                    if (!event.ctrlKey) {
+                      this.props.onChangeLayer(layerName, "isDisabled", !val);
+                      return;
                     }
-                    this.props.onChangeLayer(layerName, "isDisabled", !val);
+                    // If ctrl is pressed, toggle between "all layers visible" and
+                    // "only selected layer visible".
+                    if (this.isLayerExclusivelyVisible(layerName)) {
+                      this.setVisibilityForAllLayers(true);
+                    } else {
+                      this.setVisibilityForAllLayers(false);
+                      this.props.onChangeLayer(layerName, "isDisabled", false);
+                    }
                   }}
                   checked={!isDisabled}
                 />

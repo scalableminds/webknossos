@@ -496,7 +496,8 @@ export type APIFeatureToggles = {
   +hideNavbarLogin: boolean,
   +addMissingDatasetButtonEnabled: boolean,
   +enableFrontpage: boolean,
-  autoBrushReadyDatasets: Array<string>,
+  +autoBrushReadyDatasets: Array<string>,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes

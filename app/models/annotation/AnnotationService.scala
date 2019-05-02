@@ -117,27 +117,35 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     )
   }
 
-  def createTracings(dataSet: DataSet, dataSource: DataSource, tracingType: TracingType.Value, withFallback: Boolean)(
-      implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = tracingType match {
-    case TracingType.skeleton =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- client.saveSkeletonTracing(
-          SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-      } yield (Some(skeletonTracingId), None)
-    case TracingType.volume =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-      } yield (None, Some(volumeTracingId))
-    case TracingType.hybrid =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- client.saveSkeletonTracing(
-          SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-      } yield (Some(skeletonTracingId), Some(volumeTracingId))
-  }
+  def createTracings(
+      dataSet: DataSet,
+      dataSource: DataSource,
+      tracingType: TracingType.Value,
+      withFallback: Boolean,
+      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
+    tracingType match {
+      case TracingType.skeleton =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          userBoundingBox <- Fox.runOptional(oldTracingId)(id =>
+            client.getVolumeTracing(id).flatMap(_._1.userBoundingBox))
+          skeletonTracingId <- client.saveSkeletonTracing(
+            SkeletonTracingDefaults.createInstance
+              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBoundingBox))
+        } yield (Some(skeletonTracingId), None)
+      case TracingType.volume =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        } yield (None, Some(volumeTracingId))
+      case TracingType.hybrid =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          skeletonTracingId <- client.saveSkeletonTracing(
+            SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        } yield (Some(skeletonTracingId), Some(volumeTracingId))
+    }
 
   def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean)(
       implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -169,7 +177,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           case _                   => Fox.failure("unexpectedReturn")
         }
       case TracingType.volume =>
-        createTracings(dataSet, dataSource, TracingType.skeleton, false).flatMap {
+        createTracings(dataSet, dataSource, TracingType.skeleton, false, annotation.volumeTracingId).flatMap {
           case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
           case _                     => Fox.failure("unexpectedReturn")
         }

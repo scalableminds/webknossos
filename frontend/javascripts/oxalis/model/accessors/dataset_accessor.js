@@ -3,7 +3,12 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIAllowedMode, APIDataset, APIMaybeUnimportedDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIDataset,
+  APIMaybeUnimportedDataset,
+  APISegmentationLayer,
+} from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
@@ -146,15 +151,20 @@ function getDatasetExtentInLength(dataset: APIDataset) {
   };
   return extent;
 }
-export function getDatasetExtentAsString(dataset: APIMaybeUnimportedDataset, inVoxel: boolean = true): string {
-  if(!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive){
+
+export function getDatasetExtentAsString(
+  dataset: APIMaybeUnimportedDataset,
+  inVoxel: boolean = true,
+): string {
+  if (!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive) {
     return "";
   }
+  const importedDataset = ((dataset: any): APIDataset);
   if (inVoxel) {
-    const extentInVoxel = getDatasetExtentInVoxel(dataset);
+    const extentInVoxel = getDatasetExtentInVoxel(importedDataset);
     return formatExtentWithLength(extentInVoxel, x => `${x}`);
   }
-  const extent = getDatasetExtentInLength(dataset);
+  const extent = getDatasetExtentInLength(importedDataset);
   return formatExtentWithLength(extent, formatNumberToLength);
 }
 

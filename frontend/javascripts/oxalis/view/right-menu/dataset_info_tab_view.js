@@ -11,7 +11,7 @@ import React from "react";
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
-import { formatScale, } from "libs/format_utils";
+import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";

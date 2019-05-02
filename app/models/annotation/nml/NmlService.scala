@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
 import scala.concurrent.ExecutionContext
@@ -20,12 +20,18 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
   def extractFromNml(file: File, name: String): NmlParseResult =
     extractFromNml(new FileInputStream(file), name)
 
+  private def formatChain(chain: Box[Failure]): String = chain match {
+    case Full(failure) =>
+      " <~ " + failure.msg + formatChain(failure.chain)
+    case _ => ""
+  }
+
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult =
     NmlParser.parse(name, inputStream) match {
       case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
         NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
-      case Failure(msg, _, _) => NmlParseFailure(name, msg)
-      case Empty              => NmlParseEmpty(name)
+      case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
+      case Empty                  => NmlParseEmpty(name)
     }
 
   def extractFromZip(file: File, zipFileName: Option[String] = None): ZipParseResult = {

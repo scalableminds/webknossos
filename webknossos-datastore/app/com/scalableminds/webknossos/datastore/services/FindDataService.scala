@@ -242,13 +242,13 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "getting data failed"
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = true)
       } yield (calculateHistogramValues(convertedData), convertedData.length)
 
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
-      Fox.empty
+      Fox.empty ?~> "empty resolutions"
   }
 }

@@ -11,7 +11,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - 
 
 ## [19.05.0](https://github.com/scalableminds/webknossos/releases/tag/19.05.0) - 2019-04-29
-No migrations necessary.
+### Postgres Evolutions:
+- [042-add-json-object-constraints.sql](conf/evolutions/042-add-json-object-constraints.sql)
 
 
 ## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01
@@ -22,7 +23,6 @@ No migrations necessary.
 
 ### Postgres Evolutions:
 - [041-add-datastore-isconnector.sql](conf/evolutions/041-add-datastore-isconnector.sql)
-- [042-add-json-object-constraints.sql](conf/evolutions/042-add-json-object-constraints.sql)
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04

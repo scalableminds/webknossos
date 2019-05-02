@@ -47,14 +47,14 @@ const WelcomeHeader = ({ history }) => (
         }}
       >
         <Row type="flex" align="middle" style={{ color: "white" }}>
-          <Col span={4}>
+          <Col xs={{ span: 0 }} xl={{ span: 4 }}>
             <img
               src="/assets/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={20}>
+          <Col xs={{ span: 24 }} xl={{ span: 20 }}>
             <p
               style={{
                 fontSize: 58,

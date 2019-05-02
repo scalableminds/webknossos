@@ -490,12 +490,10 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +allowOrganizationCreation: boolean,
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +addMissingDatasetButtonEnabled: boolean,
-  +enableFrontpage: boolean,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes

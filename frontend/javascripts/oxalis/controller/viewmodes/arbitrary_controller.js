@@ -49,7 +49,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
-const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
+const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 
 type Props = {|
   viewMode: ViewMode,
@@ -70,6 +70,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
+
   storePropertyUnsubscribers: Array<Function>;
 
   // Copied from backbone events (TODO: handle this better)
@@ -90,8 +91,8 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportSelector, {
+    Utils.waitForElementWithId(arbitraryViewportId).then(() => {
+      this.input.mouseController = new InputMouse(arbitraryViewportId, {
         leftDownMove: (delta: Point2) => {
           if (this.props.viewMode === constants.MODE_ARBITRARY) {
             Store.dispatch(

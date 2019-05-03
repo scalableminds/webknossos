@@ -15,7 +15,7 @@ export function CardContainer({
   title,
 }: {
   children: React.Node,
-  withoutCard: ?boolean,
+  withoutCard?: boolean,
   title: string,
 }) {
   if (withoutCard) {
@@ -23,7 +23,7 @@ export function CardContainer({
   } else {
     return (
       <Card
-        style={{ width: "85%", marginLeft: "auto", marginRight: "auto" }}
+        style={{ maxWidth: 1200, marginLeft: "auto", marginRight: "auto" }}
         bordered={false}
         title={<h3>{title}</h3>}
       >

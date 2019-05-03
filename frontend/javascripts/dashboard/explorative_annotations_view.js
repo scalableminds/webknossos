@@ -494,7 +494,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <Tag
         key={tag}
         color={stringToColor(tag)}
-        afterClose={_.partial(this.removeTagFromSearch, tag)}
+        onClose={_.partial(this.removeTagFromSearch, tag)}
         closable
       >
         {tag}

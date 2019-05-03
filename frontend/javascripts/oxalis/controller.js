@@ -74,6 +74,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
+    // The tracing view should be rendered without the special mobile-friendly
+    // viewport meta tag.
+    Utils.disableViewportMetatag();
     this.isMounted = true;
     Store.dispatch(setIsInAnnotationViewAction(true));
 

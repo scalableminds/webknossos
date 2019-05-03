@@ -25,6 +25,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { V2 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import window from "libs/window";
 
 const outputExtent = 100;
 const inputContextExtent = 20;

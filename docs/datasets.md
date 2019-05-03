@@ -88,6 +88,8 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 
 ![Dataset Editing: General Tab](images/dataset_general.png)
 
+https://www.youtube.com/watch?v=yYauIHZcI_4  
+
 
 ### View Configuration
 - `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.

@@ -196,11 +196,18 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
         result <- identifier.annotationType match {
-          case AnnotationType.View             => Fox.failure("Cannot download View annotation")
-          case AnnotationType.CompoundProject  => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
-          case AnnotationType.CompoundTask     => downloadTask(id, request.identity, skipVolumeData.getOrElse(false))
-          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
-          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion, skipVolumeData.getOrElse(false))
+          case AnnotationType.View            => Fox.failure("Cannot download View annotation")
+          case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.CompoundTask    => downloadTask(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.CompoundTaskType =>
+            downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
+          case _ =>
+            downloadExplorational(id,
+                                  typ,
+                                  request.identity,
+                                  skeletonVersion,
+                                  volumeVersion,
+                                  skipVolumeData.getOrElse(false))
         }
       } yield result
     }

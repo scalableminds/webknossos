@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import _ from "lodash";
 import moment from "moment";
 
-import { type OxalisState} from "oxalis/store";
+import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
@@ -185,7 +185,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                       ))}
                   </Select>
                 ) : (
-                  <table style={{ width: "100%" }}>
+                  <table style={{ width: "100%", fontSize: 16 }}>
                     <tbody>
                       <tr>
                         <td style={{ width: "50%" }}>

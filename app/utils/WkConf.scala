@@ -30,6 +30,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Http {
     val uri = get[String]("http.uri")
+    val port = get[Int]("http.port")
   }
 
   object Mail {

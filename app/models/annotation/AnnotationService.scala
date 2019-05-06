@@ -372,10 +372,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit m: MessagesProvider,
-                                                                         ctx: DBAccessContext): Fox[TemporaryFile] =
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
+      implicit m: MessagesProvider,
+      ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
-      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
+      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(
         tuple =>
@@ -420,7 +421,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
        tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext): Fox[
     List[(List[Option[SkeletonTracing]],
           List[Option[VolumeTracing]],
           List[Option[Array[Byte]]],
@@ -454,8 +456,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
-          case Some(tracingId) => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
-          case None            => Fox.successful(None)
+          case None                              => Fox.successful(None)
+          case Some(tracingId) if skipVolumeData => Fox.successful(None)
+          case Some(tracingId)                   => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
         }
       } yield tracingDataObjects
 

@@ -87,6 +87,7 @@ const defaultState: OxalisState = {
       mappingSize: 0,
     },
     isMergerModeEnabled: false,
+    isAutoBrushEnabled: false,
     gpuSetup: {
       smallestCommonBucketCapacity:
         Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,

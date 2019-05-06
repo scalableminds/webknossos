@@ -36,6 +36,7 @@ export const settings = {
     but it will take more time until the best quality is shown).`,
   mergerMode: "Enable Merger Mode",
   gpuMemoryFactor: "Quality",
+  autoBrush: "Automatic Brush (Beta)",
 };
 
 export default {

@@ -3,6 +3,7 @@
  * @flow
  */
 
+import features from "features";
 import { Collapse } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -37,7 +38,10 @@ import {
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import { settings as settingsLabels } from "messages";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  updateTemporarySettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { userSettings } from "libs/user_settings.schema";
 import Constants, {
   type ControlMode,
@@ -45,6 +49,7 @@ import Constants, {
   type ViewMode,
   type Vector6,
 } from "oxalis/constants";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
 import MergerModeModalView from "./merger_mode_modal_view";
@@ -64,7 +69,9 @@ type UserSettingsViewProps = {
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeEnableMergerMode: (active: boolean) => void,
+  onChangeEnableAutoBrush: (active: boolean) => void,
   isMergerModeEnabled: boolean,
+  isAutoBrushEnabled: boolean,
   viewMode: ViewMode,
   controlMode: ControlMode,
   dataset: APIDataset,
@@ -106,6 +113,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
         isMergerModeModalClosable: false,
       });
       disableMergerMode();
+    }
+  };
+
+  handleAutoBrushChange = async (active: boolean) => {
+    this.props.onChangeEnableAutoBrush(active);
+    if (active) {
+      Toast.info(
+        "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
+      );
     }
   };
 
@@ -321,6 +337,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             value={this.props.userConfiguration.brushSize}
             onChange={this.onChangeUser.brushSize}
           />
+          {this.maybeGetAutoBrushUi()}
           <NumberInputSetting
             label="Active Cell ID"
             value={volumeTracing.activeCellId}
@@ -331,6 +348,26 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
     }
     return panels;
   };
+
+  maybeGetAutoBrushUi() {
+    const { autoBrushReadyDatasets } = features();
+    if (
+      autoBrushReadyDatasets == null ||
+      !autoBrushReadyDatasets.includes(this.props.dataset.name)
+    ) {
+      return null;
+    }
+
+    return (
+      <SwitchSetting
+        label={settingsLabels.autoBrush}
+        value={this.props.isAutoBrushEnabled}
+        onChange={value => {
+          this.handleAutoBrushChange(value);
+        }}
+      />
+    );
+  }
 
   render() {
     const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
@@ -409,6 +446,7 @@ const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
   dataset: state.dataset,
 });
 
@@ -436,6 +474,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeEnableMergerMode(active: boolean) {
     dispatch(setMergerModeEnabledAction(active));
+  },
+  onChangeEnableAutoBrush(active: boolean) {
+    dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
   },
 });
 

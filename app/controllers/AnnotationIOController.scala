@@ -190,17 +190,17 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                id: String,
                skeletonVersion: Option[Long],
                volumeVersion: Option[Long],
-               skipVolumeData: Boolean = false) =
+               skipVolumeData: Option[Boolean]) =
     sil.SecuredAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
         result <- identifier.annotationType match {
           case AnnotationType.View             => Fox.failure("Cannot download View annotation")
-          case AnnotationType.CompoundProject  => downloadProject(id, request.identity, skipVolumeData)
-          case AnnotationType.CompoundTask     => downloadTask(id, request.identity, skipVolumeData)
-          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity, skipVolumeData)
-          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion, skipVolumeData)
+          case AnnotationType.CompoundProject  => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.CompoundTask     => downloadTask(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
+          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion, skipVolumeData.getOrElse(false))
         }
       } yield result
     }
@@ -256,7 +256,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                                     organizationName,
                                                                     Some(user),
                                                                     taskOpt))
-        val dataStream = dataEnumerator.map(d => NamedEnumeratorStream("data.zip", d))
+        val dataStream: Option[NamedEnumeratorStream] = dataEnumerator.map(d => NamedEnumeratorStream("data.zip", d))
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             dataStream.map(d => List(nmlStream, d)).getOrElse(List(nmlStream)),

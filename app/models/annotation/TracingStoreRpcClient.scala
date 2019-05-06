@@ -130,7 +130,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
-      data <- Fox.runIf(skipVolumeData) {
+      data <- Fox.runIf(!skipVolumeData) {
         rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/allData")
           .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
           .addQueryStringOptional("version", version.map(_.toString))

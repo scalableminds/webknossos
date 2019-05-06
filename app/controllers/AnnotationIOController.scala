@@ -186,26 +186,31 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       )
     }
 
-  def download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long]) =
+  def download(typ: String,
+               id: String,
+               skeletonVersion: Option[Long],
+               volumeVersion: Option[Long],
+               skipVolumeData: Boolean = false) =
     sil.SecuredAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
         result <- identifier.annotationType match {
           case AnnotationType.View             => Fox.failure("Cannot download View annotation")
-          case AnnotationType.CompoundProject  => downloadProject(id, request.identity)
-          case AnnotationType.CompoundTask     => downloadTask(id, request.identity)
-          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
-          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion)
+          case AnnotationType.CompoundProject  => downloadProject(id, request.identity, skipVolumeData)
+          case AnnotationType.CompoundTask     => downloadTask(id, request.identity, skipVolumeData)
+          case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity, skipVolumeData)
+          case _                               => downloadExplorational(id, typ, request.identity, skeletonVersion, volumeVersion, skipVolumeData)
         }
       } yield result
     }
 
-  def downloadExplorational(annotationId: String,
-                            typ: String,
-                            issuingUser: User,
-                            skeletonVersion: Option[Long],
-                            volumeVersion: Option[Long])(implicit ctx: DBAccessContext, m: MessagesProvider) = {
+  private def downloadExplorational(annotationId: String,
+                                    typ: String,
+                                    issuingUser: User,
+                                    skeletonVersion: Option[Long],
+                                    volumeVersion: Option[Long],
+                                    skipVolumeData: Boolean)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
@@ -233,28 +238,28 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         volumeTracingId <- annotation.volumeTracingId.toFox
-        (volumeTracing, data: Source[ByteString, _]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
-                                                                                            volumeVersion)
+        (volumeTracing, data: Option[Source[ByteString, _]]) <- tracingStoreClient.getVolumeTracing(volumeTracingId,
+                                                                                                    volumeVersion,
+                                                                                                    skipVolumeData)
         skeletonTracingOpt <- Fox.runOptional(annotation.skeletonTracingId)(skeletonId =>
           tracingStoreClient.getSkeletonTracing(skeletonId, skeletonVersion))
         user <- userService.findOneById(annotation._user, useCache = true)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
       } yield {
-        val dataEnumerator = Enumerator.fromStream(data.runWith(StreamConverters.asInputStream()))
+        val dataEnumerator = data.map(d => Enumerator.fromStream(d.runWith(StreamConverters.asInputStream())))
+        val nmlStream = NamedEnumeratorStream(name + ".nml",
+                                              nmlWriter.toNmlStream(skeletonTracingOpt,
+                                                                    Some(volumeTracing),
+                                                                    Some(annotation),
+                                                                    dataSet.scale,
+                                                                    None,
+                                                                    organizationName,
+                                                                    Some(user),
+                                                                    taskOpt))
+        val dataStream = dataEnumerator.map(d => NamedEnumeratorStream("data.zip", d))
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
-            List(
-              new NamedEnumeratorStream(name + ".nml",
-                                        nmlWriter.toNmlStream(skeletonTracingOpt,
-                                                              Some(volumeTracing),
-                                                              Some(annotation),
-                                                              dataSet.scale,
-                                                              None,
-                                                              organizationName,
-                                                              Some(user),
-                                                              taskOpt)),
-              new NamedEnumeratorStream("data.zip", dataEnumerator)
-            ),
+            dataStream.map(d => List(nmlStream, d)).getOrElse(List(nmlStream)),
             outputStream
           )
         }, name + ".zip")
@@ -282,23 +287,25 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) =
+  private def downloadProject(projectId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
+                                                                                      m: MessagesProvider) =
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
-      zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
+      zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip", skipVolumeData)
     } yield {
       val file = new File(zip.path.toString)
       Ok.sendFile(file, inline = false)
     }
 
-  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
+  private def downloadTask(taskId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
+                                                                                m: MessagesProvider) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
       annotations =>
         val finished = annotations.filter(_.state == Finished)
-        annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
+        annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip", skipVolumeData)
     }
 
     for {
@@ -312,7 +319,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
+  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
+                                                                                        m: MessagesProvider) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
@@ -321,7 +329,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           .map(_.flatten)
           .toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
-        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary + "_nmls.zip")
+        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary + "_nmls.zip", skipVolumeData)
       } yield zip
 
     for {

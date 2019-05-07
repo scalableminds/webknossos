@@ -62,7 +62,7 @@ class VolumeTracingController @Inject()(
 
   def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
@@ -77,7 +77,7 @@ class VolumeTracingController @Inject()(
 
   def allDataBlocking(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")

@@ -39,6 +39,8 @@ import * as Utils from "libs/utils";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;
+const isAutomaticBrushEnabled = () =>
+  window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled;
 
 // eslint-disable-next-line no-unused-vars
 const simulateTracing = async (): Promise<void> => {
@@ -95,7 +97,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
-          if (window.isAutomaticBrushEnabled) {
+          if (isAutomaticBrushEnabled()) {
             return;
           }
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW));
@@ -169,7 +171,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
           Store.dispatch(setActiveCellAction(cellId));
         }
       } else if (event.ctrlKey) {
-        if (window.isAutomaticBrushEnabled) {
+        if (isAutomaticBrushEnabled()) {
           Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }
       }

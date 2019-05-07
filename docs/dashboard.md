@@ -16,7 +16,7 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
 
-![example]@(https://www.youtube.com/watch?v=naPL1jfCdOc)
+@[YouTube](https://www.youtube.com/watch?v=naPL1jfCdOc)
 
 ## Tasks
 

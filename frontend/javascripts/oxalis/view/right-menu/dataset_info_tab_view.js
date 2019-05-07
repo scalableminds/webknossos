@@ -298,7 +298,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             <tbody>
               <tr>
                 <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{extentInVoxel} Voxel³</td>
+                <td>{extentInVoxel}</td>
               </tr>
               <tr>
                 <td />

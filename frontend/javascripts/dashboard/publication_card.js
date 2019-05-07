@@ -79,7 +79,7 @@ function ThumbnailOverlay({ details }) {
       >
         <div>{details.acquisition}</div>
         <div>
-          {details.scale}/voxel
+          {details.scale}
           <br />
           {details.extent}
         </div>

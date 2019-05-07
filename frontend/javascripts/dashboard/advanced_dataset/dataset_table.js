@@ -6,7 +6,7 @@ import _ from "lodash";
 import dice from "dice-coefficient";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import { stringToColor, formatTuple } from "libs/format_utils";
+import { stringToColor, formatScale } from "libs/format_utils";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
@@ -173,9 +173,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Scale & Extent"
           dataIndex="scale"
           key="scale"
-          width={120}
+          width={220}
           render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${formatTuple(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)} Voxel³`
+            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
           }
         />
 

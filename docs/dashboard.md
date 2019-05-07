@@ -16,8 +16,7 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
 
-@(https://www.youtube.com/watch?v=naPL1jfCdOc)
-
+<iframe width="750" height="422" src="https://www.youtube.com/embed/hcm8Jx22DG8" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 ## Tasks
 
 With Tasks, you can coordinate large annotation projects with your users.

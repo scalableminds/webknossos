@@ -10,6 +10,10 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - 
 
+## [19.05.0](https://github.com/scalableminds/webknossos/releases/tag/19.05.0) - 2019-04-29
+### Postgres Evolutions:
+- [042-add-json-object-constraints.sql](conf/evolutions/042-add-json-object-constraints.sql)
+
 
 ## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01
 - Redis is now needed for the tracingstore module. Make sure to install redis in your setup and adapt the config keys `tracingstore.redis.address` and `tracingstore.redis.port`.
@@ -19,7 +23,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ### Postgres Evolutions:
 - [041-add-datastore-isconnector.sql](conf/evolutions/041-add-datastore-isconnector.sql)
-- [042-add-json-object-constraints.sql](conf/evolutions/042-add-json-object-constraints.sql)
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04

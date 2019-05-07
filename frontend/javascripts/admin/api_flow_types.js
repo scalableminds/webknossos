@@ -241,6 +241,8 @@ export type APITaskType = {
   +tracingType: "skeleton" | "volume",
 };
 
+export type TracingType = "skeleton" | "volume" | "hybrid";
+
 export type TaskStatus = { +open: number, +active: number, +finished: number };
 
 type APIScriptTypeBase = {
@@ -378,20 +380,36 @@ export type DatasetConfig = {
   +zipFile: File,
 };
 
-type WkConnectLayer = {
+type NeuroglancerLayer = {
   // This is the source URL of the layer, should start with gs://, http:// or https://
   source: string,
   type: "image" | "segmentation",
 };
 
-export type WkConnectDatasetConfig = {
-  neuroglancer: {
-    [organizationName: string]: {
-      [datasetName: string]: {
-        layers: { [layerName: string]: WkConnectLayer },
-      },
+type NeuroglancerDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      layers: { [layerName: string]: NeuroglancerLayer },
+      credentials?: Object,
     },
   },
+};
+
+type BossDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      domain: string,
+      collection: string,
+      experiment: string,
+      username: string,
+      password: string,
+    },
+  },
+};
+
+export type WkConnectDatasetConfig = {
+  neuroglancer?: NeuroglancerDatasetConfig,
+  boss?: BossDatasetConfig,
 };
 
 export type APITimeTracking = {
@@ -478,6 +496,8 @@ export type APIFeatureToggles = {
   +hideNavbarLogin: boolean,
   +addMissingDatasetButtonEnabled: boolean,
   +enableFrontpage: boolean,
+  +autoBrushReadyDatasets: Array<string>,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes

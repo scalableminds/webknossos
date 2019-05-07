@@ -201,7 +201,7 @@ services:
 
   # webKnossos-connect
   webknossos-connect:
-    image: scalableminds/webknossos-connect:master__190
+    image: scalableminds/webknossos-connect:master__205
     volumes:
       - "./conf/connect:/app/data"
     # Publish webknossos-connect ports in webknossos container

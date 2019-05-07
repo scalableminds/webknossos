@@ -16,11 +16,7 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 ![Dashboard for Team Managers or Admins](./images/dashboard_datasets.png)
 ![Dashboard for Normal Users](./images/dashboard_normal_user.png)
 
-   <iframe width="560" height="315" 
-src="https://www.youtube.com/embed/naPL1jfCdOc" 
-frameborder="0"
-allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-allowfullscreen></iframe> 
+![example](https://www.youtube.com/watch?v=naPL1jfCdOc)
 
 ## Tasks
 

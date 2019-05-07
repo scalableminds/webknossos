@@ -128,7 +128,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         for {
           client <- tracingStoreService.clientFor(dataSet)
           userBoundingBox <- Fox.runOptional(oldTracingId)(id =>
-            client.getVolumeTracing(id).flatMap(_._1.userBoundingBox))
+            client.getVolumeTracing(id, skipVolumeData=true).flatMap(_._1.userBoundingBox))
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance
               .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBoundingBox))

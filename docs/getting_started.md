@@ -3,8 +3,7 @@
 Welcome to the webKnossos documentation.
 Feel free to [drop us a line](mailto:hello@scalableminds.com) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
 
-https://www.youtube.com/watch?v=tNwDvo5MnDc 
-
+{% embed url="https://www.youtube.com/watch?v=tNwDvo5MnDc "%}
 
 ## Try webKnossos
 We host a public instance of webKnossos for trial purposes at https://try.webknossos.org.

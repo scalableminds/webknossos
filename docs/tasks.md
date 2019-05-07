@@ -12,7 +12,7 @@ webKnossos has a task system that is useful for efficiently managing large annot
 
 It is possible to download all annotations that belong to either a Project or a Task Type for further processing.
 
-https://www.youtube.com/watch?v=YC4vaia6MkY
+{% embed url="https://www.youtube.com/watch?v=YC4vaia6MkY "%}
 
 ## How To Create Tasks
 
@@ -62,7 +62,7 @@ Finally, collect the completed data from the `Projects` screen by downloading a 
 
 ![Download all Tasks of a Project](./images/tasks_download.png)
 
-https://www.youtube.com/watch?v=2A3en7Kxl3M
+{% embed url="https://www.youtube.com/watch?v=2A3en7Kxl3M "%}
 
 ## Task Assignment Criteria
 

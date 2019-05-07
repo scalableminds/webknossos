@@ -3,7 +3,7 @@
 In addition to [skeleton annotations](./skeleton_annotation.md), webKnossos also supports volume / segmentation annotations.
 In this type of annotation, you can label groups of voxels with efficient drawing tools.
 
-https://www.youtube.com/watch?v=Sq4AuWanK14 
+{% embed url="https://www.youtube.com/watch?v=Sq4AuWanK14 "%}
 
 ### Tools
 Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut *W*.
@@ -21,7 +21,7 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 ![Adding labels with the Brush tool](./images/volume_brush.gif)
 ![Removing labels with the Brush tool](./images/volume_delete.gif)
 
-https://www.youtube.com/watch?v=G3dryPbfV3o
+{% embed url="https://www.youtube.com/watch?v=G3dryPbfV3o "%}
 
 ### Proof-Reading and Merging Segments
 
@@ -31,7 +31,7 @@ The "merger mode" is available in skeleton and hybrid tracing mode. Mark connect
 
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 
-https://www.youtube.com/watch?v=ZmUqyIoA9Gw
+{% embed url="https://www.youtube.com/watch?v=ZmUqyIoA9Gw "%}
 
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.

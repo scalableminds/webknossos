@@ -88,7 +88,7 @@ For multi-layer datasets, each layer can be adjusted separately.
 - `Color`: Every data layer can be colored to make them easily identifiable. By default, all layers have a white overlay, showing the true, raw black & white data.
 - `Visibility`: Use the eye icon on the right side of the name of the data layer to enable/disable this layer.
 
-https://www.youtube.com/watch?v=JZLKB9GfMgQ 
+{% embed url="https://www.youtube.com/watch?v=JZLKB9GfMgQ "%}
 
 #### Segmentation
 - `Segmentation Opacity`: Increases / Decreases the opacity of the segmentation layer. A low value will make the segmentation almost transparent letting you see the underlying data layers more clearly. A high value will make the segmentation opaque which is useful for adjusting and reviewing the exact fit of the segmentation layer. Only possible if your dataset has a segmentation layer.

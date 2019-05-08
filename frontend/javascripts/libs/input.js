@@ -308,6 +308,8 @@ export class InputMouse {
   position: ?Point2 = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: { string?: Function };
+  isDragging: boolean;
+  ignoreScrollingWhileDragging: boolean;
 
   // Copied from backbone events (TODO: handle this better)
   on: (bindings: BindingMap<MouseHandler>) => void;
@@ -318,6 +320,7 @@ export class InputMouse {
     targetId: string,
     initialBindings: BindingMap<MouseHandler> = {},
     id: ?string = null,
+    ignoreScrollingWhileDragging: boolean=false,
   ) {
     _.extend(this, BackboneEvents);
     this.targetId = targetId;
@@ -332,6 +335,8 @@ export class InputMouse {
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
     this.delegatedEvents = {};
+    this.isDragging = false;
+    this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
 
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
@@ -403,6 +408,7 @@ export class InputMouse {
 
   mouseDown = (event: MouseEvent): void => {
     event.preventDefault();
+    this.isDragging = true;
     this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
@@ -410,6 +416,7 @@ export class InputMouse {
   };
 
   mouseUp = (event: MouseEvent): void => {
+    this.isDragging = false;
     this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
     this.rightMouseButton.handleMouseUp(event, this.triggeredByTouch);
 
@@ -437,7 +444,7 @@ export class InputMouse {
     let delta = null;
 
     this.position = this.getRelativeMousePosition(event);
-
+    
     if (this.lastPosition != null) {
       delta = {
         x: this.position.x - this.lastPosition.x,
@@ -507,6 +514,9 @@ export class InputMouse {
 
   mouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
+    if(this.isDragging && this.ignoreScrollingWhileDragging){ 
+      return;
+    }
     let delta = 0;
     if (event.deltaY != null) {
       delta = -Number(event.deltaY);

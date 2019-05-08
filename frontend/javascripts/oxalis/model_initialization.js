@@ -329,7 +329,7 @@ function initializeSettings(initialUserSettings: Object, initialDatasetSettings:
 }
 
 function initializeDataLayerInstances(
-  gpuFactor: ?number,
+  _gpuFactor: ?number,
 ): {
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,

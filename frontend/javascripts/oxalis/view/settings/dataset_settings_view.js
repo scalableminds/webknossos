@@ -40,6 +40,7 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
+import Model from "oxalis/model";
 import messages, { settings } from "messages";
 
 const { Panel } = Collapse;
@@ -64,6 +65,35 @@ type DatasetSettingsProps = {|
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+  getFindDataButton = (layerName: string, isDisabled: boolean) => (
+    <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
+      <Icon
+        type="scan"
+        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+        style={{
+          float: "right",
+          marginTop: 4,
+          cursor: !isDisabled ? "pointer" : "not-allowed",
+        }}
+      />
+    </Tooltip>
+  );
+
+  setVisibilityForAllLayers = (isVisible: boolean) => {
+    const { layers } = this.props.datasetConfiguration;
+    Object.keys(layers).forEach(otherLayerName =>
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
+    );
+  };
+
+  isLayerExclusivelyVisible = (layerName: string): boolean => {
+    const { layers } = this.props.datasetConfiguration;
+    return Object.keys(layers).every(otherLayerName => {
+      const { isDisabled } = layers[otherLayerName];
+      return layerName === otherLayerName ? !isDisabled : isDisabled;
+    });
+  };
+
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
@@ -81,7 +111,20 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               <div style={{ display: "inline-block", marginRight: 8 }}>
                 <Switch
                   size="small"
-                  onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                  onChange={(val, event) => {
+                    if (!event.ctrlKey) {
+                      this.props.onChangeLayer(layerName, "isDisabled", !val);
+                      return;
+                    }
+                    // If ctrl is pressed, toggle between "all layers visible" and
+                    // "only selected layer visible".
+                    if (this.isLayerExclusivelyVisible(layerName)) {
+                      this.setVisibilityForAllLayers(true);
+                    } else {
+                      this.setVisibilityForAllLayers(false);
+                      this.props.onChangeLayer(layerName, "isDisabled", false);
+                    }
+                  }}
                   checked={!isDisabled}
                 />
               </div>
@@ -90,17 +133,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
-              <Icon
-                type="scan"
-                onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
-                style={{
-                  float: "right",
-                  marginTop: 4,
-                  cursor: !isDisabled ? "pointer" : "not-allowed",
-                }}
-              />
-            </Tooltip>
+            {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
         <NumberSliderSetting
@@ -175,8 +208,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   getSegmentationPanel() {
+    const segmentation = Model.getSegmentationLayer();
+    const segmentationLayerName = segmentation != null ? segmentation.name : null;
     return (
       <Panel header="Segmentation" key="2">
+        {segmentationLayerName ? (
+          <div style={{ overflow: "auto" }}>
+            {this.getFindDataButton(segmentationLayerName, false)}
+          </div>
+        ) : null}
         <NumberSliderSetting
           label={settings.segmentationOpacity}
           min={0}

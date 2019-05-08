@@ -494,6 +494,7 @@ export type APIFeatureToggles = {
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +isDemoInstance: boolean,
+  +autoBrushReadyDatasets: Array<string>,
 };
 
 // Tracing related datatypes

@@ -286,6 +286,7 @@ export type TemporaryConfiguration = {
     +mappingSize: number,
   },
   +isMergerModeEnabled: boolean,
+  +isAutoBrushEnabled: boolean,
   +gpuSetup: {
     // These rendering-related variables are set up
     // during startup and cannot change (with the current

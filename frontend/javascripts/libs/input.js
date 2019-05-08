@@ -320,7 +320,7 @@ export class InputMouse {
     targetId: string,
     initialBindings: BindingMap<MouseHandler> = {},
     id: ?string = null,
-    ignoreScrollingWhileDragging: boolean=false,
+    ignoreScrollingWhileDragging: boolean = false,
   ) {
     _.extend(this, BackboneEvents);
     this.targetId = targetId;
@@ -444,7 +444,7 @@ export class InputMouse {
     let delta = null;
 
     this.position = this.getRelativeMousePosition(event);
-    
+
     if (this.lastPosition != null) {
       delta = {
         x: this.position.x - this.lastPosition.x,
@@ -514,7 +514,7 @@ export class InputMouse {
 
   mouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    if(this.isDragging && this.ignoreScrollingWhileDragging){ 
+    if (this.isDragging && this.ignoreScrollingWhileDragging) {
       return;
     }
     let delta = 0;

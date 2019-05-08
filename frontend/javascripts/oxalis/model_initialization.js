@@ -341,8 +341,9 @@ function initializeDataLayerInstances(
   const layers = dataset.dataSource.dataLayers;
 
   const requiredBucketCapacity =
-    constants.GPU_FACTOR_MULTIPLIER *
-    (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
+    // temporarily, always use the default gpu memory factor
+    constants.GPU_FACTOR_MULTIPLIER * constants.DEFAULT_GPU_MEMORY_FACTOR;
+  // (gpuFactor != null ? gpuFactor : constants.DEFAULT_GPU_MEMORY_FACTOR);
 
   const {
     textureInformationPerLayer,

@@ -495,6 +495,7 @@ export type APIFeatureToggles = {
   +hideNavbarLogin: boolean,
   +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes

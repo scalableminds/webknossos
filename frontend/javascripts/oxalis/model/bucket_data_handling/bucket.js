@@ -96,7 +96,6 @@ export class DataBucket {
   data: ?BucketDataArray;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
-  isPartlyOutsideBoundingBox: boolean;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -120,7 +119,6 @@ export class DataBucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = false;
-    this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
   }

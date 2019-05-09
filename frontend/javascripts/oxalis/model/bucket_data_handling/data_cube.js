@@ -129,7 +129,6 @@ class DataCube {
       boundingBox => {
         if (shouldBeRestrictedByTracingBoundingBox()) {
           this.boundingBox = new BoundingBox(boundingBox, this);
-          this.forgetOutOfBoundaryBuckets();
         }
       },
     );
@@ -305,17 +304,6 @@ class DataCube {
     if (bucketIndex != null && cube != null) {
       bucket.destroy();
       cube.data.delete(bucketIndex);
-    }
-  }
-
-  forgetOutOfBoundaryBuckets(): void {
-    for (const cube of this.cubes) {
-      for (const bucketIndex of cube.data.keys()) {
-        const bucket = cube.data.get(bucketIndex);
-        if (bucket instanceof DataBucket && bucket.isPartlyOutsideBoundingBox) {
-          cube.data.delete(bucketIndex);
-        }
-      }
     }
   }
 

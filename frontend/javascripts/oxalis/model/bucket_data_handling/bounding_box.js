@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 
-import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
@@ -66,46 +65,6 @@ class BoundingBox {
     return (
       min[0] < x && x < max[0] - 1 && min[1] < y && y < max[1] - 1 && min[2] < z && z < max[2] - 1
     );
-  }
-
-  removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: BucketDataArray): void {
-    if (this.containsFullBucket(bucketAddress)) {
-      return;
-    }
-    if (bucket.type === "data") {
-      bucket.isPartlyOutsideBoundingBox = true;
-    }
-
-    const zoomStep = bucketAddress[3];
-    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
-
-    const baseVoxel = bucketAddress
-      .slice(0, 3)
-      .map((e, idx) => e * resolution[idx] * constants.BUCKET_WIDTH);
-
-    for (let dx = 0; dx < constants.BUCKET_WIDTH; dx++) {
-      for (let dy = 0; dy < constants.BUCKET_WIDTH; dy++) {
-        for (let dz = 0; dz < constants.BUCKET_WIDTH; dz++) {
-          const x = baseVoxel[0] + dx * resolution[0];
-          const y = baseVoxel[1] + dy * resolution[1];
-          const z = baseVoxel[2] + dz * resolution[2];
-
-          if (
-            this.min[0] <= x &&
-            x < this.max[0] &&
-            this.min[1] <= y &&
-            y < this.max[1] &&
-            this.min[2] <= z &&
-            z < this.max[2]
-          ) {
-            continue;
-          }
-
-          const index = this.cube.getVoxelIndexByVoxelOffset([dx, dy, dz]);
-          bucketData[index] = 0;
-        }
-      }
-    }
   }
 }
 

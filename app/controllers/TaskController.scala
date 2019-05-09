@@ -350,7 +350,11 @@ class TaskController @Inject()(annotationService: AnnotationService,
                                                                 taskIdsOpt,
                                                                 userIdOpt,
                                                                 randomizeOpt)
-      jsResult <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
+      taskTypes <- Fox.serialCombined(tasks)(t => taskTypeDAO.findOne(t._taskType))
+      tasksWithTypeIds = tasks.zip(taskTypes.map(_._id))
+      allowedTasksAndTypeIds <- Fox.filter(tasksWithTypeIds)(t =>
+        userService.isTeamManagerOrAdminOf(request.identity, t._2))
+      jsResult <- Fox.serialCombined(allowedTasksAndTypeIds.map(_._1))(taskService.publicWrites(_))
     } yield {
       Ok(Json.toJson(jsResult))
     }

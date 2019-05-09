@@ -90,7 +90,7 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, config: ToastConfig = {}): void {
+  info(message: string | React$Element<any>, config: ToastConfig = {}): void {
     return this.message("info", message, config);
   },
 

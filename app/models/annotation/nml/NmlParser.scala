@@ -198,7 +198,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parsePoint3D(node: XMLNode) = {
     val xText = (node \ "@x").text
     val yText = (node \ "@y").text
-    val zText = (node \ "@x").text
+    val zText = (node \ "@z").text
     for {
       x <- xText.toIntOpt.orElse(xText.toFloatOpt.map(math.round))
       y <- yText.toIntOpt.orElse(yText.toFloatOpt.map(math.round))

@@ -19,9 +19,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     extends FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
-  private def convertData(data: Array[Byte],
-                          elementClass: ElementClass.Value,
-                          filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong] =
+  private def convertData(
+      data: Array[Byte],
+      elementClass: ElementClass.Value,
+      filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
     elementClass match {
       case ElementClass.uint8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
@@ -45,6 +46,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
           .map(ULong(_))
           .filter(filterZeroes && _ != ULong(0))
+      case ElementClass.float =>
+        convertDataImpl[Float, FloatBuffer](
+          data,
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(filterZeroes && _ != 0f)
     }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
@@ -206,6 +211,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         case d: Array[UShort] => d.map(_.toDouble)
         case d: Array[UInt]   => d.map(_.toDouble)
         case d: Array[ULong]  => d.map(_.toDouble)
+        case d: Array[Float]  => d.map(_.toDouble)
       }
 
     def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D)(
@@ -225,7 +231,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
 
-    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong]) = {
+    def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float]) = {
       val counts = Array.ofDim[Long](256)
       data match {
         case byteData: Array[UByte] =>
@@ -236,6 +242,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
         case longData: Array[ULong] =>
           longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
+        case floatData: Array[Float] =>
+          floatData.foreach(el => counts(Math.clamp(Math.roundDown(el * 255), 0, 255) += 1))
       }
       counts
     }

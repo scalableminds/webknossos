@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...HEAD)
 
 ### Added
-- Normal users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028) 
+- Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028) 
 
 ### Changed
 - Improved performance for large tracings. [#3995](https://github.com/scalableminds/webknossos/pull/3995)

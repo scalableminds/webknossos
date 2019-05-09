@@ -186,10 +186,10 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task, state from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
-                 and userAnnotations._task is null
+                 and (userAnnotations._task is null or (((select isAdmin from webknossos.users_ where _id = '${userId.id}') or webknossos.projects_._team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${userId.id}')) and userAnnotations.state = '${AnnotationState.Cancelled}'))
                  and not webknossos.projects_.paused
            order by webknossos.projects_.priority desc
            limit 1

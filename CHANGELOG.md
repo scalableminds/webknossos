@@ -21,7 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Removed
-- 
+- It is no longer possible to scroll through planes while dragging one. [#4085](https://github.com/scalableminds/webknossos/pull/4085)
 
 
 ## [19.05.0](https://github.com/scalableminds/webknossos/releases/tag/19.05.0) - 2019-04-29

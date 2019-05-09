@@ -67,6 +67,10 @@ export const getConstructorForElementClass = (type: ElementClass) => {
     return Uint8Array;
   } else if (type === "uint16") {
     return Uint16Array;
+  } else if (type === "uint24") {
+    // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
+    // TODO: This breaks uint24 segmentation layers voxel labeling
+    return Uint8Array;
   } else if (type === "uint32") {
     return Uint32Array;
   } else if (type === "float") {

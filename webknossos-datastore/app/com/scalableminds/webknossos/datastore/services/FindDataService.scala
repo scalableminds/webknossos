@@ -243,7 +243,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         case longData: Array[ULong] =>
           longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
         case floatData: Array[Float] =>
-          floatData.foreach(el => counts(Math.clamp(Math.roundDown(el * 255), 0, 255) += 1))
+          floatData.foreach(el => counts(Math.clamp(Math.roundDown(el * 255), 0, 255)) += 1)
       }
       counts
     }

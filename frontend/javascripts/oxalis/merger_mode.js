@@ -114,8 +114,8 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
-	If the count reaches 0, the segment is removed from the mapping and this function returns true. 
-	Otherwise the return value will be false. */
+  If the count reaches 0, the segment is removed from the mapping and this function returns true.
+  Otherwise the return value will be false. */
 function onNodeDeleted(mergerModeState: MergerModeState, nodeId: number) {
   const segmentId = mergerModeState.nodeSegmentMap[nodeId];
   const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
@@ -199,7 +199,11 @@ function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
   });
 }
 
-async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: MergerModeState) {
+async function mergeSegmentsOfAlreadyExistingTrees(
+  index = 0,
+  mergerModeState: MergerModeState,
+  onProgressUpdate: number => void,
+) {
   const { nodes, segmentationLayerName, nodeSegmentMap, colorMapping } = mergerModeState;
   const numbOfNodes = nodes.length;
   if (index >= numbOfNodes) {
@@ -232,12 +236,22 @@ async function mergeSegmentsOfAlreadyExistingTrees(index = 0, mergerModeState: M
       mapSegmentColorToTree(segmentId, treeId, mergerModeState);
     }
   };
-  const nodesMappedPromises = nodes.map(node => setSegementationOfNode(node));
-  await Promise.all(nodesMappedPromises);
+
+  const BATCH_SIZE = 128;
+  // Batch the segmentation lookup, otherwise there are too many bucket requests at once
+  // and this step will never complete
+  for (let cur = 0; cur < numbOfNodes; cur += BATCH_SIZE) {
+    onProgressUpdate((cur / numbOfNodes) * 100);
+    const nodesMappedPromises = nodes
+      .slice(cur, cur + BATCH_SIZE)
+      .map(node => setSegementationOfNode(node));
+    // eslint-disable-next-line no-await-in-loop
+    await Promise.all(nodesMappedPromises);
+  }
   api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
-export async function enableMergerMode() {
+export async function enableMergerMode(onProgressUpdate: number => void) {
   if (isCodeActive) {
     return;
   }
@@ -281,7 +295,7 @@ export async function enableMergerMode() {
     }),
   );
   // wait for preprocessing the already existing trees before returning
-  await mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState);
+  await mergeSegmentsOfAlreadyExistingTrees(0, mergerModeState, onProgressUpdate);
 }
 
 export function disableMergerMode() {

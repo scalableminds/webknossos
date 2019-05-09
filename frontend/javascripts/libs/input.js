@@ -295,6 +295,8 @@ class InputMouseButton {
   }
 }
 
+let isDragging = false;
+
 export class InputMouse {
   targetId: string;
   hammerManager: Hammer;
@@ -308,7 +310,6 @@ export class InputMouse {
   position: ?Point2 = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: { string?: Function };
-  isDragging: boolean;
   ignoreScrollingWhileDragging: boolean;
 
   // Copied from backbone events (TODO: handle this better)
@@ -335,7 +336,7 @@ export class InputMouse {
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
     this.delegatedEvents = {};
-    this.isDragging = false;
+    isDragging = false;
     this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
 
     document.addEventListener("mousemove", this.mouseMove);
@@ -408,7 +409,7 @@ export class InputMouse {
 
   mouseDown = (event: MouseEvent): void => {
     event.preventDefault();
-    this.isDragging = true;
+    isDragging = true;
     this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
@@ -416,7 +417,7 @@ export class InputMouse {
   };
 
   mouseUp = (event: MouseEvent): void => {
-    this.isDragging = false;
+    isDragging = false;
     this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
     this.rightMouseButton.handleMouseUp(event, this.triggeredByTouch);
 
@@ -514,7 +515,7 @@ export class InputMouse {
 
   mouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    if (this.isDragging && this.ignoreScrollingWhileDragging) {
+    if (isDragging && this.ignoreScrollingWhileDragging) {
       return;
     }
     let delta = 0;

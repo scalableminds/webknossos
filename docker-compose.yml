@@ -103,7 +103,7 @@ services:
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/tmp/.ivy2"
       - "${DOCKER_CACHE_PREFIX:-~}/.cache/coursier:/root/.cache/coursier"
       - "${DOCKER_CACHE_PREFIX:-~}/.cache/yarn:/root/.cache/yarn"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
@@ -201,7 +201,7 @@ services:
 
   # webKnossos-connect
   webknossos-connect:
-    image: scalableminds/webknossos-connect:master__190
+    image: scalableminds/webknossos-connect:master__205
     volumes:
       - "./conf/connect:/app/data"
     # Publish webknossos-connect ports in webknossos container

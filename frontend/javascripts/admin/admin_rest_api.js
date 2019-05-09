@@ -44,6 +44,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type TracingType,
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
@@ -565,7 +566,7 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetId: APIDatasetId,
-  typ: "volume" | "skeleton" | "hybrid",
+  typ: TracingType,
   withFallback: boolean,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {

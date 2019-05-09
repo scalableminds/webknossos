@@ -34,11 +34,11 @@ export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-function NavbarMenuItem({ children, style, ...props }) {
+function NavbarMenuItem({ children, ...props }) {
   return (
     <Menu
       mode="horizontal"
-      style={{ ...style, lineHeight: "48px" }}
+      style={{ lineHeight: "48px" }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
@@ -230,7 +230,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName } = activeUser;
   return (
-    <NavbarMenuItem style={{ width: 30 }}>
+    <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
         title={<UserInitials activeUser={activeUser} />}
@@ -338,7 +338,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   }
 
   if (!(_isAuthenticated || hideNavbarLogin)) {
-    trailingNavItems.push(<AnonymousAvatar key="anonynous-avatar" />);
+    trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
   menuItems.push(

@@ -11,16 +11,34 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028) 
+- The extent of a dataset is now displayed next to the scale in the dataset list in the dashboard. [#4058](https://github.com/scalableminds/webknossos/pull/4058)
+- BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
+- Added an auto-brush feature for selected datasets. [#4053](https://github.com/scalableminds/webknossos/pull/4053)
+- When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. This change makes it easier to quickly compare different data layers against each other. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
 
 ### Changed
-- Improved performance for large tracings. [#3995](https://github.com/scalableminds/webknossos/pull/3995)
-- Empty trees in skeleton tracings are now allowed. [#4010](https://github.com/scalableminds/webknossos/pull/4010)
+- The NML parser now rounds floating point values in node coordinates. [#4045](https://github.com/scalableminds/webknossos/pull/4045)
 
 ### Fixed
-- Fixed a missing redirect after registering for an existing organization (with autoVerify=true) via the onboarding flow. [#3984](https://github.com/scalableminds/webknossos/pull/3984)
+- 
 
 ### Removed
 - 
+
+
+## [19.05.0](https://github.com/scalableminds/webknossos/releases/tag/19.05.0) - 2019-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...19.05.0)
+
+### Changed
+- Improved performance for large tracings. [#3995](https://github.com/scalableminds/webknossos/pull/3995)
+- Improved how the rendering quality can be adapted in the settings. The setting can now be used to tune the quality to your hardware specification. [#4015](https://github.com/scalableminds/webknossos/pull/4015)
+- Empty trees in skeleton tracings are now allowed. [#4010](https://github.com/scalableminds/webknossos/pull/4010)
+- Creating a hybrid tracing now asks whether to use the existing segmentation layer or use a new one. [#4033](https://github.com/scalableminds/webknossos/pull/4033)
+
+### Fixed
+- Fixed a missing redirect after registering for an existing organization (with autoVerify=true) via the onboarding flow. [#3984](https://github.com/scalableminds/webknossos/pull/3984)
+- Fixed rendering artifacts which could occur under certain conditions. [#4015](https://github.com/scalableminds/webknossos/pull/4015)
+- Fixed that the zoom step was reset after switching to a new task. [#4049](https://github.com/scalableminds/webknossos/pull/4049)
 
 
 ## [19.04.0](https://github.com/scalableminds/webknossos/releases/tag/19.04.0) - 2019-04-01

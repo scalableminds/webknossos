@@ -1,7 +1,7 @@
 // @flow
 import * as tf from "@tensorflow/tfjs";
 import memoizeOne from "memoize-one";
-
+import React from "react";
 import { type Saga, call, fork, select, take, _cancel } from "oxalis/model/sagas/effect-generators";
 import floodfill from "libs/floodfill";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -18,6 +18,7 @@ import Model from "oxalis/model";
 import Toast from "libs/toast";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import Dimensions from "oxalis/model/dimensions";
+import Shortcut from "libs/shortcut_component";
 import api from "oxalis/api/internal_api";
 import {
   getPosition,
@@ -25,6 +26,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { V2 } from "libs/mjs";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import window from "libs/window";
 
 const outputExtent = 100;
 const inputContextExtent = 20;
@@ -137,9 +139,21 @@ export default function* inferSegmentInViewport(
     sticky: true,
     key: "automatic-brush",
   };
-  const toastDescription = "Automatic brush is active. Close the toast to stop using it.";
+  const getEscapableToast = text => (
+    <div>
+      {text}
+      <Shortcut
+        keys="esc"
+        onTrigger={() => {
+          aborted = true;
+          Toast.close(toastConfig.key);
+        }}
+      />
+    </div>
+  );
 
-  Toast.info(toastDescription, toastConfig);
+  const brushIsActiveText = "Automatic brush is active. Close the toast to stop using it.";
+  Toast.info(getEscapableToast(brushIsActiveText), toastConfig);
 
   const colorLayers = yield* call([Model, Model.getColorLayers]);
   const colorLayerName = colorLayers[0].name;
@@ -208,7 +222,9 @@ export default function* inferSegmentInViewport(
       console.time("predict");
       const thirdDimension = Dimensions.thirdDimensionForPlane(activeViewport);
       Toast.info(
-        `${toastDescription}\nLabeling ${["x", "y", "z"][thirdDimension]}=${z}.`,
+        getEscapableToast(
+          `${brushIsActiveText}\nLabeling ${["x", "y", "z"][thirdDimension]}=${z}.`,
+        ),
         toastConfig,
       );
       predictions.set(

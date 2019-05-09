@@ -17,17 +17,20 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { findDataPositionForLayer } from "admin/admin_rest_api";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
+  updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import Store, {
   type DatasetConfiguration,
   type DatasetLayerConfiguration,
   type OxalisState,
+  type UserConfiguration,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -37,12 +40,14 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
+import Model from "oxalis/model";
 import messages, { settings } from "messages";
 
 const { Panel } = Collapse;
 const { Option } = Select;
 
 type DatasetSettingsProps = {|
+  userConfiguration: UserConfiguration,
   datasetConfiguration: DatasetConfiguration,
   dataset: APIDataset,
   onChange: (propertyName: $Keys<DatasetConfiguration>, value: any) => void,
@@ -56,9 +61,39 @@ type DatasetSettingsProps = {|
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
+  onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+  getFindDataButton = (layerName: string, isDisabled: boolean) => (
+    <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
+      <Icon
+        type="scan"
+        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+        style={{
+          float: "right",
+          marginTop: 4,
+          cursor: !isDisabled ? "pointer" : "not-allowed",
+        }}
+      />
+    </Tooltip>
+  );
+
+  setVisibilityForAllLayers = (isVisible: boolean) => {
+    const { layers } = this.props.datasetConfiguration;
+    Object.keys(layers).forEach(otherLayerName =>
+      this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
+    );
+  };
+
+  isLayerExclusivelyVisible = (layerName: string): boolean => {
+    const { layers } = this.props.datasetConfiguration;
+    return Object.keys(layers).every(otherLayerName => {
+      const { isDisabled } = layers[otherLayerName];
+      return layerName === otherLayerName ? !isDisabled : isDisabled;
+    });
+  };
+
   getColorSettings = (
     [layerName, layer]: [string, DatasetLayerConfiguration],
     layerIndex: number,
@@ -76,7 +111,20 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               <div style={{ display: "inline-block", marginRight: 8 }}>
                 <Switch
                   size="small"
-                  onChange={val => this.props.onChangeLayer(layerName, "isDisabled", !val)}
+                  onChange={(val, event) => {
+                    if (!event.ctrlKey) {
+                      this.props.onChangeLayer(layerName, "isDisabled", !val);
+                      return;
+                    }
+                    // If ctrl is pressed, toggle between "all layers visible" and
+                    // "only selected layer visible".
+                    if (this.isLayerExclusivelyVisible(layerName)) {
+                      this.setVisibilityForAllLayers(true);
+                    } else {
+                      this.setVisibilityForAllLayers(false);
+                      this.props.onChangeLayer(layerName, "isDisabled", false);
+                    }
+                  }}
                   checked={!isDisabled}
                 />
               </div>
@@ -85,17 +133,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
               {isRGB ? "24-bit" : "8-bit"} Layer
             </Tag>
-            <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
-              <Icon
-                type="scan"
-                onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
-                style={{
-                  float: "right",
-                  marginTop: 4,
-                  cursor: !isDisabled ? "pointer" : "not-allowed",
-                }}
-              />
-            </Tooltip>
+            {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
         <NumberSliderSetting
@@ -136,8 +174,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
-  onChangeQuality = (propertyName: $Keys<DatasetConfiguration>, value: string) => {
-    this.props.onChange(propertyName, parseInt(value));
+  onChangeGpuFactor = (gpuFactor: number) => {
+    Toast.warning("Please reload the page to allow the changes to take effect.");
+    this.props.onChangeUser("gpuMemoryFactor", gpuFactor);
   };
 
   handleFindData = async (layerName: string) => {
@@ -169,8 +208,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   getSegmentationPanel() {
+    const segmentation = Model.getSegmentationLayer();
+    const segmentationLayerName = segmentation != null ? segmentation.name : null;
     return (
       <Panel header="Segmentation" key="2">
+        {segmentationLayerName ? (
+          <div style={{ overflow: "auto" }}>
+            {this.getFindDataButton(segmentationLayerName, false)}
+          </div>
+        ) : null}
         <NumberSliderSetting
           label={settings.segmentationOpacity}
           min={0}
@@ -225,13 +271,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
-            label={settings.quality}
-            value={this.props.datasetConfiguration.quality}
-            onChange={_.partial(this.onChangeQuality, "quality")}
+            label={
+              <React.Fragment>
+                {settings.gpuMemoryFactor}{" "}
+                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and speed are balanced. Medium is the default.">
+                  <Icon type="info-circle" />
+                </Tooltip>
+              </React.Fragment>
+            }
+            value={(
+              this.props.userConfiguration.gpuMemoryFactor || constants.DEFAULT_GPU_MEMORY_FACTOR
+            ).toString()}
+            onChange={this.onChangeGpuFactor}
           >
-            <Option value="0">High</Option>
-            <Option value="1">Medium</Option>
-            <Option value="2">Low</Option>
+            {getGpuFactorsWithLabels().map(([factor, label]) => (
+              <Option key={label} value={factor.toString()}>
+                {label}
+              </Option>
+            ))}
           </DropdownSetting>
           <DropdownSetting
             label={
@@ -286,6 +343,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
+  userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
@@ -296,6 +354,9 @@ const mapStateToProps = (state: OxalisState) => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChange(propertyName, value) {
     dispatch(updateDatasetSettingAction(propertyName, value));
+  },
+  onChangeUser(propertyName, value) {
+    dispatch(updateUserSettingAction(propertyName, value));
   },
   onChangeLayer(layerName, propertyName, value) {
     dispatch(updateLayerSettingAction(layerName, propertyName, value));

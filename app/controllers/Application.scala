@@ -1,13 +1,13 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import com.typesafe.config.ConfigRenderOptions
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreRpcClient
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import play.api.libs.json.Json
 import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
 import slick.jdbc.PostgresProfile.api._
@@ -17,7 +17,8 @@ import scala.concurrent.ExecutionContext
 class Application @Inject()(analyticsDAO: AnalyticsDAO,
                             releaseInformationDAO: ReleaseInformationDAO,
                             conf: WkConf,
-                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                            sil: Silhouette[WkEnv],
+                            rpc: RPC)(implicit ec: ExecutionContext)
     extends Controller {
 
   def buildInfo = sil.UserAwareAction.async { implicit request =>
@@ -44,6 +45,33 @@ class Application @Inject()(analyticsDAO: AnalyticsDAO,
 
   def features = sil.UserAwareAction { implicit request =>
     Ok(conf.raw.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
+  }
+
+  def health = sil.UserAwareAction.async { implicit request =>
+    def checkDatastoreHealthIfEnabled: Fox[Unit] =
+      if (conf.Datastore.enabled) {
+        for {
+          response <- rpc(s"http://localhost:${conf.Http.port}/data/health").get
+          if response.status == 200
+        } yield ()
+      } else {
+        Fox.successful(())
+      }
+
+    def checkTracingstoreHealthIfEnabled: Fox[Unit] =
+      if (conf.Tracingstore.enabled) {
+        for {
+          response <- rpc(s"http://localhost:${conf.Http.port}/tracings/health").get
+          if response.status == 200
+        } yield ()
+      } else {
+        Fox.successful(())
+      }
+
+    for {
+      _ <- checkDatastoreHealthIfEnabled ?~> "dataStore.unavailable"
+      _ <- checkTracingstoreHealthIfEnabled ?~> "tracingStore.unavailable"
+    } yield Ok
   }
 
 }

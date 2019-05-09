@@ -5,9 +5,10 @@ import { Modal, Button, Spin, Tooltip } from "antd";
 type Props = {
   isCloseable: boolean,
   onClose: () => void,
+  progress: number,
 };
 
-export default function MergerModeModalView({ isCloseable, onClose }: Props) {
+export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
   const closeButton = (
     <Button type="primary" onClick={onClose} disabled={!isCloseable}>
       Close
@@ -53,7 +54,7 @@ export default function MergerModeModalView({ isCloseable, onClose }: Props) {
       </table>
       {!isCloseable ? (
         <div className="centered-children">
-          <Spin style={{ marginTop: 16 }} />
+          <Spin style={{ marginTop: 16 }} tip={`${Math.round(progress)} %`} />
         </div>
       ) : null}
     </Modal>

@@ -336,7 +336,6 @@ export class InputMouse {
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
     this.delegatedEvents = {};
-    isDragging = false;
     this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
 
     document.addEventListener("mousemove", this.mouseMove);

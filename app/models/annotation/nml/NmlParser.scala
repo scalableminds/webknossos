@@ -40,7 +40,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String, nmlInputStream: InputStream)(implicit m: MessagesProvider)
+  def parse(name: String, nmlInputStream: InputStream)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)

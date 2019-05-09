@@ -19,7 +19,10 @@ import Constants, {
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import {
+  type Bucket,
+  getConstructorForElementClass,
+} from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
 import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
@@ -40,7 +43,7 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -89,6 +92,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { type ElementClass } from "admin/api_flow_types";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -813,7 +817,8 @@ class DataApi {
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
-    return this.cutOutCuboid(buckets, bbox);
+    const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+    return this.cutOutCuboid(buckets, bbox, elementClass);
   }
 
   getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
@@ -844,9 +849,14 @@ class DataApi {
     return buckets;
   }
 
-  cutOutCuboid(buckets: Array<Bucket>, bbox: BoundingBoxType): Uint8Array {
+  cutOutCuboid(
+    buckets: Array<Bucket>,
+    bbox: BoundingBoxType,
+    elementClass: ElementClass,
+  ): $TypedArray {
     const extent = V3.sub(bbox.max, bbox.min);
-    const result = new Uint8Array(extent[0] * extent[1] * extent[2]);
+    const TypedArrayClass = getConstructorForElementClass(elementClass);
+    const result = new TypedArrayClass(extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
 
@@ -876,7 +886,7 @@ class DataApi {
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
           const data =
-            bucket.type !== "null" ? bucket.getData() : new Uint8Array(Constants.BUCKET_SIZE);
+            bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
@@ -917,7 +927,7 @@ class DataApi {
   }
 
   getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const dataset = Store.getState().dataset;
+    const { dataset } = Store.getState();
 
     return doWithToken(token => {
       const downloadUrl =

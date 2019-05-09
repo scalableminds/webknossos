@@ -3,7 +3,12 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIDataset,
+  APISegmentationLayer,
+  ElementClass,
+} from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
@@ -84,6 +89,10 @@ export function getByteCountFromLayer(layerInfo: DataLayerType): number {
 
 export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
+}
+
+export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
+  return getLayerByName(dataset, layerName).elementClass;
 }
 
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };

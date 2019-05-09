@@ -19,6 +19,7 @@ import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import window from "libs/window";
+import type { ElementClass } from "admin/api_flow_types";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -59,11 +60,18 @@ export default class TextureBucketManager {
   packingDegree: number;
   addressSpaceDimensions: Vector3;
   lookUpBufferWidth: number;
+  elementClass: ElementClass;
 
-  constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
+  constructor(
+    textureWidth: number,
+    dataTextureCount: number,
+    bytes: number,
+    elementClass: ElementClass,
+  ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getPackingDegree(bytes);
+    this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
     const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
@@ -197,8 +205,13 @@ export default class TextureBucketManager {
       }
 
       const data = bucket.getData();
+      const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
       this.dataTextures[dataTextureIndex].update(
-        new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
+        new TypedArrayClass(
+          data.buffer,
+          data.byteOffset,
+          data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+        ),
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
@@ -226,7 +239,7 @@ export default class TextureBucketManager {
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
         bytes * this.packingDegree,
-        THREE.UnsignedByteType,
+        this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType,
         getRenderer(),
       );
 

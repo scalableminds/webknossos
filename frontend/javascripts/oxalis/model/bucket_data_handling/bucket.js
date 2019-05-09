@@ -62,7 +62,7 @@ export class NullBucket {
   }
 }
 
-const getConstructorForType = (type: ElementClass) => {
+export const getConstructorForElementClass = (type: ElementClass) => {
   if (type === "uint8") {
     return Uint8Array;
   } else if (type === "uint16") {
@@ -184,7 +184,7 @@ export class DataBucket {
 
   getOrCreateData(): BucketDataArray {
     if (this.data == null) {
-      const TypedArrayClass = getConstructorForType(this.elementClass);
+      const TypedArrayClass = getConstructorForElementClass(this.elementClass);
       this.data = new TypedArrayClass(Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
         this.temporalBucketManager.addBucket(this);
@@ -218,7 +218,7 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: ?Uint8Array): void {
-    const TypedArrayClass = getConstructorForType(this.elementClass);
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass);
     const data =
       arrayBuffer != null
         ? new TypedArrayClass(

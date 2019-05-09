@@ -7,7 +7,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 
-import {
+import Constants, {
   type BoundingBoxType,
   type ControlMode,
   ControlModeEnum,
@@ -847,7 +847,7 @@ class DataApi {
   cutOutCuboid(buckets: Array<Bucket>, bbox: BoundingBoxType): Uint8Array {
     const extent = V3.sub(bbox.max, bbox.min);
     const result = new Uint8Array(extent[0] * extent[1] * extent[2]);
-    const bucketLength = 32;
+    const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
 
     for (const bucket of buckets) {
@@ -859,23 +859,24 @@ class DataApi {
       let y = Math.max(bbox.min[1], bucketTopLeft[1]);
       let z = Math.max(bbox.min[2], bucketTopLeft[2]);
 
-      const xMax = Math.min(bucketTopLeft[0] + bucketLength, bbox.max[0]);
-      const yMax = Math.min(bucketTopLeft[1] + bucketLength, bbox.max[1]);
-      const zMax = Math.min(bucketTopLeft[2] + bucketLength, bbox.max[2]);
+      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bbox.max[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bbox.max[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bbox.max[2]);
 
       while (z < zMax) {
         y = Math.max(bbox.min[1], bucketTopLeft[1]);
         while (y < yMax) {
           const dataOffset =
-            (x % bucketLength) +
-            (y % bucketLength) * bucketLength +
-            (z % bucketLength) * bucketLength * bucketLength;
+            (x % bucketWidth) +
+            (y % bucketWidth) * bucketWidth +
+            (z % bucketWidth) * bucketWidth * bucketWidth;
           const rx = x - bbox.min[0];
           const ry = y - bbox.min[1];
           const rz = z - bbox.min[2];
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
-          const data = bucket.type !== "null" ? bucket.getData() : new Uint8Array(32 ** 3);
+          const data =
+            bucket.type !== "null" ? bucket.getData() : new Uint8Array(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;

@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 
-import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
@@ -19,14 +19,12 @@ import constants, {
 class BoundingBox {
   boundingBox: ?BoundingBoxType;
   cube: DataCube;
-  BYTE_OFFSET: number;
   min: Vector3;
   max: Vector3;
 
   constructor(boundingBox: ?BoundingBoxType, cube: DataCube) {
     this.boundingBox = boundingBox;
     this.cube = cube;
-    this.BYTE_OFFSET = this.cube.BYTE_OFFSET;
     // Min is including
     this.min = [0, 0, 0];
     // Max is excluding
@@ -70,7 +68,7 @@ class BoundingBox {
     );
   }
 
-  removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: Uint8Array): void {
+  removeOutsideArea(bucket: Bucket, bucketAddress: Vector4, bucketData: BucketDataArray): void {
     if (this.containsFullBucket(bucketAddress)) {
       return;
     }
@@ -104,9 +102,7 @@ class BoundingBox {
           }
 
           const index = this.cube.getVoxelIndexByVoxelOffset([dx, dy, dz]);
-          for (let b = 0; b < this.BYTE_OFFSET; b++) {
-            bucketData[index + b] = 0;
-          }
+          bucketData[index] = 0;
         }
       }
     }

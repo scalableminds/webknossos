@@ -113,19 +113,6 @@ export async function requestWithFallback(
   });
 }
 
-function shrinkFloat(arrayBuffer) {
-  const floatBuffer = new Float32Array(arrayBuffer);
-  const uint8Array = new Uint8Array(floatBuffer.length / 4);
-
-  let index = 0;
-  while (index < uint8Array.length) {
-    uint8Array[index] = floatBuffer[index];
-    index++;
-  }
-
-  return uint8Array;
-}
-
 export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
@@ -156,10 +143,6 @@ export async function requestFromStore(
       resultBuffer = await decodeFourBit(resultBuffer);
     }
 
-    if (layerInfo.elementClass === "float") {
-      resultBuffer = await shrinkFloat(resultBuffer);
-    }
-
     return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
   });
 }
@@ -171,11 +154,11 @@ function sliceBufferIntoPieces(
   buffer: Uint8Array,
 ): Array<?Uint8Array> {
   let offset = 0;
-  const BUCKET_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+  const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
 
   const bucketBuffers = batch.map((_bucketAddress, index) => {
     const isMissing = missingBuckets.indexOf(index) > -1;
-    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_LENGTH));
+    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH));
     return subbuffer;
   });
 
@@ -185,13 +168,14 @@ function sliceBufferIntoPieces(
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const items = [];
   for (const bucket of batch) {
-    const bucketData = bucket.getData();
+    const data = bucket.getData();
     const bucketInfo = createSendBucketInfo(
       bucket.zoomedAddress,
       getResolutions(Store.getState().dataset),
     );
+    const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(bucketData);
+    const base64 = await byteArrayToBase64(byteArray);
     items.push(updateBucket(bucketInfo, base64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));

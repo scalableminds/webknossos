@@ -159,8 +159,7 @@ export function getBitDepth(layerInfo: DataLayerType): number {
     case "uint64":
       return 64;
     case "float":
-      // float values are converted to uint8
-      return 8;
+      return 32;
     case "double":
       return 64;
     case "int8":

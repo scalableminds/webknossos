@@ -17,7 +17,7 @@ import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
-type ElementClass =
+export type ElementClass =
   | "uint8"
   | "uint16"
   | "uint24"

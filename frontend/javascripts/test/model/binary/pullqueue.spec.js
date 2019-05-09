@@ -50,7 +50,6 @@ const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
 
 test.beforeEach(t => {
   const cube = {
-    BUCKET_LENGTH: 32 * 32 * 32,
     getBucket: sinon.stub(),
     getOrCreateBucket: sinon.stub(),
     boundingBox: {

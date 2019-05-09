@@ -196,8 +196,9 @@ export default class TextureBucketManager {
         bucket.visualize();
       }
 
+      const data = bucket.getData();
       this.dataTextures[dataTextureIndex].update(
-        bucket.getData(),
+        new Uint8Array(data.buffer, data.byteOffset, data.byteLength),
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,

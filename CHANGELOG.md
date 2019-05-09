@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - The NML parser now rounds floating point values in node coordinates. [#4045](https://github.com/scalableminds/webknossos/pull/4045)
+- Team manager and admins can now get tasks, they previously cancelled. [#4088](https://github.com/scalableminds/webknossos/pull/4088)
 
 ### Fixed
 - 

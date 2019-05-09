@@ -113,6 +113,19 @@ export async function requestWithFallback(
   });
 }
 
+function shrinkFloat(arrayBuffer) {
+  const floatBuffer = new Float32Array(arrayBuffer);
+  const uint8Array = new Uint8Array(floatBuffer.length / 4);
+
+  let index = 0;
+  while (index < uint8Array.length) {
+    uint8Array[index] = floatBuffer[index];
+    index++;
+  }
+
+  return uint8Array;
+}
+
 export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
@@ -141,6 +154,10 @@ export async function requestFromStore(
     let resultBuffer = responseBuffer;
     if (fourBit) {
       resultBuffer = await decodeFourBit(resultBuffer);
+    }
+
+    if (layerInfo.elementClass === "float") {
+      resultBuffer = await shrinkFloat(resultBuffer);
     }
 
     return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));

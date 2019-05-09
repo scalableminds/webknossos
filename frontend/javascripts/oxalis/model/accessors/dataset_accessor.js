@@ -159,7 +159,8 @@ export function getBitDepth(layerInfo: DataLayerType): number {
     case "uint64":
       return 64;
     case "float":
-      return 32;
+      // float values are converted to uint8
+      return 8;
     case "double":
       return 64;
     case "int8":
@@ -184,8 +185,8 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int8":
     case "int16":
     case "int32":
-      return true;
     case "float":
+      return true;
     case "int64":
     case "uint64":
     case "double":

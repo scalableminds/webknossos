@@ -80,6 +80,7 @@ type UserSettingsViewProps = {
 type State = {
   isMergerModeModalVisible: boolean,
   isMergerModeModalClosable: boolean,
+  mergerModeProgress: number,
 };
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
@@ -87,6 +88,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   state = {
     isMergerModeModalVisible: false,
     isMergerModeModalClosable: false,
+    mergerModeProgress: 0,
   };
 
   componentWillMount() {
@@ -102,8 +104,10 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       this.setState({
         isMergerModeModalVisible: true,
         isMergerModeModalClosable: false,
+        mergerModeProgress: 0,
       });
-      await enableMergerMode();
+      const onUpdateProgress = mergerModeProgress => this.setState({ mergerModeProgress });
+      await enableMergerMode(onUpdateProgress);
       // The modal is only closeable after the merger mode is fully enabled
       // and finished preprocessing
       this.setState({ isMergerModeModalClosable: true });
@@ -431,6 +435,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
           <MergerModeModalView
             isCloseable={isMergerModeModalClosable}
             onClose={() => this.setState({ isMergerModeModalVisible: false })}
+            progress={this.state.mergerModeProgress}
           />
         ) : null}
       </React.Fragment>

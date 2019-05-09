@@ -217,8 +217,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const useOnboardingFlow =
-      this.props.activeUser == null &&
-      (features().allowOrganizationCreation || !this.state.hasOrganizations);
+      this.props.activeUser == null && (features().isDemoInstance || !this.state.hasOrganizations);
 
     const search = (
       <Search
@@ -258,7 +257,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               )}
             </div>
           </Spin>
-          {features().addMissingDatasetButtonEnabled ? <MissingDatasetCard /> : null}
+          {features().isDemoInstance ? <MissingDatasetCard /> : null}
           <div id="spotlight-footnote">
             Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a> for
             the original webKnossos publication website.

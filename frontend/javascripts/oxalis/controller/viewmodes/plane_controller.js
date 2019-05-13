@@ -169,7 +169,7 @@ class PlaneController extends React.PureComponent<Props> {
       },
       pinch: delta => this.zoom(delta, true),
       mouseMove: (delta: Point2, position: Point2, id, event) => {
-        if (event.altKey) {
+        if (event.altKey && !event.shiftKey) {
           this.movePlane([-delta.x, -delta.y, 0]);
         } else {
           Store.dispatch(setMousePositionAction([position.x, position.y]));

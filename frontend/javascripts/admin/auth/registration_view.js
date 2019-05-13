@@ -28,7 +28,7 @@ class RegistrationView extends React.PureComponent<Props> {
       <Card style={{ marginBottom: 24 }}>
         Not a member of the listed organizations?
         <br />
-        {features().allowOrganizationCreation ? (
+        {features().isDemoInstance ? (
           <Link to="/onboarding">Create a new organization.</Link>
         ) : (
           <React.Fragment>

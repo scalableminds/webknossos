@@ -153,6 +153,7 @@ class PlaneController extends React.PureComponent<Props> {
             inputcatcherId,
             this.getPlaneMouseControls(id),
             id,
+            true,
           );
         });
       });

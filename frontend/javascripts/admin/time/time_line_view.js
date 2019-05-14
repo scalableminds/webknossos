@@ -2,6 +2,7 @@
 import { Chart } from "react-google-charts";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import * as React from "react";
+import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
 import moment from "moment";
@@ -113,7 +114,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
   handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
-    if (dates[0].diff(dates[1], "days") > 31) {
+    if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
@@ -127,11 +128,132 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.fetchTimeTrackingData();
   };
 
+  getTooltipAsString() {
+    const tooltip = (
+      <div className="google-charts-tooltip">
+        <div className="highlighted">
+          Task ID: 1224523426324526
+          <div className="striped-border" />
+        </div>
+        <table>
+          <tbody>
+            <tr>
+              <td className="highlighted">Date:</td>
+              <td>May, 5, 2019</td>
+            </tr>
+            <tr>
+              <td className="highlighted">Time:</td>
+              <td>17:15 - 20:00</td>
+            </tr>
+            <tr>
+              <td className="highlighted">Duration:</td>
+              <td>2:45 h</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+    return ReactDOMServer.renderToStaticMarkup(tooltip);
+  }
+
+  getMockUpChart() {
+    const dateTicks = [];
+    const startingDate = moment().subtract(4, "days");
+    const endDate = moment();
+    // console.log(startingDate, endDate);
+    for (
+      let currentDate = startingDate.clone();
+      moment().diff(currentDate) >= 0;
+      currentDate.add(1, "days")
+    ) {
+      // console.log(currentDate.toDate());
+      dateTicks.push(currentDate.clone());
+    }
+    return (
+      <Chart
+        width="100%"
+        height="200px"
+        chartType="Timeline"
+        loader={<div>Loading Time Tracking Chart</div>}
+        data={[
+          [
+            { type: "string", id: "AnnotationId" },
+            { type: "string", id: "empty bar label" },
+            {
+              type: "string",
+              role: "tooltip",
+              p: { html: true },
+            },
+            { type: "date", id: "Start" },
+            { type: "date", id: "End" },
+          ],
+          [
+            "3243215132452345",
+            null,
+            this.getTooltipAsString(),
+            moment()
+              .subtract(3, "days")
+              .subtract(18, "hours"),
+            moment()
+              .subtract(3, "days")
+              .subtract(12, "hours"),
+          ],
+          [
+            "3243215132452345",
+            null,
+            this.getTooltipAsString(),
+            moment().subtract(3, "days"),
+            moment()
+              .subtract(2, "days")
+              .subtract(12, "hours"),
+          ],
+          [
+            "23452345234532452",
+            null,
+            this.getTooltipAsString(),
+            moment().subtract(2, "days"),
+            moment()
+              .subtract(1, "days")
+              .subtract(18, "hours"),
+          ],
+          [
+            "234532532453252",
+            null,
+            this.getTooltipAsString(),
+            moment().subtract(2, "days"),
+            moment()
+              .subtract(1, "days")
+              .subtract(18, "hours"),
+          ],
+        ]}
+        options={{
+          allowHtml: true,
+          tooltip: { isHtml: true },
+          timeline: { groupByRowLabel: true },
+          hAxis: {
+            format: "MMM, dd, YYYY",
+            // minValue: startingDate,
+            // maxValue: endDate,
+            ticks: [
+              new Date(2019, 5, 11),
+              new Date(2019, 5, 12),
+              new Date(2019, 5, 13),
+              new Date(2019, 5, 14),
+            ],
+            // gridlines: { color: "#333", count: 4 },
+          },
+        }}
+      />
+    );
+  }
+
   render() {
     const columns = [
       { id: "AnnotationId", type: "string" },
       { id: "Start", type: "date" },
       { id: "End", type: "date" },
+      { type: "string", role: "tooltip" },
+      // { id: "Duration - end", type: "date", role: "tooltip"}
     ];
 
     const { dateRange } = this.state;
@@ -143,8 +265,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
 
-      timeTrackingRowGrouped.push([datum.annotation, start, end]);
-      timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
+      // const durationAsString = `${moment(start).format("MMM, dd, YYYY")} - ${moment(end).format("MMM, dd, YYYY")}`;
+      const durationAsString = "awesome stuff";
+      timeTrackingRowGrouped.push([datum.task_id, start, end, durationAsString]);
+      // timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
+      timeTrackingRowTotal.push(["Sum Tracking Time", start, end, durationAsString]);
     });
 
     const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
@@ -158,8 +283,20 @@ class TimeLineView extends React.PureComponent<Props, State> {
       paddingBottom: 5,
     };
 
-    const { isAdmin, firstName, lastName, email } = this.props.activeUser;
+    // console.log("diff", dateRange[0].diff(dateRange[1], "days"))
+    const displayInDays = Math.abs(dateRange[0].diff(dateRange[1], "days")) >= 1;
+    const timeAxisFormat = displayInDays ? "MMM, dd, YYYY" : "HH:mm";
 
+    /* const dateTicks = [];
+    if(displayInDays){
+      for (let currentDay = dateRange[0].clone(); dateRange[1].diff(currentDay, "day") > 0; currentDay.add(1, "day")) {
+        dateTicks.push(currentDay.clone());
+      }
+      dateTicks.push(dateRange[1].clone());
+      console.log("ticks", dateTicks);
+    } */
+
+    const { isAdmin, firstName, lastName, email } = this.props.activeUser;
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -230,6 +367,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
         </Card>
 
         <div style={{ marginTop: 20 }}>
+          {this.getMockUpChart()}
           {this.state.timeTrackingData.length > 0 ? (
             <Chart
               chartType="Timeline"
@@ -239,9 +377,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 timeline: { singleColor: "#108ee9" },
                 // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
                 hAxis: {
+                  format: timeAxisFormat,
                   minValue: dateRange[0].toDate(),
                   maxValue: dateRange[1].toDate(),
                 },
+                tooltip: { isHtml: true },
               }}
               graph_id="TimeLineGraph"
               chartPackages={["timeline"]}

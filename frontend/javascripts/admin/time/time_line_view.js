@@ -160,8 +160,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
             <tr>
               <td className="highlighted">Time:</td>
               <td>
-                <FormattedDate timestamp={start} format={hourFormat} /> h -{" "}
-                <FormattedDate timestamp={end} format={hourFormat} /> h
+                <FormattedDate timestamp={start} format={hourFormat} /> -{" "}
+                <FormattedDate timestamp={end} format={hourFormat} />
               </td>
             </tr>
             <tr>

@@ -63,20 +63,24 @@ export class NullBucket {
 }
 
 export const getConstructorForElementClass = (type: ElementClass) => {
-  if (type === "uint8") {
-    return Uint8Array;
-  } else if (type === "uint16") {
-    return Uint16Array;
-  } else if (type === "uint24") {
-    // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
-    // TODO: This breaks uint24 segmentation layers voxel labeling
-    return Uint8Array;
-  } else if (type === "uint32") {
-    return Uint32Array;
-  } else if (type === "float") {
-    return Float32Array;
-  } else {
-    throw new Error(`This type is not supported by the DataBucket class: ${type}`);
+  switch (type) {
+    case "int8":
+    case "uint8":
+      return Uint8Array;
+    case "int16":
+    case "uint16":
+      return Uint16Array;
+    case "uint24":
+      // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
+      // TODO: This breaks uint24 segmentation layers voxel labeling
+      return Uint8Array;
+    case "int32":
+    case "uint32":
+      return Uint32Array;
+    case "float":
+      return Float32Array;
+    default:
+      throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }
 };
 

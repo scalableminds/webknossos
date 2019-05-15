@@ -6,7 +6,7 @@ import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
 import moment from "moment";
-
+import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds } from "libs/format_utils";
@@ -18,6 +18,9 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 const FormItem = Form.Item;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
+
+const dayFormat = "MMM, dd, YYYY";
+const hourFormat = "HH:mm";
 
 type TimeTrackingStats = {
   totalTime: number,
@@ -128,26 +131,44 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.fetchTimeTrackingData();
   };
 
-  getTooltipAsString() {
+  getTooltipForEntry(taskId, start, end) {
+    const isSameDay = start.getUTCDate() === end.getUTCDate();
+    const duration = end - start;
+    const dayFormatForMomentJs = "MMM, DD, YYYY";
     const tooltip = (
       <div className="google-charts-tooltip">
         <div className="highlighted">
-          Task ID: 1224523426324526
+          Task ID: {taskId}
           <div className="striped-border" />
         </div>
+
         <table>
           <tbody>
             <tr>
               <td className="highlighted">Date:</td>
-              <td>May, 5, 2019</td>
+              <td>
+                {isSameDay ? (
+                  <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
+                ) : (
+                  <React.Fragment>
+                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> -{" "}
+                    <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
+                  </React.Fragment>
+                )}
+              </td>
             </tr>
             <tr>
               <td className="highlighted">Time:</td>
-              <td>17:15 - 20:00</td>
+              <td>
+                <FormattedDate timestamp={start} format={hourFormat} /> h -{" "}
+                <FormattedDate timestamp={end} format={hourFormat} /> h
+              </td>
             </tr>
             <tr>
               <td className="highlighted">Duration:</td>
-              <td>2:45 h</td>
+              <td>
+                <FormattedDate timestamp={duration} format={hourFormat} /> h
+              </td>
             </tr>
           </tbody>
         </table>
@@ -156,120 +177,30 @@ class TimeLineView extends React.PureComponent<Props, State> {
     return ReactDOMServer.renderToStaticMarkup(tooltip);
   }
 
-  getMockUpChart() {
-    const dateTicks = [];
-    const startingDate = moment().subtract(4, "days");
-    const endDate = moment();
-    // console.log(startingDate, endDate);
-    for (
-      let currentDate = startingDate.clone();
-      moment().diff(currentDate) >= 0;
-      currentDate.add(1, "days")
-    ) {
-      // console.log(currentDate.toDate());
-      dateTicks.push(currentDate.clone());
-    }
-    return (
-      <Chart
-        width="100%"
-        height="200px"
-        chartType="Timeline"
-        loader={<div>Loading Time Tracking Chart</div>}
-        data={[
-          [
-            { type: "string", id: "AnnotationId" },
-            { type: "string", id: "empty bar label" },
-            {
-              type: "string",
-              role: "tooltip",
-              p: { html: true },
-            },
-            { type: "date", id: "Start" },
-            { type: "date", id: "End" },
-          ],
-          [
-            "3243215132452345",
-            null,
-            this.getTooltipAsString(),
-            moment()
-              .subtract(3, "days")
-              .subtract(18, "hours"),
-            moment()
-              .subtract(3, "days")
-              .subtract(12, "hours"),
-          ],
-          [
-            "3243215132452345",
-            null,
-            this.getTooltipAsString(),
-            moment().subtract(3, "days"),
-            moment()
-              .subtract(2, "days")
-              .subtract(12, "hours"),
-          ],
-          [
-            "23452345234532452",
-            null,
-            this.getTooltipAsString(),
-            moment().subtract(2, "days"),
-            moment()
-              .subtract(1, "days")
-              .subtract(18, "hours"),
-          ],
-          [
-            "234532532453252",
-            null,
-            this.getTooltipAsString(),
-            moment().subtract(2, "days"),
-            moment()
-              .subtract(1, "days")
-              .subtract(18, "hours"),
-          ],
-        ]}
-        options={{
-          allowHtml: true,
-          tooltip: { isHtml: true },
-          timeline: { groupByRowLabel: true },
-          hAxis: {
-            format: "MMM, dd, YYYY",
-            // minValue: startingDate,
-            // maxValue: endDate,
-            ticks: [
-              new Date(2019, 5, 11),
-              new Date(2019, 5, 12),
-              new Date(2019, 5, 13),
-              new Date(2019, 5, 14),
-            ],
-            // gridlines: { color: "#333", count: 4 },
-          },
-        }}
-      />
-    );
-  }
-
   render() {
     const columns = [
       { id: "AnnotationId", type: "string" },
+      { type: "string", id: "empty label" },
+      { type: "string", role: "tooltip", p: { html: true } },
       { id: "Start", type: "date" },
       { id: "End", type: "date" },
-      { type: "string", role: "tooltip" },
-      // { id: "Duration - end", type: "date", role: "tooltip"}
     ];
 
     const { dateRange } = this.state;
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
+    const totalSumColumnLabel = "Sum Tracking Time";
+
     this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
       const duration = moment.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
+      const individualTooltipAsString = this.getTooltipForEntry(datum.task_id, start, end);
+      const totalTooltipAsString = this.getTooltipForEntry(totalSumColumnLabel, start, end);
 
-      // const durationAsString = `${moment(start).format("MMM, dd, YYYY")} - ${moment(end).format("MMM, dd, YYYY")}`;
-      const durationAsString = "awesome stuff";
-      timeTrackingRowGrouped.push([datum.task_id, start, end, durationAsString]);
-      // timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
-      timeTrackingRowTotal.push(["Sum Tracking Time", start, end, durationAsString]);
+      timeTrackingRowGrouped.push([datum.task_id, "", individualTooltipAsString, start, end]);
+      timeTrackingRowTotal.push([totalSumColumnLabel, "", totalTooltipAsString, start, end]);
     });
 
     const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
@@ -283,18 +214,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
       paddingBottom: 5,
     };
 
-    // console.log("diff", dateRange[0].diff(dateRange[1], "days"))
     const displayInDays = Math.abs(dateRange[0].diff(dateRange[1], "days")) >= 1;
-    const timeAxisFormat = displayInDays ? "MMM, dd, YYYY" : "HH:mm";
-
-    /* const dateTicks = [];
-    if(displayInDays){
-      for (let currentDay = dateRange[0].clone(); dateRange[1].diff(currentDay, "day") > 0; currentDay.add(1, "day")) {
-        dateTicks.push(currentDay.clone());
-      }
-      dateTicks.push(dateRange[1].clone());
-      console.log("ticks", dateTicks);
-    } */
+    const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
 
     const { isAdmin, firstName, lastName, email } = this.props.activeUser;
     return (
@@ -367,7 +288,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
         </Card>
 
         <div style={{ marginTop: 20 }}>
-          {this.getMockUpChart()}
           {this.state.timeTrackingData.length > 0 ? (
             <Chart
               chartType="Timeline"
@@ -381,6 +301,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   minValue: dateRange[0].toDate(),
                   maxValue: dateRange[1].toDate(),
                 },
+                allowHtml: true,
                 tooltip: { isHtml: true },
               }}
               graph_id="TimeLineGraph"

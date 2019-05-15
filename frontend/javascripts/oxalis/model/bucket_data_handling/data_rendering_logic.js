@@ -3,6 +3,7 @@ import _ from "lodash";
 
 import { document } from "libs/window";
 import constants, { type Vector3 } from "oxalis/constants";
+import { type ElementClass } from "admin/api_flow_types";
 
 type GpuSpecs = {
   supportedTextureSize: number,
@@ -47,9 +48,10 @@ export type DataTextureSizeAndCount = {|
   packingDegree: number,
 |};
 
-export function getPackingDegree(byteCount: number) {
+export function getPackingDegree(byteCount: number, elementClass: ElementClass) {
   // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
-  if (byteCount === 1) return 4;
+  // Float textures can hold a float per channel, adjust the packing degree accordingly
+  if (byteCount === 1 || elementClass === "float") return 4;
   if (byteCount === 2) return 2;
   return 1;
 }
@@ -84,10 +86,11 @@ function getTextureCount(
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,
+  elementClass: ElementClass,
   requiredBucketCapacity: number,
 ): DataTextureSizeAndCount {
   let textureSize = specs.supportedTextureSize;
-  const packingDegree = getPackingDegree(byteCount);
+  const packingDegree = getPackingDegree(byteCount, elementClass);
 
   // Try to half the texture size as long as it does not require more
   // data textures
@@ -102,7 +105,7 @@ export function calculateTextureSizeAndCountForLayer(
   return { textureSize, textureCount, packingDegree };
 }
 
-function buildTextureInformationMap<Layer>(
+function buildTextureInformationMap<Layer: { elementClass: ElementClass }>(
   layers: Array<Layer>,
   getByteCountForLayer: Layer => number,
   specs: GpuSpecs,
@@ -114,6 +117,7 @@ function buildTextureInformationMap<Layer>(
     const sizeAndCount = calculateTextureSizeAndCountForLayer(
       specs,
       getByteCountForLayer(layer),
+      layer.elementClass,
       requiredBucketCapacity,
     );
     textureInformationPerLayer.set(layer, sizeAndCount);

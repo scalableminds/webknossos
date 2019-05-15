@@ -70,7 +70,7 @@ export default class TextureBucketManager {
   ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
-    this.packingDegree = getPackingDegree(bytes);
+    this.packingDegree = getPackingDegree(bytes, elementClass);
     this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
@@ -236,10 +236,12 @@ export default class TextureBucketManager {
 
   setupDataTextures(bytes: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
+      const useFloatTexture = this.elementClass === "float";
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
-        bytes * this.packingDegree,
-        this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType,
+        // Float textures can hold a float per channel, so divide bytes by 4
+        useFloatTexture ? (bytes / 4) * this.packingDegree : bytes * this.packingDegree,
+        useFloatTexture ? THREE.FloatType : THREE.UnsignedByteType,
         getRenderer(),
       );
 

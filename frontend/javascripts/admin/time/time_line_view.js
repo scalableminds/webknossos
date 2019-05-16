@@ -179,6 +179,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   render() {
     const columns = [
       { id: "AnnotationId", type: "string" },
+      // This label columns is somehow needed to make the custom tooltip work.
       { type: "string", id: "empty label" },
       { type: "string", role: "tooltip", p: { html: true } },
       { id: "Start", type: "date" },

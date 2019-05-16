@@ -402,6 +402,19 @@ class BinaryDataController @Inject()(
         }
   }
 
+  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              (histogram, count) <- findDataService.createHistogram(dataSource, dataLayer)
+            } yield Ok(Json.obj("histogram" -> histogram, "count" -> count))
+          }
+        }
+  }
+
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
     for {

@@ -131,7 +131,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.fetchTimeTrackingData();
   };
 
-  getTooltipForEntry(taskId, start, end) {
+  getTooltipForEntry(taskId: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
     const durationAsString = formatDurationToHoursAndMinutes(duration);

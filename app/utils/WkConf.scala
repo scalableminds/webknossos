@@ -88,8 +88,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object Features {
-    val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
-    val enableFrontpage = get[Boolean]("features.enableFrontpage")
     val isDemoInstance = get[Boolean]("features.isDemoInstance")
   }
 

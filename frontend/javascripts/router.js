@@ -123,7 +123,6 @@ class ReactRouter extends React.Component<Props> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
-    const { enableFrontpage } = features();
 
     return (
       <Router history={browserHistory}>
@@ -138,7 +137,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/"
                 render={() => {
                   if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
-                  if (enableFrontpage) return <SpotlightView />;
+                  if (features().isDemoInstance) return <SpotlightView />;
 
                   return isAuthenticated ? (
                     <DashboardView userId={null} isAdminView={false} initialTabKey={null} />

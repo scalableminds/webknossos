@@ -9,7 +9,7 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
-import { formatMilliseconds } from "libs/format_utils";
+import { formatMilliseconds, formatDurationToHoursAndMinutes } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -134,6 +134,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   getTooltipForEntry(taskId, start, end) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
+    const durationAsString = formatDurationToHoursAndMinutes(duration);
     const dayFormatForMomentJs = "MMM, DD, YYYY";
     const tooltip = (
       <div className="google-charts-tooltip">
@@ -166,9 +167,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
             </tr>
             <tr>
               <td className="highlighted">Duration:</td>
-              <td>
-                <FormattedDate timestamp={duration} format={hourFormat} /> h
-              </td>
+              <td>{durationAsString}</td>
             </tr>
           </tbody>
         </table>

@@ -3,8 +3,10 @@
 Welcome to the webKnossos documentation.
 Feel free to [drop us a line](mailto:hello@scalableminds.com) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
 
+{% embed url="https://www.youtube.com/watch?v=tNwDvo5MnDc "%}
+
 ## Try webKnossos
-We host a public instance of webKnossos for trial purposes at https://try.webknossos.org.
+We host a public instance of webKnossos for trial purposes at https://webknossos.org.
 Visit the page and create your organization to get started.
 The trial is limited to 2 months of use.
 If you would like to continue using webKnossos, we offer managed hosting plans for uninterrupted service.

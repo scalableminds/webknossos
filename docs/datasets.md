@@ -88,8 +88,6 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 
 ![Dataset Editing: General Tab](images/dataset_general.png)
 
-{% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%} 
-
 
 ### View Configuration
 - `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.
@@ -107,3 +105,7 @@ Read more in the [Sharing guide](./sharing.md#dataset-sharing)
 The system architecture of webKnossos allows for versatile deployment options where you can install a dedicated datastore server directly on your lab's cluster infrastructure.
 This may be useful when dealing with large datasets that should remain in your data center.
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup.
+
+We also offer dataset alignment services, click [here](https://scalableminds.com/biovision-registration) to find out more.
+
+{% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%} 

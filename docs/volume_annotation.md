@@ -36,6 +36,8 @@ The "merger mode" is available in skeleton and hybrid tracing mode. Mark connect
 ### Mappings / On-Demand Agglomeration
 With webKnossos it is possible to apply a precomputed agglomeration file to combine over-segmented volume annotations on demand. This alleviates the demand to materialize agglomeration results prematurely and allows researchers to apply different agglomerations to the data for experimentation. We typically produce several agglomeration results based on different thresholds and methods and use webKnossos to quickly review these results on subsets of a dataset in an interactive session.
 
+{% embed url="https://www.youtube.com/watch?v=ZmUqyIoA9Gw "%}
+
 Mapping files are automatically identified by webKnossos when being placed in a "mappings" folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown in the "Segmentation" information pane, typically on the right-hand side of the screen. Due to their file size, mappings are fetched on demand before being applied. Users can easily switch between several mappings and webKnossos will update accordingly.
 
 Mapping files are in JSON and need to follow this schema. All segment IDs belonging to the same super-voxel need to be listed in an array:  

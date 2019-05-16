@@ -46,8 +46,6 @@ Do not enable the `Make dataset publicly accessible` checkbox or otherwise, your
 Public access rights are not required for private sharing.
 {% endhint %}
 
-{% embed url="https://www.youtube.com/watch?v=hcm8Jx22DG8 "%}
-
 ### Public Sharing
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your webKnossos instance without the need for an account.
@@ -111,3 +109,5 @@ Otherwise, the annotation and data cannot be loaded by webKnossos and an error w
 {% hint style='info' %}
 Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
 {% endhint %}
+
+{% embed url="https://www.youtube.com/watch?v=hcm8Jx22DG8 "%}

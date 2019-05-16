@@ -6,18 +6,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
-  NodeDefaults,
-  SkeletonTracingDefaults,
-  TreeValidator
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
-import play.api.i18n.MessagesProvider
+import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
@@ -40,7 +36,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String, nmlInputStream: InputStream)
+  def parse(name: String, nmlInputStream: InputStream)(implicit m: MessagesProvider)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)

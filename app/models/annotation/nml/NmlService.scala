@@ -10,6 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.i18n.MessagesProvider
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
 import scala.concurrent.ExecutionContext
@@ -17,7 +18,7 @@ import scala.concurrent.ExecutionContext
 class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def extractFromNml(file: File, name: String): NmlParseResult =
+  def extractFromNml(file: File, name: String)(implicit m: MessagesProvider): NmlParseResult =
     extractFromNml(new FileInputStream(file), name)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
@@ -26,7 +27,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     case _ => ""
   }
 
-  def extractFromNml(inputStream: InputStream, name: String): NmlParseResult =
+  def extractFromNml(inputStream: InputStream, name: String)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream) match {
       case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
         NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
@@ -34,7 +35,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
       case Empty                  => NmlParseEmpty(name)
     }
 
-  def extractFromZip(file: File, zipFileName: Option[String] = None): ZipParseResult = {
+  def extractFromZip(file: File, zipFileName: Option[String] = None)(implicit m: MessagesProvider): ZipParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
@@ -97,12 +98,12 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)]): ZipParseResult =
+  def extractFromFiles(files: Seq[(File, String)])(implicit m: MessagesProvider): ZipParseResult =
     files.foldLeft(NmlResults.ZipParseResult()) {
       case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2))
     }
 
-  def extractFromFile(file: File, fileName: String): ZipParseResult =
+  def extractFromFile(file: File, fileName: String)(implicit m: MessagesProvider): ZipParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
       extractFromZip(file, Some(fileName))

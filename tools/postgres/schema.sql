@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(42);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(43);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -188,11 +188,13 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
+  settings_allowedMagnifications JSONB,
   recommendedConfiguration JSONB,
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object')
+  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object'),
+  CONSTRAINT settings_allowedMagnificationsIsJsonObject CHECK(jsonb_typeof(settings_allowedMagnifications) = 'object')
 );
 
 CREATE TABLE webknossos.tasks(

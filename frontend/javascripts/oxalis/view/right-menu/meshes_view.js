@@ -22,6 +22,7 @@ import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const ButtonGroup = Button.Group;
 
@@ -91,8 +92,10 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     const buffer = await readFileAsArrayBuffer(info.file);
 
     if (isIsosurfaceStl(buffer)) {
+      trackAction("Import Isosurface Mesh from STL");
       dispatch(importIsosurfaceFromStlAction(buffer));
     } else {
+      trackAction("Import STL");
       dispatch(createMeshFromBufferAction(info.file.name, buffer));
     }
   },

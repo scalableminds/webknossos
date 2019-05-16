@@ -6,7 +6,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  NodeDefaults,
+  SkeletonTracingDefaults,
+  TreeValidator
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -41,8 +45,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     try {
       val data = XML.load(nmlInputStream)
       for {
-        parameters <- (data \ "parameters").headOption ?~ "No parameters section found"
-        scale <- parseScale(parameters \ "scale") ?~ "Couldn't parse scale"
+        parameters <- (data \ "parameters").headOption ?~ Messages("nml.parameters.notFound")
+        scale <- parseScale(parameters \ "scale") ?~ Messages("nml.scale.invalid")
         time = parseTime(parameters \ "time")
         comments <- parseComments(data \ "comments")
         branchPoints <- parseBranchPoints(data \ "branchpoints", time)
@@ -122,20 +126,21 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
 
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Seq[Tree]] =
+  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
+      implicit m: MessagesProvider): Box[Seq[Tree]] =
     for {
       trees <- parseTrees(treeNodes, branchPoints, comments)
       _ <- TreeValidator.validateTrees(trees)
     } yield trees
 
-  def extractTreeGroups(treeGroupContainerNodes: NodeSeq): Box[List[TreeGroup]] = {
+  def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(implicit m: MessagesProvider): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")
-    treeGroupNodes.map(parseTreeGroup).toList.toSingleBox("Invalid tree groups in nml")
+    treeGroupNodes.map(parseTreeGroup).toList.toSingleBox(Messages("nml.element.invalid", "tree groups"))
   }
 
-  def parseTreeGroup(node: XMLNode): Box[TreeGroup] =
+  def parseTreeGroup(node: XMLNode)(implicit m: MessagesProvider): Box[TreeGroup] =
     for {
-      id <- (node \ "@id").text.toIntOpt ?~ s"Invalid tree group id ${(node \ "@id").text}"
+      id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.treegroup.id.invalid", (node \ "@id").text)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = (node \ "@name").text
     } yield TreeGroup(name, id, children)
@@ -143,8 +148,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   def extractVolumes(volumeNodes: NodeSeq) =
     volumeNodes.map(node => Volume((node \ "@location").text, (node \ "@fallbackLayer").map(_.text).headOption))
 
-  private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) =
-    treeNodes.map(treeNode => parseTree(treeNode, branchPoints, comments)).toList.toSingleBox("Invalid tree in nml")
+  private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
+      implicit m: MessagesProvider) =
+    treeNodes
+      .map(treeNode => parseTree(treeNode, branchPoints, comments))
+      .toList
+      .toSingleBox(Messages("nml.element.invalid", "trees"))
 
   private def parseBoundingBox(node: NodeSeq) =
     node.headOption.flatMap(bb =>
@@ -181,15 +190,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseZoomLevel(node: NodeSeq) =
     (node \ "@zoom").text.toDoubleOpt
 
-  private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long): Box[List[BranchPoint]] =
+  private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long)(
+      implicit m: MessagesProvider): Box[List[BranchPoint]] =
     (branchPoints \ "branchpoint").zipWithIndex.map {
       case (branchPoint, index) =>
         (branchPoint \ "@id").text.toIntOpt.map { nodeId =>
           val parsedTimestamp = (branchPoint \ "@time").text.toLongOpt
           val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
           BranchPoint(nodeId, timestamp)
-        } ?~ s"parsing branchpoint ${(branchPoint \ "@id").text} failed"
-    }.toList.toSingleBox("parsing branchpoints failed")
+        } ?~ Messages("nml.node.id.invalid", "branchpoint", (branchPoint \ "@id").text)
+    }.toList.toSingleBox(Messages("nml.element.invalid", "branchpoints"))
 
   private def parsePoint3D(node: XMLNode) = {
     val xText = (node \ "@x").text
@@ -243,15 +253,22 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseGroupId(node: XMLNode) =
     (node \ "@groupId").text.toIntOpt
 
-  private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Tree] =
+  private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
+      implicit m: MessagesProvider): Box[Tree] =
     for {
-      id <- (tree \ "@id").text.toIntOpt ?~ s"Invalid tree id ${(tree \ "@id").text}"
+      id <- (tree \ "@id").text.toIntOpt ?~ Messages("nml.tree.id.invalid", (tree \ "@id").text)
       color = parseColor(tree)
       name = parseName(tree)
       groupId = parseGroupId(tree)
       //logger.trace("Parsing tree Id: %d".format(id))
-      nodes <- (tree \ "nodes" \ "node").map(parseNode).toList.toSingleBox(s"Invalid nodes in tree $id")
-      edges <- (tree \ "edges" \ "edge").map(parseEdge).toList.toSingleBox(s"Invalid edges in tree $id")
+      nodes <- (tree \ "nodes" \ "node")
+        .map(parseNode)
+        .toList
+        .toSingleBox(Messages("nml.tree.elements.invalid", "nodes", id))
+      edges <- (tree \ "edges" \ "edge")
+        .map(parseEdge)
+        .toList
+        .toSingleBox(Messages("nml.tree.elements.invalid", "edges", id))
       nodeIds = nodes.map(_.id)
       treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
       treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
@@ -259,22 +276,22 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       else nodes.minBy(_.createdTimestamp).createdTimestamp
     } yield Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId)
 
-  private def parseComments(comments: NodeSeq) =
+  private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider) =
     (for {
       comment <- comments \ "comment"
     } yield {
       for {
-        nodeId <- (comment \ "@node").text.toIntOpt ?~ s"node id of comment ${(comment \ "@content").text} couldn't be parsed"
+        nodeId <- (comment \ "@node").text.toIntOpt ?~ Messages("nml.comment.node.invalid", (comment \ "@content").text)
       } yield {
         val content = (comment \ "@content").text
         Comment(nodeId, content)
       }
-    }).toList.toSingleBox("parsing comments failed")
+    }).toList.toSingleBox(Messages("nml.element.invalid", "comments"))
 
-  private def parseEdge(edge: XMLNode): Box[Edge] =
+  private def parseEdge(edge: XMLNode)(implicit m: MessagesProvider): Box[Edge] =
     for {
-      source <- (edge \ "@source").text.toIntOpt ?~ s"failed to parse edge source ${(edge \ "@source").text}"
-      target <- (edge \ "@target").text.toIntOpt ?~ s"failed to parse edge target ${(edge \ "@target").text}"
+      source <- (edge \ "@source").text.toIntOpt ?~ Messages("nml.edge.invalid", "source", (edge \ "@source").text)
+      target <- (edge \ "@target").text.toIntOpt ?~ Messages("nml.edge.invalid", "target", (edge \ "@target").text)
     } yield {
       Edge(source, target)
     }
@@ -294,11 +311,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseTimestamp(node: NodeSeq) =
     (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
 
-  private def parseNode(node: XMLNode): Box[Node] =
+  private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] =
     for {
-      id <- (node \ "@id").text.toIntOpt ?~ s"Invalid node id ${(node \ "@id").text}"
-      radius <- (node \ "@radius").text.toFloatOpt ?~ s"Invalid node radius for node id $id"
-      position <- parsePoint3D(node) ?~ s"Invalid node position for node id $id"
+      id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.node.id.invalid", "", (node \ "@id").text)
+      radius <- (node \ "@radius").text.toFloatOpt ?~ Messages("nml.node.attribute.invalid", "radius", id)
+      position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)

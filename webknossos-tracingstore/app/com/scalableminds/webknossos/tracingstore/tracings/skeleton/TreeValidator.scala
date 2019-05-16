@@ -95,7 +95,7 @@ object TreeValidator {
       }
       val treeComponentCount = treeComponents.size
 
-      if (treeComponentCount == 1) {
+      if (treeComponentCount <= 1) {
         Full(())
       } else {
         Failure(s"Tree ${tree.treeId} is not fully connected, but consists of $treeComponentCount components.")

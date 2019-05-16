@@ -35,6 +35,8 @@ export const settings = {
     improving the quality progressively (data will be loaded faster,
     but it will take more time until the best quality is shown).`,
   mergerMode: "Enable Merger Mode",
+  gpuMemoryFactor: "Quality",
+  autoBrush: "Automatic Brush (Beta)",
 };
 
 export default {
@@ -83,8 +85,6 @@ In order to restore the current window, a reload is necessary.`,
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-  "tracing.segmentation_downsampled_data_warning":
-    "Segmentation data is downsampled at this zoom step. This may lead to misleading data rendering. Please zoom in further to see unsampled data.",
   "tracing.no_access": "You are not allowed to access this tracing.",
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -114,7 +114,7 @@ In order to restore the current window, a reload is necessary.`,
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
-    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, restarting your browser might also help.",
+    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",

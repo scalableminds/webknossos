@@ -2,7 +2,7 @@
 import _ from "lodash";
 
 import { document } from "libs/window";
-import constants from "oxalis/constants";
+import constants, { type Vector3 } from "oxalis/constants";
 
 type GpuSpecs = {
   supportedTextureSize: number,
@@ -41,7 +41,11 @@ export function validateMinimumRequirements(specs: GpuSpecs): void {
   }
 }
 
-export type DataTextureSizeAndCount = { textureSize: number, textureCount: number };
+export type DataTextureSizeAndCount = {|
+  textureSize: number,
+  textureCount: number,
+  packingDegree: number,
+|};
 
 export function getPackingDegree(byteCount: number) {
   // If the layer holds less than 4 byte per voxel, we can pack multiple voxels using rgba channels
@@ -50,21 +54,37 @@ export function getPackingDegree(byteCount: number) {
   return 1;
 }
 
-function getNecessaryVoxelCount() {
-  return constants.MINIMUM_REQUIRED_BUCKET_CAPACITY * constants.BUCKET_SIZE;
+export function getBucketCapacity(
+  dataTextureCount: number,
+  textureWidth: number,
+  packingDegree: number,
+): number {
+  return (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+}
+
+function getNecessaryVoxelCount(requiredBucketCapacity) {
+  return requiredBucketCapacity * constants.BUCKET_SIZE;
 }
 
 function getAvailableVoxelCount(textureSize: number, packingDegree: number) {
   return packingDegree * textureSize ** 2;
 }
 
-function getTextureCount(textureSize: number, packingDegree: number) {
-  return Math.ceil(getNecessaryVoxelCount() / getAvailableVoxelCount(textureSize, packingDegree));
+function getTextureCount(
+  textureSize: number,
+  packingDegree: number,
+  requiredBucketCapacity: number,
+) {
+  return Math.ceil(
+    getNecessaryVoxelCount(requiredBucketCapacity) /
+      getAvailableVoxelCount(textureSize, packingDegree),
+  );
 }
 
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,
+  requiredBucketCapacity: number,
 ): DataTextureSizeAndCount {
   let textureSize = specs.supportedTextureSize;
   const packingDegree = getPackingDegree(byteCount);
@@ -72,24 +92,30 @@ export function calculateTextureSizeAndCountForLayer(
   // Try to half the texture size as long as it does not require more
   // data textures
   while (
-    getTextureCount(textureSize / 2, packingDegree) <= getTextureCount(textureSize, packingDegree)
+    getTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
+    getTextureCount(textureSize, packingDegree, requiredBucketCapacity)
   ) {
     textureSize /= 2;
   }
 
-  const textureCount = getTextureCount(textureSize, packingDegree);
-  return { textureSize, textureCount };
+  const textureCount = getTextureCount(textureSize, packingDegree, requiredBucketCapacity);
+  return { textureSize, textureCount, packingDegree };
 }
 
 function buildTextureInformationMap<Layer>(
   layers: Array<Layer>,
   getByteCountForLayer: Layer => number,
   specs: GpuSpecs,
+  requiredBucketCapacity: number,
 ): Map<Layer, DataTextureSizeAndCount> {
   const textureInformationPerLayer = new Map();
 
   layers.forEach(layer => {
-    const sizeAndCount = calculateTextureSizeAndCountForLayer(specs, getByteCountForLayer(layer));
+    const sizeAndCount = calculateTextureSizeAndCountForLayer(
+      specs,
+      getByteCountForLayer(layer),
+      requiredBucketCapacity,
+    );
     textureInformationPerLayer.set(layer, sizeAndCount);
   });
 
@@ -118,7 +144,7 @@ function deriveSupportedFeatures<Layer>(
   specs: GpuSpecs,
   textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
   hasSegmentation: boolean,
-): * {
+): { isMappingSupported: boolean, isBasicRenderingSupported: boolean } {
   const necessaryTextureCount = calculateNecessaryTextureCount(textureInformationPerLayer);
 
   let isMappingSupported = true;
@@ -142,17 +168,34 @@ function deriveSupportedFeatures<Layer>(
   };
 }
 
+function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
+  const capacities = Array.from(textureInformationPerLayer.values()).map(
+    (sizeAndCount: DataTextureSizeAndCount) =>
+      getBucketCapacity(
+        sizeAndCount.textureCount,
+        sizeAndCount.textureSize,
+        sizeAndCount.packingDegree,
+      ),
+  );
+
+  return _.min(capacities);
+}
+
 export function computeDataTexturesSetup<Layer>(
   specs: GpuSpecs,
+  // $FlowFixMe
   layers: Array<Layer>,
   getByteCountForLayer: Layer => number,
   hasSegmentation: boolean,
+  requiredBucketCapacity: number,
 ): * {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,
     specs,
+    requiredBucketCapacity,
   );
+  const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
 
   const { isBasicRenderingSupported, isMappingSupported } = deriveSupportedFeatures(
     specs,
@@ -164,5 +207,40 @@ export function computeDataTexturesSetup<Layer>(
     isBasicRenderingSupported,
     isMappingSupported,
     textureInformationPerLayer,
+    smallestCommonBucketCapacity,
   };
+}
+
+export function getGpuFactorsWithLabels() {
+  return [["12", "Very High"], ["6", "High"], ["3", "Medium"], ["1", "Low"]];
+}
+
+export function getLookupBufferSize(gpuMultiplier: number): number {
+  switch (gpuMultiplier) {
+    case 1:
+    case 3:
+      return 256;
+    case 6:
+      return 512;
+    case 12:
+      return 1024;
+    default:
+      return 512;
+  }
+}
+
+// A look up buffer with the size [key]**2 is able to represent
+// a volume with the dimensions of [value].
+// The values were chosen so that value[0]*value[1]*value[2] / key**2
+// approaches ~ 1 (i.e., the utilization ratio of the buffer is close to
+// 100%).
+const addressSpaceDimensionsTable = {
+  "256": [36, 36, 50],
+  "512": [61, 61, 70],
+  "1024": [96, 96, 112],
+};
+
+export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
+  const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
+  return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

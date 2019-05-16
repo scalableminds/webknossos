@@ -138,7 +138,7 @@ object Fox extends FoxImplicits {
       zipped = results.zip(seq)
     } yield (zipped.filter(_._1 != inverted).map(_._2))
 
-  def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext) =
+  def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
     input match {
       case Some(i) =>
         for {
@@ -146,6 +146,15 @@ object Fox extends FoxImplicits {
         } yield Some(result)
       case None =>
         Fox.successful(None)
+    }
+
+  def runIf[B](condition: Boolean)(f: => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
+    if (condition) {
+      for {
+        result <- f
+      } yield Some(result)
+    } else {
+      Fox.successful(None)
     }
 
   def fillOption[A](input: Option[A])(f: => Fox[A])(implicit ec: ExecutionContext): Fox[A] =

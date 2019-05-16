@@ -295,8 +295,10 @@ class InputMouseButton {
   }
 }
 
+let isDragging = false;
+
 export class InputMouse {
-  targetSelector: string;
+  targetId: string;
   hammerManager: Hammer;
   id: ?string;
 
@@ -308,24 +310,25 @@ export class InputMouse {
   position: ?Point2 = null;
   triggeredByTouch: boolean = false;
   delegatedEvents: { string?: Function };
+  ignoreScrollingWhileDragging: boolean;
 
   // Copied from backbone events (TODO: handle this better)
   on: (bindings: BindingMap<MouseHandler>) => void;
   off: Function;
   trigger: Function;
 
-  domElement: HTMLElement;
-
   constructor(
-    targetSelector: string,
+    targetId: string,
     initialBindings: BindingMap<MouseHandler> = {},
     id: ?string = null,
+    ignoreScrollingWhileDragging: boolean = false,
   ) {
     _.extend(this, BackboneEvents);
-    this.targetSelector = targetSelector;
-    this.domElement = document.querySelector(targetSelector);
-    if (!this.domElement) {
-      throw new Error(`Input couldn't be attached to the following selector ${targetSelector}`);
+    this.targetId = targetId;
+    const targetSelector = `#${targetId}`;
+    const domElement = document.getElementById(targetId);
+    if (!domElement) {
+      throw new Error(`Input couldn't be attached to the following id ${targetId}`);
     }
     this.id = id;
 
@@ -333,6 +336,7 @@ export class InputMouse {
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
     this.delegatedEvents = {};
+    this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
 
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
@@ -340,61 +344,32 @@ export class InputMouse {
 
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "mousedown",
-        this.targetSelector,
-        this.mouseDown,
-      ),
+      Utils.addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "mouseover",
-        this.targetSelector,
-        this.mouseOver,
-      ),
+      Utils.addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "mouseout",
-        this.targetSelector,
-        this.mouseOut,
-      ),
+      Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "touchstart",
-        this.targetSelector,
-        this.mouseOver,
-      ),
+      Utils.addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "touchend",
-        this.targetSelector,
-        this.mouseOut,
-      ),
+      Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
     );
     _.extend(
       this.delegatedEvents,
-      Utils.addEventListenerWithDelegation(
-        document,
-        "wheel",
-        this.targetSelector,
-        this.mouseWheel,
-        { passive: false },
-      ),
+      Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
+        passive: false,
+      }),
     );
 
-    this.hammerManager = new Hammer(this.domElement, {
+    this.hammerManager = new Hammer(domElement, {
       inputClass: Hammer.TouchInput,
     });
     this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
@@ -433,6 +408,7 @@ export class InputMouse {
 
   mouseDown = (event: MouseEvent): void => {
     event.preventDefault();
+    isDragging = true;
     this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
@@ -440,6 +416,7 @@ export class InputMouse {
   };
 
   mouseUp = (event: MouseEvent): void => {
+    isDragging = false;
     this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
     this.rightMouseButton.handleMouseUp(event, this.triggeredByTouch);
 
@@ -537,6 +514,9 @@ export class InputMouse {
 
   mouseWheel = (event: WheelEvent): void => {
     event.preventDefault();
+    if (isDragging && this.ignoreScrollingWhileDragging) {
+      return;
+    }
     let delta = 0;
     if (event.deltaY != null) {
       delta = -Number(event.deltaY);
@@ -563,7 +543,7 @@ export class InputMouse {
 
   getElementOffset() {
     // Return the bounding rectangle relative to the top-left corner of the document
-    const boundingRect = this.domElement.getBoundingClientRect();
+    const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

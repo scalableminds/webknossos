@@ -6,6 +6,6 @@ export function expectValueDeepEqual(t, block, expected) {
 
 export function execCall(t, block) {
   t.false(block.done);
-  t.truthy(block.value.CALL);
-  return block.value.CALL.fn.apply(block.value.CALL.context, block.value.CALL.args);
+  t.is(block.value.type, "CALL");
+  return block.value.payload.fn.apply(block.value.payload.context, block.value.payload.args);
 }

@@ -12,6 +12,7 @@ import {
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
@@ -26,7 +27,6 @@ import constants, {
   type OrthoViewMap,
   type Vector3,
   type Vector4,
-  addressSpaceDimensions,
 } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
@@ -161,7 +161,7 @@ export default class LayerRenderingManager {
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
-      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint);
+      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
       return this.cachedAnchorPoint;
     }
 
@@ -199,6 +199,7 @@ export default class LayerRenderingManager {
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (!isInvisible) {
+        const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(
             viewMode,
@@ -211,6 +212,7 @@ export default class LayerRenderingManager {
             this.cachedAnchorPoint,
             areas,
             subBucketLocality,
+            initializedGpuFactor,
           ),
         );
       }
@@ -230,12 +232,16 @@ export default class LayerRenderingManager {
           // This tells the bucket collection, that the buckets are necessary for rendering
           buckets.forEach(b => b.markAsNeeded());
 
-          this.textureBucketManager.setActiveBuckets(buckets, this.cachedAnchorPoint);
+          this.textureBucketManager.setActiveBuckets(
+            buckets,
+            this.cachedAnchorPoint,
+            isAnchorPointNew,
+          );
 
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
-            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_ZOOM_STEP)
             .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
 
           this.pullQueue.addAll(missingBuckets);
@@ -253,8 +259,12 @@ export default class LayerRenderingManager {
   }
 
   maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
-    const resolutions = getResolutions(Store.getState().dataset);
+    const state = Store.getState();
+    const resolutions = getResolutions(state.dataset);
     const resolution = resolutions[logZoomStep];
+    const addressSpaceDimensions = getAddressSpaceDimensions(
+      state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
 
     const maximumRenderedBucketsHalfInVoxel = addressSpaceDimensions.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,

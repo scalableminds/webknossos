@@ -10,6 +10,7 @@ export type ToastConfig = {
   sticky?: boolean,
   timeout?: number,
   key?: string,
+  onClose?: () => void,
 };
 
 const Toast = {
@@ -54,7 +55,7 @@ const Toast = {
   message(type: ToastStyle, message: string | React$Element<any>, config: ToastConfig): void {
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
-    const sticky = config.sticky;
+    const { sticky, onClose } = config;
     let toastMessage;
     if (typeof message === "string" && message.match(/<html[^>]*>/)) {
       const src = `data:text/html;charset=utf-8,${escape(message)}`;
@@ -72,6 +73,7 @@ const Toast = {
       message: toastMessage,
       style: {},
       className: "",
+      onClose,
     };
 
     if (type === "error") {
@@ -88,7 +90,7 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, config: ToastConfig = {}): void {
+  info(message: string | React$Element<any>, config: ToastConfig = {}): void {
     return this.message("info", message, config);
   },
 

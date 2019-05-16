@@ -193,12 +193,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         }
     }
 
-  private def parsePoint3D(node: XMLNode) =
+  private def parsePoint3D(node: XMLNode) = {
+    val xText = (node \ "@x").text
+    val yText = (node \ "@y").text
+    val zText = (node \ "@z").text
     for {
-      x <- (node \ "@x").text.toIntOpt
-      y <- (node \ "@y").text.toIntOpt
-      z <- (node \ "@z").text.toIntOpt
+      x <- xText.toIntOpt.orElse(xText.toFloatOpt.map(math.round))
+      y <- yText.toIntOpt.orElse(yText.toFloatOpt.map(math.round))
+      z <- zText.toIntOpt.orElse(zText.toFloatOpt.map(math.round))
     } yield Point3D(x, y, z)
+  }
 
   private def parseRotationForParams(node: XMLNode) =
     for {
@@ -242,24 +246,19 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     (node \ "@groupId").text.toIntOpt
 
   private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Option[Tree] =
-    (tree \ "@id").text.toIntOpt.flatMap { id =>
+    (tree \ "@id").text.toIntOpt.map { id =>
       val color = parseColor(tree)
       val name = parseName(tree)
       val groupId = parseGroupId(tree)
       logger.trace("Parsing tree Id: %d".format(id))
-      (tree \ "nodes" \ "node").flatMap(parseNode) match {
-        case parsedNodes if parsedNodes.nonEmpty =>
-          val edges = (tree \ "edges" \ "edge").flatMap(parseEdge)
-          val nodes = parsedNodes
-          val nodeIds = nodes.map(_.id)
-          val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
-          val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
-          val createdTimestamp =
-            if (nodes.isEmpty) System.currentTimeMillis() else parsedNodes.minBy(_.createdTimestamp).createdTimestamp
-          Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId))
-        case _ =>
-          None
-      }
+      val nodes = (tree \ "nodes" \ "node").flatMap(parseNode)
+      val edges = (tree \ "edges" \ "edge").flatMap(parseEdge)
+      val nodeIds = nodes.map(_.id)
+      val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
+      val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
+      val createdTimestamp =
+        if (nodes.isEmpty) System.currentTimeMillis() else nodes.minBy(_.createdTimestamp).createdTimestamp
+      Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId)
     }
 
   private def parseComments(comments: NodeSeq) =

@@ -2,9 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <title>@(conf.Application.title)</title>
-    @if(conf.Features.enableFrontpage){
+    @if(conf.Features.isDemoInstance){
     <meta
       name="description"
       content="Annotate and explore large 3D datasets with webKnossos. Fast neurite skeletonization. 3D voxel painting. Collaboration, sharing and crowdsourcing."

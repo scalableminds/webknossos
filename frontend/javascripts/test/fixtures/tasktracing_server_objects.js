@@ -23,6 +23,7 @@ export const tracing: ServerSkeletonTracing = {
       treeId: 1,
       color: { r: 1, g: 0, b: 0, a: 1 },
       name: "",
+      isVisible: true,
       createdTimestamp: 1528811979356,
     },
   ],

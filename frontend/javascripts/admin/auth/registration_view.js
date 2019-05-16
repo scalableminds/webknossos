@@ -28,12 +28,12 @@ class RegistrationView extends React.PureComponent<Props> {
       <Card style={{ marginBottom: 24 }}>
         Not a member of the listed organizations?
         <br />
-        {features().allowOrganizationCreation ? (
+        {features().isDemoInstance ? (
           <Link to="/onboarding">Create a new organization.</Link>
         ) : (
           <React.Fragment>
-            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
-            information about how to get to use webKnossos.
+            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
+            setting up webKnossos.
           </React.Fragment>
         )}
       </Card>

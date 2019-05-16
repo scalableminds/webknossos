@@ -372,10 +372,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit m: MessagesProvider,
-                                                                         ctx: DBAccessContext): Fox[TemporaryFile] =
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
+      implicit m: MessagesProvider,
+      ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
-      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
+      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(
         tuple =>
@@ -420,10 +421,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
        tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext): Fox[
     List[(List[Option[SkeletonTracing]],
           List[Option[VolumeTracing]],
-          List[Option[Source[ByteString, _]]],
+          List[Option[Array[Byte]]],
           List[String],
           List[Option[Scale]],
           List[Annotation],
@@ -449,14 +451,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-    def getVolumeDataObjects(dataSetId: ObjectId,
-                             tracingIds: List[Option[String]]): Fox[List[Option[Source[ByteString, Any]]]] =
+    def getVolumeDataObjects(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[Array[Byte]]]] =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        tracingDataObjects: List[Option[Source[ByteString, Any]]] <- Fox.serialCombined(tracingIds) {
-          case Some(tracingId) => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
-          case None            => Fox.successful(None)
+        tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
+          case None                              => Fox.successful(None)
+          case Some(tracingId) if skipVolumeData => Fox.successful(None)
+          case Some(tracingId)                   => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
         }
       } yield tracingDataObjects
 
@@ -503,22 +505,16 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     Fox.combined(tracingsGrouped.toList)
   }
 
-  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])],
+  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])],
                         zipFileName: String): Future[TemporaryFile] = {
     val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
-    def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])]): Future[Boolean] =
+    def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])]): Future[Boolean] =
       nmls match {
         case head :: tail => {
-          val writeVolumeDataResult = head._3 match {
-            case Some(volumeData) =>
-              zipper.addFileFromSource(head._2 + "_data.zip", volumeData)
-            case None => Future.successful(())
-          }
-          writeVolumeDataResult
-            .flatMap(_ => zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream("", head._1).writeTo))
-            .flatMap(_ => addToZip(tail))
+          head._3.foreach(volumeData => zipper.addFileFromBytes(head._2 + "_data.zip", volumeData))
+          zipper.addFileFromEnumerator(head._2 + ".nml", head._1).flatMap(_ => addToZip(tail))
         }
         case _ =>
           Future.successful(true)

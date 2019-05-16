@@ -44,6 +44,7 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type TracingType,
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
@@ -565,7 +566,7 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetId: APIDatasetId,
-  typ: "volume" | "skeleton" | "hybrid",
+  typ: TracingType,
   withFallback: boolean,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -944,6 +945,20 @@ export async function triggerSampleDatasetDownload(
   );
 }
 
+export async function getMeanAndStdDevFromDataset(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<{ mean: number, stdDev: number }> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/colorStatistics?token=${token}`,
+    ),
+  );
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDataStore>> {
   const datastores = await Request.receiveJSON("/api/datastores");
@@ -1130,7 +1145,7 @@ export function computeIsosurface(
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.name
+        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
       }/isosurface?token=${token}`,
       {
         data: {

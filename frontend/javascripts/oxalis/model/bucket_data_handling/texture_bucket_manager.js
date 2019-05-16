@@ -4,15 +4,20 @@ import _ from "lodash";
 
 import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import {
+  getAddressSpaceDimensions,
+  getBucketCapacity,
+  getLookupBufferSize,
+  getPackingDegree,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { waitForCondition } from "libs/utils";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
-import constants, { type Vector4, addressSpaceDimensions } from "oxalis/constants";
+import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import window from "libs/window";
 
 // A TextureBucketManager instance is responsible for making buckets available
@@ -26,8 +31,6 @@ import window from "libs/window";
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
-
-const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -54,16 +57,21 @@ export default class TextureBucketManager {
   dataTextureCount: number;
   maximumCapacity: number;
   packingDegree: number;
+  addressSpaceDimensions: Vector3;
+  lookUpBufferWidth: number;
 
   constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
     this.packingDegree = getPackingDegree(bytes);
+    this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
-    this.maximumCapacity =
-      (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+    const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
+    this.addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
+    this.lookUpBufferWidth = getLookupBufferSize(initializedGpuFactor);
+
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
-    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * channelCountForLookupBuffer;
+    const lookUpBufferSize = Math.pow(this.lookUpBufferWidth, 2) * channelCountForLookupBuffer;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
@@ -83,7 +91,7 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0], false);
   }
 
   freeBucket(bucket: DataBucket): void {
@@ -107,7 +115,11 @@ export default class TextureBucketManager {
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
+  setActiveBuckets(
+    buckets: Array<DataBucket>,
+    anchorPoint: Vector4,
+    isAnchorPointNew: boolean,
+  ): void {
     this.currentAnchorPoint = anchorPoint;
     window.currentAnchorPoint = anchorPoint;
     // Find out which buckets are not needed anymore
@@ -122,6 +134,7 @@ export default class TextureBucketManager {
       this.freeBucket(freeBucket);
     }
 
+    let needsNewBucket = false;
     const freeIndexArray = Array.from(this.freeIndexSet);
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
@@ -130,10 +143,15 @@ export default class TextureBucketManager {
         }
         const freeBucketIdx = freeIndexArray.shift();
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
+        needsNewBucket = true;
       }
     }
 
-    this._refreshLookUpBuffer();
+    // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
+    // or if new buckets are needed or if the anchorPoint changed. Otherwise we may end up in an endless loop.
+    if (freeBuckets.length > 0 || needsNewBucket || isAnchorPointNew) {
+      this._refreshLookUpBuffer();
+    }
   }
 
   getPackedBucketSize() {
@@ -215,7 +233,7 @@ export default class TextureBucketManager {
     }
 
     const lookUpTexture = createUpdatableTexture(
-      lookUpBufferWidth,
+      this.lookUpBufferWidth,
       channelCountForLookupBuffer,
       THREE.FloatType,
       getRenderer(),
@@ -323,17 +341,20 @@ export default class TextureBucketManager {
         }
 
         const lookUpIdx = this._getBucketIndex(bucket.zoomedAddress);
-        const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-        this.lookUpBuffer[posInBuffer] = address;
-        this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+        if (lookUpIdx !== -1) {
+          const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
+          this.lookUpBuffer[posInBuffer] = address;
+          this.lookUpBuffer[posInBuffer + 1] = bucketZoomStep;
+        }
       } else if (isFirstFallback) {
         if (address !== -1) {
           const baseBucketAddresses = this._getBaseBucketAddresses(bucket, 1);
           for (const baseBucketAddress of baseBucketAddresses) {
             const lookUpIdx = this._getBucketIndex(baseBucketAddress);
             const posInBuffer = channelCountForLookupBuffer * lookUpIdx;
-            if (this.lookUpBuffer[posInBuffer] !== -2) {
-              // Another bucket was already placed here. Skip the entire loop
+            if (this.lookUpBuffer[posInBuffer] !== -2 || lookUpIdx === -1) {
+              // Either, another bucket was already placed here. Or, the lookUpIdx is
+              // invalid. Skip the entire loop
               break;
             }
             this.lookUpBuffer[posInBuffer] = address;
@@ -349,7 +370,13 @@ export default class TextureBucketManager {
       }
     }
 
-    this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
+    this.lookUpTexture.update(
+      this.lookUpBuffer,
+      0,
+      0,
+      this.lookUpBufferWidth,
+      this.lookUpBufferWidth,
+    );
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;
   }
@@ -361,16 +388,17 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    // if (x < 0) console.warn("x should be greater than 0. is currently:", x);
-    // if (y < 0) console.warn("y should be greater than 0. is currently:", y);
-    // if (z < 0) console.warn("z should be greater than 0. is currently:", z);
+    const [xMax, yMax, zMax] = this.addressSpaceDimensions;
 
-    const [sx, sy] = addressSpaceDimensions;
+    if (x > xMax || y > yMax || z > zMax || x < 0 || y < 0 || z < 0) {
+      // The bucket is outside of the addressable space.
+      return -1;
+    }
 
     // prettier-ignore
     return (
-      sx * sy * z +
-      sx * y +
+      xMax * yMax * z +
+      xMax * y +
       x
     );
   }

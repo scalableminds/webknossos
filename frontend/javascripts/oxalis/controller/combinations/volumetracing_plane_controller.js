@@ -23,6 +23,7 @@ import {
   setContourTracingMode,
   cycleToolAction,
   copySegmentationLayerAction,
+  inferSegmentationInViewportAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -35,6 +36,11 @@ import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/acti
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
+
+// TODO: Build proper UI for this
+window.isAutomaticBrushEnabled = false;
+const isAutomaticBrushEnabled = () =>
+  window.isAutomaticBrushEnabled || Store.getState().temporaryConfiguration.isAutoBrushEnabled;
 
 // eslint-disable-next-line no-unused-vars
 const simulateTracing = async (): Promise<void> => {
@@ -91,6 +97,9 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
+          if (isAutomaticBrushEnabled()) {
+            return;
+          }
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW));
         } else {
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW_OVERWRITE));
@@ -160,6 +169,10 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         );
         if (cellId > 0) {
           Store.dispatch(setActiveCellAction(cellId));
+        }
+      } else if (event.ctrlKey) {
+        if (isAutomaticBrushEnabled()) {
+          Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }
       }
     },

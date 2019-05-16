@@ -31,6 +31,7 @@ type Params = {|
   resolutions: Array<Vector3>,
   datasetScale: Vector3,
   isOrthogonal: boolean,
+  lookupTextureWidth: number,
 |};
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -222,7 +223,7 @@ void main() {
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
+    l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,

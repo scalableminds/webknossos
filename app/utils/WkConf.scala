@@ -30,6 +30,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Http {
     val uri = get[String]("http.uri")
+    val port = get[Int]("http.port")
   }
 
   object Mail {
@@ -87,8 +88,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object Features {
-    val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
-    val enableFrontpage = get[Boolean]("features.enableFrontpage")
+    val isDemoInstance = get[Boolean]("features.isDemoInstance")
   }
 
   val operatorData = get[String]("operatorData")

@@ -4,7 +4,13 @@
  */
 import Enum from "Enumjs";
 
-import type { BoundingBoxObject, Edge, CommentType, TreeGroup } from "oxalis/store";
+import type {
+  BoundingBoxObject,
+  Edge,
+  CommentType,
+  TreeGroup,
+  RecommendedConfiguration,
+} from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
@@ -231,9 +237,11 @@ export type APITaskType = {
   +teamId: string,
   +teamName: string,
   +settings: APISettings,
-  +recommendedConfiguration: ?string,
+  +recommendedConfiguration: ?RecommendedConfiguration,
   +tracingType: "skeleton" | "volume",
 };
+
+export type TracingType = "skeleton" | "volume" | "hybrid";
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };
 
@@ -372,20 +380,36 @@ export type DatasetConfig = {
   +zipFile: File,
 };
 
-type WkConnectLayer = {
+type NeuroglancerLayer = {
   // This is the source URL of the layer, should start with gs://, http:// or https://
   source: string,
   type: "image" | "segmentation",
 };
 
-export type WkConnectDatasetConfig = {
-  neuroglancer: {
-    [organizationName: string]: {
-      [datasetName: string]: {
-        layers: { [layerName: string]: WkConnectLayer },
-      },
+type NeuroglancerDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      layers: { [layerName: string]: NeuroglancerLayer },
+      credentials?: Object,
     },
   },
+};
+
+type BossDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      domain: string,
+      collection: string,
+      experiment: string,
+      username: string,
+      password: string,
+    },
+  },
+};
+
+export type WkConnectDatasetConfig = {
+  neuroglancer?: NeuroglancerDatasetConfig,
+  boss?: BossDatasetConfig,
 };
 
 export type APITimeTracking = {
@@ -466,12 +490,12 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +allowOrganizationCreation: boolean,
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +addMissingDatasetButtonEnabled: boolean,
-  +enableFrontpage: boolean,
+  +isDemoInstance: boolean,
+  +autoBrushReadyDatasets: Array<string>,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes
@@ -521,6 +545,7 @@ export type ServerSkeletonTracingTree = {
   treeId: number,
   createdTimestamp: number,
   groupId?: ?number,
+  isVisible?: boolean,
 };
 
 export type ServerTracingBase = {|

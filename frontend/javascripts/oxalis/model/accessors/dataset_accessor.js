@@ -3,11 +3,17 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
-import type { APIAllowedMode, APIDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIDataset,
+  APIMaybeUnimportedDataset,
+  APISegmentationLayer,
+} from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
-import { map3 } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import { aggregateBoundingBox } from "libs/utils";
+import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 
 export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
@@ -29,14 +35,7 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
     return [];
   }
 
-  const lastResolution = _.last(mostExtensiveResolutions);
-
-  // We add another level of resolutions to allow zooming out even further
-  const extendedResolutions = _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).map(idx =>
-    map3(el => 2 ** (idx + 1) * el, lastResolution),
-  );
-
-  return mostExtensiveResolutions.concat(extendedResolutions);
+  return mostExtensiveResolutions;
 }
 
 // _getResolutions itself is not very performance intensive, but other functions which rely
@@ -53,7 +52,7 @@ function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
         Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
       ),
     )
-    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
+    .getOrElse(2 ** (minimumZoomStepCount - 1));
   return maxZoomstep;
 }
 
@@ -127,6 +126,46 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
     (lowerBoundary[1] + upperBoundary[1]) / 2,
     (lowerBoundary[2] + upperBoundary[2]) / 2,
   ];
+}
+
+function getDatasetExtentInVoxel(dataset: APIDataset) {
+  const datasetLayers = dataset.dataSource.dataLayers;
+  const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
+  const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
+  const { min, max } = unifiedBoundingBoxes;
+  const extent = {
+    width: max[0] - min[0],
+    height: max[1] - min[1],
+    depth: max[2] - min[2],
+  };
+  return extent;
+}
+
+function getDatasetExtentInLength(dataset: APIDataset) {
+  const extentInVoxel = getDatasetExtentInVoxel(dataset);
+  const { scale } = dataset.dataSource;
+  const extent = {
+    width: extentInVoxel.width * scale[0],
+    height: extentInVoxel.height * scale[1],
+    depth: extentInVoxel.depth * scale[2],
+  };
+  return extent;
+}
+
+export function getDatasetExtentAsString(
+  dataset: APIMaybeUnimportedDataset,
+  inVoxel: boolean = true,
+): string {
+  if (!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive) {
+    return "";
+  }
+  const importedDataset = ((dataset: any): APIDataset);
+  if (inVoxel) {
+    const extentInVoxel = getDatasetExtentInVoxel(importedDataset);
+    return `${formatExtentWithLength(extentInVoxel, x => `${x}`)} voxel³`;
+  }
+  const extent = getDatasetExtentInLength(importedDataset);
+  return formatExtentWithLength(extent, formatNumberToLength);
 }
 
 export function determineAllowedModes(

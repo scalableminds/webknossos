@@ -11,6 +11,7 @@ import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
 import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
+import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import AsyncRedirect from "components/redirect";
 import AuthTokenView from "admin/auth/auth_token_view";
 import ChangePasswordView from "admin/auth/change_password_view";
@@ -18,15 +19,18 @@ import DashboardView, { urlTokenToTabKeyMap } from "dashboard/dashboard_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DisableGenericDnd from "components/disable_generic_dnd";
+import FeaturesView from "pages/frontpage/features_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
 import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
 import LoginView from "admin/auth/login_view";
 import Navbar from "navbar";
 import Onboarding from "admin/onboarding";
 import OpenTasksReportView from "admin/statistic/open_tasks_report_view";
+import PricingView from "pages/frontpage/pricing_view";
 import ProjectCreateView from "admin/project/project_create_view";
 import ProjectListView from "admin/project/project_list_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
+import PublicationDetailView from "dashboard/publication_details_view";
 import RegistrationView from "admin/auth/registration_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
@@ -43,11 +47,9 @@ import TeamListView from "admin/team/team_list_view";
 import TimeLineView from "admin/time/time_line_view";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import UserListView from "admin/user/user_list_view";
-import FeaturesView from "pages/frontpage/features_view";
-import PricingView from "pages/frontpage/pricing_view";
 import * as Utils from "libs/utils";
-import window from "libs/window";
 import features from "features";
+import window from "libs/window";
 
 const { Content } = Layout;
 
@@ -121,12 +123,12 @@ class ReactRouter extends React.Component<Props> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
-    const { enableFrontpage } = features();
 
     return (
       <Router history={browserHistory}>
         <Layout>
           <DisableGenericDnd />
+          <AdaptViewportMetatag isAuthenticated={isAuthenticated} />
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
             <Switch>
@@ -135,7 +137,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/"
                 render={() => {
                   if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
-                  if (enableFrontpage) return <SpotlightView />;
+                  if (features().isDemoInstance) return <SpotlightView />;
 
                   return isAuthenticated ? (
                     <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
@@ -148,7 +150,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/dashboard/:tab"
                 render={({ match }: ContextRouter) => {
-                  const tab = match.params.tab;
+                  const { tab } = match.params;
                   const initialTabKey = tab ? urlTokenToTabKeyMap[tab] : null;
                   return (
                     <DashboardView
@@ -420,6 +422,12 @@ class ReactRouter extends React.Component<Props> {
                       }`;
                     }}
                   />
+                )}
+              />
+              <Route
+                path="/publication/:id"
+                render={({ match }: ContextRouter) => (
+                  <PublicationDetailView publicationId={match.params.id || ""} />
                 )}
               />
               <Route path="/imprint" component={Imprint} />

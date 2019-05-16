@@ -96,14 +96,18 @@ dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
 dataSet.downloadAlreadyRunning=Sample dataset download is already running.
 dataSet.alreadyPresent=Sample dataset is already present.
+dataSet.noResolutions=Data layer does not contain resolutions
+dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 
 dataSource.notFound=Datasource not found on datastore server
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
+dataStore.unavailable=DataStore couldn't be reached.
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.
+tracingStore.unavailable=TracingStore couldn't be reached.
 
 zip.file.notFound=No or invalid ZIP file specified
 

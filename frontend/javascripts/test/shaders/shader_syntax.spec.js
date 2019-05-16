@@ -1,9 +1,13 @@
 // @flow
 import glslParser from "glsl-parser";
 
+import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import constants from "oxalis/constants";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test from "ava";
+
+const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
 
 test("Shader syntax: Ortho Mode", t => {
   const code = getMainFragmentShader({
@@ -17,6 +21,7 @@ test("Shader syntax: Ortho Mode", t => {
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   const parseResult = glslParser.check(code);
@@ -37,6 +42,7 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", t => {
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   const parseResult = glslParser.check(code);
@@ -57,6 +63,7 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", t => {
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
+    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   const parseResult = glslParser.check(code);
@@ -77,6 +84,7 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", t => {
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
+    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   const parseResult = glslParser.check(code);
@@ -97,6 +105,7 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", t => {
     resolutions,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
+    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
   });
 
   const parseResult = glslParser.check(code);

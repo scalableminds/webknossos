@@ -16,7 +16,7 @@ import features from "features";
 const { Content } = Layout;
 const { Search } = Input;
 
-const SimpleHeader = () => (
+export const SimpleHeader = () => (
   <div id="oxalis-header">
     <img
       src="/assets/images/oxalis.svg"
@@ -47,14 +47,14 @@ const WelcomeHeader = ({ history }) => (
         }}
       >
         <Row type="flex" align="middle" style={{ color: "white" }}>
-          <Col span={4}>
+          <Col xs={{ span: 0 }} xl={{ span: 4 }}>
             <img
               src="/assets/images/oxalis.svg"
               alt="webKnossos Logo"
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col span={20}>
+          <Col xs={{ span: 24 }} xl={{ span: 20 }}>
             <p
               style={{
                 fontSize: 58,
@@ -217,8 +217,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
 
   render() {
     const useOnboardingFlow =
-      this.props.activeUser == null &&
-      (features().allowOrganizationCreation || !this.state.hasOrganizations);
+      this.props.activeUser == null && (features().isDemoInstance || !this.state.hasOrganizations);
 
     const search = (
       <Search
@@ -233,7 +232,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <Layout>
         {useOnboardingFlow ? <WelcomeHeader history={this.props.history} /> : <SimpleHeader />}
-        <Content style={{ padding: 50, minWidth: 900, maxWidth: 1500, margin: "auto" }}>
+        <Content className="centered-content">
           <div className="pull-right">{this.state.datasets.length > 0 && search}</div>
           <h3>Featured Publications</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
@@ -258,7 +257,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
               )}
             </div>
           </Spin>
-          {features().addMissingDatasetButtonEnabled ? <MissingDatasetCard /> : null}
+          {features().isDemoInstance ? <MissingDatasetCard /> : null}
           <div id="spotlight-footnote">
             Visit <a href="https://publication.webknossos.org/">publication.webknossos.org</a> for
             the original webKnossos publication website.

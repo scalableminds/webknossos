@@ -1,5 +1,5 @@
 // @flow
-import { Avatar, Badge, Icon, Layout, Menu, Popover } from "antd";
+import { Avatar, Icon, Layout, Menu, Popover } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -34,11 +34,11 @@ export const navbarHeight = 48;
 // The user should click somewhere else to close that menu like it's done in most OS menus, anyway. 10 seconds.
 const subMenuCloseDelay = 10;
 
-function NavbarMenuItem({ children, style, ...props }) {
+function NavbarMenuItem({ children, ...props }) {
   return (
     <Menu
       mode="horizontal"
-      style={{ ...style, lineHeight: "48px" }}
+      style={{ lineHeight: "48px" }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
@@ -216,7 +216,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName } = activeUser;
   return (
-    <NavbarMenuItem style={{ width: 30 }}>
+    <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
         title={<UserInitials activeUser={activeUser} />}
@@ -249,10 +249,9 @@ function AnonymousAvatar() {
       placement="bottomRight"
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
+      style={{ position: "fixed" }}
     >
-      <Badge dot>
-        <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
-      </Badge>
+      <Avatar className="hover-effect-via-opacity" icon="user" style={{ marginLeft: 8 }} />
     </Popover>
   );
 }
@@ -306,7 +305,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     );
   }
 
-  if (!_isAuthenticated && features().enableFrontpage) {
+  if (!_isAuthenticated && features().isDemoInstance && !Utils.getIsInIframe()) {
     menuItems.push(
       <Menu.Item key="features">
         <Link to="/features" style={{ fontWeight: 400 }}>
@@ -322,7 +321,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   }
 
   if (!(_isAuthenticated || hideNavbarLogin)) {
-    trailingNavItems.push(<AnonymousAvatar key="anonynous-avatar" />);
+    trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
   menuItems.push(

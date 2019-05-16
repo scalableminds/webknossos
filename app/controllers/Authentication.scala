@@ -466,7 +466,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
     val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
-    val activatedInConfig = bool2Fox(conf.Features.allowOrganizationCreation) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig = bool2Fox(conf.Features.isDemoInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
 
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox

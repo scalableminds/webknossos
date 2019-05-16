@@ -131,6 +131,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
 
+  private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
+
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
@@ -273,7 +275,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       projectFilter <- projectFilterFox
-      accessQuery <- readAccessQuery
+      accessQuery <- userIdFromCtx.map(listAccessQ).getOrElse("false")
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t
                 #${userJoin}

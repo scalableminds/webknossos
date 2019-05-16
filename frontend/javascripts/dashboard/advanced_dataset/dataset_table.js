@@ -6,10 +6,11 @@ import _ from "lodash";
 import dice from "dice-coefficient";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import { stringToColor, formatTuple } from "libs/format_utils";
+import { stringToColor, formatScale } from "libs/format_utils";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
+import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import * as Utils from "libs/utils";
 import type { DatasetFilteringMode } from "../dataset_view";
 
@@ -169,11 +170,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           render={created => <FormattedDate timestamp={created} />}
         />
         <Column
-          title="Scale"
+          title="Scale & Extent"
           dataIndex="scale"
           key="scale"
-          width={120}
-          render={(__, dataset: APIMaybeUnimportedDataset) => formatTuple(dataset.dataSource.scale)}
+          width={220}
+          render={(__, dataset: APIMaybeUnimportedDataset) =>
+            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
+          }
         />
 
         <Column

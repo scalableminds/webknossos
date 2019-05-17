@@ -19,7 +19,7 @@ const FormItem = Form.Item;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
-const dayFormat = "MMM, dd, YYYY";
+const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 
 type TimeTrackingStats = {
@@ -135,7 +135,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
     const durationAsString = formatDurationToHoursAndMinutes(duration);
-    const dayFormatForMomentJs = "MMM, DD, YYYY";
+    const dayFormatForMomentJs = "DD, MMM, YYYY";
     const tooltip = (
       <div className="google-charts-tooltip">
         <div className="highlighted">
@@ -180,6 +180,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const columns = [
       { id: "AnnotationId", type: "string" },
       // This label columns is somehow needed to make the custom tooltip work.
+      // See https://developers.google.com/chart/interactive/docs/gallery/timeline#customizing-tooltips.
       { type: "string", id: "empty label" },
       { type: "string", role: "tooltip", p: { html: true } },
       { id: "Start", type: "date" },

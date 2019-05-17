@@ -21,7 +21,6 @@ import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_acce
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import { generateScreenshotsAsBuffers } from "oxalis/view/rendering_utils";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,

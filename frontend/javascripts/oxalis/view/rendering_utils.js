@@ -63,48 +63,7 @@ export function renderToTexture(
   return buffer;
 }
 
-export async function generateScreenshotsAsBuffers(rawDataOnly = false) {
-  const { temporaryConfiguration } = Store.getState();
-  const { viewMode } = temporaryConfiguration;
-
-  const planeIds =
-    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValuesWithoutTDView : [ArbitraryViewport];
-  const screenshots = {};
-  const SceneController = getSceneController();
-  const { planes } = SceneController;
-  if (rawDataOnly) {
-    SceneController.cube.setVisibility(false);
-    SceneController.skeleton.getRootNode().visible = false;
-    const setSkeletonVisibility = val => {
-      SceneController.skeleton.getRootNode().visible = val;
-    };
-    window.setSkeletonVisibility = setSkeletonVisibility;
-  }
-  for (const planeId of planeIds) {
-    const { width, height } = getInputCatcherRect(Store.getState(), planeId);
-    if (width === 0 || height === 0) continue;
-    if (rawDataOnly && planes[planeId].displayCrosshair) {
-      planes[planeId].setDisplayCrosshair(false);
-      SceneController.cube.setVisibility(false);
-      SceneController.userBoundingBox.setVisibility(false);
-
-      screenshots[planeId] = renderToTexture(planeId);
-
-      planes[planeId].setDisplayCrosshair(true);
-      SceneController.cube.setVisibility(true);
-      SceneController.userBoundingBox.setVisibility(true);
-    } else {
-      screenshots[planeId] = renderToTexture(planeId);
-    }
-  }
-  if (rawDataOnly) {
-    SceneController.cube.setVisibility(true);
-    SceneController.skeleton.getRootNode().visible = true;
-  }
-  return screenshots;
-}
 export async function downloadScreenshot() {
-  const screenshots = await generateScreenshotsAsBuffers(true);
   const { dataset, flycam, temporaryConfiguration } = Store.getState();
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
@@ -112,11 +71,18 @@ export async function downloadScreenshot() {
 
   const baseName = `${datasetName}__${x}_${y}_${z}`;
 
-  for (const planeId of Object.keys(screenshots)) {
+  const planeIds =
+    viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValuesWithoutTDView : [ArbitraryViewport];
+
+  for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
-    const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
+    if (width === 0 || height === 0) continue;
+
+    const buffer = renderToTexture(planeId);
+
     // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(screenshots[planeId], width, height);
+    const blob = await convertBufferToImage(buffer, width, height);
+    const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
     saveAs(blob, `${baseName}__${planeDescriptor}.png`);
   }
 }

@@ -44,8 +44,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
     this.updateCanvas();
   }
 
-  componentWillReceiveProps() {
-    this.updateCanvasThrottled();
+  componentDidUpdate(_prevProps) {
+    this.updateCanvas();
   }
 
   updateCanvas = () => {
@@ -88,7 +88,6 @@ class Histogram extends React.PureComponent<HistogramProps> {
     } else {
       this.props.onChangeLayer(layerName, "bounds", [secVal, firstVal]);
     }
-    this.updateCanvasThrottled();
   };
 
   render() {

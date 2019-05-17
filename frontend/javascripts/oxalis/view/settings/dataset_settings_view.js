@@ -9,15 +9,15 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
 import {
   SwitchSetting,
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer } from "admin/admin_rest_api";
-import { getMaxZoomValueForResolution, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
@@ -63,45 +63,38 @@ type DatasetSettingsProps = {|
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
-  position: Vector3,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
 |};
 
 type State = {
-  histogram: ?Array<number>,
+  histograms: { string: APIHistogramData },
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   state = {
-    histogram: null,
+    histograms: {},
   };
 
   componentDidMount() {
-    this.loadHistogram();
+    this.loadAllHistograms();
   }
 
-  componentWillReceiveProps(newProps: DatasetSettingsProps) {
-    if (_.isEqual(this.props.position, newProps.position)) {
-      return;
-    }
-    this.loadHistogramThrottled();
-  }
-
-  loadHistogram = async () => {
-    const screenshots = await generateScreenshotsAsBuffers();
-    const histogram = Array(256).fill(0);
-    Object.keys(screenshots).forEach(planeId => {
-      const buffer = screenshots[planeId];
-      for (let pos = 0; pos + 3 < buffer.length; pos += 4) {
-        const avg = Math.floor((buffer[pos] + buffer[pos + 1] + buffer[pos + 2]) / 3);
-        histogram[avg] += 1;
-      }
+  loadAllHistograms = async () => {
+    const { layers } = this.props.datasetConfiguration;
+    const histograms = {};
+    const histogramPromises = Object.keys(layers).map(async layerName => {
+      const data = await getHistogramForLayer(
+        this.props.dataset.dataStore.url,
+        this.props.dataset,
+        layerName,
+      );
+      histograms[layerName] = data;
+      return data;
     });
-    this.setState({ histogram });
+    // Waiting for all Promises to be resolved.
+    await Promise.all(histogramPromises);
+    this.setState({ histograms });
   };
-
-  // eslint-disable-next-line react/sort-comp
-  loadHistogramThrottled = _.throttle(this.loadHistogram, 1000);
 
   getFindDataButton = (layerName: string, isDisabled: boolean) => (
     <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
@@ -139,7 +132,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
     const { brightness, contrast, alpha, color, bounds, isDisabled } = layer;
-    const { histogram } = this.state;
+    let histogram = new Array(256).fill(0);
+    if (this.state.histograms && this.state.histograms[layerName]) {
+      histogram = this.state.histograms[layerName].histogram;
+    }
 
     return (
       <div key={layerName}>
@@ -223,9 +219,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   handleFindData = async (layerName: string) => {
+    const { dataset } = this.props;
     const { position, resolution } = await findDataPositionForLayer(
-      this.props.dataset.dataStore.url,
-      this.props.dataset,
+      dataset.dataStore.url,
+      dataset,
       layerName,
     );
     if (!position || !resolution) {
@@ -393,7 +390,6 @@ const mapStateToProps = (state: OxalisState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   hasSegmentation: hasSegmentation(state.dataset),
-  position: getPosition(state.flycam),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

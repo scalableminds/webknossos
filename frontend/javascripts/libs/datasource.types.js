@@ -76,6 +76,5 @@ export type LayerUserConfiguration = {
     color: Vector3,
     bounds: Vector2,
     isDisabled: boolean,
-
   },
 };

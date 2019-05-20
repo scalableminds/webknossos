@@ -1,5 +1,16 @@
 // @flow
-import { Button, Card, Checkbox, Form, Input, Radio, Select } from "antd";
+import {
+  Button,
+  Card,
+  Checkbox,
+  Form,
+  Input,
+  Radio,
+  Select,
+  InputNumber,
+  Icon,
+  Tooltip,
+} from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
@@ -15,6 +26,7 @@ import { jsonStringify } from "libs/utils";
 import RecommendedConfigurationView, {
   DEFAULT_RECOMMENDED_CONFIGURATION,
 } from "admin/tasktype/recommended_configuration_view";
+import Toast from "libs/toast";
 
 const RadioGroup = Radio.Group;
 
@@ -32,6 +44,35 @@ type State = {
   teams: Array<APITeam>,
   useRecommendedConfiguration: boolean,
 };
+
+function isValidMagnification(rule, value, callback) {
+  if ((Math.log(value) / Math.log(2)) % 1 === 0) {
+    callback();
+  } else {
+    callback("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...");
+  }
+}
+
+function getMagnificationAdaptedSettings(rawSettings) {
+  const { magnifications, ...settingsWithoutMagnifications } = rawSettings;
+
+  let allowedMagnifications = null;
+  if (magnifications.shouldRestrict) {
+    if (magnifications.minMagnification > magnifications.maxMagnification) {
+      Toast.error("Minimum magnification must not be greater than maximum magnification.");
+      return null;
+    }
+    allowedMagnifications = {
+      min: magnifications.minMagnification,
+      max: magnifications.maxMagnification,
+    };
+  }
+
+  return {
+    ...settingsWithoutMagnifications,
+    allowedMagnifications,
+  };
+}
 
 class TaskTypeCreateView extends React.PureComponent<Props, State> {
   state = {
@@ -80,19 +121,28 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       this.props.form.setFieldsValue({ recommendedConfiguration: null });
     }
     this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
-        const { recommendedConfiguration, ...rest } = formValues;
-        const newTaskType = {
-          ...rest,
-          recommendedConfiguration: JSON.parse(recommendedConfiguration),
-        };
-        if (this.props.taskTypeId) {
-          await updateTaskType(this.props.taskTypeId, newTaskType);
-        } else {
-          await createTaskType(newTaskType);
-        }
-        this.props.history.push("/taskTypes");
+      if (err) {
+        Toast.error("Please check the form for errors.");
+        return;
       }
+      const { recommendedConfiguration, settings: rawSettings, ...rest } = formValues;
+
+      const settings = getMagnificationAdaptedSettings(rawSettings);
+      if (!settings) {
+        return;
+      }
+
+      const newTaskType = {
+        ...rest,
+        settings,
+        recommendedConfiguration: JSON.parse(recommendedConfiguration),
+      };
+      if (this.props.taskTypeId) {
+        await updateTaskType(this.props.taskTypeId, newTaskType);
+      } else {
+        await createTaskType(newTaskType);
+      }
+      this.props.history.push("/taskTypes");
     });
   };
 
@@ -103,11 +153,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskTypeId != null;
-    const titlePrefix = isEditingMode ? "Update " : "Create";
+    const titlePrefix = isEditingMode ? "Update" : "Create";
 
     return (
       <div className="container" style={{ maxWidth: 1600, margin: "0 auto" }}>
-        <Card title={<h3>{titlePrefix} Task Type</h3>}>
+        <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Summary" hasFeedback>
               {getFieldDecorator("summary", {
@@ -222,6 +272,43 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   valuePropName: "checked",
                 })(<Checkbox>Allow Branchpoints</Checkbox>)}
               </FormItem>
+
+              <FormItem style={{ marginBottom: 6 }}>
+                {getFieldDecorator("settings.magnifications.shouldRestrict", {
+                  valuePropName: "checked",
+                })(
+                  <Checkbox>
+                    Restrict Magnifications{" "}
+                    <Tooltip
+                      title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be specified as a range from 4 and 8."
+                      placement="right"
+                    >
+                      <Icon type="info-circle" />
+                    </Tooltip>
+                  </Checkbox>,
+                )}
+              </FormItem>
+
+              {this.props.form.getFieldValue("settings.magnifications.shouldRestrict") && (
+                <div style={{ marginLeft: 24 }}>
+                  <div>
+                    <FormItem hasFeedback style={{ marginBottom: 6 }}>
+                      Minimum:{" "}
+                      {getFieldDecorator("settings.magnifications.minMagnification", {
+                        rules: [{ validator: isValidMagnification }],
+                      })(<InputNumber min={1} size="small" />)}
+                    </FormItem>
+                  </div>
+                  <div>
+                    <FormItem hasFeedback>
+                      Maximum:{" "}
+                      {getFieldDecorator("settings.magnifications.maxMagnification", {
+                        rules: [{ validator: isValidMagnification }],
+                      })(<InputNumber min={1} size="small" />)}
+                    </FormItem>
+                  </div>
+                </div>
+              )}
             </div>
 
             <FormItem>

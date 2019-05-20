@@ -94,6 +94,9 @@ class CameraController extends React.PureComponent<Props> {
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       const newAspectRatio = tdRect.width / tdRect.height;
 
+      // Do not update the tdCamera if the tdView is not visible (height === 0)
+      if (Number.isNaN(newAspectRatio)) return;
+
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
 
       tdCamera.left = oldMid - newWidth / 2;

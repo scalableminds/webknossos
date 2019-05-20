@@ -9,6 +9,7 @@ import {
   getBucketCapacity,
   getLookupBufferSize,
   getPackingDegree,
+  getChannelCount,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
@@ -236,12 +237,12 @@ export default class TextureBucketManager {
 
   setupDataTextures(bytes: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
-      const useFloatTexture = this.elementClass === "float";
+      const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
+      const textureType = this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType;
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
-        // Float textures can hold a float per channel, so divide bytes by 4
-        useFloatTexture ? (bytes / 4) * this.packingDegree : bytes * this.packingDegree,
-        useFloatTexture ? THREE.FloatType : THREE.UnsignedByteType,
+        channelCount,
+        textureType,
         getRenderer(),
       );
 

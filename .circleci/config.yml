@@ -182,41 +182,48 @@ jobs:
       - run:
           name: Push docker images
           command: |
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+            function retry() {
+              for i in {1..5}; do
+                "$@" && s=0 && break || s=$?
+                sleep 10
+              done
+              return $s
+            }
+            retry sh -c 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
             if [ -n "$CIRCLE_TAG" ]; then
               docker tag \
                 scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos:$CIRCLE_TAG
-              docker push scalableminds/webknossos:$CIRCLE_TAG
+              retry docker push scalableminds/webknossos:$CIRCLE_TAG
               docker tag \
                 scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos-datastore:$CIRCLE_TAG
-              docker push scalableminds/webknossos-datastore:$CIRCLE_TAG
+              retry docker push scalableminds/webknossos-datastore:$CIRCLE_TAG
               docker tag \
                 scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos-tracingstore:$CIRCLE_TAG
-              docker push scalableminds/webknossos-tracingstore:$CIRCLE_TAG
+              retry docker push scalableminds/webknossos-tracingstore:$CIRCLE_TAG
             fi
             if [ -n "$CIRCLE_BRANCH" ]; then
               docker tag \
                 scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos:${CIRCLE_BRANCH}
-              docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-              docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+              retry docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              retry docker push scalableminds/webknossos:${CIRCLE_BRANCH}
               docker tag \
                 scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+              retry docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              retry docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
               docker tag \
                 scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
                 scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}
-              docker push scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-              docker push scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}
+              retry docker push scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              retry docker push scalableminds/webknossos-tracingstore:${CIRCLE_BRANCH}
               docker tag \
                 scalableminds/webknossos-dev \
                 scalableminds/webknossos-dev:$CIRCLE_BRANCH
-              docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
+              retry docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
             fi
             docker logout
       - run:

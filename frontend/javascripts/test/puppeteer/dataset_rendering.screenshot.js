@@ -73,6 +73,7 @@ const datasetNames = [
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
   "ROI2017_wkw_fallback",
+  "float_test_dataset",
 ];
 
 const viewOverrides: { [key: string]: string } = {

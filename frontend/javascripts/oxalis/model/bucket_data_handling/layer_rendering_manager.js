@@ -14,7 +14,11 @@ import { M4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
-import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutions,
+  getByteCount,
+  getElementClass,
+} from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
@@ -134,11 +138,13 @@ export default class LayerRenderingManager {
   setupDataTextures(): void {
     const { dataset } = Store.getState();
     const bytes = getByteCount(dataset, this.name);
+    const elementClass = getElementClass(dataset, this.name);
 
     this.textureBucketManager = new TextureBucketManager(
       this.textureWidth,
       this.dataTextureCount,
       bytes,
+      elementClass,
     );
     this.textureBucketManager.setupDataTextures(bytes);
 

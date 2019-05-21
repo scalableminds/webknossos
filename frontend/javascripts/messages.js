@@ -155,6 +155,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
+  "dataset.unsupported_segmentation_class":
+    "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":

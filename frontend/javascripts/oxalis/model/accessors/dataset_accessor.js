@@ -8,6 +8,7 @@ import type {
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  ElementClass,
 } from "admin/api_flow_types";
 import type { Settings, DataLayerType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
@@ -91,6 +92,10 @@ export function getByteCountFromLayer(layerInfo: DataLayerType): number {
 
 export function getByteCount(dataset: APIDataset, layerName: string): number {
   return getByteCountFromLayer(getLayerByName(dataset, layerName));
+}
+
+export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
+  return getLayerByName(dataset, layerName).elementClass;
 }
 
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
@@ -231,8 +236,8 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int8":
     case "int16":
     case "int32":
-      return true;
     case "float":
+      return true;
     case "int64":
     case "uint64":
     case "double":

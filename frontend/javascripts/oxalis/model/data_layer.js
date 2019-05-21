@@ -2,11 +2,7 @@
 
 import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
-import {
-  getLayerByName,
-  getLayerBoundaries,
-  getBitDepth,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -41,7 +37,6 @@ class DataLayer {
     this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
-    const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
     const isSegmentation = layerInfo.category === "segmentation";
 
     ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
@@ -49,7 +44,7 @@ class DataLayer {
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
       this.resolutions.length,
-      bitDepth,
+      layerInfo.elementClass,
       isSegmentation,
     );
 

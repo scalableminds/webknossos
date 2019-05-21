@@ -55,7 +55,7 @@ test.beforeEach(t => {
   const mockedLayer = {
     resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
   };
-  const cube = new Cube([100, 100, 100], 3, 24, mockedLayer);
+  const cube = new Cube([100, 100, 100], 3, "uint32", mockedLayer);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -162,38 +162,28 @@ test("Voxel Labeling should only create one temporal bucket", t => {
 
   const data = cube.getBucket([0, 0, 0, 0]).getData();
 
-  // Both values should be in the bucket, at positions 0 and 3 because of
-  // the bit(depth of 2function() {
   t.is(data[0], 42);
-  t.is(data[3], 43);
+  t.is(data[1], 43);
 });
 
 test("Voxel Labeling should merge incoming buckets", t => {
   const { cube } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
 
-  const oldData = new Uint8Array(32 * 32 * 32 * 3);
+  const oldData = new Uint32Array(32 * 32 * 32);
   // First voxel should be overwritten by new data
-  oldData[0] = 1;
-  oldData[1] = 2;
-  oldData[2] = 3;
+  oldData[0] = 12345;
   // Second voxel should be merged into new data
-  oldData[3] = 4;
-  oldData[4] = 5;
-  oldData[5] = 6;
+  oldData[1] = 67890;
 
-  cube.labelVoxel([0, 0, 0], 42);
+  cube.labelVoxel([0, 0, 0], 424242);
 
   bucket.pull();
-  bucket.receiveData(oldData);
+  bucket.receiveData(new Uint8Array(oldData.buffer));
 
   const newData = bucket.getData();
-  t.is(newData[0], 42);
-  t.is(newData[1], 0);
-  t.is(newData[2], 0);
-  t.is(newData[3], 4);
-  t.is(newData[4], 5);
-  t.is(newData[5], 6);
+  t.is(newData[0], 424242);
+  t.is(newData[1], oldData[1]);
 });
 
 test("getDataValue() should return the raw value without a mapping", t => {

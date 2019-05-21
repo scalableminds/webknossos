@@ -154,11 +154,11 @@ function sliceBufferIntoPieces(
   buffer: Uint8Array,
 ): Array<?Uint8Array> {
   let offset = 0;
-  const BUCKET_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+  const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
 
   const bucketBuffers = batch.map((_bucketAddress, index) => {
     const isMissing = missingBuckets.indexOf(index) > -1;
-    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_LENGTH));
+    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH));
     return subbuffer;
   });
 
@@ -168,13 +168,14 @@ function sliceBufferIntoPieces(
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const items = [];
   for (const bucket of batch) {
-    const bucketData = bucket.getData();
+    const data = bucket.getData();
     const bucketInfo = createSendBucketInfo(
       bucket.zoomedAddress,
       getResolutions(Store.getState().dataset),
     );
+    const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(bucketData);
+    const base64 = await byteArrayToBase64(byteArray);
     items.push(updateBucket(bucketInfo, base64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));

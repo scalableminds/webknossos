@@ -51,6 +51,7 @@ type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
   mapping: ?Mapping,
+  mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 };
@@ -145,12 +146,14 @@ export const setMappingEnabledAction = (isMappingEnabled: boolean): SetMappingEn
 export const setMappingAction = (
   mappingName: ?string,
   mapping: ?Mapping,
+  mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   mappingName,
   mapping,
+  mappingKeys,
   mappingColors,
   hideUnmappedIds,
 });

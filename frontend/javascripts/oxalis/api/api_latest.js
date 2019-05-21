@@ -704,6 +704,7 @@ class DataApi {
       setMappingAction(
         "<custom mapping>",
         _.clone(mapping),
+        Object.keys(mapping).map(x => parseInt(x, 10)),
         options.colors,
         options.hideUnmappedIds,
       ),

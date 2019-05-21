@@ -684,14 +684,13 @@ export function disableViewportMetatag() {
  * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
  */
 export function diffObjects(object: Object, base: Object): Object {
-  function changes(object, base) {
+  function changes(_object, _base) {
     let arrayIndexCounter = 0;
-    return _.transform(object, (result, value, key) => {
-      if (!_.isEqual(value, base[key])) {
-        const resultKey = _.isArray(base) ? arrayIndexCounter++ : key;
+    return _.transform(_object, (result, value, key) => {
+      if (!_.isEqual(value, _base[key])) {
+        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
         result[resultKey] =
-          _.isObject(value) && _.isObject(base[key]) ? changes(value, base[key]) : value;
-        console.log("Result: " + JSON.stringify(result));
+          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
       }
     });
   }

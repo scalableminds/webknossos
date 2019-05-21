@@ -32,6 +32,8 @@ import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 const { TabPane } = Tabs;
 const FormItem = Form.Item;
 
+const notImportedYetStatus = "Not imported yet.";
+
 type Props = {
   form: Object,
   datasetId: APIDatasetId,
@@ -161,6 +163,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   getDatasourceDiffAlert() {
     if (
       this.state.previousDataSource == null ||
+      this.state.previousDataSource.status === notImportedYetStatus ||
       _.size(this.state.differenceBetweenDatasources) === 0
     ) {
       return null;
@@ -333,8 +336,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const { status } = this.state.dataset.dataSource;
     if (status != null) {
       messageElements.push(
-        // "Not imported yet." is only used, when the dataSource.json is missing.
-        status === "Not imported yet." ? (
+        // This status is only used, when the dataSource.json is missing.
+        status === notImportedYetStatus ? (
           <Alert
             key="datasourceStatus"
             message={<span>{messages["dataset.missing_datasource_json"]}</span>}

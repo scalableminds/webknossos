@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. This change makes it easier to quickly compare different data layers against each other. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
 
 ### Changed
+- Heavily improved mapping creation/activation performance. [#4103](https://github.com/scalableminds/webknossos/pull/4103)
 - The NML parser now rounds floating point values in node coordinates. [#4045](https://github.com/scalableminds/webknossos/pull/4045)
 
 ### Fixed

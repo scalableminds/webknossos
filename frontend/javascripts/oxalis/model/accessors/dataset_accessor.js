@@ -299,7 +299,7 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-function _keyResolutionsByMax(dataset: APIDataset): { number: Vector3 } {
+function _keyResolutionsByMax(dataset: APIDataset): { [number]: Vector3 } {
   const resolutions = getResolutions(dataset);
   return _.keyBy(resolutions, res => Math.max(...res));
 }

@@ -212,16 +212,15 @@ export type APIRestrictions = {|
 
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";
 
-type Mag = Vector3;
-
 export type APISettings = {|
   +allowedModes: Array<APIAllowedMode>,
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +allowedMagnifications?: {
-    min?: Mag,
-    max?: Mag,
+    shouldRestrict: boolean,
+    min?: number,
+    max?: number,
   },
 |};
 

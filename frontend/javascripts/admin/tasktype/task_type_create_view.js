@@ -46,7 +46,7 @@ type State = {
 };
 
 function isValidMagnification(rule, value, callback) {
-  if ((Math.log(value) / Math.log(2)) % 1 === 0) {
+  if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     callback();
   } else {
     callback("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...");
@@ -54,18 +54,16 @@ function isValidMagnification(rule, value, callback) {
 }
 
 function getMagnificationAdaptedSettings(rawSettings) {
-  const { magnifications, ...settingsWithoutMagnifications } = rawSettings;
+  const { allowedMagnifications, ...settingsWithoutMagnifications } = rawSettings;
 
-  let allowedMagnifications = null;
-  if (magnifications.shouldRestrict) {
-    if (magnifications.minMagnification > magnifications.maxMagnification) {
-      Toast.error("Minimum magnification must not be greater than maximum magnification.");
-      return null;
-    }
-    allowedMagnifications = {
-      min: magnifications.minMagnification,
-      max: magnifications.maxMagnification,
-    };
+  if (
+    allowedMagnifications.shouldRestrict &&
+    allowedMagnifications.min != null &&
+    allowedMagnifications.max != null &&
+    allowedMagnifications.min > allowedMagnifications.max
+  ) {
+    Toast.error("Minimum magnification must not be greater than maximum magnification.");
+    return null;
   }
 
   return {
@@ -91,6 +89,11 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
         preferredMode: null,
+        allowedMagnifications: {
+          shouldRestrict: false,
+          min: 1,
+          max: 512,
+        },
       },
       recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
     };
@@ -103,6 +106,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
+    formValues.settings.allowedMagnificationsmin = formValues.settings.allowedMagnifications.min;
+    formValues.settings.allowedMagnificationsmax = formValues.settings.allowedMagnifications.max;
+
     this.props.form.setFieldsValue(formValues);
 
     if (taskType != null && taskType.recommendedConfiguration != null) {
@@ -274,13 +280,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               </FormItem>
 
               <FormItem style={{ marginBottom: 6 }}>
-                {getFieldDecorator("settings.magnifications.shouldRestrict", {
+                {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
                   valuePropName: "checked",
                 })(
                   <Checkbox>
                     Restrict Magnifications{" "}
                     <Tooltip
-                      title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be specified as a range from 4 and 8."
+                      title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be addressed with 4 and 8."
                       placement="right"
                     >
                       <Icon type="info-circle" />
@@ -289,26 +295,33 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 )}
               </FormItem>
 
-              {this.props.form.getFieldValue("settings.magnifications.shouldRestrict") && (
-                <div style={{ marginLeft: 24 }}>
-                  <div>
-                    <FormItem hasFeedback style={{ marginBottom: 6 }}>
-                      Minimum:{" "}
-                      {getFieldDecorator("settings.magnifications.minMagnification", {
-                        rules: [{ validator: isValidMagnification }],
-                      })(<InputNumber min={1} size="small" />)}
-                    </FormItem>
-                  </div>
-                  <div>
-                    <FormItem hasFeedback>
-                      Maximum:{" "}
-                      {getFieldDecorator("settings.magnifications.maxMagnification", {
-                        rules: [{ validator: isValidMagnification }],
-                      })(<InputNumber min={1} size="small" />)}
-                    </FormItem>
-                  </div>
+              <div
+                style={{
+                  marginLeft: 24,
+                  display: this.props.form.getFieldValue(
+                    "settings.allowedMagnifications.shouldRestrict",
+                  )
+                    ? "block"
+                    : "none",
+                }}
+              >
+                <div>
+                  <FormItem hasFeedback style={{ marginBottom: 6 }}>
+                    Minimum:{" "}
+                    {getFieldDecorator("settings.allowedMagnifications.min", {
+                      rules: [{ validator: isValidMagnification }],
+                    })(<InputNumber min={1} size="small" />)}
+                  </FormItem>
                 </div>
-              )}
+                <div>
+                  <FormItem hasFeedback>
+                    Maximum:{" "}
+                    {getFieldDecorator("settings.allowedMagnifications.max", {
+                      rules: [{ validator: isValidMagnification }],
+                    })(<InputNumber min={1} size="small" />)}
+                  </FormItem>
+                </div>
+              </div>
             </div>
 
             <FormItem>
@@ -321,7 +334,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <Button type="primary" htmlType="submit">
-                {titlePrefix} Task Type
+                {`${titlePrefix} Task Type`}
               </Button>
             </FormItem>
           </Form>

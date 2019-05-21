@@ -8,7 +8,11 @@ import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
-import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMaxZoomStep,
+  getResolutionByMax,
+  getResolutions,
+} from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
 import { userSettings } from "libs/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
@@ -274,20 +278,22 @@ export function getZoomValue(flycam: Flycam): number {
 
 function getValidTaskZoomRange(state: OxalisState): [number, number] {
   const defaultRange = [userSettings.zoom.minimum, Infinity];
-  // TODO: read from task
-  // const allowedMagnifications = select(state => state.tracing.restrictions.allowedMagnifications);
-  const allowedMagnifications = { min: [1, 1, 1], max: [2, 2, 2] };
+  const { allowedMagnifications } = state.tracing.restrictions;
 
-  if (!allowedMagnifications) {
+  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
     return defaultRange;
   }
 
-  const min = !allowedMagnifications.min
-    ? defaultRange[0]
-    : getValidZoomRangeForResolution(state, allowedMagnifications.min)[0];
-  const max = !allowedMagnifications.max
-    ? defaultRange[1]
-    : getValidZoomRangeForResolution(state, allowedMagnifications.max)[1];
+  function getMinMax(value, isMin) {
+    const idx = isMin ? 0 : 1;
+
+    return value == null
+      ? defaultRange[idx]
+      : getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx];
+  }
+
+  const min = getMinMax(allowedMagnifications.min, true);
+  const max = getMinMax(allowedMagnifications.max, false);
 
   return [min, max];
 }

@@ -287,9 +287,13 @@ function getValidTaskZoomRange(state: OxalisState): [number, number] {
   function getMinMax(value, isMin) {
     const idx = isMin ? 0 : 1;
 
-    return value == null
-      ? defaultRange[idx]
-      : getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx];
+    return (
+      (value == null
+        ? defaultRange[idx]
+        : getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx]) ||
+      // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
+      defaultRange[idx]
+    );
   }
 
   const min = getMinMax(allowedMagnifications.min, true);

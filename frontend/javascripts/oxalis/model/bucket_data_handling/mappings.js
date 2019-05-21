@@ -167,6 +167,7 @@ class Mappings {
         }
       }
     }
+    mappingKeys.sort((a, b) => a - b);
     return [mappingObject, mappingKeys];
   }
 
@@ -241,7 +242,6 @@ class Mappings {
 
     await progressCallback(false, "Create mapping texture...");
     console.time("Time to create mapping texture");
-    mappingKeys.sort((a, b) => a - b);
 
     const mappingSize = mappingKeys.length;
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH

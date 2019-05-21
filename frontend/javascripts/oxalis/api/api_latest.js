@@ -704,6 +704,8 @@ class DataApi {
       setMappingAction(
         "<custom mapping>",
         _.clone(mapping),
+        // Object.keys is sorted for numerical keys according to the spec:
+        // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
         Object.keys(mapping).map(x => parseInt(x, 10)),
         options.colors,
         options.hideUnmappedIds,
@@ -735,6 +737,14 @@ class DataApi {
    */
   activateMapping(mappingName?: string): void {
     return this.model.getSegmentationLayer().setActiveMapping(mappingName);
+  }
+
+  /**
+   * Returns whether a mapping is currently enabled.
+   *
+   */
+  isMappingEnabled(): boolean {
+    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
   /**

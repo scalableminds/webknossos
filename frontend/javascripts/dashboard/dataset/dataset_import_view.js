@@ -1,18 +1,14 @@
 // @flow
 
-import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
+import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip, Modal, Input } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 
-import type {
-  APIDataset,
-  APIMessage,
-  APIDataSourceWithMessages,
-  APIDatasetId,
-} from "admin/api_flow_types";
+import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import { datasetCache } from "dashboard/dataset_view";
+import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
   updateDataset,
@@ -24,12 +20,11 @@ import {
   updateDatasetTeams,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import { jsonStringify } from "libs/utils";
+import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
-import { Hideable, confirmAsync, hasFormError } from "./helper_components";
+import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
@@ -54,10 +49,12 @@ type State = {
   isLoading: boolean,
   activeDataSourceEditMode: "simple" | "advanced",
   activeTabKey: TabKey,
+  previousDataSource: ?APIDataSource,
+  differenceBetweenDatasources: ?Object,
 };
 
 export type FormData = {
-  dataSource: APIDataSourceWithMessages,
+  dataSource: APIDataSource,
   dataSourceJson: string,
   dataset: APIDataset,
   defaultConfiguration: DatasetConfiguration,
@@ -76,6 +73,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     messages: [],
     activeDataSourceEditMode: "simple",
     activeTabKey: "data",
+    differenceBetweenDatasources: null,
+    previousDataSource: null,
   };
 
   componentDidMount() {
@@ -87,11 +86,22 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.setState({ isLoading: true });
       const dataset = await getDataset(this.props.datasetId);
       let dataSource;
+      let previousDataSource;
       let dataSourceMessages = [];
       if (dataset.isForeign) {
         dataSource = await readDatasetDatasource(dataset);
       } else {
-        ({ dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset));
+        ({
+          dataSource,
+          messages: dataSourceMessages,
+          previousDataSource,
+        } = await getDatasetDatasource(dataset));
+
+        this.setState({ previousDataSource });
+        if (previousDataSource != null && dataSource != null) {
+          const diff = diffObjects(dataSource, previousDataSource);
+          this.setState({ differenceBetweenDatasources: diff });
+        }
       }
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
@@ -146,6 +156,68 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.setState({ isLoading: false });
       this.props.form.validateFields();
     }
+  }
+
+  getDatasourceDiffAlert() {
+    if (
+      this.state.previousDataSource == null ||
+      _.size(this.state.differenceBetweenDatasources) === 0
+    ) {
+      return null;
+    }
+
+    function showJSONModal(title, object) {
+      Modal.info({
+        title,
+        width: 800,
+        content: (
+          <Input.TextArea rows={20} style={jsonEditStyle}>
+            {JSON.stringify(object, null, 2)}
+          </Input.TextArea>
+        ),
+      });
+    }
+
+    return (
+      <div>
+        <Alert
+          message={
+            <div>
+              A datasource-properties.json file was found for this dataset. However, additional
+              information about the dataset could be inferred. Please review the following
+              properties and click &ldquo;Save&rdquo; to accept the suggestions. The original
+              datasource-properties.json file can be seen{" "}
+              <a
+                href="#"
+                onClick={() =>
+                  showJSONModal(
+                    "Original datasource-properties.json",
+                    this.state.previousDataSource,
+                  )
+                }
+              >
+                here
+              </a>
+              . The JSON-encoded difference can be inspected{" "}
+              <a
+                href="#"
+                onClick={() =>
+                  showJSONModal(
+                    "Difference to new datasource-properties.json",
+                    this.state.differenceBetweenDatasources,
+                  )
+                }
+              >
+                here
+              </a>
+              .
+            </div>
+          }
+          type="info"
+          showIcon
+        />
+      </div>
+    );
   }
 
   getFormValidationSummary = (): Object => {
@@ -242,6 +314,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         !this.state.dataset.dataStore.isConnector
       ) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
+        this.setState({ previousDataSource: null, differenceBetweenDatasources: null });
       }
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
@@ -405,6 +478,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                         this.props.form.validateFields();
                         this.setState({ activeDataSourceEditMode: activeEditMode });
                       }}
+                      additionalAlert={this.getDatasourceDiffAlert()}
                     />
                   </Hideable>
                 </TabPane>

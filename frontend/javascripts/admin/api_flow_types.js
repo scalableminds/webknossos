@@ -152,6 +152,7 @@ export type APISampleDataset = {
 
 export type APIDataSourceWithMessages = {
   +dataSource?: APIDataSource,
+  +previousDataSource?: APIDataSource,
   +messages: Array<APIMessage>,
 };
 

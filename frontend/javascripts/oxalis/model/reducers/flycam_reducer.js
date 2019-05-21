@@ -10,7 +10,6 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 

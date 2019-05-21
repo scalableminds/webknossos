@@ -7,7 +7,11 @@ import path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 
 import { compareScreenshot } from "./screenshot_helpers";
-import { screenshotDataset, DEV_AUTH_TOKEN } from "./dataset_rendering_helpers";
+import {
+  screenshotDataset,
+  screenshotDatasetWithMapping,
+  DEV_AUTH_TOKEN,
+} from "./dataset_rendering_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
@@ -115,6 +119,13 @@ async function withRetry(
   }
 }
 
+function isPixelEquivalent(changedPixels, width, height) {
+  // There may be a difference of 0.1 %
+  const allowedThreshold = 0.1 / 100;
+  const allowedChangedPixel = allowedThreshold * width * height;
+  return changedPixels < allowedChangedPixel;
+}
+
 datasetNames.map(async datasetName => {
   test.serial(`it should render dataset ${datasetName} correctly`, async t => {
     await withRetry(
@@ -136,10 +147,7 @@ datasetNames.map(async datasetName => {
           datasetName,
         );
 
-        // There may be a difference of 0.1 %
-        const allowedThreshold = 0.1 / 100;
-        const allowedChangedPixel = allowedThreshold * width * height;
-        return changedPixels < allowedChangedPixel;
+        return isPixelEquivalent(changedPixels, width, height);
       },
       condition => {
         t.true(
@@ -149,6 +157,38 @@ datasetNames.map(async datasetName => {
       },
     );
   });
+});
+
+test.serial("it should render a dataset with mappings correctly", async t => {
+  const datasetName = "ROI2017_wkw";
+  const mappingName = "axons";
+  await withRetry(
+    3,
+    async () => {
+      const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
+      const { screenshot, width, height } = await screenshotDatasetWithMapping(
+        await getNewPage(t.context.browser),
+        URL,
+        datasetId,
+        mappingName,
+      );
+      const changedPixels = await compareScreenshot(
+        screenshot,
+        width,
+        height,
+        BASE_PATH,
+        `${datasetName}_with_mapping_${mappingName}`,
+      );
+
+      return isPixelEquivalent(changedPixels, width, height);
+    },
+    condition => {
+      t.true(
+        condition,
+        `Dataset with name: "${datasetName}" and mapping: "${mappingName}" does not look the same.`,
+      );
+    },
+  );
 });
 
 test.afterEach(async t => {

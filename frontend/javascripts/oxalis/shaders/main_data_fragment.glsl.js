@@ -23,6 +23,7 @@ import compileShader from "./shader_module_system";
 type Params = {|
   colorLayerNames: string[],
   isRgbLayerLookup: { [string]: boolean },
+  floatLayerLookup: { [string]: false | { min: number, max: number } },
   hasSegmentation: boolean,
   segmentationName: string,
   segmentationPackingDegree: number,
@@ -176,6 +177,13 @@ void main() {
         false,
         fallbackGray
       ).xyz;
+
+    <% if (floatLayerLookup[name]) { %>
+      // Adjust the value range of the float values
+      vec3 range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
+      vec3 rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
+      color_value = (color_value + rangeMin) / range;
+    <% } %>
 
     // Brightness / Contrast Transformation for <%= name %>
     color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;

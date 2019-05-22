@@ -81,6 +81,7 @@ const defaultState: OxalisState = {
     activeMapping: {
       mappingName: null,
       mapping: null,
+      mappingKeys: null,
       mappingColors: null,
       hideUnmappedIds: false,
       isMappingEnabled: false,

@@ -40,14 +40,41 @@ export async function screenshotDataset(
   if (optionalDatasetConfigOverride != null) {
     await updateDatasetConfiguration(datasetId, optionalDatasetConfigOverride, options);
   }
-  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  await openTracingView(page, baseUrl, createdExplorational.id, optionalViewOverride);
+  return screenshotTracingView(page);
+}
+
+export async function screenshotDatasetWithMapping(
+  page: Page,
+  baseUrl: string,
+  datasetId: APIDatasetId,
+  mappingName: string,
+): Promise<Screenshot> {
+  const options = getDefaultRequestOptions(baseUrl);
+  const createdExplorational = await createExplorational(datasetId, "skeleton", false, options);
+  await openTracingView(page, baseUrl, createdExplorational.id);
+  await page.evaluate(
+    `webknossos.apiReady().then(async api => api.data.activateMapping("${mappingName}"))`,
+  );
+  await waitForMappingEnabled(page);
+  return screenshotTracingView(page);
+}
+
+async function waitForMappingEnabled(page: Page) {
+  let isMappingEnabled;
+  while (!isMappingEnabled) {
+    await page.waitFor(5000);
+    isMappingEnabled = await page.evaluate(
+      "webknossos.apiReady().then(async api => api.data.isMappingEnabled())",
+    );
+  }
 }
 
 async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   while (inputCatchers == null || inputCatchers.length < 4) {
-    inputCatchers = await page.$(".inputcatcher");
     await page.waitFor(500);
+    inputCatchers = await page.$(".inputcatcher");
   }
 }
 
@@ -68,12 +95,12 @@ async function waitForRenderingFinish(page: Page) {
   }
 }
 
-async function openTracingViewAndScreenshot(
+async function openTracingView(
   page: Page,
   baseUrl: string,
   annotationId: string,
   optionalViewOverride: ?string,
-): Promise<Screenshot> {
+) {
   const urlSlug = optionalViewOverride != null ? `#${optionalViewOverride}` : "";
   await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}${urlSlug}`), {
     timeout: 0,
@@ -81,7 +108,9 @@ async function openTracingViewAndScreenshot(
 
   await waitForTracingViewLoad(page);
   await waitForRenderingFinish(page);
+}
 
+async function screenshotTracingView(page: Page): Promise<Screenshot> {
   // Take screenshots of the other rendered planes
   const PLANE_IDS = [
     "#inputcatcher_TDView",

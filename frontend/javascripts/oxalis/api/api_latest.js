@@ -7,7 +7,7 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 
-import {
+import Constants, {
   type BoundingBoxType,
   type ControlMode,
   ControlModeEnum,
@@ -19,7 +19,10 @@ import {
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import {
+  type Bucket,
+  getConstructorForElementClass,
+} from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
 import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
@@ -40,7 +43,7 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -89,6 +92,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { type ElementClass } from "admin/api_flow_types";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -700,6 +704,9 @@ class DataApi {
       setMappingAction(
         "<custom mapping>",
         _.clone(mapping),
+        // Object.keys is sorted for numerical keys according to the spec:
+        // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
+        Object.keys(mapping).map(x => parseInt(x, 10)),
         options.colors,
         options.hideUnmappedIds,
       ),
@@ -730,6 +737,14 @@ class DataApi {
    */
   activateMapping(mappingName?: string): void {
     return this.model.getSegmentationLayer().setActiveMapping(mappingName);
+  }
+
+  /**
+   * Returns whether a mapping is currently enabled.
+   *
+   */
+  isMappingEnabled(): boolean {
+    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
   /**
@@ -813,7 +828,8 @@ class DataApi {
     const buckets = await Promise.all(
       bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
     );
-    return this.cutOutCuboid(buckets, bbox);
+    const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+    return this.cutOutCuboid(buckets, bbox, elementClass);
   }
 
   getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
@@ -844,10 +860,15 @@ class DataApi {
     return buckets;
   }
 
-  cutOutCuboid(buckets: Array<Bucket>, bbox: BoundingBoxType): Uint8Array {
+  cutOutCuboid(
+    buckets: Array<Bucket>,
+    bbox: BoundingBoxType,
+    elementClass: ElementClass,
+  ): $TypedArray {
     const extent = V3.sub(bbox.max, bbox.min);
-    const result = new Uint8Array(extent[0] * extent[1] * extent[2]);
-    const bucketLength = 32;
+    const TypedArrayClass = getConstructorForElementClass(elementClass);
+    const result = new TypedArrayClass(extent[0] * extent[1] * extent[2]);
+    const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
 
     for (const bucket of buckets) {
@@ -859,23 +880,24 @@ class DataApi {
       let y = Math.max(bbox.min[1], bucketTopLeft[1]);
       let z = Math.max(bbox.min[2], bucketTopLeft[2]);
 
-      const xMax = Math.min(bucketTopLeft[0] + bucketLength, bbox.max[0]);
-      const yMax = Math.min(bucketTopLeft[1] + bucketLength, bbox.max[1]);
-      const zMax = Math.min(bucketTopLeft[2] + bucketLength, bbox.max[2]);
+      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bbox.max[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bbox.max[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bbox.max[2]);
 
       while (z < zMax) {
         y = Math.max(bbox.min[1], bucketTopLeft[1]);
         while (y < yMax) {
           const dataOffset =
-            (x % bucketLength) +
-            (y % bucketLength) * bucketLength +
-            (z % bucketLength) * bucketLength * bucketLength;
+            (x % bucketWidth) +
+            (y % bucketWidth) * bucketWidth +
+            (z % bucketWidth) * bucketWidth * bucketWidth;
           const rx = x - bbox.min[0];
           const ry = y - bbox.min[1];
           const rz = z - bbox.min[2];
 
           const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
-          const data = bucket.type !== "null" ? bucket.getData() : new Uint8Array(32 ** 3);
+          const data =
+            bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
           const length = xMax - x;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
@@ -916,7 +938,7 @@ class DataApi {
   }
 
   getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const dataset = Store.getState().dataset;
+    const { dataset } = Store.getState();
 
     return doWithToken(token => {
       const downloadUrl =

@@ -94,9 +94,15 @@ class Mappings {
       // class will get the first color, and so on
       const assignNewIds = mappingColors != null && mappingColors.length > 0;
       await progressCallback(false, "Building mapping structure...");
-      const mappingObject = this.buildMappingObject(mappingName, fetchedMappings, assignNewIds);
+      const [mappingObject, mappingKeys] = this.buildMappingObject(
+        mappingName,
+        fetchedMappings,
+        assignNewIds,
+      );
       await progressCallback(false, "Applying mapping...");
-      Store.dispatch(setMappingAction(mappingName, mappingObject, mappingColors, hideUnmappedIds));
+      Store.dispatch(
+        setMappingAction(mappingName, mappingObject, mappingKeys, mappingColors, hideUnmappedIds),
+      );
     }
   }
 
@@ -136,8 +142,11 @@ class Mappings {
     mappingName: string,
     fetchedMappings: APIMappings,
     assignNewIds: boolean,
-  ): Mapping {
+  ): [Mapping, Array<number>] {
     const mappingObject: Mapping = {};
+    // Performance optimization: Object.keys(...) is slow for large objects
+    // keeping track of the keys in a separate array is ~5x faster
+    const mappingKeys = [];
 
     const maxId = this.getLargestSegmentId() + 1;
     // Initialize to the next multiple of 256 that is larger than maxId
@@ -152,12 +161,14 @@ class Mappings {
           const mappedId = mappingObject[minId] || minId;
           for (const id of mappingClass) {
             mappingObject[id] = mappedId;
+            mappingKeys.push(id);
           }
           newMappedId++;
         }
       }
     }
-    return mappingObject;
+    mappingKeys.sort((a, b) => a - b);
+    return [mappingObject, mappingKeys];
   }
 
   getMappingChain(mappingName: string, fetchedMappings: APIMappings): Array<string> {
@@ -198,7 +209,8 @@ class Mappings {
     listenToStoreProperty(
       state => state.temporaryConfiguration.activeMapping.mapping,
       mapping => {
-        this.updateMappingTextures(mapping);
+        const { mappingKeys } = Store.getState().temporaryConfiguration.activeMapping;
+        this.updateMappingTextures(mapping, mappingKeys);
       },
     );
 
@@ -224,50 +236,49 @@ class Mappings {
     );
   }
 
-  async updateMappingTextures(mapping: ?Mapping): Promise<void> {
-    if (mapping == null) return;
+  async updateMappingTextures(mapping: ?Mapping, mappingKeys: ?Array<number>): Promise<void> {
+    if (mapping == null || mappingKeys == null) return;
     const progressCallback = this.progressCallback;
 
     await progressCallback(false, "Create mapping texture...");
     console.time("Time to create mapping texture");
-    // $FlowFixMe Flow chooses the wrong library definition, because it doesn't seem to know that Object.keys always returns strings and throws an error
-    const keys = Uint32Array.from(Object.keys(mapping), x => parseInt(x, 10));
-    keys.sort((a, b) => a - b);
+
+    const mappingSize = mappingKeys.length;
+    // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
+    const paddedLength =
+      mappingSize + MAPPING_TEXTURE_WIDTH - (mappingSize % MAPPING_TEXTURE_WIDTH);
+
+    const keys = new Uint32Array(paddedLength);
+    const values = new Uint32Array(paddedLength);
+
+    keys.set(mappingKeys);
     // $FlowFixMe Flow doesn't recognize that mapping cannot be null or undefined :/
-    const values = Uint32Array.from(keys, key => mapping[key]);
+    values.set(mappingKeys.map(key => mapping[key]));
+
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted
     // to four 8-bit values correctly
     const uint8Keys = new Uint8Array(keys.buffer);
     const uint8Values = new Uint8Array(values.buffer);
-    // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
-    const paddedLength =
-      keys.length + MAPPING_TEXTURE_WIDTH - (keys.length % MAPPING_TEXTURE_WIDTH);
-    // The length of typed arrays cannot be changed, so we need to create new ones with the correct length
-    const uint8KeysPadded = new Uint8Array(paddedLength * 4);
-    uint8KeysPadded.set(uint8Keys);
-    const uint8ValuesPadded = new Uint8Array(paddedLength * 4);
-    uint8ValuesPadded.set(uint8Values);
     console.timeEnd("Time to create mapping texture");
 
-    const mappingSize = keys.length;
     if (mappingSize > MAPPING_TEXTURE_WIDTH ** 2) {
       throw new Error(messages["mapping.too_big"]);
     }
 
     await progressCallback(false, "Copy mapping data to GPU...");
     this.mappingLookupTexture.update(
-      uint8KeysPadded,
+      uint8Keys,
       0,
       0,
       MAPPING_TEXTURE_WIDTH,
-      uint8KeysPadded.length / MAPPING_TEXTURE_WIDTH / 4,
+      uint8Keys.length / MAPPING_TEXTURE_WIDTH / 4,
     );
     this.mappingTexture.update(
-      uint8ValuesPadded,
+      uint8Values,
       0,
       0,
       MAPPING_TEXTURE_WIDTH,
-      uint8ValuesPadded.length / MAPPING_TEXTURE_WIDTH / 4,
+      uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
     await progressCallback(true, "Mapping successfully applied.");
     Store.dispatch(setMappingEnabledAction(true));

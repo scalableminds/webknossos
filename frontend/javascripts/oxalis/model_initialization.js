@@ -205,6 +205,9 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
       Toast.warning(messages["dataset.unsupported_element_class"](layer.name, layer.elementClass), {
         sticky: true,
       });
+    } else if (layer.category === "segmentation" && layer.elementClass === "uint24") {
+      // Segmentation is not supported for uint24 layers
+      Toast.error(messages["dataset.unsupported_segmentation_class"]);
     }
   }
 }

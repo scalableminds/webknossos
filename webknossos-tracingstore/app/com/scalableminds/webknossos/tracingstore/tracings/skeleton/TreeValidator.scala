@@ -140,8 +140,8 @@ object TreeValidator {
 
   private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] =
     treeGroups match {
-      case (head :: tail) => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
-      case _              => ids
+      case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
+      case _            => ids
     }
 
   private def checkAllNodesUsedExist(trees: Seq[Tree], usedNodes: Seq[Int], nodeName: String) = {

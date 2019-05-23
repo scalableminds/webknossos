@@ -149,7 +149,7 @@
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
           "color": { "$ref": "#/definitions/types::Vector3" },
-          "bounds": { "$ref": "#/definitions/types::Vector2" },
+          "intensityRange": { "$ref": "#/definitions/types::Vector2" },
           "isDisabled": { "type": "boolean" },
           "alpha": { "type": "number" }
         },

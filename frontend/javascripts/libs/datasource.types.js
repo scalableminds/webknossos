@@ -74,7 +74,7 @@ export type LayerUserConfiguration = {
     brightness: number,
     contrast: number,
     color: Vector3,
-    bounds: Vector2,
+    intensityRange: Vector2,
     isDisabled: boolean,
   },
 };

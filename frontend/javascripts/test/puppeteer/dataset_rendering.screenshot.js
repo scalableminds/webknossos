@@ -92,7 +92,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
         contrast: 1,
         brightness: 0,
         alpha: 100,
-        bounds: [0, 255],
+        intensityRange: [0, 255],
         isDisabled: false,
       },
     },

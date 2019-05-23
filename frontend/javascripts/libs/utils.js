@@ -5,7 +5,7 @@ import naturalSort from "javascript-natural-sort";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import type { Vector2, Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -125,6 +125,17 @@ export function hexToRgb(hex: string): Vector3 {
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
   return [r, g, b];
+}
+
+export function brightnessAndContrastToIntensityRange(
+  brightness: number,
+  contrast: number,
+): Vector2 {
+  // Applies the brightness [-255; 255] and contrast (0, 5] formula to the minimal and maximal color value.
+  const applyBrightnessAndContrast = color => (color + brightness - 125) * contrast + 125 * 255;
+  const minValue = Math.round(applyBrightnessAndContrast(0));
+  const maxValue = Math.round(applyBrightnessAndContrast(255));
+  return [clamp(minValue, 0, 255), clamp(maxValue, 0, 255)];
 }
 
 export function computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {

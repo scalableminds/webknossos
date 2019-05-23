@@ -81,9 +81,9 @@ class Histogram extends React.PureComponent<HistogramProps> {
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {
     const { layerName } = this.props;
     if (firstVal < secVal) {
-      this.props.onChangeLayer(layerName, "bounds", [firstVal, secVal]);
+      this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
     } else {
-      this.props.onChangeLayer(layerName, "bounds", [secVal, firstVal]);
+      this.props.onChangeLayer(layerName, "intensityRange", [secVal, firstVal]);
     }
   };
 

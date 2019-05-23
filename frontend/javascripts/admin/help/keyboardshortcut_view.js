@@ -170,7 +170,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "R",
-      action: "Reset Rotation",
+      action: "Invert Direction",
     },
     {
       keybinding: "S",

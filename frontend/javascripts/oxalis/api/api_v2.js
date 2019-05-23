@@ -553,7 +553,13 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction("<custom mapping>", _.clone(mapping)));
+    Store.dispatch(
+      setMappingAction(
+        "<custom mapping>",
+        _.clone(mapping),
+        Object.keys(mapping).map(x => parseInt(x, 10)),
+      ),
+    );
   }
 
   /**

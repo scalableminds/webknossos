@@ -136,6 +136,16 @@ nml.file.invalid=Couldn’t parse file: {0}. {1}
 nml.file.noFile=No file or file with empty content uploaded
 nml.file.multipleVolumes=Cannot upload multiple volume tracings at once
 nml.file.differentDatasets=Cannot upload tracings that belong to different datasets at once
+nml.parameters.notFound=No parameters section found
+nml.scale.invalid=Invalid scale
+nml.element.invalid=Invalid {0}
+nml.comment.node.invalid=Invalid node id of comment {0}"
+nml.node.id.invalid=Invalid {0} node id {1}"
+nml.node.attribute.invalid=Invalid node {0} for node id {1}
+nml.edge.invalid=Invalid edge {0} {1}
+nml.tree.id.invalid=Invalid tree id {0}
+nml.tree.elements.invalid=Invalid {0} in tree {1}
+nml.treegroup.id.invalid=Invalid tree group id {0}
 
 owner=Owner
 priority=Priority

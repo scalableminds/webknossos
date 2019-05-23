@@ -19,7 +19,7 @@ import {
 import { findDataPositionForLayer } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
+import { hasSegmentation, getElementClass } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
@@ -99,7 +99,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     layerIndex: number,
     isLastLayer: boolean,
   ) => {
-    const isRGB = isRgb(this.props.dataset, layerName);
+    const elementClass = getElementClass(this.props.dataset, layerName);
     const { brightness, contrast, alpha, color, isDisabled } = layer;
     return (
       <div key={layerName}>
@@ -130,9 +130,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               </div>
             </Tooltip>
             <span style={{ fontWeight: 700 }}>{layerName}</span>
-            <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
-              {isRGB ? "24-bit" : "8-bit"} Layer
-            </Tag>
+            <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>

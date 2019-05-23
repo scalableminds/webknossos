@@ -4,7 +4,6 @@
  */
 
 /* eslint-disable no-useless-computed-key */
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import _ from "lodash";
 import update from "immutability-helper";

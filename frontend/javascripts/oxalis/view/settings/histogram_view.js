@@ -39,7 +39,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
-    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillStyle = "rgba(24, 144, 255, 0.1)";
     ctx.strokeStyle = "#1890ff";
     this.updateCanvas();
   }

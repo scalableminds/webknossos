@@ -80,7 +80,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   loadAllHistograms = async () => {
     const { layers } = this.props.datasetConfiguration;
-    const histograms = {};
+    const histograms: { string: APIHistogramData } = {};
     const histogramPromises = Object.keys(layers).map(async layerName => {
       const data = await getHistogramForLayer(
         this.props.dataset.dataStore.url,

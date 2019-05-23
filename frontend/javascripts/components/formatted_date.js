@@ -18,7 +18,7 @@ export default function FormattedDate({
   timestamp,
   format,
 }: {
-  timestamp: string | number,
+  timestamp: string | number | Date,
   format?: string,
 }) {
   const _moment = moment.utc(timestamp);

@@ -9,6 +9,7 @@ import {
   getBucketCapacity,
   getLookupBufferSize,
   getPackingDegree,
+  getChannelCount,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getBaseBucketsForFallbackBucket } from "oxalis/model/helpers/position_converter";
 import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
@@ -19,6 +20,7 @@ import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import window from "libs/window";
+import type { ElementClass } from "admin/api_flow_types";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -59,11 +61,18 @@ export default class TextureBucketManager {
   packingDegree: number;
   addressSpaceDimensions: Vector3;
   lookUpBufferWidth: number;
+  elementClass: ElementClass;
 
-  constructor(textureWidth: number, dataTextureCount: number, bytes: number) {
+  constructor(
+    textureWidth: number,
+    dataTextureCount: number,
+    bytes: number,
+    elementClass: ElementClass,
+  ) {
     // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
     // Otherwise, we don't pack bytes together (packingDegree = 1)
-    this.packingDegree = getPackingDegree(bytes);
+    this.packingDegree = getPackingDegree(bytes, elementClass);
+    this.elementClass = elementClass;
     this.maximumCapacity = getBucketCapacity(dataTextureCount, textureWidth, this.packingDegree);
 
     const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
@@ -196,8 +205,14 @@ export default class TextureBucketManager {
         bucket.visualize();
       }
 
+      const data = bucket.getData();
+      const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
       this.dataTextures[dataTextureIndex].update(
-        bucket.getData(),
+        new TypedArrayClass(
+          data.buffer,
+          data.byteOffset,
+          data.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+        ),
         0,
         bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
@@ -222,10 +237,12 @@ export default class TextureBucketManager {
 
   setupDataTextures(bytes: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
+      const channelCount = getChannelCount(bytes, this.packingDegree, this.elementClass);
+      const textureType = this.elementClass === "float" ? THREE.FloatType : THREE.UnsignedByteType;
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
-        bytes * this.packingDegree,
-        THREE.UnsignedByteType,
+        channelCount,
+        textureType,
         getRenderer(),
       );
 

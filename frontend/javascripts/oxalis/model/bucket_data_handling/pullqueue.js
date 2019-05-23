@@ -33,7 +33,6 @@ class PullQueue {
   priorityQueue: PriorityQueue<PullQueueItem>;
   batchCount: number;
   layerName: string;
-  whitenEmptyBuckets: boolean;
   connectionInfo: ConnectionInfo;
   datastoreInfo: DataStoreInfo;
 
@@ -52,10 +51,6 @@ class PullQueue {
       comparator: (b, a) => b.priority - a.priority,
     });
     this.batchCount = 0;
-
-    // Debug option.
-    // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
-    this.whitenEmptyBuckets = false;
   }
 
   pull(): Array<Promise<void>> {
@@ -108,8 +103,7 @@ class PullQueue {
         if (bucketBuffer == null && !renderMissingDataBlack) {
           bucket.markAsFailed(true);
         } else {
-          const bucketData = bucketBuffer || new Uint8Array(bucket.BUCKET_LENGTH);
-          this.handleBucket(layerInfo, bucketAddress, bucketData);
+          this.handleBucket(layerInfo, bucketAddress, bucketBuffer);
         }
       }
     } catch (error) {
@@ -132,9 +126,8 @@ class PullQueue {
     }
   }
 
-  handleBucket(layerInfo: DataLayerType, bucketAddress: Vector4, bucketData: Uint8Array): void {
+  handleBucket(layerInfo: DataLayerType, bucketAddress: Vector4, bucketData: ?Uint8Array): void {
     const bucket = this.cube.getBucket(bucketAddress);
-    this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
       bucket.setVisualizationColor(0x00ff00);
@@ -163,20 +156,6 @@ class PullQueue {
     this.priorityQueue.clear();
     for (const el of highestPriorityElements) {
       this.priorityQueue.queue(el);
-    }
-  }
-
-  maybeWhitenEmptyBucket(bucketData: Uint8Array) {
-    if (!this.whitenEmptyBuckets) {
-      return;
-    }
-
-    const allZero = _.reduce(bucketData, (res, e) => res && e === 0, true);
-
-    if (allZero) {
-      for (let i = 0; i < bucketData.length; i++) {
-        bucketData[i] = 255;
-      }
     }
   }
 }

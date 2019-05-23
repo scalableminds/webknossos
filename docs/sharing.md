@@ -18,6 +18,10 @@ Sharing a dataset is useful for multiple scenarios:
 
 webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
 
+{% embed url="https://www.youtube.com/watch?v=muJLCnzEAqk "%}
+
+{% embed url="https://www.youtube.com/watch?v=Ut4m6L3nYdY "%}
+
 ### Private Sharing for Review
 A privately shared dataset can only be accessed from outside users your using the correct URL.
 A unique authentification token is part of the URL so anyone with this URL has access rights for viewing the dataset.
@@ -105,3 +109,5 @@ Otherwise, the annotation and data cannot be loaded by webKnossos and an error w
 {% hint style='info' %}
 Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
 {% endhint %}
+
+{% embed url="https://www.youtube.com/watch?v=hcm8Jx22DG8 "%}

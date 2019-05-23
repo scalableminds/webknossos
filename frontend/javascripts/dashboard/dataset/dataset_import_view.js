@@ -175,7 +175,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         width: 800,
         content: (
           <Input.TextArea rows={20} style={jsonEditStyle}>
-            {JSON.stringify(object, null, 2)}
+            {jsonStringify(object)}
           </Input.TextArea>
         ),
       });

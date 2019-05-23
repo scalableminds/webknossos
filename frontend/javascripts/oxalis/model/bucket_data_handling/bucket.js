@@ -16,9 +16,9 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import * as Utils from "libs/utils";
-import { type Vector4 } from "oxalis/constants";
+import Constants, { type Vector4 } from "oxalis/constants";
 import window from "libs/window";
+import { type ElementClass } from "admin/api_flow_types";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -27,8 +27,7 @@ export const BucketStateEnum = {
   LOADED: "LOADED",
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
-
-export const BUCKET_SIZE_P = 5;
+export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -58,10 +57,31 @@ export class NullBucket {
     return false;
   }
 
-  getData(): Uint8Array {
+  getData(): BucketDataArray {
     throw new Error("NullBucket has no data.");
   }
 }
+
+export const getConstructorForElementClass = (type: ElementClass) => {
+  switch (type) {
+    case "int8":
+    case "uint8":
+      return Uint8Array;
+    case "int16":
+    case "uint16":
+      return Uint16Array;
+    case "uint24":
+      // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
+      return Uint8Array;
+    case "int32":
+    case "uint32":
+      return Uint32Array;
+    case "float":
+      return Float32Array;
+    default:
+      throw new Error(`This type is not supported by the DataBucket class: ${type}`);
+  }
+};
 
 export const NULL_BUCKET = new NullBucket(false);
 export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
@@ -73,19 +93,16 @@ export type Bucket = DataBucket | NullBucket;
 
 export class DataBucket {
   type: "data" = "data";
-  BIT_DEPTH: number;
-  BUCKET_LENGTH: number;
-  BYTE_OFFSET: number;
+  elementClass: ElementClass;
   visualizedMesh: ?Object;
   visualizationColor: number;
 
   state: BucketStateEnumType;
   dirty: boolean;
   accessed: boolean;
-  data: ?Uint8Array;
+  data: ?BucketDataArray;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
-  isPartlyOutsideBoundingBox: boolean;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -95,24 +112,20 @@ export class DataBucket {
   _fallbackBucket: ?Bucket;
 
   constructor(
-    BIT_DEPTH: number,
+    elementClass: ElementClass,
     zoomedAddress: Vector4,
     temporalBucketManager: TemporalBucketManager,
     cube: DataCube,
   ) {
     _.extend(this, BackboneEvents);
+    this.elementClass = elementClass;
     this.cube = cube;
-    this.BIT_DEPTH = BIT_DEPTH;
-    this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
-    this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
-
     this.zoomedAddress = zoomedAddress;
     this.temporalBucketManager = temporalBucketManager;
 
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = false;
-    this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
   }
@@ -147,7 +160,7 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
-  label(labelFunc: Uint8Array => void) {
+  label(labelFunc: BucketDataArray => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
     this.throttledTriggerLabeled();
@@ -159,7 +172,7 @@ export class DataBucket {
     return this.data != null;
   }
 
-  getData(): Uint8Array {
+  getData(): BucketDataArray {
     const data = this.data;
     if (data == null) {
       throw new Error("Bucket.getData() called, but data does not exist (anymore).");
@@ -176,9 +189,10 @@ export class DataBucket {
     this.accessed = false;
   }
 
-  getOrCreateData(): Uint8Array {
+  getOrCreateData(): BucketDataArray {
     if (this.data == null) {
-      this.data = new Uint8Array(this.BUCKET_LENGTH);
+      const TypedArrayClass = getConstructorForElementClass(this.elementClass);
+      this.data = new TypedArrayClass(Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
         this.temporalBucketManager.addBucket(this);
       }
@@ -210,7 +224,16 @@ export class DataBucket {
     }
   }
 
-  receiveData(data: Uint8Array): void {
+  receiveData(arrayBuffer: ?Uint8Array): void {
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass);
+    const data =
+      arrayBuffer != null
+        ? new TypedArrayClass(
+            arrayBuffer.buffer,
+            arrayBuffer.byteOffset,
+            arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+          )
+        : new TypedArrayClass(Constants.BUCKET_SIZE);
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {
@@ -270,24 +293,14 @@ export class DataBucket {
     return fallbackBucket;
   }
 
-  merge(newData: Uint8Array): void {
+  merge(newData: BucketDataArray): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");
     }
-    const data = this.data;
 
-    const voxelPerBucket = 1 << (BUCKET_SIZE_P * 3);
-    for (let i = 0; i < voxelPerBucket; i++) {
-      const oldVoxel = Utils.__range__(0, this.BYTE_OFFSET, false).map(
-        j => data[i * this.BYTE_OFFSET + j],
-      );
-      const oldVoxelEmpty = _.reduce(oldVoxel, (memo, v) => memo && v === 0, true);
-
-      if (oldVoxelEmpty) {
-        for (let j = 0; j < this.BYTE_OFFSET; j++) {
-          data[i * this.BYTE_OFFSET + j] = newData[i * this.BYTE_OFFSET + j];
-        }
-      }
+    for (let i = 0; i < Constants.BUCKET_SIZE; i++) {
+      // Only overwrite with the new value if the old value was 0
+      this.data[i] = this.data[i] || newData[i];
     }
   }
 

@@ -2,18 +2,25 @@
 import { Chart } from "react-google-charts";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import * as React from "react";
+import ReactDOMServer from "react-dom/server";
+import { connect } from "react-redux";
 import _ from "lodash";
 import moment from "moment";
-
+import FormattedDate from "components/formatted_date";
+import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
-import { formatMilliseconds } from "libs/format_utils";
+import { formatMilliseconds, formatDurationToHoursAndMinutes } from "libs/format_utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
-const RangePicker = DatePicker.RangePicker;
+const { Option } = Select;
+const { RangePicker } = DatePicker;
+
+const dayFormat = "dd, MMM, YYYY";
+const hourFormat = "HH:mm";
 
 type TimeTrackingStats = {
   totalTime: number,
@@ -23,6 +30,12 @@ type TimeTrackingStats = {
 
 type DateRange = [moment$Moment, moment$Moment];
 
+type StateProps = {|
+  activeUser: APIUser,
+|};
+
+type Props = {| ...StateProps |};
+
 type State = {
   user: ?APIUser,
   users: Array<APIUser>,
@@ -31,7 +44,7 @@ type State = {
   stats: TimeTrackingStats,
 };
 
-class TimeLineView extends React.PureComponent<*, State> {
+class TimeLineView extends React.PureComponent<Props, State> {
   state = {
     user: null,
     users: [],
@@ -45,7 +58,11 @@ class TimeLineView extends React.PureComponent<*, State> {
   };
 
   componentDidMount() {
-    this.fetchData();
+    if (this.props.activeUser.isAdmin) {
+      this.fetchData();
+    } else {
+      this.fetchDataFromLoggedInUser();
+    }
   }
 
   async fetchData() {
@@ -88,6 +105,11 @@ class TimeLineView extends React.PureComponent<*, State> {
     });
   }
 
+  fetchDataFromLoggedInUser = async () => {
+    await this.setState({ user: this.props.activeUser });
+    this.fetchTimeTrackingData();
+  };
+
   handleUserChange = async (userId: number) => {
     await this.setState(prevState => ({ user: prevState.users.find(u => u.id === userId) }));
     this.fetchTimeTrackingData();
@@ -95,7 +117,7 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   handleDateChange = async (dates: DateRange) => {
     // to ease the load on the server restrict date range selection to a month
-    if (dates[0].diff(dates[1], "days") > 31) {
+    if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
@@ -109,9 +131,58 @@ class TimeLineView extends React.PureComponent<*, State> {
     this.fetchTimeTrackingData();
   };
 
+  getTooltipForEntry(taskId: string, start: Date, end: Date) {
+    const isSameDay = start.getUTCDate() === end.getUTCDate();
+    const duration = end - start;
+    const durationAsString = formatDurationToHoursAndMinutes(duration);
+    const dayFormatForMomentJs = "DD, MMM, YYYY";
+    const tooltip = (
+      <div className="google-charts-tooltip">
+        <div className="highlighted">
+          Task ID: {taskId}
+          <div className="striped-border" />
+        </div>
+
+        <table>
+          <tbody>
+            <tr>
+              <td className="highlighted">Date:</td>
+              <td>
+                {isSameDay ? (
+                  <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
+                ) : (
+                  <React.Fragment>
+                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> -{" "}
+                    <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
+                  </React.Fragment>
+                )}
+              </td>
+            </tr>
+            <tr>
+              <td className="highlighted">Time:</td>
+              <td>
+                <FormattedDate timestamp={start} format={hourFormat} /> -{" "}
+                <FormattedDate timestamp={end} format={hourFormat} />
+              </td>
+            </tr>
+            <tr>
+              <td className="highlighted">Duration:</td>
+              <td>{durationAsString}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+    return ReactDOMServer.renderToStaticMarkup(tooltip);
+  }
+
   render() {
     const columns = [
       { id: "AnnotationId", type: "string" },
+      // This label columns is somehow needed to make the custom tooltip work.
+      // See https://developers.google.com/chart/interactive/docs/gallery/timeline#customizing-tooltips.
+      { type: "string", id: "empty label" },
+      { type: "string", role: "tooltip", p: { html: true } },
       { id: "Start", type: "date" },
       { id: "End", type: "date" },
     ];
@@ -120,13 +191,17 @@ class TimeLineView extends React.PureComponent<*, State> {
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
+    const totalSumColumnLabel = "Sum Tracking Time";
+
     this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
       const duration = moment.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
+      const individualTooltipAsString = this.getTooltipForEntry(datum.task_id, start, end);
+      const totalTooltipAsString = this.getTooltipForEntry(totalSumColumnLabel, start, end);
 
-      timeTrackingRowGrouped.push([datum.annotation, start, end]);
-      timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
+      timeTrackingRowGrouped.push([datum.task_id, "", individualTooltipAsString, start, end]);
+      timeTrackingRowTotal.push([totalSumColumnLabel, "", totalTooltipAsString, start, end]);
     });
 
     const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
@@ -140,6 +215,10 @@ class TimeLineView extends React.PureComponent<*, State> {
       paddingBottom: 5,
     };
 
+    const displayInDays = Math.abs(dateRange[0].diff(dateRange[1], "days")) >= 1;
+    const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
+
+    const { isAdmin, firstName, lastName, email } = this.props.activeUser;
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -147,22 +226,35 @@ class TimeLineView extends React.PureComponent<*, State> {
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a User"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                  onChange={this.handleUserChange}
-                >
-                  {this.state.users
-                    .filter(u => u.isActive)
-                    .map((user: APIUser) => (
-                      <Option key={user.id} value={user.id}>
-                        {`${user.lastName}, ${user.firstName} (${user.email})`}
-                      </Option>
-                    ))}
-                </Select>
+                {isAdmin ? (
+                  <Select
+                    allowClear
+                    showSearch
+                    placeholder="Select a User"
+                    optionFilterProp="children"
+                    style={{ width: "100%" }}
+                    onChange={this.handleUserChange}
+                  >
+                    {this.state.users
+                      .filter(u => u.isActive)
+                      .map((user: APIUser) => (
+                        <Option key={user.id} value={user.id}>
+                          {`${user.lastName}, ${user.firstName} (${user.email})`}
+                        </Option>
+                      ))}
+                  </Select>
+                ) : (
+                  <table style={{ width: "100%", fontSize: 16 }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ width: "50%" }}>
+                          {lastName}, {firstName}
+                        </td>
+                        <td style={{ width: "50%" }}> {email}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
@@ -206,9 +298,12 @@ class TimeLineView extends React.PureComponent<*, State> {
                 timeline: { singleColor: "#108ee9" },
                 // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
                 hAxis: {
+                  format: timeAxisFormat,
                   minValue: dateRange[0].toDate(),
                   maxValue: dateRange[1].toDate(),
                 },
+                allowHtml: true,
+                tooltip: { isHtml: true },
               }}
               graph_id="TimeLineGraph"
               chartPackages={["timeline"]}
@@ -227,4 +322,8 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 }
 
-export default TimeLineView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: enforceActiveUser(state.activeUser),
+});
+
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(TimeLineView);

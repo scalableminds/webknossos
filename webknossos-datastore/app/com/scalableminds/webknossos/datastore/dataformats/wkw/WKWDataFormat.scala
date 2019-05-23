@@ -16,8 +16,8 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       implicit report: DataSourceImportReport[Path]): Box[DataLayer] =
     (for {
       resolutions <- exploreResolutions(baseDir)
-      (voxelType, wkwResolutions) <- extractHeaderParameters(resolutions)
-      elementClass <- voxelTypeToElementClass(voxelType)
+      ((voxelType, voxelSize), wkwResolutions) <- extractHeaderParameters(resolutions)
+      elementClass <- voxelTypeToElementClass(voxelType, voxelSize)
     } yield {
       val category = guessLayerCategory(name, elementClass)
       val boundingBox = previous
@@ -55,16 +55,17 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
 
   private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(
-      implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
+      implicit report: DataSourceImportReport[Path]): Box[((VoxelType.Value, Int), List[WKWResolution])] = {
     val headers = resolutions.map(_._1)
     val voxelTypes = headers.map(_.voxelType).toSet
+    val voxelSize = headers.map(_.numBytesPerVoxel).toSet
     val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
     val wkwResolutions = resolutions.map { resolution =>
       WKWResolution(resolution._2, resolution._1.numVoxelsPerBlockDimension * resolution._1.numBlocksPerCubeDimension)
     }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {
-      Full((voxelTypes.head, wkwResolutions))
+      Full(((voxelTypes.head, voxelSize.head), wkwResolutions))
     } else {
       if (voxelTypes.size != 1)
         report.error(layer => s"Error processing layer '$layer' - all resolutions must have the same voxelType")

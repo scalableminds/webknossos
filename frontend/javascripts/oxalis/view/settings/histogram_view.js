@@ -44,7 +44,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
     this.updateCanvas();
   }
 
-  componentDidUpdate(_prevProps) {
+  componentDidUpdate() {
     this.updateCanvas();
   }
 
@@ -77,9 +77,6 @@ class Histogram extends React.PureComponent<HistogramProps> {
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
-
-  // eslint-disable-next-line react/sort-comp
-  updateCanvasThrottled = _.throttle(this.updateCanvas, 100);
 
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {
     const { layerName } = this.props;

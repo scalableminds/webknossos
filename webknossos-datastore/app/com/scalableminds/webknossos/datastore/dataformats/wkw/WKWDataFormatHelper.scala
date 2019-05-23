@@ -56,19 +56,20 @@ trait WKWDataFormatHelper {
     }
   }
 
-  def voxelTypeToElementClass(voxelType: VoxelType.Value): Box[ElementClass.Value] =
-    voxelType match {
-      case VoxelType.UInt8  => Full(ElementClass.uint8)
-      case VoxelType.UInt16 => Full(ElementClass.uint16)
-      case VoxelType.UInt32 => Full(ElementClass.uint32)
-      case VoxelType.UInt64 => Full(ElementClass.uint64)
-      case VoxelType.Float  => Full(ElementClass.float)
-      case VoxelType.Double => Full(ElementClass.double)
-      case VoxelType.Int8   => Full(ElementClass.int8)
-      case VoxelType.Int16  => Full(ElementClass.int16)
-      case VoxelType.Int32  => Full(ElementClass.int32)
-      case VoxelType.Int64  => Full(ElementClass.int64)
-      case _                => Failure("VoxelType is not supported.")
+  def voxelTypeToElementClass(voxelType: VoxelType.Value, voxelSize: Int): Box[ElementClass.Value] =
+    (voxelType, voxelSize) match {
+      case (VoxelType.UInt8, 1)  => Full(ElementClass.uint8)
+      case (VoxelType.UInt16, 2) => Full(ElementClass.uint16)
+      case (VoxelType.UInt8, 3)  => Full(ElementClass.uint24)
+      case (VoxelType.UInt32, 4) => Full(ElementClass.uint32)
+      case (VoxelType.UInt64, 8) => Full(ElementClass.uint64)
+      case (VoxelType.Float, 4)  => Full(ElementClass.float)
+      case (VoxelType.Double, 8) => Full(ElementClass.double)
+      case (VoxelType.Int8, 1)   => Full(ElementClass.int8)
+      case (VoxelType.Int16, 2)  => Full(ElementClass.int16)
+      case (VoxelType.Int32, 4)  => Full(ElementClass.int32)
+      case (VoxelType.Int64, 8)  => Full(ElementClass.int64)
+      case _                     => Failure("VoxelType is not supported.")
     }
 
   def elementClassToVoxelType(elementClass: ElementClass.Value): (VoxelType.Value, Int) =

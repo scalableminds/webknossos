@@ -91,12 +91,13 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const layerSettingsDefaults = _.transform(
         colorLayers,
         (result, layer) => {
-          const { brightness, contrast, intensityRange } = initialLayerSettings[layer.name];
-          if (!intensityRange) {
-            initialLayerSettings[layer.name].intensityRange = brightnessAndContrastToIntensityRange(
-              brightness,
-              contrast,
-            );
+          if (!initialLayerSettings[layer.name]) {
+            const { brightness, contrast, intensityRange } = initialLayerSettings[layer.name];
+            if (!intensityRange) {
+              initialLayerSettings[
+                layer.name
+              ].intensityRange = brightnessAndContrastToIntensityRange(brightness, contrast);
+            }
           }
           result[layer.name] = Object.assign(
             {},

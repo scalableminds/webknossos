@@ -26,9 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.05.0...19.06.0)
 
 ### Highlights
-- This release includes improvements for the time tracking:
-  - Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
-  - The time tracking view now displays dates instead of hours when having more then one day selected. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
+- The time tracking view now displays dates instead of hours when having more then one day selected. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
 - BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
 - When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
 

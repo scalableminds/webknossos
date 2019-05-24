@@ -132,7 +132,8 @@ export function brightnessAndContrastToIntensityRange(
   contrast: number,
 ): Vector2 {
   // Applies the brightness [-255; 255] and contrast (0, 5] formula to the minimal and maximal color value.
-  const applyBrightnessAndContrast = color => (color + brightness - 125) * contrast + 125 * 255;
+  // Does not work but is used as a placeholder.
+  const applyBrightnessAndContrast = color => (color + brightness - 125) * contrast + 125;
   const minValue = Math.round(applyBrightnessAndContrast(0));
   const maxValue = Math.round(applyBrightnessAndContrast(255));
   return [clamp(minValue, 0, 255), clamp(maxValue, 0, 255)];

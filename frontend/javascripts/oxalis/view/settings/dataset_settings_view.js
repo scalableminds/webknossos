@@ -130,7 +130,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isLastLayer: boolean,
   ) => {
     const isRGB = isRgb(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color, intensityRange, isDisabled } = layer;
+    const { alpha, color, intensityRange, isDisabled } = layer;
     let histogram = new Array(256).fill(0);
     if (this.state.histograms && this.state.histograms[layerName]) {
       histogram = this.state.histograms[layerName].histogram;
@@ -179,24 +179,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             layerName={layerName}
           />
         ) : null}
-        <NumberSliderSetting
-          label="Brightness"
-          min={-255}
-          max={255}
-          step={5}
-          value={brightness}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
-          disabled={isDisabled}
-        />
-        <NumberSliderSetting
-          label="Contrast"
-          min={0.5}
-          max={5}
-          step={0.1}
-          value={contrast}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
-          disabled={isDisabled}
-        />
         <NumberSliderSetting
           label="Opacity"
           min={0}

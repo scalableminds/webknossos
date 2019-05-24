@@ -507,11 +507,8 @@ class PlaneMaterialFactory {
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
-    const { alpha, brightness, contrast, isDisabled } = settings;
-    let { color, intensityRange } = settings;
-    if (!intensityRange) {
-      intensityRange = Utils.brightnessAndContrastToIntensityRange(brightness, contrast);
-    }
+    const { alpha, intensityRange, isDisabled } = settings;
+    let { color } = settings;
     this.uniforms[`${name}_min`].value = intensityRange[0] / 255;
     this.uniforms[`${name}_max`].value = intensityRange[1] / 255;
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
@@ -520,7 +517,6 @@ class PlaneMaterialFactory {
       color = this.convertColor(color);
       this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
     }
-    console.log(intensityRange);
   }
 
   getMaterial(): THREE.ShaderMaterial {

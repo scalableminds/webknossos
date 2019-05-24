@@ -56,6 +56,8 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
+Open your local webknossos instance on [localhost:9000](http://localhost:9000).
+
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 
 

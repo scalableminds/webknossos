@@ -1,4 +1,3 @@
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import _ from "lodash";
 import deepForEach from "deep-for-each";

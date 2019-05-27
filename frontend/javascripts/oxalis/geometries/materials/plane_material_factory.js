@@ -22,6 +22,7 @@ import {
   getResolutions,
   isRgb,
   getByteCount,
+  getElementClass,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
@@ -66,6 +67,18 @@ function getIsRgbLayerLookup(): { [string]: boolean } {
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
   const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
   return _.mapValues(colorLayersObject, layer => isRgb(dataset, layer.name));
+}
+
+function getFloatLayerLookup(): { [string]: false | { min: number, max: number } } {
+  const { dataset } = Store.getState();
+  const colorLayers = getColorLayers(dataset);
+  // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
+  const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
+  // TODO: Use the correct float value range (from histogram)
+  return _.mapValues(
+    colorLayersObject,
+    layer => getElementClass(dataset, layer.name) === "float" && { min: 0, max: 255 },
+  );
 }
 
 class PlaneMaterialFactory {
@@ -526,6 +539,7 @@ class PlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
     const isRgbLayerLookup = getIsRgbLayerLookup();
+    const floatLayerLookup = getFloatLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
@@ -534,7 +548,10 @@ class PlaneMaterialFactory {
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
     const segmentationPackingDegree = hasSegmentation
-      ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
+      ? getPackingDegree(
+          getByteCount(dataset, segmentationLayer.name),
+          getElementClass(dataset, segmentationLayer.name),
+        )
       : 0;
 
     const lookupTextureWidth = getLookupBufferSize(
@@ -544,6 +561,7 @@ class PlaneMaterialFactory {
     const code = getMainFragmentShader({
       colorLayerNames,
       isRgbLayerLookup,
+      floatLayerLookup,
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,

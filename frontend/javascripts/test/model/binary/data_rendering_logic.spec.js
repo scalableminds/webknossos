@@ -1,6 +1,5 @@
 // @flow
 
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
@@ -28,12 +27,15 @@ const betterSpecs = {
 };
 
 const grayscaleByteCount = 1;
+const grayscaleElementClass = "uint8";
 const volumeByteCount = 4;
+const volumeElementClass = "uint32";
 
 test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
@@ -44,6 +46,7 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
@@ -54,6 +57,7 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", t => 
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
@@ -64,6 +68,7 @@ test("calculateTextureSizeAndCountForLayer: color data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     volumeByteCount,
+    volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
@@ -74,6 +79,7 @@ test("calculateTextureSizeAndCountForLayer: color data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     volumeByteCount,
+    volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
@@ -84,17 +90,18 @@ test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     volumeByteCount,
+    volumeElementClass,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
   t.is(textureCount, 1);
 });
 
-const grayscaleLayer1 = { byteCount: grayscaleByteCount };
-const grayscaleLayer2 = { byteCount: grayscaleByteCount };
-const grayscaleLayer3 = { byteCount: grayscaleByteCount };
+const grayscaleLayer1 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
+const grayscaleLayer2 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
+const grayscaleLayer3 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
 
-const volumeLayer1 = { byteCount: volumeByteCount };
+const volumeLayer1 = { byteCount: volumeByteCount, elementClass: volumeElementClass };
 const getByteCount = layer => layer.byteCount;
 
 function testSupportFlags(t, supportFlags, expectedBasicSupport, expectedMappingSupport) {

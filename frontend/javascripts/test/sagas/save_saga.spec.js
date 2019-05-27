@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";

@@ -281,6 +281,7 @@ export type TemporaryConfiguration = {
   +activeMapping: {
     +mappingName: ?string,
     +mapping: ?Mapping,
+    +mappingKeys: ?Array<number>,
     +mappingColors: ?Array<number>,
     +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,

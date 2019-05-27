@@ -162,8 +162,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_MAPPING": {
       return updateActiveMapping(state, {
         mappingName: action.mappingName,
-        mappingSize: action.mapping != null ? _.size(action.mapping) : 0,
+        mappingSize: action.mappingKeys != null ? action.mappingKeys.length : 0,
         mapping: action.mapping,
+        mappingKeys: action.mappingKeys,
         mappingColors: action.mappingColors,
         hideUnmappedIds: action.hideUnmappedIds || false,
       });

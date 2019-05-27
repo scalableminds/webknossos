@@ -54,20 +54,20 @@ Find all available keyboard shortcuts for webKnossos listed below.
 
 ### Flight / Oblique Mode
 
-| Key Binding                   | Operation                                   |
-| ----------------------------- | ------------------------------------------- |
-| Left Mouse Drag or Arrow Keys | Rotation                                    |
-| SPACE                         | Move Forward                                |
-| CTRL + SPACE                  | Move Backward                               |
-| I, O                          | Zoom In And Out                             |
-| SHIFT + Arrow                 | Rotation Around Axis                        |
-| R                             | Reset Rotation                              |
-| B                             | Mark Node as New Branchpoint                |
-| J                             | Jump To Last Branchpoint                    |
-| S                             | Center Active Node                          |
-| F                             | Forward Without Recording Waypoints         |
-| D                             | Backward Without Recording Waypoints        |
-| SHIFT + SPACE                 | Delete Active Node, Recenter Previous Node  |
+| Key Binding                   | Operation                                  |
+| ----------------------------- | ------------------------------------------ |
+| Left Mouse Drag or Arrow Keys | Rotation                                   |
+| SPACE                         | Move Forward                               |
+| CTRL + SPACE                  | Move Backward                              |
+| I, O                          | Zoom In And Out                            |
+| SHIFT + Arrow                 | Rotation Around Axis                       |
+| R                             | Invert Direction                           |
+| B                             | Mark Node as New Branchpoint               |
+| J                             | Jump To Last Branchpoint                   |
+| S                             | Center Active Node                         |
+| F                             | Forward Without Recording Waypoints        |
+| D                             | Backward Without Recording Waypoints       |
+| SHIFT + SPACE                 | Delete Active Node, Recenter Previous Node |
 
 
 ## Volume Mode

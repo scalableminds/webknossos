@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import * as THREE from "three";
 import mock from "mock-require";
@@ -56,7 +55,7 @@ const { default: TextureBucketManager, channelCountForLookupBuffer } = mock.reRe
 const { DataBucket } = mock.reRequire("oxalis/model/bucket_data_handling/bucket");
 
 const buildBucket = (zoomedAddress, firstByte) => {
-  const bucket = new DataBucket(8, zoomedAddress, temporalBucketManagerMock);
+  const bucket = new DataBucket("uint8", zoomedAddress, temporalBucketManagerMock);
   bucket.pull();
   const data = new Uint8Array(32 ** 3);
   data[0] = firstByte;

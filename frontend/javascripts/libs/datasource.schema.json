@@ -81,7 +81,7 @@
                 "uint24",
                 "uint32",
                 "uint64",
-                "float,",
+                "float",
                 "double",
                 "int8",
                 "int16",

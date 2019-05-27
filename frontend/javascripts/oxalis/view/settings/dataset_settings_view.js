@@ -19,7 +19,7 @@ import {
 import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { hasSegmentation, isRgb } from "oxalis/model/accessors/dataset_accessor";
+import { hasSegmentation, getElementClass } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
@@ -129,7 +129,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerIndex: number,
     isLastLayer: boolean,
   ) => {
-    const isRGB = isRgb(this.props.dataset, layerName);
+    const elementClass = getElementClass(this.props.dataset, layerName);
     const { alpha, color, intensityRange, isDisabled } = layer;
     let histogram = new Array(256).fill(0);
     if (this.state.histograms && this.state.histograms[layerName]) {
@@ -165,9 +165,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               </div>
             </Tooltip>
             <span style={{ fontWeight: 700 }}>{layerName}</span>
-            <Tag style={{ cursor: "default", marginLeft: 8 }} color={isRGB && "#1890ff"}>
-              {isRGB ? "24-bit" : "8-bit"} Layer
-            </Tag>
+            <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>

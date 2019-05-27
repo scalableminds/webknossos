@@ -1,5 +1,4 @@
 // @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import _ from "lodash";
 
 import fetch from "isomorphic-fetch";

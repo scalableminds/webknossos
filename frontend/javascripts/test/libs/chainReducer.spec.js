@@ -3,8 +3,6 @@
  * @flow
  */
 
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-
 import ChainReducer from "test/helpers/chainReducer";
 import test from "ava";
 

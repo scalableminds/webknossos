@@ -10,7 +10,27 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...HEAD)
 
 ### Added
-- Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028) 
+- Added the possbility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
+
+### Changed
+- 
+
+### Fixed
+- 
+
+### Removed
+- 
+
+
+## [19.06.0](https://github.com/scalableminds/webknossos/releases/tag/19.06.0) - 2019-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/19.05.0...19.06.0)
+
+### Highlights
+- The time tracking view now displays dates instead of hours when having more than one day selected. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
+- BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
+- When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
+
+### Added
 - The extent of a dataset is now displayed next to the scale in the dataset list in the dashboard. [#4058](https://github.com/scalableminds/webknossos/pull/4058)
 - BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
 - Added an auto-brush feature for selected datasets. [#4053](https://github.com/scalableminds/webknossos/pull/4053)
@@ -21,6 +41,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - The NML parser now rounds floating point values in node coordinates. [#4045](https://github.com/scalableminds/webknossos/pull/4045)
 - The time tracking view now displays dates instead of hours when having more then one day selected. The display id's in the timeline diagram are not the task ids. The tooltip of the timeline diagram also got a rework. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
 - Improved the editing of datasets. Changes suggested by webKnossos will be easier to recognize as suggestions. [4104](https://github.com/scalableminds/webknossos/pull/4104)
+- The time tracking view now displays dates instead of hours when having more than one day selected. The display id's in the timeline diagram are not the task ids. The tooltip of the timeline diagram also got a rework. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
 
 ### Fixed
 - Fixed an issue where the 3D view was not rendered correctly after maximizing another pane. [#4098](https://github.com/scalableminds/webknossos/pull/4098)

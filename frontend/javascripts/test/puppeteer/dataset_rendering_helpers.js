@@ -1,5 +1,5 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
+/* eslint no-await-in-loop: 0 */
 import urljoin from "url-join";
 
 import type { DatasetConfiguration } from "oxalis/store";

@@ -218,6 +218,11 @@ export type APISettings = {|
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
+  +allowedMagnifications?: {
+    shouldRestrict: boolean,
+    min?: number,
+    max?: number,
+  },
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({

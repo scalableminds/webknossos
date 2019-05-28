@@ -13,8 +13,9 @@ import { ControlModeEnum } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import { location } from "libs/window";
 import {
   setAnnotationNameAction,
@@ -33,6 +34,7 @@ type StateProps = {|
   dataset: APIDataset,
   task: ?Task,
   activeUser: ?APIUser,
+  logZoomStep: number,
 |};
 type DispatchProps = {|
   setAnnotationName: string => void,
@@ -283,6 +285,31 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const extentInVoxel = getDatasetExtentAsString(this.props.dataset, true);
     const extentInLength = getDatasetExtentAsString(this.props.dataset, false);
 
+    const resolutions = getResolutions(this.props.dataset);
+    const activeResolution = resolutions[this.props.logZoomStep];
+
+    const resolutionInfo =
+      activeResolution != null ? (
+        <div className="info-tab-block">
+          Active Resolution: {activeResolution.join("-")}{" "}
+          <Tooltip
+            title={
+              <div>
+                This dataset contains the following resolutions:
+                <ul>
+                  {resolutions.map(r => (
+                    <li key={r.join()}>{r.join("-")}</li>
+                  ))}
+                </ul>
+              </div>
+            }
+            placement="right"
+          >
+            <Icon type="info-circle" />
+          </Tooltip>
+        </div>
+      ) : null;
+
     return (
       <div className="flex-overflow padded-tab-content">
         <div className="info-tab-block">
@@ -308,6 +335,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           </table>
         </div>
 
+        {resolutionInfo}
+
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
@@ -321,6 +350,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
+  logZoomStep: getRequestLogZoomStep(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

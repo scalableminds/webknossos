@@ -25,7 +25,7 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
@@ -60,7 +60,7 @@ type UserSettingsViewProps = {
   userConfiguration: UserConfiguration,
   tracing: Tracing,
   zoomStep: number,
-  maxZoomStep: number,
+  validZoomRange: [number, number],
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
@@ -137,8 +137,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             <LogSliderSetting
               label={settingsLabels.zoom}
               roundTo={3}
-              min={userSettings.zoom.minimum}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
@@ -168,8 +168,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             <LogSliderSetting
               label={settingsLabels.zoom}
               roundTo={3}
-              min={userSettings.zoom.minimum}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
@@ -191,8 +191,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             <LogSliderSetting
               label={settingsLabels.zoom}
               roundTo={3}
-              min={userSettings.zoom.minimum}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
@@ -447,7 +447,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  maxZoomStep: getMaxZoomValue(state),
+  validZoomRange: getValidZoomRangeForUser(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,

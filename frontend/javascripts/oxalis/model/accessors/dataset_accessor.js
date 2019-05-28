@@ -299,4 +299,15 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
+function _keyResolutionsByMax(dataset: APIDataset): { [number]: Vector3 } {
+  const resolutions = getResolutions(dataset);
+  return _.keyBy(resolutions, res => Math.max(...res));
+}
+const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
+
+export function getResolutionByMax(dataset: APIDataset, maxDim: number): Vector3 {
+  const keyedResolutionsByMax = keyResolutionsByMax(dataset);
+  return keyedResolutionsByMax[maxDim];
+}
+
 export default {};

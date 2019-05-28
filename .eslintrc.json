@@ -40,6 +40,10 @@
     "flowtype/no-types-missing-file-annotation": "off",
     "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
     "import/no-cycle": "off",
+    "import/no-extraneous-dependencies": [
+      "error",
+      { "devDependencies": ["frontend/javascripts/test/**"] }
+    ],
     "import/no-named-as-default-member": "warn",
     "import/no-unresolved": "off",
     "jsx-a11y/anchor-is-valid": "off",

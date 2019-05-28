@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import { PNG } from "pngjs";
 import fs from "fs";
 import pixelmatch from "pixelmatch";

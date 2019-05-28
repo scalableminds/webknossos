@@ -1,5 +1,4 @@
 // @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 // Integration tests for skeleton.js
 

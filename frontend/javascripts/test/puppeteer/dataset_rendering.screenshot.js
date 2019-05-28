@@ -1,8 +1,8 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import type { DatasetConfiguration } from "oxalis/store";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 

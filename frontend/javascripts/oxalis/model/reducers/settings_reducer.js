@@ -10,7 +10,7 @@ import {
   type StateShape1,
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
-import { clamp, brightnessAndContrastToIntensityRange } from "libs/utils";
+import { clamp } from "libs/utils";
 import { userSettings } from "libs/user_settings.schema";
 
 //
@@ -91,14 +91,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const layerSettingsDefaults = _.transform(
         colorLayers,
         (result, layer) => {
-          if (initialLayerSettings[layer.name]) {
-            const { brightness, contrast, intensityRange } = initialLayerSettings[layer.name];
-            if (!intensityRange) {
-              initialLayerSettings[
-                layer.name
-              ].intensityRange = brightnessAndContrastToIntensityRange(brightness, contrast);
-            }
-          }
           result[layer.name] = Object.assign(
             {},
             {

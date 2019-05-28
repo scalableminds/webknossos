@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 

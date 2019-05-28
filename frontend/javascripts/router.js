@@ -4,7 +4,7 @@ import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
-import createBrowserHistory from "history/createBrowserHistory";
+import { createBrowserHistory } from "history";
 
 import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -369,7 +369,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
-                component={TimeLineView}
+                render={() => <TimeLineView />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

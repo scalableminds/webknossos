@@ -674,3 +674,25 @@ export function disableViewportMetatag() {
   }
   viewport.setAttribute("content", "");
 }
+
+/**
+ * Deep diff between two object, using lodash
+ * @param  {Object} object Object compared
+ * @param  {Object} base   Object to compare with
+ * @return {Object}        Return a new object who represent the diff
+ *
+ * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
+ */
+export function diffObjects(object: Object, base: Object): Object {
+  function changes(_object, _base) {
+    let arrayIndexCounter = 0;
+    return _.transform(_object, (result, value, key) => {
+      if (!_.isEqual(value, _base[key])) {
+        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
+        result[resultKey] =
+          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
+      }
+    });
+  }
+  return changes(object, base);
+}

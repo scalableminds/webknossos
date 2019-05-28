@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...HEAD)
 
 ### Added
-- 
+- Added the possbility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
 
 ### Changed
 - 

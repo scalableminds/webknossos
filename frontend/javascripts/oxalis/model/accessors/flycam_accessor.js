@@ -6,16 +6,22 @@ import memoizeOne from "memoize-one";
 import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
-import { map3, mod } from "libs/utils";
 import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
-import { getMaxZoomStep, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getMaxZoomStep,
+  getResolutionByMax,
+  getResolutions,
+} from "oxalis/model/accessors/dataset_accessor";
+import { map3, mod } from "libs/utils";
+import { userSettings } from "libs/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   type OrthoView,
   type OrthoViewMap,
   type OrthoViewRects,
   OrthoViews,
+  type Vector2,
   type Vector3,
   type ViewMode,
 } from "oxalis/constants";
@@ -233,16 +239,25 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   return Math.min(zoomStep, maxLogZoomStep);
 }
 
-export function getMaxZoomValue(state: OxalisState): number {
+export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   const lastZoomStep = _.last(maximumZoomSteps);
-  return lastZoomStep != null ? lastZoomStep : 1;
+
+  const [min, taskAwareMax] = getValidTaskZoomRange(state);
+  const max = lastZoomStep != null ? Math.min(taskAwareMax, lastZoomStep) : 1;
+
+  return [min, max];
 }
 
 export function getMaxZoomValueForResolution(
   state: OxalisState,
   targetResolution: Vector3,
 ): number {
+  // Extract the max value from the range
+  return getValidZoomRangeForResolution(state, targetResolution)[1];
+}
+
+function getValidZoomRangeForResolution(state: OxalisState, targetResolution: Vector3): Vector2 {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   const resolutions = getResolutions(state.dataset);
 
@@ -250,11 +265,41 @@ export function getMaxZoomValueForResolution(
     _.isEqual(resolution, targetResolution),
   );
 
-  return maximumZoomSteps[targetResolutionIndex];
+  const max = maximumZoomSteps[targetResolutionIndex];
+  const min = targetResolutionIndex > 0 ? maximumZoomSteps[targetResolutionIndex - 1] : 0;
+  // Since the min of the requested range is derived from the max of the previous range,
+  // we add a small delta so that the returned range is inclusive.
+  return [min + Number.EPSILON, max];
 }
 
 export function getZoomValue(flycam: Flycam): number {
   return flycam.zoomStep;
+}
+
+function getValidTaskZoomRange(state: OxalisState): [number, number] {
+  const defaultRange = [userSettings.zoom.minimum, Infinity];
+  const { allowedMagnifications } = state.tracing.restrictions;
+
+  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+    return defaultRange;
+  }
+
+  function getMinMax(value, isMin) {
+    const idx = isMin ? 0 : 1;
+
+    return (
+      (value == null
+        ? defaultRange[idx]
+        : getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx]) ||
+      // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
+      defaultRange[idx]
+    );
+  }
+
+  const min = getMinMax(allowedMagnifications.min, true);
+  const max = getMinMax(allowedMagnifications.max, false);
+
+  return [min, max];
 }
 
 export function getPlaneScalingFactor(

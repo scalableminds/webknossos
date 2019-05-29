@@ -154,6 +154,7 @@ export type APISampleDataset = {
 
 export type APIDataSourceWithMessages = {
   +dataSource?: APIDataSource,
+  +previousDataSource?: APIDataSource,
   +messages: Array<APIMessage>,
 };
 
@@ -219,6 +220,11 @@ export type APISettings = {|
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
+  +allowedMagnifications?: {
+    shouldRestrict: boolean,
+    min?: number,
+    max?: number,
+  },
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({

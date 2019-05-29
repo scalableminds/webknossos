@@ -158,7 +158,6 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def updateOne(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that t.created is skipped
-      _ <- assertUpdateAccess(t._id) ?~> "FAILED: TimeSpanSQLDAO.assertUpdateAccess"
       r <- run(sqlu"""update webknossos.timespans
                 set
                   _user = ${t._user.id},

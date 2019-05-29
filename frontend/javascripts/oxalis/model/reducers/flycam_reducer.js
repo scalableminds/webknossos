@@ -7,10 +7,9 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getMaxZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -117,7 +116,8 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 }
 
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
-  let newZoomStep = Utils.clamp(userSettings.zoom.minimum, zoomStep, getMaxZoomValue(state));
+  const [min, max] = getValidZoomRangeForUser(state);
+  let newZoomStep = Utils.clamp(min, zoomStep, max);
   if (isNaN(newZoomStep)) {
     newZoomStep = 1;
   }

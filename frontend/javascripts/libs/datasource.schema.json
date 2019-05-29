@@ -153,7 +153,7 @@
           "isDisabled": { "type": "boolean" },
           "alpha": { "type": "number" }
         },
-        "required": ["brightness", "contrast", "color"]
+        "required": ["color"]
       }
     }
   }

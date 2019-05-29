@@ -126,14 +126,19 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           dataSource.dataLayers.map(layer => [layer.name, defaultConfigPerLayer]),
         ),
       };
+      // Remove unused brightness and contrast config and replace it with intensityRange if needed.
+      const { layers } = datasetDefaultConfiguration;
+      for (const layerConfig of _.values(layers)) {
+        delete layerConfig.brightness;
+        delete layerConfig.contrast;
+        // We want to intentionally manipulate the intensityRange although intensityRange is read-only.
+        const writeableLayerConfig = (layerConfig: any);
+        writeableLayerConfig.intensityRange = layerConfig.intensityRange || [0, 255];
+      }
 
       this.props.form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
-        defaultConfigurationLayersJson: JSON.stringify(
-          datasetDefaultConfiguration.layers,
-          null,
-          "  ",
-        ),
+        defaultConfigurationLayersJson: JSON.stringify(layers, null, "  "),
       });
 
       this.setState({

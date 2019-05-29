@@ -4,10 +4,9 @@
 // The `flow2schema` node module has been used for conversion.
 // Please note that some manual changes to the schema are required.
 
-// Add minItems=3 and maxItems=3
-type Vector3 = Array<number>;
+type Vector3 = [number, number, number];
 
-type Vector2 = Array<number>;
+type Vector2 = [number, number];
 
 type BoundingBox = {
   topLeft: Vector3,

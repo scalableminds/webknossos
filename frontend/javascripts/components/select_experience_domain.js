@@ -14,7 +14,6 @@ type Props = {
   placeholder: string,
   notFoundContent?: string,
   disabled: boolean,
-  mode?: string,
   onSelect?: string => void,
   onChange?: () => void,
   allowCreation: boolean,
@@ -55,7 +54,6 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      mode,
       value,
       notFoundContent,
       width,
@@ -78,7 +76,6 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     return (
       <Select
         showSearch
-        mode={mode}
         value={value}
         optionFilterProp="children"
         notFoundContent={notFoundContent}

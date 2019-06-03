@@ -169,7 +169,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        {histogram != null ? (
+        {!isDisabled && elementClass !== "float" ? (
           <Histogram
             data={histogram}
             min={intensityRange[0]}

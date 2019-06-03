@@ -521,13 +521,12 @@ class PlaneMaterialFactory {
 
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
     const { alpha, intensityRange, isDisabled } = settings;
-    let { color } = settings;
     this.uniforms[`${name}_min`].value = intensityRange[0] / 255;
     this.uniforms[`${name}_max`].value = intensityRange[1] / 255;
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
 
     if (settings.color != null) {
-      color = this.convertColor(color);
+      const color = this.convertColor(settings.color);
       this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
     }
   }

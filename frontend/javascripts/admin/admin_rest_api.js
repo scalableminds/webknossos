@@ -13,6 +13,7 @@ import {
   type APIDataset,
   type APIDatasetId,
   type APIFeatureToggles,
+  type APIHistogramData,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -907,6 +908,21 @@ export async function findDataPositionForLayer(
     ),
   );
   return { position, resolution };
+}
+
+export async function getHistogramForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<APIHistogramData> {
+  const { count, histogram } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/histogram?token=${token}`,
+    ),
+  );
+  return { count, histogram };
 }
 
 export async function getMappingsForDatasetLayer(

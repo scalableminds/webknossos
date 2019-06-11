@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Added the possbility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
+- Added a histogram to the dataset settings for each layer. It simplifies adjusting the brightness and contrast of a layer and replaces the brightness and contrast slider. [#4105](https://github.com/scalableminds/webknossos/pull/4105)
 
 ### Changed
 - 
@@ -19,7 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - 
 
 ### Removed
-- 
+- The brightness and contrast slider in the dataset got removed in favour of the new histogram feature. [#4105](https://github.com/scalableminds/webknossos/pull/4105)
 
 
 ## [19.06.0](https://github.com/scalableminds/webknossos/releases/tag/19.06.0) - 2019-05-27

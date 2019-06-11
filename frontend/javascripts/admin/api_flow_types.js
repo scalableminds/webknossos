@@ -60,6 +60,8 @@ export type APISegmentationLayer = {|
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
+export type APIHistogramData = { count: number, histogram: Array<number> };
+
 type APIDataSourceBase = {
   +id: {
     +name: string,

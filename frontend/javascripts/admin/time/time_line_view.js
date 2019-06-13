@@ -1,5 +1,4 @@
 // @flow
-import { Chart } from "react-google-charts";
 import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
@@ -15,6 +14,7 @@ import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import TimeTrackingChart, { DateRange } from "./time_line_chart_view";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -23,42 +23,11 @@ const { RangePicker } = DatePicker;
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 
-const TimeTrackingChart = ({ columns, rows, timeAxisFormat, dateRange, timeTrackingData }) =>
-  timeTrackingData.length > 0 ? (
-    <Chart
-      chartType="Timeline"
-      columns={columns}
-      rows={rows}
-      options={{
-        timeline: { singleColor: "#108ee9" },
-        // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
-        hAxis: {
-          format: timeAxisFormat,
-          minValue: dateRange[0].toDate(),
-          maxValue: dateRange[1].toDate(),
-        },
-        allowHtml: true,
-        tooltip: { isHtml: true },
-      }}
-      graph_id="TimeLineGraph"
-      chartPackages={["timeline"]}
-      width="100%"
-      height="600px"
-      legend_toggle
-    />
-  ) : (
-    <div style={{ textAlign: "center" }}>
-      No Time Tracking Data for the Selected User or Date Range.
-    </div>
-  );
-
 type TimeTrackingStats = {
   totalTime: number,
   numberTasks: number,
   averageTimePerTask: number,
 };
-
-type DateRange = [moment$Moment, moment$Moment];
 
 type StateProps = {|
   activeUser: APIUser,
@@ -172,7 +141,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
     const dayFormatForMomentJs = "DD, MMM, YYYY";
     const tooltip = (
-      <div className="google-charts-tooltip">
+      <div>
         <div className="highlighted">
           Task ID: {taskId}
           <div className="striped-border" />
@@ -327,13 +296,19 @@ class TimeLineView extends React.PureComponent<Props, State> {
 
         <div style={{ marginTop: 20 }} />
         <Spin size="large" spinning={isLoading}>
-          <TimeTrackingChart
-            columns={columns}
-            rows={rows}
-            timeAxisFormat={timeAxisFormat}
-            dateRange={dateRange}
-            timeTrackingData={timeTrackingData}
-          />
+          {timeTrackingData.length > 0 ? (
+            <TimeTrackingChart
+              columns={columns}
+              rows={rows}
+              timeAxisFormat={timeAxisFormat}
+              dateRange={dateRange}
+              timeTrackingData={timeTrackingData}
+            />
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              No Time Tracking Data for the Selected User or Date Range.
+            </div>
+          )}
         </Spin>
       </div>
     );

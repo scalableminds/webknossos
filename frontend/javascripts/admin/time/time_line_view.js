@@ -1,6 +1,6 @@
 // @flow
 import { Chart } from "react-google-charts";
-import { Select, Card, Form, Row, Col, DatePicker } from "antd";
+import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
@@ -23,6 +23,35 @@ const { RangePicker } = DatePicker;
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 
+const TimeTrackingChart = ({ columns, rows, timeAxisFormat, dateRange, timeTrackingData }) =>
+  timeTrackingData.length > 0 ? (
+    <Chart
+      chartType="Timeline"
+      columns={columns}
+      rows={rows}
+      options={{
+        timeline: { singleColor: "#108ee9" },
+        // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
+        hAxis: {
+          format: timeAxisFormat,
+          minValue: dateRange[0].toDate(),
+          maxValue: dateRange[1].toDate(),
+        },
+        allowHtml: true,
+        tooltip: { isHtml: true },
+      }}
+      graph_id="TimeLineGraph"
+      chartPackages={["timeline"]}
+      width="100%"
+      height="600px"
+      legend_toggle
+    />
+  ) : (
+    <div style={{ textAlign: "center" }}>
+      No Time Tracking Data for the Selected User or Date Range.
+    </div>
+  );
+
 type TimeTrackingStats = {
   totalTime: number,
   numberTasks: number,
@@ -43,6 +72,7 @@ type State = {
   dateRange: DateRange,
   timeTrackingData: Array<APITimeTracking>,
   stats: TimeTrackingStats,
+  isLoading: boolean,
 };
 
 class TimeLineView extends React.PureComponent<Props, State> {
@@ -56,6 +86,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       numberTasks: 0,
       averageTimePerTask: 0,
     },
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -73,6 +104,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchTimeTrackingData() {
+    this.setState({ isLoading: true });
     if (this.state.user != null) {
       /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = await getTimeTrackingForUser(
@@ -84,6 +116,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       this.setState({ timeTrackingData }, this.calculateStats);
       /* eslint-enable react/no-access-state-in-setstate */
     }
+    this.setState({ isLoading: false });
   }
 
   calculateStats() {
@@ -189,7 +222,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       { id: "End", type: "date" },
     ];
 
-    const { dateRange } = this.state;
+    const { dateRange, isLoading, timeTrackingData } = this.state;
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
@@ -292,35 +325,16 @@ class TimeLineView extends React.PureComponent<Props, State> {
           </Row>
         </Card>
 
-        <div style={{ marginTop: 20 }}>
-          {this.state.timeTrackingData.length > 0 ? (
-            <Chart
-              chartType="Timeline"
-              columns={columns}
-              rows={rows}
-              options={{
-                timeline: { singleColor: "#108ee9" },
-                // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
-                hAxis: {
-                  format: timeAxisFormat,
-                  minValue: dateRange[0].toDate(),
-                  maxValue: dateRange[1].toDate(),
-                },
-                allowHtml: true,
-                tooltip: { isHtml: true },
-              }}
-              graph_id="TimeLineGraph"
-              chartPackages={["timeline"]}
-              width="100%"
-              height="600px"
-              legend_toggle
-            />
-          ) : (
-            <div style={{ textAlign: "center" }}>
-              No Time Tracking Data for the Selected User or Date Range.
-            </div>
-          )}
-        </div>
+        <div style={{ marginTop: 20 }} />
+        <Spin size="large" spinning={isLoading}>
+          <TimeTrackingChart
+            columns={columns}
+            rows={rows}
+            timeAxisFormat={timeAxisFormat}
+            dateRange={dateRange}
+            timeTrackingData={timeTrackingData}
+          />
+        </Spin>
       </div>
     );
   }

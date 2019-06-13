@@ -9,16 +9,16 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
 import {
   SwitchSetting,
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer } from "admin/admin_rest_api";
-import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { hasSegmentation, getElementClass } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -42,6 +42,7 @@ import constants, {
 } from "oxalis/constants";
 import Model from "oxalis/model";
 import messages, { settings } from "messages";
+import Histogram from "./histogram_view";
 
 const { Panel } = Collapse;
 const { Option } = Select;
@@ -64,7 +65,36 @@ type DatasetSettingsProps = {|
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
 |};
 
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+type State = {
+  histograms: { string: APIHistogramData },
+};
+
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  state = {
+    histograms: {},
+  };
+
+  componentDidMount() {
+    this.loadAllHistograms();
+  }
+
+  loadAllHistograms = async () => {
+    const { layers } = this.props.datasetConfiguration;
+    const histograms: { string: APIHistogramData } = {};
+    const histogramPromises = Object.keys(layers).map(async layerName => {
+      const data = await getHistogramForLayer(
+        this.props.dataset.dataStore.url,
+        this.props.dataset,
+        layerName,
+      );
+      histograms[layerName] = data;
+      return data;
+    });
+    // Waiting for all Promises to be resolved.
+    await Promise.all(histogramPromises);
+    this.setState({ histograms });
+  };
+
   getFindDataButton = (layerName: string, isDisabled: boolean) => (
     <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
       <Icon
@@ -100,7 +130,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isLastLayer: boolean,
   ) => {
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const { brightness, contrast, alpha, color, isDisabled } = layer;
+    const { alpha, color, intensityRange, isDisabled } = layer;
+    let histogram = new Array(256).fill(0);
+    if (this.state.histograms && this.state.histograms[layerName]) {
+      histogram = this.state.histograms[layerName].histogram;
+    }
+
     return (
       <div key={layerName}>
         <Row>
@@ -134,24 +169,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        <NumberSliderSetting
-          label="Brightness"
-          min={-255}
-          max={255}
-          step={5}
-          value={brightness}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "brightness")}
-          disabled={isDisabled}
-        />
-        <NumberSliderSetting
-          label="Contrast"
-          min={0.5}
-          max={5}
-          step={0.1}
-          value={contrast}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "contrast")}
-          disabled={isDisabled}
-        />
+        {!isDisabled && elementClass !== "float" ? (
+          <Histogram
+            data={histogram}
+            min={intensityRange[0]}
+            max={intensityRange[1]}
+            layerName={layerName}
+          />
+        ) : null}
         <NumberSliderSetting
           label="Opacity"
           min={0}
@@ -178,9 +203,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   handleFindData = async (layerName: string) => {
+    const { dataset } = this.props;
     const { position, resolution } = await findDataPositionForLayer(
-      this.props.dataset.dataStore.url,
-      this.props.dataset,
+      dataset.dataStore.url,
+      dataset,
       layerName,
     );
     if (!position || !resolution) {
@@ -261,6 +287,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
       ) != null;
+
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">

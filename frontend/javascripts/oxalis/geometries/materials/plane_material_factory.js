@@ -226,11 +226,11 @@ class PlaneMaterialFactory {
         type: "v3",
         value: DEFAULT_COLOR,
       };
-      this.uniforms[`${name}_brightness`] = {
+      this.uniforms[`${name}_min`] = {
         type: "f",
-        value: 1.0,
+        value: 0.0,
       };
-      this.uniforms[`${name}_contrast`] = {
+      this.uniforms[`${name}_max`] = {
         type: "f",
         value: 1.0,
       };
@@ -520,9 +520,10 @@ class PlaneMaterialFactory {
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
-    this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
-    this.uniforms[`${name}_contrast`].value = settings.contrast;
-    this.uniforms[`${name}_alpha`].value = settings.isDisabled ? 0 : settings.alpha / 100;
+    const { alpha, intensityRange, isDisabled } = settings;
+    this.uniforms[`${name}_min`].value = intensityRange[0] / 255;
+    this.uniforms[`${name}_max`].value = intensityRange[1] / 255;
+    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);

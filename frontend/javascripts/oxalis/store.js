@@ -213,6 +213,7 @@ export type DatasetLayerConfiguration = {|
   +brightness: number,
   +contrast: number,
   +alpha: number,
+  +intensityRange: Vector2,
   +isDisabled: boolean,
 |};
 

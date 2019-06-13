@@ -7,6 +7,12 @@
       "minItems": 3,
       "maxItems": 3
     },
+    "types::Vector2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
     "types::BoundingBox": {
       "type": "object",
       "properties": {
@@ -143,10 +149,11 @@
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
           "color": { "$ref": "#/definitions/types::Vector3" },
+          "intensityRange": { "$ref": "#/definitions/types::Vector2" },
           "isDisabled": { "type": "boolean" },
           "alpha": { "type": "number" }
         },
-        "required": ["brightness", "contrast", "color"]
+        "required": ["color"]
       }
     }
   }

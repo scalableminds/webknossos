@@ -2,14 +2,14 @@
 import { Chart } from "react-google-charts";
 import * as React from "react";
 
-type ColumnDefinition = {
-  id: ?string,
+export type ColumnDefinition = {
+  id?: string,
   type: string,
-  role: ?string,
-  p: ?Object,
+  role?: string,
+  p?: Object,
 };
 
-type RowContent = [string, string, Date, Date];
+export type RowContent = [string, string, string, Date, Date];
 
 export type DateRange = [moment$Moment, moment$Moment];
 
@@ -22,7 +22,7 @@ type Props = {
 
 export default class TimeTrackingChart extends React.PureComponent<Props> {
   additionalCSS: ?HTMLStyleElement = null;
-  chartScrollElement: ?HTMLDivElement = null;
+  chartScrollElement: ?HTMLElement = null;
 
   componentWillUnmount() {
     if (this.chartScrollElement) {
@@ -40,6 +40,9 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
   refreshTooltipPositioningFix = () => {
     this.additionalCSS = document.createElement("style");
     this.additionalCSS.innerHTML = "";
+    if (!document.body) {
+      return;
+    }
     document.body.appendChild(this.additionalCSS);
 
     // TimeLineGraph is the name of the chart given by the library.
@@ -51,7 +54,10 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     }
   };
 
-  adjustTooltipPosition = event => {
+  adjustTooltipPosition = (event: MouseEvent) => {
+    if (!this.chartScrollElement || !this.additionalCSS) {
+      return;
+    }
     // When mouse moves, we determine how much the container is scrolled vertically.
     const scrollAmount = this.chartScrollElement.scrollTop;
     this.additionalCSS.innerHTML = `.google-visualization-tooltip {

@@ -14,7 +14,11 @@ import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import TimeTrackingChart, { DateRange } from "./time_line_chart_view";
+import TimeTrackingChart, {
+  type DateRange,
+  type ColumnDefinition,
+  type RowContent,
+} from "./time_line_chart_view";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -181,7 +185,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const columns = [
+    const columns: Array<ColumnDefinition> = [
       { id: "AnnotationId", type: "string" },
       // This label columns is somehow needed to make the custom tooltip work.
       // See https://developers.google.com/chart/interactive/docs/gallery/timeline#customizing-tooltips.
@@ -192,8 +196,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
     ];
 
     const { dateRange, isLoading, timeTrackingData } = this.state;
-    const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
-    const timeTrackingRowTotal = []; // show all times spans in a single row
+    const timeTrackingRowGrouped: Array<RowContent> = []; // shows each time span grouped by annotation id
+    const timeTrackingRowTotal: Array<RowContent> = []; // show all times spans in a single row
 
     const totalSumColumnLabel = "Sum Tracking Time";
 

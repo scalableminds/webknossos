@@ -82,6 +82,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             data <- tracingService.allDataFile(tracingId, tracing)
+            _ = Thread.sleep(5)
           } yield {
             Ok.sendFile(data)
           }

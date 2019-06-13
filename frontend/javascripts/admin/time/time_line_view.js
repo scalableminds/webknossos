@@ -10,6 +10,7 @@ import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds, formatDurationToHoursAndMinutes } from "libs/format_utils";
+import { isUserAdmin } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -58,7 +59,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    if (this.props.activeUser.isAdmin) {
+    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    if (isAdminOrTeamManger) {
       this.fetchData();
     } else {
       this.fetchDataFromLoggedInUser();
@@ -218,7 +220,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const displayInDays = Math.abs(dateRange[0].diff(dateRange[1], "days")) >= 1;
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
 
-    const { isAdmin, firstName, lastName, email } = this.props.activeUser;
+    const { firstName, lastName, email } = this.props.activeUser;
+    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -226,7 +230,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">
-                {isAdmin ? (
+                {isAdminOrTeamManger ? (
                   <Select
                     allowClear
                     showSearch

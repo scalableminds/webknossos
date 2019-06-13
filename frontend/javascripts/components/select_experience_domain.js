@@ -64,13 +64,13 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
       allowCreation,
     } = this.props;
     const { currentlyEnteredDomain } = this.state;
-    const options = this.getUnusedDomains();
+    let options = this.getUnusedDomains();
     if (
       allowCreation &&
       !options.includes(currentlyEnteredDomain) &&
       currentlyEnteredDomain.trim() !== ""
     ) {
-      options.push(currentlyEnteredDomain);
+      options = [...options, currentlyEnteredDomain];
     }
 
     return (

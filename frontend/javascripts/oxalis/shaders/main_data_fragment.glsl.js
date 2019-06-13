@@ -57,10 +57,10 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
-  uniform float <%= name %>_brightness;
-  uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -183,10 +183,13 @@ void main() {
       vec3 range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
       vec3 rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
       color_value = (color_value + rangeMin) / range;
-    <% } %>
+    <% } else { %>
 
-    // Brightness / Contrast Transformation for <%= name %>
-    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+      // Keep the color in bounds of min and max
+      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max); 
+      // Scale interval between min and max up to interval from 0 to 255 
+      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
+    <% } %>
 
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;

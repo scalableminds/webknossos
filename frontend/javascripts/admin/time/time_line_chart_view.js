@@ -36,7 +36,6 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
   // We need to adjust the tooltips position manually because it is not positioned correctly when scrolling down.
   // This fix was suggested by
   // https://stackoverflow.com/questions/52755733/google-charts-tooltips-have-wrong-position-when-inside-a-scrolling-container.
-
   refreshTooltipPositioningFix = () => {
     this.additionalCSS = document.createElement("style");
     this.additionalCSS.innerHTML = "";
@@ -59,7 +58,11 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
       return;
     }
     // When mouse moves, we determine how much the container is scrolled vertically.
+    
+    // direkt element manipulieren und nicht ueber den style sheet
+    // page coordinates nutzen?
     const scrollAmount = this.chartScrollElement.scrollTop;
+    console.log("X: ", event.offsetX);
     this.additionalCSS.innerHTML = `.google-visualization-tooltip {
       top: ${event.offsetY - scrollAmount}px !important;
       left:${event.offsetX + 15}px !important;
@@ -89,7 +92,6 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
         graph_id="TimeLineGraph"
         chartPackages={["timeline"]}
         width="100%"
-        height="600px"
         legend_toggle
         chartEvents={[
           {

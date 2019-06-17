@@ -28,22 +28,12 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     if (this.chartScrollElement) {
       this.chartScrollElement.removeEventListener("mousemove", this.adjustTooltipPosition);
     }
-    if (this.additionalCSS) {
-      this.additionalCSS.remove();
-    }
   }
 
   // We need to adjust the tooltips position manually because it is not positioned correctly when scrolling down.
   // This fix was suggested by
   // https://stackoverflow.com/questions/52755733/google-charts-tooltips-have-wrong-position-when-inside-a-scrolling-container.
-  refreshTooltipPositioningFix = () => {
-    this.additionalCSS = document.createElement("style");
-    this.additionalCSS.innerHTML = "";
-    if (!document.body) {
-      return;
-    }
-    document.body.appendChild(this.additionalCSS);
-
+  applyTooltipPositioningFix = () => {
     // TimeLineGraph is the name of the chart given by the library.
     this.chartScrollElement = document.querySelector(
       "#TimeLineGraph > div > div:first-child > div > div",
@@ -54,25 +44,18 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
   };
 
   adjustTooltipPosition = (event: MouseEvent) => {
-    if (!this.chartScrollElement || !this.additionalCSS) {
-      return;
+    const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
+    if (tooltip != null) {
+      tooltip.style.top = `${event.clientY}px`;
+      tooltip.style.left = `${event.clientX + 15}px`;
+      tooltip.style.visibility = "visible";
     }
-    // When mouse moves, we determine how much the container is scrolled vertically.
-    
-    // direkt element manipulieren und nicht ueber den style sheet
-    // page coordinates nutzen?
-    const scrollAmount = this.chartScrollElement.scrollTop;
-    console.log("X: ", event.offsetX);
-    this.additionalCSS.innerHTML = `.google-visualization-tooltip {
-      top: ${event.offsetY - scrollAmount}px !important;
-      left:${event.offsetX + 15}px !important;
-    }`;
   };
 
   render() {
     const { columns, rows, timeAxisFormat, dateRange } = this.props;
 
-    const applyTooltipPositioningFix = this.refreshTooltipPositioningFix;
+    const { applyTooltipPositioningFix } = this;
 
     return (
       <Chart
@@ -97,7 +80,7 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
           {
             eventName: "ready",
             callback() {
-              // After the whole chart is draw, we can now apply the position fixing workaround.
+              // After the whole chart is drawn, we can now apply the position fixing workaround.
               applyTooltipPositioningFix();
             },
           },

@@ -5,6 +5,10 @@ div.google-visualization-tooltip {
   font-weight: normal;
   font-size: 13px;
   border-radius: 6px;
+  position: fixed;
+  // We need to set the visibility to hidden as the tooltip is initially mispositioned.
+  // After adjusting the position, we set the visibility to visible again (@see TimeLineChart).
+  visibility: hidden;
   .highlighted {
     font-weight: bold;
   }
@@ -21,7 +25,7 @@ div.google-visualization-tooltip {
   }
 }
 
-/// only one scrollbar
+/// Used to remove the automatic scrolling of the google timeline charts.
 #TimeLineGraph > div > div:nth-child(1) > div > div {
   height: auto !important;
   overflow: auto !important;

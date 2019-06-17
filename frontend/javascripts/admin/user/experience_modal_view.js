@@ -410,7 +410,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         ) : null}
         <SelectExperienceDomain
           disabled={false}
-          mode="tags"
+          allowCreation
           placeholder="New Experience Domain"
           value={[]}
           width={50}

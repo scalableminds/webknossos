@@ -3,6 +3,7 @@
 import { Table, Icon, Tag } from "antd";
 import * as React from "react";
 import _ from "lodash";
+import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
@@ -154,7 +155,13 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
             <div>
-              {dataset.name}
+              <Link
+                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+                title="View Dataset"
+                className="not-highlighted-link"
+              >
+                {dataset.name}
+              </Link>
               <br />
               <Tag color={stringToColor(dataset.dataStore.name)}>{dataset.dataStore.name}</Tag>
             </div>

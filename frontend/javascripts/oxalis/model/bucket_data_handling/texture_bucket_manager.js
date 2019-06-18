@@ -78,6 +78,9 @@ export default class TextureBucketManager {
     const { initializedGpuFactor } = Store.getState().temporaryConfiguration.gpuSetup;
     this.addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
     this.lookUpBufferWidth = getLookupBufferSize(initializedGpuFactor);
+    console.log("initializedGpuFactor", initializedGpuFactor);
+    console.log("addressSpaceDimensions", this.addressSpaceDimensions);
+    console.log("lookUpBufferWidth", this.lookUpBufferWidth);
 
     // the look up buffer is addressSpaceDimensions**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(this.lookUpBufferWidth, 2) * channelCountForLookupBuffer;
@@ -409,6 +412,7 @@ export default class TextureBucketManager {
 
     if (x > xMax || y > yMax || z > zMax || x < 0 || y < 0 || z < 0) {
       // The bucket is outside of the addressable space.
+      console.log("The bucket is outside of the addressable space.");
       return -1;
     }
 

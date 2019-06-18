@@ -137,9 +137,11 @@ export const transDim: ShaderModule = {
     vec3 transDim(vec3 array) {
       if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
         return array;
-      } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+      }
+      if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
         return vec3(array.z, array.y, array.x); // [2, 1, 0]
-      } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+      }
+      if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
         return vec3(array.x, array.z, array.y); // [0, 2, 1]
       }
       return vec3(0.0, 0.0, 0.0);

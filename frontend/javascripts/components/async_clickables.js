@@ -1,6 +1,6 @@
 // @flow
 /* eslint-disable react/jsx-no-bind  */
-import { Button, Spin } from "antd";
+import { Button, Icon, Spin } from "antd";
 import * as React from "react";
 
 const onClick = async function(event: SyntheticInputEvent<>) {
@@ -34,6 +34,30 @@ export class AsyncButton extends React.PureComponent<Props, State> {
 
   render() {
     return <Button {...this.props} loading={this.state.isLoading} onClick={onClick.bind(this)} />;
+  }
+}
+
+export class AsyncIconButton extends React.PureComponent<{ ...Props, type: string }, State> {
+  _isMounted: boolean;
+  state = { isLoading: false };
+
+  componentDidMount() {
+    this._isMounted = true;
+  }
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  render() {
+    const { type } = this.props;
+    return (
+      <Icon
+        {...this.props}
+        type={this.state.isLoading ? "loading" : type}
+        onClick={onClick.bind(this)}
+      />
+    );
   }
 }
 

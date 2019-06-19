@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable react/jsx-no-bind  */
 import { Button, Icon } from "antd";
 import * as React from "react";
 const { useState, useEffect, useRef } = React;

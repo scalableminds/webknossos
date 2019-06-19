@@ -359,9 +359,6 @@ function initializeDataLayerInstances(
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
-  console.log("textureInformationPerLayer", textureInformationPerLayer);
-  console.log("isMappingSupported", isMappingSupported);
-
   const connectionInfo = new ConnectionInfo();
   const dataLayers = {};
   for (const layer of layers) {

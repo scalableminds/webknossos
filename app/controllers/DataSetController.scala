@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math, TimeLogger}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
-import models.user.UserService
+import models.user.{User, UserService}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.cache.SyncCacheApi
 import play.api.i18n.{Messages, MessagesApi}
@@ -138,19 +138,41 @@ class DataSetController @Inject()(userService: UserService,
       Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value))
     ) { filter =>
       for {
-        dataSets <- TimeLogger.logTimeF("findAll",logger)(dataSetDAO.findAll ?~> "dataSet.list.failed")
-        filtered <- TimeLogger.logTimeF("applyFilter",logger)(filter.applyOn(dataSets))
-        requestingUserTeamManagerMemberships <- TimeLogger.logTimeF("teamMemberships",logger)(Fox.runOptional(request.identity)(user =>
-          userService.teamManagerMembershipsFor(user._id)))
-        js <- TimeLogger.logTimeF("constructJson",logger)(Fox.serialCombined(filtered)(
-          d =>
-            dataSetService
-              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships)))
+        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+        filtered <- filter.applyOn(dataSets)
+        js <- listGrouped(filtered, request.identity)
       } yield {
         Ok(Json.toJson(js))
       }
     }
   }
+
+  private def listGrouped(datasets: List[DataSet], requestingUser: Option[User])(
+      implicit ctx: DBAccessContext): Fox[List[JsObject]] =
+    for {
+      requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
+        userService.teamManagerMembershipsFor(user._id))
+      groupedByOrga = datasets.groupBy(_._organization).toList
+      js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (ObjectId, List[DataSet]) =>
+        for {
+          organization <- organizationDAO.findOne(byOrgaTuple._1)
+          groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
+          result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[DataSet]) =>
+            for {
+              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)
+              resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
+                dataSetService.publicWrites(d,
+                                            requestingUser,
+                                            organization,
+                                            dataStore,
+                                            skipResolutions = true,
+                                            requestingUserTeamManagerMemberships)
+              }
+            } yield resultByDataStore
+          }
+        } yield result.flatten
+      }
+    } yield js.flatten
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
@@ -170,12 +192,15 @@ class DataSetController @Inject()(userService: UserService,
       log {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-          js <- dataSetService.publicWrites(dataSet, request.identity)
+          dataStore <- dataSetService.dataStoreFor(dataSet)
+          js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
         } yield {
           Ok(Json.toJson(js))
         }
@@ -216,7 +241,9 @@ class DataSetController @Inject()(userService: UserService,
                                        sortingKey.getOrElse(dataSet.created),
                                        isPublic)
           updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
-          js <- dataSetService.publicWrites(updated, Some(request.identity))
+          organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
+          dataStore <- dataSetService.dataStoreFor(updated)
+          js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)
         } yield {
           Ok(Json.toJson(js))
         }

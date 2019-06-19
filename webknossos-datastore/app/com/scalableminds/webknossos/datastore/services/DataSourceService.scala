@@ -47,11 +47,12 @@ class DataSourceService @Inject()(
   def checkInbox(): Fox[Unit] = {
     logger.info(s"Scanning inbox at: $dataBaseDir")
     for {
-      _ <- TimeLogger.logTime(s"listdir on $dataBaseDir",logger){PathUtils.listDirectories(dataBaseDir)} match {
+      _ <- TimeLogger.logTime(s"listdir on $dataBaseDir", logger) { PathUtils.listDirectories(dataBaseDir) } match {
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
-            foundInboxSources = TimeLogger.logTime("read datasource-properties.json files", logger)(dirs.flatMap(teamAwareInboxSources))
+            foundInboxSources = TimeLogger.logTime("read datasource-properties.json files", logger)(
+              dirs.flatMap(teamAwareInboxSources))
             dataSourceString = foundInboxSources.map { ds =>
               s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
             }.mkString(", ")

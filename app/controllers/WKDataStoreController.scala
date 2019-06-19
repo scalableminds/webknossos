@@ -52,11 +52,14 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
 
   def updateAll(name: String) = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
-      TimeLogger.logTime("parsing datasource jsons",logger)(request.body.validate[List[InboxDataSource]]) match {
+      TimeLogger
+        .logTime("parsing reported datasource jsons", logger)(request.body.validate[List[InboxDataSource]]) match {
         case JsSuccess(dataSources, _) =>
           for {
-            _ <- TimeLogger.logTimeF("deactivateUnreported",logger)(dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext))
-            _ <- TimeLogger.logTimeF("updateDatasources",logger)(dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext))
+            _ <- TimeLogger.logTimeF("deactivate unreported", logger)(
+              dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext))
+            _ <- TimeLogger.logTimeF("update datasources", logger)(
+              dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext))
           } yield {
             JsonOk
           }

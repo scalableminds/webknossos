@@ -3,8 +3,19 @@ package models.binary
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractDataLayer,
+  AbstractSegmentationLayer,
+  Category,
+  DataSourceId,
+  ElementClass,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.configuration.DataSetConfiguration
@@ -125,12 +136,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def isEmpty(implicit ctx: DBAccessContext): Fox[Boolean] = {
+  def isEmpty(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       r <- run(sql"select count(*) from #${existingCollectionName} limit 1".as[Int])
       firstRow <- r.headOption
     } yield firstRow == 0
-  }
 
   def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
@@ -140,14 +150,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield r
 
   def findOneByNameAndOrganizationName(name: String, organizationName: String)(
-    implicit ctx: DBAccessContext): Fox[DataSet] =
+      implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
       dataset <- findOneByNameAndOrganization(name, organization._id)
     } yield dataset
 
   def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-    implicit ctx: DBAccessContext): Fox[DataSet] =
+      implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(
@@ -158,20 +168,18 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield parsed
 
   def findAllByNamesAndOrganizationName(names: List[String], organizationName: String)(
-    implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+      implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
       datasets <- findAllByNamesAndOrganization(names, organization._id)
     } yield datasets
 
-  def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId) (
-    implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+  def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(
-        sql"select #${columns} from #${existingCollectionName} where name in #${writeStructTupleWithQuotes(names.map(sanitize))} and _organization = ${organizationId} and #${accessQuery}"
-          .as[DatasetsRow])
-          .map(_.toList)
+      rows <- run(sql"select #${columns} from #${existingCollectionName} where name in #${writeStructTupleWithQuotes(
+        names.map(sanitize))} and _organization = ${organizationId} and #${accessQuery}".as[DatasetsRow]).map(_.toList)
       parsed <- Fox.combined(rows.map(parse))
     } yield parsed
 
@@ -249,7 +257,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
-                #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(defaultConfiguration.map(sanitize))},
+                #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
+          defaultConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
           .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(

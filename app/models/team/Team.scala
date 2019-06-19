@@ -28,7 +28,8 @@ case class Team(
 
 class TeamService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
 
-  def publicWrites(team: Team, organizationOpt: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(team: Team, organizationOpt: Option[Organization] = None)(
+      implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(GlobalAccessContext))
     } yield {

@@ -311,7 +311,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       teams <- allowedTeamsFor(dataSet._id, requestingUserOpt)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t))
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, Some(organization)))
       logoUrl <- logoUrlFor(dataSet, Some(organization))
       isEditable <- isEditableBy(dataSet, requestingUserOpt, requestingUserTeamManagerMemberships)
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)

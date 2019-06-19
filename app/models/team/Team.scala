@@ -28,9 +28,9 @@ case class Team(
 
 class TeamService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
 
-  def publicWrites(team: Team)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(team: Team, organizationOpt: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      organization <- organizationDAO.findOne(team._organization)(GlobalAccessContext)
+      organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(GlobalAccessContext))
     } yield {
       Json.obj(
         "id" -> team._id.toString,

@@ -3,16 +3,14 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
-
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, JsonHelper, Math, TimeLogger}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
 import oxalis.security.{URLSharing, WkEnv}
-import com.scalableminds.util.tools.Math
 import play.api.cache.SyncCacheApi
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
@@ -140,14 +138,14 @@ class DataSetController @Inject()(userService: UserService,
       Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value))
     ) { filter =>
       for {
-        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        requestingUserTeamManagerMemberships <- Fox.runOptional(request.identity)(user =>
-          userService.teamManagerMembershipsFor(user._id))
-        js <- Fox.serialCombined(filtered)(
+        dataSets <- TimeLogger.logTimeF("findAll",logger)(dataSetDAO.findAll ?~> "dataSet.list.failed")
+        filtered <- TimeLogger.logTimeF("applyFilter",logger)(filter.applyOn(dataSets))
+        requestingUserTeamManagerMemberships <- TimeLogger.logTimeF("teamMemberships",logger)(Fox.runOptional(request.identity)(user =>
+          userService.teamManagerMembershipsFor(user._id)))
+        js <- TimeLogger.logTimeF("constructJson",logger)(Fox.serialCombined(filtered)(
           d =>
             dataSetService
-              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships))
+              .publicWrites(d, request.identity, skipResolutions = true, requestingUserTeamManagerMemberships)))
       } yield {
         Ok(Json.toJson(js))
       }

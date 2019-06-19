@@ -85,6 +85,7 @@ CREATE TABLE webknossos.dataSets(
   _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
+  inboxSourceHash INT,
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),

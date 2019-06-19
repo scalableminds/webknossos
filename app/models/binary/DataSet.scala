@@ -3,19 +3,8 @@ package models.binary
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayer,
-  AbstractSegmentationLayer,
-  Category,
-  DataSourceId,
-  ElementClass,
-  GenericDataSource,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.configuration.DataSetConfiguration
@@ -36,6 +25,7 @@ case class DataSet(
     _dataStore: String,
     _organization: ObjectId,
     _publication: Option[ObjectId],
+    inboxSourceHash: Option[Int],
     defaultConfiguration: Option[DataSetConfiguration] = None,
     description: Option[String] = None,
     displayName: Option[String] = None,
@@ -89,6 +79,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r._Datastore.trim,
         ObjectId(r._Organization),
         r._Publication.map(ObjectId(_)),
+        r.inboxsourcehash,
         defaultConfigurationOpt,
         r.description,
         r.displayname,
@@ -134,6 +125,13 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def isEmpty(implicit ctx: DBAccessContext): Fox[Boolean] = {
+    for {
+      r <- run(sql"select count(*) from #${existingCollectionName} limit 1".as[Int])
+      firstRow <- r.headOption
+    } yield firstRow == 0
+  }
+
   def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       rList <- run(
@@ -142,14 +140,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield r
 
   def findOneByNameAndOrganizationName(name: String, organizationName: String)(
-      implicit ctx: DBAccessContext): Fox[DataSet] =
+    implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
       dataset <- findOneByNameAndOrganization(name, organization._id)
     } yield dataset
 
   def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DataSet] =
+    implicit ctx: DBAccessContext): Fox[DataSet] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(
@@ -157,6 +155,24 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
           .as[DatasetsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
+    } yield parsed
+
+  def findAllByNamesAndOrganizationName(names: List[String], organizationName: String)(
+    implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
+      datasets <- findAllByNamesAndOrganization(names, organization._id)
+    } yield datasets
+
+  def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId) (
+    implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      accessQuery <- readAccessQuery
+      rows <- run(
+        sql"select #${columns} from #${existingCollectionName} where name in #${writeStructTupleWithQuotes(names.map(sanitize))} and _organization = ${organizationId} and #${accessQuery}"
+          .as[DatasetsRow])
+          .map(_.toList)
+      parsed <- Fox.combined(rows.map(parse))
     } yield parsed
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
@@ -230,10 +246,11 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val details: Option[String] = d.details.map(_.toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, defaultConfiguration, description, displayName,
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
-               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))}, #${optionLiteral(
-          defaultConfiguration.map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
+               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
+                #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(defaultConfiguration.map(sanitize))},
+                ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
           .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
           details.map(sanitize))}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
@@ -241,22 +258,23 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield ()
   }
 
-  def updateDataSourceByNameAndOrganizationName(name: String,
+  def updateDataSourceByNameAndOrganizationName(id: ObjectId,
                                                 dataStoreName: String,
+                                                inboxSourceHash: Int,
                                                 source: InboxDataSource,
                                                 isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      old <- findOneByNameAndOrganizationName(name, source.id.team)
       organization <- organizationDAO.findOneByName(source.id.team)
       q = sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
                         _organization = ${organization._id.id},
+                        inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
                         status = ${source.statusOpt.getOrElse("")}
-                   where _id = ${old._id.id}"""
+                   where _id = ${id}"""
       _ <- run(q)
-      _ <- dataSetDataLayerDAO.updateLayers(old._id, source)
+      _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
 
   def deactivateUnreported(names: List[String],
@@ -275,7 +293,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
              and #${inclusionPredicate})"""
     val setToUnusableQuery =
       sqlu"""update webknossos.datasets
-             set isUsable = false, status = $unreportedStatus, scale = NULL
+             set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
              where _dataStore = ${dataStoreName} and _organization = ${organizationId}
              and #${inclusionPredicate}"""
     for {

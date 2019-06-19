@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.typesafe.scalalogging.LazyLogging
@@ -47,11 +47,11 @@ class DataSourceService @Inject()(
   def checkInbox(): Fox[Unit] = {
     logger.info(s"Scanning inbox at: $dataBaseDir")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- TimeLogger.logTime(s"listdir on $dataBaseDir",logger){PathUtils.listDirectories(dataBaseDir)} match {
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
-            foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+            foundInboxSources = TimeLogger.logTime("read datasource-properties.json files", logger)(dirs.flatMap(teamAwareInboxSources))
             dataSourceString = foundInboxSources.map { ds =>
               s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
             }.mkString(", ")

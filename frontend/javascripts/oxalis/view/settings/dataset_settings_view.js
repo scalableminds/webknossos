@@ -101,7 +101,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
       <AsyncIconButton
         type="scan"
-        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => Promise.resolve()}
         style={{
           float: "right",
           marginTop: 4,

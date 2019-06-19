@@ -7,7 +7,7 @@ type Props = {
   onClick: (SyntheticInputEvent<>) => Promise<any>,
 };
 
-function useLoadingClickHandler(originalOnClick) {
+function useLoadingClickHandler(originalOnClick: (SyntheticInputEvent<>) => Promise<any>) {
   const [isLoading, setIsLoading] = useState(false);
   const wasUnmounted = useRef(false);
 
@@ -36,7 +36,7 @@ export function AsyncButton(props: Props) {
   return <Button {...props} loading={isLoading} onClick={onClick} />;
 }
 
-export function AsyncIconButton(allProps: Props) {
+export function AsyncIconButton(allProps: Props & { type: string }) {
   const { type, ...props } = allProps;
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
   return <Icon {...props} type={isLoading ? "loading" : type} onClick={onClick} />;

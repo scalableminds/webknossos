@@ -30,13 +30,15 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     }
   }
 
-  // We need to adjust the tooltips position manually because it is not positioned correctly when scrolling down.
-  // This fix was suggested by
-  // https://stackoverflow.com/questions/52755733/google-charts-tooltips-have-wrong-position-when-inside-a-scrolling-container.
+  /* We need to adjust the tooltips position manually because it is not positioned correctly when scrolling down.
+   * This fix was suggested by
+   * https://stackoverflow.com/questions/52755733/google-charts-tooltips-have-wrong-position-when-inside-a-scrolling-container.
+   * The fix is modified so that it sets the tooltip directly next to the mouse. This is done by using the total
+   * coordinates of the mouse of the whole window (clientX/Y) and manipulating the style of the tooltip directly. */
   applyTooltipPositioningFix = () => {
     // TimeLineGraph is the name of the chart given by the library.
     this.chartScrollElement = document.querySelector(
-      "#TimeLineGraph > div > div:first-child > div > div",
+      "#TimeLineGraph > div > div:first-child > div",
     );
     if (this.chartScrollElement) {
       this.chartScrollElement.addEventListener("mousemove", this.adjustTooltipPosition);
@@ -48,6 +50,9 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     if (tooltip != null) {
       tooltip.style.top = `${event.clientY}px`;
       tooltip.style.left = `${event.clientX + 15}px`;
+      // We need to make the tooltip visible again after adjusting the position.
+      // It is initially invisible as it is mispositioned by the library and would then "beam" to the corrected
+      // position. We want to avoid that "beaming" behaviour.
       tooltip.style.visibility = "visible";
     }
   };
@@ -75,6 +80,7 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
         graph_id="TimeLineGraph"
         chartPackages={["timeline"]}
         width="100%"
+        height="600px"
         legend_toggle
         chartEvents={[
           {

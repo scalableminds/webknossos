@@ -20,7 +20,10 @@ import {
   removeTreesAndTransform,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  getMaximumGroupId,
+  mapGroups,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
   setActiveGroupAction,
@@ -178,6 +181,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+  onCollapseAllGroups = () => {
+    const copyOfGroupTrees = _.cloneDeep(this.state.groupTree);
+    const allGroupsCollapsed = Array.from(
+      mapGroups(copyOfGroupTrees, group => {
+        group.expanded = false;
+        return group;
+      }),
+    );
+    this.setState({ groupTree: allGroupsCollapsed });
+  };
+
   onMoveNode = (params: {
     nextParentNode: TreeNode,
     node: TreeNode,
@@ -226,6 +240,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.createGroup(groupId);
     } else if (key === "delete") {
       this.deleteGroup(groupId);
+    } else if (key === "collapseAll") {
+      this.onCollapseAllGroups();
     }
   };
 
@@ -251,6 +267,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           <Icon type="delete" />
           Delete
         </Menu.Item>
+        {isRoot ? (
+          <Menu.Item key="collapseAll" groupId={id}>
+            <Icon type="shrink" />
+            Collapse all groups
+          </Menu.Item>
+        ) : null}
       </Menu>
     );
 

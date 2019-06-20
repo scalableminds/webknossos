@@ -1,6 +1,7 @@
 // @flow
 import { Chart } from "react-google-charts";
 import * as React from "react";
+import { getWindowBounds } from "libs/utils";
 
 export type ColumnDefinition = {
   id?: string,
@@ -48,8 +49,23 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
   adjustTooltipPosition = (event: MouseEvent) => {
     const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
     if (tooltip != null) {
-      tooltip.style.top = `${event.clientY}px`;
-      tooltip.style.left = `${event.clientX + 15}px`;
+      const { clientX, clientY } = event;
+      const [clientWidth, clientHeight] = getWindowBounds();
+      const { height, width } = tooltip.style;
+      if (clientY + height >= clientHeight) {
+        // The tooltip needs to be displayed above the mouse.
+        tooltip.style.top = `${clientY - height}px`;
+      } else {
+        // The tooltip can be displayed below the mouse.
+        tooltip.style.top = `${clientY}px`;
+      }
+      if (clientX + width >= clientWidth) {
+        // The tooltip needs to be displayed on the left side of the mouse.
+        tooltip.style.left = `${clientX - width - 5}px`;
+      } else {
+        // The tooltip needs to be displayed on the right side of the mouse.
+        tooltip.style.left = `${clientX + 15}px`;
+      }
       // We need to make the tooltip visible again after adjusting the position.
       // It is initially invisible as it is mispositioned by the library and would then "beam" to the corrected
       // position. We want to avoid that "beaming" behaviour.

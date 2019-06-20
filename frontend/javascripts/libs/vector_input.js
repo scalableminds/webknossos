@@ -122,7 +122,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     });
   };
 
-  blurYourself = () => document.activeElement.blur();
+  blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
 
   blurOnEscape = event => {
     if (event.key === "Escape") {

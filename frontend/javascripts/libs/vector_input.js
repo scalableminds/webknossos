@@ -122,6 +122,15 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     });
   };
 
+  blurYourself = () => document.activeElement.blur();
+
+  blurOnEscape = event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.blurYourself();
+    }
+  };
+
   render() {
     const { style, autosize, ...props } = _.omit(this.props, [
       "onChange",
@@ -136,6 +145,8 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.text}
+        onPressEnter={this.blurYourself}
+        onKeyDown={this.blurOnEscape}
         style={
           autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }

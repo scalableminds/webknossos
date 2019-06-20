@@ -131,7 +131,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                 updateDataSource(dataStore, dataSource, foundDatasetsByName))
             } yield ()
           case _ =>
-            logger.info(s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
+            logger.info(
+              s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
             Fox.successful(())
         }
 

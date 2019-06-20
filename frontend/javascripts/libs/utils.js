@@ -669,8 +669,8 @@ export function getIsInIframe() {
 
 export function getWindowBounds(): [number, number] {
   // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
-  let width;
-  let height;
+  let width = 0;
+  let height = 0;
   if (typeof window.innerWidth === "number") {
     // Non-IE
     width = window.innerWidth;

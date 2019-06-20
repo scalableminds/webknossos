@@ -51,17 +51,17 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     if (tooltip != null) {
       const { clientX, clientY } = event;
       const [clientWidth, clientHeight] = getWindowBounds();
-      const { height, width } = tooltip.style;
-      if (clientY + height >= clientHeight) {
+      const { offsetHeight, offsetWidth } = tooltip;
+      if (clientY + offsetHeight >= clientHeight) {
         // The tooltip needs to be displayed above the mouse.
-        tooltip.style.top = `${clientY - height}px`;
+        tooltip.style.top = `${clientY - offsetHeight}px`;
       } else {
         // The tooltip can be displayed below the mouse.
         tooltip.style.top = `${clientY}px`;
       }
-      if (clientX + width >= clientWidth) {
+      if (clientX + offsetWidth >= clientWidth) {
         // The tooltip needs to be displayed on the left side of the mouse.
-        tooltip.style.left = `${clientX - width - 5}px`;
+        tooltip.style.left = `${clientX - offsetWidth - 5}px`;
       } else {
         // The tooltip needs to be displayed on the right side of the mouse.
         tooltip.style.left = `${clientX + 15}px`;

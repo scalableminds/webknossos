@@ -6,13 +6,16 @@ import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceRepository @Inject()(
     webKnossosServer: DataStoreWkRpcClient,
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends TemporaryStore[DataSourceId, InboxDataSource](system)
+    with LazyLogging
     with FoxImplicits {
 
   def findUsable(id: DataSourceId): Option[DataSource] =
@@ -30,6 +33,6 @@ class DataSourceRepository @Inject()(
       _ <- Fox.successful(())
       _ = removeAll
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
-      _ <- webKnossosServer.reportDataSources(dataSources)
+      _ <- TimeLogger.logTimeF("report datasources to wk", logger)(webKnossosServer.reportDataSources(dataSources))
     } yield ()
 }

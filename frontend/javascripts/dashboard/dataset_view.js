@@ -85,10 +85,16 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.fetchDatasets();
   }
 
-  async fetchDatasets(): Promise<void> {
+  async fetchDatasets(datasetFilteringMode: ?string): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const datasets = await getDatasets();
+      const selectedFilterOption = datasetFilteringMode || this.state.datasetFilteringMode;
+      const mapFilterModeToActiveParameter = {
+        showAllDatasets: null,
+        onlyShowReported: true,
+        onlyShowUnreported: false,
+      };
+      const datasets = await getDatasets(mapFilterModeToActiveParameter[selectedFilterOption]);
       datasetCache.set(datasets);
 
       this.setState({ datasets });
@@ -197,7 +203,10 @@ class DatasetView extends React.PureComponent<Props, State> {
     const isUserAdmin = Utils.isUserAdmin(this.props.user);
     const createFilteringModeRadio = (key, label) => (
       <Radio
-        onChange={() => this.setState({ datasetFilteringMode: key })}
+        onChange={() => {
+          this.setState({ datasetFilteringMode: key });
+          this.fetchDatasets(key);
+        }}
         checked={this.state.datasetFilteringMode === key}
       >
         {label}

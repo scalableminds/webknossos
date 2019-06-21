@@ -18,12 +18,10 @@ import {
   insertTreesAndTransform,
   makeBasicGroupObject,
   removeTreesAndTransform,
+  forEachTreeNode,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
-import {
-  getMaximumGroupId,
-  mapGroups,
-} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setActiveTreeAction,
   setActiveGroupAction,
@@ -182,14 +180,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onCollapseAllGroups = () => {
-    const copyOfGroupTrees = _.cloneDeep(this.state.groupTree);
-    const allGroupsCollapsed = Array.from(
-      mapGroups(copyOfGroupTrees, group => {
-        group.expanded = false;
-        return group;
-      }),
-    );
-    this.setState({ groupTree: allGroupsCollapsed });
+    const collapseAllGroups = groupTree => {
+      const copyOfGroupTree = _.cloneDeep(groupTree);
+      forEachTreeNode(copyOfGroupTree, node => {
+        if (node.type === TYPE_GROUP && node.id !== MISSING_GROUP_ID) {
+          node.expanded = false;
+        }
+      });
+      return copyOfGroupTree;
+    };
+    this.setState(prevState => ({ groupTree: collapseAllGroups(prevState.groupTree) }));
   };
 
   onMoveNode = (params: {

@@ -1,74 +1,68 @@
 // @flow
-/* eslint-disable react/jsx-no-bind  */
-import { Button, Spin } from "antd";
+import { Button, Icon } from "antd";
 import * as React from "react";
-
-const onClick = async function(event: SyntheticInputEvent<>) {
-  this.setState({ isLoading: true });
-  try {
-    await this.props.onClick(event);
-  } finally {
-    if (this._isMounted) {
-      this.setState({ isLoading: false });
-    }
-  }
-};
+const { useState, useEffect, useRef } = React;
 
 type Props = {
   onClick: (SyntheticInputEvent<>) => Promise<any>,
 };
 
-type State = { isLoading: boolean };
+function useLoadingClickHandler(originalOnClick: (SyntheticInputEvent<>) => Promise<any>) {
+  const [isLoading, setIsLoading] = useState(false);
+  const wasUnmounted = useRef(false);
 
-export class AsyncButton extends React.PureComponent<Props, State> {
-  _isMounted: boolean;
-  state = { isLoading: false };
+  useEffect(
+    () => () => {
+      wasUnmounted.current = true;
+    },
+    [],
+  );
 
-  componentDidMount() {
-    this._isMounted = true;
-  }
-
-  componentWillUnmount() {
-    this._isMounted = false;
-  }
-
-  render() {
-    return <Button {...this.props} loading={this.state.isLoading} onClick={onClick.bind(this)} />;
-  }
+  const onClick = async (event: SyntheticInputEvent<>) => {
+    setIsLoading(true);
+    try {
+      await originalOnClick(event);
+    } finally {
+      if (!wasUnmounted.current) {
+        setIsLoading(false);
+      }
+    }
+  };
+  return [isLoading, onClick];
 }
 
-export class AsyncLink extends React.PureComponent<Props & { children: React.Node }, State> {
-  _isMounted: boolean;
-  static defaultProps = {
-    children: [],
-  };
+export function AsyncButton(props: Props) {
+  const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
+  return <Button {...props} loading={isLoading} onClick={onClick} />;
+}
 
-  state = { isLoading: false };
+export function AsyncIconButton(allProps: Props & { type: string }) {
+  const { type, ...props } = allProps;
+  const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
+  return <Icon {...props} type={isLoading ? "loading" : type} onClick={onClick} />;
+}
 
-  componentDidMount() {
-    this._isMounted = true;
+export function AsyncLink(props: Props & { children: React.Node }) {
+  const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
+  let content;
+  if (isLoading) {
+    const children = React.Children.toArray(props.children);
+    const childrenWithoutIcon = children.filter(child => {
+      if (child.type == null) {
+        return true;
+      }
+      return child.type !== "i" && child.type.name !== "Icon";
+    });
+    content = [<Icon type="loading" key="loading-icon" />, childrenWithoutIcon];
+  } else {
+    content = props.children;
   }
 
-  componentWillUnmount() {
-    this._isMounted = false;
-  }
-
-  render() {
-    let content;
-    if (this.state.isLoading) {
-      const children = React.Children.toArray(this.props.children);
-      const childrenWithoutIcon = children.filter(child => !child.type || child.type !== "i");
-      content = [<Spin key="icon" />, childrenWithoutIcon];
-    } else {
-      content = this.props.children;
-    }
-
-    return (
-      <a {...this.props} onClick={onClick.bind(this)}>
-        {content}
-      </a>
-    );
-  }
+  return (
+    <a {...props} onClick={onClick}>
+      {content}
+    </a>
+  );
 }
 
 export default {};

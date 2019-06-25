@@ -19,8 +19,8 @@ import {
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
   getColorLayers,
+  getDataLayers,
   getResolutions,
-  isRgb,
   getByteCount,
   getElementClass,
   getBoundaries,
@@ -61,12 +61,14 @@ function getColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
-function getIsRgbLayerLookup(): { [string]: boolean } {
+function getPackingDegreeLookup(): { [string]: number } {
   const { dataset } = Store.getState();
-  const colorLayers = getColorLayers(dataset);
+  const layers = getDataLayers(dataset);
   // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
-  const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
-  return _.mapValues(colorLayersObject, layer => isRgb(dataset, layer.name));
+  const layersObject = _.keyBy(layers, layer => sanitizeName(layer.name));
+  return _.mapValues(layersObject, layer =>
+    getPackingDegree(getByteCount(dataset, layer.name), getElementClass(dataset, layer.name)),
+  );
 }
 
 function getFloatLayerLookup(): { [string]: false | { min: number, max: number } } {
@@ -537,7 +539,7 @@ class PlaneMaterialFactory {
 
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
-    const isRgbLayerLookup = getIsRgbLayerLookup();
+    const packingDegreeLookup = getPackingDegreeLookup();
     const floatLayerLookup = getFloatLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
@@ -546,24 +548,16 @@ class PlaneMaterialFactory {
     // Don't compile code for segmentation in arbitrary mode
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    const segmentationPackingDegree = hasSegmentation
-      ? getPackingDegree(
-          getByteCount(dataset, segmentationLayer.name),
-          getElementClass(dataset, segmentationLayer.name),
-        )
-      : 0;
-
     const lookupTextureWidth = getLookupBufferSize(
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
 
     const code = getMainFragmentShader({
       colorLayerNames,
-      isRgbLayerLookup,
+      packingDegreeLookup,
       floatLayerLookup,
       hasSegmentation,
       segmentationName,
-      segmentationPackingDegree,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,

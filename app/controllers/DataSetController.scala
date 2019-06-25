@@ -6,7 +6,7 @@ import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
-import com.scalableminds.util.tools.{Fox, JsonHelper, Math, TimeLogger}
+import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserService}

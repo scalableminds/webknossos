@@ -2,7 +2,7 @@ package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   GenericDataSource,
@@ -60,41 +60,35 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None,
       isActive: Boolean = false
-  ) = {
+  ): Fox[Unit] = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
-    organizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
-      case Full(organization) =>
-        for {
-          _ <- dataSetDAO.insertOne(
-            DataSet(
-              newId,
-              dataStore.name,
-              organization._id,
-              publication,
-              Some(dataSource.hashCode()),
-              None,
-              None,
-              None,
-              false,
-              dataSource.toUsable.isDefined,
-              dataSource.id.name,
-              dataSource.scaleOpt,
-              None,
-              dataSource.statusOpt.getOrElse(""),
-              None,
-              details = publication.map(_ => details)
-            ))
-          _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
-          _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
-        } yield ()
-      case _ => {
-        logger.info(s"Ignoring reported dataset for non-existing organization $owningOrganization")
-        Fox.successful(())
-      }
-    }
+    for {
+      organization <- organizationDAO.findOneByName(owningOrganization)
+      _ <- dataSetDAO.insertOne(
+        DataSet(
+          newId,
+          dataStore.name,
+          organization._id,
+          publication,
+          Some(dataSource.hashCode()),
+          None,
+          None,
+          None,
+          false,
+          dataSource.toUsable.isDefined,
+          dataSource.id.name,
+          dataSource.scaleOpt,
+          None,
+          dataSource.statusOpt.getOrElse(""),
+          None,
+          details = publication.map(_ => details)
+        ))
+      _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
+      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
+    } yield ()
   }
 
   def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(
@@ -127,10 +121,21 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
     Fox.serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
       for {
-        foundDatasets <- dataSetDAO.findAllByNamesAndOrganizationName(orgaTuple._2.map(_.id.name), orgaTuple._1)
-        foundDatasetsByName = foundDatasets.groupBy(_.name)
-        _ <- Fox.serialSequence(orgaTuple._2)(dataSource =>
-          updateDataSource(dataStore, dataSource, foundDatasetsByName))
+        organizationBox <- organizationDAO.findOneByName(orgaTuple._1).futureBox
+        result <- organizationBox match {
+          case Full(organization) =>
+            for {
+              foundDatasets <- dataSetDAO.findAllByNamesAndOrganization(orgaTuple._2.map(_.id.name), organization._id)
+              foundDatasetsByName = foundDatasets.groupBy(_.name)
+              _ <- Fox.serialSequence(orgaTuple._2)(dataSource =>
+                updateDataSource(dataStore, dataSource, foundDatasetsByName))
+            } yield ()
+          case _ =>
+            logger.info(
+              s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
+            Fox.successful(())
+        }
+
       } yield ()
     }
   }
@@ -212,10 +217,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                             organization._id,
                                             dataStoreName,
                                             unreportedStatus)
-          case _ => {
+          case _ =>
             logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
             Fox.successful(())
-          }
         }
       } yield ()
     }

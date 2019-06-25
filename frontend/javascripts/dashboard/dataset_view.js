@@ -89,12 +89,12 @@ class DatasetView extends React.PureComponent<Props, State> {
     try {
       this.setState({ isLoading: true });
       const selectedFilterOption = datasetFilteringMode || this.state.datasetFilteringMode;
-      const mapFilterModeToActiveParameter = {
+      const mapFilterModeToUnreportedParameter = {
         showAllDatasets: null,
-        onlyShowReported: true,
-        onlyShowUnreported: false,
+        onlyShowReported: false,
+        onlyShowUnreported: true,
       };
-      const datasets = await getDatasets(mapFilterModeToActiveParameter[selectedFilterOption]);
+      const datasets = await getDatasets(mapFilterModeToUnreportedParameter[selectedFilterOption]);
       datasetCache.set(datasets);
 
       this.setState({ datasets });

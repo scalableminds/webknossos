@@ -657,8 +657,10 @@ export async function downloadNml(
 }
 
 // ### Datasets
-export async function getDatasets(isActive: ?boolean): Promise<Array<APIMaybeUnimportedDataset>> {
-  const parameters = isActive != null ? `?isActive=${String(isActive)}` : "";
+export async function getDatasets(
+  isUnreported: ?boolean,
+): Promise<Array<APIMaybeUnimportedDataset>> {
+  const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
   const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
   assertResponseLimit(datasets);
 

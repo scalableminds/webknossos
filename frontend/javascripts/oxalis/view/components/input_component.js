@@ -72,42 +72,30 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
     }
   };
 
+  blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
+
+  blurOnEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.blurYourself();
+    }
+  };
+
   render() {
-    // const { isTextArea, ...inputProps } = this.props;
-    // const InputClass = isTextArea ? Input.TextArea : Input;
+    const { isTextArea, ...inputProps } = this.props;
+    const InputClass = isTextArea ? Input.TextArea : Input;
     return (
-      <BlurrableInput
-        {...this.props}
+      <InputClass
+        {...inputProps}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.currentValue}
+        onPressEnter={this.blurYourself}
+        onKeyDown={this.blurOnEscape}
       />
     );
   }
-}
-
-type BlurrableInputProps = {
-  isTextArea: boolean,
-};
-
-/**
- * This is a wrapper Component for the antd Input.
- * It automatically blurs the element when enter or escape is pressed.
- */
-export function BlurrableInput(props: BlurrableInputProps) {
-  const blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
-
-  const blurOnEscape = (event: KeyboardEvent) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      blurYourself();
-    }
-  };
-  const { isTextArea, ...inputProps } = props;
-  const InputClass = isTextArea ? Input.TextArea : Input;
-
-  return <InputClass {...inputProps} onPressEnter={blurYourself} onKeyDown={blurOnEscape} />;
 }
 
 export default InputComponent;

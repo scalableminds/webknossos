@@ -24,7 +24,7 @@ type InputComponentState = {
 /*
  * A lightweight wrapper around <Input> to deal with a "jumping cursor" bug.
  * Modifying a input's value will always reset the cursor to the end even if
- * you are editting the middle of a string. Saving the input's value in state
+ * you are editing the middle of a string. Saving the input's value in state
  * remedies this. Rumors claim React v16 will fix this.
  * Inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
  * @class
@@ -73,11 +73,11 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
   };
 
   render() {
-    const { isTextArea, ...inputProps } = this.props;
-    const InputClass = isTextArea ? Input.TextArea : Input;
+    // const { isTextArea, ...inputProps } = this.props;
+    // const InputClass = isTextArea ? Input.TextArea : Input;
     return (
-      <InputClass
-        {...inputProps}
+      <BlurrableInput
+        {...this.props}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
@@ -85,6 +85,29 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
       />
     );
   }
+}
+
+type BlurrableInputProps = {
+  isTextArea: boolean,
+};
+
+/**
+ * This is a wrapper Component for the antd Input.
+ * It automatically blurs the element when enter or escape is pressed.
+ */
+export function BlurrableInput(props: BlurrableInputProps) {
+  const blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
+
+  const blurOnEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      blurYourself();
+    }
+  };
+  const { isTextArea, ...inputProps } = props;
+  const InputClass = isTextArea ? Input.TextArea : Input;
+
+  return <InputClass {...inputProps} onPressEnter={blurYourself} onKeyDown={blurOnEscape} />;
 }
 
 export default InputComponent;

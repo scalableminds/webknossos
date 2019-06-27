@@ -1,10 +1,10 @@
 // @flow
-import { Input } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
 import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
+import { BlurrableInput } from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
 
 type BaseProps<T> = {
@@ -122,15 +122,6 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     });
   };
 
-  blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);
-
-  blurOnEscape = event => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      this.blurYourself();
-    }
-  };
-
   render() {
     const { style, autosize, ...props } = _.omit(this.props, [
       "onChange",
@@ -140,13 +131,11 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     ]);
 
     return (
-      <Input
+      <BlurrableInput
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.text}
-        onPressEnter={this.blurYourself}
-        onKeyDown={this.blurOnEscape}
         style={
           autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }

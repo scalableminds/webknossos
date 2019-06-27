@@ -10,6 +10,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
+import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
@@ -17,8 +18,8 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { hasSegmentation, getElementClass } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -26,6 +27,7 @@ import {
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
   type DatasetLayerConfiguration,
@@ -40,8 +42,8 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
-import Model from "oxalis/model";
 import messages, { settings } from "messages";
+
 import Histogram from "./histogram_view";
 
 const { Panel } = Collapse;
@@ -97,9 +99,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getFindDataButton = (layerName: string, isDisabled: boolean) => (
     <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
-      <Icon
+      <AsyncIconButton
         type="scan"
-        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => {}}
+        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => Promise.resolve()}
         style={{
           float: "right",
           marginTop: 4,
@@ -299,7 +301,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             label={
               <React.Fragment>
                 {settings.gpuMemoryFactor}{" "}
-                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and speed are balanced. Medium is the default.">
+                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>

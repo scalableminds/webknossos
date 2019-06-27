@@ -146,6 +146,8 @@ class DatasetTable extends React.PureComponent<Props, State> {
         }
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
+        className="test1"
+        id="dataset-table"
       >
         <Column
           title="Name"

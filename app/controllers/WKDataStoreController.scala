@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, TimeLogger}
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
@@ -52,14 +52,11 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
 
   def updateAll(name: String) = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
-      TimeLogger
-        .logTime("parsing reported datasource jsons", logger)(request.body.validate[List[InboxDataSource]]) match {
+      request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
-            _ <- TimeLogger.logTimeF("deactivate unreported", logger)(
-              dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext))
-            _ <- TimeLogger.logTimeF("update datasources", logger)(
-              dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext))
+            _ <- dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext)
+            _ <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
           } yield {
             JsonOk
           }

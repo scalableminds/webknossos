@@ -301,7 +301,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             label={
               <React.Fragment>
                 {settings.gpuMemoryFactor}{" "}
-                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and speed are balanced. Medium is the default.">
+                <Tooltip title="Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>

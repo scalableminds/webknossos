@@ -21,8 +21,11 @@ export const setupRenderArea = (
   viewportHeight: number,
   color: number,
 ) => {
-  renderer.setViewport(x, y, viewportWidth, viewportHeight);
-  renderer.setScissor(x, y, viewportWidth, viewportHeight);
+  // In WebGLRenderer.setViewport() and WebGLRenderer.setScissor()
+  // (x, y) is the coordinate of the lower left corner of the rectangular region.
+  const overallHeight = renderer.domElement.height;
+  renderer.setViewport(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
+  renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
@@ -47,7 +50,7 @@ export function renderToTexture(
   width = Math.round(width);
   height = Math.round(height);
 
-  renderer.setViewport(0, 0, width, height);
+  renderer.setViewport(0, 0 + height, width, height);
   renderer.setScissorTest(false);
   renderer.setClearColor(0x000000, 1);
 
@@ -58,8 +61,10 @@ export function renderToTexture(
     // $FlowFixMe plane cannot be arbitraryViewport
     SceneController.updateSceneForCam(plane);
   }
-  renderer.render(scene, camera, renderTarget);
+  renderer.setRenderTarget(renderTarget);
+  renderer.render(scene, camera);
   renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+  renderer.setRenderTarget(null);
   return buffer;
 }
 

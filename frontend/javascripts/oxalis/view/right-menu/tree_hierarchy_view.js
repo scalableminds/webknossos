@@ -190,7 +190,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           }
         });
       });
-
       return copyOfGroupTree;
     };
     this.setState(prevState => ({ groupTree: collapseAllGroups(prevState.groupTree) }));

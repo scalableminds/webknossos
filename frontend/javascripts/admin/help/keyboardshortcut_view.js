@@ -137,6 +137,10 @@ const KeyboardShortcutView = () => {
       keybinding: ".",
       action: "Toggle Viewport Maximization",
     },
+    {
+      keybinding: "-",
+      action: "Toggle Settings Menu",
+    },
   ];
 
   const flightModeShortcuts = [

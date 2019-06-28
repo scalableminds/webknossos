@@ -20,6 +20,7 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | G                             | Decrease the Move Value                     |
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
+| -                             | Toggle Settings Menu                        |
 
 ## Skeleton Tracings
 

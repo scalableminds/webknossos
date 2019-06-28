@@ -34,6 +34,7 @@ import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import Shortcut from "libs/shortcut_component";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -224,6 +225,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
           </RenderToPortal>
           <Layout style={{ display: "flex" }}>
+            <Shortcut keys="-" onTrigger={this.handleSettingsCollapse} />
             <Drawer
               placement="left"
               visible={!this.state.isSettingsCollapsed}

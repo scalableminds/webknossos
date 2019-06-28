@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Alert, Icon, Layout, Tooltip } from "antd";
+import { Alert, Icon, Layout, Drawer, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
@@ -224,17 +224,17 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
           </RenderToPortal>
           <Layout style={{ display: "flex" }}>
-            <Sider
-              collapsible
-              trigger={null}
-              collapsed={this.state.isSettingsCollapsed}
-              collapsedWidth={0}
+            <Drawer
+              placement="left"
+              visible={!this.state.isSettingsCollapsed}
               width={350}
-              style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
+              bodyStyle={{ padding: "24px 0px" }}
+              mask={false}
+              onClose={this.handleSettingsCollapse}
             >
               {/* Don't render SettingsView if it's hidden to improve performance */}
               {!this.state.isSettingsCollapsed ? <SettingsView /> : null}
-            </Sider>
+            </Drawer>
 
             <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
               <TracingView />

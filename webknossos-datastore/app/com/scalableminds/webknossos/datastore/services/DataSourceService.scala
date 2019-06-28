@@ -186,7 +186,7 @@ class DataSourceService @Inject()(
   }
 
   private def guessDataFormat(path: Path): Box[DataSourceImporter] = {
-    val dataFormats = List(KnossosDataFormat, WKWDataFormat)
+    val dataFormats = List(WKWDataFormat, KnossosDataFormat)
 
     PathUtils.lazyFileStreamRecursive(path) { files =>
       val fileNames = files.take(MaxNumberOfFilesForDataFormatGuessing).map(_.getFileName.toString).toList

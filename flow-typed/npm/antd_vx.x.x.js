@@ -21,6 +21,7 @@ declare module "antd" {
     static RangePicker: typeof DatePickerRangePicker;
   }
   declare export class Divider<P> extends React$Component<P> {}
+  declare export class Drawer<P> extends React$Component<P> {}
   declare export class Dropdown<P> extends React$Component<P> {}
   declare export class Icon<P> extends React$Component<P> {}
   declare class InputGroup<P> extends React$Component<P> {}

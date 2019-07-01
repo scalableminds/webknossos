@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable prefer-default-export */
 import { Input } from "antd";
 import * as React from "react";
 import _ from "lodash";
@@ -124,13 +123,22 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur"]);
+    const { style, autosize, ...props } = _.omit(this.props, [
+      "onChange",
+      "value",
+      "changeOnlyOnBlur",
+      "allowDecimals",
+    ]);
+
     return (
       <Input
         onChange={this.handleChange}
         onFocus={this.handleFocus}
         onBlur={this.handleBlur}
         value={this.state.text}
+        style={
+          autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
+        }
         {...props}
       />
     );

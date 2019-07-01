@@ -5,9 +5,8 @@ import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,
 } from "oxalis/model/bucket_data_handling/mappings";
-import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
-  ModeValuesIndices,
+  ViewModeValuesIndices,
   OrthoViewIndices,
   OrthoViews,
   type Vector3,
@@ -24,6 +23,7 @@ import compileShader from "./shader_module_system";
 type Params = {|
   colorLayerNames: string[],
   isRgbLayerLookup: { [string]: boolean },
+  floatLayerLookup: { [string]: false | { min: number, max: number } },
   hasSegmentation: boolean,
   segmentationName: string,
   segmentationPackingDegree: number,
@@ -32,6 +32,7 @@ type Params = {|
   resolutions: Array<Vector3>,
   datasetScale: Vector3,
   isOrthogonal: boolean,
+  lookupTextureWidth: number,
 |};
 
 export function formatNumberAsGLSLFloat(aNumber: number): string {
@@ -56,10 +57,10 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
-  uniform float <%= name %>_brightness;
-  uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -90,7 +91,6 @@ uniform vec3 bboxMin;
 uniform vec3 bboxMax;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
-uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
@@ -98,9 +98,9 @@ uniform bool useBilinearFiltering;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
-uniform float pixelToVoxelFactor;
 uniform float planeID;
-uniform vec3 bucketsPerDim;
+uniform vec3 addressSpaceDimensions;
+uniform vec4 hoveredIsosurfaceId;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -109,7 +109,6 @@ varying mat4 savedModelMatrix;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
-const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
 // For some reason, taking the dataset scale from the uniform results is imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -140,40 +139,31 @@ void main() {
     gl_FragColor = vec4(0.0);
     return;
   }
-  vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
+  vec3 relativeCoords = getRelativeCoords(worldCoordUVW, zoomStep);
 
-  vec3 bucketPosition = div(floor(coords), bucketWidth);
+  vec3 bucketPosition = div(floor(relativeCoords), bucketWidth);
   if (renderBucketIndices) {
     gl_FragColor = vec4(bucketPosition, zoomStep) / 255.;
-    // gl_FragColor = vec4(0.5, 1.0, 1.0, 1.0);
     return;
   }
-  vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   <% if (hasSegmentation) { %>
-    float segmentationFallbackZoomStep = min(<%= segmentationName %>_maxZoomStep, zoomStep + 1.0);
-    bool segmentationHasFallback = segmentationFallbackZoomStep > zoomStep;
-    vec3 segmentationFallbackCoords = floor(getRelativeCoords(worldCoordUVW, segmentationFallbackZoomStep));
-
-    vec4 id = getSegmentationId(coords, segmentationFallbackCoords, segmentationHasFallback);
+    vec4 id = getSegmentationId(worldCoordUVW);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
-    vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
-    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, segmentationFallbackCoords, false);
+    // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
+    // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
+    // Passing the mouse position from the 3D viewport is not an option here, since that position
+    // isn't on the orthogonal planes necessarily.
+    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
   <% } %>
 
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
-  float fallbackZoomStep;
-  bool hasFallback;
-  vec3 fallbackCoords;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
-    fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
-    hasFallback = fallbackZoomStep > zoomStep;
-    fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(
@@ -181,15 +171,23 @@ void main() {
         <%= formatNumberAsGLSLFloat(layerIndex) %>,
         <%= name %>_data_texture_width,
         <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
-        coords,
-        fallbackCoords,
-        hasFallback,
+        worldCoordUVW,
         false,
         fallbackGray
       ).xyz;
 
-    // Brightness / Contrast Transformation for <%= name %>
-    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+    <% if (floatLayerLookup[name]) { %>
+      // Adjust the value range of the float values
+      vec3 range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
+      vec3 rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
+      color_value = (color_value + rangeMin) / range;
+    <% } else { %>
+
+      // Keep the color in bounds of min and max
+      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+      // Scale interval between min and max up to interval from 0 to 255
+      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
+    <% } %>
 
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;
@@ -226,17 +224,16 @@ void main() {
     // to the length of the colorLayer array
     segmentationLayerIndex: params.colorLayerNames.length,
     segmentationPackingDegree: formatNumberAsGLSLFloat(params.segmentationPackingDegree),
-    ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
+    ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
     bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
-    l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
+    l_texture_width: formatNumberAsGLSLFloat(params.lookupTextureWidth),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
     mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
-    floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
     OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

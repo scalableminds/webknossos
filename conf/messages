@@ -82,6 +82,7 @@ dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
 dataSet.name.alreadyTaken=This dataset name is already in use.
+dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
@@ -93,14 +94,20 @@ dataSet.list.failed=Failed to retrieve list of data sets.
 dataSet.url.missing=URL missing in the supplied json
 dataSet.dataStore.missing=dataStore missing in the supplied json
 dataSet.dataSet.missing=dataSet missing in the supplied json
+dataSet.downloadAlreadyRunning=Sample dataset download is already running.
+dataSet.alreadyPresent=Sample dataset is already present.
+dataSet.noResolutions=Data layer does not contain resolutions
+dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 
 dataSource.notFound=Datasource not found on datastore server
 
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
+dataStore.unavailable=DataStore couldn't be reached.
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.
+tracingStore.unavailable=TracingStore couldn't be reached.
 
 zip.file.notFound=No or invalid ZIP file specified
 
@@ -129,6 +136,16 @@ nml.file.invalid=Couldn’t parse file: {0}. {1}
 nml.file.noFile=No file or file with empty content uploaded
 nml.file.multipleVolumes=Cannot upload multiple volume tracings at once
 nml.file.differentDatasets=Cannot upload tracings that belong to different datasets at once
+nml.parameters.notFound=No parameters section found
+nml.scale.invalid=Invalid scale
+nml.element.invalid=Invalid {0}
+nml.comment.node.invalid=Invalid node id of comment {0}"
+nml.node.id.invalid=Invalid {0} node id {1}"
+nml.node.attribute.invalid=Invalid node {0} for node id {1}
+nml.edge.invalid=Invalid edge {0} {1}
+nml.tree.id.invalid=Invalid tree id {0}
+nml.tree.elements.invalid=Invalid {0} in tree {1}
+nml.treegroup.id.invalid=Invalid tree group id {0}
 
 owner=Owner
 priority=Priority
@@ -160,6 +177,7 @@ annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
+annotation.cancelled=This annotation is marked as cancelled and can’t be viewed
 annotation.allFinished=All annotations are archived
 annotation.reopened=Annotation was reopened
 annotation.saved=Annotation was saved

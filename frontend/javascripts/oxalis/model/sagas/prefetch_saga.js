@@ -11,7 +11,7 @@ import { bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
 import {
   getPosition,
   getRequestLogZoomStep,
-  getAreas,
+  getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   isSegmentationLayer,
@@ -116,7 +116,7 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
     currentBucketPickerTick !== lastBucketPickerTick &&
     (position !== lastPosition || zoomStep !== lastZoomStep)
   ) {
-    const areas = yield* select(state => getAreas(state));
+    const areas = yield* select(state => getAreasFromState(state));
     for (const strategy of prefetchStrategiesPlane) {
       if (
         strategy.forContentType(tracingTypes) &&

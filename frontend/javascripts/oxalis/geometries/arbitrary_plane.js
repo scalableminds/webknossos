@@ -25,7 +25,7 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 // attached to bend surface.
 // The result is then projected on a flat surface.
 
-const renderDebuggerPlane = true;
+const renderDebuggerPlane = false;
 
 type ArbitraryMeshes = {|
   mainPlane: THREE.Mesh,
@@ -52,12 +52,9 @@ class ArbitraryPlane {
     this.materialFactory.stopListening();
   }
 
-  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
+  updateAnchorPoints(anchorPoint: ?Vector4): void {
     if (anchorPoint) {
       this.meshes.mainPlane.material.setAnchorPoint(anchorPoint);
-    }
-    if (fallbackAnchorPoint) {
-      this.meshes.mainPlane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
   }
 
@@ -81,7 +78,9 @@ class ArbitraryPlane {
         if (!mesh) {
           return;
         }
-        mesh.matrix.set(
+
+        const meshMatrix = new THREE.Matrix4();
+        meshMatrix.set(
           matrix[0],
           matrix[4],
           matrix[8],
@@ -100,6 +99,9 @@ class ArbitraryPlane {
           matrix[15],
         );
 
+        mesh.matrix.identity();
+
+        mesh.matrix.multiply(meshMatrix);
         mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
         mesh.matrixWorldNeedsUpdate = true;
       };

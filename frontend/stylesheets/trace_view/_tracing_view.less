@@ -25,12 +25,24 @@
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   float: left;
-
   margin: 0;
-  border-color: white;
+  opacity: 0.85;
+
+  &.PLANE_XY {
+    border-color: @xyRed;
+  }
+  &.PLANE_YZ {
+    border-color: @yzBlue;
+  }
+  &.PLANE_XZ {
+    border-color: @xzGreen;
+  }
+  &.TDView {
+    border-color: white;
+  }
 
   &:hover {
-    border-color: #ff0;
+    opacity: 1;
   }
 }
 
@@ -38,7 +50,7 @@
   position: relative;
 }
 #TDViewControls {
-  float: left;
+  text-align: right;
   height: 20px;
   position: absolute;
   top: 0px;
@@ -46,7 +58,8 @@
   width: 100%;
 
   .ant-btn {
-    width: 25%;
+    width: 60px;
+    line-height: 26px;
     & > .colored-dot {
       display: inline-block;
       width: 10px;
@@ -55,13 +68,13 @@
       margin-right: 5px;
     }
     &:nth-child(2) .colored-dot {
-      background-color: red;
+      background-color: @xyRed;
     }
     &:nth-child(3) .colored-dot {
-      background-color: blue;
+      background-color: @yzBlue;
     }
     &:nth-child(4) .colored-dot {
-      background-color: #0f0;
+      background-color: @xzGreen;
     }
   }
 }
@@ -78,6 +91,7 @@
 }
 
 .tracing-layout {
+  padding-top: 4px;
   height: ~"calc(100vh - 48px)";
   display: flex;
 
@@ -147,4 +161,76 @@
 
 .close-button > i {
   margin-right: 0px;
+}
+
+.info-tab-block {
+  p {
+    margin-bottom: 0px;
+  }
+  margin-bottom: 12px;
+}
+
+#portal-navbarTracingSlot {
+  width: 100%;
+  line-height: normal;
+}
+
+// Dark mode for UI within navbar
+.ant-layout-header {
+  @dark-bg: #383d48;
+  @dark-fg: #f1f1f1;
+  @dark-border: #67687b;
+  @primary-border: #1890ff;
+  @hover-border: #40a9ff;
+
+  .ant-btn,
+  .ant-input,
+  .ant-radio-button-wrapper,
+  .ant-select-selection {
+    background-color: @dark-bg;
+    color: @dark-fg;
+    border-color: @dark-border;
+
+    &:hover {
+      border-color: @hover-border;
+    }
+  }
+
+  .ant-select-arrow {
+    color: @dark-fg;
+  }
+
+  .ant-btn-primary {
+    background-color: #2174c1;
+  }
+
+  // Radio button
+  .ant-radio-button-wrapper:first-child {
+    border-left: 1px solid @dark-border;
+  }
+
+  .ant-radio-button-wrapper-checked,
+  .ant-radio-button-wrapper-checked:first-child {
+    border-color: @primary-border;
+    color: @primary-border;
+  }
+
+  .ant-radio-button-wrapper:not(:first-child)::before {
+    background-color: @dark-border;
+  }
+
+  // Primary button in button group
+  .ant-btn-group .ant-btn-primary:not(:first-child):not(:last-child) {
+    border-right-color: @dark-border;
+    border-left-color: @dark-border;
+  }
+
+  .ant-btn-danger {
+    background: #ea7d09;
+
+    &:hover {
+      background: #ea7d09;
+      color: white;
+    }
+  }
 }

@@ -4,6 +4,7 @@
 
 GET           /buildinfo                                                        controllers.Application.buildInfo
 GET           /features                                                         controllers.Application.features
+GET           /health                                                           controllers.Application.health
 POST          /analytics/:namespace                                             controllers.Application.analytics(namespace)
 POST          /triggers/initialData                                             controllers.InitialDataController.triggerInsert
 GET           /maintenance                                                      controllers.MaintenanceController.info
@@ -38,16 +39,16 @@ GET           /user/tasks/peek                                                  
 
 GET           /users                                                            controllers.UserController.list
 GET           /user                                                             controllers.UserController.current
-GET           /user/tasks                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
-GET           /user/annotations                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /user/tasks                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /user/annotations                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/loggedTime                                                  controllers.UserController.loggedTime
 GET           /users/:id                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                             controllers.UserController.updateLastTaskTypeId(id: String)
-GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                 controllers.UserController.usersLoggedTime
-GET           /users/:id/annotations                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int])
+GET           /users/:id/annotations                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # Team
 GET           /teams                                                            controllers.TeamController.list
@@ -69,6 +70,7 @@ GET           /datasets/:organizationName/:dataSetName/sharingToken             
 DELETE        /datasets/:organizationName/:dataSetName/sharingToken             controllers.DataSetController.deleteSharingToken(organizationName: String, dataSetName: String)
 PATCH         /datasets/:organizationName/:dataSetName/teams                    controllers.DataSetController.updateTeams(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/layers/:layer/thumbnail  controllers.DataSetController.thumbnail(organizationName: String, dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
+PUT           /datasets/:organizationName/:dataSetName/clearThumbnailCache      controllers.DataSetController.removeFromThumbnailCache(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName/isValidNewName           controllers.DataSetController.isValidNewName(organizationName: String, dataSetName: String)
 GET           /datasets/:organizationName/:dataSetName                          controllers.DataSetController.read(organizationName: String, dataSetName: String, sharingToken: Option[String])
 
@@ -78,12 +80,12 @@ PUT           /datastores/:name/datasource                                      
 PUT           /datastores/:name/datasources                                     controllers.WKDataStoreController.updateAll(name: String)
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
-POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: String)
+POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 
 # Tracingstores
 GET           /tracingstore                                                     controllers.WKTracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
-POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: String)
+POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                               controllers.UserTokenController.generateTokenForDataStore
@@ -103,7 +105,7 @@ GET           /annotations/:typ/:id/info                                        
 PATCH         /annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long])
+GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 
 GET           /annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
@@ -147,7 +149,7 @@ POST          /projects                                                         
 GET           /projects/:name                                                   controllers.ProjectController.read(name: String)
 DELETE        /projects/:name                                                   controllers.ProjectController.delete(name: String)
 PUT           /projects/:name                                                   controllers.ProjectController.update(name: String)
-GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int])
+GET           /projects/:name/tasks                                             controllers.ProjectController.tasksForProject(name: String, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 PATCH         /projects/:name/incrementEachTasksInstances                       controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 PATCH         /projects/:name/pause                                             controllers.ProjectController.pause(name: String)
 PATCH         /projects/:name/resume                                            controllers.ProjectController.resume(name: String)

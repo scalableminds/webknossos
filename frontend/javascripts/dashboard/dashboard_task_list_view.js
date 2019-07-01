@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -384,7 +382,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
         <span style={{ marginRight: 8 }}>
-          {task.type.summary} (<FormattedDate timestamp={task.created} />)
+          {task.projectName} (<FormattedDate timestamp={task.created} />)
         </span>
         {task.annotation.tracing.skeleton == null ? null : <Tag color="green">skeleton</Tag>}
         {task.annotation.tracing.volume == null ? null : <Tag color="orange">volume</Tag>}
@@ -425,7 +423,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
               <p style={{ marginBottom: 14 }}>
                 <b>Task ID:</b> {task.id}
                 <br />
-                <b>Project:</b> {task.projectName}
+                <b>Task Type:</b> {task.type.summary}
               </p>
               {this.renderActions(task)}
             </Col>

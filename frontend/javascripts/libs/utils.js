@@ -11,6 +11,17 @@ import window, { document, location } from "libs/window";
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
 
+// Fix JS modulo bug
+// http://javascript.about.com/od/problemsolving/a/modulobug.htm
+export function mod(x: number, n: number) {
+  return ((x % n) + n) % n;
+}
+
+export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
+  const [x, y] = tuple;
+  return [fn(x, 0), fn(y, 1)];
+}
+
 export function map3<A, B>(fn: (A, number) => B, tuple: [A, A, A]): [B, B, B] {
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
@@ -310,6 +321,21 @@ export function sleep(timeout: number): Promise<void> {
   });
 }
 
+// Only use this function if you really need a busy wait (useful
+// for testing performance-related edge cases). Prefer `sleep`
+// otherwise.
+export function busyWaitDevHelper(time: number) {
+  const start = new Date();
+  let now;
+
+  while (true) {
+    now = new Date();
+    if (now - start >= time) {
+      break;
+    }
+  }
+}
+
 export function animationFrame(): Promise<void> {
   return new Promise(resolve => {
     window.requestAnimationFrame(resolve);
@@ -416,16 +442,40 @@ export function isNoElementFocussed(): boolean {
   return document.activeElement === document.body;
 }
 
+// https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#Safely_detecting_option_support
+const areEventListenerOptionsSupported = _.once(() => {
+  let passiveSupported = false;
+
+  try {
+    const options = {
+      // $FlowIgnore
+      get passive() {
+        // This function will be called when the browser
+        //   attempts to access the passive property.
+        passiveSupported = true;
+        return true;
+      },
+    };
+
+    window.addEventListener("test", options, options);
+    window.removeEventListener("test", options, options);
+  } catch (err) {
+    passiveSupported = false;
+  }
+  return passiveSupported;
+});
+
 // https://stackoverflow.com/questions/25248286/native-js-equivalent-to-jquery-delegation#
 export function addEventListenerWithDelegation(
   element: HTMLElement,
   eventName: string,
   delegateSelector: string,
   handlerFunc: Function,
+  options: Object = {},
 ) {
   const wrapperFunc = function(event: Event) {
     // $FlowFixMe Flow doesn't know native InputEvents
-    for (let target = event.target; target && target !== this; target = target.parentNode) {
+    for (let { target } = event; target && target !== this; target = target.parentNode) {
       // $FlowFixMe Flow doesn't know native InputEvents
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
@@ -433,7 +483,11 @@ export function addEventListenerWithDelegation(
       }
     }
   };
-  element.addEventListener(eventName, wrapperFunc, false);
+  element.addEventListener(
+    eventName,
+    wrapperFunc,
+    areEventListenerOptionsSupported() ? options : false,
+  );
   return { [eventName]: wrapperFunc };
 }
 
@@ -500,9 +554,9 @@ export function waitForCondition(pred: () => boolean): Promise<void> {
   return new Promise(tryToResolve);
 }
 
-export function waitForSelector(selector: string): Promise<*> {
+export function waitForElementWithId(elementId: string): Promise<*> {
   const tryToResolve = resolve => {
-    const el = document.querySelector(selector);
+    const el = document.getElementById(elementId);
     if (el) {
       resolve(el);
     } else {
@@ -515,13 +569,13 @@ export function waitForSelector(selector: string): Promise<*> {
 export function convertDecToBase256(num: number): Vector4 {
   const divMod = n => [Math.floor(n / 256), n % 256];
   let tmp = num;
-  // eslint-disable-next-line
+  // eslint-disable-next-line one-var
   let r, g, b, a;
 
-  [tmp, r] = divMod(tmp); // eslint-disable-line
-  [tmp, g] = divMod(tmp); // eslint-disable-line
-  [tmp, b] = divMod(tmp); // eslint-disable-line
-  [tmp, a] = divMod(tmp); // eslint-disable-line
+  [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, b] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
 
   // Big endian
   return [a, b, g, r];
@@ -575,4 +629,70 @@ export function chunkIntoTimeWindows<T>(
     },
     [],
   );
+}
+
+export function convertBufferToImage(
+  buffer: Uint8Array,
+  width: number,
+  height: number,
+  flipHorizontally: boolean = true,
+): Promise<Blob> {
+  return new Promise(resolve => {
+    width = Math.round(width);
+    height = Math.round(height);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(buffer);
+    ctx.putImageData(imageData, 0, 0);
+
+    if (flipHorizontally) {
+      ctx.transform(1, 0, 0, -1, 0, height);
+      ctx.drawImage(canvas, 0, 0);
+    }
+
+    canvas.toBlob(blob => resolve(blob));
+  });
+}
+
+export function getIsInIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
+
+export function disableViewportMetatag() {
+  const viewport = document.querySelector("meta[name=viewport]");
+  if (!viewport) {
+    return;
+  }
+  viewport.setAttribute("content", "");
+}
+
+/**
+ * Deep diff between two object, using lodash
+ * @param  {Object} object Object compared
+ * @param  {Object} base   Object to compare with
+ * @return {Object}        Return a new object who represent the diff
+ *
+ * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
+ */
+export function diffObjects(object: Object, base: Object): Object {
+  function changes(_object, _base) {
+    let arrayIndexCounter = 0;
+    return _.transform(_object, (result, value, key) => {
+      if (!_.isEqual(value, _base[key])) {
+        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
+        result[resultKey] =
+          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
+      }
+    });
+  }
+  return changes(object, base);
 }

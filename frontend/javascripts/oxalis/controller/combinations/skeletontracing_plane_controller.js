@@ -1,8 +1,4 @@
-/**
- * skeletontracing_plane_controller.js
- * @flow
- */
-
+// @flow
 import * as THREE from "three";
 import _ from "lodash";
 
@@ -44,6 +40,7 @@ import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import { renderToTexture } from "oxalis/view/rendering_utils";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -139,19 +136,20 @@ function onClick(
   const pickingNode = SceneController.skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
+  const camera = planeView.getCameras()[plane];
 
-  let { width, height } = getInputCatcherRect(plane);
+  let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);
 
-  const buffer = planeView.renderOrthoViewToTexture(plane, pickingScene);
+  const buffer = renderToTexture(plane, pickingScene, camera);
   // Beware of the fact that new browsers yield float numbers for the mouse position
   // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
   const borderWidth = OUTER_CSS_BORDER;
   const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
   // compute the index of the pixel under the cursor,
-  // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-  const index = (x + (width - y) * height) * 4;
+  // while inverting along the y-axis, because WebGL has its origin bottom-left :/
+  const index = (x + (height - y) * width) * 4;
   // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
   const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
   SceneController.skeleton.stopPicking();

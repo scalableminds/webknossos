@@ -1,12 +1,17 @@
-// @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
+// @flow
 import _ from "lodash";
 
+import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
+import constants from "oxalis/constants";
 import test from "ava";
 
-const initialState = {
+const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
+const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
+
+// $FlowFixMe
+const initialState: OxalisState = {
   dataset: {
     dataSource: {
       scale: [1, 1, 2],
@@ -38,35 +43,15 @@ test("Flycam Accessors should calculate the max zoom step", t => {
   t.is(getMaxZoomStep(initialState.dataset), 16);
 });
 
-test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {
+test("Flycam Accessors should calculate the request log zoom step (1/2)", t => {
   t.is(accessors.getRequestLogZoomStep(initialState), 0);
 });
 
-test("Flycam Accessors should calculate the request log zoom step (2/3)", t => {
+test("Flycam Accessors should calculate the request log zoom step (2/2)", t => {
   const state = _.cloneDeep(initialState);
-  state.datasetConfiguration.quality = 1;
-  t.is(accessors.getRequestLogZoomStep(state), 1);
-});
-
-test("Flycam Accessors should calculate the request log zoom step (3/3)", t => {
-  const state = _.cloneDeep(initialState);
-  state.datasetConfiguration.quality = 1;
+  // $FlowFixMe
   state.flycam.zoomStep = 8;
-  t.is(accessors.getRequestLogZoomStep(state), 4);
-});
-
-test("Flycam Accessors should calculate the texture scaling factor (1/2)", t => {
-  const texturePosition = accessors.getTextureScalingFactor(initialState);
-  t.deepEqual(texturePosition, 1.3);
-});
-
-test("Flycam Accessors should calculate the texture scaling factor (2/2)", t => {
-  const state = _.cloneDeep(initialState);
-  state.datasetConfiguration.quality = 1;
-  state.flycam.zoomStep = 8.6;
-
-  const texturePosition = accessors.getTextureScalingFactor(state);
-  t.deepEqual(texturePosition, 0.5375);
+  t.is(accessors.getRequestLogZoomStep(state), 3);
 });
 
 test.only("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", t => {
@@ -87,25 +72,42 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
     [4096, 4096, 512],
   ];
 
-  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(scale, resolutions);
+  const rect = { width: 384, height: 384, top: 0, left: 0 };
+
+  const rects = {
+    PLANE_XY: rect,
+    PLANE_YZ: rect,
+    PLANE_XZ: rect,
+    TDView: rect,
+  };
+
+  const maximumZoomPerResolution = accessors._getMaximumZoomForAllResolutions(
+    constants.MODE_PLANE_TRACING,
+    "BEST_QUALITY_FIRST",
+    scale,
+    resolutions,
+    rects,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    DEFAULT_GPU_MEMORY_FACTOR,
+  );
 
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
   const expectedZoomValues = [
-    1.6105100000000008,
-    3.1384283767210035,
-    5.559917313492239,
-    8.954302432552389,
-    17.449402268886445,
-    34.003948586157826,
-    66.26407607736661,
-    142.04293198443185,
+    1.3310000000000006,
+    2.5937424601000028,
+    4.594972986357223,
+    7.4002499442581735,
+    15.86309297171495,
+    34.00394858615784,
+    66.26407607736664,
+    129.12993816766533,
     276.80149049219943,
     539.4077978276367,
     1051.1531995000591,
-    2253.240236044026,
-    5313.0226118483115,
+    2048.400214585478,
+    4390.927778387033,
   ];
 
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);

@@ -11,6 +11,9 @@ import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
 
+// No more than MAX_NUM_ERRORS will be reported to airbrake
+const MAX_NUM_ERRORS = 50;
+
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
   sendLocalErrors: boolean,
@@ -46,6 +49,7 @@ class ErrorHandling {
   sendLocalErrors: boolean;
   commitHash: ?string;
   airbrake: AirbrakeClient;
+  numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {
     if (options == null) {
@@ -84,6 +88,15 @@ class ErrorHandling {
       return notice;
     });
 
+    // Do not report more than MAX_NUM_ERRORS to airbrake
+    this.airbrake.addFilter(notice => {
+      this.numberOfErrors++;
+      if (this.numberOfErrors <= MAX_NUM_ERRORS) {
+        return notice;
+      }
+      return null;
+    });
+
     if (!this.sendLocalErrors) {
       this.airbrake.addFilter(notice => {
         if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
@@ -92,6 +105,15 @@ class ErrorHandling {
         return null;
       });
     }
+
+    // Remove airbrake's unhandledrejection handler
+    window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
+    window.addEventListener("unhandledrejection", event => {
+      // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
+      this.notify(Error("Unhandled Rejection"), {
+        originalError: event.reason instanceof Error ? event.reason.toString() : event.reason,
+      });
+    });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
       if (error == null) {
@@ -107,24 +129,9 @@ class ErrorHandling {
     };
   }
 
-  notify(error: Error, optParams: Object = {}, escalateToSlack: boolean = false) {
+  notify(error: Error, optParams: Object = {}) {
     const actionLog = getActionLog();
     this.airbrake.notify({ error, params: { ...optParams, actionLog } });
-    if (escalateToSlack) {
-      const webhookUrl =
-        "https://hooks.slack.com/services/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";
-      fetch(webhookUrl, {
-        method: "POST",
-        headers: {},
-        body: JSON.stringify({
-          text: `*Inconsistent tracing* :k:
-*Error*: \`${error.toString()}\`
-*Url*: \`${location.href}\`
-*Action Log*: \`${JSON.stringify(actionLog)}\`
-*Params*: \`${JSON.stringify(optParams)}\``,
-        }),
-      });
-    }
   }
 
   assertExtendContext(additionalContext: Object) {

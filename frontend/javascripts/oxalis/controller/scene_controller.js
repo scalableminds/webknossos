@@ -34,7 +34,6 @@ import constants, {
   type BoundingBoxType,
   type OrthoView,
   type OrthoViewMap,
-  OrthoViewValues,
   OrthoViewValuesWithoutTDView,
   OrthoViews,
   type Vector3,
@@ -49,7 +48,7 @@ const CUBE_COLOR = 0x999999;
 class SceneController {
   skeleton: Skeleton;
   current: number;
-  displayPlane: OrthoViewMap<boolean>;
+  isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   cube: Cube;
   userBoundingBox: Cube;
@@ -60,21 +59,24 @@ class SceneController {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
   rootGroup: THREE.Object3D;
-  stlMeshes: { [key: string]: THREE.Mesh };
-  isosurfacesGroup: THREE.Group;
+  stlMeshes: { [key: string]: THREE.Mesh } = {};
+
+  // isosurfacesRootGroup holds lights and one group per segmentation id.
+  // Each group can hold multiple meshes.
+  isosurfacesRootGroup: THREE.Group;
+  isosurfacesGroupsPerSegmentationId: { [key: number]: THREE.Group } = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
   constructor() {
     _.extend(this, BackboneEvents);
     this.current = 0;
-    this.displayPlane = {
+    this.isPlaneVisible = {
       [OrthoViews.PLANE_XY]: true,
       [OrthoViews.PLANE_YZ]: true,
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.stlMeshes = {};
   }
 
   initialize() {
@@ -91,13 +93,13 @@ class SceneController {
     // scene.scale does not have an effect.
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
-    this.isosurfacesGroup = new THREE.Group();
+    this.isosurfacesRootGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
-    this.scene.add(this.isosurfacesGroup);
+    this.scene.add(this.isosurfacesRootGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -128,6 +130,10 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
+  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
+    return this.isosurfacesGroupsPerSegmentationId[cellId];
+  }
+
   addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
     const { id, position } = meshMetaData;
     if (this.stlMeshes[id] != null) {
@@ -143,7 +149,7 @@ class SceneController {
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurface(vertices, segmentationId): void {
+  addIsosurfaceFromVertices(vertices, segmentationId): void {
     let geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -158,6 +164,10 @@ class SceneController {
     // and back to a BufferGeometry
     geometry = new THREE.BufferGeometry().fromGeometry(geometry);
 
+    this.addIsosurfaceFromGeometry(geometry, segmentationId);
+  }
+
+  addIsosurfaceFromGeometry(geometry, segmentationId): void {
     const [hue] = convertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
@@ -178,7 +188,13 @@ class SceneController {
       })
       .start();
 
-    this.isosurfacesGroup.add(mesh);
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      const newGroup = new THREE.Group();
+      this.isosurfacesGroupsPerSegmentationId[segmentationId] = newGroup;
+      this.isosurfacesRootGroup.add(newGroup);
+      newGroup.cellId = segmentationId;
+    }
+    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
   addLights(): void {
@@ -187,7 +203,7 @@ class SceneController {
     // so that the light moves along the cam.
 
     const ambientLight = new THREE.AmbientLight(0x404040, 15); // soft white light
-    this.isosurfacesGroup.add(ambientLight);
+    this.isosurfacesRootGroup.add(ambientLight);
   }
 
   removeSTL(id: string): void {
@@ -252,6 +268,9 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
+
+    // Hide all objects at first, they will be made visible later if needed
+    this.stopPlaneMode();
   }
 
   buildTaskingBoundingBox(taskBoundingBox: ?BoundingBoxType): void {
@@ -270,7 +289,7 @@ class SceneController {
     }
   }
 
-  updateSceneForCam = (id: OrthoView): void => {
+  updateSceneForCam = (id: OrthoView, hidePlanes: boolean = false): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
@@ -279,13 +298,13 @@ class SceneController {
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
-    this.isosurfacesGroup.visible = id === OrthoViews.TDView;
+    this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
     if (id !== OrthoViews.TDView) {
       let ind;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
-          this.planes[planeId].setVisible(true);
+          this.planes[planeId].setVisible(!hidePlanes);
           const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
@@ -297,49 +316,55 @@ class SceneController {
         }
       }
     } else {
+      const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
-        this.planes[planeId].plane.visible = this.displayPlane[planeId];
+        this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
       }
     }
   };
 
-  update = (optPlane?: ArbitraryPlane): void => {
-    const gPos = getPosition(Store.getState().flycam);
-    const globalPosVec = new THREE.Vector3(...gPos);
-    const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+  update(optArbitraryPlane?: ArbitraryPlane): void {
+    const state = Store.getState();
+    const { flycam } = state;
+    const globalPosition = getPosition(flycam);
+    const globalPosVec = new THREE.Vector3(...globalPosition);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
     // all buckets necessary for rendering are addressed. The anchorPoint is
     // defined with bucket indices for the coordinate system of the current zoomStep.
     let anchorPoint;
-    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
-    // coordinate system of the next zoomStep which is used for fallback rendering.
-    let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
-        gPos,
-        zoomStep,
-      );
+      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
     }
 
-    if (optPlane) {
-      optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
-      optPlane.setPosition(globalPosVec);
+    if (optArbitraryPlane) {
+      optArbitraryPlane.updateAnchorPoints(anchorPoint);
+      optArbitraryPlane.setPosition(globalPosVec);
     } else {
       for (const currentPlane of _.values(this.planes)) {
-        currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+        currentPlane.updateAnchorPoints(anchorPoint);
         currentPlane.setPosition(globalPosVec);
-        currentPlane.setScale(planeScale);
+        const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
+        const isVisible = scaleX > 0 && scaleY > 0;
+        if (isVisible) {
+          this.isPlaneVisible[currentPlane.planeID] = true;
+          currentPlane.setScale(scaleX, scaleY);
+        } else {
+          this.isPlaneVisible[currentPlane.planeID] = false;
+          // Set the scale to non-zero values, since threejs will otherwise
+          // complain about non-invertible matrices.
+          currentPlane.setScale(1, 1);
+        }
       }
     }
-  };
+  }
 
   setDisplayCrosshair(value: boolean): void {
     for (const plane of _.values(this.planes)) {
@@ -362,13 +387,6 @@ class SceneController {
     }
     app.vent.trigger("rerender");
   }
-
-  setDisplayPlanes = (value: boolean): void => {
-    for (const planeId of OrthoViewValues) {
-      this.displayPlane[planeId] = value;
-    }
-    app.vent.trigger("rerender");
-  };
 
   getRootNode(): THREE.Object3D {
     return this.rootNode;
@@ -399,6 +417,9 @@ class SceneController {
     this.cube.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
+    if (this.isosurfacesRootGroup != null) {
+      this.isosurfacesRootGroup.visible = false;
+    }
   }
 
   startPlaneMode(): void {
@@ -419,11 +440,6 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.userConfiguration.displayCrosshair,
       displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
-    );
-
-    listenToStoreProperty(
-      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
-      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
     );
 
     listenToStoreProperty(

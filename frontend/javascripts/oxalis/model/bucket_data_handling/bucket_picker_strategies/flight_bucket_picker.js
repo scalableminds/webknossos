@@ -1,16 +1,11 @@
 // @flow
-import PriorityQueue from "js-priority-queue";
-
+import type { EnqueueFunction } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   globalPositionToBucketPosition,
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Store from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
@@ -26,10 +21,8 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
   const bucketLookUp = [];
   const maybeAddBucket = (bucketPos: Vector4) => {
     const [x, y, z] = bucketPos;
-    /* eslint-disable-next-line */
     bucketLookUp[x] = bucketLookUp[x] || [];
     const lookupX = bucketLookUp[x];
-    /* eslint-disable-next-line */
     lookupX[y] = lookupX[y] || [];
     const lookupY = lookupX[y];
 
@@ -43,20 +36,20 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
 }
 
 export default function determineBucketsForFlight(
-  cube: DataCube,
-  bucketQueue: PriorityQueue,
+  resolutions: Array<Vector3>,
+  centerPosition: Vector3,
+  sphericalCapRadius: number,
+  enqueueFunction: EnqueueFunction,
   matrix: Matrix4x4,
   logZoomStep: number,
-  fallbackZoomStep: number,
-  isFallbackAvailable: boolean,
+  abortLimit?: number,
 ): void {
-  const { sphericalCapRadius } = Store.getState().userConfiguration;
-  const resolutions = getResolutions(Store.getState().dataset);
-  const centerPosition = getPosition(Store.getState().flycam);
   const queryMatrix = M4x4.scale1(1, matrix);
   const width = constants.VIEWPORT_WIDTH;
   const halfWidth = width / 2;
   const cameraVertex = [0, 0, -sphericalCapRadius];
+  const fallbackZoomStep = logZoomStep + 1;
+  const isFallbackAvailable = fallbackZoomStep < resolutions.length;
 
   const transformToSphereCap = _vec => {
     const vec = V3.sub(_vec, cameraVertex);
@@ -74,7 +67,7 @@ export default function determineBucketsForFlight(
   const cameraDirection = V3.sub(centerPosition, cameraPosition);
   V3.scale(cameraDirection, 1 / Math.abs(V3.length(cameraDirection)), cameraDirection);
 
-  const iterStep = 10;
+  const iterStep = 8;
   for (let y = -halfWidth; y <= halfWidth; y += iterStep) {
     const xOffset = y % iterStep;
     for (let x = -halfWidth - xOffset; x <= halfWidth + xOffset; x += iterStep) {
@@ -149,12 +142,13 @@ export default function determineBucketsForFlight(
   const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 
+  let currentCount = 0;
   for (const bucketAddress of traversedBuckets) {
-    const bucket = cube.getOrCreateBucket(bucketAddress);
-
-    if (bucket.type !== "null") {
-      const priority = 0;
-      bucketQueue.queue({ bucket, priority });
+    const priority = 0;
+    enqueueFunction(bucketAddress, priority);
+    currentCount++;
+    if (abortLimit != null && currentCount > abortLimit) {
+      return;
     }
   }
 }

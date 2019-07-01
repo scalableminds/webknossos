@@ -1,4 +1,4 @@
-# Sharing
+# Collaboration & Sharing
 webKnossos is built for working collaboratively and sharing your work with the community.
 webKnossos can share both skeleton annotations of large structures as well as raw datasets and segmentations for showcasing the data.
 The sharing features discussed here refer to sharing scenarios with colleagues, reviewers, and publishers outside of your webKnossos organization or your lab.
@@ -9,7 +9,7 @@ To manage access rights to certain datasets for webKnossos users check out [the 
 
 Dataset sharing allows outside users to view your datasets and segmentation layers within webKnossos.
 Shared resources can be accessed through a direct URL or can be featured on a spotlight gallery for showcasing your work.
-[Please contact us](mailto:hello@scalableminds.com) to feature your dataset on https://demo.webknossos.org.
+[Please contact us](mailto:hello@scalableminds.com) to feature your dataset on https://webknossos.org.
 
 Sharing a dataset is useful for multiple scenarios: 
 - You recorded a novel microscopy dataset and want to include links to it in your paper or for reviewers. Use wklink.org to shorten these URLs, e.g. https://wklink.org/5386 ([contact us](mailto:hello@scalableminds.com)).
@@ -17,6 +17,10 @@ Sharing a dataset is useful for multiple scenarios:
 - You have worked and published several datasets over the years and want to have a single gallery for all your public datasets.
 
 webKnossos shares datasets publicly (everyone can view them without any login) or privately (a login or special URLs are required to view the link).
+
+{% embed url="https://www.youtube.com/watch?v=muJLCnzEAqk "%}
+
+{% embed url="https://www.youtube.com/watch?v=Ut4m6L3nYdY "%}
 
 ### Private Sharing for Review
 A privately shared dataset can only be accessed from outside users your using the correct URL.
@@ -105,3 +109,5 @@ Otherwise, the annotation and data cannot be loaded by webKnossos and an error w
 {% hint style='info' %}
 Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.
 {% endhint %}
+
+{% embed url="https://www.youtube.com/watch?v=hcm8Jx22DG8 "%}

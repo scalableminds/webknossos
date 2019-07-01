@@ -1,8 +1,10 @@
 // @flow
 import moment from "moment";
 
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+
+const { ThinSpace, MultiplicationSymbol } = Unicode;
 
 const COLOR_MAP: Array<string> = [
   "#6962C5",
@@ -37,13 +39,42 @@ export function formatTuple(tuple: ?(Array<number> | Vector3 | Vector6)) {
   }
 }
 
-export function formatScale(scaleArr: Vector3): string {
+export function formatScale(scaleArr: ?Vector3, roundTo?: number = 2): string {
   if (scaleArr != null && scaleArr.length > 0) {
-    const scaleArrRounded = scaleArr.map(value => Utils.roundTo(value, 2));
-    return `${scaleArrRounded.join(" × ")} nm³`;
+    let unit = "nm³";
+    let scaleArrAdjusted = scaleArr;
+    const smallestValue = Math.min(...scaleArr);
+    if (smallestValue > 1000000) {
+      scaleArrAdjusted = scaleArr.map(value => value / 1000000);
+      unit = "mm³";
+    } else if (smallestValue > 1000) {
+      scaleArrAdjusted = scaleArr.map(value => value / 1000);
+      unit = "μm³";
+    }
+    const scaleArrRounded = scaleArrAdjusted.map(value => Utils.roundTo(value, roundTo));
+    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}/voxel`;
   } else {
     return "";
   }
+}
+
+export function formatNumberToLength(numberInNm: number): string {
+  if (numberInNm < 1000) {
+    return `${numberInNm.toFixed(0)}${ThinSpace}nm`;
+  } else if (numberInNm < 1000000) {
+    return `${(numberInNm / 1000).toFixed(1)}${ThinSpace}μm`;
+  } else {
+    return `${(numberInNm / 1000000).toFixed(1)}${ThinSpace}mm`;
+  }
+}
+
+export function formatExtentWithLength(
+  extent: Object,
+  formattingFunction: number => string,
+): string {
+  return `${formattingFunction(extent.width)}${ThinSpace}×${ThinSpace}${formattingFunction(
+    extent.height,
+  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth)}`;
 }
 
 export function formatMilliseconds(durationMilliSeconds: number): string {
@@ -65,6 +96,20 @@ export function formatSeconds(durationSeconds: number): string {
     timeString = `${days}d ${hours}h ${minutes}m ${seconds}s`;
   }
   return timeString;
+}
+
+export function formatDurationToHoursAndMinutes(
+  durationInMillisecons: number,
+  minMinutes: number = 1,
+) {
+  // Moment does not provide a format method for durations, so we have to do it manually.
+  const duration = moment.duration(durationInMillisecons);
+  const minutesAsString = `${duration.minutes() < 10 ? 0 : ""}${Math.max(
+    duration.minutes(),
+    minMinutes,
+  )}`;
+  const hoursAsString = `${duration.hours() < 10 ? 0 : ""}${duration.hours()}`;
+  return `${hoursAsString}:${minutesAsString}`;
 }
 
 export function formatHash(id: string): string {

@@ -1,9 +1,9 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import { alert } from "libs/window";
 import { setSaveBusyAction } from "oxalis/model/actions/save_actions";
 import DiffableMap from "libs/diffable_map";
+import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -21,13 +21,15 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
 const {
-  compactSaveQueue,
   pushTracingTypeAsync,
   sendRequestToServer,
   toggleErrorHighlighting,
@@ -97,9 +99,9 @@ test("SaveSaga should send update actions", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next(); // setLastSaveTimestampAction
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
-  saga.next(SaveActions.pushSaveQueueAction(updateActions));
+  saga.next(SaveActions.pushSaveQueueTransaction(updateActions));
   saga.next(); // select state
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE));
   saga.next(); // select state
@@ -107,7 +109,7 @@ test("SaveSaga should send update actions", t => {
 
   // Test that loop repeats
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -138,28 +140,29 @@ test("SaveSaga should retry update actions", t => {
     [UpdateActions.createEdge(1, 0, 1), UpdateActions.createEdge(1, 1, 2)],
     TIMESTAMP,
   );
+  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
+  const requestWithTokenCall = call(
+    sendRequestWithToken,
+    `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`,
+    {
+      method: "POST",
+      headers: { "X-Date": `${TIMESTAMP}` },
+      data: saveQueueWithVersions,
+      compress: true,
+    },
+  );
 
   const saga = sendRequestToServer(TRACING_TYPE);
   saga.next();
   saga.next(saveQueue);
   saga.next({ version: LAST_VERSION, type: TRACING_TYPE, tracingId: "1234567890" });
-  const saveQueueWithVersions = addVersionNumbers(saveQueue, LAST_VERSION);
-  expectValueDeepEqual(
-    t,
-    saga.next(TRACINGSTORE_URL),
-    call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
-      method: "POST",
-      headers: { "X-Date": `${TIMESTAMP}` },
-      data: saveQueueWithVersions,
-      compress: true,
-    }),
-  );
+  expectValueDeepEqual(t, saga.next(TRACINGSTORE_URL), requestWithTokenCall);
 
   expectValueDeepEqual(t, saga.throw("Timeout"), call(toggleErrorHighlighting, true));
   // wait for retry
   saga.next();
   // should retry
-  expectValueDeepEqual(t, saga.next(), call(sendRequestToServer, TRACING_TYPE, 1));
+  expectValueDeepEqual(t, saga.next(), requestWithTokenCall);
 });
 
 test("SaveSaga should escalate on permanent client error update actions", t => {
@@ -186,7 +189,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
 
   saga.throw({ status: 409 });
   const alertEffect = saga.next().value;
-  t.is(alertEffect.CALL.fn, alert);
+  t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);
 });
 
@@ -198,7 +201,7 @@ test("SaveSaga should send update actions right away", t => {
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS[0]));
   saga.next();
   saga.next(); // select state
-  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
   saga.next(); // race
   saga.next(SaveActions.saveNowAction()); // put setSaveBusyAction
   saga.next(); // select state

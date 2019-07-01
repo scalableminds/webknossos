@@ -1,10 +1,11 @@
 // @flow
 
-import { Button, Upload, Checkbox, Icon, Input, Modal, Spin } from "antd";
+import { Button, Checkbox, Icon, Input, Modal, Spin, Tooltip, Upload } from "antd";
+import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
-import type { Dispatch } from "redux";
 
+import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
@@ -12,15 +13,23 @@ import { Vector3Input } from "libs/vector_input";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
+  importIsosurfaceFromStlAction,
+  triggerIsosurfaceDownloadAction,
   updateLocalMeshMetaDataAction,
   updateRemoteMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
+import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { ExtractReturn } from "libs/type_helpers";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const ButtonGroup = Button.Group;
+
+export const stlIsosurfaceConstants = {
+  isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
+  cellIdIndex: 3, // Write cell index after the isosurfaceMarker
+};
 
 // This file defines the components EditMeshModal and MeshesView.
 
@@ -81,7 +90,17 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   async onStlUpload(info) {
     dispatch(setImportingMeshStateAction(true));
     const buffer = await readFileAsArrayBuffer(info.file);
-    dispatch(createMeshFromBufferAction(info.file.name, buffer));
+
+    if (isIsosurfaceStl(buffer)) {
+      trackAction("Import Isosurface Mesh from STL");
+      dispatch(importIsosurfaceFromStlAction(buffer));
+    } else {
+      trackAction("Import STL");
+      dispatch(createMeshFromBufferAction(info.file.name, buffer));
+    }
+  },
+  downloadIsosurface() {
+    dispatch(triggerIsosurfaceDownloadAction());
   },
 });
 
@@ -104,7 +123,6 @@ const getCheckboxStyle = isLoaded =>
         color: "#989898",
       };
 
-// eslint-disable-next-line
 class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMetaData }> {
   state = {
     currentlyEditedMesh: null,
@@ -130,6 +148,11 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
               Import
             </ButtonComponent>
           </Upload>
+          <Tooltip title="Download the isosurface of the currently active cell as STL.">
+            <ButtonComponent icon="download" onClick={this.props.downloadIsosurface}>
+              Download
+            </ButtonComponent>
+          </Tooltip>
         </ButtonGroup>
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal

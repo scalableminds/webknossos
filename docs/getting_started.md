@@ -3,8 +3,10 @@
 Welcome to the webKnossos documentation.
 Feel free to [drop us a line](mailto:hello@scalableminds.com) or [create a Pull Request](https://github.com/scalableminds/webknossos/pulls) if you have any suggestions for improving the documentation.
 
+{% embed url="https://www.youtube.com/watch?v=tNwDvo5MnDc "%}
+
 ## Try webKnossos
-We host a public instance of webKnossos for trial purposes at https://try.webknossos.org.
+We host a public instance of webKnossos for trial purposes at https://webknossos.org.
 Visit the page and create your organization to get started.
 The trial is limited to 2 months of use.
 If you would like to continue using webKnossos, we offer managed hosting plans for uninterrupted service.
@@ -21,7 +23,7 @@ git clone https://github.com/scalableminds/webknossos.git
 cd webknossos
 
 docker-compose pull webknossos
-docker-compose up webknossos
+./start-docker.sh
 ```
 
 This will start an instance of webKnossos on http://localhost:9000/.
@@ -30,7 +32,7 @@ This will create a folder for your data at `webknossos/binaryData/<organization 
 
 {% hint style='info' %}
 For production setups, we recommend more elaborate configurations with a public domain name and HTTPS support.
-[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup. 
+[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup.
 {% endhint %}
 
 You may also install webKnossos without Docker.
@@ -59,8 +61,7 @@ For small datasets (max. 1GB), you can use the upload functionality provide in t
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
-If you do not have a compatible dataset available, you can use [this small dataset excerpt (300 MB)](https://webknossos.org/data/e2006_wkw.zip) for testing purposes.
-The data was published by [Helmstaedter et al., 2011](https://www.nature.com/articles/nn.2868).
+If you do not have a compatible dataset available, you can use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
 
 By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
@@ -70,12 +71,12 @@ However, webKnossos includes fine-grained permissions to assign datasets to grou
 
 
 ## Your First Annotation
-To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md). 
-Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation. 
-webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons. 
+To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md).
+Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation.
+webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons.
 
-Drag the mouse while pressing the left mouse button to navigate the dataset. 
-Right-click in the data to place markers, called nodes. 
+Drag the mouse while pressing the left mouse button to navigate the dataset.
+Right-click in the data to place markers, called nodes.
 Basic movement in the dataset is done with the mouse wheel or by pressing the spacebar keyboard shortcut.
 
 Learn more about the skeleton, volume, and hybrid annotations as well as the interface in the [Tracing UI guide](./tracing_ui.md).
@@ -88,8 +89,10 @@ Now you know the basics of webKnossos.
 Feel free to explore more features of webKnossos in this documentation.
 
 * [Dashboard](./dashboard.md)
+* [Skeleton Annotations](./skeleton_annotation.md)
+* [Volume Annotations & Proof-Reading](./volume_annotation.md)
 * [Keyboard Shortcuts](./keyboard_shortcuts.md)
-* [Tracing UI](./tracing_ui.md)
+* [Understanding the User Interface](./tracing_ui.md)
 * [Sharing](./sharing.md)
 * [Datasets](./datasets.md) and [Data Formats](./data_formats.md)
 * [User and Permission Management](./users.md)

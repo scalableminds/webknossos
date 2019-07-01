@@ -16,21 +16,20 @@ import scala.reflect.ClassTag
 object ExtendedTypes {
 
   implicit class ExtendedBox[A](val box: Box[A]) extends AnyVal {
-    def passFailure(f: Failure => Unit): Box[A] = {
+    def passFailure(f: Failure => Unit): Box[A] =
       box.pass {
         case failure: Failure => f(failure)
-        case _ => ()
+        case _                => ()
       }
-    }
   }
 
   implicit class ExtendedList[A](val list: List[A]) extends AnyVal {
-    def futureSort[B](f: A => Future[B])(implicit ord: Ordering[B]): Future[List[A]] = {
-      Future.traverse(list) {
-        e =>
+    def futureSort[B](f: A => Future[B])(implicit ord: Ordering[B]): Future[List[A]] =
+      Future
+        .traverse(list) { e =>
           f(e).map(_ -> e)
-      }.map(_.sortBy(_._1).map(_._2))
-    }
+        }
+        .map(_.sortBy(_._1).map(_._2))
   }
 
   implicit class ExtendedArray[A](val array: Array[A]) extends AnyVal {
@@ -49,7 +48,7 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedArraySeq[T](val as: Seq[Array[T]]) {
-    def appendArrays(implicit c: ClassTag[T]): Array[T] = {
+    def appendArrays(implicit c: ClassTag[T]): Array[T] =
       if (as.size == 1)
         as.head
       else {
@@ -64,7 +63,6 @@ object ExtendedTypes {
         }
         combined
       }
-    }
   }
 
   implicit class When[F](fun: F) {
@@ -73,15 +71,15 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedByteArray(val b: Array[Byte]) extends AnyVal {
+
     /**
       * Converts this array of bytes to one float value
       */
-    def toFloat: Float = {
+    def toFloat: Float =
       if (b != null && b.length == 4)
         ByteBuffer.wrap(b).getFloat
       else
         Float.NaN
-    }
 
     /**
       * Converts this array of bytes to one int value
@@ -90,7 +88,7 @@ object ExtendedTypes {
 
     def toBooleanFromFloat: Boolean = b match {
       case Array(0x3F, -0x80, 0x0, 0x0) => true
-      case _ => false
+      case _                            => false
     }
 
     /**
@@ -102,7 +100,6 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedDouble(val d: Double) extends AnyVal {
-
 
     /**
       * Patches the value of this double (used during arithmetic operations
@@ -141,6 +138,7 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedFloat(val f: Float) extends AnyVal {
+
     /**
       * Converts this float into an array of bytes
       */
@@ -152,6 +150,7 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedInt(val i: Int) extends AnyVal {
+
     /**
       * Converts this int into an array of bytes
       */
@@ -180,7 +179,7 @@ object ExtendedTypes {
   import scala.concurrent.Future
 
   implicit class ExtendedFutureBox[T](b: Box[Future[Box[T]]]) {
-    def flatten: Future[Box[T]] = {
+    def flatten: Future[Box[T]] =
       b match {
         case Full(f) =>
           f
@@ -189,34 +188,31 @@ object ExtendedTypes {
         case f: Failure =>
           Future.successful(f)
       }
-    }
   }
 
   implicit class ExtendedBooleanFuture(future: Future[Boolean]) {
-    def failIfFalse(errorMsg: String): Future[Box[Boolean]] = {
+    def failIfFalse(errorMsg: String): Future[Box[Boolean]] =
       future.map {
-        case true => Full(true)
+        case true  => Full(true)
         case false => Failure(errorMsg)
       }
-    }
 
-    def failIfTrue(errorMsg: String): Future[Box[Boolean]] = {
+    def failIfTrue(errorMsg: String): Future[Box[Boolean]] =
       future.map {
         case false => Full(false)
-        case true => Failure(errorMsg)
+        case true  => Failure(errorMsg)
       }
-    }
   }
 
   implicit class ExtendedBoolean(val b: Boolean) extends AnyVal {
     def failIfFalse(errorMsg: String): Box[Boolean] = b match {
-      case true => Full(true)
+      case true  => Full(true)
       case false => Failure(errorMsg)
     }
 
     def failIfTrue(errorMsg: String): Box[Boolean] = b match {
       case false => Full(false)
-      case true => Failure(errorMsg)
+      case true  => Failure(errorMsg)
     }
   }
 
@@ -245,7 +241,7 @@ object ExtendedTypes {
   }
 
   implicit class ExtendedListOfBoxes[T](l: List[Box[T]]) {
-    def combine: Box[List[T]] = {
+    def combine: Box[List[T]] =
       l.foldLeft[Box[List[T]]](Full(List.empty))((result: Box[List[T]], elemBox: Box[T]) => {
         result.flatMap { l2 =>
           elemBox match {
@@ -258,7 +254,6 @@ object ExtendedTypes {
           }
         }
       })
-    }
   }
 
 }

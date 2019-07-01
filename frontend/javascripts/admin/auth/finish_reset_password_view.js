@@ -8,6 +8,7 @@ import Toast from "libs/toast";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
+const { Password } = Input;
 
 type Props = {
   form: Object,
@@ -44,21 +45,21 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
   };
 
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
-    const value = e.target.value;
+    const { value } = e.target;
     this.setState(prevState => ({ confirmDirty: prevState.confirmDirty || !!value }));
   };
 
   checkPassword = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && value !== form.getFieldValue("password.password1")) {
-      callback(messages["auth.registration_password_missmatch"]);
+      callback(messages["auth.registration_password_mismatch"]);
     } else {
       callback();
     }
   };
 
   checkConfirm = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && this.state.confirmDirty) {
       form.validateFields(["confirm"], { force: true });
     }
@@ -89,8 +90,7 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="New Password"
                 />,
@@ -112,8 +112,7 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   onBlur={this.handleConfirmBlur}
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Confirm New Password"

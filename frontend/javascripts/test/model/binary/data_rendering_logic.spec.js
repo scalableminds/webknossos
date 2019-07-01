@@ -1,11 +1,15 @@
 // @flow
 
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import test from "ava";
+import constants from "oxalis/constants";
+
+const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
+
+const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 
 const minSpecs = {
   supportedTextureSize: 4096,
@@ -23,12 +27,16 @@ const betterSpecs = {
 };
 
 const grayscaleByteCount = 1;
+const grayscaleElementClass = "uint8";
 const volumeByteCount = 4;
+const volumeElementClass = "uint32";
 
 test("calculateTextureSizeAndCountForLayer: grayscale data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -38,6 +46,8 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -47,6 +57,8 @@ test("calculateTextureSizeAndCountForLayer: grayscale data + betterSpecs", t => 
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     grayscaleByteCount,
+    grayscaleElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -56,6 +68,8 @@ test("calculateTextureSizeAndCountForLayer: color data + minSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     minSpecs,
     volumeByteCount,
+    volumeElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, minSpecs.supportedTextureSize);
   t.is(textureCount, 3);
@@ -65,6 +79,8 @@ test("calculateTextureSizeAndCountForLayer: color data + midSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     midSpecs,
     volumeByteCount,
+    volumeElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
   t.is(textureCount, 1);
@@ -74,16 +90,18 @@ test("calculateTextureSizeAndCountForLayer: color data + betterSpecs", t => {
   const { textureSize, textureCount } = calculateTextureSizeAndCountForLayer(
     betterSpecs,
     volumeByteCount,
+    volumeElementClass,
+    DEFAULT_REQUIRED_BUCKET_CAPACITY,
   );
   t.is(textureSize, midSpecs.supportedTextureSize);
   t.is(textureCount, 1);
 });
 
-const grayscaleLayer1 = { byteCount: grayscaleByteCount };
-const grayscaleLayer2 = { byteCount: grayscaleByteCount };
-const grayscaleLayer3 = { byteCount: grayscaleByteCount };
+const grayscaleLayer1 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
+const grayscaleLayer2 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
+const grayscaleLayer3 = { byteCount: grayscaleByteCount, elementClass: grayscaleElementClass };
 
-const volumeLayer1 = { byteCount: volumeByteCount };
+const volumeLayer1 = { byteCount: volumeByteCount, elementClass: volumeElementClass };
 const getByteCount = layer => layer.byteCount;
 
 function testSupportFlags(t, supportFlags, expectedBasicSupport, expectedMappingSupport) {
@@ -92,7 +110,14 @@ function testSupportFlags(t, supportFlags, expectedBasicSupport, expectedMapping
 }
 
 function computeDataTexturesSetupCurried(spec, hasSegmentation): * {
-  return layers => computeDataTexturesSetup(spec, layers, getByteCount, hasSegmentation);
+  return layers =>
+    computeDataTexturesSetup(
+      spec,
+      layers,
+      getByteCount,
+      hasSegmentation,
+      DEFAULT_REQUIRED_BUCKET_CAPACITY,
+    );
 }
 
 test("Basic support (no segmentation): all specs", t => {

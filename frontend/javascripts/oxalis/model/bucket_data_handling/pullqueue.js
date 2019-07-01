@@ -6,14 +6,10 @@
 import PriorityQueue from "js-priority-queue";
 import _ from "lodash";
 
-import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getResolutionsFactors,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import { type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
 
@@ -29,21 +25,14 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
-const createPriorityQueue = () =>
-  new PriorityQueue({
-    // small priorities take precedence
-    comparator: (b, a) => b.priority - a.priority,
-  });
-
 const BATCH_SIZE = 3;
 
 class PullQueue {
   cube: DataCube;
   queue: Array<PullQueueItem>;
-  priorityQueue: PriorityQueue;
+  priorityQueue: PriorityQueue<PullQueueItem>;
   batchCount: number;
   layerName: string;
-  whitenEmptyBuckets: boolean;
   connectionInfo: ConnectionInfo;
   datastoreInfo: DataStoreInfo;
 
@@ -57,12 +46,11 @@ class PullQueue {
     this.layerName = layerName;
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
-    this.priorityQueue = createPriorityQueue();
+    this.priorityQueue = new PriorityQueue({
+      // small priorities take precedence
+      comparator: (b, a) => b.priority - a.priority,
+    });
     this.batchCount = 0;
-
-    // Debug option.
-    // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
-    this.whitenEmptyBuckets = false;
   }
 
   pull(): Array<Promise<void>> {
@@ -106,8 +94,6 @@ class PullQueue {
         _.sum(bucketBuffers.map(buffer => (buffer != null ? buffer.length : 0))),
       );
 
-      const resolutions = getResolutions(dataset);
-
       for (const [index, bucketAddress] of batch.entries()) {
         const bucketBuffer = bucketBuffers[index];
         const bucket = this.cube.getBucket(bucketAddress);
@@ -115,17 +101,16 @@ class PullQueue {
           continue;
         }
         if (bucketBuffer == null && !renderMissingDataBlack) {
-          bucket.pullFailed(true);
+          bucket.markAsFailed(true);
         } else {
-          const bucketData = bucketBuffer || new Uint8Array(bucket.BUCKET_LENGTH);
-          this.handleBucket(layerInfo, bucketAddress, bucketData, resolutions);
+          this.handleBucket(layerInfo, bucketAddress, bucketBuffer);
         }
       }
     } catch (error) {
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
         if (bucket.type === "data") {
-          bucket.pullFailed(false);
+          bucket.markAsFailed(false);
           if (bucket.dirty) {
             this.add({
               bucket: bucketAddress,
@@ -141,41 +126,11 @@ class PullQueue {
     }
   }
 
-  handleBucket(
-    layerInfo: DataLayerType,
-    bucketAddress: Vector4,
-    bucketData: Uint8Array,
-    resolutions: Array<Vector3>,
-  ): void {
-    const zoomStep = bucketAddress[3];
+  handleBucket(layerInfo: DataLayerType, bucketAddress: Vector4, bucketData: ?Uint8Array): void {
     const bucket = this.cube.getBucket(bucketAddress);
-    this.maybeWhitenEmptyBucket(bucketData);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
       bucket.setVisualizationColor(0x00ff00);
-      if (
-        zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP &&
-        Constants.DOWNSAMPLED_ZOOM_STEP_COUNT === 1
-      ) {
-        const higherAddress = zoomedAddressToAnotherZoomStep(
-          bucketAddress,
-          resolutions,
-          zoomStep + 1,
-        );
-
-        const resolutionsFactors = getResolutionsFactors(
-          resolutions[zoomStep + 1],
-          resolutions[zoomStep],
-        );
-        const higherBucket = this.cube.getOrCreateBucket(higherAddress);
-        if (higherBucket.type === "data") {
-          higherBucket.downsampleFromLowerBucket(
-            bucket,
-            resolutionsFactors,
-            layerInfo.category === "segmentation",
-          );
-        }
-      }
     }
   }
 
@@ -201,20 +156,6 @@ class PullQueue {
     this.priorityQueue.clear();
     for (const el of highestPriorityElements) {
       this.priorityQueue.queue(el);
-    }
-  }
-
-  maybeWhitenEmptyBucket(bucketData: Uint8Array) {
-    if (!this.whitenEmptyBuckets) {
-      return;
-    }
-
-    const allZero = _.reduce(bucketData, (res, e) => res && e === 0, true);
-
-    if (allZero) {
-      for (let i = 0; i < bucketData.length; i++) {
-        bucketData[i] = 255;
-      }
     }
   }
 }

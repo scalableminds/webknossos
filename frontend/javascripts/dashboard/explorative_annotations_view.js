@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
@@ -496,7 +494,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       <Tag
         key={tag}
         color={stringToColor(tag)}
-        afterClose={_.partial(this.removeTagFromSearch, tag)}
+        onClose={_.partial(this.removeTagFromSearch, tag)}
         closable
       >
         {tag}

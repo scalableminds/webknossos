@@ -37,8 +37,6 @@ type OwnProps = {|
   activeTreeId: ?number,
   activeGroupId: ?number,
   treeGroups: Array<TreeGroup>,
-  // TODO: eslint doesn't recognize, that sortBy is indeed used in the getDerivedStateFromProps function
-  // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
   selectedTrees: Array<number>,
@@ -140,7 +138,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onSelectTree = (evt: SyntheticMouseEvent<*>) => {
     // $FlowFixMe .dataset is unknown to flow
     const treeId = parseInt(evt.target.dataset.id, 10);
-    if (evt.ctrlKey) {
+    if (evt.ctrlKey || evt.metaKey) {
       this.props.onSelectTree(treeId);
     } else {
       this.props.deselectAllTrees();

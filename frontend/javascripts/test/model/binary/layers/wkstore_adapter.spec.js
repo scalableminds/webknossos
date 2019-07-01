@@ -1,15 +1,13 @@
 // @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import Base64 from "base64-js";
 import _ from "lodash";
 
+import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
-
-mockRequire.stopAll();
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
@@ -196,9 +194,9 @@ test.serial(
 
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
   const data = new Uint8Array(2);
-  const bucket1 = new DataBucket(8, [0, 0, 0, 0], null);
+  const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null);
   bucket1.data = data;
-  const bucket2 = new DataBucket(8, [1, 1, 1, 1], null);
+  const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null);
   bucket2.data = data;
   const batch = [bucket1, bucket2];
 
@@ -206,7 +204,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
   getBucketData.returns(data);
 
   const expectedSaveQueueItems = {
-    type: "PUSH_SAVE_QUEUE",
+    type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
       {
         name: "updateBucket",
@@ -227,6 +225,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
         },
       },
     ],
+    transactionId: "dummyRequestId",
     tracingType: "volume",
   };
 

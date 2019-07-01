@@ -1,6 +1,7 @@
 import com.google.inject.AbstractModule
 import controllers.InitialDataService
 import models.annotation.AnnotationStore
+import models.binary.DataSetService
 import models.task.TaskService
 import models.user._
 import oxalis.user.UserCache
@@ -19,5 +20,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserDataSetConfigurationDAO]).asEagerSingleton()
     bind(classOf[UserCache]).asEagerSingleton()
     bind(classOf[AnnotationStore]).asEagerSingleton()
+    bind(classOf[DataSetService]).asEagerSingleton()
   }
 }

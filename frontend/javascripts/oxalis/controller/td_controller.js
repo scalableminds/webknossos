@@ -1,17 +1,21 @@
 // @flow
-import * as React from "react";
-import * as Utils from "libs/utils";
-import { InputMouse } from "libs/input";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import CameraController from "oxalis/controller/camera_controller";
-import { voxelToNm } from "oxalis/model/scaleinfo";
-import TrackballControls from "libs/trackball_controls";
-import Store from "oxalis/store";
-import type { OxalisState, Flycam, CameraData, Tracing } from "oxalis/store";
-import * as THREE from "three";
-import { OrthoViews, type Vector3 } from "oxalis/constants";
-import type { Point2, OrthoViewMap } from "oxalis/constants";
 import { connect } from "react-redux";
+import * as React from "react";
+import * as THREE from "three";
+
+import { InputMouse } from "libs/input";
+import {
+  type OrthoView,
+  type OrthoViewMap,
+  OrthoViews,
+  type Point2,
+  type Vector3,
+} from "oxalis/constants";
+import { V3 } from "libs/mjs";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   setViewportAction,
   setTDCameraAction,
@@ -20,8 +24,12 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { voxelToNm } from "oxalis/model/scaleinfo";
+import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } from "oxalis/store";
+import TrackballControls from "libs/trackball_controls";
+import * as Utils from "libs/utils";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
@@ -77,16 +85,12 @@ class TDController extends React.PureComponent<Props> {
 
   initMouse(): void {
     const tdView = OrthoViews.TDView;
-    const inputcatcherSelector = `#inputcatcher_${tdView}`;
-    Utils.waitForSelector(inputcatcherSelector).then(view => {
+    const inputcatcherId = `inputcatcher_${tdView}`;
+    Utils.waitForElementWithId(inputcatcherId).then(view => {
       if (!this.isStarted) {
         return;
       }
-      this.mouseController = new InputMouse(
-        inputcatcherSelector,
-        this.getTDViewMouseControls(),
-        tdView,
-      );
+      this.mouseController = new InputMouse(inputcatcherId, this.getTDViewMouseControls(), tdView);
       this.initTrackballControls(view);
     });
   }
@@ -129,7 +133,23 @@ class TDController extends React.PureComponent<Props> {
       this.props.tracing.skeleton != null &&
       this.props.planeView != null
         ? skeletonController.getTDViewMouseControls(this.props.planeView)
-        : {};
+        : {
+            mouseMove: (delta: Point2, position: Point2) => {
+              Store.dispatch(setMousePositionAction([position.x, position.y]));
+            },
+            leftClick: (_pos: Point2, _plane: OrthoView, event: MouseEvent) => {
+              if (this.props.planeView == null || !event.shiftKey) {
+                return;
+              }
+              const hitPosition = this.props.planeView.performIsosurfaceHitTest();
+              if (!hitPosition) {
+                return;
+              }
+
+              const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
+              Store.dispatch(setPositionAction(unscaledPosition));
+            },
+          };
 
     return {
       ...baseControls,
@@ -180,14 +200,14 @@ class TDController extends React.PureComponent<Props> {
     if (zoomToMouse && this.mouseController) {
       zoomToPosition = this.mouseController.position;
     }
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   moveTDView(delta: Point2): void {
-    const scale = getViewportScale(OrthoViews.TDView);
-    Store.dispatch(moveTDViewXAction((delta.x / scale) * -1));
-    Store.dispatch(moveTDViewYAction((delta.y / scale) * -1));
+    const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
+    Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
+    Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }
 
   render() {

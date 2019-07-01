@@ -1,59 +1,43 @@
 // @flow
+import { saveAs } from "file-saver";
+
 import type { APIDataset } from "admin/api_flow_types";
 import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
-import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { type Saga, _takeEvery, select, call, take } from "oxalis/model/sagas/effect-generators";
+import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
+import type { ImportIsosurfaceFromStlAction } from "oxalis/model/actions/annotation_actions";
+import {
+  type Saga,
+  _takeEvery,
+  call,
+  put,
+  select,
+  take,
+} from "oxalis/model/sagas/effect-generators";
+import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
+import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
+import ThreeDMap from "libs/ThreeDMap";
 import * as Utils from "libs/utils";
+import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
+import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 
-class ThreeDMap<T> {
-  map: Map<number, ?Map<number, ?Map<number, T>>>;
-
-  constructor() {
-    this.map = new Map();
-  }
-
-  get(vec: Vector3): ?T {
-    const [x, y, z] = vec;
-    const atX = this.map.get(x);
-    if (atX == null) {
-      return null;
-    }
-    const atY = atX.get(y);
-    if (atY == null) {
-      return null;
-    }
-    return atY.get(z);
-  }
-
-  set(vec: Vector3, value: T): void {
-    const [x, y, z] = vec;
-    if (this.map.get(x) == null) {
-      this.map.set(x, new Map());
-    }
-    // Flow doesn't understand that the access to X
-    // is guaranteed to be not null due to the above code.
-    // $FlowFixMe
-    if (this.map.get(x).get(y) == null) {
-      // $FlowFixMe
-      this.map.get(x).set(y, new Map());
-    }
-    // $FlowFixMe
-    this.map
-      .get(x)
-      .get(y)
-      .set(z, value);
-  }
-}
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
+
+export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
+  const dataView = new DataView(buffer);
+  const isIsosurface = stlIsosurfaceConstants.isosurfaceMarker.every(
+    (marker, index) => dataView.getUint8(index) === marker,
+  );
+  return isIsosurface;
+}
 
 function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
   const maybeMap = isosurfacesMap.get(segmentId);
@@ -106,7 +90,7 @@ function getNeighborPosition(
 // for datasets is limited in volume tracings etc.), we use another state
 // variable for the "active cell" in view mode. The cell can be changed via
 // shift+click (similar to the volume tracing mode).
-let currentIsosurfaceCellId = 0;
+let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
@@ -114,19 +98,34 @@ const batchCounterPerSegment: { [key: number]: number } = {};
 const MAXIMUM_BATCH_SIZE = 30;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
-  currentIsosurfaceCellId = action.cellId;
+  currentViewIsosurfaceCellId = action.cellId;
 
-  yield* call(ensureSuitableIsosurface);
+  yield* call(ensureSuitableIsosurface, null, action.seedPosition);
 }
 
-function* ensureSuitableIsosurface(): Saga<void> {
-  const segmentId = currentIsosurfaceCellId;
+// This function either returns the activeCellId of the current volume tracing
+// or the view-only active cell id
+function* getCurrentCellId(): Saga<number> {
+  const volumeTracing = yield* select(state => state.tracing.volume);
+  if (volumeTracing != null) {
+    return volumeTracing.activeCellId;
+  }
+
+  return currentViewIsosurfaceCellId;
+}
+
+function* ensureSuitableIsosurface(
+  maybeFlycamAction: ?FlycamAction,
+  seedPosition?: Vector3,
+): Saga<void> {
+  const segmentId = yield* call(getCurrentCellId);
   if (segmentId === 0) {
     return;
   }
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
   const isControlModeSupported = yield* select(
-    state => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+    state =>
+      state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces,
   );
   if (!renderIsosurfaces || !isControlModeSupported) {
     return;
@@ -136,7 +135,8 @@ function* ensureSuitableIsosurface(): Saga<void> {
   if (!layer) {
     return;
   }
-  const position = yield* select(state => getFlooredPosition(state.flycam));
+  const position =
+    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = Math.min(preferredZoomStep, resolutions.length - 1);
@@ -145,7 +145,7 @@ function* ensureSuitableIsosurface(): Saga<void> {
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(
-    maybeLoadIsosurface,
+    loadIsosurfaceWithNeighbors,
     dataset,
     layer,
     segmentId,
@@ -155,7 +155,7 @@ function* ensureSuitableIsosurface(): Saga<void> {
   );
 }
 
-function* maybeLoadIsosurface(
+function* loadIsosurfaceWithNeighbors(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
@@ -163,13 +163,38 @@ function* maybeLoadIsosurface(
   zoomStep: number,
   resolutions: Array<Vector3>,
 ): Saga<void> {
+  let positionsToRequest = [clippedPosition];
+
+  while (positionsToRequest.length > 0) {
+    const position = positionsToRequest.shift();
+    const neighbors = yield* call(
+      maybeLoadIsosurface,
+      dataset,
+      layer,
+      segmentId,
+      position,
+      zoomStep,
+      resolutions,
+    );
+    positionsToRequest = positionsToRequest.concat(neighbors);
+  }
+}
+
+function* maybeLoadIsosurface(
+  dataset: APIDataset,
+  layer: DataLayer,
+  segmentId: number,
+  clippedPosition: Vector3,
+  zoomStep: number,
+  resolutions: Array<Vector3>,
+): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
 
   if (threeDMap.get(clippedPosition)) {
-    return;
+    return [];
   }
   if (batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)) {
-    return;
+    return [];
   }
   batchCounterPerSegment[segmentId]++;
 
@@ -193,24 +218,47 @@ function* maybeLoadIsosurface(
   );
 
   const vertices = new Float32Array(responseBuffer);
-  getSceneController().addIsosurface(vertices, segmentId);
+  getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
 
-  for (const neighbor of neighbors) {
-    const neighborPosition = getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions);
-    yield* call(
-      maybeLoadIsosurface,
-      dataset,
-      layer,
-      segmentId,
-      neighborPosition,
-      zoomStep,
-      resolutions,
-    );
-  }
+  return neighbors.map(neighbor =>
+    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions),
+  );
+}
+
+function* downloadActiveIsosurfaceCell(): Saga<void> {
+  const currentId = yield* call(getCurrentCellId);
+  const sceneController = getSceneController();
+  const geometry = sceneController.getIsosurfaceGeometry(currentId);
+
+  const stl = exportToStl(geometry);
+
+  // Encode isosurface and cell id property
+  const { isosurfaceMarker, cellIdIndex } = stlIsosurfaceConstants;
+  isosurfaceMarker.forEach((marker, index) => {
+    stl.setUint8(index, marker);
+  });
+  stl.setUint32(cellIdIndex, currentId, true);
+
+  const blob = new Blob([stl]);
+  yield* call(saveAs, blob, `isosurface-${currentId}.stl`);
+}
+
+function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
+  const { buffer } = action;
+  const dataView = new DataView(buffer);
+  const segmentationId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
+  const geometry = yield* call(parseStlBuffer, buffer);
+  getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
+  yield* put(setImportingMeshStateAction(false));
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
+  yield _takeEvery(
+    ["CHANGE_ACTIVE_ISOSURFACE_CELL", "SET_ACTIVE_CELL"],
+    changeActiveIsosurfaceCell,
+  );
+  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
 }

@@ -24,7 +24,6 @@ export default class HighlightableRow extends React.PureComponent<Props, State> 
   }
 
   render() {
-    // eslint-disable-next-line no-unused-vars
     const { shouldHighlight, style, ...restProps } = this.props;
     return (
       <tr

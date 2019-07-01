@@ -4,13 +4,12 @@
  */
 
 import * as THREE from "three";
-import TWEEN from "tween.js";
 import _ from "lodash";
 
 import type { SkeletonTracing, Tree, Node } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import EdgeShader from "oxalis/geometries/materials/edge_shader";
 import NodeShader, {
@@ -275,7 +274,7 @@ class Skeleton {
    */
   refresh(skeletonTracing: SkeletonTracing) {
     const state = Store.getState();
-    const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
+    const diff = cachedDiffTrees(this.prevTracing, skeletonTracing);
 
     for (const update of diff) {
       switch (update.name) {
@@ -313,8 +312,8 @@ class Skeleton {
         case "createTree":
           this.updateTreeColor(update.value.id, update.value.color);
           break;
-        case "toggleTree": {
-          const treeId = update.value.id;
+        case "updateTreeVisibility": {
+          const { treeId } = update.value;
           const tree = skeletonTracing.trees[treeId];
           this.updateTreeColor(treeId, tree.color, tree.isVisible);
           break;
@@ -356,20 +355,18 @@ class Skeleton {
           // Unused for now
           break;
         default:
-          throw new Error("[Skeleton] Unhandled skeletontracing diff action");
+          throw new Error(`[Skeleton] Unhandled skeletontracing diff action: ${update.name}`);
       }
     }
 
-    // compute bounding sphere to make ThreeJS happy
-    for (const nodes of this.nodes.buffers) {
-      nodes.geometry.computeBoundingSphere();
-    }
-    for (const edges of this.edges.buffers) {
-      edges.geometry.computeBoundingSphere();
-    }
-
-    if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
-      this.startNodeHighlightAnimation();
+    if (diff.length > 0) {
+      // compute bounding sphere to make ThreeJS happy
+      for (const nodes of this.nodes.buffers) {
+        nodes.geometry.computeBoundingSphere();
+      }
+      for (const edges of this.edges.buffers) {
+        edges.geometry.computeBoundingSphere();
+      }
     }
 
     // Uniforms
@@ -380,7 +377,7 @@ class Skeleton {
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
-    nodeUniforms.planeZoomFactor.value = getPlaneScalingFactor(state.flycam);
+    nodeUniforms.planeZoomFactor.value = getZoomValue(state.flycam);
     nodeUniforms.overrideParticleSize.value = particleSize;
     nodeUniforms.overrideNodeRadius.value = overrideNodeRadius;
     nodeUniforms.activeTreeId.value = activeTreeId;
@@ -444,7 +441,7 @@ class Skeleton {
       this.createEdge(tree.treeId, source, target);
     }
 
-    this.updateTreeColor(tree.treeId, tree.color);
+    this.updateTreeColor(tree.treeId, tree.color, tree.isVisible);
   }
 
   /**
@@ -551,40 +548,6 @@ class Skeleton {
 
   getTreeRGBA(color: Vector3, isVisible: boolean) {
     return color.concat(isVisible ? 1 : 0);
-  }
-
-  /**
-   * Calculates a resizing factor for the active node's radius every time the
-   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
-   */
-  async startNodeHighlightAnimation() {
-    const normal = 1.0;
-    const highlighted = 2.0;
-
-    await this.animateNodeScale(normal, highlighted);
-    await this.animateNodeScale(highlighted, normal);
-  }
-
-  /**
-   * Calculates a resizing factor for the active node's radius every time the
-   * active node id changes. In essence this animates the node's radius to grow/shrink a little.
-   */
-  animateNodeScale(from: number, to: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const setScaleFactor = scale => {
-        this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;
-      };
-
-      const tweenAnimation = new TWEEN.Tween({ scaleFactor: from });
-      tweenAnimation
-        .to({ scaleFactor: to }, 100)
-        .onUpdate(function onUpdate() {
-          setScaleFactor(this.scaleFactor);
-        })
-        .onComplete(resolve)
-        .onStop(reject)
-        .start();
-    });
   }
 }
 

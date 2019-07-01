@@ -1,14 +1,15 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { getUid } from "libs/uid_generator";
 import Date from "libs/date";
 
 type Tracing = "skeleton" | "volume";
 
-type PushSaveQueueAction = {
-  type: "PUSH_SAVE_QUEUE",
+type PushSaveQueueTransaction = {
+  type: "PUSH_SAVE_QUEUE_TRANSACTION",
   items: Array<UpdateAction>,
   tracingType: Tracing,
+  transactionId: string,
 };
 type SaveNowAction = { type: "SAVE_NOW" };
 type ShiftSaveQueueAction = {
@@ -31,7 +32,7 @@ type SetVersionNumberAction = {
 type UndoAction = { type: "UNDO" };
 type RedoAction = { type: "REDO" };
 export type SaveAction =
-  | PushSaveQueueAction
+  | PushSaveQueueTransaction
   | SaveNowAction
   | ShiftSaveQueueAction
   | DiscardSaveQueuesAction
@@ -41,13 +42,15 @@ export type SaveAction =
   | UndoAction
   | RedoAction;
 
-export const pushSaveQueueAction = (
+export const pushSaveQueueTransaction = (
   items: Array<UpdateAction>,
   tracingType: Tracing,
-): PushSaveQueueAction => ({
-  type: "PUSH_SAVE_QUEUE",
+  transactionId: string = getUid(),
+): PushSaveQueueTransaction => ({
+  type: "PUSH_SAVE_QUEUE_TRANSACTION",
   items,
   tracingType,
+  transactionId,
 });
 
 export const saveNowAction = (): SaveNowAction => ({

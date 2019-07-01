@@ -11,7 +11,7 @@ import {
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { parseAsMaybe } from "libs/utils";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
@@ -81,11 +81,12 @@ export async function requestWithFallback(
   const shouldUseDataStore = !isSegmentation || state.tracing.volume == null;
   const requestUrl = shouldUseDataStore ? getDataStoreUrl() : getTracingStoreUrl();
 
-  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch).catch(() =>
-    batch.map(() => null),
-  );
+  const bucketBuffers = await requestFromStore(requestUrl, layerInfo, batch);
   const missingBucketIndices = getNullIndices(bucketBuffers);
 
+  // The request will only be retried for
+  // volume annotations with a fallback layer, for buckets that are missing
+  // on the tracing store (buckets that were not annotated)
   const retry =
     !shouldUseDataStore &&
     missingBucketIndices.length > 0 &&
@@ -153,11 +154,11 @@ function sliceBufferIntoPieces(
   buffer: Uint8Array,
 ): Array<?Uint8Array> {
   let offset = 0;
-  const BUCKET_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
+  const BUCKET_BYTE_LENGTH = constants.BUCKET_SIZE * getByteCountFromLayer(layerInfo);
 
   const bucketBuffers = batch.map((_bucketAddress, index) => {
     const isMissing = missingBuckets.indexOf(index) > -1;
-    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_LENGTH));
+    const subbuffer = isMissing ? null : buffer.subarray(offset, (offset += BUCKET_BYTE_LENGTH));
     return subbuffer;
   });
 
@@ -167,14 +168,15 @@ function sliceBufferIntoPieces(
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const items = [];
   for (const bucket of batch) {
-    const bucketData = bucket.getData();
+    const data = bucket.getData();
     const bucketInfo = createSendBucketInfo(
       bucket.zoomedAddress,
       getResolutions(Store.getState().dataset),
     );
+    const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(bucketData);
+    const base64 = await byteArrayToBase64(byteArray);
     items.push(updateBucket(bucketInfo, base64));
   }
-  Store.dispatch(pushSaveQueueAction(items, "volume"));
+  Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

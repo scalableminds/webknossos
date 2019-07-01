@@ -10,6 +10,7 @@ export const settings = {
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",
   highlightCommentedNodes: "Highlight Commented Nodes",
+  nodeRadius: "Node Radius",
   overrideNodeRadius: "Override Node Radius",
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Display Planes in 3D View",
@@ -28,13 +29,21 @@ export const settings = {
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
   userBoundingBox: "Bounding Box",
+  loadingStrategy: "Loading Strategy",
+  loadingStrategyDescription: `You can choose between loading the best quality first
+    (will take longer until you see data) or alternatively,
+    improving the quality progressively (data will be loaded faster,
+    but it will take more time until the best quality is shown).`,
+  mergerMode: "Enable Merger Mode",
+  gpuMemoryFactor: "Hardware Utilization",
+  autoBrush: "Automatic Brush (Beta)",
 };
 
 export default {
   yes: "Yes",
   no: "No",
   unknown_error:
-    "An unknown error occured. Please try again or check the console for more details.",
+    "An unknown error occurred. Please try again or check the console for more details.",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
@@ -65,8 +74,8 @@ In order to restore the current window, a reload is necessary.`,
   data black. This means that in case of missing data, data of lower quality is rendered
   instead. Only enable this option if you understand its effect. Please refresh
   this page so that the changes can take effect.`,
-  "tracing.copy_position": "Click this button to copy the position.",
-  "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_position": "Copy position to clipboard.",
+  "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -76,8 +85,6 @@ In order to restore the current window, a reload is necessary.`,
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-  "tracing.segmentation_downsampled_data_warning":
-    "Segmentation data is downsampled at this zoom step. This may lead to misleading data rendering. Please zoom in further to see unsampled data.",
   "tracing.no_access": "You are not allowed to access this tracing.",
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -85,7 +92,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
-  "tracing.delete_mulitple_trees": _.template(
+  "tracing.delete_multiple_trees": _.template(
     "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),
   "tracing.group_deletion_message": "Do you want to delete the selected group?",
@@ -107,7 +114,7 @@ In order to restore the current window, a reload is necessary.`,
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
-    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, restarting your browser might also help.",
+    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
@@ -123,8 +130,10 @@ In order to restore the current window, a reload is necessary.`,
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": "The dataset was reloaded successfully",
-  "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.upload_success": "The dataset was uploaded successfully.",
+  "dataset.add_success": "The dataset was added successfully.",
+  "dataset.add_error": "Could not reach the datastore.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
@@ -138,13 +147,16 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
-  "dataset.import.required.name": "Please provide a name for the dataset",
-  "dataset.import.required.datastore": "Please select a datastore for the dataset",
+  "dataset.import.required.name": "Please provide a name for the dataset.",
+  "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
+  "dataset.import.required.url": "Please provide a URL to a dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
+  "dataset.unsupported_segmentation_class":
+    "The segmentation layer was defined as uint24. This format is not supported for segmentations. Please convert the layer to a supported format.",
   "dataset.is_scratch":
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
@@ -159,9 +171,9 @@ In order to restore the current window, a reload is necessary.`,
     "Do you really want to add one additional instance to all tasks of this project?",
   "project.none_selected": "No currently selected project found.",
   "project.successful_active_tasks_transfer":
-    "All active tasks were transfered to the selected user",
+    "All active tasks were transferred to the selected user",
   "project.unsuccessful_active_tasks_transfer":
-    "An error occured while trying to transfer the tasks. Please check your permissions and the server logs",
+    "An error occurred while trying to transfer the tasks. Please check your permissions and the server logs",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
@@ -169,7 +181,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_email_invalid": "The input is not valid E-mail!",
   "auth.registration_password_input": "Please input your password!",
   "auth.registration_password_confirm": "Please confirm your password!",
-  "auth.registration_password_missmatch": "Passwords do not match!",
+  "auth.registration_password_mismatch": "Passwords do not match!",
   "auth.registration_password_length": "Passwords needs min. 8 characters.",
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",

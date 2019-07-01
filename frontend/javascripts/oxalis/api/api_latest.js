@@ -5,17 +5,24 @@
 
 import TWEEN from "tween.js";
 import _ from "lodash";
+import { V3 } from "libs/mjs";
 
-import {
+import Constants, {
+  type BoundingBoxType,
   type ControlMode,
   ControlModeEnum,
   OrthoViews,
   type Vector3,
+  type Vector4,
   type VolumeTool,
   VolumeToolEnum,
 } from "oxalis/constants";
 import { InputKeyboardNoLoop } from "libs/input";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import {
+  type Bucket,
+  getConstructorForElementClass,
+} from "oxalis/model/bucket_data_handling/bucket";
 import type { Versions } from "oxalis/view/version_view";
 import { callDeep } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
@@ -36,9 +43,13 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
+import {
+  bucketPositionToGlobalAddress,
+  globalPositionToBaseBucket,
+} from "oxalis/model/helpers/position_converter";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -76,10 +87,12 @@ import Store, {
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
+import Request from "libs/request";
 import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { type ElementClass } from "admin/api_flow_types";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -254,7 +267,7 @@ class TracingApi {
    * api.tracing.setActiveTree(3);
    */
   setActiveTree(treeId: number) {
-    const tracing = Store.getState().tracing;
+    const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setActiveTreeAction(treeId));
   }
@@ -267,7 +280,7 @@ class TracingApi {
    * api.tracing.setTreeColorIndex(3, 10);
    */
   setTreeColorIndex(treeId: ?number, colorIndex: number) {
-    const tracing = Store.getState().tracing;
+    const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setTreeColorIndexAction(treeId, colorIndex));
   }
@@ -525,7 +538,7 @@ class TracingApi {
     rotation?: Vector3,
   ): void {
     // Let the user still manipulate the "third dimension" during animation
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
       skipDimensions && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
@@ -654,15 +667,23 @@ class DataApi {
   }
 
   /**
+   * Invalidates all downloaded buckets so that they are reloaded on the next movement.
+   */
+  reloadAllBuckets(): void {
+    _.forEach(this.model.dataLayers, dataLayer => dataLayer.cube.collectAllBuckets());
+  }
+
+  /**
    * Sets a mapping for a given layer.
    *
    * @example
    * const position = [123, 123, 123];
-   * const segmentId = await api.data.getDataValue("segmentation", position);
+   * const segmentationLayerName = "segmentation";
+   * const segmentId = await api.data.getDataValue(segmentationLayerName, position);
    * const treeId = api.tracing.getActiveTreeId();
    * const mapping = {[segmentId]: treeId}
    *
-   * api.setMapping("segmentation", mapping);
+   * api.setMapping(segmentationLayerName, mapping);
    */
   setMapping(
     layerName: string,
@@ -683,6 +704,9 @@ class DataApi {
       setMappingAction(
         "<custom mapping>",
         _.clone(mapping),
+        // Object.keys is sorted for numerical keys according to the spec:
+        // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
+        Object.keys(mapping).map(x => parseInt(x, 10)),
         options.colors,
         options.hideUnmappedIds,
       ),
@@ -713,6 +737,14 @@ class DataApi {
    */
   activateMapping(mappingName?: string): void {
     return this.model.getSegmentationLayer().setActiveMapping(mappingName);
+  }
+
+  /**
+   * Returns whether a mapping is currently enabled.
+   *
+   */
+  isMappingEnabled(): boolean {
+    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
   /**
@@ -748,6 +780,8 @@ class DataApi {
 
     if (bucket.type === "null") return 0;
 
+    // todo: use new getBucket api here instead
+
     let needsToAwaitBucket = false;
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
@@ -765,6 +799,115 @@ class DataApi {
     return cube.getDataValue(position, null, zoomStep);
   }
 
+  async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
+    const cube = this.model.getCubeByLayerName(layerName);
+    const pullQueue = this.model.getPullQueueByLayerName(layerName);
+    const bucket = cube.getOrCreateBucket(bucketAddress);
+
+    if (bucket.type === "null") return bucket;
+
+    let needsToAwaitBucket = false;
+    if (bucket.isRequested()) {
+      needsToAwaitBucket = true;
+    } else if (bucket.needsRequest()) {
+      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.pull();
+      needsToAwaitBucket = true;
+    }
+    if (needsToAwaitBucket) {
+      await new Promise(resolve => {
+        bucket.on("bucketLoaded", resolve);
+      });
+    }
+    // Bucket has been loaded by now or was loaded already
+    return bucket;
+  }
+
+  async getDataFor2DBoundingBox(layerName: string, bbox: BoundingBoxType) {
+    const bucketAddresses = this.getBucketAddressesInCuboid(bbox);
+    const buckets = await Promise.all(
+      bucketAddresses.map(addr => this.getLoadedBucket(layerName, addr)),
+    );
+    const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
+    return this.cutOutCuboid(buckets, bbox, elementClass);
+  }
+
+  getBucketAddressesInCuboid(bbox: BoundingBoxType): Array<Vector4> {
+    const buckets = [];
+    const bottomRight = bbox.max;
+    const minBucket = globalPositionToBaseBucket(bbox.min);
+    const topLeft = bucketAddress => bucketPositionToGlobalAddress(bucketAddress, [[1, 1, 1]]);
+    const nextBucketInDim = (bucket, dim) => {
+      const copy = bucket.slice();
+      copy[dim]++;
+      return ((copy: any): Vector4);
+    };
+
+    let bucket = minBucket;
+    while (topLeft(bucket)[0] < bottomRight[0]) {
+      const prevX = bucket.slice();
+      while (topLeft(bucket)[1] < bottomRight[1]) {
+        const prevY = bucket.slice();
+        while (topLeft(bucket)[2] < bottomRight[2]) {
+          buckets.push(bucket);
+          bucket = nextBucketInDim(bucket, 2);
+        }
+        bucket = nextBucketInDim(prevY, 1);
+      }
+
+      bucket = nextBucketInDim(prevX, 0);
+    }
+    return buckets;
+  }
+
+  cutOutCuboid(
+    buckets: Array<Bucket>,
+    bbox: BoundingBoxType,
+    elementClass: ElementClass,
+  ): $TypedArray {
+    const extent = V3.sub(bbox.max, bbox.min);
+    const TypedArrayClass = getConstructorForElementClass(elementClass);
+    const result = new TypedArrayClass(extent[0] * extent[1] * extent[2]);
+    const bucketWidth = Constants.BUCKET_WIDTH;
+    buckets.reverse();
+
+    for (const bucket of buckets) {
+      if (bucket.type === "null") {
+        continue;
+      }
+      const bucketTopLeft = bucketPositionToGlobalAddress(bucket.zoomedAddress, [[1, 1, 1]]);
+      const x = Math.max(bbox.min[0], bucketTopLeft[0]);
+      let y = Math.max(bbox.min[1], bucketTopLeft[1]);
+      let z = Math.max(bbox.min[2], bucketTopLeft[2]);
+
+      const xMax = Math.min(bucketTopLeft[0] + bucketWidth, bbox.max[0]);
+      const yMax = Math.min(bucketTopLeft[1] + bucketWidth, bbox.max[1]);
+      const zMax = Math.min(bucketTopLeft[2] + bucketWidth, bbox.max[2]);
+
+      while (z < zMax) {
+        y = Math.max(bbox.min[1], bucketTopLeft[1]);
+        while (y < yMax) {
+          const dataOffset =
+            (x % bucketWidth) +
+            (y % bucketWidth) * bucketWidth +
+            (z % bucketWidth) * bucketWidth * bucketWidth;
+          const rx = x - bbox.min[0];
+          const ry = y - bbox.min[1];
+          const rz = z - bbox.min[2];
+
+          const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
+          const data =
+            bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
+          const length = xMax - x;
+          result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
+          y += 1;
+        }
+        z += 1;
+      }
+    }
+    return result;
+  }
+
   /**
    * Downloads a cuboid of raw data from a dataset (not tracing) layer. A new window is opened for the download -
    * if that is not the case, please check your pop-up blocker.
@@ -773,7 +916,7 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const dataset = Store.getState().dataset;
+    const { dataset } = Store.getState();
 
     return doWithToken(token => {
       const downloadUrl =
@@ -791,6 +934,28 @@ class DataApi {
       window.open(downloadUrl);
       // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
       return Promise.resolve();
+    });
+  }
+
+  getRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
+    const { dataset } = Store.getState();
+
+    return doWithToken(token => {
+      const downloadUrl =
+        `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
+          dataset.name
+        }/layers/${layerName}/data?resolution=0&` +
+        `token=${token}&` +
+        `x=${topLeft[0]}&` +
+        `y=${topLeft[1]}&` +
+        `z=${topLeft[2]}&` +
+        `width=${bottomRight[0] - topLeft[0]}&` +
+        `height=${bottomRight[1] - topLeft[1]}&` +
+        `depth=${bottomRight[2] - topLeft[2]}`;
+
+      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+
+      return Request.receiveArraybuffer(downloadUrl);
     });
   }
 
@@ -960,6 +1125,7 @@ class UtilsApi {
    *   - SHUFFLE_ALL_TREE_COLORS
    *   - CREATE_COMMENT
    *   - DELETE_COMMENT
+   * @returns {function()} - A function used to unregister the overwriteFunction
    *
    *
    * @example
@@ -971,9 +1137,13 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,
+    overwriteFunction: (
+      store: S,
+      next: (action: A) => void,
+      originalAction: A,
+    ) => void | Promise<void>,
   ) {
-    overwriteAction(actionName, overwriteFunction);
+    return overwriteAction(actionName, overwriteFunction);
   }
 
   /**

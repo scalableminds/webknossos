@@ -7,12 +7,12 @@ import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
 import {
-  BUCKET_SIZE_P,
   type Bucket,
   DataBucket,
   NULL_BUCKET,
   NULL_BUCKET_OUT_OF_BB,
   NullBucket,
+  type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -26,6 +26,7 @@ import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import { type ElementClass } from "admin/api_flow_types";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -39,23 +40,20 @@ class CubeEntry {
 
 class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
-  BUCKET_LENGTH: number;
   ZOOM_STEP_COUNT: number;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   bucketCount: number = 0;
-  BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
-  MAX_UNSAMPLED_ZOOM_STEP: number;
-  BYTE_OFFSET: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
   isSegmentation: boolean;
+  elementClass: ElementClass;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -78,24 +76,18 @@ class DataCube {
   constructor(
     upperBoundary: Vector3,
     resolutionsLength: number,
-    bitDepth: number,
+    elementClass: ElementClass,
     isSegmentation: boolean,
   ) {
     this.upperBoundary = upperBoundary;
+    this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
 
-    this.MAX_UNSAMPLED_ZOOM_STEP = resolutionsLength - 1;
+    this.ZOOM_STEP_COUNT = resolutionsLength;
 
-    // Always add another layer of downsampled buckets, so that we support
-    // zooming out to maxZoomStep + 1
-    this.ZOOM_STEP_COUNT = resolutionsLength + constants.DOWNSAMPLED_ZOOM_STEP_COUNT;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
 
-    this.BIT_DEPTH = bitDepth;
     _.extend(this, BackboneEvents);
-
-    this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
-    this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
 
     this.cubes = [];
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
@@ -137,7 +129,6 @@ class DataCube {
       boundingBox => {
         if (shouldBeRestrictedByTracingBoundingBox()) {
           this.boundingBox = new BoundingBox(boundingBox, this);
-          this.forgetOutOfBoundaryBuckets();
         }
       },
     );
@@ -247,7 +238,7 @@ class DataCube {
   }
 
   createBucket(address: Vector4): Bucket {
-    const bucket = new DataBucket(this.BIT_DEPTH, address, this.temporalBucketManager);
+    const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
     bucket.on({
       bucketLoaded: () => this.trigger("bucketLoaded", address),
     });
@@ -311,18 +302,8 @@ class DataCube {
     const bucketIndex = this.getBucketIndex(address);
     const cube = this.cubes[address[3]];
     if (bucketIndex != null && cube != null) {
+      bucket.destroy();
       cube.data.delete(bucketIndex);
-    }
-  }
-
-  forgetOutOfBoundaryBuckets(): void {
-    for (const cube of this.cubes) {
-      for (const bucketIndex of cube.data.keys()) {
-        const bucket = cube.data.get(bucketIndex);
-        if (bucket instanceof DataBucket && bucket.isPartlyOutsideBoundingBox) {
-          cube.data.delete(bucketIndex);
-        }
-      }
     }
   }
 
@@ -372,11 +353,8 @@ class DataCube {
         }
 
         if (shouldUpdateVoxel) {
-          const labelFunc = (data: Uint8Array): void => {
-            // Write label in little endian order
-            for (let i = 0; i < this.BYTE_OFFSET; i++) {
-              data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
-            }
+          const labelFunc = (data: BucketDataArray): void => {
+            data[voxelIndex] = label;
           };
           bucket.label(labelFunc);
 
@@ -396,20 +374,16 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      let result = 0;
-      // Assuming little endian byte order
-      for (let i = 0; i < this.BYTE_OFFSET; i++) {
-        result += (1 << (8 * i)) * data[voxelIndex + i];
-      }
+      const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = mapping[result];
+        const mappedValue = mapping[dataValue];
         if (mappedValue != null) {
           return mappedValue;
         }
       }
 
-      return result;
+      return dataValue;
     }
 
     return 0;
@@ -420,7 +394,7 @@ class DataCube {
   }
 
   getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
-    return this.BYTE_OFFSET * (x + y * (1 << BUCKET_SIZE_P) + z * (1 << (BUCKET_SIZE_P * 2)));
+    return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 
   getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {

@@ -1,6 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
-
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Icon, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
@@ -208,7 +206,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
       <React.Fragment>
         {newInactiveUsers.map(user => (
           <Row key={user.id} gutter={16}>
-            <Col span={6}>{`${user.firstName} ${user.lastName} (${user.email}) `}</Col>
+            <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
               <a href="#" onClick={() => this.activateUser(user)}>
                 <Icon type="user-add" />

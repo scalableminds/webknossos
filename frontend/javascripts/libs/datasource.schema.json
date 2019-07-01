@@ -7,6 +7,12 @@
       "minItems": 3,
       "maxItems": 3
     },
+    "types::Vector2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
     "types::BoundingBox": {
       "type": "object",
       "properties": {
@@ -68,7 +74,21 @@
           "properties": {
             "name": { "type": "string" },
             "category": { "enum": ["color", "segmentation"] },
-            "elementClass": { "enum": ["uint8", "uint16", "uint24", "uint32", "uint64", "float,", "double", "int8", "int16", "int32", "int64"] }
+            "elementClass": {
+              "enum": [
+                "uint8",
+                "uint16",
+                "uint24",
+                "uint32",
+                "uint64",
+                "float",
+                "double",
+                "int8",
+                "int16",
+                "int32",
+                "int64"
+              ]
+            }
           },
           "required": ["name", "category", "elementClass"]
         },
@@ -128,9 +148,12 @@
         "properties": {
           "brightness": { "type": "number" },
           "contrast": { "type": "number" },
-          "color": { "$ref": "#/definitions/types::Vector3" }
+          "color": { "$ref": "#/definitions/types::Vector3" },
+          "intensityRange": { "$ref": "#/definitions/types::Vector2" },
+          "isDisabled": { "type": "boolean" },
+          "alpha": { "type": "number" }
         },
-        "required": ["brightness", "contrast", "color"]
+        "required": ["color"]
       }
     }
   }

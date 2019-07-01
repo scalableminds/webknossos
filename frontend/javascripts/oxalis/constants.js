@@ -3,9 +3,9 @@
  * @flow
  */
 
-export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
-export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
-export type Mode = "orthogonal" | "oblique" | "flight" | "volume";
+export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ViewModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
+export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
@@ -39,6 +39,8 @@ export const OrthoViews = {
 };
 export type OrthoView = $Keys<typeof OrthoViews>;
 export type OrthoViewMap<T> = { [key: OrthoView]: T };
+export type OrthoViewExtents = $ReadOnly<OrthoViewMap<Vector2>>;
+export type OrthoViewRects = $ReadOnly<OrthoViewMap<Rect>>;
 
 export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
@@ -49,6 +51,11 @@ export type ArbitraryView = $Keys<typeof ArbitraryViews>;
 export type ArbitraryViewMap<T> = { [key: ArbitraryView]: T };
 
 export type Viewport = OrthoView | typeof ArbitraryViewport;
+
+export type ViewportMap<T> = { [key: Viewport]: T };
+export type ViewportExtents = $ReadOnly<ViewportMap<Vector2>>;
+export type ViewportRects = $ReadOnly<ViewportMap<Rect>>;
+
 export const OrthoViewValues: Array<OrthoView> = Object.keys(OrthoViews);
 export const OrthoViewIndices = {
   PLANE_XY: OrthoViewValues.indexOf("PLANE_XY"),
@@ -63,9 +70,9 @@ export const OrthoViewValuesWithoutTDView = [
 ];
 
 export const OrthoViewColors: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0xff0000,
-  [OrthoViews.PLANE_YZ]: 0x0000ff,
-  [OrthoViews.PLANE_XZ]: 0x00ff00,
+  [OrthoViews.PLANE_XY]: 0xc81414, // red
+  [OrthoViews.PLANE_YZ]: 0x1414c8, // blue
+  [OrthoViews.PLANE_XZ]: 0x14c814, // green
   [OrthoViews.TDView]: 0xffffff,
 };
 
@@ -111,10 +118,13 @@ export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
 // There is an outer yellow CSS border and an inner (red/green/blue) border
 // that is a result of the plane being smaller than the renderer viewport
 export const OUTER_CSS_BORDER = 2;
-const INNER_RENDERER_BORDER = 2;
-export const ORTHOGONAL_BORDER = OUTER_CSS_BORDER + INNER_RENDERER_BORDER;
-const PLANE_WIDTH = 376;
-const VIEWPORT_WIDTH = PLANE_WIDTH + ORTHOGONAL_BORDER * 2;
+const VIEWPORT_WIDTH = 376;
+export const ensureSmallerEdge = false;
+
+export const Unicode = {
+  ThinSpace: "\u202f",
+  MultiplicationSymbol: "×",
+};
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -127,52 +137,23 @@ const Constants = {
   MODES_ARBITRARY: ["flight", "oblique"],
   MODES_SKELETON: ["orthogonal", "flight", "oblique"],
 
-  DEFAULT_SEG_ALPHA: 20,
-
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
-  PLANE_WIDTH,
   VIEWPORT_WIDTH,
-  // The size of the gap between the 4 viewports in the orthogonal mode
-  VIEWPORT_GAP_WIDTH: 20,
 
-  // We require at least 3 * 512 === 1536 buckets per data layer to fit onto the GPU.
-  // This number is used during setup to pick appropriate data texture sizes.
-  // Previously, a minimum of 1200 buckets was enforced. Since, this limit required at least
-  // three 4096**2 textures, a minimum of capacity of 1536 is actually reasonable.
-  MINIMUM_REQUIRED_BUCKET_CAPACITY: 3 * 512,
-  DISTANCE_3D: 140,
-  MAX_TEXTURE_COUNT_PER_LAYER: 1,
-  LOOK_UP_TEXTURE_WIDTH: 128,
+  // The amount of buckets which is required per layer can be customized
+  // via the settings. The value which we expose for customization is a factor
+  // which will be multiplied with GPU_FACTOR_MULTIPLIER to calculate the
+  // the actual amount of buckets.
+  GPU_FACTOR_MULTIPLIER: 512,
+  DEFAULT_GPU_MEMORY_FACTOR: 3,
+  DEFAULT_LOOK_UP_TEXTURE_WIDTH: 256,
 
-  TDView_MOVE_SPEED: 150,
-  MIN_MOVE_VALUE: 30,
-  MAX_MOVE_VALUE: 14000,
-  MAX_MOVE_VALUE_SLIDER: 1500,
+  MAX_ZOOM_STEP_DIFF_PREFETCH: 1, // prefetch only fallback buckets for currentZoomStep + 1
 
   FPS: 50,
 
-  MIN_LAYOUT_SCALE: 1,
-  MAX_LAYOUT_SCALE: 5,
-
-  MIN_BRUSH_SIZE: 5,
-  MAX_BRUSH_SIZE: 5000,
-
-  // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
-  MIN_NODE_RADIUS: 1,
-  MAX_NODE_RADIUS: 5000,
-
-  // The particle size is measured in pixels - it's independent of zoom and dataset scale
-  MIN_PARTICLE_SIZE: 1,
-  MAX_PARTICLE_SIZE: 20,
-
-  ZOOM_DIFF: 0.1,
-
-  // !Currently disabled!
-  // We always add another (read: one) zoomstep level by downsampling buckets from the highest
-  // available zoomstep. This allows to zoom out far enough while still being able to load enough
-  // buckets to the GPU.
-  DOWNSAMPLED_ZOOM_STEP_COUNT: 0,
+  DEFAULT_SPHERICAL_CAP_RADIUS: 140,
 
   RESIZE_THROTTLE_TIME: 250,
 

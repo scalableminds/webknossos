@@ -1,17 +1,24 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreConfig, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.tracingstore.{
+  TracingStoreAccessTokenService,
+  TracingStoreConfig,
+  TracingStoreWkRpcClient
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
@@ -20,24 +27,24 @@ import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
-class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val webKnossosServer: TracingStoreWkRpcClient,
-                                        val accessTokenService: TracingStoreAccessTokenService,
-                                        config: TracingStoreConfig,
-                                        tracingDataStore: TracingDataStore)
-                                       (implicit val ec: ExecutionContext,
-                                        val bodyParsers: PlayBodyParsers)
-  extends TracingController[VolumeTracing, VolumeTracings] {
+class VolumeTracingController @Inject()(
+    val tracingService: VolumeTracingService,
+    val webKnossosServer: TracingStoreWkRpcClient,
+    val accessTokenService: TracingStoreAccessTokenService,
+    config: TracingStoreConfig,
+    tracingDataStore: TracingDataStore)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
 
-  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
+  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings =
+    VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
 
-  implicit def packMultipleOpt(tracings: List[Option[VolumeTracing]]): VolumeTracings = VolumeTracings(tracings.map(t => VolumeTracingOpt(t)))
+  implicit def packMultipleOpt(tracings: List[Option[VolumeTracing]]): VolumeTracings =
+    VolumeTracings(tracings.map(t => VolumeTracingOpt(t)))
 
-  implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] = tracings.tracings.toList.map(_.tracing)
-
-  override def freezeVersions = config.Tracingstore.freezeVolumeVersions
+  implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
+    tracings.tracings.toList.map(_.tracing)
 
   def initialData(tracingId: String) = Action.async { implicit request =>
     log {
@@ -55,13 +62,29 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   def allData(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
           } yield {
-            val enumerator: Enumerator[Array[Byte]] = tracingService.allData(tracingId, tracing)
+            val enumerator: Enumerator[Array[Byte]] = tracingService.allDataEnumerator(tracingId, tracing)
             Ok.chunked(Source.fromPublisher(IterateeStreams.enumeratorToPublisher(enumerator)))
+          }
+        }
+      }
+    }
+  }
+
+  def allDataBlocking(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
+            data <- tracingService.allDataFile(tracingId, tracing)
+            _ = Thread.sleep(5)
+          } yield {
+            Ok.sendFile(data)
           }
         }
       }
@@ -73,7 +96,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
         AllowRemoteOrigin {
           for {
-            tracing <- tracingService.find(tracingId) ?~>  Messages("tracing.notFound")
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
             (data, indices) <- tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
         }
@@ -81,15 +104,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
+  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
+    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)),
+         ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
 
-  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] = {
-    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)), ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
-  }
-
-  private def formatMissingBucketList(indices: List[Int]): String = {
+  private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
-  }
-
 
   def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {

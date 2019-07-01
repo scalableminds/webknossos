@@ -36,7 +36,7 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 type Props = {
@@ -255,6 +255,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         placeholder="Select an Experience Domain"
                         notFoundContent={messages["task.domain_does_not_exist"]}
                         width={100}
+                        allowCreation
                       />,
                     )}
                   </FormItem>

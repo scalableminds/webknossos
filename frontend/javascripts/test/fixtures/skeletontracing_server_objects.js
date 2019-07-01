@@ -25,6 +25,7 @@ export const tracing: ServerSkeletonTracing = {
       branchPoints: [{ nodeId: 3, createdTimestamp: 1502302770510 }],
       comments: [{ nodeId: 3, content: "Test" }],
       name: "explorative_2017-08-09_SCM_Boy_002",
+      isVisible: true,
     },
     {
       treeId: 1,
@@ -57,6 +58,7 @@ export const tracing: ServerSkeletonTracing = {
       color: { r: 0.6784313917160034, g: 0.1411764770746231, b: 0.05098039284348488, a: 1.0 },
       branchPoints: [{ nodeId: 1, createdTimestamp: 1502302774534 }],
       comments: [],
+      isVisible: true,
       name: "explorative_2017-08-09_SCM_Boy_001",
     },
   ],
@@ -89,6 +91,8 @@ export const annotation: APIAnnotation = {
     name: "localhost",
     url: "http://localhost:9000",
     isScratch: false,
+    isForeign: false,
+    isConnector: false,
   },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {

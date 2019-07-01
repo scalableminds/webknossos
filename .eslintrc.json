@@ -1,6 +1,7 @@
 {
   "extends": [
     "airbnb",
+    "plugin:eslint-comments/recommended",
     "plugin:flowtype/recommended",
     "plugin:react/recommended",
     "prettier",
@@ -34,9 +35,15 @@
   "rules": {
     "array-callback-return": "warn",
     "class-methods-use-this": "off",
+    "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": true }],
+    "eslint-comments/no-unused-disable": "error",
     "flowtype/no-types-missing-file-annotation": "off",
     "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
     "import/no-cycle": "off",
+    "import/no-extraneous-dependencies": [
+      "error",
+      { "devDependencies": ["frontend/javascripts/test/**"] }
+    ],
     "import/no-named-as-default-member": "warn",
     "import/no-unresolved": "off",
     "jsx-a11y/anchor-is-valid": "off",
@@ -79,7 +86,16 @@
     "flow-header/flow-header": "error",
     "react/sort-comp": [
       "error",
-      { "order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"] }
+      {
+        "order": [
+          "type-annotations",
+          "instance-variables",
+          "static-methods",
+          "lifecycle",
+          "everything-else",
+          "render"
+        ]
+      }
     ]
   }
 }

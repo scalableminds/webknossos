@@ -19,7 +19,6 @@ type OwnProps = {|
   onOk: () => void,
 |};
 type StateProps = {|
-  // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
   dataset: APIDataset,
   restrictions: RestrictionsAndSettings,
@@ -69,8 +68,12 @@ class ShareModalView extends PureComponent<Props, State> {
   async fetch() {
     const { name, owningOrganization } = this.props.dataset;
     const datasetId = { name, owningOrganization };
-    const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
-    this.setState({ sharingToken });
+    try {
+      const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
+      this.setState({ sharingToken });
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   getUrl() {

@@ -17,7 +17,6 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
   OrthoViewValues,
-  OrthoViews,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
@@ -29,28 +28,27 @@ class Plane {
   plane: THREE.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  scaleVector: THREE.Vector3;
+  baseScaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
-  renderer: THREE.WebGLRenderer;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
 
-    // PLANE_WIDTH means that the plane should be that many voxels wide in the
+    // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
-    this.scaleVector = new THREE.Vector3(...scaleArray);
+    this.baseScaleVector = new THREE.Vector3(...scaleArray);
 
     this.createMeshes();
   }
 
   createMeshes(): void {
-    const pWidth = constants.PLANE_WIDTH;
+    const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
@@ -81,6 +79,10 @@ class Plane {
         crosshairGeometries[i],
         this.getLineBasicMaterial(OrthoViewCrosshairColors[this.planeID][i], 1),
       );
+      // Objects are rendered according to their renderOrder (lowest to highest).
+      // The default renderOrder is 0. In order for the crosshairs to be shown
+      // render them AFTER the plane has been rendered.
+      this.crosshair[i].renderOrder = 1;
     }
 
     // create borders
@@ -129,16 +131,16 @@ class Plane {
     }
   }
 
-  setScale = (factor: number): void => {
+  setScale(xFactor: number, yFactor: number): void {
     const scaleVec = new THREE.Vector3().multiplyVectors(
-      new THREE.Vector3(factor, factor, factor),
-      this.scaleVector,
+      new THREE.Vector3(xFactor, yFactor, 1),
+      this.baseScaleVector,
     );
     this.plane.scale.copy(scaleVec);
     this.TDViewBorders.scale.copy(scaleVec);
     this.crosshair[0].scale.copy(scaleVec);
     this.crosshair[1].scale.copy(scaleVec);
-  };
+  }
 
   setRotation = (rotVec: Vector3): void => {
     [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]].map(mesh =>
@@ -150,16 +152,7 @@ class Plane {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
-
-    const offset = new THREE.Vector3(0, 0, 0);
-    if (this.planeID === OrthoViews.PLANE_XY) {
-      offset.z = 1;
-    } else if (this.planeID === OrthoViews.PLANE_YZ) {
-      offset.x = -1;
-    } else if (this.planeID === OrthoViews.PLANE_XZ) {
-      offset.y = -1;
-    }
-    this.plane.position.copy(offset.addVectors(posVec, offset));
+    this.plane.position.copy(posVec);
 
     const globalPosition = getPosition(Store.getState().flycam);
     this.plane.material.setGlobalPosition(globalPosition);

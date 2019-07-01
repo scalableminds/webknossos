@@ -2,18 +2,19 @@
  * dataset_info_view.js
  * @flow
  */
+import type { Dispatch } from "redux";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
-import type { Dispatch } from "redux";
 
-import { type APIDataset, APIAnnotationTypeEnum } from "admin/api_flow_types";
-import { aggregateBoundingBox } from "libs/utils";
+import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
+import { ControlModeEnum } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
 import {
@@ -23,8 +24,7 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
-import Store, { type Flycam, type OxalisState, type Task, type Tracing } from "oxalis/store";
-import constants, { ControlModeEnum } from "oxalis/constants";
+import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
 type OwnProps = {|
   portalKey: string,
@@ -32,8 +32,9 @@ type OwnProps = {|
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
-  flycam: Flycam,
   task: ?Task,
+  activeUser: ?APIUser,
+  logZoomStep: number,
 |};
 type DispatchProps = {|
   setAnnotationName: string => void,
@@ -83,60 +84,12 @@ const shortcuts = [
   },
 ];
 
-export function calculateZoomLevel(flycam: Flycam, dataset: APIDataset): number {
-  const zoom = getPlaneScalingFactor(flycam);
-  let width;
-  const { viewMode } = Store.getState().temporaryConfiguration;
-  if (constants.MODES_PLANE.includes(viewMode)) {
-    width = constants.PLANE_WIDTH;
-  } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-    width = constants.VIEWPORT_WIDTH;
-  } else {
-    throw new Error(`Model mode not recognized: ${viewMode}`);
-  }
-  // unit is nm
-  const baseVoxel = getBaseVoxel(dataset.dataSource.scale);
-  return zoom * width * baseVoxel;
-}
-
-export function formatNumberToLength(zoomLevel: number): string {
-  if (zoomLevel < 1000) {
-    return `${zoomLevel.toFixed(0)} nm`;
-  } else if (zoomLevel < 1000000) {
-    return `${(zoomLevel / 1000).toFixed(1)} μm`;
-  } else {
-    return `${(zoomLevel / 1000000).toFixed(1)} mm`;
-  }
-}
-
-function getDatasetExtentInVoxel(dataset: APIDataset) {
-  const datasetLayers = dataset.dataSource.dataLayers;
-  const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
-  const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
-  const { min, max } = unifiedBoundingBoxes;
-  const extent = {
-    width: max[0] - min[0],
-    height: max[1] - min[1],
-    depth: max[2] - min[2],
-  };
-  return extent;
-}
-
-function getDatasetExtentInLength(dataset: APIDataset) {
-  const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const scale = dataset.dataSource.scale;
-  const extent = {
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
-  };
-  return extent;
-}
-
-function formatExtentWithLength(extent: Object, formattingFunction: number => string) {
-  return `${formattingFunction(extent.width)} x ${formattingFunction(
-    extent.height,
-  )} x ${formattingFunction(extent.depth)}`;
+export function convertPixelsToNm(
+  lengthInPixel: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
 class DatasetInfoTabView extends React.PureComponent<Props> {
@@ -305,36 +258,86 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
   }
 
+  maybePrintOwner() {
+    const { activeUser } = this.props;
+    const owner = this.props.tracing.user;
+
+    if (!owner) {
+      return null;
+    }
+
+    if (!activeUser || owner.id !== activeUser.id) {
+      return (
+        <span>
+          Owner: {owner.firstName} {owner.lastName}
+        </span>
+      );
+    }
+
+    // Active user is owner
+    return null;
+  }
+
   render() {
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const zoomLevel = calculateZoomLevel(this.props.flycam, this.props.dataset);
-    const extentInVoxel = getDatasetExtentInVoxel(this.props.dataset);
-    const extent = getDatasetExtentInLength(this.props.dataset);
+    const extentInVoxel = getDatasetExtentAsString(this.props.dataset, true);
+    const extentInLength = getDatasetExtentAsString(this.props.dataset, false);
+
+    const resolutions = getResolutions(this.props.dataset);
+    const activeResolution = resolutions[this.props.logZoomStep];
+
+    const resolutionInfo =
+      activeResolution != null ? (
+        <div className="info-tab-block">
+          Active Resolution: {activeResolution.join("-")}{" "}
+          <Tooltip
+            title={
+              <div>
+                This dataset contains the following resolutions:
+                <ul>
+                  {resolutions.map(r => (
+                    <li key={r.join()}>{r.join("-")}</li>
+                  ))}
+                </ul>
+              </div>
+            }
+            placement="right"
+          >
+            <Icon type="info-circle" />
+          </Tooltip>
+        </div>
+      ) : null;
+
     return (
       <div className="flex-overflow padded-tab-content">
-        {this.getTracingName(isDatasetViewMode)}
-        {this.getTracingType(isDatasetViewMode)}
-        {this.getDatasetName(isDatasetViewMode)}
+        <div className="info-tab-block">
+          {this.getTracingName(isDatasetViewMode)}
+          {this.getTracingType(isDatasetViewMode)}
+          {this.getDatasetName(isDatasetViewMode)}
+          {this.maybePrintOwner()}
+        </div>
 
-        <p>Viewport Width: {formatNumberToLength(zoomLevel)}</p>
-        <p>Dataset Resolution: {formatScale(this.props.dataset.dataSource.scale)}</p>
+        <div className="info-tab-block">
+          <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
+          <table>
+            <tbody>
+              <tr>
+                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
+                <td>{extentInVoxel}</td>
+              </tr>
+              <tr>
+                <td />
+                <td>{extentInLength}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <table>
-          <tbody>
-            <tr>
-              <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-              <td>{formatExtentWithLength(extentInVoxel, x => `${x}`)} Voxel³</td>
-            </tr>
-            <tr>
-              <td />
-              <td>{formatExtentWithLength(extent, formatNumberToLength)}</td>
-            </tr>
-          </tbody>
-        </table>
+        {resolutionInfo}
 
-        {this.getTracingStatistics()}
+        <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
       </div>
@@ -345,8 +348,9 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
-  flycam: state.flycam,
   task: state.task,
+  activeUser: state.activeUser,
+  logZoomStep: getRequestLogZoomStep(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

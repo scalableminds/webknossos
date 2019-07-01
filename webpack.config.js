@@ -7,6 +7,7 @@ module.exports = function(env = {}) {
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
+  const CopyWebpackPlugin = require("copy-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "frontend/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
@@ -31,6 +32,9 @@ module.exports = function(env = {}) {
       ReactDOM: "react-dom",
       $: "jquery",
       jQuery: "jquery",
+    }),
+    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
+      dot: true,
     }),
   ];
 
@@ -58,13 +62,18 @@ module.exports = function(env = {}) {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
       sourceMapFilename: "[file].map",
-      publicPath: "/bundle/",
+      publicPath: "/assets/bundle/",
     },
     module: {
       rules: [
         {
           test: /\.worker\.js$/,
-          use: { loader: "worker-loader" },
+          use: {
+            loader: "worker-loader",
+            options: {
+              name: "[name].[hash].worker.js",
+            },
+          },
         },
         {
           test: /\.js$/,
@@ -136,6 +145,7 @@ module.exports = function(env = {}) {
     plugins,
     devServer: {
       contentBase: `${__dirname}/public`,
+      publicPath: "/assets/bundle/",
       port: env.PORT ? env.PORT : 9002,
       hot: false,
       inline: false,

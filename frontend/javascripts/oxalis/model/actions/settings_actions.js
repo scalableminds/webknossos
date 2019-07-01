@@ -1,6 +1,5 @@
-/* eslint-disable import/prefer-default-export */
 // @flow
-import type { Mode, ControlMode } from "oxalis/constants";
+import type { ViewMode, ControlMode } from "oxalis/constants";
 import type {
   UserConfiguration,
   DatasetConfiguration,
@@ -39,15 +38,20 @@ export type InitializeSettingsAction = {
   initialUserSettings: UserConfiguration,
   initialDatasetSettings: DatasetConfiguration,
 };
-
-type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: Mode };
+type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
+type InitializeGpuSetupAction = {
+  type: "INITIALIZE_GPU_SETUP",
+  bucketCapacity: number,
+  gpuFactor: number,
+};
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
   type: "SET_MAPPING",
   mappingName: ?string,
   mapping: ?Mapping,
+  mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 };
@@ -62,7 +66,8 @@ export type SettingAction =
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
-  | SetMappingAction;
+  | SetMappingAction
+  | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfiguration>,
@@ -118,7 +123,7 @@ export const initializeSettingsAction = (
   initialDatasetSettings,
 });
 
-export const setViewModeAction = (viewMode: Mode): SetViewModeAction => ({
+export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",
   viewMode,
 });
@@ -141,12 +146,23 @@ export const setMappingEnabledAction = (isMappingEnabled: boolean): SetMappingEn
 export const setMappingAction = (
   mappingName: ?string,
   mapping: ?Mapping,
+  mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   mappingName,
   mapping,
+  mappingKeys,
   mappingColors,
   hideUnmappedIds,
+});
+
+export const initializeGpuSetupAction = (
+  bucketCapacity: number,
+  gpuFactor: number,
+): InitializeGpuSetupAction => ({
+  type: "INITIALIZE_GPU_SETUP",
+  bucketCapacity,
+  gpuFactor,
 });

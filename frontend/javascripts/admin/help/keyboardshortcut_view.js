@@ -22,6 +22,10 @@ const KeyboardShortcutView = () => {
       action: "Move",
     },
     {
+      keybinding: "Alt + Mouse Move",
+      action: "Move",
+    },
+    {
       keybinding: "I, O, or Alt + Mousewheel",
       action: "Zoom In/out",
     },
@@ -99,7 +103,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "M",
-      action: "Toggle Mode (orthogonal, Flight, Oblique)",
+      action: "Toggle Mode (Orthogonal, Flight, Oblique)",
     },
     {
       keybinding: "1",
@@ -124,6 +128,14 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "Ctrl + Shift + F",
       action: "Open Tree Search (if Tree List is visible)",
+    },
+    {
+      keybinding: "Q",
+      action: "Download Screenshot(s) of Viewport(s)",
+    },
+    {
+      keybinding: ".",
+      action: "Toggle Viewport Maximization",
     },
   ];
 
@@ -158,7 +170,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "R",
-      action: "Reset Rotation",
+      action: "Invert Direction",
     },
     {
       keybinding: "S",
@@ -202,6 +214,10 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "Ctrl + Right Mouse Drag",
       action: "Remove Voxels From Any Cell",
+    },
+    {
+      keybinding: "Alt + Mouse Move",
+      action: "Move",
     },
     {
       keybinding: "C",

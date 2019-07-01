@@ -7,12 +7,11 @@ import { M4x4, type Matrix4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
-const ZOOM_STEP_MIN = 0.005;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -60,6 +59,9 @@ function rotateReducer(
   axis: Vector3,
   regardDistance: boolean,
 ): OxalisState {
+  if (Number.isNaN(angle)) {
+    return state;
+  }
   const { flycam } = state;
   if (regardDistance) {
     return update(state, {
@@ -114,11 +116,19 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 }
 
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
-  return update(state, {
+  const [min, max] = getValidZoomRangeForUser(state);
+  let newZoomStep = Utils.clamp(min, zoomStep, max);
+  if (isNaN(newZoomStep)) {
+    newZoomStep = 1;
+  }
+
+  const newState = update(state, {
     flycam: {
-      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state.dataset)) },
+      zoomStep: { $set: newZoomStep },
     },
   });
+
+  return newState;
 }
 
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {

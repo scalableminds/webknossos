@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
@@ -29,7 +28,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     dataStoreService.validateAccess(name) { dataStore =>
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
-        organization <- organizationDAO.findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound"
+        organization <- organizationDAO
+          .findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
         _ <- dataSetService
           .assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"

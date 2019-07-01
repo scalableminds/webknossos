@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import Numeric.Implicits._
+
 object Math {
   val RotationMatrixSize3D = 16
 
@@ -15,7 +17,7 @@ object Math {
 
   def roundUp(x: Double) = {
     val c = x.ceil.toInt
-    if(c != x)
+    if (c != x)
       c + 1
     else
       c
@@ -23,7 +25,7 @@ object Math {
 
   def roundDown(x: Double) = {
     val c = x.floor.toInt
-    if(c != x)
+    if (c != x)
       c - 1
     else
       c
@@ -33,5 +35,15 @@ object Math {
     import num._
     lower.max(x).min(upper)
   }
+
+  def mean[T: Numeric](xs: Iterable[T]): Double = xs.sum.toDouble / xs.size
+
+  def variance[T: Numeric](xs: Iterable[T]): Double = {
+    val avg = mean(xs)
+
+    xs.map(_.toDouble).map(a => math.pow(a - avg, 2)).sum / xs.size
+  }
+
+  def stdDev[T: Numeric](xs: Iterable[T]): Double = math.sqrt(variance(xs))
 
 }

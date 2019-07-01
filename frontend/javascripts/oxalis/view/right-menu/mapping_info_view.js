@@ -23,6 +23,7 @@ import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
+import * as Utils from "libs/utils";
 
 const { Option } = Select;
 
@@ -43,6 +44,7 @@ type StateProps = {|
   setAvailableMappingsForLayer: (string, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
+  isMergerModeEnabled: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -79,6 +81,8 @@ const convertCellIdToCSS = (id, customColors) =>
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
 class MappingInfoView extends React.Component<Props, State> {
+  isMounted: boolean = false;
+
   state = {
     shouldMappingBeEnabled: false,
     isRefreshingMappingList: false,
@@ -105,8 +109,7 @@ class MappingInfoView extends React.Component<Props, State> {
     cube.off("volumeLabeled", this._forceUpdate);
   }
 
-  isMounted: boolean = false;
-
+  // eslint-disable-next-line react/sort-comp
   _forceUpdate = _.throttle(() => {
     if (!this.isMounted) {
       return;
@@ -213,7 +216,10 @@ class MappingInfoView extends React.Component<Props, State> {
     const mappings = await getMappingsForDatasetLayer(
       this.props.dataset.dataStore.url,
       this.props.dataset,
-      segmentationLayer.name,
+      // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+      segmentationLayer.fallbackLayer != null
+        ? segmentationLayer.fallbackLayer
+        : segmentationLayer.name,
     );
 
     this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings);
@@ -234,7 +240,6 @@ class MappingInfoView extends React.Component<Props, State> {
     if (!hasSegmentation()) {
       return "No segmentation available";
     }
-
     const availableMappings =
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings
@@ -252,41 +257,47 @@ class MappingInfoView extends React.Component<Props, State> {
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
+        {/* Only display the mapping selection when merger mode is not active
+            to avoid conflicts in the logic of the UI. */
+        !this.props.isMergerModeEnabled ? (
+          <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
+            <div style={{ marginBottom: 6 }}>
+              <label className="setting-label">
+                ID Mapping
+                <Switch
+                  onChange={this.handleSetMappingEnabled}
+                  checked={this.state.shouldMappingBeEnabled}
+                  style={{ float: "right" }}
+                  loading={this.state.isRefreshingMappingList}
+                />
+              </label>
+            </div>
 
-        <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
-          <div style={{ marginBottom: 6 }}>
-            <label className="setting-label">
-              ID Mapping
-              <Switch
-                onChange={this.handleSetMappingEnabled}
-                checked={this.state.shouldMappingBeEnabled}
-                style={{ float: "right" }}
-                loading={this.state.isRefreshingMappingList}
-              />
-            </label>
-          </div>
-
-          {/*
+            {/*
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-          {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
-            <Select
-              placeholder="Select mapping"
-              defaultActiveFirstOption={false}
-              style={{ width: "100%" }}
-              {...selectValueProp}
-              onChange={this.handleChangeMapping}
-              notFoundContent="No mappings found."
-            >
-              {availableMappings.map(mapping => (
-                <Option key={mapping} value={mapping}>
-                  {mapping}
-                </Option>
-              ))}
-            </Select>
-          ) : null}
-        </div>
+            {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
+              <Select
+                placeholder="Select mapping"
+                defaultActiveFirstOption={false}
+                style={{ width: "100%" }}
+                {...selectValueProp}
+                onChange={this.handleChangeMapping}
+                notFoundContent="No mappings found."
+              >
+                {availableMappings
+                  .slice()
+                  .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
+                  .map(mapping => (
+                    <Option key={mapping} value={mapping}>
+                      {mapping}
+                    </Option>
+                  ))}
+              </Select>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -316,6 +327,7 @@ function mapStateToProps(state: OxalisState) {
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
+    isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
   };
 }
 

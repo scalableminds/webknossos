@@ -10,6 +10,7 @@ import Store from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
+const { Password } = Input;
 
 type Props = {
   form: Object,
@@ -58,7 +59,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   checkPassword = (rule, value, callback) => {
     const form = this.props.form;
     if (value && value !== form.getFieldValue("password.password1")) {
-      callback(messages["auth.registration_password_missmatch"]);
+      callback(messages["auth.registration_password_mismatch"]);
     } else {
       callback();
     }
@@ -86,7 +87,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
                     message: messages["auth.reset_old_password"],
                   },
                 ],
-              })(<Input type="password" placeholder="Old Password" />)}
+              })(<Password placeholder="Old Password" />)}
             </FormItem>
             <FormItem hasFeedback>
               {getFieldDecorator("password.password1", {
@@ -104,8 +105,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="New Password"
                 />,
@@ -127,8 +127,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   onBlur={this.handleConfirmBlur}
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Confirm New Password"

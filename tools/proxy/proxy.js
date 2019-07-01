@@ -1,15 +1,9 @@
 // @noflow
-/* eslint-disable */
 const express = require("express");
 const httpProxy = require("http-proxy");
 const { spawn } = require("child_process");
 const path = require("path");
-const fs = require("fs");
 const prefixLines = require("prefix-stream-lines");
-const url = require("url");
-const { promisify } = require("util");
-
-const fileStatAsync = promisify(fs.stat);
 
 const proxy = httpProxy.createProxyServer();
 const app = express();
@@ -85,32 +79,12 @@ function toBackend(req, res) {
   proxy.web(req, res, { target: `http://localhost:${PORT + 1}` });
 }
 
-async function toStaticRessource(req, res) {
-  const { pathname } = url.parse(req.url);
-  const filepath = path.join(ROOT, "public", pathname);
-
-  res.set({
-    "Access-Control-Allow-Origin": "*",
-  });
-
-  if (await isFile(filepath)) proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
-  else if (pathname.match(/^.+\..+$/))
-    proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
-  else toBackend(req, res);
+function toWebpackDev(req, res) {
+  proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
 }
 
-async function isFile(filepath) {
-  try {
-    const stats = await fileStatAsync(filepath);
-    return !stats.isDirectory();
-  } catch (err) {
-    return false;
-  }
-}
-
-app.all("/api/*", toBackend);
-app.all("/data/*", toBackend);
-app.all("/*", toStaticRessource);
+app.all("/assets/bundle/*", toWebpackDev);
+app.all("/*", toBackend);
 
 app.listen(PORT);
 console.log("PROXY", "Listening on", PORT);

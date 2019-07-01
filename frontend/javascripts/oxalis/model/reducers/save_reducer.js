@@ -8,35 +8,45 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
+import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
-import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
-    case "PUSH_SAVE_QUEUE": {
+    case "PUSH_SAVE_QUEUE_TRANSACTION": {
       // Only report tracing statistics, if a "real" update to the tracing happened
       const stats = _.some(action.items, ua => ua.name !== "updateTracing")
         ? Utils.toNullable(getStats(state.tracing))
         : null;
-      const { items } = action;
+      const { items, transactionId } = action;
+
       if (items.length > 0) {
+        const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
+        const transactionGroupCount = updateActionChunks.length;
+
+        const oldQueue = state.save.queue[action.tracingType];
+        const newQueue = oldQueue.concat(
+          updateActionChunks.map((actions, transactionGroupIndex) => ({
+            // Placeholder, the version number will be updated before sending to the server
+            version: -1,
+            transactionId,
+            transactionGroupCount,
+            transactionGroupIndex,
+            timestamp: Date.now(),
+            actions,
+            stats,
+            // TODO: Redux Action Log context for debugging purposes. Remove this again if it is no longer needed.
+            info: JSON.stringify(getActionLog().slice(-50)),
+          })),
+        );
         return update(state, {
           save: {
             queue: {
               [action.tracingType]: {
-                $push: [
-                  {
-                    // Placeholder, the version number will be updated before sending to the server
-                    version: -1,
-                    timestamp: Date.now(),
-                    actions: items,
-                    stats,
-                    // TODO: Redux Action Log context for debugging purposes. Remove this again if it is no longer needed.
-                    info: JSON.stringify(getActionLog().slice(-50)),
-                  },
-                ],
+                $set: newQueue,
               },
             },
             progressInfo: {

@@ -3,7 +3,7 @@
 import jsonschema from "jsonschema";
 
 import DatasourceSchema from "libs/datasource.schema.json";
-import UserSettingsSchema from "libs/user_settings.schema.json";
+import UserSettingsSchema from "libs/user_settings.schema";
 
 const validator = new jsonschema.Validator();
 validator.addSchema(DatasourceSchema, "/");

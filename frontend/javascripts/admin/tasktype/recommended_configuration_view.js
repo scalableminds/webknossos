@@ -31,11 +31,11 @@ const recommendedConfigByCategory = {
   dataset: {
     fourBit: false,
     interpolation: true,
-    quality: 0,
     segmentationOpacity: 0,
     highlightHoveredCellId: false,
     zoom: 0.8,
     renderMissingDataBlack: false,
+    loadingStrategy: "BEST_QUALITY_FIRST",
   },
   flight: {
     clippingDistanceArbitrary: 60,
@@ -43,6 +43,9 @@ const recommendedConfigByCategory = {
     mouseRotateValue: 0.001,
     rotateValue: 0.01,
     sphericalCapRadius: 500,
+  },
+  volume: {
+    brushSize: 50,
   },
 };
 
@@ -54,6 +57,7 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   ...recommendedConfigByCategory.all,
   ...recommendedConfigByCategory.dataset,
   ...recommendedConfigByCategory.flight,
+  ...recommendedConfigByCategory.volume,
 };
 
 export const settingComments = {
@@ -62,6 +66,7 @@ export const settingComments = {
   quality: "0 (high), 1 (medium), 2 (low)",
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
+  loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
 };
 
 const errorIcon = (
@@ -148,11 +153,14 @@ export default function RecommendedConfigurationView({
                 />,
               )}
             </FormItem>
-            <Button style={{ marginRight: 10 }} onClick={() => removeSettings(form, "orthogonal")}>
+            <Button className="button-margin" onClick={() => removeSettings(form, "orthogonal")}>
               Remove Orthogonal-only Settings
             </Button>
-            <Button onClick={() => removeSettings(form, "flight")}>
+            <Button className="button-margin" onClick={() => removeSettings(form, "flight")}>
               Remove Flight/Oblique-only Settings
+            </Button>
+            <Button className="button-margin" onClick={() => removeSettings(form, "volume")}>
+              Remove Volume-only Settings
             </Button>
           </Col>
           <Col span={12}>

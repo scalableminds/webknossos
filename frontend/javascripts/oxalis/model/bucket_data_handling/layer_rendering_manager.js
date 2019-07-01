@@ -1,37 +1,45 @@
 // @flow
 
-import PriorityQueue from "js-priority-queue";
 import * as THREE from "three";
 import _ from "lodash";
+import memoizeOne from "memoize-one";
 
 import {
   type Area,
-  getAreas,
-  getMaxBucketCountPerDim,
-  getMaxBucketCountPerDimForAllResolutions,
-  getMaxBucketCountsForFallback,
+  getAreasFromState,
   getZoomedMatrix,
 } from "oxalis/model/accessors/flycam_accessor";
 import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { M4x4 } from "libs/mjs";
-import { getResolutions, getByteCount } from "oxalis/model/accessors/dataset_accessor";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getAnchorPositionToCenterDistance } from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import {
+  getResolutions,
+  getByteCount,
+  getElementClass,
+} from "oxalis/model/accessors/dataset_accessor";
+import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import Store from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, {
-  type Mode,
+  type ViewMode,
   type OrthoViewMap,
   type Vector3,
   type Vector4,
 } from "oxalis/constants";
-import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal, {
-  getAnchorPositionToCenterDistance,
-} from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+
+const asyncBucketPick = memoizeOne(createWorker(AsyncBucketPickerWorker), (oldArgs, newArgs) =>
+  _.isEqual(oldArgs, newArgs),
+);
+const dummyBuffer = new ArrayBuffer(0);
+
+export type EnqueueFunction = (Vector4, number) => void;
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -47,25 +55,41 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
-function consumeBucketsFromPriorityQueue(
-  queue: PriorityQueue,
+function consumeBucketsFromArrayBuffer(
+  buffer: ArrayBuffer,
+  cube: DataCube,
   capacity: number,
 ): Array<{ priority: number, bucket: DataBucket }> {
-  // Use bucketSet to only get unique buckets from the priority queue.
-  // Don't use {bucket, priority} as set elements, as the instances will always be unique
-  const bucketSet = new Set();
   const bucketsWithPriorities = [];
+  const uint32Array = new Uint32Array(buffer);
+
+  let currentElementIndex = 0;
+  const intsPerItem = 5; // [x, y, z, zoomStep, priority]
+
   // Consume priority queue until we maxed out the capacity
   while (bucketsWithPriorities.length < capacity) {
-    if (queue.length === 0) {
+    const currentBufferIndex = currentElementIndex * intsPerItem;
+    if (currentBufferIndex >= uint32Array.length) {
       break;
     }
-    const bucketWithPriority = queue.dequeue();
-    if (!bucketSet.has(bucketWithPriority.bucket)) {
-      bucketSet.add(bucketWithPriority.bucket);
-      bucketsWithPriorities.push(bucketWithPriority);
+
+    const bucketAddress = [
+      uint32Array[currentBufferIndex],
+      uint32Array[currentBufferIndex + 1],
+      uint32Array[currentBufferIndex + 2],
+      uint32Array[currentBufferIndex + 3],
+    ];
+    const priority = uint32Array[currentBufferIndex + 4];
+
+    const bucket = cube.getOrCreateBucket(bucketAddress);
+
+    if (bucket.type !== "null") {
+      bucketsWithPriorities.push({ bucket, priority });
     }
+
+    currentElementIndex++;
   }
+
   return bucketsWithPriorities;
 }
 
@@ -76,24 +100,20 @@ export default class LayerRenderingManager {
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
   lastAreas: OrthoViewMap<Area>;
   lastZoomedMatrix: M4x4;
-  lastViewMode: Mode;
+  lastViewMode: ViewMode;
   lastIsInvisible: boolean;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
   pullQueue: PullQueue;
   dataTextureCount: number;
-  anchorPointCache: {
-    anchorPoint: Vector4,
-    fallbackAnchorPoint: Vector4,
-  } = {
-    anchorPoint: [0, 0, 0, 0],
-    fallbackAnchorPoint: [0, 0, 0, 0],
-  };
+  cachedAnchorPoint: Vector4 = [0, 0, 0, 0];
+
   name: string;
   isSegmentation: boolean;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
+  latestTaskExecutor: LatestTaskExecutor<Function> = new LatestTaskExecutor();
 
   constructor(
     name: string,
@@ -118,16 +138,13 @@ export default class LayerRenderingManager {
   setupDataTextures(): void {
     const { dataset } = Store.getState();
     const bytes = getByteCount(dataset, this.name);
-    const bucketsPerDimPerResolution = getMaxBucketCountPerDimForAllResolutions(
-      dataset.dataSource.scale,
-      getResolutions(dataset),
-    );
+    const elementClass = getElementClass(dataset, this.name);
 
     this.textureBucketManager = new TextureBucketManager(
-      bucketsPerDimPerResolution,
       this.textureWidth,
       this.dataTextureCount,
       bytes,
+      elementClass,
     );
     this.textureBucketManager.setupDataTextures(bytes);
 
@@ -143,43 +160,30 @@ export default class LayerRenderingManager {
   }
 
   // Returns the new anchorPoints if they are new
-  updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
-    const { dataset } = Store.getState();
-    const isAnchorPointNew = this.maybeUpdateAnchorPoint(
-      position,
-      logZoomStep,
-      dataset.dataSource.scale,
-      false,
-    );
-    const fallbackZoomStep = logZoomStep + 1;
-    const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
-    const isFallbackAnchorPointNew = isFallbackAvailable
-      ? this.maybeUpdateAnchorPoint(position, fallbackZoomStep, dataset.dataSource.scale, true)
-      : false;
+  updateDataTextures(position: Vector3, logZoomStep: number): ?Vector4 {
+    const state = Store.getState();
+    const { dataset, datasetConfiguration } = state;
+    const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
 
     if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
       // Don't render anything if the zoomStep is too high
-      this.textureBucketManager.setActiveBuckets(
-        [],
-        this.anchorPointCache.anchorPoint,
-        this.anchorPointCache.fallbackAnchorPoint,
-      );
-      return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
+      this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
+      return this.cachedAnchorPoint;
     }
 
-    const subBucketLocality = getSubBucketLocality(position, getResolutions(dataset)[logZoomStep]);
-    const areas = getAreas(Store.getState());
+    const resolutions = getResolutions(dataset);
+    const subBucketLocality = getSubBucketLocality(position, resolutions[logZoomStep]);
+    const areas = getAreasFromState(state);
 
-    const matrix = getZoomedMatrix(Store.getState().flycam);
+    const matrix = getZoomedMatrix(state.flycam);
 
-    const { viewMode } = Store.getState().temporaryConfiguration;
+    const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
-    const { sphericalCapRadius } = Store.getState().userConfiguration;
+    const { sphericalCapRadius } = state.userConfiguration;
     const isInvisible =
-      this.isSegmentation && Store.getState().datasetConfiguration.segmentationOpacity === 0;
+      this.isSegmentation && (datasetConfiguration.segmentationOpacity === 0 || isArbitrary);
     if (
       isAnchorPointNew ||
-      isFallbackAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
       (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
@@ -198,88 +202,77 @@ export default class LayerRenderingManager {
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
 
-      const bucketQueue = new PriorityQueue({
-        // small priorities take precedence
-        comparator: (b, a) => b.priority - a.priority,
-      });
+      let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
       if (!isInvisible) {
-        if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-          determineBucketsForOblique(
-            this.cube,
-            bucketQueue,
+        const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
+        pickingPromise = this.latestTaskExecutor.schedule(() =>
+          asyncBucketPick(
+            viewMode,
+            resolutions,
+            position,
+            sphericalCapRadius,
             matrix,
             logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else if (viewMode === constants.MODE_ARBITRARY) {
-          determineBucketsForFlight(
-            this.cube,
-            bucketQueue,
-            matrix,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-          );
-        } else {
-          determineBucketsForOrthogonal(
-            Store.getState().dataset,
-            this.cube,
-            bucketQueue,
-            logZoomStep,
-            fallbackZoomStep,
-            isFallbackAvailable,
-            this.anchorPointCache.anchorPoint,
-            this.anchorPointCache.fallbackAnchorPoint,
+            datasetConfiguration.loadingStrategy,
+            this.cachedAnchorPoint,
             areas,
             subBucketLocality,
-          );
-        }
+            initializedGpuFactor,
+          ),
+        );
       }
 
-      const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
-        bucketQueue,
-        this.textureBucketManager.maximumCapacity,
+      this.textureBucketManager.setAnchorPoint(this.cachedAnchorPoint);
+
+      pickingPromise.then(
+        buffer => {
+          const bucketsWithPriorities = consumeBucketsFromArrayBuffer(
+            buffer,
+            this.cube,
+            this.textureBucketManager.maximumCapacity,
+          );
+
+          const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
+          this.cube.markBucketsAsUnneeded();
+          // This tells the bucket collection, that the buckets are necessary for rendering
+          buckets.forEach(b => b.markAsNeeded());
+
+          this.textureBucketManager.setActiveBuckets(
+            buckets,
+            this.cachedAnchorPoint,
+            isAnchorPointNew,
+          );
+
+          // In general, pull buckets which are not available but should be sent to the GPU
+          const missingBuckets = bucketsWithPriorities
+            .filter(({ bucket }) => !bucket.hasData())
+            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_ZOOM_STEP)
+            .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+
+          this.pullQueue.addAll(missingBuckets);
+          this.pullQueue.pull();
+        },
+        reason => {
+          if (reason.message !== SKIPPED_TASK_REASON) {
+            throw reason;
+          }
+        },
       );
-
-      const buckets = bucketsWithPriorities.map(({ bucket }) => bucket);
-      this.cube.markBucketsAsUnneeded();
-      // This tells the bucket collection, that the buckets are necessary for rendering
-      buckets.forEach(b => b.markAsNeeded());
-
-      this.textureBucketManager.setActiveBuckets(
-        buckets,
-        this.anchorPointCache.anchorPoint,
-        this.anchorPointCache.fallbackAnchorPoint,
-      );
-
-      // In general, pull buckets which are not available but should be sent to the GPU
-      const missingBuckets = bucketsWithPriorities
-        .filter(({ bucket }) => !bucket.hasData())
-        .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-        .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
-
-      this.pullQueue.addAll(missingBuckets);
-      this.pullQueue.pull();
     }
 
-    return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
+    return this.cachedAnchorPoint;
   }
 
-  maybeUpdateAnchorPoint(
-    position: Vector3,
-    logZoomStep: number,
-    datasetScale: Vector3,
-    isFallback: boolean,
-  ): boolean {
-    const resolutions = getResolutions(Store.getState().dataset);
+  maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
+    const state = Store.getState();
+    const resolutions = getResolutions(state.dataset);
     const resolution = resolutions[logZoomStep];
-    const bucketsPerDim = isFallback
-      ? getMaxBucketCountsForFallback(datasetScale, logZoomStep, resolutions)
-      : getMaxBucketCountPerDim(datasetScale, logZoomStep, resolutions);
+    const addressSpaceDimensions = getAddressSpaceDimensions(
+      state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
 
-    const maximumRenderedBucketsHalfInVoxel = bucketsPerDim.map(
+    const maximumRenderedBucketsHalfInVoxel = addressSpaceDimensions.map(
       bucketPerDim => getAnchorPositionToCenterDistance(bucketPerDim) * constants.BUCKET_WIDTH,
     );
 
@@ -292,11 +285,10 @@ export default class LayerRenderingManager {
 
     const anchorPoint = this.cube.positionToZoomedAddress(anchorPointInVoxel, logZoomStep);
 
-    const cacheKey = isFallback ? "fallbackAnchorPoint" : "anchorPoint";
-    if (_.isEqual(anchorPoint, this.anchorPointCache[cacheKey])) {
+    if (_.isEqual(anchorPoint, this.cachedAnchorPoint)) {
       return false;
     }
-    this.anchorPointCache[cacheKey] = anchorPoint;
+    this.cachedAnchorPoint = anchorPoint;
     return true;
   }
 }

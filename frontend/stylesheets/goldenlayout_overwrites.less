@@ -25,7 +25,7 @@
   & > div > div {
     // Make sure that the wrapping divs within a content pane
     // have the same height as the pane.
-    height: inherit;
+    height: 100%;
   }
 
   & > div > div {
@@ -38,7 +38,7 @@
 
 .gl-dont-overflow {
   overflow: hidden;
-  height: inherit;
+  height: 100%;
 }
 
 .lm_tabdropdown_list {
@@ -64,9 +64,9 @@
       color: rgba(0, 0, 0, 0.65);
       font-size: 14px;
       font-weight: 400;
-      font-family: "Monospaced Number", "Chinese Quote", -apple-system, BlinkMacSystemFont,
-        "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
-        Helvetica, Arial, sans-serif;
+      font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+        sans-serif;
       &:hover {
         cursor: move;
       }
@@ -84,5 +84,15 @@
     background: white !important;
     color: #1890ff !important;
     border-bottom: 1px solid #1890ff;
+  }
+}
+
+// Used to hide the header and content of a gl item when another component is maximized.
+.hidden-gl-item {
+  .lm_header {
+    display: none;
+  }
+  .lm_items .lm_item_container .lm_content {
+    display: none;
   }
 }

@@ -24,8 +24,11 @@ type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
 type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
-type SetBrushSizeAction = { type: "SET_BRUSH_SIZE", brushSize: number };
 type SetContourTracingMode = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };
+export type InferSegmentationInViewportAction = {
+  type: "INFER_SEGMENT_IN_VIEWPORT",
+  position: Vector3,
+};
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -40,8 +43,8 @@ export type VolumeTracingAction =
   | ResetContourAction
   | SetMousePositionAction
   | HideBrushAction
-  | SetBrushSizeAction
   | CopySegmentationLayerAction
+  | InferSegmentationInViewportAction
   | SetContourTracingMode;
 
 export const VolumeTracingSaveRelevantActions = [
@@ -114,12 +117,14 @@ export const hideBrushAction = (): HideBrushAction => ({
   type: "HIDE_BRUSH",
 });
 
-export const setBrushSizeAction = (brushSize: number): SetBrushSizeAction => ({
-  type: "SET_BRUSH_SIZE",
-  brushSize,
-});
-
 export const setContourTracingMode = (mode: ContourMode): SetContourTracingMode => ({
   type: "SET_CONTOUR_TRACING_MODE",
   mode,
+});
+
+export const inferSegmentationInViewportAction = (
+  position: Vector3,
+): InferSegmentationInViewportAction => ({
+  type: "INFER_SEGMENT_IN_VIEWPORT",
+  position,
 });

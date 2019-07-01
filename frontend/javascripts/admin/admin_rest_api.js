@@ -13,6 +13,7 @@ import {
   type APIDataset,
   type APIDatasetId,
   type APIFeatureToggles,
+  type APIHistogramData,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -21,6 +22,7 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
+  type APISampleDataset,
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
@@ -43,6 +45,8 @@ import {
   type ServerSkeletonTracing,
   type ServerTracing,
   type ServerVolumeTracing,
+  type TracingType,
+  type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
 import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
@@ -98,7 +102,7 @@ export function getSharingToken(): ?string {
 }
 
 let tokenPromise;
-export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+export function doWithToken<T>(fn: (token: string) => Promise<T>, tries: number = 1): Promise<*> {
   const sharingToken = getSharingToken();
   if (sharingToken != null) {
     return fn(sharingToken);
@@ -108,7 +112,10 @@ export function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
     if (error.status === 403) {
       console.warn("Token expired. Requesting new token...");
       tokenPromise = requestUserToken();
-      return doWithToken(fn);
+      // If three new tokens did not fix the 403, abort, otherwise we'll get into an endless loop here
+      if (tries < 3) {
+        return doWithToken(fn, tries + 1);
+      }
     }
     throw error;
   });
@@ -560,7 +567,7 @@ export function getAnnotationInformation(
 
 export function createExplorational(
   datasetId: APIDatasetId,
-  typ: "volume" | "skeleton" | "hybrid",
+  typ: TracingType,
   withFallback: boolean,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
@@ -766,11 +773,24 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export async function addDataset(datasetConfig: DatasetConfig): Promise<void> {
-  await doWithToken(token =>
+export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+  return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datasetConfig,
       host: datasetConfig.datastore,
+    }),
+  );
+}
+
+export function addWkConnectDataset(
+  datastoreHost: string,
+  datasetConfig: WkConnectDatasetConfig,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datasetConfig,
+      host: datastoreHost,
+      method: "POST",
     }),
   );
 }
@@ -835,11 +855,18 @@ export async function triggerDatasetClearCache(
 ): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(
-      `/data/triggers/clearCache/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
+      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
       {
         host: datastoreHost,
       },
     ),
+  );
+}
+
+export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
+  await Request.triggerRequest(
+    `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
+    { method: "PUT" },
   );
 }
 
@@ -868,6 +895,36 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
   return organizationName;
 }
 
+export async function findDataPositionForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/findData?token=${token}`,
+    ),
+  );
+  return { position, resolution };
+}
+
+export async function getHistogramForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<APIHistogramData> {
+  const { count, histogram } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/histogram?token=${token}`,
+    ),
+  );
+  return { count, histogram };
+}
+
 export async function getMappingsForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -878,6 +935,42 @@ export async function getMappingsForDatasetLayer(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/mappings?token=${token}`,
+    ),
+  );
+}
+
+export function getSampleDatasets(
+  datastoreUrl: string,
+  organizationName: string,
+): Promise<Array<APISampleDataset>> {
+  return doWithToken(token =>
+    Request.receiveJSON(`${datastoreUrl}/data/datasets/sample/${organizationName}?token=${token}`),
+  );
+}
+
+export async function triggerSampleDatasetDownload(
+  datastoreUrl: string,
+  organizationName: string,
+  datasetName: string,
+) {
+  await doWithToken(token =>
+    Request.triggerRequest(
+      `${datastoreUrl}/data/datasets/sample/${organizationName}/${datasetName}/download?token=${token}`,
+      { method: "POST" },
+    ),
+  );
+}
+
+export async function getMeanAndStdDevFromDataset(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<{ mean: number, stdDev: number }> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/colorStatistics?token=${token}`,
     ),
   );
 }
@@ -976,12 +1069,12 @@ export async function getOrganizationNames(): Promise<Array<string>> {
 
 // ### BuildInfo webknossos
 export function getBuildInfo(): Promise<APIBuildInfo> {
-  return Request.receiveJSON("/api/buildinfo");
+  return Request.receiveJSON("/api/buildinfo", { doNotInvestigate: true });
 }
 
 // ### BuildInfo datastore
 export function getDataStoreBuildInfo(dataStoreUrl: string): Promise<APIBuildInfo> {
-  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`);
+  return Request.receiveJSON(`${dataStoreUrl}/api/buildinfo`, { doNotInvestigate: true });
 }
 
 // ### Feature Selection
@@ -1068,7 +1161,7 @@ export function computeIsosurface(
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.name
+        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
       }/isosurface?token=${token}`,
       {
         data: {

@@ -131,6 +131,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
 
+  private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
+
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
@@ -164,6 +166,15 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
               order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select count(*) from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"""
+          .as[Int])
+      parsed <- r.headOption
     } yield parsed
 
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
@@ -264,7 +275,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       projectFilter <- projectFilterFox
-      accessQuery <- readAccessQuery
+      accessQuery <- userIdFromCtx.map(listAccessQ).getOrElse("false")
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t
                 #${userJoin}

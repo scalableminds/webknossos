@@ -2,11 +2,7 @@
 
 import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
-import {
-  getLayerByName,
-  getLayerBoundaries,
-  getBitDepth,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -27,6 +23,7 @@ class DataLayer {
   activeMapping: ?string;
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
+  fallbackLayer: ?string;
 
   constructor(
     layerInfo: DataLayerType,
@@ -36,18 +33,19 @@ class DataLayer {
   ) {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
+    this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
-    const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
+    const isSegmentation = layerInfo.category === "segmentation";
 
     ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
       this.resolutions.length,
-      bitDepth,
-      layerInfo.category === "segmentation",
+      layerInfo.elementClass,
+      isSegmentation,
     );
 
     this.pullQueue = new PullQueue(
@@ -58,15 +56,15 @@ class DataLayer {
     );
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(layerInfo.name);
-    this.activeMapping = null;
+    const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
+    this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,
       this.cube,
       textureWidth,
       dataTextureCount,
-      layerInfo.category === "segmentation",
+      isSegmentation,
     );
   }
 

@@ -13,13 +13,13 @@ import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } fro
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { document } from "libs/window";
 import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getPosition,
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -27,10 +27,7 @@ import {
   moveFlycamOrthoAction,
   zoomByDeltaAction,
 } from "oxalis/model/actions/flycam_actions";
-import {
-  setBrushSizeAction,
-  setMousePositionAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { setViewportAction, zoomTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
@@ -51,9 +48,12 @@ import constants, {
   VolumeToolEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import messages from "messages";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
+
+const MAX_BRUSH_CHANGE_VALUE = 5;
+const BRUSH_CHANGING_CONSTANT = 0.02;
 
 function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: Object): void {
   const conflictingHandlers = _.intersection(
@@ -77,22 +77,20 @@ const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) =
   if (!segmentation) {
     return;
   }
+  const position = calculateGlobalPos(pos);
   const cellId = segmentation.cube.getMappedDataValue(
-    calculateGlobalPos(pos),
+    position,
     getRequestLogZoomStep(Store.getState()),
   );
   if (cellId > 0) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(cellId));
+    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
   }
 };
 
-type OwnProps = {|
-  onRender: () => void,
-|};
 type StateProps = {|
   tracing: Tracing,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = {| ...StateProps |};
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -106,6 +104,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
+
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   zoomPos: Vector3;
@@ -137,23 +136,24 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    // Workaround: We are only waiting for tdview since this
-    // introduces the necessary delay to attach the events to the
-    // newest input catchers. We should refactor the
+    // Workaround: We are only waiting for tdview since this introduces
+    // the necessary delay to attach the events to the newest input
+    // catchers (only necessary for HammerJS). We should refactor the
     // InputMouse handling so that this is not necessary anymore.
     // See: https://github.com/scalableminds/webknossos/issues/3475
-    const tdSelector = `#inputcatcher_${OrthoViews.TDView}`;
-    Utils.waitForSelector(tdSelector).then(() => {
+    const tdId = `inputcatcher_${OrthoViews.TDView}`;
+    Utils.waitForElementWithId(tdId).then(() => {
       OrthoViewValuesWithoutTDView.forEach(id => {
-        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-        Utils.waitForSelector(inputcatcherSelector).then(el => {
+        const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
+        Utils.waitForElementWithId(inputcatcherId).then(el => {
           if (!document.body.contains(el)) {
             console.error("el is not attached anymore");
           }
           this.input.mouseControllers[id] = new InputMouse(
-            inputcatcherSelector,
+            inputcatcherId,
             this.getPlaneMouseControls(id),
             id,
+            true,
           );
         });
       });
@@ -162,17 +162,18 @@ class PlaneController extends React.PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
-      leftDownMove: (delta: Point2) => {
-        const viewportScale = getViewportScale(planeId);
-        return this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
-      },
+      leftDownMove: (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]),
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));
       },
       pinch: delta => this.zoom(delta, true),
-      mouseMove: (delta: Point2, position: Point2) => {
-        Store.dispatch(setMousePositionAction([position.x, position.y]));
+      mouseMove: (delta: Point2, position: Point2, id, event) => {
+        if (event.altKey && !event.shiftKey) {
+          this.movePlane([-delta.x, -delta.y, 0]);
+        } else {
+          Store.dispatch(setMousePositionAction([position.x, position.y]));
+        }
       },
     };
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -236,8 +237,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + f": (timeFactor, first) => this.moveZ(getMoveValue(timeFactor) * 5, first),
         "shift + d": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor) * 5, first),
 
-        "shift + i": () => this.changeBrushSizeIfBrushIsActive(-5),
-        "shift + o": () => this.changeBrushSizeIfBrushIsActive(5),
+        "shift + i": () => this.changeBrushSizeIfBrushIsActiveBy(-1),
+        "shift + o": () => this.changeBrushSizeIfBrushIsActiveBy(1),
 
         "shift + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
         "ctrl + space": (timeFactor, first) => this.moveZ(-getMoveValue(timeFactor), first),
@@ -295,6 +296,7 @@ class PlaneController extends React.PureComponent<Props> {
           Toast.warning("No cell under cursor.");
         }
       },
+      q: downloadScreenshot,
     };
 
     // TODO: Find a nicer way to express this, while satisfying flow
@@ -355,7 +357,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   onPlaneViewRender(): void {
     getSceneController().update();
-    this.props.onRender();
   }
 
   movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
@@ -416,8 +417,8 @@ class PlaneController extends React.PureComponent<Props> {
 
   zoomTDView(value: number): void {
     const zoomToPosition = null;
-    const { width } = getInputCatcherRect(OrthoViews.TDView);
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
+    const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
   finishZoom = (): void => {
@@ -450,23 +451,21 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   changeMoveValue(delta: number): void {
-    let moveValue = Store.getState().userConfiguration.moveValue + delta;
-    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
-    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
-
+    const moveValue = Store.getState().userConfiguration.moveValue + delta;
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
-  changeBrushSizeIfBrushIsActive(changeValue: number) {
+  changeBrushSizeIfBrushIsActiveBy(factor: number) {
     const isBrushActive = Utils.maybe(getVolumeTool)(this.props.tracing.volume)
       .map(tool => tool === VolumeToolEnum.BRUSH)
       .getOrElse(false);
     if (isBrushActive) {
-      const currentSize = Store.getState().temporaryConfiguration.brushSize;
-      Store.dispatch(setBrushSizeAction(currentSize + changeValue));
+      const currentBrushSize = Store.getState().userConfiguration.brushSize;
+      const newBrushSize =
+        Math.min(Math.ceil(currentBrushSize * BRUSH_CHANGING_CONSTANT), MAX_BRUSH_CHANGE_VALUE) *
+          factor +
+        currentBrushSize;
+      Store.dispatch(updateUserSettingAction("brushSize", newBrushSize));
     }
   }
 
@@ -485,9 +484,12 @@ class PlaneController extends React.PureComponent<Props> {
           .map(tool => tool === VolumeToolEnum.BRUSH)
           .getOrElse(false);
         if (isBrushActive) {
-          const currentSize = Store.getState().temporaryConfiguration.brushSize;
           // Different browsers send different deltas, this way the behavior is comparable
-          Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));
+          if (delta > 0) {
+            this.changeBrushSizeIfBrushIsActiveBy(1);
+          } else {
+            this.changeBrushSizeIfBrushIsActiveBy(-1);
+          }
         } else if (this.props.tracing.skeleton) {
           // Different browsers send different deltas, this way the behavior is comparable
           api.tracing.setNodeRadius(delta > 0 ? 5 : -5);
@@ -560,13 +562,13 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const state = Store.getState();
   const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
-  const zoomFactor = getPlaneScalingFactor(state.flycam);
-  const viewportScale = getViewportScale(activeViewport);
+  const zoomFactors = getPlaneScalingFactor(state, state.flycam, activeViewport);
+  const viewportScale = getViewportScale(state, activeViewport);
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
-  const center = (constants.VIEWPORT_WIDTH * viewportScale) / 2;
-  const diffX = ((center - clickPos.x) / viewportScale) * zoomFactor;
-  const diffY = ((center - clickPos.y) / viewportScale) * zoomFactor;
+  const center = [0, 1].map(dim => (constants.VIEWPORT_WIDTH * viewportScale[dim]) / 2);
+  const diffX = ((center[0] - clickPos.x) / viewportScale[0]) * zoomFactors[0];
+  const diffY = ((center[1] - clickPos.y) / viewportScale[1]) * zoomFactors[1];
 
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:
@@ -607,4 +609,4 @@ export function mapStateToProps(state: OxalisState): StateProps {
 }
 
 export { PlaneController as PlaneControllerClass };
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);
+export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(PlaneController);

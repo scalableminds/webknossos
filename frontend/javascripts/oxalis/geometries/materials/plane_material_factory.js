@@ -2,9 +2,8 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import app from "app";
 import {
-  ModeValues,
+  ViewModeValues,
   type OrthoView,
   OrthoViewValues,
   OrthoViews,
@@ -14,23 +13,24 @@ import {
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import {
+  getAddressSpaceDimensions,
+  getLookupBufferSize,
+  getPackingDegree,
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
   getColorLayers,
   getResolutions,
   isRgb,
   getByteCount,
+  getElementClass,
   getBoundaries,
 } from "oxalis/model/accessors/dataset_accessor";
-import {
-  getMaxBucketCountPerDim,
-  getPlaneScalingFactor,
-  getRequestLogZoomStep,
-} from "oxalis/model/accessors/flycam_accessor";
-import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Store, { type DatasetLayerConfiguration } from "oxalis/store";
 import * as Utils from "libs/utils";
+import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
@@ -69,6 +69,18 @@ function getIsRgbLayerLookup(): { [string]: boolean } {
   return _.mapValues(colorLayersObject, layer => isRgb(dataset, layer.name));
 }
 
+function getFloatLayerLookup(): { [string]: false | { min: number, max: number } } {
+  const { dataset } = Store.getState();
+  const colorLayers = getColorLayers(dataset);
+  // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
+  const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
+  // TODO: Use the correct float value range (from histogram)
+  return _.mapValues(
+    colorLayersObject,
+    layer => getElementClass(dataset, layer.name) === "float" && { min: 0, max: 255 },
+  );
+}
+
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
@@ -96,6 +108,9 @@ class PlaneMaterialFactory {
   }
 
   setupUniforms(): void {
+    const addressSpaceDimensions = getAddressSpaceDimensions(
+      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
     this.uniforms = {
       alpha: {
         type: "f",
@@ -114,10 +129,6 @@ class PlaneMaterialFactory {
         value: new THREE.Vector3(0, 0, 0),
       },
       anchorPoint: {
-        type: "v4",
-        value: new THREE.Vector3(0, 0, 0),
-      },
-      fallbackAnchorPoint: {
         type: "v4",
         value: new THREE.Vector3(0, 0, 0),
       },
@@ -150,10 +161,6 @@ class PlaneMaterialFactory {
         value: new THREE.Vector3(0, 0, 0),
       },
       brushSizeInPixel: {
-        type: "f",
-        value: 0,
-      },
-      pixelToVoxelFactor: {
         type: "f",
         value: 0,
       },
@@ -193,9 +200,13 @@ class PlaneMaterialFactory {
         type: "b",
         value: false,
       },
-      bucketsPerDim: {
+      addressSpaceDimensions: {
         type: "v3",
-        value: new THREE.Vector3(0, 0, 0),
+        value: new THREE.Vector3(...addressSpaceDimensions),
+      },
+      hoveredIsosurfaceId: {
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
       },
     };
 
@@ -215,11 +226,11 @@ class PlaneMaterialFactory {
         type: "v3",
         value: DEFAULT_COLOR,
       };
-      this.uniforms[`${name}_brightness`] = {
+      this.uniforms[`${name}_min`] = {
         type: "f",
-        value: 1.0,
+        value: 0.0,
       };
-      this.uniforms[`${name}_contrast`] = {
+      this.uniforms[`${name}_max`] = {
         type: "f",
         value: 1.0,
       };
@@ -294,10 +305,6 @@ class PlaneMaterialFactory {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
-    this.material.setFallbackAnchorPoint = ([x, y, z]) => {
-      this.uniforms.fallbackAnchorPoint.value.set(x, y, z);
-    };
-
     this.material.setSegmentationAlpha = alpha => {
       this.uniforms.alpha.value = alpha / 100;
     };
@@ -324,25 +331,6 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => getRequestLogZoomStep(storeState),
-        zoomStep => {
-          const storeState = Store.getState();
-          const { dataset } = storeState;
-          const resolutions = getResolutions(dataset);
-          const bucketsPerDim = getMaxBucketCountPerDim(
-            dataset.dataSource.scale,
-            zoomStep,
-            resolutions,
-          );
-
-          this.uniforms.bucketsPerDim.value.set(...bucketsPerDim);
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
         storeState => storeState.userConfiguration.sphericalCapRadius,
         sphericalCapRadius => {
           this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
@@ -353,9 +341,9 @@ class PlaneMaterialFactory {
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        storeState => storeState.flycam.zoomStep,
-        zoomStep => {
-          this.uniforms.zoomValue.value = zoomStep;
+        storeState => getZoomValue(storeState.flycam),
+        zoomValue => {
+          this.uniforms.zoomValue.value = zoomValue;
         },
         true,
       ),
@@ -385,17 +373,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         storeState => storeState.temporaryConfiguration.viewMode,
         viewMode => {
-          this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
-        },
-        true,
-      ),
-    );
-
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
-        pixelToVoxelFactor => {
-          this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
+          this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
         },
         true,
       ),
@@ -478,11 +456,21 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.brushSize,
+          storeState => storeState.userConfiguration.brushSize,
           brushSize => {
             this.uniforms.brushSizeInPixel.value = brushSize;
           },
           true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.hoveredIsosurfaceId,
+          hoveredIsosurfaceId => {
+            const [a, b, g, r] = Utils.convertDecToBase256(hoveredIsosurfaceId);
+            this.uniforms.hoveredIsosurfaceId.value.set(r, g, b, a);
+          },
         ),
       );
 
@@ -532,9 +520,10 @@ class PlaneMaterialFactory {
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
-    this.uniforms[`${name}_brightness`].value = settings.brightness / 255;
-    this.uniforms[`${name}_contrast`].value = settings.contrast;
-    this.uniforms[`${name}_alpha`].value = settings.alpha / 100;
+    const { alpha, intensityRange, isDisabled } = settings;
+    this.uniforms[`${name}_min`].value = intensityRange[0] / 255;
+    this.uniforms[`${name}_max`].value = intensityRange[1] / 255;
+    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);
@@ -549,6 +538,7 @@ class PlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
     const isRgbLayerLookup = getIsRgbLayerLookup();
+    const floatLayerLookup = getFloatLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
@@ -557,20 +547,30 @@ class PlaneMaterialFactory {
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
     const segmentationPackingDegree = hasSegmentation
-      ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
+      ? getPackingDegree(
+          getByteCount(dataset, segmentationLayer.name),
+          getElementClass(dataset, segmentationLayer.name),
+        )
       : 0;
+
+    const lookupTextureWidth = getLookupBufferSize(
+      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    );
 
     const code = getMainFragmentShader({
       colorLayerNames,
       isRgbLayerLookup,
+      floatLayerLookup,
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,
       isMappingSupported: Model.isMappingSupported,
+      // Todo: this is not computed per layer. See #4018
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
+      lookupTextureWidth,
     });
 
     return code;

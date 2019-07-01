@@ -1,30 +1,50 @@
 // @flow
 
-import { Form, Popover, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import {
+  Form,
+  Popover,
+  Modal,
+  Input,
+  Button,
+  Row,
+  Col,
+  Steps,
+  Icon,
+  Card,
+  AutoComplete,
+} from "antd";
+import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import * as React from "react";
+import React, { type Node, useState, useEffect } from "react";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import { getOrganizations, getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
+import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import Toast from "libs/toast";
+import features from "features";
+import renderIndependently from "libs/render_independently";
 
-const Step = Steps.Step;
+const { Step } = Steps;
 const FormItem = Form.Item;
 
 type StateProps = {|
   activeUser: ?APIUser,
 |};
-type Props = StateProps;
+
+type Props = { ...StateProps, history: RouterHistory };
 
 type State = {
   currentStep: number,
+  datastores: Array<APIDataStore>,
   organizationName: string,
   datasetNameToImport: ?string,
+  showDatasetUploadModal: boolean,
 };
 
 function StepHeader({
@@ -34,9 +54,9 @@ function StepHeader({
   children,
 }: {
   header: string,
-  subheader: React.Node,
-  icon: React.Node,
-  children: React.Node,
+  subheader: Node,
+  icon: Node,
+  children: Node,
 }) {
   return (
     <div style={{}}>
@@ -74,11 +94,41 @@ function FeatureCard({ icon, header, children }) {
   );
 }
 
+type OptionCardProps = {
+  icon: Node,
+  header: string,
+  children: Node,
+  action: Node,
+  height: number,
+};
+
+export function OptionCard({ icon, header, children, action, height }: OptionCardProps) {
+  return (
+    <div style={{ padding: 12 }}>
+      <Card
+        bodyStyle={{
+          textAlign: "center",
+          height,
+          width: 350,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-around",
+        }}
+      >
+        <div style={{ fontSize: 30 }}>{icon}</div>
+        <p style={{ fontWeight: "bold" }}>{header}</p>
+        <p style={{ color: "gray" }}>{children}</p>
+        <p>{action}</p>
+      </Card>
+    </div>
+  );
+}
+
 export class InviteUsersPopover extends React.Component<{
   organizationName: string,
   visible?: boolean,
   handleVisibleChange?: Function,
-  children: React.Node,
+  children: Node,
 }> {
   getRegistrationHotLink(): string {
     return `${location.origin}/auth/register?organizationName=${encodeURIComponent(
@@ -121,6 +171,15 @@ export class InviteUsersPopover extends React.Component<{
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
+  const [organizations, setOrganizations] = useState([]);
+  const fetchOrganizations = async () =>
+    setOrganizations((await getOrganizations()).map(org => org.name));
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
+
+  const joinExistingOrganization = organizations.includes(form.getFieldValue("organizationName"));
+
   const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
   const handleSubmit = e => {
     e.preventDefault();
@@ -146,28 +205,39 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
           >
             {getFieldDecorator("organizationName", {
               rules: [{ required: true, message: "Please enter an organization name!" }],
+              initialValue: features().defaultOrganization,
             })(
-              <Input
+              <AutoComplete
                 size="large"
+                dataSource={organizations}
+                defaultActiveFirstOption={false}
                 placeholder="Your organization name"
-                autoFocus
-                style={{ width: "100%" }}
               />,
             )}
           </FormItem>
         </Col>
         <Col span={6}>
           <FormItem>
-            <Button
-              size="large"
-              type="primary"
-              icon="plus"
-              style={{ width: "100%" }}
-              htmlType="submit"
-              disabled={hasErrors(getFieldsError())}
-            >
-              Create
-            </Button>
+            {joinExistingOrganization ? (
+              <Link
+                to={`/auth/register?organizationName=${form.getFieldValue("organizationName")}`}
+              >
+                <Button size="large" type="primary" style={{ width: "100%" }}>
+                  Join
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                size="large"
+                type="primary"
+                icon="plus"
+                style={{ width: "100%" }}
+                htmlType="submit"
+                disabled={hasErrors(getFieldsError())}
+              >
+                Create
+              </Button>
+            )}
           </FormItem>
         </Col>
       </Row>
@@ -176,194 +246,248 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
 });
 
 class OnboardingView extends React.PureComponent<Props, State> {
-  constructor() {
-    super();
-    this.state = {
-      currentStep: 0,
-      organizationName: "",
-      datasetNameToImport: null,
-    };
+  state = {
+    currentStep: 0,
+    datastores: [],
+    organizationName: "",
+    showDatasetUploadModal: false,
+    datasetNameToImport: null,
+  };
+
+  componentDidMount() {
+    if (this.props.activeUser != null) {
+      this.props.history.push("/dashboard");
+      return;
+    }
+
+    this.fetchData();
+  }
+
+  async fetchData() {
+    const datastores = (await getDatastores()).filter(ds => !ds.isForeign && !ds.isConnector);
+    this.setState({ datastores });
   }
 
   advanceStep = () => {
     this.setState(prevState => ({
       currentStep: prevState.currentStep + 1,
+      showDatasetUploadModal: false,
       datasetNameToImport: null,
     }));
   };
 
-  renderCreateOrganization() {
-    return (
-      <StepHeader
-        header="Create Your Organization"
-        subheader={
-          <React.Fragment>
-            Welcome to webKnossos! This guide will help you get started.
-            <br />
-            Setup your organization to manage users and datasets. Example names: &ldquo;University
-            of Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
-          </React.Fragment>
-        }
-        icon={
-          <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-        }
-      >
-        <OrganizationForm
-          onComplete={organizationName => {
-            this.setState({ organizationName });
-            this.advanceStep();
-          }}
-        />
-      </StepHeader>
-    );
-  }
+  renderSampleDatasetsModal = () => {
+    renderIndependently(destroy => (
+      <SampleDatasetsModal
+        organizationName={this.state.organizationName}
+        destroy={destroy}
+        onOk={this.advanceStep}
+      />
+    ));
+  };
 
-  renderCreateAccount() {
-    return (
-      <StepHeader
-        header="Create an Admin Account"
-        subheader={
-          <React.Fragment>
-            This will be the first user account in your organization. It will be equipped with admin
-            privileges in order to confirm user registrations, define teams, create tasks and much
-            more.
-          </React.Fragment>
-        }
-        icon={<Icon type="user" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
-      >
-        <RegistrationForm
-          hidePrivacyStatement
-          createOrganization
-          organizationName={this.state.organizationName}
-          onRegistered={this.advanceStep}
-          confirmLabel="Create account"
-          tryAutoLogin
-        />
-      </StepHeader>
-    );
-  }
+  renderCreateOrganization = () => (
+    <StepHeader
+      header="Create or Join an Organization"
+      subheader={
+        <React.Fragment>
+          Welcome to webKnossos! This guide will help you get started.
+          <br />
+          Setup your organization to manage users and datasets. Example names: &ldquo;University of
+          Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
+        </React.Fragment>
+      }
+      icon={<i className="fa fa-building icon-big" />}
+    >
+      <OrganizationForm
+        onComplete={organizationName => {
+          this.setState({ organizationName });
+          this.advanceStep();
+        }}
+      />
+    </StepHeader>
+  );
 
-  renderUploadDatasets() {
-    return (
-      <StepHeader
-        header="Upload the first dataset into your organization."
-        subheader={
-          <React.Fragment>
-            Upload your dataset via drag and drop or by directly copying the dataset on the hosting
-            server.{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
-              Learn more about supported data formats.
-            </a>
-          </React.Fragment>
-        }
-        icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
-      >
-        {this.state.datasetNameToImport == null ? (
+  renderCreateAccount = () => (
+    <StepHeader
+      header="Create an Admin Account"
+      subheader={
+        <React.Fragment>
+          This will be the first user account in your organization. It will be equipped with admin
+          privileges in order to confirm user registrations, define teams, create tasks and much
+          more.
+        </React.Fragment>
+      }
+      icon={<Icon type="user" className="icon-big" />}
+    >
+      <RegistrationForm
+        hidePrivacyStatement
+        createOrganization
+        organizationName={this.state.organizationName}
+        onRegistered={this.advanceStep}
+        confirmLabel="Create account"
+        tryAutoLogin
+      />
+    </StepHeader>
+  );
+
+  renderUploadDatasets = () => (
+    <StepHeader
+      header="Add the first dataset to your organization."
+      subheader={
+        <React.Fragment>
+          Upload your dataset via drag and drop or add one of our sample datasets.
+        </React.Fragment>
+      }
+      icon={<Icon type="file-add" className="icon-big" />}
+    >
+      {this.state.showDatasetUploadModal && (
+        <Modal
+          visible
+          width="85%"
+          footer={null}
+          maskClosable={false}
+          onCancel={() => this.setState({ showDatasetUploadModal: false })}
+        >
           <DatasetUploadView
-            onUploaded={datasetName => {
-              this.setState({ datasetNameToImport: datasetName });
+            datastores={this.state.datastores}
+            onUploaded={(_organization: string, datasetName: string) => {
+              this.setState({ datasetNameToImport: datasetName, showDatasetUploadModal: false });
             }}
             withoutCard
           />
-        ) : (
-          <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
-            <DatasetImportView
-              isEditingMode={false}
-              datasetId={{
-                name: this.state.datasetNameToImport || "",
-                owningOrganization: this.state.organizationName || "",
-              }}
-              onComplete={this.advanceStep}
-              onCancel={this.advanceStep}
-            />
-          </Modal>
-        )}
-        <div style={{ textAlign: "center" }}>
-          <a
-            href="#"
-            onClick={this.advanceStep}
-            style={{
-              fontSize: 14,
-              color: "gray",
-              display: "inline-block",
+        </Modal>
+      )}
+      {this.state.datasetNameToImport != null && (
+        <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
+          <DatasetImportView
+            isEditingMode={false}
+            datasetId={{
+              name: this.state.datasetNameToImport || "",
+              owningOrganization: this.state.organizationName || "",
             }}
-          >
-            Or skip this step
+            onComplete={this.advanceStep}
+            onCancel={this.advanceStep}
+          />
+        </Modal>
+      )}
+      <Row type="flex" gutter={16} justify="center" align="bottom">
+        <OptionCard
+          header="Upload Dataset"
+          icon={<Icon type="cloud-upload-o" />}
+          action={
+            <Button onClick={() => this.setState({ showDatasetUploadModal: true })}>
+              Upload your dataset
+            </Button>
+          }
+          height={250}
+        >
+          You can also copy it directly onto the hosting server.{" "}
+          <a href="https://docs.webknossos.org/reference/data_formats">
+            Learn more about supported data formats.
           </a>
-        </div>
-      </StepHeader>
-    );
-  }
+        </OptionCard>
+        <OptionCard
+          header="Add Sample Dataset"
+          icon={<Icon type="rocket" />}
+          action={
+            <Button type="primary" onClick={this.renderSampleDatasetsModal}>
+              Add Sample Dataset
+            </Button>
+          }
+          height={350}
+        >
+          This is the easiest way to try out webKnossos. Add one of our sample datasets and start
+          exploring in less than a minute.
+        </OptionCard>
+        <OptionCard
+          header="Skip"
+          icon={<Icon type="clock-circle-o" />}
+          action={
+            <a href="#" onClick={this.advanceStep}>
+              Skip this step
+            </a>
+          }
+          height={170}
+        >
+          You can always do this later!
+        </OptionCard>
+      </Row>
+    </StepHeader>
+  );
 
-  renderWhatsNext() {
-    return (
-      <StepHeader
-        header="Congratulations!"
-        subheader={
-          <React.Fragment>
-            You&apos;ve completed the initial setup.
-            <br />
-            <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
-            the features and concepts of webKnossos.
-          </React.Fragment>
-        }
-        icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
-      >
-        <Row type="flex" gutter={50}>
-          <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
-            <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-            <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
-          </FeatureCard>
-          <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
-            <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">Learn more</a> about
-            the formats and upload processes webKnossos supports.
-          </FeatureCard>
-          <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-            <InviteUsersPopover
-              organizationName={
-                this.props.activeUser != null ? this.props.activeUser.organization : ""
-              }
-            >
-              <a href="#">Invite users</a>{" "}
-            </InviteUsersPopover>
-            and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
-            permissions and task assignments.
-          </FeatureCard>
-          <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
-            Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
-            accomplish your research goals.{" "}
-            <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
-          </FeatureCard>
-          <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-            Use the <a href="/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
-            <a href="/scripts">scriptable workflows</a>.{" "}
-            <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
-          </FeatureCard>
-          <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
-            <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
-            questions or need help getting started.
-          </FeatureCard>
-        </Row>
-      </StepHeader>
-    );
-  }
-
-  render() {
-    const currentStepContent = (() => {
-      switch (this.state.currentStep) {
-        case 0:
-          return this.renderCreateOrganization();
-        case 1:
-          return this.renderCreateAccount();
-        case 2:
-          return this.renderUploadDatasets();
-        case 3:
-          return this.renderWhatsNext();
-        default:
-          return null;
+  renderWhatsNext = () => (
+    <StepHeader
+      header="Congratulations!"
+      subheader={
+        <React.Fragment>
+          You&apos;ve completed the initial setup.
+          <br />
+          <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
+          the features and concepts of webKnossos.
+        </React.Fragment>
       }
-    })();
+      icon={<Icon type="rocket" className="icon-big" />}
+    >
+      <Row type="flex" gutter={50}>
+        <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
+          <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
+          <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
+        </FeatureCard>
+        <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
+          <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
+          <a href="https://docs.webknossos.org/reference/data_formats">Learn more</a> about the
+          formats and upload processes webKnossos supports.
+        </FeatureCard>
+        <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
+          <InviteUsersPopover
+            organizationName={
+              this.props.activeUser != null ? this.props.activeUser.organization : ""
+            }
+          >
+            <a href="#">Invite users</a>{" "}
+          </InviteUsersPopover>
+          and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
+          permissions and task assignments.
+        </FeatureCard>
+        <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
+          Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
+          accomplish your research goals.{" "}
+          <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
+        </FeatureCard>
+        <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
+          Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+          <a href="/scripts">scriptable workflows</a>.{" "}
+          <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
+        </FeatureCard>
+        <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
+          <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
+          questions or need help getting started.
+        </FeatureCard>
+      </Row>
+    </StepHeader>
+  );
+
+  getAvailableSteps() {
+    if (features().isDemoInstance) {
+      return [
+        { title: "Create Organization", component: this.renderCreateOrganization },
+        { title: "Create Account", component: this.renderCreateAccount },
+        { title: "What's Next?", component: this.renderWhatsNext },
+      ];
+    } else {
+      return [
+        { title: "Create Organization", component: this.renderCreateOrganization },
+        { title: "Create Account", component: this.renderCreateAccount },
+        { title: "Add Dataset", component: this.renderUploadDatasets },
+        { title: "What's Next?", component: this.renderWhatsNext },
+      ];
+    }
+  }
+
+  render = () => {
+    const availableSteps = this.getAvailableSteps();
+    const currentStepContent = availableSteps[this.state.currentStep].component();
 
     return (
       <div
@@ -377,10 +501,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
-              <Step title="Create Organization" />
-              <Step title="Create Account" />
-              <Step title="Upload Dataset" />
-              <Step title="What's Next?" />
+              {availableSteps.map(({ title }) => (
+                <Step title={title} key={title} />
+              ))}
             </Steps>
           </Col>
         </Row>
@@ -388,18 +511,18 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <Row type="flex" justify="center" style={{ flex: "1 1 auto" }} align="middle">
             <Col span={18}>
               <Row type="flex" justify="center" align="middle">
-                <Col span={18}>{currentStepContent}</Col>
+                <Col span={24}>{currentStepContent}</Col>
               </Row>
             </Col>
           </Row>
         </div>
       </div>
     );
-  }
+  };
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(OnboardingView);
+export default connect<StateProps, {||}, _, _, _, _>(mapStateToProps)(withRouter(OnboardingView));

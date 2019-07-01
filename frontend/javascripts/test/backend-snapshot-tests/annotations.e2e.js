@@ -1,8 +1,4 @@
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
-import { APIAnnotationTypeEnum } from "admin/api_flow_types";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import {
   resetDatabase,
   replaceVolatileValues,
@@ -10,6 +6,9 @@ import {
   tokenUserA,
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
+import { APIAnnotationTypeEnum } from "admin/api_flow_types";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";
 import * as UpdateActions from "oxalis/model/sagas/update_actions";
 import * as api from "admin/admin_rest_api";
@@ -139,7 +138,7 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
   t.is(finishedAnnotation.state, "Finished");
 });
 
-test("getTracingForAnnotations()", async t => {
+test.serial("getTracingForAnnotations()", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   const tracing = await api.getTracingForAnnotations(createdExplorational);
@@ -147,6 +146,33 @@ test("getTracingForAnnotations()", async t => {
   t.snapshot(replaceVolatileValues(tracing.skeleton), {
     id: "annotations-tracing",
   });
+});
+
+test.serial("getTracingForAnnotations() for volume", async t => {
+  const createdExplorational = await api.createExplorational(dataSetId, "volume", false);
+
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing-volume", "HybridServerTracing");
+  t.snapshot(replaceVolatileValues(tracing.volume), {
+    id: "annotations-tracing-volume",
+  });
+});
+
+test.serial("getTracingForAnnotations() for hybrid", async t => {
+  const createdExplorational = await api.createExplorational(dataSetId, "hybrid", false);
+
+  const tracing = await api.getTracingForAnnotations(createdExplorational);
+  writeFlowCheckingFile(tracing, "tracing-hybrid", "HybridServerTracing");
+  // The volatileValues list includes "skeleton" and "volume", because of other requests, so we need to do it like this
+  t.snapshot(
+    {
+      skeleton: replaceVolatileValues(tracing.skeleton),
+      volume: replaceVolatileValues(tracing.volume),
+    },
+    {
+      id: "annotations-tracing-hybrid",
+    },
+  );
 });
 
 async function sendUpdateActions(explorational, queue) {
@@ -163,7 +189,7 @@ async function sendUpdateActions(explorational, queue) {
   );
 }
 
-test("Send update actions and compare resulting tracing", async t => {
+test.serial("Send update actions and compare resulting tracing", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
   const initialSkeleton = { activeNodeId: undefined, userBoundingBox: undefined };

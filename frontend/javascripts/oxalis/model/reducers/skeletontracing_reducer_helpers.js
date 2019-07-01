@@ -131,15 +131,15 @@ export function createNode(
     };
 
     // Create a new edge
-    const newEdges = activeNodeMaybe
-      .map(activeNode => [
-        {
+    const edges = activeNodeMaybe
+      .map(activeNode => {
+        const newEdge = {
           source: activeNode.id,
           target: nextNewId,
-        },
-      ])
-      .getOrElse([]);
-    const edges = tree.edges.addEdges(newEdges);
+        };
+        return tree.edges.addEdge(newEdge);
+      })
+      .getOrElse(tree.edges);
 
     return Maybe.Just([node, edges]);
   }
@@ -790,7 +790,7 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
             ? [tree.color.r, tree.color.g, tree.color.b]
             : ColorGenerator.distinctColorForId(tree.treeId),
         branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
-        isVisible: true,
+        isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
       }),

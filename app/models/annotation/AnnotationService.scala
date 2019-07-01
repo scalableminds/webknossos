@@ -117,27 +117,35 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     )
   }
 
-  def createTracings(dataSet: DataSet, dataSource: DataSource, tracingType: TracingType.Value, withFallback: Boolean)(
-      implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = tracingType match {
-    case TracingType.skeleton =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- client.saveSkeletonTracing(
-          SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-      } yield (Some(skeletonTracingId), None)
-    case TracingType.volume =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-      } yield (None, Some(volumeTracingId))
-    case TracingType.hybrid =>
-      for {
-        client <- tracingStoreService.clientFor(dataSet)
-        skeletonTracingId <- client.saveSkeletonTracing(
-          SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-        volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
-      } yield (Some(skeletonTracingId), Some(volumeTracingId))
-  }
+  def createTracings(
+      dataSet: DataSet,
+      dataSource: DataSource,
+      tracingType: TracingType.Value,
+      withFallback: Boolean,
+      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
+    tracingType match {
+      case TracingType.skeleton =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          userBoundingBox <- Fox.runOptional(oldTracingId)(id =>
+            client.getVolumeTracing(id, skipVolumeData = true).flatMap(_._1.userBoundingBox))
+          skeletonTracingId <- client.saveSkeletonTracing(
+            SkeletonTracingDefaults.createInstance
+              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBoundingBox))
+        } yield (Some(skeletonTracingId), None)
+      case TracingType.volume =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        } yield (None, Some(volumeTracingId))
+      case TracingType.hybrid =>
+        for {
+          client <- tracingStoreService.clientFor(dataSet)
+          skeletonTracingId <- client.saveSkeletonTracing(
+            SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+        } yield (Some(skeletonTracingId), Some(volumeTracingId))
+    }
 
   def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean)(
       implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -169,7 +177,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           case _                   => Fox.failure("unexpectedReturn")
         }
       case TracingType.volume =>
-        createTracings(dataSet, dataSource, TracingType.skeleton, false).flatMap {
+        createTracings(dataSet, dataSource, TracingType.skeleton, false, annotation.volumeTracingId).flatMap {
           case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
           case _                     => Fox.failure("unexpectedReturn")
         }
@@ -372,10 +380,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
-  def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit m: MessagesProvider,
-                                                                         ctx: DBAccessContext): Fox[TemporaryFile] =
+  def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
+      implicit m: MessagesProvider,
+      ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
-      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
+      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
       tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(
         tuple =>
@@ -420,10 +429,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
        tuple._2)
     }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext): Fox[
     List[(List[Option[SkeletonTracing]],
           List[Option[VolumeTracing]],
-          List[Option[Source[ByteString, _]]],
+          List[Option[Array[Byte]]],
           List[String],
           List[Option[Scale]],
           List[Annotation],
@@ -449,14 +459,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         tracingOpts: List[VolumeTracingOpt] = tracingContainers.flatMap(_.tracings)
       } yield tracingOpts.map(_.tracing)
 
-    def getVolumeDataObjects(dataSetId: ObjectId,
-                             tracingIds: List[Option[String]]): Fox[List[Option[Source[ByteString, Any]]]] =
+    def getVolumeDataObjects(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[Array[Byte]]]] =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-        tracingDataObjects: List[Option[Source[ByteString, Any]]] <- Fox.serialCombined(tracingIds) {
-          case Some(tracingId) => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
-          case None            => Fox.successful(None)
+        tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
+          case None                              => Fox.successful(None)
+          case Some(tracingId) if skipVolumeData => Fox.successful(None)
+          case Some(tracingId)                   => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
         }
       } yield tracingDataObjects
 
@@ -503,24 +513,16 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     Fox.combined(tracingsGrouped.toList)
   }
 
-  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])],
+  private def createZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])],
                         zipFileName: String): Future[TemporaryFile] = {
     val zipped = temporaryFileCreator.create(normalize(zipFileName), ".zip")
     val zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
 
-    def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Source[ByteString, _]])]): Future[Boolean] =
+    def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])]): Future[Boolean] =
       nmls match {
         case head :: tail => {
-          val dataEnumeratorOpt: Option[Enumerator[Array[Byte]]] =
-            head._3.map(volumeData => Enumerator.fromStream(volumeData.runWith(StreamConverters.asInputStream())))
-          val writeVolumeDataResult = dataEnumeratorOpt match {
-            case Some(dataEnumerator) =>
-              zipper.withFile(head._2 + "_data.zip")(NamedEnumeratorStream("", dataEnumerator).writeTo)
-            case None => Future.successful(())
-          }
-          writeVolumeDataResult
-            .flatMap(_ => zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream("", head._1).writeTo))
-            .flatMap(_ => addToZip(tail))
+          head._3.foreach(volumeData => zipper.addFileFromBytes(head._2 + "_data.zip", volumeData))
+          zipper.addFileFromEnumerator(head._2 + ".nml", head._1).flatMap(_ => addToZip(tail))
         }
         case _ =>
           Future.successful(true)
@@ -586,7 +588,10 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      userJson <- userService.compactWrites(user)
+      isTeamManagerOrAdminOfOwner <- Fox.runOptional(requestingUser)(requester =>
+        userService.isTeamManagerOrAdminOf(requester, user))
+      userJson <- if (isTeamManagerOrAdminOfOwner.getOrElse(false)) userService.compactWrites(user).map(Some(_))
+      else Fox.successful(None)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),

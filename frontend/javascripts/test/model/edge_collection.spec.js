@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 
 import EdgeCollection, { diffEdgeCollections } from "../../oxalis/model/edge_collection";
@@ -118,4 +117,36 @@ test("EdgeCollection diffing should work with smaller batch size when there is a
 
   t.deepEqual(onlyA.sort(edgeSort), [edges[0]]);
   t.deepEqual(onlyB.sort(edgeSort), edges.slice(8));
+});
+
+test("EdgeCollection addEdge should not mutate the original edge collection", t => {
+  const edgeA = { source: 0, target: 1 };
+  const edgeB = { source: 2, target: 1 };
+  const edgeC = { source: 3, target: 2 };
+  const edgeD = { source: 3, target: 4 };
+
+  const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
+
+  const edgeCollectionB = edgeCollectionA.addEdge(edgeD);
+
+  const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+
+  t.deepEqual(onlyA, []);
+  t.deepEqual(onlyB, [edgeD]);
+});
+
+test("EdgeCollection addEdge should mutate the original edge collection if specified", t => {
+  const edgeA = { source: 0, target: 1 };
+  const edgeB = { source: 2, target: 1 };
+  const edgeC = { source: 3, target: 2 };
+  const edgeD = { source: 3, target: 4 };
+
+  const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
+
+  const edgeCollectionB = edgeCollectionA.addEdge(edgeD, true);
+
+  const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+
+  t.deepEqual(onlyA, []);
+  t.deepEqual(onlyB, []);
 });

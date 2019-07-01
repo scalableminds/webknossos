@@ -3,7 +3,12 @@ import { Alert, Dropdown, Icon, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIDataset, APIUser } from "admin/api_flow_types";
+import type {
+  APIDataset,
+  APIUser,
+  APIMaybeUnimportedDataset,
+  TracingType,
+} from "admin/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,
@@ -15,7 +20,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import Store, { type OxalisState } from "oxalis/store";
 import TracingActionsView, {
@@ -25,6 +30,7 @@ import TracingActionsView, {
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import AuthenticationModal from "admin/auth/authentication_modal";
+import { createTracingOverlayMenu } from "dashboard/advanced_dataset/dataset_action_view";
 
 const VersionRestoreWarning = (
   <Alert
@@ -37,7 +43,7 @@ const VersionRestoreWarning = (
 type StateProps = {|
   dataset: APIDataset,
   activeUser: ?APIUser,
-  viewMode: Mode,
+  viewMode: ViewMode,
   controlMode: ControlMode,
   hasVolume: boolean,
   hasSkeleton: boolean,
@@ -52,12 +58,14 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isNewLayoutModalVisible: boolean,
   isAuthenticationModalVisible: boolean,
+  useExistingSegmentation: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
     isAuthenticationModalVisible: false,
+    useExistingSegmentation: true,
   };
 
   handleResetLayout = () => {
@@ -84,36 +92,47 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async () => {
-    const type = "hybrid";
-    const annotation = await createExplorational(this.props.dataset, type, true);
-    trackAction(`Create ${type} tracing (from view mode)`);
+  createTracing = async (dataset: APIMaybeUnimportedDataset, useExistingSegmentation: boolean) => {
+    const annotation = await createExplorational(dataset, "hybrid", useExistingSegmentation);
+    trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
       location.hash
     }`;
   };
 
   renderStartTracingButton(): React.Node {
-    const needsAuthentication = this.props.activeUser == null;
+    const { activeUser, dataset } = this.props;
+    const needsAuthentication = activeUser == null;
 
-    const handleCreateTracing = async () => {
+    const handleCreateTracing = async (
+      _dataset: APIMaybeUnimportedDataset,
+      _type: TracingType,
+      useExistingSegmentation: boolean,
+    ) => {
       if (needsAuthentication) {
-        this.setState({ isAuthenticationModalVisible: true });
+        this.setState({ isAuthenticationModalVisible: true, useExistingSegmentation });
       } else {
-        this.createTracing();
+        this.createTracing(dataset, useExistingSegmentation);
       }
     };
 
     return (
-      <ButtonComponent onClick={handleCreateTracing} style={{ marginLeft: 12 }} type="primary">
-        Create Tracing
-      </ButtonComponent>
+      <Dropdown
+        overlay={createTracingOverlayMenu(dataset, "hybrid", handleCreateTracing)}
+        trigger={["click"]}
+      >
+        <ButtonComponent style={{ marginLeft: 12 }} type="primary">
+          Create Tracing
+        </ButtonComponent>
+      </Dropdown>
     );
   }
 
   render() {
     const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
     const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
+    const isArbitrarySupported =
+      this.props.hasSkeleton || this.props.controlMode === ControlModeEnum.VIEW;
     const layoutMenu = (
       <LayoutMenu
         {...this.props.layoutProps}
@@ -127,11 +146,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
     );
 
     const viewDropdown = (
-      <Dropdown overlay={<Menu>{layoutMenu}</Menu>}>
-        <ButtonComponent>
-          <Icon type="down" />
-        </ButtonComponent>
-      </Dropdown>
+      <div style={{ marginLeft: 10 }}>
+        <Dropdown overlay={<Menu>{layoutMenu}</Menu>} trigger={["click"]}>
+          <ButtonComponent style={{ padding: "0 10px" }}>
+            <Icon type="down" />
+          </ButtonComponent>
+        </Dropdown>
+      </div>
     );
 
     return (
@@ -147,7 +168,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {!this.props.isReadOnly && this.props.hasVolume && isVolumeSupported ? (
             <VolumeActionsView />
           ) : null}
-          {this.props.hasSkeleton && isTraceMode ? <ViewModesView /> : null}
+          {isArbitrarySupported ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
         <AddNewLayoutModal
@@ -158,7 +179,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         <AuthenticationModal
           onLoggedIn={() => {
             this.setState({ isAuthenticationModalVisible: false });
-            this.createTracing();
+            this.createTracing(this.props.dataset, this.state.useExistingSegmentation);
           }}
           onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
           visible={this.state.isAuthenticationModalVisible}

@@ -9,9 +9,11 @@ import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
 import features from "features";
+import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
 const { Option } = Select;
+const { Password } = Input;
 
 type Props = {|
   form: Object,
@@ -75,6 +77,8 @@ class RegistrationForm extends React.PureComponent<Props, State> {
         { data: formValues },
       );
 
+      Store.dispatch(setHasOrganizationsAction(true));
+
       const organization = this.state.organizations.find(
         org => org.name === formValues.organization,
       );
@@ -100,7 +104,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
   checkPassword = (rule, value, callback) => {
     const { form } = this.props;
     if (value && value !== form.getFieldValue("password.password1")) {
-      callback(messages["auth.registration_password_missmatch"]);
+      callback(messages["auth.registration_password_mismatch"]);
     } else {
       callback();
     }
@@ -237,8 +241,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Password"
                 />,
@@ -262,8 +265,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Input
-                  type="password"
+                <Password
                   onBlur={this.handleConfirmBlur}
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Confirm Password"

@@ -4,10 +4,14 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIUser, APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotationType, APIUser } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
-import { copyAnnotationToUserAccount, finishAnnotation, downloadNml } from "admin/admin_rest_api";
-import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
+import {
+  type LayoutKeys,
+  mapLayoutKeysToLanguage,
+} from "oxalis/view/layouting/default_layout_configs";
+import { copyAnnotationToUserAccount, downloadNml, finishAnnotation } from "admin/admin_rest_api";
+import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -20,8 +24,7 @@ import Store, { type OxalisState, type RestrictionsAndSettings, type Task } from
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
-import { location } from "libs/window";
-import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -112,7 +115,7 @@ export const LayoutMenu = (props: LayoutMenuProps) => {
       {...others}
       title={
         <span style={{ display: "inline-block", minWidth: 120 }}>
-          <Icon type="laptop" /> Layout
+          <Icon type="layout" /> Layout
           <Tooltip placement="top" title={layoutMissingHelpTitle}>
             <Icon
               type="info-circle-o"
@@ -250,25 +253,35 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   render() {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const archiveButtonText = this.props.task ? "Finish" : "Archive";
+    const archiveButtonText = this.props.task ? "Finish and go to Dashboard" : "Archive";
     const { restrictions } = this.props;
 
     const saveButton = restrictions.allowUpdate
       ? [
           isSkeletonMode
             ? [
-                <ButtonComponent key="undo-button" title="Undo (Ctrl+Z)" onClick={this.handleUndo}>
+                <ButtonComponent
+                  className="narrow"
+                  key="undo-button"
+                  title="Undo (Ctrl+Z)"
+                  onClick={this.handleUndo}
+                >
                   <i className="fa fa-undo" aria-hidden="true" />
                 </ButtonComponent>,
-                <ButtonComponent key="redo-button" title="Redo (Ctrl+Y)" onClick={this.handleRedo}>
+                <ButtonComponent
+                  className="narrow hide-on-small-screen"
+                  key="redo-button"
+                  title="Redo (Ctrl+Y)"
+                  onClick={this.handleRedo}
+                >
                   <i className="fa fa-repeat" aria-hidden="true" />
                 </ButtonComponent>,
               ]
             : null,
-          <SaveButton key="save-button" onClick={this.handleSave} />,
+          <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />,
         ]
       : [
-          <ButtonComponent key="read-only-button" type="primary" disabled>
+          <ButtonComponent key="read-only-button" type="danger" disabled>
             Read only
           </ButtonComponent>,
           <AsyncButton key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
@@ -319,6 +332,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
     elements.push(
+      <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
+        <Icon type="camera" />
+        Screenshot (Q)
+      </Menu.Item>,
+    );
+    elements.push(
       <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
         <Icon type="setting" />
         Add Script
@@ -365,8 +384,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           {saveButton}
           {finishAndNextTaskButton}
           {modals}
-          <Dropdown overlay={menu}>
-            <ButtonComponent>
+          <Dropdown overlay={menu} trigger={["click"]}>
+            <ButtonComponent className="narrow">
               <Icon type="down" />
             </ButtonComponent>
           </Dropdown>

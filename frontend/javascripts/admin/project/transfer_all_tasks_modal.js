@@ -30,7 +30,6 @@ type State = {
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
   state = {
-    // eslint-disable-next-line react/no-unused-state
     users: [],
     selectedUser: null,
     usersWithActiveTasks: [],
@@ -51,7 +50,6 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
         : [];
       const sortedUsers = _.sortBy(activeUsers, "lastName");
       this.setState({
-        // eslint-disable-next-line react/no-unused-state
         users: sortedUsers,
         usersWithActiveTasks,
       });
@@ -85,13 +83,16 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
   renderTableContent() {
     const activeUsersWithKey = this.state.usersWithActiveTasks.map(activeUser => ({
       email: activeUser.email,
+      firstName: activeUser.firstName,
+      lastName: activeUser.lastName,
       activeTasks: activeUser.activeTasks,
       key: activeUser.email,
     }));
     const columns = [
       {
-        title: "User Email",
+        title: "User",
         dataIndex: "email",
+        render: (email, record) => `${record.lastName}, ${record.firstName} (${email})`,
         key: "email",
       },
       {

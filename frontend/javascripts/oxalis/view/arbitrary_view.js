@@ -18,8 +18,7 @@ import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
-
-import { clearCanvas, setupRenderArea } from "./plane_view";
+import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -36,9 +35,7 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: ?number = null;
 
-  scaleFactor: number;
   camDistance: number;
-
   camera: THREE.PerspectiveCamera = null;
   tdCamera: THREE.OrthographicCamera = null;
 
@@ -51,6 +48,8 @@ class ArbitraryView {
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, BackboneEvents);
 
+    const { scene } = getSceneController();
+
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
@@ -58,7 +57,10 @@ class ArbitraryView {
 
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+    // This name can be used to retrieve the camera from the scene
+    this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
+    scene.add(this.camera);
 
     const tdCamera = new THREE.OrthographicCamera(0, 0, 0, 0);
     tdCamera.position.copy(new THREE.Vector3(10, 10, -10));
@@ -178,10 +180,11 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
+      const storeState = Store.getState();
       const renderViewport = (viewport, _camera) => {
-        const { left, top, width, height } = getInputCatcherRect(viewport);
+        const { left, top, width, height } = getInputCatcherRect(storeState, viewport);
         if (width > 0 && height > 0) {
-          setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
+          setupRenderArea(renderer, left, top, width, height, 0xffffff);
           renderer.render(scene, _camera);
         }
       };
@@ -207,30 +210,6 @@ class ArbitraryView {
 
   draw(): void {
     this.needsRerender = true;
-  }
-
-  renderToTexture(): Uint8Array {
-    const { renderer, scene } = getSceneController();
-
-    renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(ArbitraryViewport);
-    width = Math.round(width);
-    height = Math.round(height);
-
-    const { camera } = this;
-
-    renderer.setViewport(0, 0, width, height);
-    renderer.setScissorTest(false);
-    renderer.setClearColor(0x222222, 1);
-
-    const renderTarget = new THREE.WebGLRenderTarget(width, height);
-    const buffer = new Uint8Array(width * height * 4);
-    this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
-    renderer.render(scene, camera, renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
-    this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
-
-    return buffer;
   }
 
   getRenderedBucketsDebug = () => {
@@ -263,7 +242,9 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
 
-    const buffer = this.renderToTexture();
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
+    const buffer = renderToTexture(ArbitraryViewport);
+    this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
     let index = 0;
 
     const usedBucketSet = new Set();

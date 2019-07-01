@@ -1,5 +1,4 @@
 // @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
@@ -60,7 +59,7 @@ export const KeyboardJS = {
   unbind: _.noop,
 };
 mockRequire("libs/keyboard", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
+mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop, success: _.noop });
 
 mockRequire(
   "libs/window",

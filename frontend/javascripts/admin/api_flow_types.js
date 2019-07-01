@@ -4,14 +4,20 @@
  */
 import Enum from "Enumjs";
 
-import type { BoundingBoxObject, Edge, CommentType, TreeGroup } from "oxalis/store";
+import type {
+  BoundingBoxObject,
+  Edge,
+  CommentType,
+  TreeGroup,
+  RecommendedConfiguration,
+} from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
-type ElementClass =
+export type ElementClass =
   | "uint8"
   | "uint16"
   | "uint24"
@@ -41,17 +47,20 @@ type APIDataLayerBase = {|
 
 type APIColorLayer = {|
   ...APIDataLayerBase,
-  category: "color",
+  +category: "color",
 |};
 
 export type APISegmentationLayer = {|
   ...APIDataLayerBase,
-  category: "segmentation",
-  largestSegmentId: number,
+  +category: "segmentation",
+  +largestSegmentId: number,
   +mappings?: Array<string>,
+  +fallbackLayer?: ?string,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+export type APIHistogramData = { count: number, histogram: Array<number> };
 
 type APIDataSourceBase = {
   +id: {
@@ -74,8 +83,9 @@ export type APIDataSource = APIDataSourceBase & {
 export type APIDataStore = {
   +name: string,
   +url: string,
-  +isForeign?: boolean,
+  +isForeign: boolean,
   +isScratch: boolean,
+  +isConnector: boolean,
 };
 
 export type APITracingStore = {
@@ -110,6 +120,7 @@ export type APIDatasetDetails = {
 };
 
 type APIDatasetBase = APIDatasetId & {
+  +isUnreported: boolean,
   +allowedTeams: Array<APITeam>,
   +created: number,
   +dataStore: APIDataStore,
@@ -135,8 +146,15 @@ export type APIDataset = APIDatasetBase & {
   +isActive: true,
 };
 
+export type APISampleDataset = {
+  +name: string,
+  +description: string,
+  +status: "available" | "downloading" | "present",
+};
+
 export type APIDataSourceWithMessages = {
   +dataSource?: APIDataSource,
+  +previousDataSource?: APIDataSource,
   +messages: Array<APIMessage>,
 };
 
@@ -183,6 +201,8 @@ export type APIUserLoggedTime = {
 
 export type APIActiveUser = {
   email: string,
+  firstName: string,
+  lastName: string,
   activeTasks: number,
 };
 
@@ -200,6 +220,11 @@ export type APISettings = {|
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
+  +allowedMagnifications?: {
+    shouldRestrict: boolean,
+    min?: number,
+    max?: number,
+  },
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({
@@ -220,9 +245,11 @@ export type APITaskType = {
   +teamId: string,
   +teamName: string,
   +settings: APISettings,
-  +recommendedConfiguration: ?string,
+  +recommendedConfiguration: ?RecommendedConfiguration,
   +tracingType: "skeleton" | "volume",
 };
+
+export type TracingType = "skeleton" | "volume" | "hybrid";
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };
 
@@ -361,6 +388,38 @@ export type DatasetConfig = {
   +zipFile: File,
 };
 
+type NeuroglancerLayer = {
+  // This is the source URL of the layer, should start with gs://, http:// or https://
+  source: string,
+  type: "image" | "segmentation",
+};
+
+type NeuroglancerDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      layers: { [layerName: string]: NeuroglancerLayer },
+      credentials?: Object,
+    },
+  },
+};
+
+type BossDatasetConfig = {
+  [organizationName: string]: {
+    [datasetName: string]: {
+      domain: string,
+      collection: string,
+      experiment: string,
+      username: string,
+      password: string,
+    },
+  },
+};
+
+export type WkConnectDatasetConfig = {
+  neuroglancer?: NeuroglancerDatasetConfig,
+  boss?: BossDatasetConfig,
+};
+
 export type APITimeTracking = {
   time: string,
   timestamp: number,
@@ -439,11 +498,12 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +allowOrganizationCreation: boolean,
   +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
-  +freezeVolumeVersions: boolean,
+  +isDemoInstance: boolean,
+  +autoBrushReadyDatasets: Array<string>,
+  +isDemoInstance: boolean,
 };
 
 // Tracing related datatypes
@@ -493,6 +553,7 @@ export type ServerSkeletonTracingTree = {
   treeId: number,
   createdTimestamp: number,
   groupId?: ?number,
+  isVisible?: boolean,
 };
 
 export type ServerTracingBase = {|

@@ -1,9 +1,13 @@
 // @noflow
-/* eslint-disable import/no-extraneous-dependencies */
+
+import "test/sagas/skeletontracing_saga.mock.js";
+
 import type { SaveQueueEntry } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
+import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -21,15 +25,16 @@ mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const { diffSkeletonTracing } = mockRequire.reRequire("oxalis/model/sagas/skeletontracing_saga");
-const { saveTracingTypeAsync, compactUpdateActions, compactSaveQueue } = mockRequire.reRequire(
-  "oxalis/model/sagas/save_saga",
-);
+const { saveTracingTypeAsync } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 const SkeletonTracingActions = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
 );
-const { pushSaveQueueAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
+const { pushSaveQueueTransaction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
@@ -42,11 +47,14 @@ function testDiffing(prevTracing, nextTracing, prevFlycam, flycam) {
   );
 }
 
-function compactSaveQueueWithUpdateActions(queue: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
+function compactSaveQueueWithUpdateActions(
+  queue: Array<SaveQueueEntry>,
+  tracing,
+): Array<SaveQueueEntry> {
   return compactSaveQueue(
     queue.map(batch => ({
       ...batch,
-      actions: compactUpdateActions(batch.actions),
+      actions: compactUpdateActions(batch.actions, tracing),
     })),
   );
 }
@@ -86,6 +94,7 @@ const initialState = {
           edges: new EdgeCollection(),
           comments: [],
           color: [23, 23, 23],
+          isVisible: true,
         },
       },
       activeTreeId: 1,
@@ -118,7 +127,7 @@ test("SkeletonTracingSaga should create a tree if there is none (saga test)", t 
   saga.next();
   saga.next({ tracing: { trees: {} } });
   saga.next(initialState.flycam);
-  t.is(saga.next(true).value.PUT.action.type, "CREATE_TREE");
+  t.is(saga.next(true).value.payload.action.type, "CREATE_TREE");
 });
 
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
@@ -154,7 +163,7 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.true(withoutUpdateTracing(items).length > 0);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "skeleton")));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
 });
 
 test("SkeletonTracingSaga should emit createNode update actions", t => {
@@ -471,7 +480,7 @@ test("compactUpdateActions should detect a tree merge (1/3)", t => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   // This should result in a moved treeComponent of size three
@@ -524,7 +533,7 @@ test("compactUpdateActions should detect a tree merge (2/3)", t => {
 
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState2.tracing);
 
   // This should result in one created node and its edge (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -613,7 +622,7 @@ test("compactUpdateActions should detect a tree merge (3/3)", t => {
 
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   // This should result in a moved treeComponent of size one (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -678,7 +687,7 @@ test("compactUpdateActions should detect a tree split (1/3)", t => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   // This should result in a new tree
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -726,7 +735,7 @@ test("compactUpdateActions should detect a tree split (2/3)", t => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   // This should result in two new trees and two moved treeComponents of size three and two
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -782,7 +791,7 @@ test("compactUpdateActions should detect a tree split (3/3)", t => {
   );
 
   const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState2.tracing);
 
   // This should result in the creation of a new tree (a)
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
@@ -850,7 +859,7 @@ test("compactUpdateActions should do nothing if it cannot compact", t => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   // The deleteTree optimization in compactUpdateActions (that is unrelated to this test)
   // will remove the first deleteNode update action as the first tree is deleted because of the merge,
@@ -881,7 +890,7 @@ test("compactUpdateActions should detect a deleted tree", t => {
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {
@@ -912,7 +921,7 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
     newState.flycam,
   );
   const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
-  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue);
+  const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(saveQueue, newState.tracing);
 
   const simplifiedFirstBatch = simplifiedUpdateActions[0].actions;
   t.deepEqual(simplifiedFirstBatch[0], {

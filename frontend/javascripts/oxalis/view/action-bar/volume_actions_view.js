@@ -8,7 +8,7 @@ import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Store, { type OxalisState, type VolumeTracing } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
 const RadioGroup = Radio.Group;
@@ -16,7 +16,7 @@ const RadioButton = Radio.Button;
 const ButtonGroup = Button.Group;
 
 type Props = {|
-  volumeTracing: VolumeTracing,
+  activeTool: VolumeTool,
 |};
 
 class VolumeActionsView extends PureComponent<Props> {
@@ -37,7 +37,7 @@ class VolumeActionsView extends PureComponent<Props> {
       >
         <RadioGroup
           onChange={this.handleSetTool}
-          value={this.props.volumeTracing.activeTool}
+          value={this.props.activeTool}
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
@@ -45,7 +45,9 @@ class VolumeActionsView extends PureComponent<Props> {
           <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
         </RadioGroup>
         <ButtonGroup>
-          <ButtonComponent onClick={this.handleCreateCell}>Create new cell (C)</ButtonComponent>
+          <ButtonComponent onClick={this.handleCreateCell}>
+            New <span style={{ textDecoration: "underline" }}>C</span>ell
+          </ButtonComponent>
         </ButtonGroup>
       </div>
     );
@@ -54,7 +56,7 @@ class VolumeActionsView extends PureComponent<Props> {
 
 function mapStateToProps(state: OxalisState): Props {
   return {
-    volumeTracing: enforceVolumeTracing(state.tracing),
+    activeTool: enforceVolumeTracing(state.tracing).activeTool,
   };
 }
 

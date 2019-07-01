@@ -94,8 +94,7 @@ export class Privacy extends LegalBase {
               </li>
               <li>
                 An &quot;<strong>instance</strong>&quot; of webKnossos is one installation of the
-                application on a server with one domain name attached (e.g.
-                https://demo.webknossos.org).
+                application on a server with one domain name attached (e.g. https://webknossos.org).
               </li>
               <li>
                 Persons that use webKnossos are &quot;<strong>users</strong>&quot; or &quot;

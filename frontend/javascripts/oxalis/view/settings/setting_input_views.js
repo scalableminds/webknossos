@@ -1,12 +1,4 @@
-/**
- * setting_input_views.js
- * @flow
- */
-
-/* eslint-disable react/no-multi-comp */
-/* eslint-disable react/prefer-stateless-function */
-/* eslint-disable jsx-a11y/label-has-for */
-
+// @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
 import * as React from "react";
 
@@ -20,12 +12,14 @@ type NumberSliderSettingProps = {
   max: number,
   min: number,
   step: number,
+  disabled: boolean,
 };
 
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
     min: 1,
     step: 1,
+    disabled: false,
   };
 
   _onChange = (_value: number) => {
@@ -35,24 +29,32 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
   };
 
   render() {
-    const { value, label, max, min, step, onChange } = this.props;
+    const { value, label, max, min, step, onChange, disabled } = this.props;
 
     return (
       <Row type="flex" align="middle">
-        <Col span={8}>
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
-          <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
+          <Slider
+            min={min}
+            max={max}
+            onChange={onChange}
+            value={value}
+            step={step}
+            disabled={disabled}
+          />
         </Col>
-        <Col span={6}>
+        <Col span={5}>
           <InputNumber
             min={min}
             max={max}
-            style={{ marginLeft: 16 }}
+            style={{ width: 80, marginLeft: 16 }}
             value={value}
             onChange={this._onChange}
             size="small"
+            disabled={disabled}
           />
         </Col>
       </Row>
@@ -114,8 +116,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   render() {
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
-      <Row type="flex" align="middle">
-        <Col span={8}>
+      <Row type="flex" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
@@ -128,11 +130,11 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             disabled={disabled}
           />
         </Col>
-        <Col span={6}>
+        <Col span={5}>
           <InputNumber
             min={min}
             max={max}
-            style={{ marginLeft: 16 }}
+            style={{ width: 80, marginLeft: 16 }}
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
@@ -148,18 +150,35 @@ type SwitchSettingProps = {
   onChange: (value: boolean) => void,
   value: boolean,
   label: string | React.Node,
+  disabled: boolean,
+  tooltipText: ?string,
 };
 
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
+  static defaultProps = {
+    disabled: false,
+    tooltipText: null,
+  };
+
   render() {
-    const { label, onChange, value } = this.props;
+    const { label, onChange, value, disabled, tooltipText } = this.props;
     return (
-      <Row className="margin-bottom" type="flex" align="middle">
-        <Col span={8}>
+      <Row className="margin-bottom" type="flex" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
-          <Switch onChange={onChange} checked={value} defaultChecked={value} />
+        <Col span={15}>
+          <Tooltip title={tooltipText} placement="top">
+            {/* This div is necessary for the tooltip to be displayed */}
+            <div style={{ display: "inline-block" }}>
+              <Switch
+                onChange={onChange}
+                checked={value}
+                defaultChecked={value}
+                disabled={disabled}
+              />
+            </div>
+          </Tooltip>
         </Col>
       </Row>
     );
@@ -186,12 +205,13 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
     const { onChange, value, label, max, min, step } = this.props;
 
     return (
-      <Row className="margin-bottom">
-        <Col span={8}>
+      <Row className="margin-bottom" align="top">
+        <Col span={9}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
+        <Col span={15}>
           <InputNumber
+            style={{ width: 80 }}
             min={min}
             max={max}
             onChange={onChange}
@@ -297,7 +317,7 @@ export class Vector6InputSetting extends React.PureComponent<
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
 
     return (
-      <Row className="margin-bottom">
+      <Row className="margin-bottom" align="top">
         <Col span={8}>
           <label className="setting-label">{this.props.label}</label>
         </Col>
@@ -327,21 +347,50 @@ type ColorSettingPropTypes = {
   value: string,
   label: string,
   onChange: (value: Vector3) => void,
+  disabled: boolean,
 };
 
 export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
+  static defaultProps = {
+    disabled: false,
+  };
+
   onColorChange = (evt: SyntheticInputEvent<>) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 
   render() {
+    const { label, value, disabled } = this.props;
     return (
-      <Row className="margin-bottom">
-        <Col span={8}>
-          <label className="setting-label">{this.props.label}</label>
+      <Row className="margin-bottom" align="top">
+        <Col span={9}>
+          <label className="setting-label">{label}</label>
         </Col>
-        <Col span={16}>
-          <input type="color" onChange={this.onColorChange} value={this.props.value} />
+        <Col span={15}>
+          <div
+            id="color-picker-wrapper"
+            style={{
+              backgroundColor: value,
+              display: "block",
+              width: 16,
+              height: 16,
+              borderRadius: 3,
+              boxShadow: "0px 0px 3px #cacaca",
+            }}
+          >
+            <input
+              type="color"
+              style={{
+                opacity: 0,
+                display: "block",
+                border: "none",
+                cursor: disabled ? "not-allowed" : "pointer",
+              }}
+              onChange={this.onColorChange}
+              value={value}
+              disabled={disabled}
+            />
+          </div>
         </Col>
       </Row>
     );
@@ -350,8 +399,8 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
 type DropdownSettingProps = {
   onChange: (value: number) => void,
-  label: string,
-  value: number,
+  label: React.Node | string,
+  value: number | string,
   children?: Array<React.Node>,
 };
 
@@ -363,7 +412,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
     const { onChange, label, value, children } = this.props;
     return (
-      <Row className="margin-bottom">
+      <Row className="margin-bottom" align="top">
         <Col span={8}>
           <label className="setting-label">{label}</label>
         </Col>
@@ -373,6 +422,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
             value={value.toString()}
             defaultValue={value.toString()}
             size="small"
+            dropdownMatchSelectWidth={false}
           >
             {children}
           </Select>

@@ -1,8 +1,4 @@
-/**
- * arbitrary_controller.js
- * @flow
- */
-
+// @flow
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
@@ -48,15 +44,15 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import app from "app";
-import constants, { ArbitraryViewport, type Mode, type Point2 } from "oxalis/constants";
+import constants, { ArbitraryViewport, type ViewMode, type Point2 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
+import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
-const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
+const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 
 type Props = {|
-  onRender: () => void,
-  viewMode: Mode,
+  viewMode: ViewMode,
 |};
 
 class ArbitraryController extends React.PureComponent<Props> {
@@ -74,6 +70,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
+
   storePropertyUnsubscribers: Array<Function>;
 
   // Copied from backbone events (TODO: handle this better)
@@ -94,8 +91,8 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportSelector, {
+    Utils.waitForElementWithId(arbitraryViewportId).then(() => {
+      this.input.mouseController = new InputMouse(arbitraryViewportId, {
         leftDownMove: (delta: Point2) => {
           if (this.props.viewMode === constants.MODE_ARBITRARY) {
             Store.dispatch(
@@ -108,8 +105,10 @@ class ArbitraryController extends React.PureComponent<Props> {
               ),
             );
           } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
-            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
+            const fx = Store.getState().flycam.zoomStep / scaleX;
+            const fy = Store.getState().flycam.zoomStep / scaleY;
+            Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
           }
         },
         scroll: this.scroll,
@@ -231,6 +230,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       "shift + space": () => {
         Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
+
+      q: downloadScreenshot,
     });
   }
 
@@ -274,8 +275,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.props.onRender);
-
     const onBucketLoaded = () => {
       this.arbitraryView.draw();
       app.vent.trigger("rerender");
@@ -388,21 +387,12 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   changeMoveValue(delta: number): void {
-    let moveValue = Store.getState().userConfiguration.moveValue3d + delta;
-    moveValue = Math.min(constants.MAX_MOVE_VALUE, moveValue);
-    moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
-
+    const moveValue = Store.getState().userConfiguration.moveValue3d + delta;
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
-
-    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {
-    let particleSize = Store.getState().userConfiguration.particleSize + delta;
-    particleSize = Math.min(constants.MAX_PARTICLE_SIZE, particleSize);
-    particleSize = Math.max(constants.MIN_PARTICLE_SIZE, particleSize);
-
+    const particleSize = Store.getState().userConfiguration.particleSize + delta;
     Store.dispatch(updateUserSettingAction("particleSize", particleSize));
   }
 

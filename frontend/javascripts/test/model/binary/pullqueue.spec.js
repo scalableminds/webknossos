@@ -1,5 +1,4 @@
 // @noflow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import _ from "lodash";
 
 import mockRequire from "mock-require";
@@ -50,7 +49,6 @@ const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
 
 test.beforeEach(t => {
   const cube = {
-    BUCKET_LENGTH: 32 * 32 * 32,
     getBucket: sinon.stub(),
     getOrCreateBucket: sinon.stub(),
     boundingBox: {
@@ -67,7 +65,10 @@ test.beforeEach(t => {
 
   const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
 
-  const buckets = [new DataBucket(8, [0, 0, 0, 0], null), new DataBucket(8, [1, 1, 1, 1], null)];
+  const buckets = [
+    new DataBucket("uint8", [0, 0, 0, 0], null),
+    new DataBucket("uint8", [1, 1, 1, 1], null),
+  ];
 
   for (const bucket of buckets) {
     cube.getBucket.withArgs(bucket.zoomedAddress).returns(bucket);

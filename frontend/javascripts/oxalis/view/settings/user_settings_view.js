@@ -1,58 +1,66 @@
 /**
-
  * tracing_settings_view.js
  * @flow
  */
 
+import features from "features";
 import { Collapse } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
 
+import type { APIDataset } from "admin/api_flow_types";
 import {
-  NumberInputSetting,
-  SwitchSetting,
-  NumberSliderSetting,
-  Vector6InputSetting,
   LogSliderSetting,
+  NumberInputSetting,
+  NumberSliderSetting,
+  SwitchSetting,
+  Vector6InputSetting,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
+import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
+import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  setActiveCellAction,
-  setBrushSizeAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
   setNodeRadiusAction,
+  setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { settings as settingsLabels } from "messages";
+import {
+  updateTemporarySettingAction,
+  updateUserSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { userSettings } from "libs/user_settings.schema";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
-  type Mode,
+  type ViewMode,
   type Vector6,
 } from "oxalis/constants";
+import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { settings } from "messages";
 
-const Panel = Collapse.Panel;
+import MergerModeModalView from "./merger_mode_modal_view";
+
+const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
   userConfiguration: UserConfiguration,
   tracing: Tracing,
   zoomStep: number,
-  maxZoomStep: number,
+  validZoomRange: [number, number],
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
@@ -60,14 +68,28 @@ type UserSettingsViewProps = {
   onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
-  onChangeBrushSize: (value: number) => void,
-  viewMode: Mode,
+  onChangeEnableMergerMode: (active: boolean) => void,
+  onChangeEnableAutoBrush: (active: boolean) => void,
+  isMergerModeEnabled: boolean,
+  isAutoBrushEnabled: boolean,
+  viewMode: ViewMode,
   controlMode: ControlMode,
-  brushSize: number,
+  dataset: APIDataset,
 };
 
-class UserSettingsView extends PureComponent<UserSettingsViewProps> {
+type State = {
+  isMergerModeModalVisible: boolean,
+  isMergerModeModalClosable: boolean,
+  mergerModeProgress: number,
+};
+
+class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  state = {
+    isMergerModeModalVisible: false,
+    isMergerModeModalClosable: false,
+    mergerModeProgress: 0,
+  };
 
   componentWillMount() {
     // cache onChange handler
@@ -76,34 +98,65 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
   }
 
+  handleMergerModeChange = async (active: boolean) => {
+    this.props.onChangeEnableMergerMode(active);
+    if (active) {
+      this.setState({
+        isMergerModeModalVisible: true,
+        isMergerModeModalClosable: false,
+        mergerModeProgress: 0,
+      });
+      const onUpdateProgress = mergerModeProgress => this.setState({ mergerModeProgress });
+      await enableMergerMode(onUpdateProgress);
+      // The modal is only closeable after the merger mode is fully enabled
+      // and finished preprocessing
+      this.setState({ isMergerModeModalClosable: true });
+    } else {
+      this.setState({
+        isMergerModeModalVisible: false,
+        isMergerModeModalClosable: false,
+      });
+      disableMergerMode();
+    }
+  };
+
+  handleAutoBrushChange = async (active: boolean) => {
+    this.props.onChangeEnableAutoBrush(active);
+    if (active) {
+      Toast.info(
+        "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
+      );
+    }
+  };
+
   getViewportOptions = () => {
     switch (this.props.viewMode) {
       case Constants.MODE_PLANE_TRACING:
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label="Zoom"
+              label={settingsLabels.zoom}
               roundTo={3}
-              min={0.001}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
             <LogSliderSetting
-              label={settings.clippingDistance}
+              label={settingsLabels.clippingDistance}
               roundTo={3}
-              min={1}
-              max={12000}
+              min={userSettings.clippingDistance.minimum}
+              max={userSettings.clippingDistance.maximum}
               value={this.props.userConfiguration.clippingDistance}
               onChange={this.onChangeUser.clippingDistance}
             />
             <SwitchSetting
-              label={settings.displayCrosshair}
+              label={settingsLabels.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label={settings.displayScalebars}
+              label={settingsLabels.displayScalebars}
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -113,20 +166,20 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         return (
           <Panel header="Viewport Options" key="2">
             <LogSliderSetting
-              label={settings.zoom}
+              label={settingsLabels.zoom}
               roundTo={3}
-              min={0.1}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
             <SwitchSetting
-              label={settings.displayCrosshair}
+              label={settingsLabels.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
-              label={settings.displayScalebars}
+              label={settingsLabels.displayScalebars}
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
@@ -136,53 +189,54 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         return (
           <Panel header="Flight Options" key="2">
             <LogSliderSetting
-              label={settings.zoom}
+              label={settingsLabels.zoom}
               roundTo={3}
-              min={0.001}
-              max={this.props.maxZoomStep}
+              min={this.props.validZoomRange[0]}
+              max={this.props.validZoomRange[1]}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
             <NumberSliderSetting
-              label={settings.mouseRotateValue}
-              min={0.0001}
-              max={0.02}
+              label={settingsLabels.mouseRotateValue}
+              min={userSettings.mouseRotateValue.minimum}
+              max={userSettings.mouseRotateValue.maximum}
               step={0.001}
               value={this.props.userConfiguration.mouseRotateValue}
               onChange={this.onChangeUser.mouseRotateValue}
             />
             <NumberSliderSetting
-              label={settings.rotateValue}
-              min={0.001}
-              max={0.08}
+              label={settingsLabels.rotateValue}
+              min={userSettings.rotateValue.minimum}
+              max={userSettings.rotateValue.maximum}
               step={0.001}
               value={this.props.userConfiguration.rotateValue}
               onChange={this.onChangeUser.rotateValue}
             />
             <NumberSliderSetting
-              label={settings.crosshairSize}
-              min={0.05}
-              max={0.5}
+              label={settingsLabels.crosshairSize}
+              min={userSettings.crosshairSize.minimum}
+              max={userSettings.crosshairSize.maximum}
               step={0.01}
               value={this.props.userConfiguration.crosshairSize}
               onChange={this.onChangeUser.crosshairSize}
             />
             <NumberSliderSetting
-              label={settings.sphericalCapRadius}
-              min={50}
-              max={500}
+              label={settingsLabels.sphericalCapRadius}
+              min={userSettings.sphericalCapRadius.minimum}
+              max={userSettings.sphericalCapRadius.maximum}
               step={1}
               value={this.props.userConfiguration.sphericalCapRadius}
               onChange={this.onChangeUser.sphericalCapRadius}
             />
             <NumberSliderSetting
-              label={settings.clippingDistanceArbitrary}
-              max={127}
+              label={settingsLabels.clippingDistanceArbitrary}
+              min={userSettings.clippingDistanceArbitrary.minimum}
+              max={userSettings.clippingDistanceArbitrary.maximum}
               value={this.props.userConfiguration.clippingDistanceArbitrary}
               onChange={this.onChangeUser.clippingDistanceArbitrary}
             />
             <SwitchSetting
-              label={settings.displayCrosshair}
+              label={settingsLabels.displayCrosshair}
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
@@ -207,6 +261,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       const activeNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
         .getOrElse(0);
+      const isMergerModeSupported = hasSegmentation(this.props.dataset);
       panels.push(
         <Panel header="Nodes & Trees" key="3a">
           <NumberInputSetting
@@ -220,9 +275,9 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.props.onChangeActiveTreeId}
           />
           <LogSliderSetting
-            label="Node Radius"
-            min={Constants.MIN_NODE_RADIUS}
-            max={Constants.MAX_NODE_RADIUS}
+            label={settingsLabels.nodeRadius}
+            min={userSettings.nodeRadius.minimum}
+            max={userSettings.nodeRadius.maximum}
             roundTo={0}
             value={activeNodeRadius}
             onChange={this.props.onChangeRadius}
@@ -231,30 +286,43 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <NumberSliderSetting
             label={
               this.props.userConfiguration.overrideNodeRadius
-                ? settings.particleSize
-                : `Min. ${settings.particleSize}`
+                ? settingsLabels.particleSize
+                : `Min. ${settingsLabels.particleSize}`
             }
-            min={Constants.MIN_PARTICLE_SIZE}
-            max={Constants.MAX_PARTICLE_SIZE}
+            min={userSettings.particleSize.minimum}
+            max={userSettings.particleSize.maximum}
             step={0.1}
             roundTo={1}
             value={this.props.userConfiguration.particleSize}
             onChange={this.onChangeUser.particleSize}
           />
           <SwitchSetting
-            label={settings.overrideNodeRadius}
+            label={settingsLabels.overrideNodeRadius}
             value={this.props.userConfiguration.overrideNodeRadius}
             onChange={this.onChangeUser.overrideNodeRadius}
           />
           <SwitchSetting
-            label={settings.newNodeNewTree}
+            label={settingsLabels.newNodeNewTree}
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
           <SwitchSetting
-            label={settings.highlightCommentedNodes}
+            label={settingsLabels.highlightCommentedNodes}
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}
+          />
+          <SwitchSetting
+            label={settingsLabels.mergerMode}
+            value={this.props.isMergerModeEnabled}
+            onChange={value => {
+              this.handleMergerModeChange(value);
+            }}
+            disabled={!isMergerModeSupported}
+            tooltipText={
+              !isMergerModeSupported
+                ? "The merger mode is only available for datasets with a segmentation layer."
+                : null
+            }
           />
         </Panel>,
       );
@@ -265,14 +333,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       panels.push(
         <Panel header="Volume Options" key="3b">
           <LogSliderSetting
-            label={settings.brushSize}
+            label={settingsLabels.brushSize}
             roundTo={0}
-            min={Constants.MIN_BRUSH_SIZE}
-            max={Constants.MAX_BRUSH_SIZE}
+            min={userSettings.brushSize.minimum}
+            max={userSettings.brushSize.maximum}
             step={5}
-            value={this.props.brushSize}
-            onChange={this.props.onChangeBrushSize}
+            value={this.props.userConfiguration.brushSize}
+            onChange={this.onChangeUser.brushSize}
           />
+          {this.maybeGetAutoBrushUi()}
           <NumberInputSetting
             label="Active Cell ID"
             value={volumeTracing.activeCellId}
@@ -284,21 +353,42 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     return panels;
   };
 
+  maybeGetAutoBrushUi() {
+    const { autoBrushReadyDatasets } = features();
+    if (
+      autoBrushReadyDatasets == null ||
+      !autoBrushReadyDatasets.includes(this.props.dataset.name)
+    ) {
+      return null;
+    }
+
+    return (
+      <SwitchSetting
+        label={settingsLabels.autoBrush}
+        value={this.props.isAutoBrushEnabled}
+        onChange={value => {
+          this.handleAutoBrushChange(value);
+        }}
+      />
+    );
+  }
+
   render() {
+    const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={settings.moveValue3d}
-        min={30}
-        max={1500}
+        label={settingsLabels.moveValue3d}
+        min={userSettings.moveValue3d.minimum}
+        max={userSettings.moveValue3d.maximum}
         step={10}
         value={this.props.userConfiguration.moveValue3d}
         onChange={this.onChangeUser.moveValue3d}
       />
     ) : (
       <NumberSliderSetting
-        label={settings.moveValue}
-        min={30}
-        max={14000}
+        label={settingsLabels.moveValue}
+        min={userSettings.moveValue.minimum}
+        max={userSettings.moveValue.maximum}
         step={10}
         value={this.props.userConfiguration.moveValue}
         onChange={this.onChangeUser.moveValue}
@@ -306,40 +396,49 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     );
 
     return (
-      <Collapse defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
-        <Panel header="Controls" key="1">
-          <NumberSliderSetting
-            label={settings.keyboardDelay}
-            min={0}
-            max={500}
-            value={this.props.userConfiguration.keyboardDelay}
-            onChange={this.onChangeUser.keyboardDelay}
+      <React.Fragment>
+        <Collapse bordered={false} defaultActiveKey={["1", "2", "3a", "3b", "4"]}>
+          <Panel header="Controls" key="1">
+            <NumberSliderSetting
+              label={settingsLabels.keyboardDelay}
+              min={userSettings.keyboardDelay.minimum}
+              max={userSettings.keyboardDelay.maximum}
+              value={this.props.userConfiguration.keyboardDelay}
+              onChange={this.onChangeUser.keyboardDelay}
+            />
+            {moveValueSetting}
+            <SwitchSetting
+              label={settingsLabels.dynamicSpaceDirection}
+              value={this.props.userConfiguration.dynamicSpaceDirection}
+              onChange={this.onChangeUser.dynamicSpaceDirection}
+            />
+          </Panel>
+          {this.getViewportOptions()}
+          {this.getSkeletonOrVolumeOptions()}
+          <Panel header="Other" key="4">
+            <Vector6InputSetting
+              label={settingsLabels.userBoundingBox}
+              tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+              value={Utils.computeArrayFromBoundingBox(
+                getSomeTracing(this.props.tracing).userBoundingBox,
+              )}
+              onChange={this.props.onChangeBoundingBox}
+            />
+            <SwitchSetting
+              label={settingsLabels.tdViewDisplayPlanes}
+              value={this.props.userConfiguration.tdViewDisplayPlanes}
+              onChange={this.onChangeUser.tdViewDisplayPlanes}
+            />
+          </Panel>
+        </Collapse>
+        {isMergerModeModalVisible ? (
+          <MergerModeModalView
+            isCloseable={isMergerModeModalClosable}
+            onClose={() => this.setState({ isMergerModeModalVisible: false })}
+            progress={this.state.mergerModeProgress}
           />
-          {moveValueSetting}
-          <SwitchSetting
-            label={settings.dynamicSpaceDirection}
-            value={this.props.userConfiguration.dynamicSpaceDirection}
-            onChange={this.onChangeUser.dynamicSpaceDirection}
-          />
-        </Panel>
-        {this.getViewportOptions()}
-        {this.getSkeletonOrVolumeOptions()}
-        <Panel header="Other" key="4">
-          <Vector6InputSetting
-            label={settings.userBoundingBox}
-            tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(
-              getSomeTracing(this.props.tracing).userBoundingBox,
-            )}
-            onChange={this.props.onChangeBoundingBox}
-          />
-          <SwitchSetting
-            label={settings.tdViewDisplayPlanes}
-            value={this.props.userConfiguration.tdViewDisplayPlanes}
-            onChange={this.onChangeUser.tdViewDisplayPlanes}
-          />
-        </Panel>
-      </Collapse>
+        ) : null}
+      </React.Fragment>
     );
   }
 }
@@ -348,10 +447,12 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  maxZoomStep: getMaxZoomStep(state.dataset),
+  validZoomRange: getValidZoomRangeForUser(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
-  brushSize: state.temporaryConfiguration.brushSize,
+  isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+  isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
+  dataset: state.dataset,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -367,9 +468,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
   },
-  onChangeBrushSize(size: number) {
-    dispatch(setBrushSizeAction(size));
-  },
   onChangeBoundingBox(boundingBox: ?Vector6) {
     dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));
   },
@@ -378,6 +476,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeRadius(radius: number) {
     dispatch(setNodeRadiusAction(radius));
+  },
+  onChangeEnableMergerMode(active: boolean) {
+    dispatch(setMergerModeEnabledAction(active));
+  },
+  onChangeEnableAutoBrush(active: boolean) {
+    dispatch(updateTemporarySettingAction("isAutoBrushEnabled", active));
   },
 });
 

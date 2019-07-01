@@ -16,8 +16,6 @@ import {
 } from "oxalis/constants";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
 import Store from "oxalis/store";
@@ -212,11 +210,12 @@ class VolumeLayer {
   }
 
   getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
-    const radius = Math.round(
-      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
-    );
+    const state = Store.getState();
+    const { brushSize } = state.userConfiguration;
+
+    const radius = Math.round(brushSize / 2);
     const width = 2 * radius;
-    const height = width;
+    const height = 2 * radius;
 
     const map = new Array(width);
     for (let x = 0; x < width; x++) {
@@ -231,7 +230,7 @@ class VolumeLayer {
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
+      getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
 
     const setMap = (x, y) => {
@@ -252,12 +251,12 @@ class VolumeLayer {
 
   drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {
     const contourList = this.getContourList();
+    const state = Store.getState();
     const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
+      getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
-    const radius = Math.round(
-      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
-    );
+    const { brushSize } = state.userConfiguration;
+    const radius = Math.round(brushSize / 2);
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {
@@ -330,13 +329,6 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
-  }
-
-  pixelsToVoxels(pixels: number): number {
-    const state = Store.getState();
-    const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = getViewportScale(this.plane);
-    return (pixels / viewportScale) * zoomFactor;
   }
 }
 

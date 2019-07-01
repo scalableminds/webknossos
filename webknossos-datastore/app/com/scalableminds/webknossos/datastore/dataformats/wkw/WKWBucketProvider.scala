@@ -26,7 +26,7 @@ class WKWCube(wkwFile: WKWFile) extends Cube {
 }
 
 class WKWBucketProvider(layer: WKWLayer)
-  extends BucketProvider
+    extends BucketProvider
     with WKWDataFormatHelper
     with FoxImplicits
     with LazyLogging {

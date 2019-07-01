@@ -221,4 +221,11 @@ V3.toArray = function(vec) {
   return [vec[0], vec[1], vec[2]];
 };
 
+V2.scale2 = function scale2(a, k, r) {
+  if (r == null) r = new Float32Array(2);
+  r[0] = a[0] * k[0];
+  r[1] = a[1] * k[1];
+  return r;
+};
+
 export { M4x4, V2, V3 };

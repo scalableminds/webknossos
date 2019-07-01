@@ -103,6 +103,7 @@ type DeleteCommentAction = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: n
 type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
+type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -138,7 +139,8 @@ export type SkeletonTracingAction =
   | NoAction
   | SetTracingAction
   | SetTreeGroupsAction
-  | SetTreeGroupAction;
+  | SetTreeGroupAction
+  | SetMergerModeEnabledAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -163,6 +165,11 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_USER_BOUNDING_BOX",
   "SET_TREE_GROUPS",
   "SET_TREE_GROUP",
+  "SET_MERGER_MODE_ENABLED",
+  "TOGGLE_TREE",
+  "TOGGLE_TREE_GROUP",
+  "TOGGLE_ALL_TREES",
+  "TOGGLE_INACTIVE_TREES",
 ];
 
 const noAction = (): NoAction => ({
@@ -398,6 +405,10 @@ export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGr
   treeId,
 });
 
+export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnabledAction => ({
+  type: "SET_MERGER_MODE_ENABLED",
+  active,
+});
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.
 // For example, the deleteActiveNodeAsUserAction also initiates the deletion of a tree,

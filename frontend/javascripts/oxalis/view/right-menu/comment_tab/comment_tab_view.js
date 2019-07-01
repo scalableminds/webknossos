@@ -1,8 +1,4 @@
-/**
- * comment_tab_view.js
- * @flow
- */
-
+// @flow
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
 import { Input, Menu, Dropdown, Tooltip, Icon } from "antd";
@@ -98,13 +94,19 @@ type CommentTabState = {
 
 class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabState> {
   listRef: ?List;
+  storePropertyUnsubscribers: Array<() => void> = [];
+  keyboard = new InputKeyboard(
+    {
+      n: () => this.nextComment(),
+      p: () => this.previousComment(),
+    },
+    { delay: Store.getState().userConfiguration.keyboardDelay },
+  );
 
   state = {
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     data: [],
-    // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
-    // eslint-disable-next-line react/no-unused-state
     collapsedTreeIds: {},
     isMarkdownModalVisible: false,
   };
@@ -156,16 +158,6 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
     this.keyboard.destroy();
     this.unsubscribeStoreListeners();
   }
-
-  storePropertyUnsubscribers: Array<() => void> = [];
-
-  keyboard = new InputKeyboard(
-    {
-      n: () => this.nextComment(),
-      p: () => this.previousComment(),
-    },
-    { delay: Store.getState().userConfiguration.keyboardDelay },
-  );
 
   nextComment = (forward: boolean = true) => {
     getActiveNode(this.props.skeletonTracing).map(activeNode => {
@@ -390,7 +382,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             onClick={this.nextComment}
             icon="arrow-right"
           />
-          <Dropdown overlay={this.renderSortDropdown()}>
+          <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
               {this.renderSortIcon()}
             </ButtonComponent>

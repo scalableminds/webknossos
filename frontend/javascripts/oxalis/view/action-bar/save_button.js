@@ -10,6 +10,7 @@ import window from "libs/window";
 
 type OwnProps = {|
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
+  className?: string,
 |};
 type StateProps = {|
   progressInfo: ProgressInfo,
@@ -24,6 +25,7 @@ type State = {
 const SAVE_POLLING_INTERVAL = 1000;
 
 class SaveButton extends React.PureComponent<Props, State> {
+  savedPollingInterval: number = 0;
   state = {
     isStateSaved: false,
   };
@@ -37,7 +39,6 @@ class SaveButton extends React.PureComponent<Props, State> {
     window.clearInterval(this.savedPollingInterval);
   }
 
-  savedPollingInterval: number = 0;
   _forceUpdate = () => {
     const isStateSaved = Model.stateSaved();
     this.setState({
@@ -68,12 +69,13 @@ class SaveButton extends React.PureComponent<Props, State> {
         type="primary"
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
+        className={this.props.className}
       >
         {this.shouldShowProgress() ? (
-          <React.Fragment>
+          <span style={{ marginLeft: 8 }}>
             {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
             %
-          </React.Fragment>
+          </span>
         ) : (
           <span className="hide-on-small-screen">Save</span>
         )}

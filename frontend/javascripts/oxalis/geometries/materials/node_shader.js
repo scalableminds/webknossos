@@ -1,11 +1,11 @@
 // @flow
 import * as THREE from "three";
 
-import { ModeValues, ModeValuesIndices } from "oxalis/constants";
+import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 import { formatNumberAsGLSLFloat } from "oxalis/shaders/main_data_fragment.glsl";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Store from "oxalis/store";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -42,7 +42,11 @@ class NodeShader {
     this.uniforms = {
       planeZoomFactor: {
         type: "f",
-        value: getPlaneScalingFactor(state.flycam),
+        // The flycam zoom is typically decomposed into an x- and y-factor
+        // which respects the aspect ratio. However, this value is merely used
+        // for selecting an appropriate node size (gl_PointSize). The resulting points
+        // will and should be square regardless of the plane's aspect ratio.
+        value: getZoomValue(state.flycam),
       },
       datasetScale: {
         type: "f",
@@ -67,10 +71,6 @@ class NodeShader {
       activeNodeId: {
         type: "f",
         value: NaN,
-      },
-      activeNodeScaleFactor: {
-        type: "f",
-        value: 1.0,
       },
       treeColors: {
         type: "t",
@@ -104,7 +104,7 @@ class NodeShader {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.viewMode,
       viewMode => {
-        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+        this.uniforms.viewMode.value = ViewModeValues.indexOf(viewMode);
       },
       true,
     );
@@ -128,7 +128,6 @@ uniform float datasetScale;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
-uniform float activeNodeScaleFactor; // used for the "new node" animation
 uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
@@ -218,11 +217,14 @@ void main() {
     // NODE COLOR FOR ACTIVE NODE
     v_isActiveNode = activeNodeId == nodeId ? 1.0 : 0.0;
     if (v_isActiveNode > 0.0) {
-      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(ModeValuesIndices.Orthogonal)};
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(
+        ViewModeValuesIndices.Orthogonal,
+      )};
 
-      gl_PointSize *= activeNodeScaleFactor;
       v_innerPointSize = gl_PointSize;
-      v_outerPointSize = isOrthogonalMode ? (v_innerPointSize + 25.0) * activeNodeScaleFactor : v_innerPointSize;
+      v_outerPointSize = isOrthogonalMode
+        ? v_innerPointSize + 25.0
+        : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
     }
 
@@ -253,6 +255,8 @@ void main() {
 
 precision highp float;
 
+uniform float viewMode;
+
 varying vec3 color;
 varying float v_isHighlightedCommented;
 varying float v_isActiveNode;
@@ -270,22 +274,48 @@ void main()
       gl_FragColor  = vec4(1.0);
     };
 
-    // Make active node round and give it a "halo"
+    // Give active node a "halo"
     if (v_isActiveNode > 0.0) {
       float r = 0.0, delta = 0.0, alphaInner = 1.0, alphaOuter = 1.0;
+
+      bool isOrthogonalMode = viewMode == ${formatNumberAsGLSLFloat(
+        ViewModeValuesIndices.Orthogonal,
+      )};
+
+      // cxy is between -1.0 and +1.0
       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      // r is the length from the center of the point to the active texel
       r = dot(cxy, cxy);
+      float relativeInnerNodeRadius = 0.5 * v_innerPointSize / v_outerPointSize;
 
       #ifdef GL_OES_standard_derivatives
         delta = fwidth(r);
-        alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
-        alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / (v_innerPointSize / v_outerPointSize));
+
+        if (isOrthogonalMode) {
+          // Make the inner node a square so that it looks exactly as a non-active node. The halo
+          // will ensure that the active node is recognizable.
+          float maxCenterDistance = max(centerDistance.x, centerDistance.y);
+          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, maxCenterDistance / relativeInnerNodeRadius);
+          alphaOuter = 1.0 - smoothstep(0.0, delta, abs(1.0 - delta - r));
+        } else {
+          // In non-ortho mode, we do not show a halo. Therefore, make the active node round
+          // to give at least a slight clue, which node is active.
+          alphaInner = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r / relativeInnerNodeRadius);
+          alphaOuter = 0.0;
+        }
+
         alphaOuter = max(0.0, alphaOuter - alphaInner);
       #endif
 
       vec4 inner = vec4(color, alphaInner);
       vec4 outer = vec4(color, alphaOuter);
       gl_FragColor = mix(inner, outer, alphaOuter);
+
+      if (gl_FragColor.a == 0.0) {
+        // Discard that texel to avoid that the transparent halo content
+        // overwrites other nodes.
+        discard;
+      }
     }
 }`;
   }

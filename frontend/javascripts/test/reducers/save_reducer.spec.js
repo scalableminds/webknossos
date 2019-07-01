@@ -1,19 +1,10 @@
-/**
- * save_reducer.spec.js
- * @flow
- */
-
-/* eslint-disable no-useless-computed-key */
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-
+// @flow
 import Maybe from "data.maybe";
-
 import mockRequire from "mock-require";
 import test from "ava";
 
+import "test/reducers/save_reducer.mock";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-
-mockRequire.stopAll();
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -44,7 +35,7 @@ const initialState = {
 test("Save should add update actions to the queue", t => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
   const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const newState = SaveReducer(initialState, pushAction);
 
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
@@ -53,7 +44,7 @@ test("Save should add update actions to the queue", t => {
 test("Save should add more update actions to the queue", t => {
   const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
   const saveQueue = createSaveQueueFromUpdateActions([items, items], TIMESTAMP);
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const testState = SaveReducer(initialState, pushAction);
   const newState = SaveReducer(testState, pushAction);
 
@@ -62,7 +53,7 @@ test("Save should add more update actions to the queue", t => {
 
 test("Save should add zero update actions to the queue", t => {
   const items = [];
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const newState = SaveReducer(initialState, pushAction);
 
   t.deepEqual(newState.save.queue.skeleton, []);
@@ -72,8 +63,8 @@ test("Save should remove one update actions from the queue", t => {
   const firstItem = [createEdge(0, 1, 2)];
   const secondItem = [createEdge(1, 2, 3)];
   const saveQueue = createSaveQueueFromUpdateActions(secondItem, TIMESTAMP);
-  const firstPushAction = SaveActions.pushSaveQueueAction(firstItem, "skeleton");
-  const secondPushAction = SaveActions.pushSaveQueueAction(secondItem, "skeleton");
+  const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem, "skeleton");
+  const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(1, "skeleton");
   let newState = SaveReducer(initialState, firstPushAction);
   newState = SaveReducer(newState, secondPushAction);
@@ -85,7 +76,7 @@ test("Save should remove one update actions from the queue", t => {
 test("Save should remove zero update actions from the queue", t => {
   const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
   const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(0, "skeleton");
   let newState = SaveReducer(initialState, pushAction);
   newState = SaveReducer(newState, popAction);
@@ -95,7 +86,7 @@ test("Save should remove zero update actions from the queue", t => {
 
 test("Save should remove all update actions from the queue (1/2)", t => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(2, "skeleton");
   let newState = SaveReducer(initialState, pushAction);
   newState = SaveReducer(newState, popAction);
@@ -105,7 +96,7 @@ test("Save should remove all update actions from the queue (1/2)", t => {
 
 test("Save should remove all update actions from the queue (2/2)", t => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
-  const pushAction = SaveActions.pushSaveQueueAction(items, "skeleton");
+  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(5, "skeleton");
   let newState = SaveReducer(initialState, pushAction);
   newState = SaveReducer(newState, popAction);

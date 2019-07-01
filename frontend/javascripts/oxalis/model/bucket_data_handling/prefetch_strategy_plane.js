@@ -3,18 +3,19 @@
 import _ from "lodash";
 
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
-import {
+import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Dimensions from "oxalis/model/dimensions";
+import constants, {
   type OrthoView,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
   type Vector3,
 } from "oxalis/constants";
-import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Dimensions from "oxalis/model/dimensions";
+import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 
-const MAX_ZOOM_STEP_DIFF = 1;
+const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
 export class AbstractPrefetchStrategy {
   velocityRangeStart: number = 0;
@@ -83,7 +84,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
   ): Array<PullQueueItem> {
-    const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
+    const zoomStep = Math.min(currentZoomStep, cube.MAX_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
@@ -99,7 +100,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     );
 
     let queueItemsForFallbackZoomStep = [];
-    const fallbackZoomStep = Math.min(cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
+    const fallbackZoomStep = Math.min(cube.MAX_ZOOM_STEP, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
       queueItemsForFallbackZoomStep = this.prefetchImpl(
         cube,
@@ -130,7 +131,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
   ): Array<PullQueueItem> {
     const pullQueue = [];
 
-    if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) {
+    if (zoomStepDiff > MAX_ZOOM_STEP_DIFF_PREFETCH) {
       return pullQueue;
     }
 
@@ -161,12 +162,14 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       const height = scaledWidthHeightVector[v];
 
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
+      const prefetchWeight = getPriorityWeightForPrefetch();
 
       for (const bucket of bucketPositions) {
         const priority =
           Math.abs(bucket[0] - centerBucket3[0]) +
           Math.abs(bucket[1] - centerBucket3[1]) +
           Math.abs(bucket[2] - centerBucket3[2]) +
+          prefetchWeight +
           fallbackPriorityWeight;
         pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
         if (plane === activePlane) {

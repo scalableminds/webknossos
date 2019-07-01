@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -98,7 +97,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
         }
         <br />
         {"See the "}
-        <Link to="/docs/frontend-api/index.html" target="_blank">
+        <Link to="/assets/docs/frontend-api/index.html" target="_blank">
           Frontend API Documentation
         </Link>
         {" for more information."}

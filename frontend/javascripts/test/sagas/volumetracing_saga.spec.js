@@ -1,17 +1,15 @@
-/**
- * volumetracing_saga.spec.js
- * @flow
- */
+// @flow
+import "test/sagas/volumetracing_saga.mock.js";
 
-/* eslint-disable import/no-extraneous-dependencies */
 import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";
 
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
-import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";
 import test from "ava";
 
@@ -29,11 +27,13 @@ mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
+mockRequire("@tensorflow/tfjs", {});
+mockRequire("oxalis/workers/tensorflow.impl", {});
+mockRequire("oxalis/workers/tensorflow.worker", {});
 
 const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
-const { defaultState } = require("oxalis/store");
 
 const volumeTracing = {
   type: "volume",
@@ -100,7 +100,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
-  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items, "volume")));
+  expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "volume")));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", t => {

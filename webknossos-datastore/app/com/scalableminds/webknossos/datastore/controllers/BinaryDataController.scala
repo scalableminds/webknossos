@@ -1,54 +1,52 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.{ByteArrayOutputStream, OutputStream}
-import java.nio.{Buffer, ByteBuffer, ByteOrder, FloatBuffer}
-import java.nio.file.Paths
+import java.nio.{ByteBuffer, ByteOrder}
 import java.util.Base64
 
-import akka.actor.{ActorSystem, Props}
-import akka.pattern.ask
-import akka.routing.RoundRobinPool
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.StreamConverters
-import akka.util.Timeout
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.datastore.models._
-import com.scalableminds.util.mvc.JsonResults
+import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
   DataServiceDataRequest,
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
-import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, VoxelPosition, WebKnossosDataRequest}
-import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import com.scalableminds.webknossos.datastore.models.{
+  DataRequest,
+  ImageThumbnail,
+  VoxelPosition,
+  WebKnossosDataRequest,
+  _
+}
+import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.util.Helpers.tryo
 import play.api.http.HttpEntity
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, ResponseHeader, Result}
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 
 class BinaryDataController @Inject()(
     dataSourceRepository: DataSourceRepository,
     config: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
-    binaryDatServiceHolder: BinaryDataServiceHolder,
+    binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
     isosurfaceService: IsosurfaceService,
+    findDataService: FindDataService,
     actorSystem: ActorSystem
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  val binaryDataService = binaryDatServiceHolder.binaryDataService
+  val binaryDataService = binaryDataServiceHolder.binaryDataService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.
@@ -367,11 +365,55 @@ class BinaryDataController @Inject()(
     }
 
   private def getNeighborIndices(neighbors: List[Int]) =
-    List(("NEIGHBORS" -> formatNeighborList(neighbors)),
-      ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
+
+  def colorStatistics(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              meanAndStdDev <- findDataService.meanAndStdDev(dataSource, dataLayer)
+            } yield
+              Ok(
+                Json.obj("mean" -> meanAndStdDev._1, "stdDev" -> meanAndStdDev._2)
+              )
+          }
+        }
+  }
+
+  def findData(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              positionAndResolutionOpt <- findDataService.findPositionWithData(dataSource, dataLayer)
+            } yield
+              Ok(
+                Json.obj("position" -> positionAndResolutionOpt.map(_._1),
+                         "resolution" -> positionAndResolutionOpt.map(_._2)))
+          }
+        }
+  }
+
+  def createHistogram(organizationName: String, dataSetName: String, dataLayerName: String) = Action.async {
+    implicit request =>
+      accessTokenService
+        .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+          AllowRemoteOrigin {
+            for {
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
+              (histogram, count) <- findDataService.createHistogram(dataSource, dataLayer)
+            } yield Ok(Json.obj("histogram" -> histogram, "count" -> count))
+          }
+        }
+  }
 
   private def getDataSourceAndDataLayer(organizationName: String, dataSetName: String, dataLayerName: String)(
       implicit m: MessagesProvider): Fox[(DataSource, DataLayer)] =
@@ -442,14 +484,4 @@ class BinaryDataController @Inject()(
     } yield {
       image
     }
-
-  def clearCache(organizationName: String, dataSetName: String) = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        val count = binaryDataService.clearCache(organizationName, dataSetName)
-        Future.successful(Ok("Closed " + count + " file handles"))
-      }
-    }
-  }
-
 }

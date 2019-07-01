@@ -50,7 +50,7 @@ export const getBrushOverlay: ShaderModule = {
 
       float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 
-      float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
+      float radius = round(brushSizeInPixel / 2.0);
       if (radius > dist) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }
@@ -63,16 +63,14 @@ export const getBrushOverlay: ShaderModule = {
 export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
-    vec4 getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
+    vec4 getSegmentationId(vec3 worldPositionUVW) {
       vec4 volume_color =
         getMaybeFilteredColorOrFallback(
           <%= segmentationName %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
           <%= segmentationName %>_data_texture_width,
           <%= segmentationPackingDegree %>,
-          coords,
-          fallbackCoords,
-          hasFallback,
+          worldPositionUVW,
           true, // Don't use bilinear filtering for volume data
           vec4(0.0, 0.0, 0.0, 0.0)
         );
@@ -80,6 +78,15 @@ export const getSegmentationId: ShaderModule = {
 
       <% if (isMappingSupported) { %>
         if (isMappingEnabled) {
+          // Depending on the packing degree, the returned volume color contains extra values
+          // which would make the binary search fail
+
+          <% if (segmentationPackingDegree === "4.0") { %>
+            volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
+          <% } else if (segmentationPackingDegree === "2.0") { %>
+            volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+          <% } %>
+
           float index = binarySearchIndex(
             <%= segmentationName %>_mapping_lookup_texture,
             mappingSize,

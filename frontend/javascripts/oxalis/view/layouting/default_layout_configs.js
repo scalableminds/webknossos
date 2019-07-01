@@ -6,23 +6,24 @@
  */
 
 // @flow
-import Constants, { type ControlMode, ControlModeEnum, type Mode } from "oxalis/constants";
-import { navbarHeight } from "navbar";
 import _ from "lodash";
+
+import { getIsInIframe } from "libs/utils";
+import { navbarHeight } from "navbar";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 7;
+export const currentLayoutVersion = 8;
 export const layoutHeaderHeight = 20;
-export const headerHeight = 55;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,
   showCloseIcon: false,
-  showMaximiseIcon: false,
+  showMaximiseIcon: true,
 };
 
 // While the first parameter to `Pane` is the title of the pane, the second one is an id
@@ -56,16 +57,18 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const SkeletonRightHandColumn = Stack(
+const SkeletonRightHandColumnItems = [
   Panes.DatasetInfoTabView,
   Panes.TreesTabView,
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
   Panes.Meshes,
-);
+];
+const SkeletonRightHandColumn = Stack(...SkeletonRightHandColumnItems);
 
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes);
+const NonSkeletonRightHandColumnItems = [Panes.DatasetInfoTabView, Panes.Mappings, Panes.Meshes];
+const NonSkeletonRightHandColumn = Stack(...NonSkeletonRightHandColumnItems);
 
 export const getGroundTruthLayoutRect = () => {
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
@@ -75,7 +78,7 @@ export const getGroundTruthLayoutRect = () => {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= headerHeight + navbarHeight;
+      height -= navbarHeight;
     } else {
       // use fallback values
       height = dummyExtent;
@@ -91,25 +94,44 @@ export const getGroundTruthLayoutRect = () => {
 };
 
 const _getDefaultLayouts = () => {
-  const layoutContainer = getGroundTruthLayoutRect();
-  layoutContainer.height -= layoutHeaderHeight * 2;
-  const viewportWidth = ((layoutContainer.height / 2) * 100) / layoutContainer.width;
+  const isInIframe = getIsInIframe();
+  const defaultViewportWidthInPercent = 33;
 
-  const OrthoViewsGrid = [
-    setGlContainerWidth(Column(Panes.xy, Panes.xz), viewportWidth),
-    setGlContainerWidth(Column(Panes.yz, Panes.td), viewportWidth),
-  ];
+  let OrthoLayout;
+  let OrthoLayoutView;
+  let VolumeTracingView;
 
-  const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-  const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-  const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  if (isInIframe) {
+    const getGridWithExtraTabs = tabs => [
+      Column(Panes.xy, Panes.xz),
+      Column(Panes.yz, Stack(Panes.td, ...tabs)),
+    ];
 
-  const arbitraryPanes = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
-    show3DViewportInArbitrary ? [Panes.td] : [],
+    OrthoLayout = createLayout(Row(...getGridWithExtraTabs(SkeletonRightHandColumnItems)));
+    OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
+    VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
+  } else {
+    const OrthoViewsGrid = [
+      setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
+      setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
+    ];
+
+    OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+    OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+    VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+  }
+
+  const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
+  const arbitraryPanes = [Panes.arbitraryViewport, NonSkeletonRightHandColumn].concat(
+    eventual3DViewportForArbitrary,
   );
-  const ArbitraryLayout = createLayout(Row(...arbitraryPanes));
+  const ArbitraryLayoutView = createLayout(Row(...arbitraryPanes));
+  const arbitraryPanesWithSkeleton = [Panes.arbitraryViewport, SkeletonRightHandColumn].concat(
+    eventual3DViewportForArbitrary,
+  );
+  const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
 
-  return { OrthoLayout, OrthoLayoutView, VolumeTracingView, ArbitraryLayout };
+  return { OrthoLayout, OrthoLayoutView, ArbitraryLayoutView, VolumeTracingView, ArbitraryLayout };
 };
 
 const getDefaultLayouts = _.memoize(_getDefaultLayouts);
@@ -128,6 +150,9 @@ export const getCurrentDefaultLayoutConfig = () => {
     OrthoLayoutView: {
       "Custom Layout": defaultLayouts.OrthoLayoutView,
     },
+    ArbitraryLayoutView: {
+      "Custom Layout": defaultLayouts.ArbitraryLayoutView,
+    },
     VolumeTracingView: {
       "Custom Layout": defaultLayouts.VolumeTracingView,
     },
@@ -139,6 +164,7 @@ export const getCurrentDefaultLayoutConfig = () => {
     },
     LastActiveLayouts: {
       OrthoLayoutView: "Custom Layout",
+      ArbitraryLayoutView: "Custom Layout",
       VolumeTracingView: "Custom Layout",
       ArbitraryLayout: "Custom Layout",
       OrthoLayout: "Custom Layout",
@@ -146,16 +172,20 @@ export const getCurrentDefaultLayoutConfig = () => {
   };
 };
 
-export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layout {
+export function determineLayout(controlMode: ControlMode, viewMode: ViewMode): Layout {
+  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
   if (controlMode === ControlModeEnum.VIEW) {
-    return "OrthoLayoutView";
+    if (isArbitraryMode) {
+      return "ArbitraryLayoutView";
+    } else {
+      return "OrthoLayoutView";
+    }
   }
 
   if (!Constants.MODES_SKELETON.includes(viewMode)) {
     return "VolumeTracingView";
   }
 
-  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
   if (isArbitraryMode) {
     return "ArbitraryLayout";
   } else {
@@ -165,6 +195,7 @@ export function determineLayout(controlMode: ControlMode, viewMode: Mode): Layou
 
 export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
+  ArbitraryLayoutView: "Arbitrary Mode - View Only",
   VolumeTracingView: "Volume Mode",
   ArbitraryLayout: "Arbitray Mode",
   OrthoLayout: "Orthogonal Mode",

@@ -5,6 +5,7 @@ import { Row, Col, Card } from "antd";
 import type { RouterHistory } from "react-router-dom";
 import messages from "messages";
 import Toast from "libs/toast";
+import features from "features";
 import RegistrationForm from "./registration_form";
 
 type Props = {
@@ -18,10 +19,7 @@ class RegistrationView extends React.PureComponent<Props> {
     if (organizationName) {
       return (
         <Card style={{ marginBottom: 24 }}>
-          You were invited to join the organization &ldquo;{organizationName}&rdquo;!
-          <br /> In case you do not know this organization, contact{" "}
-          <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
-          information about how to get to use webKnossos.
+          You are about to join the organization &ldquo;{organizationName}&rdquo;!
         </Card>
       );
     }
@@ -29,8 +27,15 @@ class RegistrationView extends React.PureComponent<Props> {
     return (
       <Card style={{ marginBottom: 24 }}>
         Not a member of the listed organizations?
-        <br /> Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get
-        more information about how to get to use webKnossos.
+        <br />
+        {features().isDemoInstance ? (
+          <Link to="/onboarding">Create a new organization.</Link>
+        ) : (
+          <React.Fragment>
+            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
+            setting up webKnossos.
+          </React.Fragment>
+        )}
       </Card>
     );
   }

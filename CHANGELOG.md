@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Fixed
-- Fixed a bug where volume tracings could not be converted to hybrid. [#4159](https://github.com/scalableminds/webknossos/pull/4158)
+- Fixed a bug where volume tracings could not be converted to hybrid. [#4159](https://github.com/scalableminds/webknossos/pull/4159)
 
 ### Removed
 -

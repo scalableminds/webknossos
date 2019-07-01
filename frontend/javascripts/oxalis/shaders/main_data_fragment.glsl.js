@@ -162,10 +162,8 @@ void main() {
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
-  float fallbackZoomStep;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
-    fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(
@@ -186,8 +184,8 @@ void main() {
     <% } else { %>
 
       // Keep the color in bounds of min and max
-      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max); 
-      // Scale interval between min and max up to interval from 0 to 255 
+      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+      // Scale interval between min and max up to interval from 0 to 255
       color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
     <% } %>
 

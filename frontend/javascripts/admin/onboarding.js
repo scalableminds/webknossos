@@ -326,7 +326,10 @@ class OnboardingView extends React.PureComponent<Props, State> {
         onRegistered={() => {
           // Update the entered organization to the normalized name of the organization received by the backend.
           // This is needed for further requests.
-          this.setState({ organizationName: Store.getState().activeUser.organization });
+          const { activeUser } = Store.getState();
+          if (activeUser) {
+            this.setState({ organizationName: activeUser.organization });
+          }
           this.advanceStep();
         }}
         confirmLabel="Create account"

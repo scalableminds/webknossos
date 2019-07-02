@@ -5,8 +5,13 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
--
+- 
 
+### Postgres Evolutions:
+- 
+
+
+## [19.07.0](https://github.com/scalableminds/webknossos/releases/tag/19.07.0) - 2019-07-01
 ### Postgres Evolutions:
 - [043-annotationsettings-allowedMagnifications.sql](conf/evolutions/043-annotationsettings-allowedMagnifications.sql)
 - [044-datasource-hash.sql](conf/evolutions/044-datasource-hash.sql)

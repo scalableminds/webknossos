@@ -192,8 +192,9 @@ class DataSetController @Inject()(userService: UserService,
       log {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                       organizationName)
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND

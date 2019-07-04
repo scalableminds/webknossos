@@ -144,6 +144,25 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup
   return foundGroup;
 }
 
+export function forEachTreeNode(groups: Array<TreeNode>, callback: TreeNode => *) {
+  for (const group of groups) {
+    callback(group);
+    if (group.children) {
+      forEachTreeNode(group.children, callback);
+    }
+  }
+}
+
+export function findTreeNode(groups: Array<TreeNode>, id: number, callback: TreeNode => *) {
+  for (const group of groups) {
+    if (group.id === id) {
+      callback(group);
+    } else if (group.children) {
+      findTreeNode(group.children, id, callback);
+    }
+  }
+}
+
 export function createGroupToTreesMap(trees: TreeMap): { [number]: Array<Tree> } {
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }

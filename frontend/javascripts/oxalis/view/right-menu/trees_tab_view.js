@@ -556,6 +556,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             onChange={this.handleChangeTreeName}
             value={activeTreeName || activeGroupName}
             style={{ width: "60%" }}
+            blurOnEnterAndEsc
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
             <i className="fa fa-arrow-right" />

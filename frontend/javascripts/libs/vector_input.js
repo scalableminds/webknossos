@@ -139,7 +139,6 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         style={
           autosize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
         }
-        blurOnEnterAndEsc
         {...props}
       />
     );

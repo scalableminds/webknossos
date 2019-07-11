@@ -525,14 +525,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           if (volumeDataOpt.isDefined) {
             val subZip = temporaryFileCreator.create(normalize(name), ".zip")
             val subZipper =
-              ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString))))
+              ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.path.toString))))
             volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(name + "_data.zip", volumeData))
             for {
               _ <- subZipper.addFileFromEnumerator(name + ".nml", nml)
-              _ <- Future.successful(subZipper.close())
-              _ <- Future.successful(Thread.sleep(100))
-              _ <- Future.successful(zipper.addFileFromTemporaryFile(name + ".zip", subZip))
-              _ <- Future.successful(Thread.sleep(100))
+              _ = subZipper.close()
+              _ = zipper.addFileFromTemporaryFile(name + ".zip", subZip)
               res <- addToZip(tail)
             } yield res
           } else {

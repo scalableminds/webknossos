@@ -15,9 +15,9 @@ class TracingStoreModule(environment: Environment, configuration: Configuration)
   override def configure() = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
     bind(classOf[TracingDataStore]).asEagerSingleton()
-    bind(classOf[SkeletonTracingService]).asEagerSingleton()
     bind(classOf[VolumeTracingService]).asEagerSingleton()
     bind(classOf[TracingStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[TracingStoreWkRpcClient]).asEagerSingleton()
+    bind(classOf[SkeletonTracingService]).asEagerSingleton()
   }
 }

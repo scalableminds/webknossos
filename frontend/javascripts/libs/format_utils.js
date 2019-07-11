@@ -98,18 +98,13 @@ export function formatSeconds(durationSeconds: number): string {
   return timeString;
 }
 
-export function formatDurationToHoursAndMinutes(
-  durationInMillisecons: number,
-  minMinutes: number = 1,
-) {
+export function formatDurationToMinutesAndSeconds(durationInMillisecons: number) {
   // Moment does not provide a format method for durations, so we have to do it manually.
   const duration = moment.duration(durationInMillisecons);
-  const minutesAsString = `${duration.minutes() < 10 ? 0 : ""}${Math.max(
-    duration.minutes(),
-    minMinutes,
-  )}`;
-  const hoursAsString = `${duration.hours() < 10 ? 0 : ""}${duration.hours()}`;
-  return `${hoursAsString}:${minutesAsString}`;
+  const minuteDuration = duration.minutes() + 60 * duration.hours();
+  const minutesAsString = `${minuteDuration < 10 ? 0 : ""}${minuteDuration}`;
+  const hoursAsSeconds = `${duration.seconds() < 10 ? 0 : ""}${duration.seconds()}`;
+  return `${minutesAsString}:${hoursAsSeconds}`;
 }
 
 export function formatHash(id: string): string {

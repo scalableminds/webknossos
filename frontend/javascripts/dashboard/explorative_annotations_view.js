@@ -401,6 +401,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        className="large-table"
       >
         <Column
           title="ID"

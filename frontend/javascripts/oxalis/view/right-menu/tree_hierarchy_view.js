@@ -332,14 +332,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>
+        <div className={styleClass}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
             node={node}
             style={CHECKBOX_STYLE}
           />
-          {` (${tree.nodes.size()}) ${tree.name}`}
+          <div
+            data-id={node.id}
+            style={{ marginLeft: 10, display: "inline" }}
+            onClick={this.onSelectTree}
+          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
         </div>
       );
       nodeProps.className = "tree-type";

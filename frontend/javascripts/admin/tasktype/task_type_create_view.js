@@ -278,49 +278,49 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   valuePropName: "checked",
                 })(<Checkbox>Allow Branchpoints</Checkbox>)}
               </FormItem>
+            </div>
 
-              <FormItem style={{ marginBottom: 6 }}>
-                {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
-                  valuePropName: "checked",
-                })(
-                  <Checkbox>
-                    Restrict Magnifications{" "}
-                    <Tooltip
-                      title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be addressed with 4 and 8."
-                      placement="right"
-                    >
-                      <Icon type="info-circle" />
-                    </Tooltip>
-                  </Checkbox>,
-                )}
-              </FormItem>
+            <FormItem style={{ marginBottom: 6 }}>
+              {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
+                valuePropName: "checked",
+              })(
+                <Checkbox>
+                  Restrict Magnifications{" "}
+                  <Tooltip
+                    title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be addressed with 4 and 8."
+                    placement="right"
+                  >
+                    <Icon type="info-circle" />
+                  </Tooltip>
+                </Checkbox>,
+              )}
+            </FormItem>
 
-              <div
-                style={{
-                  marginLeft: 24,
-                  display: this.props.form.getFieldValue(
-                    "settings.allowedMagnifications.shouldRestrict",
-                  )
-                    ? "block"
-                    : "none",
-                }}
-              >
-                <div>
-                  <FormItem hasFeedback style={{ marginBottom: 6 }}>
-                    Minimum:{" "}
-                    {getFieldDecorator("settings.allowedMagnifications.min", {
-                      rules: [{ validator: isValidMagnification }],
-                    })(<InputNumber min={1} size="small" />)}
-                  </FormItem>
-                </div>
-                <div>
-                  <FormItem hasFeedback>
-                    Maximum:{" "}
-                    {getFieldDecorator("settings.allowedMagnifications.max", {
-                      rules: [{ validator: isValidMagnification }],
-                    })(<InputNumber min={1} size="small" />)}
-                  </FormItem>
-                </div>
+            <div
+              style={{
+                marginLeft: 24,
+                display: this.props.form.getFieldValue(
+                  "settings.allowedMagnifications.shouldRestrict",
+                )
+                  ? "block"
+                  : "none",
+              }}
+            >
+              <div>
+                <FormItem hasFeedback style={{ marginBottom: 6 }}>
+                  Minimum:{" "}
+                  {getFieldDecorator("settings.allowedMagnifications.min", {
+                    rules: [{ validator: isValidMagnification }],
+                  })(<InputNumber min={1} size="small" />)}
+                </FormItem>
+              </div>
+              <div>
+                <FormItem hasFeedback>
+                  Maximum:{" "}
+                  {getFieldDecorator("settings.allowedMagnifications.max", {
+                    rules: [{ validator: isValidMagnification }],
+                  })(<InputNumber min={1} size="small" />)}
+                </FormItem>
               </div>
             </div>
 

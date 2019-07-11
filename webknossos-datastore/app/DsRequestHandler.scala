@@ -6,8 +6,7 @@ import play.api.mvc.{Action, Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.{DefaultWebCommands, WebCommands}
 
-class DsRequestHandler @Inject()(
-                                 webCommands: WebCommands,
+class DsRequestHandler @Inject()(webCommands: WebCommands,
                                  optionalDevContext: OptionalDevContext,
                                  router: Router,
                                  errorHandler: HttpErrorHandler,

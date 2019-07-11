@@ -310,6 +310,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(false)
     }
 
+  def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
+
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
                    organization: Organization,
@@ -345,7 +347,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "sortingKey" -> dataSet.sortingKey,
         "details" -> dataSet.details,
         "publication" -> publicationJson,
-        "isUnreported" -> Json.toJson(dataSource.statusOpt.contains(unreportedStatus)),
+        "isUnreported" -> Json.toJson(isUnreported(dataSet)),
         "isForeign" -> dataStore.isForeign
       )
     }

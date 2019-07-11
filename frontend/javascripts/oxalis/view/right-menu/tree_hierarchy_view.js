@@ -18,6 +18,8 @@ import {
   insertTreesAndTransform,
   makeBasicGroupObject,
   removeTreesAndTransform,
+  forEachTreeNode,
+  findTreeNode,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -178,6 +180,21 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }));
   };
 
+  setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
+    const collapseAllGroups = groupTree => {
+      const copyOfGroupTree = _.cloneDeep(groupTree);
+      findTreeNode(copyOfGroupTree, groupId, item => {
+        forEachTreeNode(item.children, node => {
+          if (node.type === TYPE_GROUP) {
+            node.expanded = expanded;
+          }
+        });
+      });
+      return copyOfGroupTree;
+    };
+    this.setState(prevState => ({ groupTree: collapseAllGroups(prevState.groupTree) }));
+  };
+
   onMoveNode = (params: {
     nextParentNode: TreeNode,
     node: TreeNode,
@@ -226,6 +243,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       this.createGroup(groupId);
     } else if (key === "delete") {
       this.deleteGroup(groupId);
+    } else if (key === "collapseSubgroups") {
+      this.setExpansionOfAllSubgroupsTo(groupId, false);
+    } else if (key === "expandSubgroups") {
+      this.setExpansionOfAllSubgroupsTo(groupId, true);
     }
   };
 
@@ -241,6 +262,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // The root group must not be removed or renamed
     const { id, name } = node;
     const isRoot = id === MISSING_GROUP_ID;
+    const hasExpandedSubgroup = node.children.some(
+      child => child.expanded && child.type === TYPE_GROUP,
+    );
+    const hasCollapsedSubgroup = node.children.some(
+      child => !child.expanded && child.type === TYPE_GROUP,
+    );
+    const hasSubgroup = node.children.some(child => child.type === TYPE_GROUP);
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
         <Menu.Item key="create" groupId={id}>
@@ -251,6 +279,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           <Icon type="delete" />
           Delete
         </Menu.Item>
+        {hasSubgroup ? (
+          <Menu.Item key="collapseSubgroups" groupId={id} disabled={!hasExpandedSubgroup}>
+            <Icon type="shrink" />
+            Collapse all subgroups
+          </Menu.Item>
+        ) : null}
+        {hasSubgroup ? (
+          <Menu.Item key="expandSubgroups" groupId={id} disabled={!hasCollapsedSubgroup}>
+            <Icon type="shrink" />
+            Expand all subgroups
+          </Menu.Item>
+        ) : null}
       </Menu>
     );
 
@@ -292,14 +332,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>
+        <div className={styleClass}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
             node={node}
             style={CHECKBOX_STYLE}
           />
-          {` (${tree.nodes.size()}) ${tree.name}`}
+          <div
+            data-id={node.id}
+            style={{ marginLeft: 10, display: "inline" }}
+            onClick={this.onSelectTree}
+          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
         </div>
       );
       nodeProps.className = "tree-type";

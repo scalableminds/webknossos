@@ -37,7 +37,7 @@ class DataSourceService @Inject()(
   override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
-  private val MaxNumberOfFilesForDataFormatGuessing = 10
+  private val MaxNumberOfFilesForDataFormatGuessing = 50
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
@@ -186,7 +186,7 @@ class DataSourceService @Inject()(
   }
 
   private def guessDataFormat(path: Path): Box[DataSourceImporter] = {
-    val dataFormats = List(KnossosDataFormat, WKWDataFormat)
+    val dataFormats = List(WKWDataFormat, KnossosDataFormat)
 
     PathUtils.lazyFileStreamRecursive(path) { files =>
       val fileNames = files.take(MaxNumberOfFilesForDataFormatGuessing).map(_.getFileName.toString).toList

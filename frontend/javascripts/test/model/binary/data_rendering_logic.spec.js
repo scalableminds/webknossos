@@ -1,6 +1,5 @@
 // @flow
 
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,

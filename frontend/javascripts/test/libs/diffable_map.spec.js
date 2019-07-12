@@ -1,5 +1,4 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import _ from "lodash";
 
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";

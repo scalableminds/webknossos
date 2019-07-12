@@ -1,8 +1,8 @@
 // @flow
-/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import type { DatasetConfiguration } from "oxalis/store";
 import anyTest, { type TestInterface } from "ava";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+// eslint-disable-next-line import/no-extraneous-dependencies
 import path from "path";
 import puppeteer, { type Browser } from "puppeteer";
 
@@ -92,7 +92,14 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
     fourBit: false,
     interpolation: true,
     layers: {
-      color: { color: [255, 255, 255], contrast: 1, brightness: 0, alpha: 100, isDisabled: false },
+      color: {
+        color: [255, 255, 255],
+        contrast: 1,
+        brightness: 0,
+        alpha: 100,
+        intensityRange: [0, 255],
+        isDisabled: false,
+      },
     },
     quality: 0,
     segmentationOpacity: 0,

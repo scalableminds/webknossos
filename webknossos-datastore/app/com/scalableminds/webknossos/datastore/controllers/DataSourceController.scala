@@ -140,6 +140,7 @@ class DataSourceController @Inject()(
           Ok(
             Json.obj(
               "dataSource" -> dataSource,
+              "previousDataSource" -> previousDataSource,
               "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
             ))
         }

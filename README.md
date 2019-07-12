@@ -50,9 +50,13 @@ This is only recommended for testing.
 [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
+git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
+cd webknossos
 docker-compose pull webknossos
 ./start-docker.sh
 ```
+
+Open your local webknossos instance on [localhost:9000](http://localhost:9000).
 
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 

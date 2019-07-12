@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
+import com.scalableminds.webknossos.tracingstore.geometry
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -127,11 +128,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       case TracingType.skeleton =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
-          userBoundingBox <- Fox.runOptional(oldTracingId)(id =>
-            client.getVolumeTracing(id, skipVolumeData = true).flatMap(_._1.userBoundingBox))
+          oldTracingOpt <- Fox.runOptional(oldTracingId)(id => client.getVolumeTracing(id, skipVolumeData = true))
+          userBBoxOpt = oldTracingOpt.map(_._1).flatMap(_.userBoundingBox)
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance
-              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBoundingBox))
+              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBBoxOpt))
         } yield (Some(skeletonTracingId), None)
       case TracingType.volume =>
         for {
@@ -185,9 +186,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
 
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)
-      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
-      _ <- createNewTracings(dataSet, dataSource)
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
+      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSource.notFound"
+      _ <- createNewTracings(dataSet, dataSource) ?~> "makeHybrid.createTracings.failed"
     } yield ()
 
   }

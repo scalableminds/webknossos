@@ -60,6 +60,8 @@ export type APISegmentationLayer = {|
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
+export type APIHistogramData = { count: number, histogram: Array<number> };
+
 type APIDataSourceBase = {
   +id: {
     +name: string,
@@ -152,6 +154,7 @@ export type APISampleDataset = {
 
 export type APIDataSourceWithMessages = {
   +dataSource?: APIDataSource,
+  +previousDataSource?: APIDataSource,
   +messages: Array<APIMessage>,
 };
 
@@ -217,6 +220,11 @@ export type APISettings = {|
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
+  +allowedMagnifications?: {
+    shouldRestrict: boolean,
+    min?: number,
+    max?: number,
+  },
 |};
 
 export const APIAnnotationTypeEnum = Enum.make({

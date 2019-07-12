@@ -667,10 +667,55 @@ export function getIsInIframe() {
   }
 }
 
+export function getWindowBounds(): [number, number] {
+  // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
+  let width = 0;
+  let height = 0;
+  if (typeof window.innerWidth === "number") {
+    // Non-IE
+    width = window.innerWidth;
+    height = window.innerHeight;
+  } else if (
+    document.documentElement &&
+    (document.documentElement.clientWidth || document.documentElement.clientHeight)
+  ) {
+    // IE 6+ in 'standards compliant mode'
+    width = document.documentElement.clientWidth;
+    height = document.documentElement.clientHeight;
+  } else if (document.body && (document.body.clientWidth || document.body.clientHeight)) {
+    // IE 4 compatible
+    width = document.body.clientWidth;
+    height = document.body.clientHeight;
+  }
+  return [width, height];
+}
+
 export function disableViewportMetatag() {
   const viewport = document.querySelector("meta[name=viewport]");
   if (!viewport) {
     return;
   }
   viewport.setAttribute("content", "");
+}
+
+/**
+ * Deep diff between two object, using lodash
+ * @param  {Object} object Object compared
+ * @param  {Object} base   Object to compare with
+ * @return {Object}        Return a new object who represent the diff
+ *
+ * Source: https://gist.github.com/Yimiprod/7ee176597fef230d1451#gistcomment-2699388
+ */
+export function diffObjects(object: Object, base: Object): Object {
+  function changes(_object, _base) {
+    let arrayIndexCounter = 0;
+    return _.transform(_object, (result, value, key) => {
+      if (!_.isEqual(value, _base[key])) {
+        const resultKey = _.isArray(_base) ? arrayIndexCounter++ : key;
+        result[resultKey] =
+          _.isObject(value) && _.isObject(_base[key]) ? changes(value, _base[key]) : value;
+      }
+    });
+  }
+  return changes(object, base);
 }

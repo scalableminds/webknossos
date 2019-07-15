@@ -23,7 +23,7 @@ class AnnotationStore @Inject()(
 
   case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) =
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     requestFromCache(id).getOrElse(requestFromHandler(id, user)).futureBox.recover {
       case e =>
         logger.error("AnnotationStore ERROR: " + e)

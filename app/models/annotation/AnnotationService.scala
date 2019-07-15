@@ -521,9 +521,21 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
     def addToZip(nmls: List[(Enumerator[Array[Byte]], String, Option[Array[Byte]])]): Future[Boolean] =
       nmls match {
-        case head :: tail => {
-          head._3.foreach(volumeData => zipper.addFileFromBytes(head._2 + "_data.zip", volumeData))
-          zipper.addFileFromEnumerator(head._2 + ".nml", head._1).flatMap(_ => addToZip(tail))
+        case (nml, name, volumeDataOpt) :: tail => {
+          if (volumeDataOpt.isDefined) {
+            val subZip = temporaryFileCreator.create(normalize(name), ".zip")
+            val subZipper =
+              ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(subZip.path.toString))))
+            volumeDataOpt.foreach(volumeData => subZipper.addFileFromBytes(name + "_data.zip", volumeData))
+            for {
+              _ <- subZipper.addFileFromEnumerator(name + ".nml", nml)
+              _ = subZipper.close()
+              _ = zipper.addFileFromTemporaryFile(name + ".zip", subZip)
+              res <- addToZip(tail)
+            } yield res
+          } else {
+            zipper.addFileFromEnumerator(name + ".nml", nml).flatMap(_ => addToZip(tail))
+          }
         }
         case _ =>
           Future.successful(true)

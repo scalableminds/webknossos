@@ -19,8 +19,8 @@ trait ResultBox extends I18nSupport {
   def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = b match {
     case Full(result) =>
       result
-    case ParamFailure(msg, _, _, statusCode: Int) =>
-      new JsonResult(statusCode)(Messages(msg))
+    case ParamFailure(msg, _, chain, statusCode: Int) =>
+      new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
     case ParamFailure(msg, _, _, msgs: JsArray) =>
       new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
     case Failure(msg, _, chain) =>

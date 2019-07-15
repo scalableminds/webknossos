@@ -29,10 +29,7 @@ const canvasHeight = 100;
 const canvasWidth = 300;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
-  if (["int8", "uint8"].includes(elementClass)) {
-    return true;
-  }
-  return false;
+  return ["int8", "uint8"].includes(elementClass);
 }
 
 class Histogram extends React.PureComponent<HistogramProps> {

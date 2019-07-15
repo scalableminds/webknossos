@@ -7,6 +7,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
+import { type ElementClass } from "admin/api_flow_types";
 
 type OwnProps = {|
   data: Array<number>,
@@ -26,6 +27,13 @@ type HistogramProps = {
 
 const canvasHeight = 100;
 const canvasWidth = 300;
+
+export function isHistogramSupported(elementClass: ElementClass): boolean {
+  if (["int8", "uint8"].includes(elementClass)) {
+    return true;
+  }
+  return false;
+}
 
 class Histogram extends React.PureComponent<HistogramProps> {
   canvasRef: ?HTMLCanvasElement;

@@ -74,6 +74,11 @@ export type ImportIsosurfaceFromStlAction = {
   buffer: ArrayBuffer,
 };
 
+export type RemoveIsosurfaceAction = {
+  type: "REMOVE_ISOSURFACE",
+  cellId: number,
+};
+
 export type AnnotationActionTypes =
   | InitializeAnnotation
   | SetAnnotationNameAction
@@ -87,7 +92,8 @@ export type AnnotationActionTypes =
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
   | TriggerIsosurfaceDownloadAction
-  | ImportIsosurfaceFromStlAction;
+  | ImportIsosurfaceFromStlAction
+  | RemoveIsosurfaceAction;
 
 export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
   type: "INITIALIZE_ANNOTATION",
@@ -173,4 +179,9 @@ export const importIsosurfaceFromStlAction = (
 ): ImportIsosurfaceFromStlAction => ({
   type: "IMPORT_ISOSURFACE_FROM_STL",
   buffer,
+});
+
+export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction => ({
+  type: "REMOVE_ISOSURFACE",
+  cellId,
 });

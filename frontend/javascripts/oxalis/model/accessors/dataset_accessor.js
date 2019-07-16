@@ -59,7 +59,7 @@ function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
 
 export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 
-function getDataLayers(dataset: APIDataset): DataLayerType[] {
+export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 

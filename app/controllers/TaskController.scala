@@ -361,7 +361,9 @@ class TaskController @Inject()(annotationService: AnnotationService,
       val user = request.identity
       for {
         teams <- getAllowedTeamsForNextTask(user)
-        (task, initializingAnnotationId) <- taskDAO.assignNext(user._id, teams) ?~> "task.unavailable"
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+        (task, initializingAnnotationId) <- taskDAO
+          .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
         insertedAnnotationBox <- annotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
@@ -398,7 +400,8 @@ class TaskController @Inject()(annotationService: AnnotationService,
     val user = request.identity
     for {
       teamIds <- userService.teamIdsFor(user._id)
-      task <- taskDAO.peekNextAssignment(user._id, teamIds) ?~> "task.unavailable"
+      isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+      task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> "task.unavailable"
       taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }

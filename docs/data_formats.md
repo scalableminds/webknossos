@@ -7,7 +7,7 @@ webKnossos supports two data formats (WKW and KNOSSOS) for voxel datasets and NM
 * [KNOSSOS cubes](https://knossostool.org/). Dataset of 128x128x128 cubes.
 
 ### Image formats
-* Grayscale data (`uint8`), also referred to as `color` data
+* Grayscale data (8 Bit, 16 Bit, Float), also referred to as `color` data
 * RGB data (24 Bit)
 * Segmentation data (8 Bit, 16 Bit, 32 Bit)
 * Multi-channel data (multiple 8 Bit)

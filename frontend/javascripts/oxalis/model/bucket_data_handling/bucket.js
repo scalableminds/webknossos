@@ -66,18 +66,18 @@ export const getConstructorForElementClass = (type: ElementClass) => {
   switch (type) {
     case "int8":
     case "uint8":
-      return Uint8Array;
+      return [Uint8Array, 1];
     case "int16":
     case "uint16":
-      return Uint16Array;
+      return [Uint16Array, 1];
     case "uint24":
       // There is no Uint24Array and uint24 is treated in a special way (rgb) anyways
-      return Uint8Array;
+      return [Uint8Array, 3];
     case "int32":
     case "uint32":
-      return Uint32Array;
+      return [Uint32Array, 1];
     case "float":
-      return Float32Array;
+      return [Float32Array, 1];
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }
@@ -191,8 +191,8 @@ export class DataBucket {
 
   getOrCreateData(): BucketDataArray {
     if (this.data == null) {
-      const TypedArrayClass = getConstructorForElementClass(this.elementClass);
-      this.data = new TypedArrayClass(Constants.BUCKET_SIZE);
+      const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
+      this.data = new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
       if (!this.isMissing()) {
         this.temporalBucketManager.addBucket(this);
       }
@@ -225,7 +225,7 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: ?Uint8Array): void {
-    const TypedArrayClass = getConstructorForElementClass(this.elementClass);
+    const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
     const data =
       arrayBuffer != null
         ? new TypedArrayClass(
@@ -233,7 +233,7 @@ export class DataBucket {
             arrayBuffer.byteOffset,
             arrayBuffer.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
           )
-        : new TypedArrayClass(Constants.BUCKET_SIZE);
+        : new TypedArrayClass(channelCount * Constants.BUCKET_SIZE);
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {

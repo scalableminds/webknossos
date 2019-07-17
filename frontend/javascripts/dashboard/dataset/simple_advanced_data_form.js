@@ -20,11 +20,13 @@ export default function SimpleAdvancedDataForm({
   form,
   activeDataSourceEditMode,
   onChange,
+  additionalAlert,
 }: {
   isReadOnlyDataset: boolean,
   form: Object,
   activeDataSourceEditMode: "simple" | "advanced",
   onChange: ("simple" | "advanced") => void,
+  additionalAlert: ?React.Node,
 }) {
   const { getFieldDecorator } = form;
   const dataSource =
@@ -64,14 +66,9 @@ export default function SimpleAdvancedDataForm({
           type="warning"
           showIcon
         />
-      ) : (
-        <Alert
-          message="Please review the following properties. If you want to adjust the configuration described by
-            &ldquo;datasource-properties.json&rdquo;, please enable the &ldquo;Advanced&rdquo; mode in the top-right corner."
-          type="info"
-          showIcon
-        />
-      )}
+      ) : null}
+
+      {additionalAlert}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>

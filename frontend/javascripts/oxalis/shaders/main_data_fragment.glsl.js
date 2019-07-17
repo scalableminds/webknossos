@@ -22,11 +22,10 @@ import compileShader from "./shader_module_system";
 
 type Params = {|
   colorLayerNames: string[],
-  isRgbLayerLookup: { [string]: boolean },
+  packingDegreeLookup: { [string]: number },
   floatLayerLookup: { [string]: false | { min: number, max: number } },
   hasSegmentation: boolean,
   segmentationName: string,
-  segmentationPackingDegree: number,
   isMappingSupported: boolean,
   dataTextureCountPerLayer: number,
   resolutions: Array<Vector3>,
@@ -57,10 +56,10 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
-  uniform float <%= name %>_brightness;
-  uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_min;
+  uniform float <%= name %>_max;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -162,17 +161,15 @@ void main() {
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
-  float fallbackZoomStep;
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
-    fallbackZoomStep = min(<%= name %>_maxZoomStep, zoomStep + 1.0);
     // Get grayscale value for <%= name %>
     color_value =
       getMaybeFilteredColorOrFallback(
         <%= name %>_lookup_texture,
         <%= formatNumberAsGLSLFloat(layerIndex) %>,
         <%= name %>_data_texture_width,
-        <%= isRgbLayerLookup[name] ? "1.0" : "4.0" %>,  // RGB data cannot be packed, gray scale data is always packed into rgba channels
+        <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
         worldCoordUVW,
         false,
         fallbackGray
@@ -183,10 +180,17 @@ void main() {
       vec3 range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
       vec3 rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
       color_value = (color_value + rangeMin) / range;
-    <% } %>
+    <% } else { %>
 
-    // Brightness / Contrast Transformation for <%= name %>
-    color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+      <% if (packingDegreeLookup[name] === 2.0) { %>
+        // Workaround for 16-bit color layers
+        color_value = vec3(color_value.g * 255.0 + color_value.r);
+      <% } %>
+      // Keep the color in bounds of min and max
+      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+      // Scale interval between min and max up to interval from 0 to 255
+      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
+    <% } %>
 
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;
@@ -222,7 +226,9 @@ void main() {
     // Since we concat the segmentation to the color layers, its index is equal
     // to the length of the colorLayer array
     segmentationLayerIndex: params.colorLayerNames.length,
-    segmentationPackingDegree: formatNumberAsGLSLFloat(params.segmentationPackingDegree),
+    segmentationPackingDegree: params.hasSegmentation
+      ? formatNumberAsGLSLFloat(params.packingDegreeLookup[params.segmentationName])
+      : 0.0,
     ViewModeValuesIndices: _.mapValues(ViewModeValuesIndices, formatNumberAsGLSLFloat),
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

@@ -80,7 +80,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
       </Row>
       <FormItemWithInfo
         label="Layer Configuration"
-        info="Use the following JSON to define layer-specific properties, such as color, contrast and brightness."
+        info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
       >
         {getFieldDecorator("defaultConfigurationLayersJson", {
           rules: [{ validator: validateLayerConfigurationJSON }],

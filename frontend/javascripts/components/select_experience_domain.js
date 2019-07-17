@@ -6,7 +6,7 @@ import * as React from "react";
 import type { ExperienceDomainList } from "admin/api_flow_types";
 import { getExistingExperienceDomains } from "admin/admin_rest_api";
 
-const Option = Select.Option;
+const { Option } = Select;
 
 type Props = {
   value?: string | Array<string>,
@@ -14,23 +14,26 @@ type Props = {
   placeholder: string,
   notFoundContent?: string,
   disabled: boolean,
-  mode?: string,
   onSelect?: string => void,
   onChange?: () => void,
+  allowCreation: boolean,
   alreadyUsedDomains: ExperienceDomainList,
 };
 
 type State = {
   domains: ExperienceDomainList,
+  currentlyEnteredDomain: string,
 };
 
 class SelectExperienceDomain extends React.PureComponent<Props, State> {
   static defaultProps = {
     alreadyUsedDomains: [],
+    allowCreation: false,
   };
 
   state = {
     domains: [],
+    currentlyEnteredDomain: "",
   };
 
   componentDidMount() {
@@ -45,21 +48,45 @@ class SelectExperienceDomain extends React.PureComponent<Props, State> {
     return this.state.domains.filter(domain => !this.props.alreadyUsedDomains.includes(domain));
   }
 
+  onSearch = (domain: string) => {
+    this.setState({ currentlyEnteredDomain: domain });
+  };
+
   render() {
+    const {
+      value,
+      notFoundContent,
+      width,
+      disabled,
+      placeholder,
+      onSelect,
+      onChange,
+      allowCreation,
+    } = this.props;
+    const { currentlyEnteredDomain } = this.state;
+    let options = this.getUnusedDomains();
+    if (
+      allowCreation &&
+      !options.includes(currentlyEnteredDomain) &&
+      currentlyEnteredDomain.trim() !== ""
+    ) {
+      options = [...options, currentlyEnteredDomain];
+    }
+
     return (
       <Select
         showSearch
-        mode={this.props.mode}
-        value={this.props.value}
+        value={value}
         optionFilterProp="children"
-        notFoundContent={this.props.notFoundContent}
-        style={{ width: `${this.props.width}%` }}
-        disabled={this.props.disabled}
-        placeholder={this.props.placeholder}
-        onSelect={this.props.onSelect}
-        onChange={this.props.onChange}
+        notFoundContent={notFoundContent}
+        style={{ width: `${width}%` }}
+        disabled={disabled}
+        placeholder={placeholder}
+        onSelect={onSelect}
+        onChange={onChange}
+        onSearch={this.onSearch}
       >
-        {this.getUnusedDomains().map(domain => (
+        {options.map(domain => (
           <Option key={domain}>{domain}</Option>
         ))}
       </Select>

@@ -19,7 +19,7 @@ type Props = {|
   viewMode: ViewMode,
 |};
 
-const positionIconStyle = { transform: "rotate(45deg)" };
+const positionIconStyle = { transform: "rotate(-45deg)" };
 
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {

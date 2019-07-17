@@ -13,6 +13,7 @@ import {
   type APIDataset,
   type APIDatasetId,
   type APIFeatureToggles,
+  type APIHistogramData,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -656,8 +657,11 @@ export async function downloadNml(
 }
 
 // ### Datasets
-export async function getDatasets(): Promise<Array<APIMaybeUnimportedDataset>> {
-  const datasets = await Request.receiveJSON("/api/datasets");
+export async function getDatasets(
+  isUnreported: ?boolean,
+): Promise<Array<APIMaybeUnimportedDataset>> {
+  const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
+  const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
   assertResponseLimit(datasets);
 
   return datasets;
@@ -907,6 +911,21 @@ export async function findDataPositionForLayer(
     ),
   );
   return { position, resolution };
+}
+
+export async function getHistogramForLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<APIHistogramData> {
+  const { count, histogram } = await doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/histogram?token=${token}`,
+    ),
+  );
+  return { count, histogram };
 }
 
 export async function getMappingsForDatasetLayer(

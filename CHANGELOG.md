@@ -62,17 +62,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
 
 ### Added
-<<<<<<< HEAD
-||||||| merged common ancestors
-<<<<<<<<< Temporary merge branch 1
 - Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
-||||||||| merged common ancestors
-- Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028) 
-=========
->>>>>>>>> Temporary merge branch 2
-=======
-- Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
->>>>>>> 91d7deffd2287494b21306a7456a02dbd1881787
 - The extent of a dataset is now displayed next to the scale in the dataset list in the dashboard. [#4058](https://github.com/scalableminds/webknossos/pull/4058)
 - BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
 - Added an auto-brush feature for selected datasets. [#4053](https://github.com/scalableminds/webknossos/pull/4053)

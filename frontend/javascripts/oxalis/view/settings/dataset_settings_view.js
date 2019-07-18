@@ -44,7 +44,7 @@ import constants, {
 } from "oxalis/constants";
 import messages, { settings } from "messages";
 
-import Histogram from "./histogram_view";
+import Histogram, { isHistogramSupported } from "./histogram_view";
 
 const { Panel } = Collapse;
 const { Option } = Select;
@@ -135,7 +135,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { alpha, color, intensityRange, isDisabled } = layer;
     let histogram = new Array(256).fill(0);
     if (this.state.histograms && this.state.histograms[layerName]) {
-      histogram = this.state.histograms[layerName].histogram;
+      ({ histogram } = this.state.histograms[layerName]);
     }
 
     return (
@@ -171,7 +171,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        {!isDisabled && elementClass !== "float" ? (
+        {!isDisabled && isHistogramSupported(elementClass) ? (
           <Histogram
             data={histogram}
             min={intensityRange[0]}

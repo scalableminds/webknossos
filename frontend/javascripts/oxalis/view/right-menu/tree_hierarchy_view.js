@@ -181,18 +181,23 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
+    const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
     const collapseAllGroups = groupTree => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
       findTreeNode(copyOfGroupTree, groupId, item => {
         forEachTreeNode(item.children, node => {
           if (node.type === TYPE_GROUP) {
             node.expanded = expanded;
+            newExpandedGroupIds[node.id] = expanded;
           }
         });
       });
       return copyOfGroupTree;
     };
-    this.setState(prevState => ({ groupTree: collapseAllGroups(prevState.groupTree) }));
+    this.setState(prevState => ({
+      groupTree: collapseAllGroups(prevState.groupTree),
+      expandedGroupIds: newExpandedGroupIds,
+    }));
   };
 
   onMoveNode = (params: {

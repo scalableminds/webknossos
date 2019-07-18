@@ -2,10 +2,16 @@
 import { saveAs } from "file-saver";
 
 import type { APIDataset } from "admin/api_flow_types";
-import type { ChangeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
+import {
+  changeActiveIsosurfaceCellAction,
+  type ChangeActiveIsosurfaceCellAction,
+} from "oxalis/model/actions/segmentation_actions";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { ImportIsosurfaceFromStlAction } from "oxalis/model/actions/annotation_actions";
+import type {
+  ImportIsosurfaceFromStlAction,
+  RemoveIsosurfaceAction,
+} from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
   _takeEvery,
@@ -47,6 +53,10 @@ function getMapForSegment(segmentId: number): ThreeDMap<boolean> {
     return newMap;
   }
   return maybeMap;
+}
+
+function removeMapForSegment(segmentId: number): void {
+  isosurfacesMap.delete(segmentId);
 }
 
 function getZoomedCubeSize(zoomStep: number, resolutions: Array<Vector3>): Vector3 {
@@ -95,7 +105,7 @@ let currentViewIsosurfaceCellId = 0;
 // In order to avoid, that too many chunks are computed for one user interaction,
 // we store the amount of requests in a batch per segment.
 const batchCounterPerSegment: { [key: number]: number } = {};
-const MAXIMUM_BATCH_SIZE = 30;
+const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
@@ -180,6 +190,12 @@ function* loadIsosurfaceWithNeighbors(
   }
 }
 
+function hasBatchCounterExceededLimit(segmentId: number): boolean {
+  return (
+    batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)
+  );
+}
+
 function* maybeLoadIsosurface(
   dataset: APIDataset,
   layer: DataLayer,
@@ -193,7 +209,7 @@ function* maybeLoadIsosurface(
   if (threeDMap.get(clippedPosition)) {
     return [];
   }
-  if (batchCounterPerSegment[segmentId] > (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE)) {
+  if (hasBatchCounterExceededLimit(segmentId)) {
     return [];
   }
   batchCounterPerSegment[segmentId]++;
@@ -216,6 +232,12 @@ function* maybeLoadIsosurface(
       cubeSize,
     },
   );
+
+  // Check again whether the limit was exceeded, since this variable could have been
+  // set in the mean time by ctrl-clicking the segment to remove it
+  if (hasBatchCounterExceededLimit(segmentId)) {
+    return [];
+  }
 
   const vertices = new Float32Array(responseBuffer);
   getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
@@ -246,10 +268,26 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
   const { buffer } = action;
   const dataView = new DataView(buffer);
-  const segmentationId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
+  const segmentId = dataView.getUint32(stlIsosurfaceConstants.cellIdIndex, true);
   const geometry = yield* call(parseStlBuffer, buffer);
-  getSceneController().addIsosurfaceFromGeometry(geometry, segmentationId);
+  getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
   yield* put(setImportingMeshStateAction(false));
+}
+
+function* removeIsosurface(action: RemoveIsosurfaceAction): Saga<void> {
+  const { cellId } = action;
+  getSceneController().removeIsosurfaceById(cellId);
+  removeMapForSegment(cellId);
+
+  // Set batch counter to maximum so that potentially running requests are aborted
+  batchCounterPerSegment[cellId] = 1 + (window.__isosurfaceMaxBatchSize || MAXIMUM_BATCH_SIZE);
+
+  const currentCellId = yield* call(getCurrentCellId);
+  if (cellId === currentCellId) {
+    // Clear the active cell id to avoid that the isosurface is immediately reconstructed
+    // when the position changes.
+    yield* put(changeActiveIsosurfaceCellAction(0, [0, 0, 0]));
+  }
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
@@ -261,4 +299,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   );
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
+  yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
 }

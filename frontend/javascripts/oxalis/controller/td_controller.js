@@ -31,6 +31,7 @@ import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } f
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
+import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -138,7 +139,7 @@ class TDController extends React.PureComponent<Props> {
               Store.dispatch(setMousePositionAction([position.x, position.y]));
             },
             leftClick: (_pos: Point2, _plane: OrthoView, event: MouseEvent) => {
-              if (this.props.planeView == null || !event.shiftKey) {
+              if (this.props.planeView == null) {
                 return;
               }
               const hitPosition = this.props.planeView.performIsosurfaceHitTest();
@@ -147,7 +148,14 @@ class TDController extends React.PureComponent<Props> {
               }
 
               const unscaledPosition = V3.divide3(hitPosition.toArray(), this.props.scale);
-              Store.dispatch(setPositionAction(unscaledPosition));
+
+              if (event.shiftKey) {
+                Store.dispatch(setPositionAction(unscaledPosition));
+              } else if (event.ctrlKey) {
+                const storeState = Store.getState();
+                const { hoveredIsosurfaceId } = storeState.temporaryConfiguration;
+                Store.dispatch(removeIsosurfaceAction(hoveredIsosurfaceId));
+              }
             },
           };
 

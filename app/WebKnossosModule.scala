@@ -8,7 +8,7 @@ import oxalis.user.UserCache
 import utils.SQLClient
 
 class WebKnossosModule extends AbstractModule {
-  def configure(): Unit = {
+  override def configure(): Unit = {
     bind(classOf[Startup]).asEagerSingleton()
     bind(classOf[SQLClient]).asEagerSingleton()
     bind(classOf[InitialDataService]).asEagerSingleton()

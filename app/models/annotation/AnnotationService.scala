@@ -253,7 +253,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       for {
         dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
         dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.noAccess"
-        (newSkeletonId, newVolumeId) <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
+        (newSkeletonId, newVolumeId) <- tracingFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task ${task._id} with annotation base ${annotation._id}"
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
           _user = user._id,
@@ -563,6 +563,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
       for {
         task <- taskFor(annotation)
+        _ = logger.warn(
+          s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${annotation.skeletonTracingId}")
         annotationBase <- baseForTask(task._id)
         dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
         (newSkeletonIdOpt, newVolumeIdOpt) <- tracingFromBase(annotationBase, dataSet)

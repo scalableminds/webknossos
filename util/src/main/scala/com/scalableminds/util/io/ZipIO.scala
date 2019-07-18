@@ -1,7 +1,7 @@
 package com.scalableminds.util.io
 
 import java.io._
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
 import akka.stream.{ActorMaterializer, scaladsl}
@@ -15,6 +15,7 @@ import net.liftweb.util.Helpers.tryo
 
 import scala.concurrent.duration._
 import org.apache.commons.io.IOUtils
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,6 +46,12 @@ object ZipIO extends LazyLogging {
     def addFileFromBytes(name: String, data: Array[Byte]): Unit = {
       stream.putNextEntry(new ZipEntry(name))
       stream.write(data)
+      stream.closeEntry()
+    }
+
+    def addFileFromTemporaryFile(name: String, data: TemporaryFile): Unit = {
+      stream.putNextEntry(new ZipEntry(name))
+      stream.write(Files.readAllBytes(data))
       stream.closeEntry()
     }
 

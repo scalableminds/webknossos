@@ -260,7 +260,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       color = parseColor(tree)
       name = parseName(tree)
       groupId = parseGroupId(tree)
-      //logger.trace("Parsing tree Id: %d".format(id))
       nodes <- (tree \ "nodes" \ "node")
         .map(parseNode)
         .toList

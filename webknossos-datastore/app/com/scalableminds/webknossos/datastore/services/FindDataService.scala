@@ -16,10 +16,7 @@ import spire.math._
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-case class Histogram(elementCounts: Array[Long],
-                     numberOfElements: Int,
-                     min: Double,
-                     max: Double)
+case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Double, max: Double)
 object Histogram { implicit val jsonFormat = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)

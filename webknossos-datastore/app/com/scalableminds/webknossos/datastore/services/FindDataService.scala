@@ -243,31 +243,32 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
       var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
 
-      data match {
-        case byteData: Array[UByte] => {
-          if (isUint24) {
-            for (i <- byteData.indices by 3) {
-              counts(byteData(i).toInt) += 1
-              counts(byteData(i + 1).toInt + 256) += 1
-              counts(byteData(i + 2).toInt + 512) += 1
+      if (data.nonEmpty) {
+        data match {
+          case byteData: Array[UByte] =>
+            if (isUint24) {
+              for (i <- byteData.indices by 3) {
+                counts(byteData(i).toInt) += 1
+                counts(byteData(i + 1).toInt + 256) += 1
+                counts(byteData(i + 2).toInt + 512) += 1
+              }
+              extrema = (0, 255)
+            } else
+              byteData.foreach(el => counts(el.toInt) += 1)
+          case shortData: Array[UShort] =>
+            shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
+          case intData: Array[UInt] =>
+            intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
+          case longData: Array[ULong] =>
+            longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
+          case floatData: Array[Float] =>
+            val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
+              case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
             }
-            extrema = (0, 255)
-          } else
-            byteData.foreach(el => counts(el.toInt) += 1)
+            val bucketSize = (max - min + 1) / 256
+            floatData.foreach(el => counts(Math.clamp(Math.roundDown((el - min) / bucketSize), 0, 255)) += 1)
+            extrema = (min, max)
         }
-        case shortData: Array[UShort] =>
-          shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
-        case intData: Array[UInt] =>
-          intData.foreach(el => counts((el / UInt(16777216)).toInt) += 1)
-        case longData: Array[ULong] =>
-          longData.foreach(el => counts((el / ULong(math.pow(2, 56).toLong)).toInt) += 1)
-        case floatData: Array[Float] =>
-          val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
-            case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
-          }
-          val bucketSize = (max - min + 1) / 256
-          floatData.foreach(el => counts(Math.clamp(Math.roundDown((el - min) / bucketSize), 0, 255)) += 1)
-          extrema = (min, max)
       }
       if (isUint24) {
         val listOfCounts = counts.grouped(256).toList

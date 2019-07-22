@@ -136,6 +136,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const depth = parseInt(words[17]);
     const projectName = words[18];
     const scriptId = words[19] || undefined;
+    const baseAnnotationId = words[20] || undefined;
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -163,6 +164,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
       isForAnonymous: false,
+      baseAnnotationId,
     };
   }
 
@@ -265,7 +267,10 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
               experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
               <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
+              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>, baseAnnotationId]
+              <br />
+              If you want to define some (but not all) of the optional values, please list all
+              optional values and use null for the ones you do not want to set.
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>
@@ -289,7 +294,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                 })(
                   <TextArea
                     className="input-monospace"
-                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
+                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                     autosize={{ minRows: 6 }}
                     style={{
                       fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',

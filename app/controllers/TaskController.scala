@@ -154,7 +154,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(taskType.tracingType == TracingType.skeleton) ?~> "task.create.fromFileVolume"
+      _ <- bool2Fox(taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) ?~> "task.create.fromFileVolume"
       project <- projectDAO
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -162,8 +162,10 @@ class TaskController @Inject()(annotationService: AnnotationService,
         .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)))
         .parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
-      result <- createTasks(skeletonSuccesses.map(s =>
-        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing, None)))
+      fullParams = skeletonSuccesses.map(s =>
+        (buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description), s.skeletonTracing))
+      volumeBaseOpts <- createTaskVolumeTracingBases(fullParams.map(_._1), request.identity._organization)
+      result <- createTasks((fullParams zip volumeBaseOpts).map(t => (t._1._1, t._1._2, t._2)))
     } yield {
       result
     }

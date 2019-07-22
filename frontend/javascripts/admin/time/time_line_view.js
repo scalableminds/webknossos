@@ -55,7 +55,11 @@ function compressTimeLogs(logs) {
   let previousLog = null;
   for (const timeLog of logs) {
     // If the current log is within 1s of the previous log, merge these two logs
-    if (previousLog != null && timeLog.timestamp - previousLog.timestamp < 1000) {
+    if (
+      previousLog != null &&
+      timeLog.timestamp - previousLog.timestamp < 1000 &&
+      timeLog.task_id === previousLog.task_id
+    ) {
       const newDuration = moment.duration(previousLog.time).add(moment.duration(timeLog.time));
       const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
       copiedLog.time = newDuration.toISOString();

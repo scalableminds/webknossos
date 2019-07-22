@@ -10,6 +10,7 @@ import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions"
 import { type ElementClass } from "admin/api_flow_types";
 import type { APIHistogramData } from "admin/api_flow_types";
 import { type Vector3 } from "oxalis/constants";
+import { roundTo } from "libs/utils";
 
 type OwnProps = {|
   data: APIHistogramData,
@@ -133,6 +134,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           style={{ width: 300, margin: 0, marginBottom: 18 }}
+          step={(maxRange - minRange) / 255}
+          tipFormatter={val => roundTo(val, 2).toString()}
         />
       </React.Fragment>
     );

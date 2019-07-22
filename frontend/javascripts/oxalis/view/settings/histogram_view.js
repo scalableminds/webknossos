@@ -8,15 +8,14 @@ import { connect } from "react-redux";
 import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { type ElementClass } from "admin/api_flow_types";
+import type { APIHistogramData } from "admin/api_flow_types";
+import { type Vector3 } from "oxalis/constants";
 
 type OwnProps = {|
-  data: Array<number>,
+  data: APIHistogramData,
   layerName: string,
-  minRange: number,
-  maxRange: number,
   min: number,
   max: number,
-  color: Array<number>,
 |};
 
 type HistogramProps = {
@@ -28,6 +27,7 @@ type HistogramProps = {
   ) => void,
 };
 
+const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
 
@@ -37,23 +37,16 @@ export function isHistogramSupported(elementClass: ElementClass): boolean {
 
 class Histogram extends React.PureComponent<HistogramProps> {
   canvasRef: ?HTMLCanvasElement;
-  static defaultProps = {
-    /* eslint-disable-next-line react/default-props-match-prop-types */
-    color: [24, 144, 255],
-  };
 
   componentDidMount() {
     if (this.canvasRef == null) {
       return;
     }
-    const { color } = this.props;
     const ctx = this.canvasRef.getContext("2d");
     ctx.translate(0, canvasHeight);
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
-    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
-    ctx.strokeStyle = `rgba(${color.join(",")})`;
     this.updateCanvas();
   }
 
@@ -61,16 +54,33 @@ class Histogram extends React.PureComponent<HistogramProps> {
     this.updateCanvas();
   }
 
-  updateCanvas = () => {
+  updateCanvas() {
     if (this.canvasRef == null) {
       return;
     }
-    const { min, max, minRange, maxRange, data } = this.props;
-    const rangeLength = maxRange - minRange;
     const ctx = this.canvasRef.getContext("2d");
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const maxValue = Math.max(...data);
-    const downscaledData = this.props.data.map(value =>
+    const { data } = this.props;
+    // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other
+    const maxValue = Math.max(...data.map(({ elementCounts }) => Math.max(...elementCounts)));
+    for (const [i, histogram] of data.entries()) {
+      const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      this.drawHistogram(ctx, histogram, maxValue, color);
+    }
+  }
+
+  drawHistogram = (
+    ctx: CanvasRenderingContext2D,
+    histogram: $ElementType<APIHistogramData, number>,
+    maxValue: number,
+    color: Vector3,
+  ) => {
+    const { min, max } = this.props;
+    const { min: minRange, max: maxRange, elementCounts } = histogram;
+    const rangeLength = maxRange - minRange;
+    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
+    ctx.strokeStyle = `rgba(${color.join(",")})`;
+    const downscaledData = elementCounts.map(value =>
       value > 0 ? (Math.log(value) / Math.log(maxValue)) * canvasHeight : 0,
     );
     const activeRegion = new Path2D();
@@ -103,7 +113,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
   };
 
   render() {
-    const { min, max, minRange, maxRange } = this.props;
+    const { min, max, data } = this.props;
+    const { min: minRange, max: maxRange } = data[0];
     return (
       <React.Fragment>
         <canvas

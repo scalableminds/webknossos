@@ -139,7 +139,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (this.state.histograms && this.state.histograms[layerName]) {
       histograms = this.state.histograms[layerName];
     }
-    const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 
     return (
       <div key={layerName}>
@@ -174,21 +173,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        {!isDisabled && isHistogramSupported(elementClass)
-          ? histograms.map((histogram, channel) => (
-              <Histogram
-                /* eslint-disable-next-line react/no-array-index-key */
-                key={channel}
-                data={histogram.elementCounts}
-                minRange={histogram.min}
-                maxRange={histogram.max}
-                min={intensityRange[0]}
-                max={intensityRange[1]}
-                layerName={layerName}
-                {...(elementClass === "uint24" ? { color: uint24Colors[channel] } : {})}
-              />
-            ))
-          : null}
+        {!isDisabled && isHistogramSupported(elementClass) ? (
+          <Histogram
+            data={histograms}
+            min={intensityRange[0]}
+            max={intensityRange[1]}
+            layerName={layerName}
+          />
+        ) : null}
         <NumberSliderSetting
           label="Opacity"
           min={0}

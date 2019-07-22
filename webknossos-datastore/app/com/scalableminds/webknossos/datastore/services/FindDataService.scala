@@ -244,15 +244,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
       data match {
         case byteData: Array[UByte] => {
-          if (!isUint24)
-            byteData.foreach(el => counts(el.toInt) += 1)
-          else {
+          if (isUint24) {
             for (i <- byteData.indices by 3) {
               counts(byteData(i).toInt) += 1
               counts(byteData(i + 1).toInt + 256) += 1
               counts(byteData(i + 2).toInt + 512) += 1
             }
-          }
+          } else
+            byteData.foreach(el => counts(el.toInt) += 1)
         }
         case shortData: Array[UShort] =>
           shortData.foreach(el => counts((el / UShort(256)).toInt) += 1)
@@ -268,12 +267,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           floatData.foreach(el => counts(Math.clamp(Math.roundDown((el - min) / bucketSize), 0, 255)) += 1)
           extrema = (Some(min), Some(max))
       }
-      if (!isUint24)
-        List(Histogram(counts, data.length, extrema._1, extrema._2))
-      else {
+      if (isUint24) {
         val listOfCounts = counts.grouped(256).toList
         listOfCounts.map(counts => { counts(0) = 0; Histogram(counts, counts.sum.toInt) })
-      }
+      } else
+        List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
 
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =

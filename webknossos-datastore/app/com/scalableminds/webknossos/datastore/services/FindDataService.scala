@@ -18,8 +18,8 @@ import scala.reflect.ClassTag
 
 case class Histogram(elementCounts: Array[Long],
                      numberOfElements: Int,
-                     min: Option[Float] = None,
-                     max: Option[Float] = None)
+                     min: Double,
+                     max: Double)
 object Histogram { implicit val jsonFormat = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
@@ -238,9 +238,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
 
     def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float],
+                                 bytesPerElement: Int,
                                  isUint24: Boolean = false) = {
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
-      var extrema: (Option[Float], Option[Float]) = (None, None)
+      var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
 
       data match {
         case byteData: Array[UByte] => {
@@ -250,6 +251,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               counts(byteData(i + 1).toInt + 256) += 1
               counts(byteData(i + 2).toInt + 512) += 1
             }
+            extrema = (0, 255)
           } else
             byteData.foreach(el => counts(el.toInt) += 1)
         }
@@ -265,11 +267,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           }
           val bucketSize = (max - min + 1) / 256
           floatData.foreach(el => counts(Math.clamp(Math.roundDown((el - min) / bucketSize), 0, 255)) += 1)
-          extrema = (Some(min), Some(max))
+          extrema = (min, max)
       }
       if (isUint24) {
         val listOfCounts = counts.grouped(256).toList
-        listOfCounts.map(counts => { counts(0) = 0; Histogram(counts, counts.sum.toInt) })
+        listOfCounts.map(counts => { counts(0) = 0; Histogram(counts, counts.sum.toInt, extrema._1, extrema._2) })
       } else
         List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
@@ -279,7 +281,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "getting data failed"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
-      } yield calculateHistogramValues(convertedData, isUint24)
+      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))

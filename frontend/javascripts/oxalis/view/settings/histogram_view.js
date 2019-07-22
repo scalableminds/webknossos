@@ -12,8 +12,11 @@ import { type ElementClass } from "admin/api_flow_types";
 type OwnProps = {|
   data: Array<number>,
   layerName: string,
+  minRange: number,
+  maxRange: number,
   min: number,
   max: number,
+  color: Array<number>,
 |};
 
 type HistogramProps = {
@@ -34,18 +37,23 @@ export function isHistogramSupported(elementClass: ElementClass): boolean {
 
 class Histogram extends React.PureComponent<HistogramProps> {
   canvasRef: ?HTMLCanvasElement;
+  static defaultProps = {
+    /* eslint-disable-next-line react/default-props-match-prop-types */
+    color: [24, 144, 255],
+  };
 
   componentDidMount() {
     if (this.canvasRef == null) {
       return;
     }
+    const { color } = this.props;
     const ctx = this.canvasRef.getContext("2d");
     ctx.translate(0, canvasHeight);
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
-    ctx.fillStyle = "rgba(24, 144, 255, 0.1)";
-    ctx.strokeStyle = "#1890ff";
+    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
+    ctx.strokeStyle = `rgba(${color.join(",")})`;
     this.updateCanvas();
   }
 
@@ -57,7 +65,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
     if (this.canvasRef == null) {
       return;
     }
-    const { min, max, data } = this.props;
+    const { min, max, minRange, maxRange, data } = this.props;
+    const rangeLength = maxRange - minRange;
     const ctx = this.canvasRef.getContext("2d");
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     const maxValue = Math.max(...data);
@@ -67,18 +76,19 @@ class Histogram extends React.PureComponent<HistogramProps> {
     const activeRegion = new Path2D();
     ctx.beginPath();
     ctx.moveTo(0, downscaledData[0]);
-    activeRegion.moveTo((min / downscaledData.length) * canvasWidth, 0);
+    activeRegion.moveTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     for (let i = 0; i < downscaledData.length; i++) {
       const x = (i / downscaledData.length) * canvasWidth;
-      if (i >= min && i <= max) {
+      const xValue = minRange + i * (rangeLength / downscaledData.length);
+      if (xValue >= min && xValue <= max) {
         activeRegion.lineTo(x, downscaledData[i]);
       }
       ctx.lineTo(x, downscaledData[i]);
     }
     ctx.stroke();
     ctx.closePath();
-    activeRegion.lineTo((max / downscaledData.length) * canvasWidth, 0);
-    activeRegion.lineTo((min / downscaledData.length) * canvasWidth, 0);
+    activeRegion.lineTo(((max - minRange) / rangeLength) * canvasWidth, 0);
+    activeRegion.lineTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -93,7 +103,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
   };
 
   render() {
-    const { min, max } = this.props;
+    const { min, max, minRange, maxRange } = this.props;
     return (
       <React.Fragment>
         <canvas
@@ -105,10 +115,10 @@ class Histogram extends React.PureComponent<HistogramProps> {
         />
         <Slider
           value={[min, max]}
-          min={0}
-          max={255}
+          min={minRange}
+          max={maxRange}
           range
-          defaultValue={[0, this.props.data.length - 1]}
+          defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           style={{ width: 300, margin: 0, marginBottom: 18 }}

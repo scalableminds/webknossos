@@ -48,6 +48,35 @@ type State = {
   isLoading: boolean,
 };
 
+function compressTimeLogs(logs) {
+  logs.sort((a, b) => a.timestamp - b.timestamp);
+
+  const compressedLogs = [];
+  let previousLog = null;
+  for (const timeLog of logs) {
+    // If the current log is within 1s of the previous log, merge these two logs
+    const previousDuration = previousLog != null ? moment.duration(previousLog.time) : null;
+    if (
+      previousDuration != null &&
+      previousLog != null &&
+      Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
+        1000 &&
+      timeLog.task_id === previousLog.task_id
+    ) {
+      const newDuration = previousDuration.add(moment.duration(timeLog.time));
+      const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
+      copiedLog.time = newDuration.toISOString();
+      compressedLogs[compressedLogs.length - 1] = copiedLog;
+    } else {
+      compressedLogs.push(timeLog);
+    }
+
+    previousLog = compressedLogs[compressedLogs.length - 1];
+  }
+
+  return compressedLogs;
+}
+
 class TimeLineView extends React.PureComponent<Props, State> {
   state = {
     user: null,
@@ -80,10 +109,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     if (this.state.user != null) {
       /* eslint-disable react/no-access-state-in-setstate */
-      const timeTrackingData = await getTimeTrackingForUser(
-        this.state.user.id,
-        this.state.dateRange[0],
-        this.state.dateRange[1],
+      const timeTrackingData = compressTimeLogs(
+        await getTimeTrackingForUser(
+          this.state.user.id,
+          this.state.dateRange[0],
+          this.state.dateRange[1],
+        ),
       );
 
       this.setState({ timeTrackingData }, this.calculateStats);

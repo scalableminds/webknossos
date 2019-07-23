@@ -683,7 +683,7 @@ class DataApi {
    * const treeId = api.tracing.getActiveTreeId();
    * const mapping = {[segmentId]: treeId}
    *
-   * api.setMapping(segmentationLayerName, mapping);
+   * api.data.setMapping(segmentationLayerName, mapping);
    */
   setMapping(
     layerName: string,

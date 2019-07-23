@@ -173,29 +173,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        {!isDisabled && isHistogramSupported(elementClass) ? (
-          <Histogram
-            data={histograms}
-            min={intensityRange[0]}
-            max={intensityRange[1]}
-            layerName={layerName}
-          />
-        ) : null}
-        <NumberSliderSetting
-          label="Opacity"
-          min={0}
-          max={100}
-          value={alpha}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
-          disabled={isDisabled}
-        />
-        <ColorSetting
-          label="Color"
-          value={Utils.rgbToHex(color)}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-          className="ant-btn"
-          disabled={isDisabled}
-        />
+        {isDisabled ? null : (
+          <React.Fragment>
+            {isHistogramSupported(elementClass) ? (
+              <Histogram
+                data={histograms}
+                min={intensityRange[0]}
+                max={intensityRange[1]}
+                layerName={layerName}
+              />
+            ) : null}
+            <NumberSliderSetting
+              label="Opacity"
+              min={0}
+              max={100}
+              value={alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+            />
+            <ColorSetting
+              label="Color"
+              value={Utils.rgbToHex(color)}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+              className="ant-btn"
+            />
+          </React.Fragment>
+        )}
         {!isLastLayer && <Divider />}
       </div>
     );

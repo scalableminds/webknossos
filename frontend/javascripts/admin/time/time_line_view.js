@@ -58,6 +58,7 @@ function compressTimeLogs(logs) {
     const previousDuration = previousLog != null ? moment.duration(previousLog.time) : null;
     if (
       previousDuration != null &&
+      previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
         1000 &&
       timeLog.task_id === previousLog.task_id

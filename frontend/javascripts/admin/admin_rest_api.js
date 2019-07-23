@@ -560,9 +560,10 @@ export function copyAnnotationToUserAccount(
 export function getAnnotationInformation(
   annotationId: string,
   annotationType: APIAnnotationType,
+  options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
   const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info`;
-  return Request.receiveJSON(infoUrl);
+  return Request.receiveJSON(infoUrl, options);
 }
 
 export function createExplorational(

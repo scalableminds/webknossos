@@ -26,7 +26,7 @@ type State = {
   tasksProcessed: number,
 };
 
-export type NewTask = {
+export type NewTask = {|
   +boundingBox: ?BoundingBoxObject,
   +dataSet: string,
   +editPosition: Vector3,
@@ -42,7 +42,10 @@ export type NewTask = {
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFiles?: File,
-};
+  +baseAnnotation: ?{
+    baseId: string,
+  },
+|};
 
 export type TaskCreationResponse = {
   status: number,
@@ -135,8 +138,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
-    const scriptId = words[19] || undefined;
-    const baseAnnotationId = words[20] || undefined;
+    const scriptId =
+      words[19] != null && words[19] != "null" && words[19] != "" ? words[19] : undefined;
+    const baseAnnotation = words[20] != null ? { baseId: words[20] } : undefined;
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -164,7 +168,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
       isForAnonymous: false,
-      baseAnnotationId,
+      baseAnnotation,
     };
   }
 
@@ -270,7 +274,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>, baseAnnotationId]
               <br />
               If you want to define some (but not all) of the optional values, please list all
-              optional values and use null for the ones you do not want to set.
+              optional values and use an empty value for the ones you do not want to set (e.g.,
+              someValue,,someOtherValue)
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

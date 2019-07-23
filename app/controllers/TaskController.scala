@@ -2,14 +2,18 @@ package controllers
 
 import java.io.File
 
-import javax.inject.Inject
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
-import models.annotation.nml.{NmlResults, NmlService}
+import javax.inject.Inject
+import models.annotation.nml.NmlResults.NmlParseResult
+import models.annotation.nml.NmlService
 import models.annotation.{AnnotationDAO, AnnotationService, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
@@ -18,14 +22,9 @@ import models.team.TeamDAO
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import models.annotation.nml.NmlResults.NmlParseResult
-import play.api.libs.Files
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
-import play.api.mvc.{MultipartFormData, PlayBodyParsers, Result}
+import play.api.mvc.{PlayBodyParsers, Result}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -134,7 +133,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-        skeletonTracingOpt <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid && params.baseAnnotation.isEmpty) {
+        skeletonTracingOpt <- if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           Fox.successful(
             Some(
               annotationService.createSkeletonTracingBase(
@@ -154,7 +153,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-        volumeTracingOpt <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid && params.baseAnnotation.isEmpty) {
+        volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
             .createVolumeTracingBase(
               params.dataSet,

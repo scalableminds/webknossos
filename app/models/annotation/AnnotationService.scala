@@ -238,7 +238,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(Option[String], Option[String])] =
     for {
-      dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonId: Option[String] <- Fox.runOptional(annotationBase.skeletonTracingId)(skeletonId =>
         tracingStoreClient.duplicateSkeletonTracing(skeletonId))
@@ -345,7 +345,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(ObjectId.generate,
                                   dataSetId,

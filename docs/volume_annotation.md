@@ -81,6 +81,30 @@ Mapping files are in JSON and need to follow this schema. All segment IDs belong
 
 <!-- ![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
+### Download File Format
+Volume tracings can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
+The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
+Additionally, there is another embedded ZIP file that contains the volume tracings in WKW file format.
+
+{% hint style='info' %}
+In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
+Therefore, also the addressing of the WKW files (e.g. `z48/y5444/x5748.wkw`) is in steps of 32 instead of 1024.
+{% endhint %}
+
+```
+volumetracing.zip # A ZIP file containing the volume annotation
+├─ data.zip # Container for WKW dataset
+│ └─ 1 # Magnification step folder
+│   ├─ z48
+│   │ ├─ y5444
+│   │ │ └─ x5748.wkw # Actual WKW bucket file (32^3 voxel)
+│   │ └─ y5445/...
+│   ├─ z49/...
+│   └─ header.wkw # Information about the WKW files
+└─ volumetracing.nml # Tracing metadata NML file
+```
+
+After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB and other languages]([GitHub - scalableminds/webknossos-wrap: Efficient 3D volume storage format for webKnossos and analyses]https://github.com/scalableminds/webknossos-wrap). 
 
 ## Hybrid Annotations
 

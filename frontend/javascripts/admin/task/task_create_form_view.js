@@ -37,6 +37,7 @@ import {
 import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
+import Enum from "Enumjs";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -50,7 +51,12 @@ type Props = {
   history: RouterHistory,
 };
 
-type Specification = "manual" | "nml" | "baseAnnotation";
+export const SpecificationEnum = Enum.make({
+  Manual: "Manual",
+  Nml: "Nml",
+  BaseAnnotation: "BaseAnnotation",
+});
+type Specification = $Keys<typeof SpecificationEnum>;
 
 type State = {
   datasets: Array<APIDataset>,
@@ -110,7 +116,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     taskTypes: [],
     projects: [],
     scripts: [],
-    specificationType: "manual",
+    specificationType: SpecificationEnum.Manual,
     isUploading: false,
   };
 
@@ -173,7 +179,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           // or create a new one either from the form values or with an NML file
           let response;
           try {
-            if (this.state.specificationType === "nml") {
+            if (this.state.specificationType === SpecificationEnum.Nml) {
               // Workaround: Antd replaces file objects in the formValues with a wrapper file
               // The original file object is contained in the originFileObj property
               // This is most likely not intentional and may change in a future Antd version
@@ -182,7 +188,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               );
               response = await createTaskFromNML(formValues);
             } else {
-              if (this.state.specificationType !== "baseAnnotation") {
+              if (this.state.specificationType !== SpecificationEnum.BaseAnnotation) {
                 // Ensure that the base annotation field is null, if the specification mode
                 // does not include that field.
                 formValues.baseAnnotation = null;
@@ -217,7 +223,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
   onChangeTaskType = (taskTypeId: string) => {
     if (this.isVolumeTaskType(taskTypeId)) {
-      this.setState({ specificationType: "manual" });
+      this.setState({ specificationType: SpecificationEnum.Manual });
     }
   };
 
@@ -225,7 +231,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
 
-    if (this.state.specificationType === "nml") {
+    if (this.state.specificationType === SpecificationEnum.Nml) {
       return (
         <FormItem label="NML Files" hasFeedback>
           {getFieldDecorator("nmlFiles", {
@@ -249,7 +255,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     } else {
       return (
         <div>
-          {this.state.specificationType === "baseAnnotation" ? (
+          {this.state.specificationType === SpecificationEnum.BaseAnnotation ? (
             <FormItem label="Base Annotation ID" hasFeedback>
               {getFieldDecorator("baseAnnotation.baseId", {
                 rules: [
@@ -289,14 +295,16 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <Select
                 showSearch
                 placeholder={
-                  this.state.specificationType === "baseAnnotation"
+                  this.state.specificationType === SpecificationEnum.BaseAnnotation
                     ? "The dataset is inferred from the base annotation."
                     : "Select a Dataset"
                 }
                 optionFilterProp="children"
                 style={fullWidth}
                 autoFocus
-                disabled={isEditingMode || this.state.specificationType === "baseAnnotation"}
+                disabled={
+                  isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
+                }
               >
                 {this.state.datasets.map((dataset: APIDataset) => (
                   <Option key={dataset.name} value={dataset.name}>
@@ -323,8 +331,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         </div>
       );
     }
-
-    return null;
   }
 
   render() {
@@ -443,16 +449,22 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <RadioGroup
                   value={this.state.specificationType}
                   onChange={(evt: SyntheticInputEvent<*>) =>
-                    this.setState({ specificationType: evt.target.value })
+                    this.setState({
+                      // $FlowFixMe Inference for enum.coalesce does not work properly anymore? Flow update might help
+                      specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
+                    })
                   }
                 >
-                  <Radio value="manual" disabled={isEditingMode}>
+                  <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
                     Manual Specification
                   </Radio>
-                  <Radio value="nml" disabled={isEditingMode || this.isVolumeTaskType()}>
+                  <Radio
+                    value={SpecificationEnum.Nml}
+                    disabled={isEditingMode || this.isVolumeTaskType()}
+                  >
                     Upload NML File
                   </Radio>
-                  <Radio value="baseAnnotation" disabled={isEditingMode}>
+                  <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
                     Use Annotation ID as Base
                   </Radio>
                 </RadioGroup>

@@ -42,7 +42,7 @@ export type NewTask = {|
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFiles?: File,
-  +baseAnnotation: ?{
+  +baseAnnotation?: ?{
     baseId: string,
   },
 |};
@@ -104,9 +104,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   }
 
   splitToWords(string: string): Array<string> {
-    return string
-      .split(",")
-      .map(word => word.trim())
+    return string.split(",").map(word => word.trim());
   }
 
   parseText(bulkText: string): Array<NewTask> {
@@ -117,7 +115,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
 
   parseLine(line: string): NewTask {
     const words = this.splitToWords(line);
-
 
     const dataSet = words[0];
     const taskTypeId = words[1];
@@ -140,8 +137,10 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const projectName = words[18];
 
     // mapOptional takes care of treating empty strings as null
-    const mapOptional = (word, fn=id=>id) => word != null && word !== "" ? fn(word) : undefined;
-    const scriptId = mapOptional(words[19]);
+    function mapOptional<U>(word, fn: string => U): ?U {
+      return word != null && word !== "" ? fn(word) : undefined;
+    }
+    const scriptId = mapOptional(words[19], a => a);
     const baseAnnotation = mapOptional(words[20], word => ({ baseId: word }));
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
@@ -169,7 +168,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       },
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
-      isForAnonymous: false,
       baseAnnotation,
     };
   }
@@ -277,9 +275,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <br />
               If you want to define some (but not all) of the optional values, please list all
               optional values and use an empty value for the ones you do not want to set (e.g.,
-              someValue,,someOtherValue if you want to omit the second value).
-              If you don not want to define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding
-              values.
+              someValue,,someOtherValue if you want to omit the second value). If you don not want
+              to define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

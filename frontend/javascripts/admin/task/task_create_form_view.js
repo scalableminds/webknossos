@@ -34,6 +34,7 @@ import {
   getTaskTypes,
   updateTask,
 } from "admin/admin_rest_api";
+import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 
@@ -255,18 +256,17 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   { required: true },
                   {
                     validator: async (rule, value, callback) => {
-                      let response;
-                      try {
-                        response = await getAnnotationInformation(value, "Task", {
-                          showErrorToast: false,
-                        });
-                      } catch (_exc) {
-                        try {
-                          response = await getAnnotationInformation(value, "Explorational", {
+                      const response =
+                        (await tryToAwaitPromise(
+                          getAnnotationInformation(value, "Task", {
                             showErrorToast: false,
-                          });
-                        } catch (__exc) {}
-                      }
+                          }),
+                        )) ||
+                        (await tryToAwaitPromise(
+                          getAnnotationInformation(value, "Explorational", {
+                            showErrorToast: false,
+                          }),
+                        ));
 
                       if (response != null && response.dataSetName != null) {
                         this.props.form.setFieldsValue({ dataSet: response.dataSetName });

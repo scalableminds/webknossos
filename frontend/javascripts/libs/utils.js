@@ -86,6 +86,14 @@ export function parseAsMaybe(str: ?string): Maybe<any> {
   }
 }
 
+export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T> {
+  try {
+    return await promise;
+  } catch (exception) {
+    return null;
+  }
+}
+
 export function jsonStringify(json: Object) {
   return JSON.stringify(json, null, "  ");
 }

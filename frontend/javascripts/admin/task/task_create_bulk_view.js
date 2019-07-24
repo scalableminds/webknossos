@@ -107,7 +107,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     return string
       .split(",")
       .map(word => word.trim())
-      .filter(word => word !== "");
   }
 
   parseText(bulkText: string): Array<NewTask> {
@@ -118,6 +117,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
 
   parseLine(line: string): NewTask {
     const words = this.splitToWords(line);
+
 
     const dataSet = words[0];
     const taskTypeId = words[1];
@@ -138,9 +138,11 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
-    const scriptId =
-      words[19] != null && words[19] != "null" && words[19] != "" ? words[19] : undefined;
-    const baseAnnotation = words[20] != null ? { baseId: words[20] } : undefined;
+
+    // mapOptional takes care of treating empty strings as null
+    const mapOptional = (word, fn=id=>id) => word != null && word !== "" ? fn(word) : undefined;
+    const scriptId = mapOptional(words[19]);
+    const baseAnnotation = mapOptional(words[20], word => ({ baseId: word }));
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -275,7 +277,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <br />
               If you want to define some (but not all) of the optional values, please list all
               optional values and use an empty value for the ones you do not want to set (e.g.,
-              someValue,,someOtherValue)
+              someValue,,someOtherValue if you want to omit the second value).
+              If you don not want to define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding
+              values.
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

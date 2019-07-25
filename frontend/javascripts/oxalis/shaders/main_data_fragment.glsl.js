@@ -161,6 +161,8 @@ void main() {
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
+  vec3 range  = vec3(0.0);
+  vec3 rangeMin  = vec3(0.0);
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
     // Get grayscale value for <%= name %>
@@ -177,8 +179,8 @@ void main() {
 
     <% if (floatLayerLookup[name]) { %>
       // Adjust the value range of the float values
-      vec3 range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
-      vec3 rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
+      range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
+      rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
       color_value = (color_value + rangeMin) / range;
     <% } else { %>
 

@@ -53,7 +53,7 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
     }
   }
 
-  yield* take("INITIALIZE_SETTINGS");
+  yield* take("WK_READY");
   yield* warnMaybe();
 
   while (true) {
@@ -62,6 +62,7 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
       "ZOOM_OUT",
       "ZOOM_BY_DELTA",
       "SET_ZOOM_STEP",
+      "SET_STORED_LAYOUTS",
       action =>
         action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
     ]);

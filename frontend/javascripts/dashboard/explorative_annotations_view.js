@@ -406,12 +406,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
+          width={100}
           render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
         <Column
           title="Name"
+          width={200}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationCompact) =>
@@ -420,6 +422,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
+          width={100}
           render={(__, annotation: APIAnnotationCompact) =>
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
@@ -477,10 +480,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
+          width={150}
           sorter={Utils.compareBy(typeHint, annotation => annotation.modified)}
           render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column
+          width={200}
           title="Actions"
           className="nowrap"
           key="action"

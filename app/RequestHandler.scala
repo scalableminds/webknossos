@@ -1,13 +1,16 @@
 import com.typesafe.scalalogging.LazyLogging
 import controllers.{Assets, SitemapController}
 import javax.inject.Inject
-import play.api.Environment
+import play.api.{Environment, OptionalDevContext}
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
+import play.core.WebCommands
 import utils.WkConf
 
-class RequestHandler @Inject()(router: Router,
+class RequestHandler @Inject()(webCommands: WebCommands,
+                               optionalDevContext: OptionalDevContext,
+                               router: Router,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
                                filters: HttpFilters,
@@ -16,6 +19,8 @@ class RequestHandler @Inject()(router: Router,
                                env: Environment,
                                sitemapController: SitemapController)
     extends DefaultHttpRequestHandler(
+      webCommands,
+      optionalDevContext,
       router,
       errorHandler,
       httpConfiguration,

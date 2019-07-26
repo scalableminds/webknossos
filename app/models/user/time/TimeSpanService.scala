@@ -160,7 +160,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
-    last._annotation == annotation.map(_.id)
+    last._annotation.map(_.id) == annotation.map(_.id)
 
   private def logTimeToAnnotation(duration: Long, annotation: Option[ObjectId]): Fox[Unit] =
     // Log time to annotation

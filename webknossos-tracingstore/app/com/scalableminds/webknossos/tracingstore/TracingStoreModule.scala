@@ -12,7 +12,7 @@ class TracingStoreModule(environment: Environment, configuration: Configuration)
 
   val system = ActorSystem("webknossos-tracingstore")
 
-  def configure() = {
+  override def configure() = {
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-tracingstore")).toInstance(system)
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[SkeletonTracingService]).asEagerSingleton()

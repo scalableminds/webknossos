@@ -128,14 +128,15 @@ class DataSetController @Inject()(userService: UserService,
 
   def list = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
+      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
       Filter(
         "isEditable",
         (value: Boolean, el: DataSet) =>
           for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
             isEditable && value || !isEditable && !value
         }
-      ),
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value))
+      )
     ) { filter =>
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"

@@ -197,6 +197,16 @@ class SceneController {
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
+  removeIsosurfaceById(segmentationId): void {
+    if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
+      return;
+    }
+
+    const group = this.isosurfacesGroupsPerSegmentationId[segmentationId];
+    this.isosurfacesRootGroup.remove(group);
+    this.isosurfacesGroupsPerSegmentationId[segmentationId] = null;
+  }
+
   addLights(): void {
     // At the moment, we only attach an AmbientLight for the isosurfaces group.
     // The PlaneView attaches a directional light directly to the TD camera,

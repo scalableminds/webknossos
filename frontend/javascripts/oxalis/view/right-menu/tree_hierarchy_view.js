@@ -182,6 +182,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
+    const newExpandedGroupIds = Object.assign({}, this.state.expandedGroupIds);
     const collapseAllGroups = groupTree => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
       findTreeNode(copyOfGroupTree, groupId, item => {
@@ -192,12 +193,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         forEachTreeNode(item.children, node => {
           if (node.type === TYPE_GROUP) {
             node.expanded = expanded;
+            newExpandedGroupIds[node.id] = expanded;
           }
         });
       });
       return copyOfGroupTree;
     };
-    this.setState(prevState => ({ groupTree: collapseAllGroups(prevState.groupTree) }));
+    this.setState(prevState => ({
+      groupTree: collapseAllGroups(prevState.groupTree),
+      expandedGroupIds: newExpandedGroupIds,
+    }));
   };
 
   onMoveNode = (params: {
@@ -339,14 +344,18 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
       nodeProps.title = (
-        <div data-id={node.id} onClick={this.onSelectTree} className={styleClass}>
+        <div className={styleClass}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
             node={node}
             style={CHECKBOX_STYLE}
           />
-          {` (${tree.nodes.size()}) ${tree.name}`}
+          <div
+            data-id={node.id}
+            style={{ marginLeft: 10, display: "inline" }}
+            onClick={this.onSelectTree}
+          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
         </div>
       );
       nodeProps.className = "tree-type";

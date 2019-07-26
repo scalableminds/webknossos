@@ -1,8 +1,8 @@
-import play.sbt.Play.autoImport._
+import play.sbt.PlayImport._
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.11"
+  val akkaVersion = "2.5.22"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
   val webknossosWrapVersion = "1.1.7"
@@ -25,8 +25,8 @@ object Dependencies {
   val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
   val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
-  val playFramework = "com.typesafe.play" %% "play" % "2.6.18"
-  val playJson = "com.typesafe.play" %% "play-json" % "2.6.10"
+  val playFramework = "com.typesafe.play" %% "play" % "2.7.1"
+  val playJson = "com.typesafe.play" %% "play-json" % "2.7.2"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
   val playIterateesStreams = "com.typesafe.play" %% "play-iteratees-reactive-streams" % "2.6.1"
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson" % "0.12.7"
@@ -34,8 +34,8 @@ object Dependencies {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
   val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
   val scalaTestPlusPlay = "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % "test"
-  val silhouette = "com.mohiva" %% "play-silhouette" % "5.0.5"
-  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.5" % "test"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "6.0.0"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "5.0.7" % "test"
   val trireme = "io.apigee.trireme" % "trireme-core" % "0.9.3"
   val triremeNode = "io.apigee.trireme" % "trireme-node12src" % "0.9.3"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.16"

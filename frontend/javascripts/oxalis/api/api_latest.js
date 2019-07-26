@@ -683,7 +683,7 @@ class DataApi {
    * const treeId = api.tracing.getActiveTreeId();
    * const mapping = {[segmentId]: treeId}
    *
-   * api.setMapping(segmentationLayerName, mapping);
+   * api.data.setMapping(segmentationLayerName, mapping);
    */
   setMapping(
     layerName: string,
@@ -866,8 +866,8 @@ class DataApi {
     elementClass: ElementClass,
   ): $TypedArray {
     const extent = V3.sub(bbox.max, bbox.min);
-    const TypedArrayClass = getConstructorForElementClass(elementClass);
-    const result = new TypedArrayClass(extent[0] * extent[1] * extent[2]);
+    const [TypedArrayClass, channelCount] = getConstructorForElementClass(elementClass);
+    const result = new TypedArrayClass(channelCount * extent[0] * extent[1] * extent[2]);
     const bucketWidth = Constants.BUCKET_WIDTH;
     buckets.reverse();
 

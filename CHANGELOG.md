@@ -7,19 +7,49 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.04.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.07.0...HEAD)
 
 ### Added
-- Added the possbility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
-- Added the possibility for admins to add experience domains while creating new tasks. [#4119](https://github.com/scalableminds/webknossos/pull/4119)
-- Added a histogram to the dataset settings for each layer. It simplifies adjusting the brightness and contrast of a layer and replaces the brightness and contrast slider. [#4105](https://github.com/scalableminds/webknossos/pull/4105)
-- The dataset table in the dashboard is now horizontally scrollable if the window is not wide enough. Additionally, clicking on the name of a dataset in the table opens the dataset in view mode. [#4136](https://github.com/scalableminds/webknossos/pull/4136)
+- Volume tasks with only one finished instance can now be viewed as CompoundTask. [#4167](https://github.com/scalableminds/webknossos/pull/4167)
+- Added the possibility to remove isosurfaces from the 3D viewport by CTRL+Clicking it. [#4185](https://github.com/scalableminds/webknossos/pull/4185)
+- Added support for int16 and uint16 color layers. [#4152](https://github.com/scalableminds/webknossos/pull/4152)
 
 ### Changed
+- Volume project download zips are reorganized to contain a zipfile for each annotation (that in turn contains a data.zip and an nml file). [#4167](https://github.com/scalableminds/webknossos/pull/4167)
+- Team managers and admins can now get tasks that they had previously cancelled. [#4088](https://github.com/scalableminds/webknossos/pull/4088)
+
+### Fixed
+- Fixed a bug where volume tracings could not be converted to hybrid. [#4159](https://github.com/scalableminds/webknossos/pull/4159)
+- Fixed a bug where for uint24 color layers, scrambled data was shown for missing magnifications. [#4188](https://github.com/scalableminds/webknossos/pull/4188)
+- Fixed a bug where collapsing/expanding all tree groups would trigger when toggling a single tree [#4178](https://github.com/scalableminds/webknossos/pull/4178)
+- Fixed performance for time logging. [#4196](https://github.com/scalableminds/webknossos/pull/4196)
+
+### Removed
+-
+
+## [19.07.0](https://github.com/scalableminds/webknossos/releases/tag/19.07.0) - 2019-07-01
+[Commits](https://github.com/scalableminds/webknossos/compare/19.06.0...19.07.0)
+
+### Highlights
+- Added a histogram and min- / max-sliders to the dataset settings for each layer. This replaces the brightness and contrast settings. [#4105](https://github.com/scalableminds/webknossos/pull/4105)
+- Added the possbility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
+- Added the possibility for admins to add experience domains while creating new tasks. [#4119](https://github.com/scalableminds/webknossos/pull/4119)
+
+### Added
+- Added the possibility to enforce a certain magnification range for tasks (can be configured in the corresponding task type). [#4101](https://github.com/scalableminds/webknossos/pull/4101)
+- Added the possibility for admins to add experience domains while creating new tasks. [#4119](https://github.com/scalableminds/webknossos/pull/4119)
+- Added a histogram to the dataset settings for each layer. It simplifies adjusting the brightness and contrast of a layer and replaces the brightness and contrast slider. [#4105](https://github.com/scalableminds/webknossos/pull/4105)
+- The dataset and the explorative annotations table in the dashboard are now horizontally scrollable if the window is not wide enough. Additionally, clicking on the name of a dataset in the dataset table opens the dataset in view mode. [#4136](https://github.com/scalableminds/webknossos/pull/4136)
+- Added an two additional buttons to the dropdown menu of the tree hierarchy view. On Click, one collapses the other expands all subgroups. [#4143](https://github.com/scalableminds/webknossos/pull/4143)
+
+### Changed
+- The tooltip of the timeline chart in the Time Tracking view now displays the duration in minutes:seconds. [#4121](https://github.com/scalableminds/webknossos/pull/4121)
 - Reactivated and renamed the "Quality" setting to "Hardware Utilization". Using a higher value will render data in higher quality, but puts more stress on the user's hardware and bandwidth. [#4142](https://github.com/scalableminds/webknossos/pull/4142)
+
 
 ### Fixed
 - Fixed that team managers couldn't view time tracking details of other users anymore. [#4125](https://github.com/scalableminds/webknossos/pull/4125)
+- Fixed the positioning of the tooltip of the timeline chart in the Time Tracking view. [#4121](https://github.com/scalableminds/webknossos/pull/4121)
 - Fixed a rendering problem which caused a red viewport on some Windows machines. [#4133](https://github.com/scalableminds/webknossos/pull/4133)
 
 ### Removed
@@ -35,6 +65,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - When holding CTRL while toggling the visibility of a layer, that layer will be made exclusively visible. [#4061](https://github.com/scalableminds/webknossos/pull/4061)
 
 ### Added
+- Non-admin users now can see their own tracing time statistics. [#4028](https://github.com/scalableminds/webknossos/pull/4028)
 - The extent of a dataset is now displayed next to the scale in the dataset list in the dashboard. [#4058](https://github.com/scalableminds/webknossos/pull/4058)
 - BossDB datasets can now be added to webKnossos using the webknossos-connect service. [#4036](https://github.com/scalableminds/webknossos/pull/4036)
 - Added an auto-brush feature for selected datasets. [#4053](https://github.com/scalableminds/webknossos/pull/4053)

@@ -128,14 +128,15 @@ class DataSetController @Inject()(userService: UserService,
 
   def list = sil.UserAwareAction.async { implicit request =>
     UsingFilters(
+      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
       Filter(
         "isEditable",
         (value: Boolean, el: DataSet) =>
           for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
             isEditable && value || !isEditable && !value
         }
-      ),
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value))
+      )
     ) { filter =>
       for {
         dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
@@ -192,8 +193,9 @@ class DataSetController @Inject()(userService: UserService,
       log {
         val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
         for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                       organizationName)
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            organizationName)
           dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
             "dataSet.notFound",
             dataSetName) ~> NOT_FOUND

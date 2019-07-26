@@ -5,7 +5,7 @@ import com.mohiva.play.silhouette.api.{Environment, Silhouette, SilhouetteProvid
 import oxalis.security.{PasswordHasher, UserAuthInfoRepository, WkEnv, WkSilhouetteEnvironment}
 
 class SilhouetteModule extends AbstractModule {
-  def configure(): Unit = {
+  override def configure(): Unit = {
     bind(new TypeLiteral[Environment[WkEnv]] {}).to(new TypeLiteral[WkSilhouetteEnvironment] {})
     bind(new TypeLiteral[Silhouette[WkEnv]] {}).to(new TypeLiteral[SilhouetteProvider[WkEnv]] {})
     bind(new TypeLiteral[AuthInfoRepository] {}).to(new TypeLiteral[UserAuthInfoRepository] {})

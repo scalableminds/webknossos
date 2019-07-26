@@ -267,7 +267,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         result <- combinedAuthenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
-      Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
+      logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
       Future.successful(Forbidden(Messages("user.notAuthorised")))
     }
   }

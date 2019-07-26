@@ -12,6 +12,7 @@ To activate a cell, use shift+click on a segment in the tracing view.
 The isosurface is computed in chunks, which is why the isosurface is likely to appear bit by bit.
 When hovering over an isosurface in the 3D viewport, the cell will also be highlighted in the other viewports.
 Shift + Click on an isosurface in the 3D viewport will change the active position to where you clicked.
+CTRL + Click on an isosurface will remove that isosurface again.
 
 ![Generating isosurfaces for specific cell ids via shift+click](./images/isosurface-demo.gif)
 

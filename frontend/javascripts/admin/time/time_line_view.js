@@ -1,6 +1,5 @@
 // @flow
-import { Chart } from "react-google-charts";
-import { Select, Card, Form, Row, Col, DatePicker } from "antd";
+import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
@@ -9,12 +8,17 @@ import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
-import { formatMilliseconds, formatDurationToHoursAndMinutes } from "libs/format_utils";
+import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdmin } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import TimeTrackingChart, {
+  type DateRange,
+  type ColumnDefinition,
+  type RowContent,
+} from "./time_line_chart_view";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -29,8 +33,6 @@ type TimeTrackingStats = {
   averageTimePerTask: number,
 };
 
-type DateRange = [moment$Moment, moment$Moment];
-
 type StateProps = {|
   activeUser: APIUser,
 |};
@@ -43,7 +45,37 @@ type State = {
   dateRange: DateRange,
   timeTrackingData: Array<APITimeTracking>,
   stats: TimeTrackingStats,
+  isLoading: boolean,
 };
+
+function compressTimeLogs(logs) {
+  logs.sort((a, b) => a.timestamp - b.timestamp);
+
+  const compressedLogs = [];
+  let previousLog = null;
+  for (const timeLog of logs) {
+    // If the current log is within 1s of the previous log, merge these two logs
+    const previousDuration = previousLog != null ? moment.duration(previousLog.time) : null;
+    if (
+      previousDuration != null &&
+      previousLog != null &&
+      Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
+        1000 &&
+      timeLog.task_id === previousLog.task_id
+    ) {
+      const newDuration = previousDuration.add(moment.duration(timeLog.time));
+      const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
+      copiedLog.time = newDuration.toISOString();
+      compressedLogs[compressedLogs.length - 1] = copiedLog;
+    } else {
+      compressedLogs.push(timeLog);
+    }
+
+    previousLog = compressedLogs[compressedLogs.length - 1];
+  }
+
+  return compressedLogs;
+}
 
 class TimeLineView extends React.PureComponent<Props, State> {
   state = {
@@ -56,6 +88,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       numberTasks: 0,
       averageTimePerTask: 0,
     },
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -73,17 +106,21 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchTimeTrackingData() {
+    this.setState({ isLoading: true });
     if (this.state.user != null) {
       /* eslint-disable react/no-access-state-in-setstate */
-      const timeTrackingData = await getTimeTrackingForUser(
-        this.state.user.id,
-        this.state.dateRange[0],
-        this.state.dateRange[1],
+      const timeTrackingData = compressTimeLogs(
+        await getTimeTrackingForUser(
+          this.state.user.id,
+          this.state.dateRange[0],
+          this.state.dateRange[1],
+        ),
       );
 
       this.setState({ timeTrackingData }, this.calculateStats);
       /* eslint-enable react/no-access-state-in-setstate */
     }
+    this.setState({ isLoading: false });
   }
 
   calculateStats() {
@@ -136,10 +173,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
   getTooltipForEntry(taskId: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
-    const durationAsString = formatDurationToHoursAndMinutes(duration);
+    const durationAsString = formatDurationToMinutesAndSeconds(duration);
     const dayFormatForMomentJs = "DD, MMM, YYYY";
     const tooltip = (
-      <div className="google-charts-tooltip">
+      <div>
         <div className="highlighted">
           Task ID: {taskId}
           <div className="striped-border" />
@@ -168,7 +205,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </td>
             </tr>
             <tr>
-              <td className="highlighted">Duration:</td>
+              <td className="highlighted">Duration (min:sec):</td>
               <td>{durationAsString}</td>
             </tr>
           </tbody>
@@ -179,7 +216,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const columns = [
+    const columns: Array<ColumnDefinition> = [
       { id: "AnnotationId", type: "string" },
       // This label columns is somehow needed to make the custom tooltip work.
       // See https://developers.google.com/chart/interactive/docs/gallery/timeline#customizing-tooltips.
@@ -189,9 +226,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
       { id: "End", type: "date" },
     ];
 
-    const { dateRange } = this.state;
-    const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
-    const timeTrackingRowTotal = []; // show all times spans in a single row
+    const { dateRange, isLoading, timeTrackingData } = this.state;
+    const timeTrackingRowGrouped: Array<RowContent> = []; // shows each time span grouped by annotation id
+    const timeTrackingRowTotal: Array<RowContent> = []; // show all times spans in a single row
 
     const totalSumColumnLabel = "Sum Tracking Time";
 
@@ -292,35 +329,22 @@ class TimeLineView extends React.PureComponent<Props, State> {
           </Row>
         </Card>
 
-        <div style={{ marginTop: 20 }}>
-          {this.state.timeTrackingData.length > 0 ? (
-            <Chart
-              chartType="Timeline"
+        <div style={{ marginTop: 20 }} />
+        <Spin size="large" spinning={isLoading}>
+          {timeTrackingData.length > 0 ? (
+            <TimeTrackingChart
               columns={columns}
               rows={rows}
-              options={{
-                timeline: { singleColor: "#108ee9" },
-                // Workaround for google-charts bug, see https://github.com/scalableminds/webknossos/pull/3772
-                hAxis: {
-                  format: timeAxisFormat,
-                  minValue: dateRange[0].toDate(),
-                  maxValue: dateRange[1].toDate(),
-                },
-                allowHtml: true,
-                tooltip: { isHtml: true },
-              }}
-              graph_id="TimeLineGraph"
-              chartPackages={["timeline"]}
-              width="100%"
-              height="600px"
-              legend_toggle
+              timeAxisFormat={timeAxisFormat}
+              dateRange={dateRange}
+              timeTrackingData={timeTrackingData}
             />
           ) : (
             <div style={{ textAlign: "center" }}>
               No Time Tracking Data for the Selected User or Date Range.
             </div>
           )}
-        </div>
+        </Spin>
       </div>
     );
   }

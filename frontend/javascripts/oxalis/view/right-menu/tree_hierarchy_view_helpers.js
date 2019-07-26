@@ -144,7 +144,7 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup
   return foundGroup;
 }
 
-export function forEachTreeNode(groups: Array<TreeNode>, callback: TreeNode => *) {
+export function forEachTreeNode(groups: Array<TreeNode>, callback: TreeNode => void) {
   for (const group of groups) {
     callback(group);
     if (group.children) {
@@ -159,7 +159,7 @@ export function anySatisfyDeep(groups: Array<TreeNode>, testFunction: TreeNode =
       return true;
     }
     if (group.children) {
-      if (forEachTreeNode(group.children, testFunction)) {
+      if (anySatisfyDeep(group.children, testFunction)) {
         return true;
       }
     }

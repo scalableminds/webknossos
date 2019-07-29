@@ -3,16 +3,21 @@ import { Select } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import {
+  setViewModeAction,
+  setFlightmodeRecordingAction,
+} from "oxalis/model/actions/settings_actions";
+
 import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode } from "oxalis/constants";
 
-const Option = Select.Option;
+const { Option } = Select;
 
 type Props = {|
   viewMode: ViewMode,
   allowedModes: Array<AllowedMode>,
+  onChangeFlightmodeRecording: boolean => void,
 |};
 
 class ViewModesView extends PureComponent<Props, {}> {
@@ -21,6 +26,15 @@ class ViewModesView extends PureComponent<Props, {}> {
   };
 
   handleChange = (mode: ViewMode) => {
+    // If we switch back from any arbitrary mode we stop recording.
+    // This prevents that when the user switches back to any flightmode,
+    // a new node is instantly created at the screens center.
+    if (
+      constants.MODES_ARBITRARY.includes(this.props.viewMode) &&
+      mode === constants.MODE_PLANE_TRACING
+    ) {
+      this.props.onChangeFlightmodeRecording(false);
+    }
     Store.dispatch(setViewModeAction(mode));
 
     // Unfortunately, antd doesn't provide the original event here
@@ -62,4 +76,13 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ViewModesView);
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  onChangeFlightmodeRecording(value) {
+    dispatch(setFlightmodeRecordingAction(value));
+  },
+});
+
+export default connect<Props, {||}, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(ViewModesView);

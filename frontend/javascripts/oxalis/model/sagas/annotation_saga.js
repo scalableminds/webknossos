@@ -1,6 +1,13 @@
 // @flow
 import { type EditableAnnotation, editAnnotation } from "admin/admin_rest_api";
-import { type Saga, _takeEvery, call, select, take } from "oxalis/model/sagas/effect-generators";
+import {
+  type Saga,
+  _takeEvery,
+  call,
+  select,
+  take,
+  _delay,
+} from "oxalis/model/sagas/effect-generators";
 import {
   isVolumeTracingDisallowed,
   isSegmentationMissingForZoomstep,
@@ -54,6 +61,8 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
   }
 
   yield* take("WK_READY");
+  // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
+  yield _delay(5000);
   yield* warnMaybe();
 
   while (true) {

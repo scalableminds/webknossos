@@ -10,9 +10,14 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "admin/api_flow_types";
-import type { Settings, DataLayerType } from "oxalis/store";
+import type { Settings, DataLayerType, DatasetConfiguration } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import constants, {
+  ViewModeValues,
+  type Vector3,
+  Vector3Indicies,
+  type ViewMode,
+} from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
@@ -308,6 +313,22 @@ const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
 export function getResolutionByMax(dataset: APIDataset, maxDim: number): Vector3 {
   const keyedResolutionsByMax = keyResolutionsByMax(dataset);
   return keyedResolutionsByMax[maxDim];
+}
+
+export function isLayerVisible(
+  dataset: APIDataset,
+  layerName: string,
+  datasetConfiguration: DatasetConfiguration,
+  viewMode: ViewMode,
+): boolean {
+  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
+  if (isSegmentationLayer(dataset, layerName)) {
+    // Segmentation layers are only displayed in plane mode for now
+    return datasetConfiguration.segmentationOpacity > 0 && isPlaneMode;
+  } else {
+    const layerConfig = datasetConfiguration.layers[layerName];
+    return !layerConfig.isDisabled && layerConfig.alpha > 0;
+  }
 }
 
 export default {};

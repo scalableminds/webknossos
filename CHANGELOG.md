@@ -34,7 +34,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Volume tasks with only one finished instance can now be viewed as CompoundTask. [#4167](https://github.com/scalableminds/webknossos/pull/4167)
 - Added the possibility to remove isosurfaces from the 3D viewport by CTRL+Clicking it. [#4185](https://github.com/scalableminds/webknossos/pull/4185)
-- Added support for int16 and uint16 color layers. [#4152](https://github.com/scalableminds/webknossos/pull/4152)
+- Added support for `int16` and `uint16` color layers. [#4152](https://github.com/scalableminds/webknossos/pull/4152)
+- Added histogram support for `int16` and `uint16` color layers. Additionally refined support for `float` color layers. [#4195](https://github.com/scalableminds/webknossos/pull/4195)
 
 ### Changed
 - Volume project download zips are reorganized to contain a zipfile for each annotation (that in turn contains a data.zip and an nml file). [#4167](https://github.com/scalableminds/webknossos/pull/4167)

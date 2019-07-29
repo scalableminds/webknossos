@@ -33,6 +33,7 @@ import * as Utils from "libs/utils";
 import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import { type ElementClass } from "admin/api_flow_types";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean,
@@ -68,18 +69,6 @@ function getPackingDegreeLookup(): { [string]: number } {
   const layersObject = _.keyBy(layers, layer => sanitizeName(layer.name));
   return _.mapValues(layersObject, layer =>
     getPackingDegree(getByteCount(dataset, layer.name), getElementClass(dataset, layer.name)),
-  );
-}
-
-function getFloatLayerLookup(): { [string]: false | { min: number, max: number } } {
-  const { dataset } = Store.getState();
-  const colorLayers = getColorLayers(dataset);
-  // keyBy the sanitized layer name as the lookup will happen in the shader using the sanitized layer name
-  const colorLayersObject = _.keyBy(colorLayers, layer => sanitizeName(layer.name));
-  // TODO: Use the correct float value range (from histogram)
-  return _.mapValues(
-    colorLayersObject,
-    layer => getElementClass(dataset, layer.name) === "float" && { min: 0, max: 255 },
   );
 }
 
@@ -421,7 +410,7 @@ class PlaneMaterialFactory {
             const settings = layerSettings[colorLayer.name];
             if (settings != null) {
               const name = sanitizeName(colorLayer.name);
-              this.updateUniformsForLayer(settings, name);
+              this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
             }
           }
           // TODO: Needed?
@@ -521,10 +510,16 @@ class PlaneMaterialFactory {
     this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
-  updateUniformsForLayer(settings: DatasetLayerConfiguration, name: string): void {
+  updateUniformsForLayer(
+    settings: DatasetLayerConfiguration,
+    name: string,
+    elementClass: ElementClass,
+  ): void {
     const { alpha, intensityRange, isDisabled } = settings;
-    this.uniforms[`${name}_min`].value = intensityRange[0] / 255;
-    this.uniforms[`${name}_max`].value = intensityRange[1] / 255;
+    // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
+    const divisor = elementClass === "float" ? 1 : 255;
+    this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+    this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
 
     if (settings.color != null) {
@@ -540,7 +535,6 @@ class PlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = getColorLayerNames();
     const packingDegreeLookup = getPackingDegreeLookup();
-    const floatLayerLookup = getFloatLayerLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
@@ -555,7 +549,6 @@ class PlaneMaterialFactory {
     const code = getMainFragmentShader({
       colorLayerNames,
       packingDegreeLookup,
-      floatLayerLookup,
       hasSegmentation,
       segmentationName,
       isMappingSupported: Model.isMappingSupported,

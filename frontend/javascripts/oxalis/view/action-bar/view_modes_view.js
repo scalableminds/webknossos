@@ -1,6 +1,7 @@
 // @flow
 import { Select } from "antd";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
 
 import {
@@ -14,11 +15,16 @@ import constants, { type ViewMode } from "oxalis/constants";
 
 const { Option } = Select;
 
-type Props = {|
+type StateProps = {|
   viewMode: ViewMode,
   allowedModes: Array<AllowedMode>,
+|};
+
+type DispatchProps = {|
   onChangeFlightmodeRecording: boolean => void,
 |};
+
+type Props = {| ...StateProps, ...DispatchProps |};
 
 class ViewModesView extends PureComponent<Props, {}> {
   blurElement = (event: SyntheticInputEvent<>) => {
@@ -69,18 +75,18 @@ class ViewModesView extends PureComponent<Props, {}> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Props {
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  onChangeFlightmodeRecording(value: boolean) {
+    dispatch(setFlightmodeRecordingAction(value));
+  },
+});
+
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     allowedModes: state.tracing.restrictions.allowedModes,
   };
 }
-
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  onChangeFlightmodeRecording(value) {
-    dispatch(setFlightmodeRecordingAction(value));
-  },
-});
 
 export default connect<Props, {||}, _, _, _, _>(
   mapStateToProps,

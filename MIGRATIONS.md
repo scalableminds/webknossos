@@ -11,6 +11,10 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - 
 
 
+## [19.08.0](https://github.com/scalableminds/webknossos/releases/tag/19.08.0) - 2019-07-29
+No migrations necessary.
+
+
 ## [19.07.0](https://github.com/scalableminds/webknossos/releases/tag/19.07.0) - 2019-07-01
 ### Postgres Evolutions:
 - [043-annotationsettings-allowedMagnifications.sql](conf/evolutions/043-annotationsettings-allowedMagnifications.sql)

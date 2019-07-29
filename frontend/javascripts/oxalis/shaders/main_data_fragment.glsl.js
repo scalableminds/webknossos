@@ -23,7 +23,6 @@ import compileShader from "./shader_module_system";
 type Params = {|
   colorLayerNames: string[],
   packingDegreeLookup: { [string]: number },
-  floatLayerLookup: { [string]: false | { min: number, max: number } },
   hasSegmentation: boolean,
   segmentationName: string,
   isMappingSupported: boolean,
@@ -161,8 +160,6 @@ void main() {
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
-  vec3 range  = vec3(0.0);
-  vec3 rangeMin  = vec3(0.0);
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
 
     // Get grayscale value for <%= name %>
@@ -177,22 +174,14 @@ void main() {
         fallbackGray
       ).xyz;
 
-    <% if (floatLayerLookup[name]) { %>
-      // Adjust the value range of the float values
-      range = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].max - floatLayerLookup[name].min) %>);
-      rangeMin = vec3(<%= formatNumberAsGLSLFloat(floatLayerLookup[name].min) %>);
-      color_value = (color_value + rangeMin) / range;
-    <% } else { %>
-
-      <% if (packingDegreeLookup[name] === 2.0) { %>
-        // Workaround for 16-bit color layers
-        color_value = vec3(color_value.g * 255.0 + color_value.r);
-      <% } %>
-      // Keep the color in bounds of min and max
-      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-      // Scale interval between min and max up to interval from 0 to 255
-      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
+    <% if (packingDegreeLookup[name] === 2.0) { %>
+      // Workaround for 16-bit color layers
+      color_value = vec3(color_value.g * 256.0 + color_value.r);
     <% } %>
+    // Keep the color in bounds of min and max
+    color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+    // Scale the color value according to the histogram settings
+    color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
 
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;

@@ -409,8 +409,8 @@ class BinaryDataController @Inject()(
           AllowRemoteOrigin {
             for {
               (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              (histogram, count) <- findDataService.createHistogram(dataSource, dataLayer)
-            } yield Ok(Json.obj("histogram" -> histogram, "count" -> count))
+              listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer)
+            } yield Ok(Json.toJson(listOfHistograms))
           }
         }
   }

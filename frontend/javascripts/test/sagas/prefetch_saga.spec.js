@@ -24,51 +24,47 @@ const {
 test("Prefetch saga should trigger prefetching for the correct view mode", t => {
   // These are not the correct layers (those should be data_layer instances)
   // but they are sufficient to test this saga
-  const colorLayers = DATASET.dataSource.dataLayers.filter(layer => layer.category === "color");
+  const allLayers = DATASET.dataSource.dataLayers;
   const previousProperties = {};
   const saga = triggerDataPrefetching(previousProperties);
   saga.next(); // select viewMode
-  saga.next(constants.MODE_ARBITRARY);
+  saga.next(constants.MODE_ARBITRARY); // Model.getAllLayers
+  saga.next(allLayers); // shouldPrefetchForDataLayer
   expectValueDeepEqual(
     t,
-    saga.next(colorLayers),
-    call(prefetchForArbitraryMode, colorLayers[0], previousProperties),
+    saga.next(true),
+    call(prefetchForArbitraryMode, allLayers[0], previousProperties),
   );
-  t.is(saga.next().done, true);
+  // Saga should not be over as there are multiple layers
+  t.is(saga.next().done, false);
 });
 
 test("Prefetch saga should not prefetch segmentation if it is not visible", t => {
   // These are not the correct layers (those should be data_layer instances)
   // but they are sufficient to test this saga
   const allLayers = DATASET.dataSource.dataLayers;
-  const colorLayers = DATASET.dataSource.dataLayers.filter(layer => layer.category === "color");
   const previousProperties = {};
+  const viewMode = constants.MODE_PLANE_TRACING;
   const saga = triggerDataPrefetching(previousProperties);
   saga.next(); // select viewMode
-  expectValueDeepEqual(
-    t,
-    saga.next(constants.MODE_PLANE_TRACING),
-    call([Model, Model.getAllLayers]),
-  );
+  expectValueDeepEqual(t, saga.next(viewMode), call([Model, Model.getAllLayers]));
 
-  let shouldPrefetchSaga = execCall(t, saga.next(allLayers)); // shouldPrefetchForDataLayer
-  shouldPrefetchSaga.next();
-  shouldPrefetchSaga.next(0); // select segmentationOpacity
-  const shouldPrefetchColorLayer = shouldPrefetchSaga.next(false).value;
-  // The color layer should be prefetched, although the segmentationOpacity is 0
-  t.is(shouldPrefetchColorLayer, true);
+  let shouldPrefetchSaga = execCall(t, saga.next(allLayers, viewMode)); // shouldPrefetchForDataLayer
+  shouldPrefetchSaga.next(); // isLayerVisible
+  const shouldPrefetchDataLayer = shouldPrefetchSaga.next(true).value;
+  // The color layer should be prefetched, because it is visible
+  t.is(shouldPrefetchDataLayer, true);
   expectValueDeepEqual(
     t,
-    saga.next(shouldPrefetchColorLayer),
-    call(prefetchForPlaneMode, colorLayers[0], previousProperties),
+    saga.next(shouldPrefetchDataLayer),
+    call(prefetchForPlaneMode, allLayers[0], previousProperties),
   );
 
   shouldPrefetchSaga = execCall(t, saga.next()); // shouldPrefetchForDataLayer
-  shouldPrefetchSaga.next();
-  shouldPrefetchSaga.next(0); // select segmentationOpacity
-  const shouldPrefetchSegmentationLayer = shouldPrefetchSaga.next(true).value;
+  shouldPrefetchSaga.next(); // isLayerVisible
+  const shouldPrefetchSegmentationLayer = shouldPrefetchSaga.next(false).value;
   // The segmentation layer should not be prefetched because it is not visible
   t.is(shouldPrefetchSegmentationLayer, false);
-  // So the saga should be over afterwards, no prefetch call
+  // The saga should be over afterwards - no prefetch call
   t.is(saga.next(shouldPrefetchSegmentationLayer).done, true);
 });

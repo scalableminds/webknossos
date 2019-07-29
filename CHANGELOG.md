@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Changed
--
+- Each of the  columns of the dataset table and explorative annotations table in the dashboard now have an individual fixed width, so the tables become scrollable on smaller screens. [#4207](https://github.com/scalableminds/webknossos/pull/4207)
 
 ### Fixed
 - Data for disabled or invisible layers will no longer be downloaded, saving bandwidth and speeding up webKnossos in general. [#4202](https://github.com/scalableminds/webknossos/pull/4202)

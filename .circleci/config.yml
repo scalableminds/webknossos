@@ -1,7 +1,8 @@
 version: 2
 jobs:
   build_test_deploy:
-    machine: true
+    machine:
+      image: ubuntu-1604:201903-01
     environment:
       USER_NAME: circleci
       USER_UID: 1001

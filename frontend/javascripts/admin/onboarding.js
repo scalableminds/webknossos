@@ -19,8 +19,8 @@ import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
-import type { OxalisState } from "oxalis/store";
-import { getOrganizations, getDatastores } from "admin/admin_rest_api";
+import Store, { type OxalisState } from "oxalis/store";
+import { getOrganizationNames, getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -172,8 +172,7 @@ export class InviteUsersPopover extends React.Component<{
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
   const [organizations, setOrganizations] = useState([]);
-  const fetchOrganizations = async () =>
-    setOrganizations((await getOrganizations()).map(org => org.name));
+  const fetchOrganizations = async () => setOrganizations(await getOrganizationNames());
   useEffect(() => {
     fetchOrganizations();
   }, []);
@@ -324,7 +323,15 @@ class OnboardingView extends React.PureComponent<Props, State> {
         hidePrivacyStatement
         createOrganization
         organizationName={this.state.organizationName}
-        onRegistered={this.advanceStep}
+        onRegistered={() => {
+          // Update the entered organization to the normalized name of the organization received by the backend.
+          // This is needed for further requests.
+          const { activeUser } = Store.getState();
+          if (activeUser) {
+            this.setState({ organizationName: activeUser.organization });
+          }
+          this.advanceStep();
+        }}
         confirmLabel="Create account"
         tryAutoLogin
       />

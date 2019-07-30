@@ -156,7 +156,7 @@
     "javascript-natural-sort": "^0.7.1",
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
-    "lodash": "^4.13.1",
+    "lodash": "^4.17.13",
     "memoize-one": "^4.0.2",
     "mini-css-extract-plugin": "^0.4.0",
     "mjs": "^1.0.0",

@@ -104,7 +104,7 @@ volumetracing.zip # A ZIP file containing the volume annotation
 └─ volumetracing.nml # Tracing metadata NML file
 ```
 
-After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB and other languages]([GitHub - scalableminds/webknossos-wrap: Efficient 3D volume storage format for webKnossos and analyses]https://github.com/scalableminds/webknossos-wrap). 
+After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB and other languages](https://github.com/scalableminds/webknossos-wrap/). 
 
 ## Hybrid Annotations
 

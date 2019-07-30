@@ -13,7 +13,7 @@ jobs:
           name: "Custom environment variables"
           command: |
             echo "export NORMALIZED_BRANCH=${CIRCLE_BRANCH//[\/-]/_}" >> $BASH_ENV
-            echo "export DOCKER_TAG=${NORMALIZED_BRANCH}__${CIRCLE_BUILD_NUM}" >> $BASH_ENV
+            echo "export DOCKER_TAG=${CIRCLE_BRANCH//[\/-]/_}__${CIRCLE_BUILD_NUM}" >> $BASH_ENV
       - run:
           name: "Custom environment variables"
           command: |

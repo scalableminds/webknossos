@@ -13,6 +13,7 @@ import window, { document, location } from "libs/window";
 
 // No more than MAX_NUM_ERRORS will be reported to airbrake
 const MAX_NUM_ERRORS = 50;
+const BLACKLISTED_ERROR_MESSAGES = ["ResizeObserver loop limit exceeded"];
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
@@ -116,6 +117,10 @@ class ErrorHandling {
     });
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
+      if (BLACKLISTED_ERROR_MESSAGES.indexOf(message) > -1) {
+        console.warn("Ignoring", message);
+        return;
+      }
       if (error == null) {
         // older browsers don't deliver the error parameter
         error = new Error(message);

@@ -8,9 +8,12 @@ import { connect } from "react-redux";
 import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { type ElementClass } from "admin/api_flow_types";
+import type { APIHistogramData } from "admin/api_flow_types";
+import { type Vector3 } from "oxalis/constants";
+import { roundTo } from "libs/utils";
 
 type OwnProps = {|
-  data: Array<number>,
+  data: APIHistogramData,
   layerName: string,
   min: number,
   max: number,
@@ -25,11 +28,12 @@ type HistogramProps = {
   ) => void,
 };
 
+const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
-  return ["int8", "uint8"].includes(elementClass);
+  return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
 
 class Histogram extends React.PureComponent<HistogramProps> {
@@ -44,8 +48,6 @@ class Histogram extends React.PureComponent<HistogramProps> {
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
-    ctx.fillStyle = "rgba(24, 144, 255, 0.1)";
-    ctx.strokeStyle = "#1890ff";
     this.updateCanvas();
   }
 
@@ -53,32 +55,51 @@ class Histogram extends React.PureComponent<HistogramProps> {
     this.updateCanvas();
   }
 
-  updateCanvas = () => {
+  updateCanvas() {
     if (this.canvasRef == null) {
       return;
     }
-    const { min, max, data } = this.props;
     const ctx = this.canvasRef.getContext("2d");
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const maxValue = Math.max(...data);
-    const downscaledData = this.props.data.map(value =>
+    const { data } = this.props;
+    // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other
+    const maxValue = Math.max(...data.map(({ elementCounts }) => Math.max(...elementCounts)));
+    for (const [i, histogram] of data.entries()) {
+      const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      this.drawHistogram(ctx, histogram, maxValue, color);
+    }
+  }
+
+  drawHistogram = (
+    ctx: CanvasRenderingContext2D,
+    histogram: $ElementType<APIHistogramData, number>,
+    maxValue: number,
+    color: Vector3,
+  ) => {
+    const { min, max } = this.props;
+    const { min: minRange, max: maxRange, elementCounts } = histogram;
+    const rangeLength = maxRange - minRange;
+    ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
+    ctx.strokeStyle = `rgba(${color.join(",")})`;
+    const downscaledData = elementCounts.map(value =>
       value > 0 ? (Math.log(value) / Math.log(maxValue)) * canvasHeight : 0,
     );
     const activeRegion = new Path2D();
     ctx.beginPath();
     ctx.moveTo(0, downscaledData[0]);
-    activeRegion.moveTo((min / downscaledData.length) * canvasWidth, 0);
+    activeRegion.moveTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     for (let i = 0; i < downscaledData.length; i++) {
       const x = (i / downscaledData.length) * canvasWidth;
-      if (i >= min && i <= max) {
+      const xValue = minRange + i * (rangeLength / downscaledData.length);
+      if (xValue >= min && xValue <= max) {
         activeRegion.lineTo(x, downscaledData[i]);
       }
       ctx.lineTo(x, downscaledData[i]);
     }
     ctx.stroke();
     ctx.closePath();
-    activeRegion.lineTo((max / downscaledData.length) * canvasWidth, 0);
-    activeRegion.lineTo((min / downscaledData.length) * canvasWidth, 0);
+    activeRegion.lineTo(((max - minRange) / rangeLength) * canvasWidth, 0);
+    activeRegion.lineTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -93,7 +114,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
   };
 
   render() {
-    const { min, max } = this.props;
+    const { min, max, data } = this.props;
+    const { min: minRange, max: maxRange } = data[0];
     return (
       <React.Fragment>
         <canvas
@@ -105,13 +127,15 @@ class Histogram extends React.PureComponent<HistogramProps> {
         />
         <Slider
           value={[min, max]}
-          min={0}
-          max={255}
+          min={minRange}
+          max={maxRange}
           range
-          defaultValue={[0, this.props.data.length - 1]}
+          defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
           style={{ width: 300, margin: 0, marginBottom: 18 }}
+          step={(maxRange - minRange) / 255}
+          tipFormatter={val => roundTo(val, 2).toString()}
         />
       </React.Fragment>
     );

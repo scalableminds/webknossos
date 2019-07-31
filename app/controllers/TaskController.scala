@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicit
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.NmlService
-import models.annotation.{AnnotationDAO, AnnotationService, TracingStoreService}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, TracingStoreRpcClient, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
@@ -107,23 +107,65 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
     } yield result
   }
 
-  def duplicateAllBaseTracings(taskParametersList: List[TaskParameters], organizationId: ObjectId)(
-      implicit ctx: DBAccessContext) =
+  def duplicateAllBaseTracings(taskParametersList: List[TaskParameters],
+                               organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider) =
     Fox.serialCombined(taskParametersList)(
       params =>
         Fox
-          .runOptional(params.baseAnnotation)(duplicateBaseTracings(_, params.dataSet, organizationId))
+          .runOptional(params.baseAnnotation)(duplicateBaseTracings(_, params, organizationId))
           .map(baseAnnotation => params.copy(baseAnnotation = baseAnnotation)))
 
-  def duplicateBaseTracings(baseAnnotation: BaseAnnotation, dataSet: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext) =
+  private def duplicateSkeletonTracingOrCreateSkeletonTracingBase(
+      annotation: Annotation,
+      params: TaskParameters,
+      tracingStoreClient: TracingStoreRpcClient): Fox[String] =
+    annotation.skeletonTracingId
+      .map(id => tracingStoreClient.duplicateSkeletonTracing(id))
+      .getOrElse(
+        tracingStoreClient.saveSkeletonTracing(
+          annotationService.createSkeletonTracingBase(
+            params.dataSet,
+            params.boundingBox,
+            params.editPosition,
+            params.editRotation
+          )))
+
+  private def duplicateVolumeTracingOrCreateVolumeTracingBase(
+      annotation: Annotation,
+      params: TaskParameters,
+      tracingStoreClient: TracingStoreRpcClient,
+      organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
+    annotation.volumeTracingId
+      .map(id => tracingStoreClient.duplicateVolumeTracing(id))
+      .getOrElse(
+        annotationService
+          .createVolumeTracingBase(
+            params.dataSet,
+            organizationId,
+            params.boundingBox,
+            params.editPosition,
+            params.editRotation,
+            false
+          )
+          .flatMap(tracingStoreClient.saveVolumeTracing(_)))
+
+  def duplicateBaseTracings(baseAnnotation: BaseAnnotation, taskParameters: TaskParameters, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider) =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSet, organizationId)
+      taskTypeIdValidated <- ObjectId.parse(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+      dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.parse(baseAnnotation.baseId)
       annotation <- annotationDAO.findOne(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newSkeletonId <- Fox.runOptional(annotation.skeletonTracingId)(tracingStoreClient.duplicateSkeletonTracing(_))
-      newVolumeId <- Fox.runOptional(annotation.volumeTracingId)(tracingStoreClient.duplicateVolumeTracing)
+      newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
+        duplicateSkeletonTracingOrCreateSkeletonTracingBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
+      else Fox.successful(None)
+      newVolumeId <- if (taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid)
+        duplicateVolumeTracingOrCreateVolumeTracingBase(annotation, taskParameters, tracingStoreClient, organizationId)
+          .map(Some(_))
+      else Fox.successful(None)
     } yield BaseAnnotation(baseAnnotationIdValidated.id, newSkeletonId, newVolumeId)
 
   def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(

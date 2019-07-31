@@ -919,14 +919,13 @@ export async function getHistogramForLayer(
   datasetId: APIDatasetId,
   layerName: string,
 ): Promise<APIHistogramData> {
-  const { count, histogram } = await doWithToken(token =>
+  return doWithToken(token =>
     Request.receiveJSON(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/histogram?token=${token}`,
     ),
   );
-  return { count, histogram };
 }
 
 export async function getMappingsForDatasetLayer(

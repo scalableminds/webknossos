@@ -144,13 +144,27 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): ?TreeGroup
   return foundGroup;
 }
 
-export function forEachTreeNode(groups: Array<TreeNode>, callback: TreeNode => *) {
+export function forEachTreeNode(groups: Array<TreeNode>, callback: TreeNode => void) {
   for (const group of groups) {
     callback(group);
     if (group.children) {
       forEachTreeNode(group.children, callback);
     }
   }
+}
+
+export function anySatisfyDeep(groups: Array<TreeNode>, testFunction: TreeNode => boolean) {
+  for (const group of groups) {
+    if (testFunction(group)) {
+      return true;
+    }
+    if (group.children) {
+      if (anySatisfyDeep(group.children, testFunction)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 export function findTreeNode(groups: Array<TreeNode>, id: number, callback: TreeNode => *) {

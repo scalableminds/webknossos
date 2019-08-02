@@ -3,9 +3,11 @@ import NanoEvents from "nanoevents";
 import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setStoredLayoutsAction } from "oxalis/model/actions/ui_actions";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
+import UserLocalStorage from "libs/user_local_storage";
 
 import getDefaultLayouts, {
   currentLayoutVersion,
@@ -25,12 +27,12 @@ const localStorageKeys = {
 };
 
 function readStoredLayoutConfigs() {
-  const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
+  const storedLayoutVersion = UserLocalStorage.getItem(localStorageKeys.currentLayoutVersion);
   const defaultLayoutConfig = getCurrentDefaultLayoutConfig();
   if (getIsInIframe() || !storedLayoutVersion || disableLayoutPersistance) {
     return defaultLayoutConfig;
   }
-  const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
+  const layoutString = UserLocalStorage.getItem(localStorageKeys.goldenWkLayouts);
   if (!layoutString) {
     return defaultLayoutConfig;
   }
@@ -80,7 +82,14 @@ function readStoredLayoutConfigs() {
   return defaultLayoutConfig;
 }
 
-Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
+listenToStoreProperty(
+  storeState => storeState.activeUser,
+  () => {
+    console.log("Dispatching setStoredLayoutsAction");
+    Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
+  },
+  true,
+);
 
 function persistLayoutConfigs() {
   if (getIsInIframe()) {
@@ -88,8 +97,11 @@ function persistLayoutConfigs() {
     return;
   }
   const { storedLayouts } = Store.getState().uiInformation;
-  localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
-  localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
+  UserLocalStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
+  UserLocalStorage.setItem(
+    localStorageKeys.currentLayoutVersion,
+    JSON.stringify(currentLayoutVersion),
+  );
 }
 
 layoutEmitter.on("resetLayout", (layoutKey: LayoutKeys, activeLayout: string) => {

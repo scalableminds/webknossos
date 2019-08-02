@@ -14,6 +14,7 @@ import Persistence from "libs/persistence";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import * as Utils from "libs/utils";
 import renderIndependently from "libs/render_independently";
+import UserLocalStorage from "libs/user_local_storage";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -46,13 +47,13 @@ const persistence: Persistence<State> = new Persistence(
 export const wkDatasetsCacheKey = "wk.datasets";
 export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
-    localStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
+    UserLocalStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
   },
   get(): APIMaybeUnimportedDataset[] {
-    return Utils.parseAsMaybe(localStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
+    return Utils.parseAsMaybe(UserLocalStorage.getItem(wkDatasetsCacheKey)).getOrElse([]);
   },
   clear(): void {
-    localStorage.removeItem(wkDatasetsCacheKey);
+    UserLocalStorage.removeItem(wkDatasetsCacheKey);
   },
 };
 

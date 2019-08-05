@@ -1,6 +1,6 @@
 // @flow
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { OxalisState, DataLayerType } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import {
   PrefetchStrategySkeleton,
@@ -13,14 +13,10 @@ import {
   getRequestLogZoomStep,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
-  isSegmentationLayer,
-  getResolutions,
-  getColorLayers,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getResolutions, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import constants, { type Vector3 } from "oxalis/constants";
+import constants, { type Vector3, type ViewMode } from "oxalis/constants";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -42,31 +38,25 @@ export function* watchDataRelevantChanges(): Saga<void> {
   );
 }
 
-function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
-  const segmentationOpacity = yield* select(
-    state => state.datasetConfiguration.segmentationOpacity,
+function* shouldPrefetchForDataLayer(dataLayer: DataLayer, viewMode: ViewMode): Saga<boolean> {
+  // There is no need to prefetch data for layers that are not visible
+  return yield* select(state =>
+    isLayerVisible(state.dataset, dataLayer.name, state.datasetConfiguration, viewMode),
   );
-  const isSegmentationVisible = segmentationOpacity !== 0;
-  const isSegmentation = yield* select(state => isSegmentationLayer(state.dataset, dataLayer.name));
-  // There is no need to prefetch data for segmentation layers that are not visible
-  return !isSegmentation || isSegmentationVisible;
 }
 
 export function* triggerDataPrefetching(previousProperties: Object): Saga<void> {
-  const currentViewMode = yield* select(state => state.temporaryConfiguration.viewMode);
-  const isPlaneMode = constants.MODES_PLANE.includes(currentViewMode);
+  const viewMode = yield* select(state => state.temporaryConfiguration.viewMode);
+  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
 
-  if (isPlaneMode) {
-    const dataLayers = yield* call([Model, Model.getAllLayers]);
-    for (const dataLayer of dataLayers) {
-      if (yield* call(shouldPrefetchForDataLayer, dataLayer)) {
+  const dataLayers = yield* call([Model, Model.getAllLayers]);
+  for (const dataLayer of dataLayers) {
+    if (yield* call(shouldPrefetchForDataLayer, dataLayer, viewMode)) {
+      if (isPlaneMode) {
         yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
+      } else {
+        yield* call(prefetchForArbitraryMode, dataLayer, previousProperties);
       }
-    }
-  } else {
-    const dataLayers = yield* select(state => getColorLayers(state.dataset));
-    for (const colorLayer of dataLayers) {
-      yield* call(prefetchForArbitraryMode, colorLayer, previousProperties);
     }
   }
 }
@@ -154,7 +144,7 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
 }
 
 export function* prefetchForArbitraryMode(
-  layer: DataLayerType,
+  layer: DataLayer,
   previousProperties: Object,
 ): Saga<void> {
   const position = yield* select(state => getPosition(state.flycam));

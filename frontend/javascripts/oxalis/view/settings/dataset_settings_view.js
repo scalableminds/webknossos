@@ -133,9 +133,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   ) => {
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { alpha, color, intensityRange, isDisabled } = layer;
-    let histogram = new Array(256).fill(0);
+    let histograms = [
+      { numberOfElements: 256, elementCounts: new Array(256).fill(0), min: 0, max: 255 },
+    ];
     if (this.state.histograms && this.state.histograms[layerName]) {
-      ({ histogram } = this.state.histograms[layerName]);
+      histograms = this.state.histograms[layerName];
     }
 
     return (
@@ -171,29 +173,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {this.getFindDataButton(layerName, isDisabled)}
           </Col>
         </Row>
-        {!isDisabled && isHistogramSupported(elementClass) ? (
-          <Histogram
-            data={histogram}
-            min={intensityRange[0]}
-            max={intensityRange[1]}
-            layerName={layerName}
-          />
-        ) : null}
-        <NumberSliderSetting
-          label="Opacity"
-          min={0}
-          max={100}
-          value={alpha}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
-          disabled={isDisabled}
-        />
-        <ColorSetting
-          label="Color"
-          value={Utils.rgbToHex(color)}
-          onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-          className="ant-btn"
-          disabled={isDisabled}
-        />
+        {isDisabled ? null : (
+          <React.Fragment>
+            {isHistogramSupported(elementClass) ? (
+              <Histogram
+                data={histograms}
+                min={intensityRange[0]}
+                max={intensityRange[1]}
+                layerName={layerName}
+              />
+            ) : null}
+            <NumberSliderSetting
+              label="Opacity"
+              min={0}
+              max={100}
+              value={alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+            />
+            <ColorSetting
+              label="Color"
+              value={Utils.rgbToHex(color)}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+              className="ant-btn"
+            />
+          </React.Fragment>
+        )}
         {!isLastLayer && <Divider />}
       </div>
     );

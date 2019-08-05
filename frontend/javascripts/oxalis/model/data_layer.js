@@ -64,7 +64,6 @@ class DataLayer {
       this.cube,
       textureWidth,
       dataTextureCount,
-      isSegmentation,
     );
   }
 

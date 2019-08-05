@@ -33,8 +33,8 @@ class ViewModesView extends PureComponent<Props, {}> {
 
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
-    // This prevents that when the user switches back to any flightmode,
-    // a new node is instantly created at the screens center.
+    // This prevents that when the user switches back to any arbitrary mode,
+    // a new node is instantly created at the screen's center.
     if (
       constants.MODES_ARBITRARY.includes(this.props.viewMode) &&
       mode === constants.MODE_PLANE_TRACING

@@ -26,8 +26,10 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
   chartScrollElement: ?HTMLElement = null;
 
   componentWillUnmount() {
-    if (this.chartScrollElement) {
-      this.chartScrollElement.removeEventListener("mousemove", this.adjustTooltipPosition);
+    const { chartScrollElement } = this;
+    if (chartScrollElement) {
+      chartScrollElement.removeEventListener("mousemove", this.adjustTooltipPosition);
+      chartScrollElement.removeEventListener("mouseleave", this.removeTooltip);
     }
   }
 
@@ -38,11 +40,21 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
    * coordinates of the mouse of the whole window (clientX/Y) and manipulating the style of the tooltip directly. */
   applyTooltipPositioningFix = () => {
     // TimeLineGraph is the name of the chart given by the library.
-    this.chartScrollElement = document.querySelector(
+    const chartScrollElement = document.querySelector(
       "#TimeLineGraph > div > div:first-child > div",
     );
-    if (this.chartScrollElement) {
-      this.chartScrollElement.addEventListener("mousemove", this.adjustTooltipPosition);
+    if (chartScrollElement) {
+      chartScrollElement.addEventListener("mousemove", this.adjustTooltipPosition);
+      chartScrollElement.addEventListener("mouseleave", this.removeTooltip);
+    }
+    this.chartScrollElement = chartScrollElement;
+  };
+
+  removeTooltip = () => {
+    const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
+    if (tooltip != null && tooltip.parentElement != null) {
+      console.log("remove");
+      tooltip.parentElement.removeChild(tooltip);
     }
   };
 

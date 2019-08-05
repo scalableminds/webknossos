@@ -29,7 +29,6 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     const { chartScrollElement } = this;
     if (chartScrollElement) {
       chartScrollElement.removeEventListener("mousemove", this.adjustTooltipPosition);
-      chartScrollElement.removeEventListener("mouseleave", this.removeTooltip);
     }
   }
 
@@ -45,22 +44,26 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     );
     if (chartScrollElement) {
       chartScrollElement.addEventListener("mousemove", this.adjustTooltipPosition);
-      chartScrollElement.addEventListener("mouseleave", this.removeTooltip);
     }
     this.chartScrollElement = chartScrollElement;
-  };
-
-  removeTooltip = () => {
-    const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
-    if (tooltip != null && tooltip.parentElement != null) {
-      console.log("remove");
-      tooltip.parentElement.removeChild(tooltip);
-    }
   };
 
   adjustTooltipPosition = (event: MouseEvent) => {
     const tooltip = document.getElementsByClassName("google-visualization-tooltip")[0];
     if (tooltip != null) {
+      const { target } = event;
+      const isTargetNotATimeEntry =
+        // $FlowIgnore
+        (target != null && target.tagName != null && target.tagName !== "rect") ||
+        // $FlowIgnore
+        target.getAttribute("stroke") !== "none";
+      if (isTargetNotATimeEntry) {
+        if (tooltip.parentElement) {
+          tooltip.parentElement.removeChild(tooltip);
+        }
+        return;
+      }
+
       const { clientX, clientY } = event;
       const [clientWidth, clientHeight] = getWindowBounds();
       const { offsetHeight, offsetWidth } = tooltip;

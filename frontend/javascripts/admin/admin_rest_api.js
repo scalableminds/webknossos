@@ -61,6 +61,7 @@ import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { saveAs } from "file-saver";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -649,11 +650,41 @@ export async function downloadNml(
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
   const win = window.open("about:blank", "_blank");
-  win.document.body.innerHTML = messages["download.wait"];
+  // win.document.body.innerHTML = messages["download.wait"];
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
   win.location.href = downloadUrl;
-  win.document.body.innerHTML = messages["download.close_window"];
+  /* win.document.innerHTML = `<head>
+  <script type='text/javascript'>
+      alert('opened');
+      window.onload = () => alert('loaded');
+    </script>
+    </head>
+    <body>
+    ${messages["download.close_window"]}
+  </body>
+   `; */
+  // win.document.body.innerHTML = messages["download.close_window"];
+
+  win.onblur = () => win.close();
+  win.onunload = () => alert("Download window closed");
+  win.onload = () => alert("Finished loading");
+}
+
+export async function downloadNml2(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  versions?: Versions = {},
+) {
+  const possibleVersionString = Object.entries(versions)
+    // $FlowFixMe Flow returns val as mixed here die to the use of Object.entries
+    .map(([key, val]) => `${key}Version=${val}`)
+    .join("&");
+
+  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
+  // eventuell hier noch optionen rein
+  const nml = await Request.receiveArraybuffer(downloadUrl);
+  saveAs(nml, "nml_name.nml");
 }
 
 // ### Datasets

@@ -20,6 +20,7 @@ import {
   removeTreesAndTransform,
   forEachTreeNode,
   findTreeNode,
+  anySatisfyDeep,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -185,6 +186,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const collapseAllGroups = groupTree => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
       findTreeNode(copyOfGroupTree, groupId, item => {
+        // If we expand all subgroups, the group itself should be expanded.
+        if (expanded) {
+          item.expanded = expanded;
+        }
         forEachTreeNode(item.children, node => {
           if (node.type === TYPE_GROUP) {
             node.expanded = expanded;
@@ -267,13 +272,15 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // The root group must not be removed or renamed
     const { id, name } = node;
     const isRoot = id === MISSING_GROUP_ID;
-    const hasExpandedSubgroup = node.children.some(
+    const hasExpandedSubgroup = anySatisfyDeep(
+      node.children,
       child => child.expanded && child.type === TYPE_GROUP,
     );
-    const hasCollapsedSubgroup = node.children.some(
+    const hasCollapsedSubgroup = anySatisfyDeep(
+      node.children,
       child => !child.expanded && child.type === TYPE_GROUP,
     );
-    const hasSubgroup = node.children.some(child => child.type === TYPE_GROUP);
+    const hasSubgroup = anySatisfyDeep(node.children, child => child.type === TYPE_GROUP);
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
         <Menu.Item key="create" groupId={id}>

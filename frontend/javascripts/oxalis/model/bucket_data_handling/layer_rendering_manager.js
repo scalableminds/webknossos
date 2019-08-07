@@ -18,6 +18,7 @@ import {
   getResolutions,
   getByteCount,
   getElementClass,
+  isLayerVisible,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -101,7 +102,7 @@ export default class LayerRenderingManager {
   lastAreas: OrthoViewMap<Area>;
   lastZoomedMatrix: M4x4;
   lastViewMode: ViewMode;
-  lastIsInvisible: boolean;
+  lastIsVisible: boolean;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   cube: DataCube;
@@ -110,7 +111,6 @@ export default class LayerRenderingManager {
   cachedAnchorPoint: Vector4 = [0, 0, 0, 0];
 
   name: string;
-  isSegmentation: boolean;
   needsRefresh: boolean = false;
   currentBucketPickerTick: number = 0;
   latestTaskExecutor: LatestTaskExecutor<Function> = new LatestTaskExecutor();
@@ -121,14 +121,12 @@ export default class LayerRenderingManager {
     cube: DataCube,
     textureWidth: number,
     dataTextureCount: number,
-    isSegmentation: boolean,
   ) {
     this.name = name;
     this.pullQueue = pullQueue;
     this.cube = cube;
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
-    this.isSegmentation = isSegmentation;
   }
 
   refresh() {
@@ -180,8 +178,7 @@ export default class LayerRenderingManager {
     const { viewMode } = state.temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = state.userConfiguration;
-    const isInvisible =
-      this.isSegmentation && (datasetConfiguration.segmentationOpacity === 0 || isArbitrary);
+    const isVisible = isLayerVisible(dataset, this.name, datasetConfiguration, viewMode);
     if (
       isAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
@@ -189,7 +186,7 @@ export default class LayerRenderingManager {
       (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
       viewMode !== this.lastViewMode ||
       sphericalCapRadius !== this.lastSphericalCapRadius ||
-      isInvisible !== this.lastIsInvisible ||
+      isVisible !== this.lastIsVisible ||
       this.needsRefresh
     ) {
       this.lastSubBucketLocality = subBucketLocality;
@@ -197,14 +194,14 @@ export default class LayerRenderingManager {
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
       this.lastSphericalCapRadius = sphericalCapRadius;
-      this.lastIsInvisible = isInvisible;
+      this.lastIsVisible = isVisible;
       this.needsRefresh = false;
       this.currentBucketPickerTick++;
       this.pullQueue.clear();
 
       let pickingPromise: Promise<ArrayBuffer> = Promise.resolve(dummyBuffer);
 
-      if (!isInvisible) {
+      if (isVisible) {
         const { initializedGpuFactor } = state.temporaryConfiguration.gpuSetup;
         pickingPromise = this.latestTaskExecutor.schedule(() =>
           asyncBucketPick(

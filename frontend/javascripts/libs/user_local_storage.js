@@ -17,12 +17,12 @@ const UserLocalStorage = {
     return localStorage.setItem(prefixKey(key), value);
   },
 
-  clear(): void {
-    localStorage.clear();
+  removeItem(key: string): void {
+    return localStorage.removeItem(prefixKey(key));
   },
 
-  removeItem(key: string): void {
-    return localStorage.removeItem(key);
+  clear(): void {
+    localStorage.clear();
   },
 };
 

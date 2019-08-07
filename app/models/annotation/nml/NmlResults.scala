@@ -29,6 +29,8 @@ object NmlResults extends LazyLogging {
       case _ =>
         Fox.failure("Couldn’t parse file")
     }
+
+    def withName(name: String): NmlParseResult = this
   }
 
   case class NmlParseSuccess(fileName: String,
@@ -44,6 +46,8 @@ object NmlResults extends LazyLogging {
     override def description = Some(_description)
 
     override def organizationName: Option[String] = organizationNameOpt
+
+    override def withName(name: String): NmlParseResult = this.copy(fileName=name)
   }
 
   case class NmlParseFailure(fileName: String, error: String) extends NmlParseResult {

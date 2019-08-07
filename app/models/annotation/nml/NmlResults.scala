@@ -47,7 +47,7 @@ object NmlResults extends LazyLogging {
 
     override def organizationName: Option[String] = organizationNameOpt
 
-    override def withName(name: String): NmlParseResult = this.copy(fileName=name)
+    override def withName(name: String): NmlParseResult = this.copy(fileName = name)
   }
 
   case class NmlParseFailure(fileName: String, error: String) extends NmlParseResult {

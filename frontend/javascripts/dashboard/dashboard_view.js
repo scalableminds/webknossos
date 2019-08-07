@@ -14,6 +14,7 @@ import DatasetView from "dashboard/dataset_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
+import UserLocalStorage from "libs/user_local_storage";
 
 const { TabPane } = Tabs;
 
@@ -45,7 +46,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
 
     const validTabKeys = this.getValidTabKeys();
     const { initialTabKey } = this.props;
-    const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
+    const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
     const defaultTabKey = this.props.isAdminView ? "tasks" : "datasets";
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
@@ -132,7 +133,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
       const url = tabKeyToURLMap[activeTabKey];
       if (url) {
-        localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+        UserLocalStorage.setItem("lastUsedDashboardTab", activeTabKey);
         if (!this.props.isAdminView) {
           this.props.history.push(`/dashboard/${url}`);
         }

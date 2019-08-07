@@ -85,7 +85,6 @@ function readStoredLayoutConfigs() {
 listenToStoreProperty(
   storeState => storeState.activeUser,
   () => {
-    console.log("Dispatching setStoredLayoutsAction");
     Store.dispatch(setStoredLayoutsAction(readStoredLayoutConfigs()));
   },
   true,

@@ -7,12 +7,12 @@ Feel free to [drop us a line](mailto:hello@scalableminds.com) or [create a Pull 
 
 ## Create a webknossos.org Account
 Signing up to [webknossos.org](https://webknossos.org) is the easiest way to get started with webKnossos.
-Go to [webknossos.org](https://webknossos.org) and create an account in the "Demo Lab" organization.
+Go to [webknossos.org](https://webknossos.org) and create an account in the "Demo_Lab" organization.
 Please make sure to enter a correct email address.
 After you have entered your details, the account will be automatically activated.
 
 You can also choose to create a new organization which will allow you to upload private datasets at a later point in time and manage other users.
-For testing purposes, the "Demo Lab" organization is preferred.
+For testing purposes, the "Demo_Lab" organization is preferred.
 
 Accounts on [webknossos.org](https://webknossos.org) are free to use with published datasets.
 If you wish to use private datasets, there is a fee that covers storage costs and also provides support services such as dataset conversions.
@@ -25,6 +25,8 @@ On [webknossos.org](https://webknossos.org) there are already a bunch of publish
 To get started, navigate to the `Datasets` tab on your [dashboard](./dashboard.md).
 There, you find a list of all available datasets.
 Click on the dataset name to open the dataset.
+
+![The list of available datasets](./images/getting_started-datasest.png)
 
 Once you are in the view mode, you are presented with three orthongonal views and one 3D viewport.
 You can use the following shortcuts to navigate the data.
@@ -39,14 +41,16 @@ See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) 
 | O or ALT + Mousewheel         | Zoom Out                        |
 | Scroll Mousewheel (3D View)   | Zoom In And Out                 |
 | Right Click Drag (3D View)    | Rotate 3D View                  |
-| .                             | Toggle Viewport Maximization    |
+| . (Dot)                       | Toggle Viewport Maximization    |
 
 You can also change the size of the viewports to see more details in your data and customize your layout.
 
+![Explore datasets with customized viewport layouts](./images/getting_started-viewports.png)
+
 
 ## Your First Annotation
-To get started with your first annotation, navigate to the `Datasets` tab on your [dashboard](./dashboard.md).
-Identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation.
+Click the `Create Tracing` button from the view mode of a dataset to create your first annotation.
+Alternatively, navigate to the `Datasets` tab on your [dashboard](./dashboard.md), identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation.
 webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons.
 
 Drag the mouse while pressing the left mouse button to navigate the dataset.

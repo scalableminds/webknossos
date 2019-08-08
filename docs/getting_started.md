@@ -26,7 +26,7 @@ To get started, navigate to the `Datasets` tab on your [dashboard](./dashboard.m
 There, you find a list of all available datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](./images/getting_started-datasest.png)
+![The list of available datasets](./images/getting_started-datasets.png)
 
 Once you are in the view mode, you are presented with three orthongonal views and one 3D viewport.
 You can use the following shortcuts to navigate the data.

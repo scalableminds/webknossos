@@ -30,6 +30,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import UserLocalStorage from "libs/user_local_storage";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -99,7 +100,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   restoreSearchTags() {
     // restore the search query tags from the last session
-    const searchTagString = localStorage.getItem("lastDashboardSearchTags");
+    const searchTagString = UserLocalStorage.getItem("lastDashboardSearchTags");
     if (searchTagString) {
       try {
         const searchTags = JSON.parse(searchTagString);
@@ -297,7 +298,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (!this.state.tags.includes(tag)) {
       this.setState(prevState => {
         const newTags = update(prevState.tags, { $push: [tag] });
-        localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+        UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
         return { tags: newTags };
       });
     }
@@ -306,7 +307,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   removeTagFromSearch = (tag: string): void => {
     this.setState(prevState => {
       const newTags = prevState.tags.filter(t => t !== tag);
-      localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+      UserLocalStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
       return { tags: newTags };
     });
   };

@@ -1,6 +1,6 @@
 # Tooling
 
-We provide a number of free, open-source libraries and tools alongside webKnossos to aid with data analytics. 
+We provide a number of free, open-source libraries and tools alongside webKnossos to aid with data analysis. 
 
 
 ## webKnossos Wrap Data Format (wkw)

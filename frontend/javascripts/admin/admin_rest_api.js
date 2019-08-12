@@ -646,7 +646,7 @@ export async function downloadNml(
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
-    // $FlowFixMe Flow returns val as mixed here die to the use of Object.entries
+    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;

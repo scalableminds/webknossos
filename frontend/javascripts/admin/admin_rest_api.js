@@ -646,45 +646,25 @@ export async function downloadNml(
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
-    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
-    .map(([key, val]) => `${key}Version=${val}`)
-    .join("&");
-  const win = window.open("about:blank", "_blank");
-  // win.document.body.innerHTML = messages["download.wait"];
-
-  const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
-  win.location.href = downloadUrl;
-  /* win.document.innerHTML = `<head>
-  <script type='text/javascript'>
-      alert('opened');
-      window.onload = () => alert('loaded');
-    </script>
-    </head>
-    <body>
-    ${messages["download.close_window"]}
-  </body>
-   `; */
-  // win.document.body.innerHTML = messages["download.close_window"];
-
-  win.onblur = () => win.close();
-  win.onunload = () => alert("Download window closed");
-  win.onload = () => alert("Finished loading");
-}
-
-export async function downloadNml2(
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  versions?: Versions = {},
-) {
-  const possibleVersionString = Object.entries(versions)
     // $FlowFixMe Flow returns val as mixed here die to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
-
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
-  // eventuell hier noch optionen rein
-  const nml = await Request.receiveArraybuffer(downloadUrl);
-  saveAs(nml, "nml_name.nml");
+  const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
+    extractHeaders: true,
+  });
+  // Using headers to determine the name and type of the file.
+  const contentDispositionHeader = headers["content-disposition"];
+  const filenameStartingPart = 'filename="';
+  const filenameStartingPosition =
+    contentDispositionHeader.indexOf(filenameStartingPart) + filenameStartingPart.length;
+  const filenameEndPosition = contentDispositionHeader.indexOf('"', filenameStartingPosition + 1);
+  const filename = contentDispositionHeader.substring(
+    filenameStartingPosition,
+    filenameEndPosition,
+  );
+  const blob = new Blob([buffer], { type: headers["content-type"] });
+  saveAs(blob, filename);
 }
 
 // ### Datasets

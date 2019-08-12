@@ -23,6 +23,7 @@
 * [Changelog](../CHANGELOG.md)
 * [Migration Guide](../MIGRATIONS.md)
 * [Publications](./publications.md) 
+* [Tooling](./tooling.md) 
 
 ## Getting Help
 * [Community Support](https://support.webknossos.org)

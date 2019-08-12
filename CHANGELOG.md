@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Data for disabled or invisible layers will no longer be downloaded, saving bandwidth and speeding up webKnossos in general. [#4202](https://github.com/scalableminds/webknossos/pull/4202)
+- Fixed tooltip not disappearing in the statistics view in certain circumstances. [#4219](https://github.com/scalableminds/webknossos/pull/4219)
 
 ### Removed
 -
@@ -47,6 +48,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a bug where for uint24 color layers, scrambled data was shown for missing magnifications. [#4188](https://github.com/scalableminds/webknossos/pull/4188)
 - Fixed a bug where collapsing/expanding all tree groups would trigger when toggling a single tree [#4178](https://github.com/scalableminds/webknossos/pull/4178)
 - Fixed performance for time logging. [#4196](https://github.com/scalableminds/webknossos/pull/4196)
+- Personal tracing layouts are saved per user now. [#4217](https://github.com/scalableminds/webknossos/pull/4217)
 - Fixed an error message when quickly resizing the browser window. [#4205](https://github.com/scalableminds/webknossos/pull/4205)
 
 ### Removed

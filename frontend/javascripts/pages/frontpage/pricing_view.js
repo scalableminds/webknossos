@@ -317,6 +317,25 @@ const PricingView = () => (
             to learn more.
           </p>
         </FAQItem>
+        <FAQItem title="Can I further analyze my annotations outside of webKnossos with Python/MATLAB?">
+          <p>
+            Yes, you can. webKnossos allows the download and export of skeleton annotations as NML
+            files and segmentations/volume data as binary/wkw files.{" "}
+          </p>
+          <p>
+            See the{" "}
+            <a href="https://docs.webknossos.org/reference/tooling">documentation on Tooling</a> for
+            a recommendation of Python/MATLAB libaries to work with the webKnossos standard formats.
+          </p>
+          <p>
+            We offer a Custom hosting plan, where datasets can be directly stored in your data
+            center.{" "}
+            <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
+              Get in touch with us
+            </a>{" "}
+            to learn more.
+          </p>
+        </FAQItem>
         <FAQItem title="Where is my data stored?">
           <p>
             All datasets uploaded on webknossos.org are stored securely in the scalable minds cloud

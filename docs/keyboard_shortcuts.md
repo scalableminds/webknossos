@@ -9,12 +9,10 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | CTRL / CMD + Z                | Undo                                        |
 | CTRL / CMD + Y                | Redo                                        |
 | CTRL / CMD + S                | Save                                        |
-| P                             | Select Previous Comment                     |
-| N                             | Select Next Comment                         |
-| K                             | Scale Up Viewport Size                      |
-| L                             | Scale Down Viewport Size                    |
 | I or ALT + Mousewheel         | Zoom In                                     |
 | O or ALT + Mousewheel         | Zoom Out                                    |
+| P                             | Select Previous Comment                     |
+| N                             | Select Next Comment                         |
 | 3                             | Toggle Segmentation Opacity                 |
 | H                             | Increase the Move Value                     |
 | G                             | Decrease the Move Value                     |
@@ -37,9 +35,9 @@ Find all available keyboard shortcuts for webKnossos listed below.
 
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
-| Left Mouse Drag or Arrow Keys | Move                                        |
-| Alt + Mouse Move              | Move                                        |
-| SPACE                         | Move Forward by a Single Slice              |
+| Left Mouse Drag or Arrow Keys | Move In-Plane                               |
+| Alt + Mouse Move              | Move In-Plane                               |
+| SPACE                         | Move Forward                                |
 | Scroll Mousewheel (3D View)   | Zoom In And Out                             |
 | Right Click Drag (3D View)    | Rotate 3D View                              |
 | Right Click                   | Create New Node                             |

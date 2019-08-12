@@ -95,7 +95,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     ) {
       lastActiveLayout = props.storedLayouts.LastActiveLayouts[layoutType];
     } else {
-      // added as a valide fallback when there are no stored last active layouts
+      // added as a fallback when there are no stored last active layouts
       const firstStoredLayout = Object.keys(props.storedLayouts[layoutType])[0];
       lastActiveLayout = firstStoredLayout;
     }

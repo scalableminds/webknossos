@@ -42,7 +42,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
       if (filename.toString.endsWith(".nml")) {
         val result = extractFromNml(file, filename.toString)
-        parseResults ::= result
+        parseResults ::= result.withName(name)
       } else {
         val tempFile = temporaryFileCreator.create(filename.toString)
         Files.copy(file, tempFile.path, StandardCopyOption.REPLACE_EXISTING)

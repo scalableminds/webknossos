@@ -274,13 +274,13 @@ jobs:
 
 workflows:
   version: 2
-  default:
+  circleci_build:
     jobs:
       - build_test_deploy:
           filters:
             tags:
               only: /.*/
-  nightly:
+  circleci_nightly:
     jobs:
       - nightly
     triggers:

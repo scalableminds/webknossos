@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Divider, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -159,42 +159,49 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getLayerSettingsHeader = (
     isDisabled: boolean,
     isColorLayer: boolean,
-    layerName: string,
+    layerName: ?string,
     elementClass: string,
-  ) => (
-    <Row>
-      <Col span={24}>
-        {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */
-        this.getEnableDisableLayerSwitch(
-          isDisabled,
-          isColorLayer
-            ? (val, event) => {
-                if (!event.ctrlKey) {
-                  this.props.onChangeLayer(layerName, "isDisabled", !val);
-                  return;
-                }
-                // If ctrl is pressed, toggle between "all layers visible" and
-                // "only selected layer visible".
-                // Phillip fragen wie das gehandhabt werden soll
-                if (this.isLayerExclusivelyVisible(layerName)) {
-                  this.setVisibilityForAllLayers(true);
-                } else {
-                  this.setVisibilityForAllLayers(false);
-                  this.props.onChangeLayer(layerName, "isDisabled", false);
-                }
-              }
-            : () => console.log("segmentation visibitly toggled"),
-        )}
-        <span style={{ fontWeight: 700 }}>{layerName}</span>
-        <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
-        {this.getFindDataButton(layerName, isDisabled)}
-      </Col>
-    </Row>
-  );
+  ) => {
+    let onChange = () => {};
+    if (isColorLayer && layerName != null) {
+      const layerNameFixed: string = layerName;
+      onChange = (value, event) => {
+        if (!event.ctrlKey) {
+          this.props.onChangeLayer(layerNameFixed, "isDisabled", !value);
+          return;
+        }
+        // If ctrl is pressed, toggle between "all layers visible" and
+        // "only selected layer visible".
+        // Phillip fragen wie das gehandhabt werden soll
+        if (this.isLayerExclusivelyVisible(layerNameFixed)) {
+          this.setVisibilityForAllLayers(true);
+        } else {
+          this.setVisibilityForAllLayers(false);
+          this.props.onChangeLayer(layerNameFixed, "isDisabled", false);
+        }
+      };
+    } else if (!isColorLayer) {
+      onChange = value => {
+        console.log("received value from segemntation visibility switch", !value);
+        this.props.onChange("isSegmentationDisabled", !value);
+      };
+    }
+    return (
+      <Row>
+        <Col span={24}>
+          {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */
+          this.getEnableDisableLayerSwitch(isDisabled, onChange)}
+          <span style={{ fontWeight: 700 }}>{layerName}</span>
+          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
+          {layerName != null ? this.getFindDataButton(layerName, isDisabled) : null}
+        </Col>
+      </Row>
+    );
+  };
 
   getLayerSettings = (
-    layerName?: string,
-    layer?: DatasetLayerConfiguration,
+    layerName: ?string,
+    layer: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
     // Ensure that a color layer needs a layer and a layer name
@@ -204,18 +211,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     if (!isColorLayer && !layerName) {
       layerName = "segmentation";
     }
-    let elementClass = isColorLayer ? "color" : "segmentation";
-    if (layerName) {
+    let elementClass = "uint8";
+    if (layerName != null) {
       elementClass = getElementClass(this.props.dataset, layerName);
     }
-    const isDisabled = isColorLayer ? layer.isDisabled : false;
+    const isDisabled =
+      isColorLayer && layer != null
+        ? layer.isDisabled
+        : this.props.datasetConfiguration.isSegmentationDisabled;
 
     return (
       <div key={layerName}>
         {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
         {isDisabled ? null : (
           <React.Fragment>
-            {isHistogramSupported(elementClass) ? this.getHistogram(layerName, layer) : null}
+            {isHistogramSupported(elementClass) && layerName != null && layer != null
+              ? this.getHistogram(layerName, layer)
+              : null}
             <NumberSliderSetting
               label="Opacity"
               min={0}
@@ -314,15 +326,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   render() {
     const { layers } = this.props.datasetConfiguration;
     const colorSettings = Object.entries(layers).map(entry => {
-      // $FlowFixMe Object.entries returns mixed for Flow
       const [layerName, layer] = entry;
+      // $FlowFixMe Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, true);
     });
     const hasInvisibleLayers =
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null;
-
+      ) != null || this.props.datasetConfiguration.isSegmentationDisabled;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">

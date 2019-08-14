@@ -126,79 +126,135 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     });
   };
 
-  getColorSettings = (
-    [layerName, layer]: [string, DatasetLayerConfiguration],
-    layerIndex: number,
-    isLastLayer: boolean,
-  ) => {
-    const elementClass = getElementClass(this.props.dataset, layerName);
-    const { alpha, color, intensityRange, isDisabled } = layer;
+  getEnableDisableLayerSwitch = (
+    isDisabled: boolean,
+    onChange: (boolean, SyntheticMouseEvent<>) => void,
+  ) => (
+    <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
+      {/* This div is necessary for the tooltip to be displayed */}
+      <div style={{ display: "inline-block", marginRight: 8 }}>
+        <Switch size="small" onChange={onChange} checked={!isDisabled} />
+      </div>
+    </Tooltip>
+  );
+
+  getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
+    const { intensityRange } = layer;
     let histograms = [
       { numberOfElements: 256, elementCounts: new Array(256).fill(0), min: 0, max: 255 },
     ];
     if (this.state.histograms && this.state.histograms[layerName]) {
       histograms = this.state.histograms[layerName];
     }
+    return (
+      <Histogram
+        data={histograms}
+        min={intensityRange[0]}
+        max={intensityRange[1]}
+        layerName={layerName}
+      />
+    );
+  };
+
+  getLayerSettingsHeader = (
+    isDisabled: boolean,
+    isColorLayer: boolean,
+    layerName: string,
+    elementClass: string,
+  ) => (
+    <Row>
+      <Col span={24}>
+        {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */
+        this.getEnableDisableLayerSwitch(
+          isDisabled,
+          isColorLayer
+            ? (val, event) => {
+                if (!event.ctrlKey) {
+                  this.props.onChangeLayer(layerName, "isDisabled", !val);
+                  return;
+                }
+                // If ctrl is pressed, toggle between "all layers visible" and
+                // "only selected layer visible".
+                // Phillip fragen wie das gehandhabt werden soll
+                if (this.isLayerExclusivelyVisible(layerName)) {
+                  this.setVisibilityForAllLayers(true);
+                } else {
+                  this.setVisibilityForAllLayers(false);
+                  this.props.onChangeLayer(layerName, "isDisabled", false);
+                }
+              }
+            : () => console.log("segmentation visibitly toggled"),
+        )}
+        <span style={{ fontWeight: 700 }}>{layerName}</span>
+        <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
+        {this.getFindDataButton(layerName, isDisabled)}
+      </Col>
+    </Row>
+  );
+
+  getLayerSettings = (
+    layerName?: string,
+    layer?: DatasetLayerConfiguration,
+    isColorLayer: boolean = true,
+  ) => {
+    // Ensure that a color layer needs a layer and a layer name
+    if (isColorLayer && (!layerName || !layer)) {
+      return null;
+    }
+    if (!isColorLayer && !layerName) {
+      layerName = "segmentation";
+    }
+    let elementClass = isColorLayer ? "color" : "segmentation";
+    if (layerName) {
+      elementClass = getElementClass(this.props.dataset, layerName);
+    }
+    const isDisabled = isColorLayer ? layer.isDisabled : false;
 
     return (
       <div key={layerName}>
-        <Row>
-          <Col span={24}>
-            {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */}
-            <Tooltip title={isDisabled ? "Enable" : "Disable"} placement="top">
-              {/* This div is necessary for the tooltip to be displayed */}
-              <div style={{ display: "inline-block", marginRight: 8 }}>
-                <Switch
-                  size="small"
-                  onChange={(val, event) => {
-                    if (!event.ctrlKey) {
-                      this.props.onChangeLayer(layerName, "isDisabled", !val);
-                      return;
-                    }
-                    // If ctrl is pressed, toggle between "all layers visible" and
-                    // "only selected layer visible".
-                    if (this.isLayerExclusivelyVisible(layerName)) {
-                      this.setVisibilityForAllLayers(true);
-                    } else {
-                      this.setVisibilityForAllLayers(false);
-                      this.props.onChangeLayer(layerName, "isDisabled", false);
-                    }
-                  }}
-                  checked={!isDisabled}
-                />
-              </div>
-            </Tooltip>
-            <span style={{ fontWeight: 700 }}>{layerName}</span>
-            <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
-            {this.getFindDataButton(layerName, isDisabled)}
-          </Col>
-        </Row>
+        {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
         {isDisabled ? null : (
           <React.Fragment>
-            {isHistogramSupported(elementClass) ? (
-              <Histogram
-                data={histograms}
-                min={intensityRange[0]}
-                max={intensityRange[1]}
-                layerName={layerName}
-              />
-            ) : null}
+            {isHistogramSupported(elementClass) ? this.getHistogram(layerName, layer) : null}
             <NumberSliderSetting
               label="Opacity"
               min={0}
               max={100}
-              value={alpha}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
+              value={
+                isColorLayer && layer != null
+                  ? layer.alpha
+                  : this.props.datasetConfiguration.segmentationOpacity
+              }
+              onChange={
+                isColorLayer && layerName != null
+                  ? _.partial(this.props.onChangeLayer, layerName, "alpha")
+                  : _.partial(this.props.onChange, "segmentationOpacity")
+              }
             />
-            <ColorSetting
-              label="Color"
-              value={Utils.rgbToHex(color)}
-              onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-              className="ant-btn"
-            />
+            {isColorLayer && layer != null ? (
+              <ColorSetting
+                label="Color"
+                value={Utils.rgbToHex(layer.color)}
+                onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+                className="ant-btn"
+              />
+            ) : (
+              <SwitchSetting
+                label={settings.highlightHoveredCellId}
+                value={this.props.datasetConfiguration.highlightHoveredCellId}
+                onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
+              />
+            )}
+            {(!isColorLayer && this.props.controlMode === ControlModeEnum.VIEW) ||
+            window.allowIsosurfaces ? (
+              <SwitchSetting
+                label="Render Isosurfaces (Beta)"
+                value={this.props.datasetConfiguration.renderIsosurfaces}
+                onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
+              />
+            ) : null}
           </React.Fragment>
         )}
-        {!isLastLayer && <Divider />}
       </div>
     );
   };
@@ -240,55 +296,28 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getSegmentationPanel() {
     const segmentation = Model.getSegmentationLayer();
     const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    return (
-      <Panel header="Segmentation" key="2">
-        {segmentationLayerName ? (
-          <div style={{ overflow: "auto" }}>
-            {this.getFindDataButton(segmentationLayerName, false)}
-          </div>
-        ) : null}
-        <NumberSliderSetting
-          label={settings.segmentationOpacity}
-          min={0}
-          max={100}
-          value={this.props.datasetConfiguration.segmentationOpacity}
-          onChange={_.partial(this.props.onChange, "segmentationOpacity")}
-        />
-        <SwitchSetting
-          label={settings.highlightHoveredCellId}
-          value={this.props.datasetConfiguration.highlightHoveredCellId}
-          onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
-        />
-
-        {this.props.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces ? (
-          <SwitchSetting
-            label="Render Isosurfaces (Beta)"
-            value={this.props.datasetConfiguration.renderIsosurfaces}
-            onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
-          />
-        ) : null}
-      </Panel>
-    );
+    return this.getLayerSettings(segmentationLayerName, null, false);
   }
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>
     hasInvisibleLayers ? (
       <span>
-        Color Layers
+        Layers
         <Tooltip title="Not all layers are currently visible.">
           <Icon type="exclamation-circle-o" style={{ marginLeft: 16, color: "coral" }} />
         </Tooltip>
       </span>
     ) : (
-      "Color Layers"
+      "Layers"
     );
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const colorSettings = Object.entries(layers).map((entry, index) =>
+    const colorSettings = Object.entries(layers).map(entry => {
       // $FlowFixMe Object.entries returns mixed for Flow
-      this.getColorSettings(entry, index, index === _.size(layers) - 1),
-    );
+      const [layerName, layer] = entry;
+      return this.getLayerSettings(layerName, layer, true);
+    });
     const hasInvisibleLayers =
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
@@ -298,8 +327,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
           {colorSettings}
+          {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
         </Panel>
-        {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
             label={

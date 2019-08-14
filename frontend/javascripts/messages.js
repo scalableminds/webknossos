@@ -17,7 +17,7 @@ export const settings = {
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   quality: "Quality",
-  segmentationOpacity: "Segmentation Opacity",
+  segmentationOpacity: "Opacity",
   highlightHoveredCellId: "Highlight Hovered Cells",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",

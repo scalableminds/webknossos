@@ -18,16 +18,18 @@ class AddNewLayoutModal extends React.PureComponent<Props, State> {
     value: "",
   };
 
+  onConfirm = () => {
+    const value = this.state.value;
+    this.setState({ value: "" });
+    this.props.addLayout(value);
+  };
+
   render() {
     return (
       <Modal
         title="Add a new layout"
         visible={this.props.visible}
-        onOk={() => {
-          const value = this.state.value;
-          this.setState({ value: "" });
-          this.props.addLayout(value);
-        }}
+        onOk={this.onConfirm}
         onCancel={this.props.onCancel}
       >
         <Input
@@ -36,6 +38,8 @@ class AddNewLayoutModal extends React.PureComponent<Props, State> {
           onChange={evt => {
             this.setState({ value: evt.target.value });
           }}
+          autoFocus
+          onPressEnter={this.onConfirm}
         />
       </Modal>
     );

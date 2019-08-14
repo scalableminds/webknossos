@@ -61,6 +61,7 @@ import Toast, { type Message } from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
+import { saveAs } from "file-saver";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -648,12 +649,22 @@ export async function downloadNml(
     // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
-  const win = window.open("about:blank", "_blank");
-  win.document.body.innerHTML = messages["download.wait"];
-
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
-  win.location.href = downloadUrl;
-  win.document.body.innerHTML = messages["download.close_window"];
+  const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
+    extractHeaders: true,
+  });
+  // Using headers to determine the name and type of the file.
+  const contentDispositionHeader = headers["content-disposition"];
+  const filenameStartingPart = 'filename="';
+  const filenameStartingPosition =
+    contentDispositionHeader.indexOf(filenameStartingPart) + filenameStartingPart.length;
+  const filenameEndPosition = contentDispositionHeader.indexOf('"', filenameStartingPosition + 1);
+  const filename = contentDispositionHeader.substring(
+    filenameStartingPosition,
+    filenameEndPosition,
+  );
+  const blob = new Blob([buffer], { type: headers["content-type"] });
+  saveAs(blob, filename);
 }
 
 // ### Datasets

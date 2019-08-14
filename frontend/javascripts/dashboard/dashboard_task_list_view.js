@@ -8,7 +8,7 @@ import * as React from "react";
 import classNames from "classnames";
 
 import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
-import { AsyncButton } from "components/async_clickables";
+import { AsyncButton, AsyncLink } from "components/async_clickables";
 import type { OxalisState } from "oxalis/store";
 import {
   deleteAnnotation,
@@ -16,6 +16,7 @@ import {
   finishTask,
   requestTask,
   peekNextTasks,
+  downloadNml,
 } from "admin/admin_rest_api";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { handleGenericError } from "libs/error_handling";
@@ -124,7 +125,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     this.state.showFinishedTasks ? this.state.finishedModeState : this.state.unfinishedModeState;
 
   setCurrentModeState = modeShape => {
-    const showFinishedTasks = this.state.showFinishedTasks;
+    const { showFinishedTasks } = this.state;
     this.setState(prevState => {
       const newSubState = {
         ...prevState[showFinishedTasks ? "finishedModeState" : "unfinishedModeState"],
@@ -253,10 +254,10 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         ) : null}
         {isAdmin ? (
           <div>
-            <a href={`/api/annotations/Task/${annotation.id}/download`}>
+            <AsyncLink href="#" onClick={() => downloadNml(annotation.id, "Task")}>
               <Icon type="download" />
               Download
-            </a>
+            </AsyncLink>
             <br />
             <a href="#" onClick={() => this.resetTask(annotation)}>
               <Icon type="rollback" />

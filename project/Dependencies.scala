@@ -4,7 +4,6 @@ import sbt._
 object Dependencies {
   val akkaVersion = "2.5.22"
   val log4jVersion = "2.0-beta9"
-  val newrelicVersion = "3.44.1"
   val webknossosWrapVersion = "1.1.7"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
@@ -23,8 +22,6 @@ object Dependencies {
   val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
   val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion
-  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
-  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
   val playFramework = "com.typesafe.play" %% "play" % "2.7.1"
   val playJson = "com.typesafe.play" %% "play-json" % "2.7.2"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
@@ -73,8 +70,6 @@ object Dependencies {
     akkaLogging,
     ehcache,
     gson,
-    newrelic,
-    newrelicApi,
     webknossosWrap,
     playIterateesStreams,
     filters,

@@ -1,17 +1,18 @@
 import akka.actor.{ActorSystem, Props}
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import io.apigee.trireme.core.NodeEnvironment
 import java.io.File
+
 import javax.inject._
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
+import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
 
@@ -27,7 +28,8 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
-                        sqlClient: SQLClient)
+                        sqlClient: SQLClient,
+                        slackNotificationService: SlackNotificationService)
     extends LazyLogging {
 
   logger.info("Executing Startup")
@@ -84,7 +86,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
     } else {
       val errorMessage = new StringBuilder("Database schema does not fit to schema.sql!")
       logger.error(errorMessage.toString())
-      NewRelic.noticeError(errorMessage.toString())
+      slackNotificationService.noticeError(errorMessage.toString())
     }
 
     Future.successful(())

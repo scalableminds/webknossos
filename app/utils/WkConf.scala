@@ -118,6 +118,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val environment = get[String]("airbrake.environment")
   }
 
+  object SlackNotifications {
+    val url = get[String]("slackNotifications.url")
+  }
+
   object Google {
     object Analytics {
       val trackingID = get[String]("google.analytics.trackingID")

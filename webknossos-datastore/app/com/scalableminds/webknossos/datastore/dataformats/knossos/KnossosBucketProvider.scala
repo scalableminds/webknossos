@@ -5,7 +5,6 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Path
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer

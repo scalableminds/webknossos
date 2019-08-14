@@ -152,6 +152,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Name"
           dataIndex="name"
           key="name"
+          width={280}
           sorter={Utils.localeCompareBy(typeHint, dataset => dataset.name)}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
@@ -181,7 +182,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Scale & Extent"
           dataIndex="scale"
           key="scale"
-          width={220}
+          width={280}
           render={(__, dataset: APIMaybeUnimportedDataset) =>
             `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
           }
@@ -229,6 +230,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         />
         <Column
           title="Data Layers"
+          width={200}
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) =>
             (dataset.dataSource.dataLayers || []).map(layer => (

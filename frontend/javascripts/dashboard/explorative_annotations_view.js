@@ -6,16 +6,18 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
+import { AsyncLink } from "components/async_clickables";
 
 import type { APIAnnotationCompact } from "admin/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
-import { AsyncLink } from "components/async_clickables";
+
 import {
   finishAllAnnotations,
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
   getCompactAnnotations,
+  downloadNml,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
@@ -117,7 +119,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       : this.state.unarchivedModeState;
 
   setModeState = modeShape => {
-    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
         ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
@@ -130,7 +132,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   setOppositeModeState = modeShape => {
-    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
         ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
@@ -218,10 +220,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             Trace
           </Link>
           <br />
-          <a href={`/api/annotations/${typ}/${id}/download`}>
+          <AsyncLink href="#" onClick={() => downloadNml(id, typ)}>
             <Icon type="download" />
             Download
-          </a>
+          </AsyncLink>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <Icon type="inbox" />

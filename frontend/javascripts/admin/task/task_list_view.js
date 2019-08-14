@@ -6,8 +6,9 @@ import Clipboard from "clipboard-js";
 import React from "react";
 import _ from "lodash";
 
+import { AsyncLink } from "components/async_clickables";
 import type { APITask, APITaskType } from "admin/api_flow_types";
-import { deleteTask, getTasks } from "admin/admin_rest_api";
+import { deleteTask, getTasks, downloadNml } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -297,13 +298,14 @@ class TaskListView extends React.PureComponent<Props, State> {
                   </a>
                   <br />
                   {task.status.finished > 0 ? (
-                    <a
-                      href={`/api/annotations/CompoundTask/${task.id}/download`}
+                    <AsyncLink
+                      href="#"
+                      onClick={() => downloadNml(task.id, "CompoundTask")}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />
                       Download
-                    </a>
+                    </AsyncLink>
                   ) : null}
                   <br />
                   <a href="#" onClick={_.partial(this.deleteTask, task)}>

@@ -6,12 +6,14 @@ import React from "react";
 import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";
+import { AsyncLink } from "components/async_clickables";
 import {
   getAnnotationsForTask,
   reOpenAnnotation,
   finishAnnotation,
   resetAnnotation,
   deleteAnnotation,
+  downloadNml,
 } from "admin/admin_rest_api";
 import FormattedDate from "components/formatted_date";
 import Toast from "libs/toast";
@@ -125,10 +127,10 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           Transfer
         </Item>
         <Item key={`${annotation.id}-download`}>
-          <a href={`/api/annotations/Task/${annotation.id}/download`}>
+          <AsyncLink href="#" onClick={() => downloadNml(annotation.id, "Task")}>
             <Icon type="download" />
             Download
-          </a>
+          </AsyncLink>
         </Item>
         <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
           <Icon type="rollback" />

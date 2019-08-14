@@ -56,9 +56,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
-  private def nameForNmls(fileNames: Seq[String]) =
+  private def nameForUploaded(fileNames: Seq[String]) =
     if (fileNames.size == 1)
-      fileNames.headOption.map(_.replaceAll("\\.nml$", ""))
+      fileNames.headOption.map(_.replaceAll("\\.nml$", "").replaceAll("\\.zip", ""))
     else
       None
 
@@ -99,10 +99,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         request.body.dataParts("createGroupForEachFile").headOption.contains("true")
 
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
-        case (acc, next) => {
+        case (acc, next) =>
           val file = new File(next.ref.path.toString)
           acc.combineWith(nmlService.extractFromFile(file, next.filename))
-        }
       }
 
       val tracingsProcessed =
@@ -116,7 +115,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       if (!parsedFiles.isEmpty) {
         val tracings = parseSuccesses.flatMap(_.bothTracingOpts)
         val (skeletonTracings, volumeTracingsWithDataLocations) = nmlService.splitVolumeAndSkeletonTracings(tracings)
-        val name = nameForNmls(parseSuccesses.map(_.fileName))
+        val name = nameForUploaded(parseSuccesses.map(_.fileName))
         val description = descriptionForNMLs(parseSuccesses.map(_.description))
 
         for {

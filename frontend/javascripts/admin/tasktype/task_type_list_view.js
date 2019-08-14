@@ -5,9 +5,10 @@ import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
+import { AsyncLink } from "components/async_clickables";
 
 import type { APITaskType } from "admin/api_flow_types";
-import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
+import { getTaskTypes, deleteTaskType, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
@@ -240,13 +241,14 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                       Tasks
                     </Link>
                     <br />
-                    <a
-                      href={`/api/annotations/CompoundTaskType/${taskType.id}/download`}
+                    <AsyncLink
+                      href="#"
+                      onClick={() => downloadNml(taskType.id, "CompoundTaskType")}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />
                       Download
-                    </a>
+                    </AsyncLink>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
                       <Icon type="delete" />

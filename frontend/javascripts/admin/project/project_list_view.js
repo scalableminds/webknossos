@@ -7,6 +7,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 
+import { AsyncLink } from "components/async_clickables";
 import type { APIProjectWithAssignments, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -16,6 +17,7 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
+  downloadNml,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
@@ -301,13 +303,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       Increase Instances
                     </a>
                     <br />
-                    <a
-                      href={`/api/annotations/CompoundProject/${project.id}/download`}
+                    <AsyncLink
+                      href="#"
+                      onClick={() => downloadNml(project.id, "CompoundProject")}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />
                       Download
-                    </a>
+                    </AsyncLink>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
                       <Icon type="team" />

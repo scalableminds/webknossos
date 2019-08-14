@@ -19,6 +19,10 @@ function useLoadingClickHandler(originalOnClick: (SyntheticInputEvent<>) => Prom
   );
 
   const onClick = async (event: SyntheticInputEvent<>) => {
+    if (isLoading) {
+      // Ignoring the event when a previous event is still being processed.
+      return;
+    }
     setIsLoading(true);
     try {
       await originalOnClick(event);
@@ -59,7 +63,7 @@ export function AsyncLink(props: Props & { children: React.Node }) {
   }
 
   return (
-    <a {...props} onClick={onClick}>
+    <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : null}>
       {content}
     </a>
   );

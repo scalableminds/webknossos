@@ -141,6 +141,20 @@ function StatisticsSubMenu({ collapse, ...menuProps }) {
   );
 }
 
+function getTimeTrackingMenu({ collapse }) {
+  return (
+    <Menu.Item key="timeStatisticMenu">
+      <Link to="/reports/timetracking" style={{ fontWeight: 400 }}>
+        <CollapsibleMenuTitle
+          title="Time Tracking"
+          icon={<Icon type="bar-chart" />}
+          collapse={collapse}
+        />
+      </Link>
+    </Menu.Item>
+  );
+}
+
 function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
   return (
     <SubMenu
@@ -298,6 +312,9 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     if (isAdmin) {
       menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
+    } else {
+      // JSX can not be used here directly as it adds a item between the menu and the actual menu item and this leads to a bug.
+      menuItems.push(getTimeTrackingMenu({ collapse: collapseAllNavItems }));
     }
 
     trailingNavItems.push(

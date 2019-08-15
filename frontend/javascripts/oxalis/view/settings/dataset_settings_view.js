@@ -257,8 +257,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
               />
             )}
-            {(!isColorLayer && this.props.controlMode === ControlModeEnum.VIEW) ||
-            window.allowIsosurfaces ? (
+            {!isColorLayer && (this.props.controlMode === ControlModeEnum.VIEW ||
+            window.allowIsosurfaces) ? (
               <SwitchSetting
                 label="Render Isosurfaces (Beta)"
                 value={this.props.datasetConfiguration.renderIsosurfaces}

@@ -1,19 +1,30 @@
 // @flow
 import { Select } from "antd";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
 
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import {
+  setViewModeAction,
+  setFlightmodeRecordingAction,
+} from "oxalis/model/actions/settings_actions";
+
 import Store, { type OxalisState, type AllowedMode } from "oxalis/store";
 import * as Utils from "libs/utils";
 import constants, { type ViewMode } from "oxalis/constants";
 
-const Option = Select.Option;
+const { Option } = Select;
 
-type Props = {|
+type StateProps = {|
   viewMode: ViewMode,
   allowedModes: Array<AllowedMode>,
 |};
+
+type DispatchProps = {|
+  onChangeFlightmodeRecording: boolean => void,
+|};
+
+type Props = {| ...StateProps, ...DispatchProps |};
 
 class ViewModesView extends PureComponent<Props, {}> {
   blurElement = (event: SyntheticInputEvent<>) => {
@@ -21,6 +32,15 @@ class ViewModesView extends PureComponent<Props, {}> {
   };
 
   handleChange = (mode: ViewMode) => {
+    // If we switch back from any arbitrary mode we stop recording.
+    // This prevents that when the user switches back to any arbitrary mode,
+    // a new node is instantly created at the screen's center.
+    if (
+      constants.MODES_ARBITRARY.includes(this.props.viewMode) &&
+      mode === constants.MODE_PLANE_TRACING
+    ) {
+      this.props.onChangeFlightmodeRecording(false);
+    }
     Store.dispatch(setViewModeAction(mode));
 
     // Unfortunately, antd doesn't provide the original event here
@@ -55,11 +75,20 @@ class ViewModesView extends PureComponent<Props, {}> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Props {
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  onChangeFlightmodeRecording(value: boolean) {
+    dispatch(setFlightmodeRecordingAction(value));
+  },
+});
+
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     allowedModes: state.tracing.restrictions.allowedModes,
   };
 }
 
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(ViewModesView);
+export default connect<Props, {||}, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(ViewModesView);

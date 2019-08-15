@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.Cube
@@ -48,8 +47,6 @@ class ParsedMappingCache(val maxEntries: Int)
       }.toFox
 
       put(cachedMappingInfo, mappingFox)
-      NewRelic.incrementCounter("Custom/FileDataStore/MappingCache/miss")
-      NewRelic.recordMetric("Custom/FileDataStore/MappingCache/size", size())
 
       mappingFox.map { mapping =>
         f(mapping)
@@ -59,7 +56,6 @@ class ParsedMappingCache(val maxEntries: Int)
     get(cachedMappingInfo) match {
       case Some(mappingFox) =>
         mappingFox.map { mapping =>
-          NewRelic.incrementCounter("Custom/FileDataStore/MappingCache/hit")
           f(mapping)
         }
       case _ => handleUncachedMapping()

@@ -1,6 +1,5 @@
 package utils
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -8,6 +7,7 @@ import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
+import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.Configuration
 import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
@@ -22,8 +22,9 @@ import play.api.data.validation.ValidationError
 
 import scala.concurrent.ExecutionContext
 
-class SQLClient @Inject()(configuration: Configuration) {
+class SQLClient @Inject()(configuration: Configuration, slackNotificationService: SlackNotificationService) {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
+  def getSlackNotificationService = slackNotificationService
 }
 
 case class ObjectId(id: String) {
@@ -71,7 +72,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
             logError(e, query)
-            reportErrorToNewrelic(e, query)
+            reportErrorToSlack(e, query)
             Fox.failure("SQL Failure: " + e.getMessage)
           }
         }
@@ -85,8 +86,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
   }
 
-  private def reportErrorToNewrelic[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) =
-    NewRelic.noticeError(ex, Map("Causing query: " -> query.getDumpInfo.mainInfo).asJava)
+  private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) =
+    sqlClient.getSlackNotificationService.noticeError(ex, s"Causing query: ${query.getDumpInfo.mainInfo}")
 
   def writeArrayTuple(elements: List[String]): String = {
     val commaSeparated = elements.mkString(",")

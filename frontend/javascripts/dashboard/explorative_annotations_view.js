@@ -6,16 +6,18 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
+import { AsyncLink } from "components/async_clickables";
 
 import type { APIAnnotationCompact } from "admin/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
-import { AsyncLink } from "components/async_clickables";
+
 import {
   finishAllAnnotations,
   editAnnotation,
   finishAnnotation,
   reOpenAnnotation,
   getCompactAnnotations,
+  downloadNml,
   getCompactAnnotationsForUser,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
@@ -117,7 +119,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       : this.state.unarchivedModeState;
 
   setModeState = modeShape => {
-    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
         ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
@@ -130,7 +132,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   setOppositeModeState = modeShape => {
-    const shouldShowArchivedTracings = this.state.shouldShowArchivedTracings;
+    const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
         ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
@@ -218,10 +220,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             Trace
           </Link>
           <br />
-          <a href={`/api/annotations/${typ}/${id}/download`}>
+          <AsyncLink href="#" onClick={() => downloadNml(id, typ)}>
             <Icon type="download" />
             Download
-          </a>
+          </AsyncLink>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <Icon type="inbox" />
@@ -407,12 +409,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
+          width={100}
           render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
         <Column
           title="Name"
+          width={200}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationCompact) =>
@@ -421,6 +425,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
+          width={100}
           render={(__, annotation: APIAnnotationCompact) =>
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
@@ -478,10 +483,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
+          width={150}
           sorter={Utils.compareBy(typeHint, annotation => annotation.modified)}
           render={modified => <FormattedDate timestamp={modified} />}
         />
         <Column
+          width={200}
           title="Actions"
           className="nowrap"
           key="action"

@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.dataformats
 
 import java.util.concurrent.TimeoutException
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
@@ -10,7 +9,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Failure
 
-import collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -27,17 +25,13 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
         val className = this.getClass.getName.split("\\.").last
         val result = Await.result(loadFromUnderlying(readInstruction).futureBox, timeout)
         val duration = System.currentTimeMillis - t
-        NewRelic.recordResponseTimeMetric(s"Custom/BucketProvider/$className/file-response-time", duration)
-        NewRelic.incrementCounter(s"Custom/BucketProvider/$className/files-loaded")
         if (duration > 500) {
-          NewRelic.noticeError(
-            s"loading file in $className took too long",
-            Map(
-              "duration" -> duration.toString,
-              "dataSource" -> readInstruction.dataSource.id.name,
-              "dataLayer" -> readInstruction.dataLayer.name,
-              "cube" -> readInstruction.cube.toString
-            ).asJava
+          logger.warn(
+            s"loading file in $className took too long.\n"
+              + s"  duration: $duration\n"
+              + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
+              + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
+              + s"  cube: ${readInstruction.cube}"
           )
         }
         result

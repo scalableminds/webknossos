@@ -30,7 +30,6 @@
       media="screen"
       href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
-    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     @if(conf.Application.Authentication.enableDevAutoLogin){
     <script src="/api/auth/autoLogin"></script>
     }
@@ -65,6 +64,6 @@
       ga("set", "anonymizeIp", true);
       ga("send", "pageview");
     </script>
-    } @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingFooter)
+    }
   </body>
 </html>

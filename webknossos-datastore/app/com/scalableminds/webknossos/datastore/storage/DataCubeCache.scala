@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.dataformats.Cube
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.util.cache.LRUConcurrentCache
@@ -57,8 +56,6 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
       }.toFox
 
       put(cachedCubeInfo, cubeFox)
-      NewRelic.incrementCounter("Custom/FileDataStore/Cache/miss")
-      NewRelic.recordMetric("Custom/FileDataStore/Cache/size", size())
 
       cubeFox.flatMap { cube =>
         val result = f(cube)
@@ -71,7 +68,6 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
       case Some(cubeFox) =>
         cubeFox.flatMap { cube =>
           if (cube.tryAccess()) {
-            NewRelic.incrementCounter("Custom/FileDataStore/Cache/hit")
             val result = f(cube)
             cube.finishAccess()
             result.toFox

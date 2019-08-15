@@ -111,6 +111,14 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     parseProtoResponse(performRequest)(companion)
   }
 
+  def postJson[J: Writes](body: J = Json.obj()): Unit = {
+    request = request
+      .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .withBody(Json.toJson(body))
+      .withMethod("POST")
+    performRequest
+  }
+
   def postProtoWithJsonResponse[T <: GeneratedMessage with Message[T], J: Reads](body: T): Fox[J] = {
     request = request
       .addHttpHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")

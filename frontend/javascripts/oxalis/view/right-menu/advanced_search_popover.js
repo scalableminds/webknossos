@@ -128,7 +128,13 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     style={{ width: "calc(100% - 100px)", ...additionalInputStyle }}
                     value={searchQuery}
                     placeholder="Enter your search keywords"
-                    onPressEnter={this.selectNextOption}
+                    onPressEnter={event => {
+                      if (event.shiftKey) {
+                        this.selectPreviousOption();
+                      } else {
+                        this.selectNextOption();
+                      }
+                    }}
                     onChange={evt =>
                       this.setState({ searchQuery: evt.target.value, currentPosition: null })
                     }

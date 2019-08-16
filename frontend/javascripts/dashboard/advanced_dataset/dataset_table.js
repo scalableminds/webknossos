@@ -66,44 +66,42 @@ class DatasetTable extends React.PureComponent<Props, State> {
     // trigger rerendering of arrow indicator when receiving event
     // !! throttle this with lodash !!
     // here create the two indicators
-    const indicatorContainer = document.createElement("div");
-    indicatorContainer.classList.add("indicator-container");
-    tableBody.appendChild(indicatorContainer);
-    ReactDOM.render(
-      <React.Fragment>
-        <div className="scrolling-indicator left-scrolling-indicator" />
-        <div className="scrolling-indicator right-scrolling-indicator" />
-      </React.Fragment>,
-      indicatorContainer,
-    );
+    const leftScrollingIndicator = document.createElement("div");
+    const rightScrollingIndicator = document.createElement("div");
+    leftScrollingIndicator.classList.add("left-scrolling-indicator");
+    rightScrollingIndicator.classList.add("right-scrolling-indicator");
+    tableBody.appendChild(leftScrollingIndicator);
+    tableBody.appendChild(rightScrollingIndicator);
 
     tableBody.addEventListener(
       "scroll",
       _.throttle(
-        () => this.updateScrollingIndicators(tableContent, tableBody, indicatorContainer),
+        () =>
+          this.updateScrollingIndicators(
+            tableContent,
+            tableBody,
+            leftScrollingIndicator,
+            rightScrollingIndicator,
+          ),
         100,
       ),
     );
-    // Intial call to set is[Left/Right]ScrollingIndicatorVisible correctly.
+    // Initial call to set is[Left/Right]ScrollingIndicatorVisible correctly.
     // But we need to wait for React to actually render the indicators.
-    setTimeout(
-      () => this.updateScrollingIndicators(tableContent, tableBody, indicatorContainer),
-      200,
+    this.updateScrollingIndicators(
+      tableContent,
+      tableBody,
+      leftScrollingIndicator,
+      rightScrollingIndicator,
     );
   }
 
   updateScrollingIndicators = (
     content: DOMElement,
     container: DOMElement,
-    indicatorContainer: DOMElement,
+    leftIndicator: DOMElement,
+    rightIndicator: DOMElement,
   ) => {
-    const leftIndicator = indicatorContainer.getElementsByClassName("left-scrolling-indicator")[0];
-    const rightIndicator = indicatorContainer.getElementsByClassName(
-      "right-scrolling-indicator",
-    )[0];
-    if (!leftIndicator || !rightIndicator) {
-      return;
-    }
     const isOverflowing = this.determineOverflow(content, container);
     const mapBooleanToString = { true: "visible", false: "hidden" };
     leftIndicator.style.visibility = mapBooleanToString[isOverflowing.left];

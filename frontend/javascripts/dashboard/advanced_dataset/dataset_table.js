@@ -5,6 +5,7 @@ import * as React from "react";
 import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
+import ReactDOM from "react-dom";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
@@ -55,6 +56,75 @@ class DatasetTable extends React.PureComponent<Props, State> {
       prevSearchQuery: nextProps.searchQuery,
       ...maybeSortedInfo,
     };
+  }
+
+  async componentDidMount() {
+    const table = document.getElementById("dataset-table");
+    const tableBody = table.querySelector(".ant-table-body");
+    const tableContent = tableBody.firstChild;
+    // works HYPE
+    // trigger rerendering of arrow indicator when receiving event
+    // !! throttle this with lodash !!
+    // here create the two indicators
+    const indicatorContainer = document.createElement("div");
+    indicatorContainer.classList.add("indicator-container");
+    tableBody.appendChild(indicatorContainer);
+    ReactDOM.render(
+      <React.Fragment>
+        <div className="scrolling-indicator left-scrolling-indicator" />
+        <div className="scrolling-indicator right-scrolling-indicator" />
+      </React.Fragment>,
+      indicatorContainer,
+    );
+
+    tableBody.addEventListener(
+      "scroll",
+      _.throttle(
+        () => this.updateScrollingIndicators(tableContent, tableBody, indicatorContainer),
+        100,
+      ),
+    );
+    // Intial call to set is[Left/Right]ScrollingIndicatorVisible correctly.
+    // But we need to wait for React to actually render the indicators.
+    setTimeout(
+      () => this.updateScrollingIndicators(tableContent, tableBody, indicatorContainer),
+      200,
+    );
+  }
+
+  updateScrollingIndicators = (
+    content: DOMElement,
+    container: DOMElement,
+    indicatorContainer: DOMElement,
+  ) => {
+    const leftIndicator = indicatorContainer.getElementsByClassName("left-scrolling-indicator")[0];
+    const rightIndicator = indicatorContainer.getElementsByClassName(
+      "right-scrolling-indicator",
+    )[0];
+    if (!leftIndicator || !rightIndicator) {
+      return;
+    }
+    const isOverflowing = this.determineOverflow(content, container);
+    const mapBooleanToString = { true: "visible", false: "hidden" };
+    leftIndicator.style.visibility = mapBooleanToString[isOverflowing.left];
+    rightIndicator.style.visibility = mapBooleanToString[isOverflowing.right];
+  };
+
+  determineOverflow(content: DOMElement, container: DOMElement) {
+    const containerMetrics = container.getBoundingClientRect();
+    const containerMetricsRight = Math.floor(containerMetrics.right);
+    const containerMetricsLeft = Math.floor(containerMetrics.left);
+    const contentMetrics = content.getBoundingClientRect();
+    const contentMetricsRight = Math.floor(contentMetrics.right);
+    const contentMetricsLeft = Math.floor(contentMetrics.left);
+    const isOverflowing = { left: false, right: false };
+    if (containerMetricsLeft > contentMetricsLeft) {
+      isOverflowing.left = true;
+    }
+    if (containerMetricsRight < contentMetricsRight) {
+      isOverflowing.right = true;
+    }
+    return isOverflowing;
   }
 
   handleChange = (pagination: Object, filters: Object, sorter: Object) => {
@@ -147,6 +217,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
         className="large-table"
+        id="dataset-table"
       >
         <Column
           title="Name"

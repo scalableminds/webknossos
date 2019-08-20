@@ -1,7 +1,7 @@
 package backend
 
 import models.annotation.Annotation
-import models.user.time.TimeSpan
+import models.user.time.{TimeSpan, TimeSpanService}
 import org.scalatest.FlatSpec
 import utils.ObjectId
 

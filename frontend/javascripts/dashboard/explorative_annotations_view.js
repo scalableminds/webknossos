@@ -405,11 +405,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           defaultPageSize: 50,
         }}
         className="large-table"
+        scroll={{ x: 1500 }}
       >
         <Column
           title="ID"
           dataIndex="id"
           width={100}
+          fixed="left"
           render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
@@ -417,6 +419,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Name"
           width={200}
+          fixed="left"
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationCompact) =>
@@ -425,7 +428,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
-          width={100}
+          width={80}
           render={(__, annotation: APIAnnotationCompact) =>
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
@@ -489,6 +492,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           width={200}
+          fixed="right"
           title="Actions"
           className="nowrap"
           key="action"

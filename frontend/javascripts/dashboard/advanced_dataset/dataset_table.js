@@ -147,12 +147,14 @@ class DatasetTable extends React.PureComponent<Props, State> {
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
         className="large-table"
+        scroll={{ x: 1500 }}
       >
         <Column
           title="Name"
           dataIndex="name"
           key="name"
-          width={280}
+          fixed="left"
+          width={230}
           sorter={Utils.localeCompareBy(typeHint, dataset => dataset.name)}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
@@ -170,6 +172,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
+          title="Scale & Extent"
+          dataIndex="scale"
+          key="scale"
+          fixed="left"
+          width={230}
+          render={(__, dataset: APIMaybeUnimportedDataset) =>
+            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
+          }
+        />
+        <Column
           width={150}
           title="Creation Date"
           dataIndex="created"
@@ -177,15 +189,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sorter={Utils.compareBy(typeHint, dataset => dataset.created)}
           sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
           render={created => <FormattedDate timestamp={created} />}
-        />
-        <Column
-          title="Scale & Extent"
-          dataIndex="scale"
-          key="scale"
-          width={280}
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
-          }
         />
 
         <Column
@@ -245,6 +248,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           width={200}
           title="Actions"
           key="actions"
+          fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
           )}

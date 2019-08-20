@@ -147,7 +147,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
         className="large-table"
-        scroll={{ x: 1500 }}
+        scroll={{ x: "max-content" }}
       >
         <Column
           title="Name"
@@ -182,7 +182,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           }
         />
         <Column
-          width={150}
+          width={180}
           title="Creation Date"
           dataIndex="created"
           key="created"
@@ -195,7 +195,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Allowed Teams"
           dataIndex="allowedTeams"
           key="allowedTeams"
-          width={150}
+          width={180}
           render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
             teams.map(team => (
               <Tag
@@ -211,7 +211,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Active"
           dataIndex="isActive"
           key="isActive"
-          width={100}
+          width={130}
           sorter={(a, b) => a.isActive - b.isActive}
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) => {
@@ -223,7 +223,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Public"
           dataIndex="isPublic"
           key="isPublic"
-          width={100}
+          width={130}
           sorter={(a, b) => a.isPublic - b.isPublic}
           sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
           render={(isPublic: boolean) => {
@@ -233,7 +233,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         />
         <Column
           title="Data Layers"
-          width={200}
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) =>
             (dataset.dataSource.dataLayers || []).map(layer => (

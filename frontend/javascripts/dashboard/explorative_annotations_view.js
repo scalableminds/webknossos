@@ -405,7 +405,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           defaultPageSize: 50,
         }}
         className="large-table"
-        scroll={{ x: 1500 }}
+        scroll={{ x: "max-content" }}
       >
         <Column
           title="ID"
@@ -428,7 +428,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
-          width={80}
+          width={150}
           render={(__, annotation: APIAnnotationCompact) =>
             // Flow doesn't recognize that stats must contain the nodeCount if the treeCount is != null
             annotation.stats.treeCount != null &&
@@ -457,7 +457,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Tags"
           dataIndex="tags"
-          width={500}
           render={(tags: Array<string>, annotation: APIAnnotationCompact) => (
             <div>
               {tags.map(tag => (
@@ -486,7 +485,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          width={150}
+          width={200}
           sorter={Utils.compareBy(typeHint, annotation => annotation.modified)}
           render={modified => <FormattedDate timestamp={modified} />}
         />

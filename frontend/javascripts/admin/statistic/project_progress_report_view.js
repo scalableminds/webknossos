@@ -102,7 +102,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             rowKey="projectName"
             style={{ marginTop: 30, marginBotton: 30 }}
             size="small"
-            scroll={{ x: 1200 }}
+            scroll={{ x: "max-content" }}
           >
             <Column
               title="Project"

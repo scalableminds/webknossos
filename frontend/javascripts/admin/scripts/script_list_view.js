@@ -140,7 +140,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
               locale={{ emptyText: this.renderPlaceholder() }}
-              scroll={{ x: 1500 }}
+              scroll={{ x: "max-content" }}
               className="large-table"
             >
               <Column
@@ -150,7 +150,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 className="monospace-id"
                 sorter={Utils.localeCompareBy(typeHint, script => script.id)}
                 fixed="left"
-                width={120}
+                width={150}
               />
               <Column
                 title="Name"
@@ -183,7 +183,7 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 title="Action"
                 key="actions"
                 fixed="right"
-                width={200}
+                width={180}
                 render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>

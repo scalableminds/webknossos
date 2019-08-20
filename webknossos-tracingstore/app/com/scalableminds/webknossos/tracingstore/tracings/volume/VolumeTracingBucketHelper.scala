@@ -85,6 +85,7 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
     if (currentBatchIterator.hasNext) true
     else fetchNextAndSave.hasNext
 
+  @SuppressWarnings(Array("OptionGet")) // We're parsing a generated key therefore it's safe to assume that it's correct
   override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key

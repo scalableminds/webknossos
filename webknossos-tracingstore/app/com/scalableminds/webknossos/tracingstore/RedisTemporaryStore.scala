@@ -73,7 +73,7 @@ class RedisTemporaryStore @Inject()(config: TracingStoreConfig)(implicit val ec:
     } catch {
       case e: Exception => {
         logger.error(s"Redis health check failed at $address:$port (reply: ${e.getMessage})")
-        Fox.failure(s"Redis health check failed")
+        Fox.failure("Redis health check failed")
       }
     }
 

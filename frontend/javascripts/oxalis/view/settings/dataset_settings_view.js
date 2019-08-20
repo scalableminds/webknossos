@@ -116,14 +116,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Object.keys(layers).forEach(otherLayerName =>
       this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
     );
+    this.props.onChange("isSegmentationDisabled", !isVisible);
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {
     const { layers } = this.props.datasetConfiguration;
-    return Object.keys(layers).every(otherLayerName => {
+    const isOnlyGivenLayerVisible = Object.keys(layers).every(otherLayerName => {
       const { isDisabled } = layers[otherLayerName];
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
+    const { isSegmentationDisabled } = this.props.datasetConfiguration;
+    const segmentation = Model.getSegmentationLayer();
+    const segmentationLayerName = segmentation != null ? segmentation.name : null;
+    if (layerName === segmentationLayerName) {
+      return isOnlyGivenLayerVisible && !isSegmentationDisabled;
+    } else {
+      return isOnlyGivenLayerVisible && isSegmentationDisabled;
+    }
   };
 
   getEnableDisableLayerSwitch = (
@@ -159,62 +168,52 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getLayerSettingsHeader = (
     isDisabled: boolean,
     isColorLayer: boolean,
-    layerName: ?string,
+    layerName: string,
     elementClass: string,
   ) => {
-    let onChange = () => {};
-    if (isColorLayer && layerName != null) {
-      const layerNameFixed: string = layerName;
-      onChange = (value, event) => {
-        if (!event.ctrlKey) {
-          this.props.onChangeLayer(layerNameFixed, "isDisabled", !value);
-          return;
-        }
-        // If ctrl is pressed, toggle between "all layers visible" and
-        // "only selected layer visible".
-        // Phillip fragen wie das gehandhabt werden soll
-        if (this.isLayerExclusivelyVisible(layerNameFixed)) {
-          this.setVisibilityForAllLayers(true);
-        } else {
-          this.setVisibilityForAllLayers(false);
-          this.props.onChangeLayer(layerNameFixed, "isDisabled", false);
-        }
-      };
-    } else if (!isColorLayer) {
-      onChange = value => {
-        console.log("received value from segemntation visibility switch", !value);
-        this.props.onChange("isSegmentationDisabled", !value);
-      };
-    }
+    const setSingleLayerVisibility = (isVisible: boolean) => {
+      if (isColorLayer) {
+        this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
+      } else {
+        this.props.onChange("isSegmentationDisabled", !isVisible);
+      }
+    };
+    const onChange = (value, event) => {
+      if (!event.ctrlKey) {
+        setSingleLayerVisibility(value);
+        return;
+      }
+      // If ctrl is pressed, toggle between "all layers visible" and
+      // "only selected layer visible".
+      if (this.isLayerExclusivelyVisible(layerName)) {
+        this.setVisibilityForAllLayers(true);
+      } else {
+        this.setVisibilityForAllLayers(false);
+        setSingleLayerVisibility(true);
+      }
+    };
     return (
-      <Row>
+      <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
-          {/* TODO Maybe use the new antd icons instead of the switch when upgrading antd. */
-          this.getEnableDisableLayerSwitch(isDisabled, onChange)}
+          {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>{layerName}</span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
-          {layerName != null ? this.getFindDataButton(layerName, isDisabled) : null}
+          {this.getFindDataButton(layerName, isDisabled)}
         </Col>
       </Row>
     );
   };
 
   getLayerSettings = (
-    layerName: ?string,
+    layerName: string,
     layer: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that a color layer needs a layer and a layer name
-    if (isColorLayer && (!layerName || !layer)) {
+    // Ensure that a color layer needs a layer.
+    if (isColorLayer && !layer) {
       return null;
     }
-    if (!isColorLayer && !layerName) {
-      layerName = "segmentation";
-    }
-    let elementClass = "uint8";
-    if (layerName != null) {
-      elementClass = getElementClass(this.props.dataset, layerName);
-    }
+    const elementClass = getElementClass(this.props.dataset, layerName);
     const isDisabled =
       isColorLayer && layer != null
         ? layer.isDisabled
@@ -238,7 +237,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                   : this.props.datasetConfiguration.segmentationOpacity
               }
               onChange={
-                isColorLayer && layerName != null
+                isColorLayer
                   ? _.partial(this.props.onChangeLayer, layerName, "alpha")
                   : _.partial(this.props.onChange, "segmentationOpacity")
               }
@@ -308,6 +307,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getSegmentationPanel() {
     const segmentation = Model.getSegmentationLayer();
     const segmentationLayerName = segmentation != null ? segmentation.name : null;
+    if (!segmentationLayerName) {
+      return null;
+    }
     return this.getLayerSettings(segmentationLayerName, null, false);
   }
 

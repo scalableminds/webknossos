@@ -242,7 +242,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")
       case body: SourceBody =>
-        s"<streaming source>"
+        "<streaming source>"
       case _ =>
         ""
     }

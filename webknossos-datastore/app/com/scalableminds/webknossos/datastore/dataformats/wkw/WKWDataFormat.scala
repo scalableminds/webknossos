@@ -39,6 +39,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")
     }
 
+  @SuppressWarnings(Array("OptionGet")) // parseResolutionName always returns a full Option because of the resolutionDirFilter
   private def exploreResolutions(baseDir: Path)(
       implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] =
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
@@ -53,7 +54,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
       resolutionHeaders.toSingleBox("Error reading resolutions")
     }
-
+  @SuppressWarnings(Array("TraversableHead")) // voxelType has a size of one therefore voxelSize and voxelType have one entry
   private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(
       implicit report: DataSourceImportReport[Path]): Box[((VoxelType.Value, Int), List[WKWResolution])] = {
     val headers = resolutions.map(_._1)
@@ -87,6 +88,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       multiplierY = resolution.cubeLength * resolution.resolution.fold(identity, _.y)
       multiplierZ = resolution.cubeLength * resolution.resolution.fold(identity, _.z)
 
+      // can we use the resolution dir filter here to make absolutely sure that only resolutionDirs are listed
       resolutionDirs <- PathUtils.listDirectories(baseDir, filterGen(""))
       resolutionDir <- resolveHead(baseDir, resolutionDirs.sortBy(resolutionDirSortingKey))
 

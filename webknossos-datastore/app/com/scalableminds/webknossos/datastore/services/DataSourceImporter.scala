@@ -77,6 +77,7 @@ trait DataSourceImporter {
 
   protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
 
+  @SuppressWarnings(Array("OptionGet")) // this method is only used when comparing resolutionDirs
   protected def resolutionDirSortingKey(path: Path) =
     parseResolutionName(path).get match {
       case Left(int)    => int

@@ -67,7 +67,7 @@ object KnossosDataFormat extends DataSourceImporter {
     PathUtils
       .listDirectories(baseDir, resolutionDirFilter)
       .map { resolutionDirs =>
-        resolutionDirs.map(parseResolutionName(_).get)
+        resolutionDirs.flatMap(parseResolutionName)
       }
       .getOrElse(Nil)
 

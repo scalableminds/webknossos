@@ -16,6 +16,7 @@ object ImageThumbnail {
       case None    => 0
     }
 
+  @SuppressWarnings(Array("OptionGet")) // we explicitly check that every parameter is defined
   def goodThumbnailParameters(dataLayer: DataLayerLike,
                               width: Int,
                               height: Int,

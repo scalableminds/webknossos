@@ -79,7 +79,7 @@ class DataSourceController @Inject()(
       }
     }
   }
-
+  @SuppressWarnings(Array("TraversableHead")) // hasErrors only gets called when errors exist therefore formWithErrors.errors is nonEmpty
   def upload = Action.async(parse.multipartFormData) { implicit request =>
     val uploadForm = Form(
       tuple(

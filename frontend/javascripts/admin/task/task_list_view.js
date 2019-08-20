@@ -178,6 +178,8 @@ class TaskListView extends React.PureComponent<Props, State> {
             }}
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}
+            scroll={{ x: "max-content" }}
+            className="large-table"
           >
             <Column
               title="ID"
@@ -185,6 +187,8 @@ class TaskListView extends React.PureComponent<Props, State> {
               key="id"
               sorter={Utils.localeCompareBy(typeHint, task => task.id)}
               className="monospace-id"
+              width={100}
+              fixed="left"
             />
             <Column
               title="Project"
@@ -195,12 +199,13 @@ class TaskListView extends React.PureComponent<Props, State> {
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
               )}
+              fixed="left"
             />
             <Column
               title="Type"
               dataIndex="type"
               key="type"
-              width={100}
+              width={200}
               sorter={Utils.localeCompareBy(typeHint, task => task.type.summary)}
               render={(taskType: APITaskType) => (
                 <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
@@ -210,14 +215,13 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Dataset"
               dataIndex="dataSet"
               key="dataSet"
-              width={130}
               sorter={Utils.localeCompareBy(typeHint, task => task.dataSet)}
             />
             <Column
               title="Edit Position / Bounding Box"
               dataIndex="editPosition"
               key="editPosition"
-              width={130}
+              width={150}
               render={(__, task: APITask) => (
                 <div className="nowrap">
                   {formatTuple(task.editPosition)} <br />
@@ -230,7 +234,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="neededExperience"
               key="neededExperience"
               sorter={Utils.localeCompareBy(typeHint, task => task.neededExperience.domain)}
-              width={200}
+              width={250}
               render={neededExperience =>
                 neededExperience.domain !== "" || neededExperience.value > 0 ? (
                   <Tag>
@@ -243,7 +247,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Creation Date"
               dataIndex="created"
               key="created"
-              width={150}
+              width={200}
               sorter={Utils.compareBy(typeHint, task => task.created)}
               render={created => <FormattedDate timestamp={created} />}
             />
@@ -251,7 +255,8 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Stats"
               dataIndex="status"
               key="status"
-              width={80}
+              width={120}
+              fixed="right"
               render={(status, task: APITask) => (
                 <div className="nowrap">
                   <span title="Open Instances">
@@ -280,6 +285,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Action"
               key="actions"
               width={130}
+              fixed="right"
               render={(__, task: APITask) => (
                 <span>
                   {task.status.finished > 0 ? (

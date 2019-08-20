@@ -378,6 +378,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 activationFilter: filters.isActive,
               })
             }
+            className="large-table"
+            scroll={{ x: "max-content" }}
           >
             <Column
               title="Last Name"
@@ -385,6 +387,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               key="lastName"
               width={130}
               sorter={Utils.localeCompareBy(typeHint, user => user.lastName)}
+              fixed="left"
             />
             <Column
               title="First Name"
@@ -392,12 +395,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               key="firstName"
               width={130}
               sorter={Utils.localeCompareBy(typeHint, user => user.firstName)}
+              fixed="left"
             />
             <Column
               title="Email"
               dataIndex="email"
               key="email"
-              width={300}
+              width={350}
               sorter={Utils.localeCompareBy(typeHint, user => user.email)}
               render={(__, user: APIUser) =>
                 this.props.activeUser.isAdmin ? (
@@ -429,7 +433,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
-              width={250}
               render={(experiences: ExperienceMap, user: APIUser) =>
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
@@ -501,6 +504,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               title="Actions"
               key="actions"
               width={160}
+              fixed="right"
               render={(__, user: APIUser) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>

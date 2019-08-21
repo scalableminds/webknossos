@@ -16,6 +16,7 @@ type Props<S> = {
   onSelect: S => void,
   children: React.Node,
   provideShortcut?: boolean,
+  targetId: string,
 };
 
 type State = {
@@ -81,7 +82,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
   };
 
   render() {
-    const { data, searchKey, provideShortcut, children } = this.props;
+    const { data, searchKey, provideShortcut, children, targetId } = this.props;
     const { searchQuery, isVisible } = this.state;
     let { currentPosition } = this.state;
     const availableOptions = this.getAvailableOptions(data, searchQuery, searchKey);
@@ -95,7 +96,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
     return (
       <React.Fragment>
         {provideShortcut ? (
-          <DomVisibilityObserver targetId="tree-list">
+          <DomVisibilityObserver targetId={targetId}>
             {isVisibleInDom =>
               isVisibleInDom && (
                 <Shortcut
@@ -141,7 +142,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                     addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
                     autoFocus
                   />
-                  <Tooltip title="Previous">
+                  <Tooltip title="Previous (shift+enter)">
                     <ButtonComponent
                       style={{ width: 50 }}
                       onClick={this.selectPreviousOption}
@@ -150,7 +151,7 @@ export default class AdvancedSearchPopover<S: Object> extends React.PureComponen
                       <Icon type="up" />
                     </ButtonComponent>
                   </Tooltip>
-                  <Tooltip title="Next">
+                  <Tooltip title="Next (enter)">
                     <ButtonComponent
                       style={{ width: 50 }}
                       onClick={this.selectNextOption}

@@ -39,6 +39,8 @@ const InputGroup = Input.Group;
 const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
 
+const commentListId = "comment-list";
+
 const SortByEnum = Enum.make({
   NAME: "NAME",
   ID: "ID",
@@ -352,6 +354,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
             searchKey="content"
             provideShortcut
+            targetId={commentListId}
           >
             <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />
           </AdvancedSearchPopover>
@@ -396,7 +399,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">
                 <List
-                  id="comment-list"
+                  id={commentListId}
                   height={height}
                   width={width}
                   rowCount={this.state.data.length}

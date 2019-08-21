@@ -213,7 +213,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="name"
                 key="name"
                 sorter={Utils.localeCompareBy(typeHint, project => project.name)}
-                fixed="left"
                 width={250}
               />
               <Column
@@ -221,7 +220,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, project => project.team)}
-                fixed="left"
                 width={300}
               />
               <Column

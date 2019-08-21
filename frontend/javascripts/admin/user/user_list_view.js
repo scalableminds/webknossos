@@ -385,17 +385,15 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               title="Last Name"
               dataIndex="lastName"
               key="lastName"
-              width={130}
+              width={200}
               sorter={Utils.localeCompareBy(typeHint, user => user.lastName)}
-              fixed="left"
             />
             <Column
               title="First Name"
               dataIndex="firstName"
               key="firstName"
-              width={130}
+              width={200}
               sorter={Utils.localeCompareBy(typeHint, user => user.firstName)}
-              fixed="left"
             />
             <Column
               title="Email"

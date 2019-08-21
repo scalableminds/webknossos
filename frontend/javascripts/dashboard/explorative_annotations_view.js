@@ -411,15 +411,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          fixed="left"
           render={(__, tracing: APIAnnotationCompact) => formatHash(tracing.id)}
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.id)}
           className="monospace-id"
         />
         <Column
           title="Name"
-          width={200}
-          fixed="left"
+          width={280}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationCompact) =>

@@ -12,13 +12,13 @@ import {
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-import RecommendConfigurationModal from "oxalis/view/recommended_configuration_modal";
+import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
-  // Users can aquire new tasks directly in the tracing view. Occasionally,
+  // Users can acquire new tasks directly in the tracing view. Occasionally,
   // they start working on a new TaskType and need to be instructed.
   const title = `Attention, new Task Type: ${taskType.summary}`;
   let text;
@@ -58,7 +58,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   // The renderIndependently call returns a promise that is only resolved
   // once destroy is called. yield* will wait until the returned promise is resolved.
   yield* call(renderIndependently, destroy => (
-    <RecommendConfigurationModal
+    <RecommendedConfigurationModal
       config={recommendedConfiguration}
       onOk={() => {
         confirmed = true;

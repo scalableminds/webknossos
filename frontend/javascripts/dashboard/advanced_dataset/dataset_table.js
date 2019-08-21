@@ -153,8 +153,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Name"
           dataIndex="name"
           key="name"
-          fixed="left"
-          width={230}
+          width={280}
           sorter={Utils.localeCompareBy(typeHint, dataset => dataset.name)}
           sortOrder={sortedInfo.columnKey === "name" && sortedInfo.order}
           render={(name: string, dataset: APIMaybeUnimportedDataset) => (
@@ -175,7 +174,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Scale & Extent"
           dataIndex="scale"
           key="scale"
-          fixed="left"
           width={230}
           render={(__, dataset: APIMaybeUnimportedDataset) =>
             `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
@@ -195,7 +193,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Allowed Teams"
           dataIndex="allowedTeams"
           key="allowedTeams"
-          width={180}
+          width={230}
           render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
             teams.map(team => (
               <Tag

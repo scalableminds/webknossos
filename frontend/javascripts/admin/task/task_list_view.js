@@ -188,7 +188,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               sorter={Utils.localeCompareBy(typeHint, task => task.id)}
               className="monospace-id"
               width={100}
-              fixed="left"
             />
             <Column
               title="Project"
@@ -199,7 +198,6 @@ class TaskListView extends React.PureComponent<Props, State> {
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
               )}
-              fixed="left"
             />
             <Column
               title="Type"

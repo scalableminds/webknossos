@@ -148,15 +148,13 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 width={120}
                 sorter={Utils.localeCompareBy(typeHint, taskType => taskType.id)}
                 className="monospace-id"
-                fixed="left"
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="team"
-                width={150}
+                width={230}
                 sorter={Utils.localeCompareBy(typeHint, taskType => taskType.teamName)}
-                fixed="left"
               />
               <Column
                 title="Summary"

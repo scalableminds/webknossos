@@ -116,7 +116,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 </span>
               )}
               width={250}
-              fixed="left"
             />
             <Column
               title="Tasks"
@@ -124,7 +123,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
               render={number => number.toLocaleString()}
               width={150}
-              fixed="left"
             />
             <Column
               title="Priority"

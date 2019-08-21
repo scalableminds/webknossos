@@ -149,7 +149,6 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 key="id"
                 className="monospace-id"
                 sorter={Utils.localeCompareBy(typeHint, script => script.id)}
-                fixed="left"
                 width={150}
               />
               <Column
@@ -157,7 +156,6 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="name"
                 key="name"
                 sorter={Utils.localeCompareBy(typeHint, script => script.name)}
-                fixed="left"
                 width={250}
               />
 

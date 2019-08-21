@@ -66,7 +66,6 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               dataIndex="user"
               sorter={Utils.localeCompareBy(typeHint, task => task.user)}
               width={200}
-              fixed="left"
             />
             <Column
               title="# Assignments"
@@ -74,7 +73,6 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               defaultSortOrder="ascend"
               sorter={Utils.compareBy(typeHint, task => task.totalAssignments)}
               width={150}
-              fixed="left"
             />
             <Column
               title=""

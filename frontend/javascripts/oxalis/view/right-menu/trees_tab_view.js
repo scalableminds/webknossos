@@ -62,6 +62,8 @@ import AdvancedSearchPopover from "./advanced_search_popover";
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
+const treeTabId = "tree-list";
+
 type TreeOrTreeGroup = {
   name: string,
   id: number,
@@ -502,7 +504,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const { groupToDelete } = this.state;
 
     return (
-      <div id="tree-list" className="padded-tab-content">
+      <div id={treeTabId} className="padded-tab-content">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
           title={title}
@@ -519,6 +521,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
             searchKey="name"
             provideShortcut
+            targetId={treeTabId}
           >
             <Tooltip title="Open the search via CTRL + Shift + F">
               <ButtonComponent>

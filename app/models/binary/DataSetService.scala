@@ -3,9 +3,13 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWSegmentationLayer
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractSegmentationLayer,
   DataSourceId,
+  ElementClass,
   GenericDataSource,
+  inbox,
   DataLayerLike => DataLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
@@ -254,7 +258,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
       dataLayersBox match {
-        case Full(dataLayers) if (dataLayers.length > 0) =>
+        case Full(dataLayers) if (dataLayers.nonEmpty) =>
           for {
             scale <- dataSet.scale
           } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
@@ -327,12 +331,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
+      dataSourceWith64BitSupport = dataSource.toUsable.map(replaceUint64Layers).getOrElse(dataSource)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
-        "dataSource" -> dataSource,
+        "dataSource" -> dataSourceWith64BitSupport,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
@@ -352,4 +357,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       )
     }
 
+  private def replaceUint64Layers(dataSource: GenericDataSource[DataLayer]) = {
+    val newLayers = dataSource.dataLayers.map {
+      case l: WKWSegmentationLayer if l.elementClass == ElementClass.uint64 =>
+        l.copy(elementClass = ElementClass.uint32)
+      case l: AbstractSegmentationLayer if l.elementClass == ElementClass.uint64 =>
+        l.copy(elementClass = ElementClass.uint32)
+      case l => l
+    }
+
+    dataSource.copy(dataLayers = newLayers)
+  }
 }

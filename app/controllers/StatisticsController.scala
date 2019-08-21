@@ -45,9 +45,8 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
         case Some(handler) =>
           for {
             organizationId <- Fox.successful(request.identity._organization)
-            _ <- userService
-              .isTeamManagerOrAdminOfOrg(request.identity, organizationId)
-              .flatMap(bool2Fox) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox
+              .assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, organizationId)) ?~> "notAllowed" ~> FORBIDDEN
             times <- timeSpanService.loggedTimePerInterval(handler, start, end, organizationId)
             numberOfUsers <- userDAO.countAllForOrganization(organizationId)
             numberOfDatasets <- dataSetDAO.countAllForOrganization(organizationId)
@@ -72,9 +71,8 @@ class StatisticsController @Inject()(timeSpanService: TimeSpanService,
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = sil.SecuredAction.async {
     implicit request =>
       for {
-        _ <- userService
-          .isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
-          .flatMap(bool2Fox) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox
+          .assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
         handler <- intervalHandler.get(interval) ?~> "statistics.interval.invalid"
         users <- userDAO.findAll
         usersWithTimes <- Fox.serialCombined(users)(user =>

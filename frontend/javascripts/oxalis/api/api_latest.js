@@ -57,6 +57,7 @@ import {
   createCommentAction,
   deleteNodeAction,
   deleteTreeAction,
+  resetSkeletonTracingAction,
   setNodeRadiusAction,
   setTreeNameAction,
   setActiveTreeAction,
@@ -187,9 +188,20 @@ class TracingApi {
     Store.dispatch(deleteNodeAction(nodeId, treeId));
   }
 
+  /**
+   * Deletes the tree with the given treeId.
+   */
   deleteTree(treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteTreeAction(treeId));
+  }
+
+  /**
+   * Completely resets the skeleton tracing.
+   */
+  resetSkeletonTracing() {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(resetSkeletonTracingAction());
   }
 
   /**

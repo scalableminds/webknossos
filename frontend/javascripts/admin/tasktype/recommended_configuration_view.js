@@ -176,6 +176,8 @@ export default function RecommendedConfigurationView({
               }))}
               size="small"
               pagination={false}
+              className="large-table"
+              scroll={{ x: "max-content" }}
             />
           </Col>
         </Row>

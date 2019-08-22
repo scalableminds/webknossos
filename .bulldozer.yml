@@ -9,6 +9,6 @@ merge:
       body: summarize_commits
   delete_after_merge: true
 update:
-  whitelist:
-    labels: ["automerge"]
+  blacklist:
+    labels: ["no-update"]
 

@@ -280,7 +280,7 @@ class AnnotationController @Inject()(
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound" ~> NOT_FOUND
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id =>

@@ -169,6 +169,10 @@ class Plane {
     this.plane.material.setSegmentationAlpha(alpha);
   }
 
+  setSegmentationVisibility(isVisible: boolean): void {
+    this.plane.material.setSegmentationVisibility(isVisible);
+  }
+
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
 
   setLinearInterpolationEnabled = (enabled: boolean) => {

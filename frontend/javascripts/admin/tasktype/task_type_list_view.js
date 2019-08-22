@@ -138,12 +138,14 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
               locale={{ emptyText: this.renderPlaceholder() }}
+              scroll={{ x: "max-content" }}
+              className="large-table"
             >
               <Column
                 title="ID"
                 dataIndex="id"
                 key="id"
-                width={100}
+                width={120}
                 sorter={Utils.localeCompareBy(typeHint, taskType => taskType.id)}
                 className="monospace-id"
               />
@@ -151,14 +153,14 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 title="Team"
                 dataIndex="teamName"
                 key="team"
-                width={130}
+                width={230}
                 sorter={Utils.localeCompareBy(typeHint, taskType => taskType.teamName)}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
-                width={130}
+                width={230}
                 sorter={Utils.localeCompareBy(typeHint, taskType => taskType.summary)}
               />
               <Column
@@ -174,13 +176,12 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     />
                   </div>
                 )}
-                width={300}
               />
               <Column
                 title="Modes"
                 dataIndex="settings"
                 key="allowedModes"
-                width={100}
+                width={200}
                 render={(settings, taskType) =>
                   [
                     taskType.tracingType === "skeleton" ? (
@@ -217,12 +218,13 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     );
                   return elements;
                 }}
-                width={100}
+                width={200}
               />
               <Column
                 title="Action"
                 key="actions"
                 width={140}
+                fixed="right"
                 render={(__, taskType: APITaskType) => (
                   <span>
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">

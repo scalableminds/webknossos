@@ -205,18 +205,22 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
               locale={{ emptyText: this.renderPlaceholder() }}
+              scroll={{ x: "max-content" }}
+              className="large-table"
             >
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
                 sorter={Utils.localeCompareBy(typeHint, project => project.name)}
+                width={250}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
                 sorter={Utils.localeCompareBy(typeHint, project => project.team)}
+                width={300}
               />
               <Column
                 title="Priority"
@@ -240,18 +244,22 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
+                width={200}
                 sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
               />
               <Column
                 title="Expected Time"
                 dataIndex="expectedTime"
                 key="expectedTime"
+                width={200}
                 sorter={Utils.compareBy(typeHint, project => project.expectedTime)}
                 render={expectedTime => `${expectedTime}m`}
               />
               <Column
                 title="Action"
                 key="actions"
+                fixed="right"
+                width={200}
                 render={(__, project: APIProjectWithAssignments) => (
                   <span>
                     <Link

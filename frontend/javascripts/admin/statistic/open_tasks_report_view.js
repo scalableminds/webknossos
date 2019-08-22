@@ -58,6 +58,8 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             rowKey="id"
             style={{ marginTop: 30, marginBotton: 30 }}
             size="small"
+            scroll={{ x: "max-content" }}
+            className="large-table"
           >
             <Column
               title="User"

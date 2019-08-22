@@ -97,19 +97,41 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     this.setState({ histograms });
   };
 
-  getFindDataButton = (layerName: string, isDisabled: boolean) => (
-    <Tooltip title="If you are having trouble finding your data, webKnossos can try to find a position which contains data.">
-      <AsyncIconButton
-        type="scan"
-        onClick={!isDisabled ? () => this.handleFindData(layerName) : () => Promise.resolve()}
-        style={{
-          float: "right",
-          marginTop: 4,
-          cursor: !isDisabled ? "pointer" : "not-allowed",
-        }}
-      />
-    </Tooltip>
-  );
+  getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
+    let tooltipText = isDisabled
+      ? "You cannot search for data when the layer is disabled."
+      : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
+    // If the tracing contains a volume tracing, the backend can only
+    // search in the fallback layer of the segmentation layer for data.
+    let layerNameToSearchDataIn = layerName;
+    if (!isColorLayer) {
+      const { volume } = Store.getState().tracing;
+      if (volume && volume.fallbackLayer) {
+        layerNameToSearchDataIn = volume.fallbackLayer;
+      } else if (volume && !volume.fallbackLayer && !isDisabled) {
+        isDisabled = true;
+        tooltipText = "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers";
+      }
+    }
+
+    return (
+      <Tooltip title={tooltipText}>
+        <AsyncIconButton
+          type="scan"
+          onClick={
+            !isDisabled
+              ? () => this.handleFindData(layerNameToSearchDataIn)
+              : () => Promise.resolve()
+          }
+          style={{
+            float: "right",
+            marginTop: 4,
+            cursor: !isDisabled ? "pointer" : "not-allowed",
+          }}
+        />
+      </Tooltip>
+    );
+  };
 
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
@@ -192,13 +214,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         setSingleLayerVisibility(true);
       }
     };
+
     return (
       <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>{layerName}</span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
-          {this.getFindDataButton(layerName, isDisabled)}
+          {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
         </Col>
       </Row>
     );
@@ -306,6 +329,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getSegmentationPanel() {
     const segmentation = Model.getSegmentationLayer();
+    console.log(segmentation);
     const segmentationLayerName = segmentation != null ? segmentation.name : null;
     if (!segmentationLayerName) {
       return null;

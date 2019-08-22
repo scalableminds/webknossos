@@ -110,7 +110,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         layerNameToSearchDataIn = volume.fallbackLayer;
       } else if (volume && !volume.fallbackLayer && !isDisabled) {
         isDisabled = true;
-        tooltipText = "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers";
+        tooltipText =
+          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers";
       }
     }
 

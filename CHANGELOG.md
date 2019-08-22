@@ -12,15 +12,20 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Indicating active nml downloads with a loading icon. [#4228](https://github.com/scalableminds/webknossos/pull/4228)
 - Added possibility for users to see their own time statistics. [#4220](https://github.com/scalableminds/webknossos/pull/4220)
+- The segmentation layer can now be turned invisible and also supports the find data feature. [#4232](https://github.com/scalableminds/webknossos/pull/4232)
+- Enabled the advanced search for the comment tab. [#4238](https://github.com/scalableminds/webknossos/pull/4238)
+- Added limited support for `uint64` segmentation layer by using the lower 4 bytes. [#4233](https://github.com/scalableminds/webknossos/pull/4233)
 - Added an API route to add and delete dataStores. [#4242](https://github.com/scalableminds/webknossos/pull/4242)
 
 ### Changed
 - Each of the  columns of the dataset table and explorative annotations table in the dashboard now have an individual fixed width, so the tables become scrollable on smaller screens. [#4207](https://github.com/scalableminds/webknossos/pull/4207)
 - When uploading a zipped annotation (such as volume / hybrid / collection), the zip name is used for the resulting explorative annotation, rather than the name of the contained NML file. [#4222](https://github.com/scalableminds/webknossos/pull/4222)
+- Color and segmentation layer are not longer treated separately in the dataset settings in tracing/view mode.  [#4232](https://github.com/scalableminds/webknossos/pull/4232)
 
 ### Fixed
 - Data for disabled or invisible layers will no longer be downloaded, saving bandwidth and speeding up webKnossos in general. [#4202](https://github.com/scalableminds/webknossos/pull/4202)
 - Fixed tooltip not disappearing in the statistics view in certain circumstances. [#4219](https://github.com/scalableminds/webknossos/pull/4219)
+- Fixed the error messages when trying to access a dataset with insufficient permissions. [#4244](https://github.com/scalableminds/webknossos/pull/4244)
 
 ### Removed
 -

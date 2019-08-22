@@ -4,7 +4,7 @@ import java.nio.file.{Path, Paths}
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{
   DataReadInstruction,
   DataServiceDataRequest,
@@ -48,10 +48,14 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         handleDataRequest(request).map { data =>
+          val convertedData =
+            if (request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation)
+              convertToUInt32(data)
+            else data
           if (request.settings.halfByte) {
-            (convertToHalfByte(data), index)
+            (convertToHalfByte(convertedData), index)
           } else {
-            (data, index)
+            (convertedData, index)
           }
         }
     }
@@ -151,6 +155,17 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
       i += 1
     }
     compressed
+  }
+
+  private def convertToUInt32(a: Array[Byte]) = {
+    val result = new Array[Byte](a.length / 2)
+
+    for (i <- a.indices by 8) {
+      for (j <- 0 until 4) {
+        result(i / 2 + j) = a(i + j)
+      }
+    }
+    result
   }
 
   def clearCache(organizationName: String, dataSetName: String) = {

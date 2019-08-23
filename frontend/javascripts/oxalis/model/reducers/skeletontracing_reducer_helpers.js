@@ -431,7 +431,11 @@ export function deleteBranchPoint(
   return Maybe.Nothing();
 }
 
-export function createTree(state: OxalisState, timestamp: number): Maybe<Tree> {
+export function createTree(
+  state: OxalisState,
+  timestamp: number,
+  addToActiveGroup: boolean = true,
+): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = state.tracing.restrictions;
 
@@ -442,11 +446,16 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<Tree> {
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
-      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(group => group.groupId);
-      const groupId = Utils.toNullable(
-        groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
-      );
+      let groupId = null;
+      if (addToActiveGroup) {
+        const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map(tree => tree.groupId);
+        const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+          group => group.groupId,
+        );
+        groupId = Utils.toNullable(
+          groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe),
+        );
+      }
 
       // Create the new tree
       const tree: Tree = {

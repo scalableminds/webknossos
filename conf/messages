@@ -105,6 +105,9 @@ dataSource.notFound=Datasource not found on datastore server
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
 dataStore.unavailable=DataStore couldn't be reached.
+dataStore.create.failed=Failed to create DataStore.
+dataStore.remove.failure=The DataStore couldn’t get removed.
+dataStore.name.alreadyTaken=The DataStore name is already in use.
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.

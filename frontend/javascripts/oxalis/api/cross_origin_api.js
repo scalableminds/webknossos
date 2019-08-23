@@ -27,6 +27,15 @@ const onMessage = event => {
       api.tracing.resetSkeletonTracing();
       break;
     }
+    case "importNml": {
+      const nmlAsString = args[0];
+      if (_.isString(nmlAsString)) {
+        api.tracing.importNmlAsString(nmlAsString);
+      } else {
+        console.warn("The first argument needs to be the content of the nml as a string.");
+      }
+      break;
+    }
     default: {
       console.warn("Unsupported cross origin API command.");
     }

@@ -45,6 +45,7 @@ import {
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,
@@ -53,6 +54,7 @@ import {
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import {
+  addTreesAndGroupsAction,
   setActiveNodeAction,
   createCommentAction,
   deleteNodeAction,
@@ -338,6 +340,11 @@ class TracingApi {
     }
 
     Store.dispatch(setTreeGroupAction(groupId, treeId));
+  }
+
+  async importNmlAsString(nmlString: string) {
+    const { treeGroups, trees } = await parseNml(nmlString);
+    Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
   }
 
   /**

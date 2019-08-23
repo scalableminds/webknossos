@@ -130,7 +130,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Time [h]"
               dataIndex="billedMilliseconds"
               sorter={Utils.compareBy(typeHint, project => project.billedMilliseconds)}
-              render={number => Utils.millisecondsToHours(number).toLocaleString()}
+              render={number =>
+                Utils.millisecondsToHours(number).toLocaleString(undefined, {
+                  maximumFractionDigits: 1,
+                })
+              }
               width={150}
             />
             <ColumnGroup title="Instances">

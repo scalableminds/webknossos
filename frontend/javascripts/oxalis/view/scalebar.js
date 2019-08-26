@@ -85,6 +85,13 @@ function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) 
   );
 }
 
+// getViewportScale(Store.getState(), OrthoViews.TDView);
+/*
+
+// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
+getViewportScale 
+*/
+
 const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => {
   const [width, height] = getViewportExtents(state)[ownProps.viewportID];
   return {

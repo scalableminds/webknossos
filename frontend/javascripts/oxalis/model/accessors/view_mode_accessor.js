@@ -2,18 +2,26 @@
 
 import memoizeOne from "memoize-one";
 
-import { type OxalisState } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
   OUTER_CSS_BORDER,
   type OrthoViewExtents,
   type Rect,
   type Viewport,
+  OrthoViews,
 } from "oxalis/constants";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
   return [camera.right - camera.left, camera.top - camera.bottom];
+}
+
+export function getTDViewZoom() {
+  const { width } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
+  const [viewplaneWidth] = getTDViewportSize(Store.getState());
+  const scaleX = viewplaneWidth / width;
+  return scaleX;
 }
 
 export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {

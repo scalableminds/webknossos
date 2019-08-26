@@ -115,7 +115,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "3",
-      action: "Toggle Segmentation Opacity",
+      action: "Toggle Segmentation Visibility",
     },
     {
       keybinding: "Shift + Mousewheel",

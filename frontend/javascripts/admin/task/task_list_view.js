@@ -21,6 +21,7 @@ import TaskSearchForm, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import LargeTableWrapper from "components/large_table_wrapper";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
@@ -35,8 +36,6 @@ type State = {
   tasks: Array<APITask>,
   searchQuery: string,
   isAnonymousTaskLinkModalVisible: boolean,
-  expandedColumns: Array<string>,
-  ignoreNextUpdate: boolean,
 };
 
 const typeHint: Array<APITask> = [];
@@ -52,8 +51,6 @@ class TaskListView extends React.PureComponent<Props, State> {
     tasks: [],
     searchQuery: "",
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
-    expandedColumns: [],
-    ignoreNextUpdate: false,
   };
 
   componentWillMount() {
@@ -134,10 +131,8 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const { expandedColumns, searchQuery, isLoading, tasks } = this.state;
+    const { searchQuery, isLoading, tasks } = this.state;
 
-    console.log("expanded columns in render:", expandedColumns);
-    console.log("column set to:", expandedColumns.length <= 0 ? "right" : false);
     return (
       <div className="container">
         <div className="pull-right">
@@ -165,7 +160,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         </Card>
 
         <Spin spinning={isLoading} size="large">
-          <Table
+          <LargeTableWrapper
             dataSource={Utils.filterWithSearchQueryAND(
               tasks,
               [
@@ -185,23 +180,6 @@ class TaskListView extends React.PureComponent<Props, State> {
             }}
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}
-            expandedRowKeys={expandedColumns}
-            scroll={{ x: "max-content" }}
-            className="large-table"
-            onExpandedRowsChange={(arg: Array<string>) => {
-              if (this.state.ignoreNextUpdate) {
-                this.setState({ ignoreNextUpdate: false });
-                console.log("ignoring update with arg:", arg);
-                console.log(arg);
-                return;
-              }
-              this.setState(prevState => ({
-                expandedColumns: arg,
-                ignoreNextUpdate: prevState.expandedColumns.length === 0 && arg.length > 0,
-              }));
-              console.log("expanded changed");
-              console.log(arg);
-            }}
           >
             <Column
               title="ID"
@@ -304,7 +282,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Action"
               key="actions"
               width={130}
-              fixed={expandedColumns.length <= 0 ? "right" : false}
+              fixed="right"
               render={(__, task: APITask) => (
                 <span>
                   {task.status.finished > 0 ? (
@@ -340,7 +318,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 </span>
               )}
             />
-          </Table>
+          </LargeTableWrapper>
           {this.getAnonymousTaskLinkModal()}
         </Spin>
       </div>

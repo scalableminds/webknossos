@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Data for disabled or invisible layers will no longer be downloaded, saving bandwidth and speeding up webKnossos in general. [#4202](https://github.com/scalableminds/webknossos/pull/4202)
 - Fixed tooltip not disappearing in the statistics view in certain circumstances. [#4219](https://github.com/scalableminds/webknossos/pull/4219)
 - Fixed the error messages when trying to access a dataset with insufficient permissions. [#4244](https://github.com/scalableminds/webknossos/pull/4244)
+- Fixed the upload of volume tracings by recognizing the correct format of the fallback layer. [#4248](https://github.com/scalableminds/webknossos/pull/4248)
 
 ### Removed
 -

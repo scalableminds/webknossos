@@ -334,6 +334,22 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             )
             .getOrElse(state);
         }
+        case "RESET_SKELETON_TRACING": {
+          const newTree = createTree(state, Date.now(), false).get();
+          const newTreesObject = Object.assign({}, { [newTree.treeId]: newTree });
+          const newState = update(state, {
+            tracing: {
+              skeleton: {
+                trees: { $set: newTreesObject },
+                activeTreeId: { $set: newTree.treeId },
+                activeNodeId: { $set: null },
+                activeGroupId: { $set: null },
+                treeGroups: { $set: [] },
+              },
+            },
+          });
+          return newState;
+        }
 
         case "SET_ACTIVE_TREE": {
           const { trees } = skeletonTracing;

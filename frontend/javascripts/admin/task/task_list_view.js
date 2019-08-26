@@ -35,7 +35,8 @@ type State = {
   tasks: Array<APITask>,
   searchQuery: string,
   isAnonymousTaskLinkModalVisible: boolean,
-  hasExpandedColumns: boolean,
+  expandedColumns: Array<string>,
+  ignoreNextUpdate: boolean,
 };
 
 const typeHint: Array<APITask> = [];
@@ -51,7 +52,8 @@ class TaskListView extends React.PureComponent<Props, State> {
     tasks: [],
     searchQuery: "",
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
-    hasExpandedColumns: false,
+    expandedColumns: [],
+    ignoreNextUpdate: false,
   };
 
   componentWillMount() {
@@ -132,9 +134,10 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const { hasExpandedColumns, searchQuery, isLoading, tasks } = this.state;
+    const { expandedColumns, searchQuery, isLoading, tasks } = this.state;
 
-    console.log(hasExpandedColumns);
+    console.log("expanded columns in render:", expandedColumns);
+    console.log("column set to:", expandedColumns.length <= 0 ? "right" : false);
     return (
       <div className="container">
         <div className="pull-right">
@@ -182,10 +185,20 @@ class TaskListView extends React.PureComponent<Props, State> {
             }}
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}
+            expandedRowKeys={expandedColumns}
             scroll={{ x: "max-content" }}
             className="large-table"
             onExpandedRowsChange={(arg: Array<string>) => {
-              this.setState({ hasExpandedColumns: arg.length > 0 });
+              if (this.state.ignoreNextUpdate) {
+                this.setState({ ignoreNextUpdate: false });
+                console.log("ignoring update with arg:", arg);
+                console.log(arg);
+                return;
+              }
+              this.setState(prevState => ({
+                expandedColumns: arg,
+                ignoreNextUpdate: prevState.expandedColumns.length === 0 && arg.length > 0,
+              }));
               console.log("expanded changed");
               console.log(arg);
             }}
@@ -287,87 +300,46 @@ class TaskListView extends React.PureComponent<Props, State> {
                 </div>
               )}
             />
-            {hasExpandedColumns ? (
-              <Column
-                title="Action"
-                key="actions"
-                width={130}
-                render={(__, task: APITask) => (
-                  <span>
-                    {task.status.finished > 0 ? (
-                      <a
-                        href={`/annotations/CompoundTask/${task.id}`}
-                        title="View all Finished Tracings"
-                      >
-                        <Icon type="eye-o" />
-                        View
-                      </a>
-                    ) : null}
-                    <br />
-                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                      <Icon type="edit" />
-                      Edit
+            <Column
+              title="Action"
+              key="actions"
+              width={130}
+              fixed={expandedColumns.length <= 0 ? "right" : false}
+              render={(__, task: APITask) => (
+                <span>
+                  {task.status.finished > 0 ? (
+                    <a
+                      href={`/annotations/CompoundTask/${task.id}`}
+                      title="View all Finished Tracings"
+                    >
+                      <Icon type="eye-o" />
+                      View
                     </a>
-                    <br />
-                    {task.status.finished > 0 ? (
-                      <AsyncLink
-                        href="#"
-                        onClick={() => downloadNml(task.id, "CompoundTask")}
-                        title="Download all Finished Tracings"
-                      >
-                        <Icon type="download" />
-                        Download
-                      </AsyncLink>
-                    ) : null}
-                    <br />
-                    <a href="#" onClick={_.partial(this.deleteTask, task)}>
-                      <Icon type="delete" />
-                      Delete
-                    </a>
-                  </span>
-                )}
-              />
-            ) : (
-              <Column
-                title="Action"
-                key="actions"
-                width={130}
-                render={(__, task: APITask) => (
-                  <span>
-                    {task.status.finished > 0 ? (
-                      <a
-                        href={`/annotations/CompoundTask/${task.id}`}
-                        title="View all Finished Tracings"
-                      >
-                        <Icon type="eye-o" />
-                        View
-                      </a>
-                    ) : null}
-                    <br />
-                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                      <Icon type="edit" />
-                      Edit
-                    </a>
-                    <br />
-                    {task.status.finished > 0 ? (
-                      <AsyncLink
-                        href="#"
-                        onClick={() => downloadNml(task.id, "CompoundTask")}
-                        title="Download all Finished Tracings"
-                      >
-                        <Icon type="download" />
-                        Download
-                      </AsyncLink>
-                    ) : null}
-                    <br />
-                    <a href="#" onClick={_.partial(this.deleteTask, task)}>
-                      <Icon type="delete" />
-                      Delete
-                    </a>
-                  </span>
-                )}
-              />
-            )}
+                  ) : null}
+                  <br />
+                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+                    <Icon type="edit" />
+                    Edit
+                  </a>
+                  <br />
+                  {task.status.finished > 0 ? (
+                    <AsyncLink
+                      href="#"
+                      onClick={() => downloadNml(task.id, "CompoundTask")}
+                      title="Download all Finished Tracings"
+                    >
+                      <Icon type="download" />
+                      Download
+                    </AsyncLink>
+                  ) : null}
+                  <br />
+                  <a href="#" onClick={_.partial(this.deleteTask, task)}>
+                    <Icon type="delete" />
+                    Delete
+                  </a>
+                </span>
+              )}
+            />
           </Table>
           {this.getAnonymousTaskLinkModal()}
         </Spin>

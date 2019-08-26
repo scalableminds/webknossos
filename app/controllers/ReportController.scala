@@ -24,7 +24,8 @@ case class ProjectProgressEntry(projectName: String,
                                 totalInstances: Int,
                                 openInstances: Int,
                                 finishedInstances: Int,
-                                activeInstances: Int)
+                                activeInstances: Int,
+                                billedMilliseconds: Long)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
 class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
@@ -67,7 +68,8 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
                p.priority priority,
                count(t._id) totalTasks,
                sum(t.totalInstances) totalInstances,
-               sum(t.openInstances) openInstances
+               sum(t.openInstances) openInstances,
+               sum(t.tracingTime) tracingTime
           from
             filteredProjects p
             join webknossos.tasks_ t on p._id = t._project
@@ -83,14 +85,14 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
            )
 
 
-          select s1.projectName, s1.paused, s1.priority, s1.totalTasks, s1.totalInstances, s1.openInstances, (s1.totalInstances - s1.openInstances - s2.activeInstances) finishedInstances, s2.activeInstances
+          select s1.projectName, s1.paused, s1.priority, s1.totalTasks, s1.totalInstances, s1.openInstances, (s1.totalInstances - s1.openInstances - s2.activeInstances) finishedInstances, s2.activeInstances, s1.tracingTime
           from s1
             join s2 on s1._id = s2._id
             join projectModifiedTimes pmt on s1._id = pmt._id
           where (not (s1.paused and s1.totalInstances = s1.openInstances)) and ((s1.openInstances > 0 and not s1.paused) or s2.activeInstances > 0 or pmt.modified > NOW() - INTERVAL '30 days')
-        """.as[(String, Boolean, Long, Int, Int, Int, Int, Int)])
+        """.as[(String, Boolean, Long, Int, Int, Int, Int, Int, Long)])
     } yield {
-      r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8))
+      r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9))
     }
 
   def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] =

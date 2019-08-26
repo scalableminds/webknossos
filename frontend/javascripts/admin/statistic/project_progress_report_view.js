@@ -102,6 +102,8 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             rowKey="projectName"
             style={{ marginTop: 30, marginBotton: 30 }}
             size="small"
+            scroll={{ x: "max-content" }}
+            className="large-table"
           >
             <Column
               title="Project"
@@ -113,12 +115,14 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
                 </span>
               )}
+              width={250}
             />
             <Column
               title="Tasks"
               dataIndex="totalTasks"
               sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
               render={number => number.toLocaleString()}
+              width={150}
             />
             <Column
               title="Priority"

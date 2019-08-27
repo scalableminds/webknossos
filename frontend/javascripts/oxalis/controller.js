@@ -15,7 +15,11 @@ import { fetchGistContent } from "libs/gist";
 import { initializeSceneController } from "oxalis/controller/scene_controller";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
-import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import {
+  setViewModeAction,
+  updateUserSettingAction,
+  updateDatasetSettingAction,
+} from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
@@ -30,7 +34,7 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+
 import app from "app";
 import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
 import messages from "messages";
@@ -151,9 +155,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   async initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
-    const task = Store.getState().task;
+    const { task } = Store.getState();
     if (task != null && task.script != null) {
-      const script = task.script;
+      const { script } = task;
       const content = await fetchGistContent(script.gist, script.name);
       try {
         // eslint-disable-next-line no-eval
@@ -190,9 +194,8 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       }
     });
 
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    const { controlMode } = Store.getState().temporaryConfiguration;
     const keyboardControls = {};
-    let prevSegAlpha = 20;
     if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
@@ -203,7 +206,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         m: () => {
           // rotate allowed modes
           const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-          const allowedModes = Store.getState().tracing.restrictions.allowedModes;
+          const { allowedModes } = Store.getState().tracing.restrictions;
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
@@ -241,18 +244,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
-        // Flow cannot infer the return type of getConfiguration :(
-        // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-        const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
-        let newSegAlpha = 0;
-
-        if (curSegAlpha > 0) {
-          prevSegAlpha = curSegAlpha;
-        } else {
-          newSegAlpha = prevSegAlpha;
-        }
-
-        api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+        Store.dispatch(
+          updateDatasetSettingAction(
+            "isSegmentationDisabled",
+            !Store.getState().datasetConfiguration.isSegmentationDisabled,
+          ),
+        );
       },
     });
 

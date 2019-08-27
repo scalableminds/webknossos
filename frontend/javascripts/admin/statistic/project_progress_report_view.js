@@ -115,14 +115,12 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
                 </span>
               )}
-              width={250}
             />
             <Column
               title="Tasks"
               dataIndex="totalTasks"
               sorter={Utils.compareBy(typeHint, project => project.totalTasks)}
               render={number => number.toLocaleString()}
-              width={150}
             />
             <Column
               title="Priority"
@@ -139,7 +137,6 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                   maximumFractionDigits: 1,
                 })
               }
-              width={150}
             />
             <ColumnGroup title="Instances">
               <Column

@@ -12,12 +12,8 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { getPosition, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getViewportScale,
-  getInputCatcherRect,
-  getTDViewZoom,
-} from "oxalis/model/accessors/view_mode_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {

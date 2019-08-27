@@ -2,7 +2,7 @@
 
 import memoizeOne from "memoize-one";
 
-import Store, { type OxalisState } from "oxalis/store";
+import { type OxalisState } from "oxalis/store";
 import constants, {
   ArbitraryViewport,
   OUTER_CSS_BORDER,
@@ -17,10 +17,10 @@ export function getTDViewportSize(state: OxalisState): [number, number] {
   return [camera.right - camera.left, camera.top - camera.bottom];
 }
 
-export function getTDViewZoom() {
-  const { width } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-  const [viewplaneWidth] = getTDViewportSize(Store.getState());
-  const { scale } = Store.getState().dataset.dataSource;
+export function getTDViewZoom(state: OxalisState) {
+  const { width } = getInputCatcherRect(state, OrthoViews.TDView);
+  const [viewplaneWidth] = getTDViewportSize(state);
+  const { scale } = state.dataset.dataSource;
   // We only need to calculate scaleX as scaleY would have the same value.
   const scaleX = viewplaneWidth / (width * scale[0]);
   return scaleX;

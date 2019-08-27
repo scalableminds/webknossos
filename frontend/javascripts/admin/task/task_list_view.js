@@ -21,7 +21,7 @@ import TaskSearchForm, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import LargeTableWrapper from "components/large_table_wrapper";
+import FixedExpandableTable from "components/fixed_expandable_table";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
@@ -160,7 +160,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         </Card>
 
         <Spin spinning={isLoading} size="large">
-          <LargeTableWrapper
+          <FixedExpandableTable
             dataSource={Utils.filterWithSearchQueryAND(
               tasks,
               [
@@ -318,7 +318,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 </span>
               )}
             />
-          </LargeTableWrapper>
+          </FixedExpandableTable>
           {this.getAnonymousTaskLinkModal()}
         </Spin>
       </div>

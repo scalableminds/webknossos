@@ -4,7 +4,7 @@ import * as React from "react";
 
 type Props = {
   children: React.Node,
-  expandedRowRender?: Function,
+  expandedRowRender: Function,
 };
 
 type State = {
@@ -17,7 +17,7 @@ type State = {
  *  If you are using this wrapper, you do not need to set the class "large-table"
  *  and the scroll prop as this is already done by the wrapper.
  */
-export default class LargeTableWrapper extends React.PureComponent<Props, State> {
+export default class FixedExpandableTable extends React.PureComponent<Props, State> {
   state = {
     expandedColumns: [],
     ignoreNextUpdate: false,
@@ -26,7 +26,6 @@ export default class LargeTableWrapper extends React.PureComponent<Props, State>
   render() {
     const { expandedColumns } = this.state;
     const { children, ...restProps } = this.props;
-    const hasExpandableRows = restProps.expandedRowRender != null;
     const columnsWithAdjustedFixedProp = React.Children.map(children, child => {
       const columnFixed = expandedColumns.length > 0 ? false : child.props.fixed;
       return React.cloneElement(child, { fixed: columnFixed });
@@ -35,24 +34,22 @@ export default class LargeTableWrapper extends React.PureComponent<Props, State>
     return (
       <Table
         {...restProps}
-        expandedRowKeys={hasExpandableRows ? expandedColumns : null}
+        expandedRowKeys={expandedColumns}
         scroll={{ x: "max-content" }}
         className="large-table"
-        onExpandedRowsChange={
-          hasExpandableRows
-            ? (selectedRows: Array<string>) => {
-                if (this.state.ignoreNextUpdate) {
-                  this.setState({ ignoreNextUpdate: false });
-                  return;
-                }
-                this.setState(prevState => ({
-                  expandedColumns: selectedRows,
-                  ignoreNextUpdate:
-                    prevState.expandedColumns.length === 0 && selectedRows.length > 0,
-                }));
-              }
-            : () => {}
-        }
+        onExpandedRowsChange={(selectedRows: Array<string>) => {
+          // Disabling the fixed feature of a table causes antd to automatically collapse all expanded rows.
+          // We need to ignore this update to keep the rows expanded.
+          // This case always occurs when the user expands a row when there were previously no expanded rows.
+          if (this.state.ignoreNextUpdate) {
+            this.setState({ ignoreNextUpdate: false });
+            return;
+          }
+          this.setState(prevState => ({
+            expandedColumns: selectedRows,
+            ignoreNextUpdate: prevState.expandedColumns.length === 0 && selectedRows.length > 0,
+          }));
+        }}
       >
         {columnsWithAdjustedFixedProp}
       </Table>

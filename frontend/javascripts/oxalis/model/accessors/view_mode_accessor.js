@@ -20,7 +20,9 @@ export function getTDViewportSize(state: OxalisState): [number, number] {
 export function getTDViewZoom() {
   const { width } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(Store.getState());
-  const scaleX = viewplaneWidth / width;
+  const { scale } = Store.getState().dataset.dataSource;
+  // We only need to calculate scaleX as scaleY would have the same value.
+  const scaleX = viewplaneWidth / (width * scale[0]);
   return scaleX;
 }
 

@@ -219,9 +219,6 @@ class TDController extends React.PureComponent<Props> {
   moveTDView(delta: Point2): void {
     // was genau gibt denn getViewportScale zureck
     const [scaleX, scaleY] = getViewportScale(Store.getState(), OrthoViews.TDView);
-    console.log("tdViewport Scale", getTDViewZoom());
-    console.log("tdViewport Scale / 20", getTDViewZoom() / 20);
-    console.log(getZoomValue(Store.getState().flycam));
     Store.dispatch(moveTDViewXAction((delta.x / scaleX) * -1));
     Store.dispatch(moveTDViewYAction((delta.y / scaleY) * -1));
   }

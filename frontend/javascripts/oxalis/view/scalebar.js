@@ -8,9 +8,9 @@ import type { APIDataset } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { convertPixelsToNm } from "oxalis/view/right-menu/dataset_info_tab_view";
 import { formatNumberToLength } from "libs/format_utils";
-import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
+import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
-import constants, { Unicode, OUTER_CSS_BORDER, type OrthoView } from "oxalis/constants";
+import constants, { Unicode, OUTER_CSS_BORDER, type OrthoView, OrthoViews } from "oxalis/constants";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 
@@ -85,17 +85,12 @@ function Scalebar({ zoomValue, dataset, widthInPixels, heightInPixels }: Props) 
   );
 }
 
-// getViewportScale(Store.getState(), OrthoViews.TDView);
-/*
-
-// Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
-getViewportScale 
-*/
-
 const mapStateToProps = (state: OxalisState, ownProps: OwnProps): StateProps => {
   const [width, height] = getViewportExtents(state)[ownProps.viewportID];
+  const zoomValue =
+    ownProps.viewportID === OrthoViews.TDView ? getTDViewZoom() : getZoomValue(state.flycam);
   return {
-    zoomValue: getZoomValue(state.flycam),
+    zoomValue,
     dataset: state.dataset,
     widthInPixels: width,
     heightInPixels: height,

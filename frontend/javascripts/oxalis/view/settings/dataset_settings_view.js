@@ -330,7 +330,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getSegmentationPanel() {
     const segmentation = Model.getSegmentationLayer();
-    console.log(segmentation);
     const segmentationLayerName = segmentation != null ? segmentation.name : null;
     if (!segmentationLayerName) {
       return null;

@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed the error messages when trying to access a dataset with insufficient permissions. [#4244](https://github.com/scalableminds/webknossos/pull/4244)
 - Fixed the upload of volume tracings by recognizing the correct format of the fallback layer. [#4248](https://github.com/scalableminds/webknossos/pull/4248)
 - Fixed an imprecision when exporting an NML via the front-end. [#4262](https://github.com/scalableminds/webknossos/pull/4262)
+- Fixed viewing and tracing of datasets which only contain a segmentation layer. [#4265](https://github.com/scalableminds/webknossos/pull/4265)
 
 ### Removed
 -

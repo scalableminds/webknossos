@@ -267,10 +267,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   portalKey="xz"
                   displayScalebars={displayScalebars}
                 />
-                <InputCatcher viewportID={OrthoViews.TDView} key="td" portalKey="td">
+                <InputCatcher
+                  viewportID={OrthoViews.TDView}
+                  key="td"
+                  portalKey="td"
+                  displayScalebars={displayScalebars}
+                >
                   <TDViewControls />
                 </InputCatcher>
-
                 <InputCatcher
                   viewportID={ArbitraryViewport}
                   key="arbitraryViewport"
@@ -278,7 +282,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 >
                   {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
                 </InputCatcher>
-
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
                 <TreesTabView key="TreesTabView" portalKey="TreesTabView" />
                 <CommentTabView key="CommentTabView" portalKey="CommentTabView" />

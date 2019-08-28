@@ -9,11 +9,21 @@ import constants, {
   type OrthoViewExtents,
   type Rect,
   type Viewport,
+  OrthoViews,
 } from "oxalis/constants";
 
 export function getTDViewportSize(state: OxalisState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
   return [camera.right - camera.left, camera.top - camera.bottom];
+}
+
+export function getTDViewZoom(state: OxalisState) {
+  const { width } = getInputCatcherRect(state, OrthoViews.TDView);
+  const [viewplaneWidth] = getTDViewportSize(state);
+  const { scale } = state.dataset.dataSource;
+  // We only need to calculate scaleX as scaleY would have the same value.
+  const scaleX = viewplaneWidth / (width * scale[0]);
+  return scaleX;
 }
 
 export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {

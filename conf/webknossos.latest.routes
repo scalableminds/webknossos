@@ -81,6 +81,8 @@ PUT           /datastores/:name/datasources                                     
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
+POST          /datastores                                                       controllers.DataStoreController.create
+DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)
 
 # Tracingstores
 GET           /tracingstore                                                     controllers.WKTracingStoreController.listOne

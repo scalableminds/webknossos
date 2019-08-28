@@ -77,6 +77,7 @@ braintracing.exists=Great, you already have an account on braintracing.org. Plea
 dataSet=Dataset
 dataSet.file=Dataset ZIP File
 dataSet.notFound=Dataset {0} doesn’t exist
+dataSet.nonExistent=The requested DataSet doesn’t exist.
 dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
 dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
@@ -104,6 +105,9 @@ dataSource.notFound=Datasource not found on datastore server
 dataStore.list.failed=Failed to retrieve list of data stores.
 dataStore.notFound=DataStore not found.
 dataStore.unavailable=DataStore couldn't be reached.
+dataStore.create.failed=Failed to create DataStore.
+dataStore.remove.failure=The DataStore couldn’t get removed.
+dataStore.name.alreadyTaken=The DataStore name is already in use.
 
 tracingStore.notFound=TracingStore not found.
 tracingStore.list.failed=Failed to retrieve list of tracing stores.

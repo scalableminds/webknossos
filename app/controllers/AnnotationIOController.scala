@@ -10,7 +10,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -125,7 +125,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
-          } ?~> Messages("dataSet.notFound", dataSetName) ~> FORBIDDEN
+          } ?~> Messages("organization.notFound", organizationNameOpt.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
             dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
@@ -169,8 +169,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       fallbackLayer = dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
-        case _                                                                           => None
+        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
+        case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+        case _                                                                                   => None
       }.headOption
     } yield {
       volumeTracing.copy(
@@ -282,7 +283,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       restrictions <- provider.restrictionsFor(typ, annotationId)
       name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound" ~> NOT_FOUND
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation, name, organization.name)
     } yield {

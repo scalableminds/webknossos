@@ -7,7 +7,24 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.09.0...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+
+## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28
+[Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...19.09.0)
+
+### Highlights
+- Users can see their own time statistics now. [#4220](https://github.com/scalableminds/webknossos/pull/4220)
+- Added limited support for `uint64` segmentation layer by using the lower 4 bytes. [#4233](https://github.com/scalableminds/webknossos/pull/4233)
+- Added a scale bar to the 3D viewport. [#4258](https://github.com/scalableminds/webknossos/pull/4258)
+- Added currently spent hours on a project to the project progress view. [#4236](https://github.com/scalableminds/webknossos/pull/4236)
+
 
 ### Added
 - Indicating active nml downloads with a loading icon. [#4228](https://github.com/scalableminds/webknossos/pull/4228)

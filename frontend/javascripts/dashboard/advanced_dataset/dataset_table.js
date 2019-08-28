@@ -12,6 +12,7 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
+import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
 import type { DatasetFilteringMode } from "../dataset_view";
 
@@ -135,7 +136,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         : dataSourceSortedByRank;
 
     return (
-      <Table
+      <FixedExpandableTable
         dataSource={sortedDataSource}
         rowKey="name"
         pagination={{
@@ -146,8 +147,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         }
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
-        className="large-table"
-        scroll={{ x: "max-content" }}
       >
         <Column
           title="Name"
@@ -250,7 +249,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
           )}
         />
-      </Table>
+      </FixedExpandableTable>
     );
   }
 }

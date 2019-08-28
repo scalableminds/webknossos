@@ -18,10 +18,27 @@ const onMessage = event => {
   const { type, args } = event.data;
   if (type == null || !_.isArray(args)) return;
 
-  if (type === "setMapping") {
-    api.data.setMapping(api.data.getVolumeTracingLayerName(), ...args);
-  } else {
-    console.warn("Unsupported cross origin API command.");
+  switch (type) {
+    case "setMapping": {
+      api.data.setMapping(api.data.getVolumeTracingLayerName(), ...args);
+      break;
+    }
+    case "resetSkeleton": {
+      api.tracing.resetSkeletonTracing();
+      break;
+    }
+    case "importNml": {
+      const nmlAsString = args[0];
+      if (_.isString(nmlAsString)) {
+        api.tracing.importNmlAsString(nmlAsString);
+      } else {
+        console.warn("The first argument needs to be the content of the nml as a string.");
+      }
+      break;
+    }
+    default: {
+      console.warn("Unsupported cross origin API command.");
+    }
   }
 };
 

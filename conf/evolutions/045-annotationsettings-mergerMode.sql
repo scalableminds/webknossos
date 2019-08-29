@@ -3,7 +3,7 @@
 START TRANSACTION;
 
 DROP VIEW webknossos.taskTypes_;
-ALTER TABLE webknossos.taskTypes ADD COLUMN settings_mergerMode BOOLEAN;
+ALTER TABLE webknossos.taskTypes ADD COLUMN settings_mergerMode BOOLEAN NOT NULL;
 
 CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 

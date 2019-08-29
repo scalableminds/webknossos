@@ -216,6 +216,12 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                         Allow Single-node-tree mode (&quot;Soma clicking&quot;)
                       </Tag>,
                     );
+                  if (settings.mergerMode)
+                    elements.push(
+                      <Tag color="purple" key="mergerMode">
+                        Merger Mode
+                      </Tag>,
+                    );
                   return elements;
                 }}
                 width={200}

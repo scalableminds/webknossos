@@ -10,6 +10,7 @@ case class AnnotationSettings(
     preferredMode: Option[String] = None,
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
+    mergerMode: Option[Boolean] = None,
     allowedMagnifications: Option[JsValue] = None
 )
 

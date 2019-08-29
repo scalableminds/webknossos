@@ -189,7 +189,7 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
-  settings_mergerMode BOOLEAN NOT NULL,
+  settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
   settings_allowedMagnifications JSONB,
   recommendedConfiguration JSONB,
   tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',

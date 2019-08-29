@@ -10,7 +10,7 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.SegmentationLayer
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -169,8 +169,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       fallbackLayer = dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
-        case _                                                                           => None
+        case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
+        case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
+        case _                                                                                   => None
       }.headOption
     } yield {
       volumeTracing.copy(

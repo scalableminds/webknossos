@@ -249,7 +249,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
 
 function serializeNodes(nodes: NodeMap): Array<string> {
   return nodes.map(node => {
-    const position = node.position.map(Math.round);
+    const position = node.position.map(Math.floor);
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,

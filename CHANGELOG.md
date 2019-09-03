@@ -7,7 +7,24 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.09.0...HEAD)
+
+### Added
+
+### Changed
+
+### Fixed
+
+
+## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28
+[Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...19.09.0)
+
+### Highlights
+- Users can see their own time statistics now. [#4220](https://github.com/scalableminds/webknossos/pull/4220)
+- Added limited support for `uint64` segmentation layer by using the lower 4 bytes. [#4233](https://github.com/scalableminds/webknossos/pull/4233)
+- Added a scale bar to the 3D viewport. [#4258](https://github.com/scalableminds/webknossos/pull/4258)
+- Added currently spent hours on a project to the project progress view. [#4236](https://github.com/scalableminds/webknossos/pull/4236)
+
 
 ### Added
 - Indicating active nml downloads with a loading icon. [#4228](https://github.com/scalableminds/webknossos/pull/4228)
@@ -17,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Enabled the advanced search for the comment tab. [#4238](https://github.com/scalableminds/webknossos/pull/4238)
 - Added limited support for `uint64` segmentation layer by using the lower 4 bytes. [#4233](https://github.com/scalableminds/webknossos/pull/4233)
 - Added an API route to add and delete dataStores. [#4242](https://github.com/scalableminds/webknossos/pull/4242)
+- Added a scale bar to the 3D viewport. [#4258](https://github.com/scalableminds/webknossos/pull/4258)
 - Added the possibility to import an nml file as a string and to reset the active skeleton tracing to the API. [#4252](https://github.com/scalableminds/webknossos/pull/4252)
 - Added currently spent hours on a project to the project progress view. [#4236](https://github.com/scalableminds/webknossos/pull/4236)
 
@@ -30,6 +48,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed tooltip not disappearing in the statistics view in certain circumstances. [#4219](https://github.com/scalableminds/webknossos/pull/4219)
 - Fixed the error messages when trying to access a dataset with insufficient permissions. [#4244](https://github.com/scalableminds/webknossos/pull/4244)
 - Fixed the upload of volume tracings by recognizing the correct format of the fallback layer. [#4248](https://github.com/scalableminds/webknossos/pull/4248)
+- Fixed an imprecision when exporting an NML via the front-end. [#4262](https://github.com/scalableminds/webknossos/pull/4262)
+- Fixed viewing and tracing of datasets which only contain a segmentation layer. [#4265](https://github.com/scalableminds/webknossos/pull/4265)
 
 ### Removed
 -

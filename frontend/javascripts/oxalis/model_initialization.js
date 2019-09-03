@@ -378,7 +378,7 @@ function initializeDataLayerInstances(
     window.mappings = setupGlobalMappingsObject(dataLayers[segmentationLayer.name]);
   }
 
-  if (getColorLayers(dataset).length === 0) {
+  if (getColorLayers(dataset).length === 0 && segmentationLayer == null) {
     Toast.error(messages["dataset.no_data"]);
     throw HANDLED_ERROR;
   }

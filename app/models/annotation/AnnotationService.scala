@@ -559,8 +559,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider) = annotation.typ match {
     case AnnotationType.Explorational =>
-      Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
+      Fox.failure("annotation.revert.tasksOnly")
+    case AnnotationType.Task =>
       for {
         task <- taskFor(annotation)
         _ = logger.warn(
@@ -575,8 +575,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId =>
           annotationDAO.updateVolumeTracingId(annotation._id, newVolumeId))
       } yield ()
-    case _ if !annotation.skeletonTracingId.isDefined =>
-      Fox.failure("annotation.revert.skeletonOnly")
   }
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =

@@ -159,7 +159,7 @@ class TaskController @Inject()(annotationService: AnnotationService,
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       parseResults: List[NmlParseResult] = nmlService
-        .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)))
+        .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)), useZipName = false)
         .parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       result <- createTasks(skeletonSuccesses.map(s =>

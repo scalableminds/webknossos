@@ -101,7 +101,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
         case (acc, next) =>
           val file = new File(next.ref.path.toString)
-          acc.combineWith(nmlService.extractFromFile(file, next.filename))
+          acc.combineWith(nmlService.extractFromFile(file, next.filename, useZipName = true))
       }
 
       val tracingsProcessed =

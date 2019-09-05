@@ -35,14 +35,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
       case Empty                  => NmlParseEmpty(name)
     }
 
-  def extractFromZip(file: File, zipFileName: Option[String] = None)(implicit m: MessagesProvider): ZipParseResult = {
+  def extractFromZip(file: File, zipFileName: Option[String] = None, useZipName: Boolean)(
+      implicit m: MessagesProvider): ZipParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
     ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
       if (filename.toString.endsWith(".nml")) {
         val result = extractFromNml(file, filename.toString)
-        parseResults ::= result.withName(name)
+        parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile = temporaryFileCreator.create(filename.toString)
         Files.copy(file, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
@@ -98,15 +99,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)])(implicit m: MessagesProvider): ZipParseResult =
+  def extractFromFiles(files: Seq[(File, String)], useZipName: Boolean)(implicit m: MessagesProvider): ZipParseResult =
     files.foldLeft(NmlResults.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2))
+      case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2, useZipName))
     }
 
-  def extractFromFile(file: File, fileName: String)(implicit m: MessagesProvider): ZipParseResult =
+  def extractFromFile(file: File, fileName: String, useZipName: Boolean)(implicit m: MessagesProvider): ZipParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
-      extractFromZip(file, Some(fileName))
+      extractFromZip(file, Some(fileName), useZipName)
     } else {
       logger.trace("Extracting from Nml file")
       val parseResult = extractFromNml(file, fileName)

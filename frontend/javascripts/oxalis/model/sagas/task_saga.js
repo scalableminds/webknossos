@@ -10,6 +10,7 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
@@ -83,6 +84,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   }
 }
 
+function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
+  if (taskType.settings.mergerMode) yield* put(setMergerModeEnabledAction(true));
+}
+
 export default function* watchTasksAsync(): Saga<void> {
   yield* take("WK_READY");
 
@@ -90,6 +95,8 @@ export default function* watchTasksAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (task == null || activeUser == null || !allowUpdate) return;
+
+  yield* call(maybeActivateMergerMode, task.type);
 
   const { lastTaskTypeId } = activeUser;
   const isDifferentTaskType = lastTaskTypeId == null || lastTaskTypeId !== task.type.id;

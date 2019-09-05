@@ -19,7 +19,6 @@ import {
   Vector6InputSetting,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
-import { enableMergerMode, disableMergerMode } from "oxalis/merger_mode";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -52,8 +51,6 @@ import Constants, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
-import MergerModeModalView from "./merger_mode_modal_view";
-
 const { Panel } = Collapse;
 
 type UserSettingsViewProps = {
@@ -71,25 +68,15 @@ type UserSettingsViewProps = {
   onChangeEnableMergerMode: (active: boolean) => void,
   onChangeEnableAutoBrush: (active: boolean) => void,
   isMergerModeEnabled: boolean,
+  isMergerModeTask: boolean,
   isAutoBrushEnabled: boolean,
   viewMode: ViewMode,
   controlMode: ControlMode,
   dataset: APIDataset,
 };
 
-type State = {
-  isMergerModeModalVisible: boolean,
-  isMergerModeModalClosable: boolean,
-  mergerModeProgress: number,
-};
-
-class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
+class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
-  state = {
-    isMergerModeModalVisible: false,
-    isMergerModeModalClosable: false,
-    mergerModeProgress: 0,
-  };
 
   componentWillMount() {
     // cache onChange handler
@@ -97,28 +84,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
       _.partial(this.props.onChangeUser, propertyName),
     );
   }
-
-  handleMergerModeChange = async (active: boolean) => {
-    this.props.onChangeEnableMergerMode(active);
-    if (active) {
-      this.setState({
-        isMergerModeModalVisible: true,
-        isMergerModeModalClosable: false,
-        mergerModeProgress: 0,
-      });
-      const onUpdateProgress = mergerModeProgress => this.setState({ mergerModeProgress });
-      await enableMergerMode(onUpdateProgress);
-      // The modal is only closeable after the merger mode is fully enabled
-      // and finished preprocessing
-      this.setState({ isMergerModeModalClosable: true });
-    } else {
-      this.setState({
-        isMergerModeModalVisible: false,
-        isMergerModeModalClosable: false,
-      });
-      disableMergerMode();
-    }
-  };
 
   handleAutoBrushChange = async (active: boolean) => {
     this.props.onChangeEnableAutoBrush(active);
@@ -314,10 +279,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
           <SwitchSetting
             label={settingsLabels.mergerMode}
             value={this.props.isMergerModeEnabled}
-            onChange={value => {
-              this.handleMergerModeChange(value);
-            }}
-            disabled={!isMergerModeSupported}
+            onChange={this.props.onChangeEnableMergerMode}
+            disabled={!isMergerModeSupported || this.props.isMergerModeTask}
             tooltipText={
               !isMergerModeSupported
                 ? "The merger mode is only available for datasets with a segmentation layer."
@@ -374,7 +337,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
   }
 
   render() {
-    const { isMergerModeModalVisible, isMergerModeModalClosable } = this.state;
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
         label={settingsLabels.moveValue3d}
@@ -431,13 +393,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps, State> {
             />
           </Panel>
         </Collapse>
-        {isMergerModeModalVisible ? (
-          <MergerModeModalView
-            isCloseable={isMergerModeModalClosable}
-            onClose={() => this.setState({ isMergerModeModalVisible: false })}
-            progress={this.state.mergerModeProgress}
-          />
-        ) : null}
       </React.Fragment>
     );
   }
@@ -453,6 +408,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
   isAutoBrushEnabled: state.temporaryConfiguration.isAutoBrushEnabled,
   dataset: state.dataset,
+  isMergerModeTask: state.tracing.restrictions.mergerMode || false,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -19,6 +19,7 @@ const initialAnnotationInfo = {
     allowAccess: true,
     allowDownload: false,
     somaClickingAllowed: false,
+    mergerMode: false,
     allowedModes: ["orthogonal", "oblique", "flight"],
   },
   isPublic: false,

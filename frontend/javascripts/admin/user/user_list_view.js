@@ -431,6 +431,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
               title="Experiences"
               dataIndex="experiences"
               key="experiences"
+              width={250}
               render={(experiences: ExperienceMap, user: APIUser) =>
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>

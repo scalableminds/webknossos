@@ -13,6 +13,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 
+- Renamed "Expected Time" to "Time Limit" in the project table. [#4278](https://github.com/scalableminds/webknossos/pull/4278)
+
 ### Fixed
 
 

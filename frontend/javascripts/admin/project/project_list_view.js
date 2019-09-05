@@ -248,7 +248,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
               />
               <Column
-                title="Expected Time"
+                title="Time Limit"
                 dataIndex="expectedTime"
                 key="expectedTime"
                 width={200}

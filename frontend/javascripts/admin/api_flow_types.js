@@ -283,7 +283,7 @@ type APIProjectTypeBase = {
   +team: string,
   +priority: number,
   +paused: boolean,
-  +expectedTime: number,
+  +expectedTime: number, // Also known as "time limit"
   +isBlacklistedFromReport: boolean,
 };
 

@@ -241,6 +241,21 @@ const KeyboardShortcutView = () => {
     },
   ];
 
+  const isosurfaceShortcuts = [
+    {
+      keybinding: "Shift + Click on a segment in the orthogonal viewports",
+      action: "Initiate isosurface rendering for that cell",
+    },
+    {
+      keybinding: "Shift + Click on a segment in the 3D viewport",
+      action: "Change the active position to the clicked position",
+    },
+    {
+      keybinding: "Ctrl + Click on a segment in the 3D viewport",
+      action: "Remove the isosurface of the clicked cell",
+    },
+  ];
+
   return (
     <div className="container help">
       <h3>Keyboard Shortcuts</h3>
@@ -273,6 +288,14 @@ const KeyboardShortcutView = () => {
       <h3>Volume Mode</h3>
       <Table
         dataSource={volumeModeShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+
+      <h3>Isosurface Shortcuts</h3>
+      <Table
+        dataSource={isosurfaceShortcuts}
         columns={columns}
         pagination={false}
         rowKey={(_, index) => index}

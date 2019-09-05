@@ -36,6 +36,7 @@ test("createTaskType and deleteTaskType", async t => {
     settings: {
       somaClickingAllowed: true,
       branchPointsAllowed: true,
+      mergerMode: false,
       allowedModes: ["orthogonal"],
     },
     recommendedConfiguration: null,

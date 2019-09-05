@@ -25,6 +25,7 @@ import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import SettingsView from "oxalis/view/settings/settings_view";
+import MergerModeController from "oxalis/controller/merger_mode_controller";
 import TDViewControls from "oxalis/view/td_view_controls";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
@@ -235,7 +236,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               {/* Don't render SettingsView if it's hidden to improve performance */}
               {!this.state.isSettingsCollapsed ? <SettingsView /> : null}
             </Sider>
-
+            <MergerModeController />
             <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
               <TracingView />
               <GoldenLayoutAdapter

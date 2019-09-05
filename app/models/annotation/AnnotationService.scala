@@ -564,7 +564,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       for {
         task <- taskFor(annotation)
         _ = logger.warn(
-          s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${annotation.skeletonTracingId}")
+          s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${annotation.skeletonTracingId} and/or volume tracing ${annotation.volumeTracingId}")
         annotationBase <- baseForTask(task._id)
         dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent"
         (newSkeletonIdOpt, newVolumeIdOpt) <- tracingFromBase(annotationBase, dataSet)

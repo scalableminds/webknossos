@@ -10,15 +10,16 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
-import RecommendConfigurationModal from "oxalis/view/recommended_configuration_modal";
+import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
-  // Users can aquire new tasks directly in the tracing view. Occasionally,
+  // Users can acquire new tasks directly in the tracing view. Occasionally,
   // they start working on a new TaskType and need to be instructed.
   const title = `Attention, new Task Type: ${taskType.summary}`;
   let text;
@@ -58,7 +59,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   // The renderIndependently call returns a promise that is only resolved
   // once destroy is called. yield* will wait until the returned promise is resolved.
   yield* call(renderIndependently, destroy => (
-    <RecommendConfigurationModal
+    <RecommendedConfigurationModal
       config={recommendedConfiguration}
       onOk={() => {
         confirmed = true;
@@ -83,6 +84,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   }
 }
 
+function* maybeActivateMergerMode(taskType: APITaskType): Saga<void> {
+  if (taskType.settings.mergerMode) yield* put(setMergerModeEnabledAction(true));
+}
+
 export default function* watchTasksAsync(): Saga<void> {
   yield* take("WK_READY");
 
@@ -90,6 +95,8 @@ export default function* watchTasksAsync(): Saga<void> {
   const activeUser = yield* select(state => state.activeUser);
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (task == null || activeUser == null || !allowUpdate) return;
+
+  yield* call(maybeActivateMergerMode, task.type);
 
   const { lastTaskTypeId } = activeUser;
   const isDifferentTaskType = lastTaskTypeId == null || lastTaskTypeId !== task.type.id;

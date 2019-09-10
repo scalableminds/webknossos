@@ -32,12 +32,14 @@ import Store, {
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
 import messages from "messages";
 
-import SearchPopover from "../search_popover";
+import AdvancedSearchPopover from "../advanced_search_popover";
 
 const InputGroup = Input.Group;
 
 const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
+
+const commentListId = "comment-list";
 
 const SortByEnum = Enum.make({
   NAME: "NAME",
@@ -343,20 +345,19 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
       this.state.data,
       activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
     );
-
     return (
       <div className="flex-column padded-tab-content" style={{ height: "inherit" }}>
         {this.renderMarkdownModal()}
         <InputGroup compact>
-          <SearchPopover
-            onSelect={nodeIdString => this.props.setActiveNode(parseInt(nodeIdString, 10))}
+          <AdvancedSearchPopover
+            onSelect={comment => this.props.setActiveNode(comment.nodeId)}
             data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
-            idKey="nodeId"
             searchKey="content"
-            maxSearchResults={10}
+            provideShortcut
+            targetId={commentListId}
           >
             <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />
-          </SearchPopover>
+          </AdvancedSearchPopover>
           <ButtonComponent
             title="Jump to previous comment"
             onClick={this.previousComment}
@@ -398,7 +399,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             {({ height, width }) => (
               <div style={{ height, width }} className="flex-overflow">
                 <List
-                  id="comment-list"
+                  id={commentListId}
                   height={height}
                   width={width}
                   rowCount={this.state.data.length}

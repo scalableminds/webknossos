@@ -66,7 +66,7 @@ object ElementClass extends Enumeration {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
-    case ElementClass.uint64 => 1L << 64L
+    case ElementClass.uint64 => (1L << 63L) - 1
   }
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
@@ -211,13 +211,15 @@ case class AbstractSegmentationLayer(
 object AbstractSegmentationLayer {
 
   def from(layer: SegmentationLayerLike): AbstractSegmentationLayer =
-    AbstractSegmentationLayer(layer.name,
-                              layer.category,
-                              layer.boundingBox,
-                              layer.resolutions,
-                              layer.elementClass,
-                              layer.largestSegmentId,
-                              layer.mappings)
+    AbstractSegmentationLayer(
+      layer.name,
+      layer.category,
+      layer.boundingBox,
+      layer.resolutions,
+      layer.elementClass,
+      layer.largestSegmentId,
+      layer.mappings
+    )
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
 }

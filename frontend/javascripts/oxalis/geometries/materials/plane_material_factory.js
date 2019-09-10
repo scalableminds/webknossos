@@ -300,6 +300,12 @@ class PlaneMaterialFactory {
       this.uniforms.alpha.value = alpha / 100;
     };
 
+    this.material.setSegmentationVisibility = isVisible => {
+      this.uniforms.alpha.value = isVisible
+        ? Store.getState().datasetConfiguration.segmentationOpacity / 100
+        : 0;
+    };
+
     this.material.setUseBilinearFiltering = isEnabled => {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };

@@ -71,6 +71,7 @@ export default class RecommendedConfigurationModal extends React.Component<Props
           }))}
           size="small"
           pagination={false}
+          scroll={{ x: "max-content" }}
         />
       </Modal>
     );

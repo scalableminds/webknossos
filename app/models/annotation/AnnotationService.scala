@@ -186,7 +186,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }
 
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.nonExistent"
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSource.notFound"
       _ <- createNewTracings(dataSet, dataSource) ?~> "makeHybrid.createTracings.failed"
     } yield ()
@@ -251,8 +251,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) =
       for {
-        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
-        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.noAccess"
+        dataSetName <- dataSetDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent"
+        dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> Messages("dataSet.noAccess", dataSetName)
         (newSkeletonId, newVolumeId) <- tracingFromBase(annotation, dataSet) ?~> s"Failed to use annotation base as template for task ${task._id} with annotation base ${annotation._id}"
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
@@ -559,14 +559,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext, m: MessagesProvider) = annotation.typ match {
     case AnnotationType.Explorational =>
-      Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationType.Task if annotation.skeletonTracingId.isDefined =>
+      Fox.failure("annotation.revert.tasksOnly")
+    case AnnotationType.Task =>
       for {
         task <- taskFor(annotation)
         _ = logger.warn(
-          s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${annotation.skeletonTracingId}")
+          s"Resetting annotation ${annotation._id} to base, discarding skeleton tracing ${annotation.skeletonTracingId} and/or volume tracing ${annotation.volumeTracingId}")
         annotationBase <- baseForTask(task._id)
-        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+        dataSet <- dataSetDAO.findOne(annotationBase._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent"
         (newSkeletonIdOpt, newVolumeIdOpt) <- tracingFromBase(annotationBase, dataSet)
         _ <- Fox
           .bool2Fox(newSkeletonIdOpt.isDefined || newVolumeIdOpt.isDefined) ?~> "annotation.needsEitherSkeletonOrVolume"
@@ -575,8 +575,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         _ <- Fox.runOptional(newVolumeIdOpt)(newVolumeId =>
           annotationDAO.updateVolumeTracingId(annotation._id, newVolumeId))
       } yield ()
-    case _ if !annotation.skeletonTracingId.isDefined =>
-      Fox.failure("annotation.revert.skeletonOnly")
   }
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =
@@ -598,7 +596,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                    restrictionsOpt: Option[AnnotationRestrictions] = None): Fox[JsObject] = {
     implicit val ctx = GlobalAccessContext
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet) ?~> "dataSet.nonExistent"
       organization <- organizationDAO.findOne(dataSet._organization) ?~> "organization.notFound"
       task = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- task.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull)
@@ -647,7 +645,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   //for Explorative Annotations list
   def compactWrites(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
+      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.nonExistent"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
     } yield {
       Json.obj(

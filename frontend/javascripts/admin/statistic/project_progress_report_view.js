@@ -102,6 +102,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             rowKey="projectName"
             style={{ marginTop: 30, marginBotton: 30 }}
             size="small"
+            className="large-table"
           >
             <Column
               title="Project"
@@ -125,6 +126,16 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               dataIndex="priority"
               sorter={Utils.compareBy(typeHint, project => project.priority)}
               render={number => number.toLocaleString()}
+            />
+            <Column
+              title="Time [h]"
+              dataIndex="billedMilliseconds"
+              sorter={Utils.compareBy(typeHint, project => project.billedMilliseconds)}
+              render={number =>
+                Utils.millisecondsToHours(number).toLocaleString(undefined, {
+                  maximumFractionDigits: 1,
+                })
+              }
             />
             <ColumnGroup title="Instances">
               <Column

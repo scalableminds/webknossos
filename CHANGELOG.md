@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 
 - Renamed "Expected Time" to "Time Limit" in the project table. [#4278](https://github.com/scalableminds/webknossos/pull/4278)
+- Clicking on an experience domain of a user, while multiple users are selected will edit the domain of all selected users (instead of only the domain of the clicked row). [#4280](https://github.com/scalableminds/webknossos/pull/4280)
 
 ### Fixed
 - When creating tasks from zip, the individual nml names are used again, rather than the zip name. [#4277](https://github.com/scalableminds/webknossos/pull/4277)

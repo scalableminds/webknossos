@@ -228,7 +228,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       parseResults: List[NmlParseResult] = nmlService
-        .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)))
+        .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)), useZipName = false)
         .parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
       fullParams = skeletonSuccesses.map(s => buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description))

@@ -1,6 +1,6 @@
-# Keyboard Shortcuts
+# Keyboard & Mouse Shortcuts
 
-Find all available keyboard shortcuts for webKnossos listed below.
+Find all available keyboard & mouse shortcuts for webKnossos listed below.
 
 ## General
 
@@ -83,3 +83,14 @@ Find all available keyboard shortcuts for webKnossos listed below.
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                              |
 | V                                 | Copy Segmentation of Current Cell From Previous Slice       |
 | SHIFT + V                         | Copy Segmentation of Current Cell From Next Slice           |
+
+## Mesh Related Shortcuts
+
+The following bindings only work if isosurface rendering is activated in the settings and a segmentation exists.
+
+| Key Binding                                            | Operation                                                   |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| Shift + Click on a segment in the orthogonal viewports | Initiate isosurface rendering for that cell                 |
+| Shift + Click on a segment in the 3D viewport          | Change the active position to the clicked position          |
+| Ctrl + Click on a segment in the 3D viewport           | Remove the isosurface of the clicked cell                   |
+

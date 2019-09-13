@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -22,6 +22,24 @@ case class DataStore(
     isForeign: Boolean = false,
     isConnector: Boolean = false
 )
+
+object DataStore {
+  implicit val dataStoreFormat: Format[DataStore] = Json.format[DataStore]
+
+  def fromForm(name: String,
+               url: String,
+               key: String,
+               isScratch: Option[Boolean],
+               isForeign: Option[Boolean],
+               isConnector: Option[Boolean]) =
+    DataStore(name,
+              url,
+              key,
+              isScratch.getOrElse(false),
+              isDeleted = false,
+              isForeign.getOrElse(false),
+              isConnector.getOrElse(false))
+}
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -67,15 +85,6 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isconnector
       ))
 
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
-    for {
-      rOpt <- run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
-
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       rOpt <- run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
@@ -100,6 +109,11 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     for {
       _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign, isConnector)
                              values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
+    } yield ()
+
+  def deleteOneByName(name: String) =
+    for {
+      _ <- run(sqlu"""update webknossos.dataStores set isDeleted = true where name = $name""")
     } yield ()
 
 }

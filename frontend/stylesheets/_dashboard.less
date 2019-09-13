@@ -187,10 +187,11 @@
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   border-radius: 6px;
+  transform: translateZ(0);
 
   &:hover {
     box-shadow: 0 4px 6px hsla(0, 0%, 0%, 0.22), 0 5px 15px hsla(0, 0%, 0%, 0.1);
-    transform: translateY(-2px);
+    transform: translateY(-2px) translateZ(0);
 
     .dataset-thumbnail-image {
       transform: scale(1.1);

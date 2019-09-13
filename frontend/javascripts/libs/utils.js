@@ -444,6 +444,11 @@ export function minutesToMilliseconds(min: number) {
   return min * 60000;
 }
 
+export function millisecondsToHours(ms: number) {
+  const oneHourInMilliseconds = 1000 * 60 * 60;
+  return ms / oneHourInMilliseconds;
+}
+
 export function isNoElementFocussed(): boolean {
   // checks whether an <input> or <button> element has the focus
   // when no element is focused <body> gets the focus

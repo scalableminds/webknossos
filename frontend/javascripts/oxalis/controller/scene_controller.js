@@ -413,6 +413,12 @@ class SceneController {
     }
   }
 
+  setSegmentationVisibility(isVisible: boolean): void {
+    for (const plane of _.values(this.planes)) {
+      plane.setSegmentationVisibility(isVisible);
+    }
+  }
+
   setIsMappingEnabled(isMappingEnabled: boolean): void {
     for (const plane of _.values(this.planes)) {
       plane.setIsMappingEnabled(isMappingEnabled);
@@ -455,6 +461,11 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.datasetConfiguration.segmentationOpacity,
       segmentationOpacity => this.setSegmentationAlpha(segmentationOpacity),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.isSegmentationDisabled,
+      isSegmentationDisabled => this.setSegmentationVisibility(!isSegmentationDisabled),
     );
 
     listenToStoreProperty(

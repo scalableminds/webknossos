@@ -88,6 +88,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
+        mergerMode: false,
         preferredMode: null,
         allowedMagnifications: {
           shouldRestrict: false,
@@ -280,6 +281,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 {getFieldDecorator("settings.branchPointsAllowed", {
                   valuePropName: "checked",
                 })(<Checkbox>Allow Branchpoints</Checkbox>)}
+              </FormItem>
+
+              <FormItem>
+                {getFieldDecorator("settings.mergerMode", {
+                  valuePropName: "checked",
+                })(<Checkbox>Merger Mode</Checkbox>)}
               </FormItem>
             </div>
 

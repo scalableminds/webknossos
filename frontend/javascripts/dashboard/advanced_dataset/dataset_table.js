@@ -12,6 +12,7 @@ import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_lis
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
+import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
 import type { DatasetFilteringMode } from "../dataset_view";
 
@@ -135,7 +136,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         : dataSourceSortedByRank;
 
     return (
-      <Table
+      <FixedExpandableTable
         dataSource={sortedDataSource}
         rowKey="name"
         pagination={{
@@ -146,7 +147,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         }
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
-        className="large-table"
       >
         <Column
           title="Name"
@@ -170,7 +170,16 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
-          width={150}
+          title="Scale & Extent"
+          dataIndex="scale"
+          key="scale"
+          width={230}
+          render={(__, dataset: APIMaybeUnimportedDataset) =>
+            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
+          }
+        />
+        <Column
+          width={180}
           title="Creation Date"
           dataIndex="created"
           key="created"
@@ -178,21 +187,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
           sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
           render={created => <FormattedDate timestamp={created} />}
         />
-        <Column
-          title="Scale & Extent"
-          dataIndex="scale"
-          key="scale"
-          width={280}
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
-          }
-        />
 
         <Column
           title="Allowed Teams"
           dataIndex="allowedTeams"
           key="allowedTeams"
-          width={150}
+          width={230}
           render={(teams: Array<APITeam>, dataset: APIMaybeUnimportedDataset) =>
             teams.map(team => (
               <Tag
@@ -208,7 +208,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Active"
           dataIndex="isActive"
           key="isActive"
-          width={100}
+          width={130}
           sorter={(a, b) => a.isActive - b.isActive}
           sortOrder={sortedInfo.columnKey === "isActive" && sortedInfo.order}
           render={(isActive: boolean) => {
@@ -220,7 +220,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Public"
           dataIndex="isPublic"
           key="isPublic"
-          width={100}
+          width={130}
           sorter={(a, b) => a.isPublic - b.isPublic}
           sortOrder={sortedInfo.columnKey === "isPublic" && sortedInfo.order}
           render={(isPublic: boolean) => {
@@ -230,7 +230,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
         />
         <Column
           title="Data Layers"
-          width={200}
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) =>
             (dataset.dataSource.dataLayers || []).map(layer => (
@@ -245,11 +244,12 @@ class DatasetTable extends React.PureComponent<Props, State> {
           width={200}
           title="Actions"
           key="actions"
+          fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
           )}
         />
-      </Table>
+      </FixedExpandableTable>
     );
   }
 }

@@ -225,6 +225,7 @@ export type APISettings = {|
   +preferredMode?: APIAllowedMode,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
+  +mergerMode?: boolean,
   +allowedMagnifications?: {
     shouldRestrict: boolean,
     min?: number,
@@ -282,7 +283,7 @@ type APIProjectTypeBase = {
   +team: string,
   +priority: number,
   +paused: boolean,
-  +expectedTime: number,
+  +expectedTime: number, // Also known as "time limit"
   +isBlacklistedFromReport: boolean,
 };
 
@@ -445,6 +446,7 @@ export type APIProjectProgressReport = {
   +activeInstances: number,
   +finishedInstances: number,
   +priority: number,
+  +billedMilliseconds: number,
 };
 
 export type APIOpenTasksReport = {

@@ -1,5 +1,4 @@
 import com.mohiva.play.silhouette.api.actions.SecuredErrorHandler
-import com.newrelic.api.agent.NewRelic
 import javax.inject._
 import play.api.http.DefaultHttpErrorHandler
 import play.api._
@@ -26,8 +25,4 @@ class ErrorHandler @Inject()(env: Environment,
   override def onNotAuthorized(implicit request: RequestHeader): Future[Result] =
     Future.successful(Forbidden(Messages("notAllowed")))
 
-  override def onServerError(request: RequestHeader, ex: Throwable): Future[Result] = {
-    NewRelic.noticeError(ex)
-    super.onServerError(request, ex)
-  }
 }

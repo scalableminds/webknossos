@@ -18,6 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TracingStore(
     name: String,
     url: String,
+    publicUrl: String,
     key: String,
     isDeleted: Boolean = false
 )
@@ -60,6 +61,7 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       TracingStore(
         r.name,
         r.url,
+        r.publicurl,
         r.key,
         r.isdeleted
       ))
@@ -95,8 +97,8 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, key, isDeleted)
-                         values(${t.name}, ${t.url}, ${t.key}, ${t.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
+                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""")
     } yield ()
 
 }

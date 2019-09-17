@@ -16,6 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class DataStore(
     name: String,
     url: String,
+    publicUrl: String,
     key: String,
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
@@ -28,12 +29,14 @@ object DataStore {
 
   def fromForm(name: String,
                url: String,
+               publicUrl: String,
                key: String,
                isScratch: Option[Boolean],
                isForeign: Option[Boolean],
                isConnector: Option[Boolean]) =
     DataStore(name,
               url,
+              publicUrl,
               key,
               isScratch.getOrElse(false),
               isDeleted = false,
@@ -49,7 +52,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
     Fox.successful(
       Json.obj(
         "name" -> dataStore.name,
-        "url" -> dataStore.url,
+        "url" -> dataStore.publicUrl,
         "isForeign" -> dataStore.isForeign,
         "isScratch" -> dataStore.isScratch,
         "isConnector" -> dataStore.isConnector
@@ -78,6 +81,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       DataStore(
         r.name,
         r.url,
+        r.publicurl,
         r.key,
         r.isscratch,
         r.isdeleted,
@@ -107,8 +111,9 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign, isConnector)
-                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
+      _ <- run(
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
     } yield ()
 
   def deleteOneByName(name: String) =

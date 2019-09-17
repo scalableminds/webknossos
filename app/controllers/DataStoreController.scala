@@ -23,6 +23,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   val dataStoreReads: Reads[DataStore] =
     ((__ \ 'name).read[String] and
       (__ \ 'url).read[String] and
+      (__ \ 'publicUrl).read[String] and
       (__ \ 'key).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
       (__ \ 'isForeign).readNullable[Boolean] and

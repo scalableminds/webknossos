@@ -72,10 +72,10 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       for {
         _ <- bool2Fox(request.identity.isAdmin)
         _ <- dataStoreDAO.findOneByName(name) ?~> "dataStore.notFound" ~> NOT_FOUND
+        _ <- bool2Fox(dataStore.name == name)
         _ <- dataStoreDAO.updateOne(dataStore) ?~> "dataStore.create.failed"
         js <- dataStoreService.publicWrites(dataStore)
       } yield { Ok(js) }
-
     }
   }
 }

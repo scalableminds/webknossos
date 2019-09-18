@@ -23,6 +23,14 @@ case class TracingStore(
     isDeleted: Boolean = false
 )
 
+object TracingStore {
+  def fromForm(name: String, url: String, publicUrl: String, key: String) =
+    TracingStore(name, url, publicUrl, key)
+
+  def fromUpdateForm(name: String, url: String, publicUrl: String) =
+    fromForm(name, url, publicUrl, "")
+}
+
 class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with Results {
@@ -31,7 +39,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
     Fox.successful(
       Json.obj(
         "name" -> tracingStore.name,
-        "url" -> tracingStore.url
+        "url" -> tracingStore.publicUrl
       ))
 
   def validateAccess[A](name: String)(block: (TracingStore) => Future[Result])(implicit request: Request[A],
@@ -101,4 +109,14 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
                          values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""")
     } yield ()
 
+  def deleteOneByName(name: String): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""update webknossos.tracingStores set isDeleted = true where name = $name""")
+    } yield ()
+
+  def updateOne(t: TracingStore) =
+    for {
+      _ <- run(
+        sqlu""" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}""")
+    } yield ()
 }

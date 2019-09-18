@@ -42,6 +42,14 @@ object DataStore {
               isDeleted = false,
               isForeign.getOrElse(false),
               isConnector.getOrElse(false))
+
+  def fromUpdateForm(name: String,
+                     url: String,
+                     publicUrl: String,
+                     isScratch: Option[Boolean],
+                     isForeign: Option[Boolean],
+                     isConnector: Option[Boolean]) =
+    fromForm(name, url, publicUrl, "", isScratch, isForeign, isConnector)
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
@@ -119,6 +127,12 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def deleteOneByName(name: String) =
     for {
       _ <- run(sqlu"""update webknossos.dataStores set isDeleted = true where name = $name""")
+    } yield ()
+
+  def updateOne(d: DataStore) =
+    for {
+      _ <- run(
+        sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isForeign = ${d.isForeign}, isConnector = ${d.isConnector} where name = ${d.name}""")
     } yield ()
 
 }

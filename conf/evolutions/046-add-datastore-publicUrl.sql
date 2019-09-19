@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/X
+-- https://github.com/scalableminds/webknossos/pull/4286
 
 START TRANSACTION;
 
@@ -12,5 +12,7 @@ UPDATE webknossos.dataStores SET publicUrl = url;
 
 ALTER TABLE webknossos.dataStores ALTER COLUMN publicUrl SET NOT NULL;
 ALTER TABLE webknossos.dataStores ADD CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$');
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 46;
 
 COMMIT TRANSACTION;

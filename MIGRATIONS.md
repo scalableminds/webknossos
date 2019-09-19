@@ -9,6 +9,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ### Postgres Evolutions:
 - [045-annotationsettings-mergerMode.sql](conf/evolutions/045-annotationsettings-mergerMode.sql)
+- [046-add-datastore-publicUrl.sql](conf/evolutions/046-add-datastore-publicUrl.sql)
+- [047-add-tracingstore-publicUrl.sql](conf/evolutions/047-add-tracingstore-publicUrl.sql)
 
 
 ## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28

@@ -108,7 +108,7 @@ echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
 curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
@@ -140,11 +140,12 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **9+ is required**
+* node version **10+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
 ```bash
+yarn install
 yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.

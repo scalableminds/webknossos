@@ -353,7 +353,6 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             onSelect={comment => this.props.setActiveNode(comment.nodeId)}
             data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
             searchKey="content"
-            provideShortcut
             targetId={commentListId}
           >
             <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />

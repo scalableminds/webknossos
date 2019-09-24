@@ -355,7 +355,7 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
             searchKey="content"
             targetId={commentListId}
           >
-            <ButtonComponent icon="search" title="Open the search via CTRL + Shift + F" />
+            <ButtonComponent icon="search" title="Search through comments" />
           </AdvancedSearchPopover>
           <ButtonComponent
             title="Jump to previous comment"

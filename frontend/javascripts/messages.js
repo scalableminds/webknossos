@@ -52,7 +52,9 @@ export default {
   "datastore.version.too_old": _.template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
-  "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
+  "save.failed_simultaneous_tracing": `The tracing couldn't be processed correctly.
+
+This might be caused by editing the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
@@ -227,8 +229,6 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
-  "nml.different_dataset":
-    "At least one NML file was originally created for a different dataset. Are you sure you want to continue with the import?",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume tracings.",

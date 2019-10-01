@@ -205,7 +205,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
-                Mailer ! Send(defaultMails.registerMail(user.name, user.email, brainDBResult))
+                Mailer ! Send(
+                  defaultMails.registerMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
                 Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
                 Ok
               }

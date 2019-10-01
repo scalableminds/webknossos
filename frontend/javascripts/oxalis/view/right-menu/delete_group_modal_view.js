@@ -20,22 +20,18 @@ export default function DeleteGroupModalView({
       title={messages["tracing.group_deletion_message"]}
       onOk={onJustDeleteGroup}
       onCancel={onCancel}
+      width={620}
       footer={[
-        <Button key="back" onClick={onCancel}>
-          Cancel
-        </Button>,
         <Button key="submit-all" onClick={onDeleteGroupAndTrees}>
-          Remove group recursively
+          Remove group including all children
         </Button>,
         <Button key="submit-groups-only" type="primary" onClick={onJustDeleteGroup}>
-          Remove group only
+          Remove group and keep children
         </Button>,
       ]}
     >
-      Do you really want to remove the selected group? If you want to remove the group with all its
-      trees and subgroups recursively, select &quot;Remove group recursively&quot;. If you want to
-      remove just the group and keep the subtrees and subgroups select &quot;Remove group
-      only&quot;.
+      When selecting &quot;Remove group and keep children&quot;, the children will be moved to the
+      level of the original group.
     </Modal>
   );
 }

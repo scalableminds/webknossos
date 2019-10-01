@@ -32,13 +32,6 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
     }
   }
 
-  def delete(name: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- tracingStoreDAO.deleteOneByName(name) ?~> "tracingStore.remove.failure"
-    } yield Ok
-  }
-
   def update(name: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(tracingStorePublicReads) { tracingStore =>
       for {

@@ -89,7 +89,6 @@ PUT           /datastores/:name                                                 
 GET           /tracingstore                                                     controllers.TracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
 POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
-DELETE        /tracingstores/:name                                              controllers.TracingStoreController.delete(name: String)
 PUT           /tracingstores/:name                                              controllers.TracingStoreController.update(name: String)
 
 # User access tokens for datastore authentification

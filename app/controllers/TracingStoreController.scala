@@ -18,13 +18,6 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
                                        sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
-
-  val tracingStoreReads: Reads[TracingStore] =
-    ((__ \ 'name).read[String] and
-      (__ \ 'url).read[String] and
-      (__ \ 'publicUrl).read[String] and
-      (__ \ 'key).read[String])(TracingStore.fromForm _)
-
   val tracingStorePublicReads: Reads[TracingStore] =
     ((__ \ 'name).read[String] and
       (__ \ 'url).read[String] and
@@ -36,20 +29,6 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
       js <- tracingStoreService.publicWrites(tracingStore)
     } yield {
       Ok(Json.toJson(js))
-    }
-  }
-
-  def create = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(tracingStoreReads) { tracingStore =>
-      tracingStoreDAO.findOneByName(tracingStore.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty =>
-          for {
-            _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
-            _ <- tracingStoreDAO.insertOne(tracingStore) ?~> "tracingStore.create.failed"
-            js <- tracingStoreService.publicWrites(tracingStore)
-          } yield { Ok(js) }
-        case _ => Future.successful(JsonBadRequest(Messages("tracingStore.name.alreadyTaken")))
-      }
     }
   }
 

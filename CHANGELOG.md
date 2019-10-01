@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...HEAD)
 
 ### Added
--
+- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
 
 ### Changed
 -
@@ -32,7 +32,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Reset to base is now also allowed for volume tasks. [#4276](https://github.com/scalableminds/webknossos/pull/4276)
-- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
 
 ### Changed
 

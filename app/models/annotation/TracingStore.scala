@@ -24,11 +24,8 @@ case class TracingStore(
 )
 
 object TracingStore {
-  def fromForm(name: String, url: String, publicUrl: String, key: String) =
-    TracingStore(name, url, publicUrl, key)
-
   def fromUpdateForm(name: String, url: String, publicUrl: String) =
-    fromForm(name, url, publicUrl, "")
+    TracingStore(name, url, publicUrl, "")
 }
 
 class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)

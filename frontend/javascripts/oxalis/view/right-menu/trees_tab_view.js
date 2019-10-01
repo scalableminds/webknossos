@@ -1,7 +1,4 @@
-/**
- * list_tree_view.js
- * @flow
- */
+// @flow
 import { Alert, Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -9,7 +6,6 @@ import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { binaryConfirm } from "libs/async_confirm";
 import {
   createGroupToTreesMap,
   callDeep,
@@ -125,17 +121,6 @@ export async function importNmls(files: Array<File>, createGroupForEachFile: boo
 
     if (errors.length > 0) {
       throw errors;
-    }
-
-    const currentDatasetName = Store.getState().dataset.name;
-    const doDatasetNamesDiffer = importActionsWithDatasetNames
-      .map(el => el.datasetName)
-      .some(name => name !== "" && name != null && name !== currentDatasetName);
-    if (doDatasetNamesDiffer) {
-      const shouldImport = await binaryConfirm("Are you sure?", messages["nml.different_dataset"]);
-      if (!shouldImport) {
-        return;
-      }
     }
 
     // Dispatch the actual actions as the very last step, so that

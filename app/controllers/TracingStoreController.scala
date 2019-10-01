@@ -40,7 +40,7 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
         _ <- bool2Fox(tracingStore.name == name)
         _ <- tracingStoreDAO.updateOne(tracingStore) ?~> "tracingStore.create.failed"
         js <- tracingStoreService.publicWrites(tracingStore)
-      } yield { Ok(js) }
+      } yield { Ok(Json.toJson(js)) }
     }
   }
 }

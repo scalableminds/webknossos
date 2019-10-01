@@ -54,7 +54,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
             _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
-          } yield { Ok(js) }
+          } yield { Ok(Json.toJson(js)) }
         case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
     }
@@ -75,7 +75,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
         _ <- bool2Fox(dataStore.name == name)
         _ <- dataStoreDAO.updateOne(dataStore) ?~> "dataStore.create.failed"
         js <- dataStoreService.publicWrites(dataStore)
-      } yield { Ok(js) }
+      } yield { Ok(Json.toJson(js)) }
     }
   }
 }

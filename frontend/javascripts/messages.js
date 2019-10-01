@@ -52,7 +52,9 @@ export default {
   "datastore.version.too_old": _.template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
-  "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
+  "save.failed_simultaneous_tracing": `The tracing couldn't be processed correctly.
+
+This might be caused by editing the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,

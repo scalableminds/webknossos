@@ -20,6 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - When creating tasks from zip, the individual nml names are used again, rather than the zip name. [#4277](https://github.com/scalableminds/webknossos/pull/4277)
 
+### Removed
+- Removed the Search shortcut (Ctrl+Shift+F) for comments in the tracing view, since that shortcut collides with the tree search. [#4291](https://github.com/scalableminds/webknossos/pull/4291)
 
 ## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28
 [Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...19.09.0)

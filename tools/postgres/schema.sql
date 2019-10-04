@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(37);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(45);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -30,7 +30,8 @@ CREATE TABLE webknossos.analytics(
   namespace VARCHAR(256) NOT NULL,
   value JSONB NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT valueIsJsonObject CHECK(jsonb_typeof(value) = 'object')
 );
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
@@ -55,7 +56,8 @@ CREATE TABLE webknossos.annotations(
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
-  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL)
+  CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL),
+  CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
 );
 
 CREATE TABLE webknossos.meshes(
@@ -83,6 +85,7 @@ CREATE TABLE webknossos.dataSets(
   _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
+  inboxSourceHash INT,
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -97,11 +100,13 @@ CREATE TABLE webknossos.dataSets(
   details JSONB,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization)
+  UNIQUE (name, _organization),
+  CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
+  CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
-CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32');
+CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
 CREATE TABLE webknossos.dataSet_layers(
   _dataSet CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL,
@@ -139,7 +144,8 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isForeign BOOLEAN NOT NULL DEFAULT false
+  isForeign BOOLEAN NOT NULL DEFAULT false,
+  isConnector BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -173,6 +179,7 @@ CREATE TABLE webknossos.scripts(
 );
 
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
+CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _team CHAR(24) NOT NULL,
@@ -182,9 +189,14 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
+  settings_mergerMode BOOLEAN NOT NULL DEFAULT false,
+  settings_allowedMagnifications JSONB,
   recommendedConfiguration JSONB,
+  tracingType webknossos.TASKTYPE_TRACINGTYPES NOT NULL DEFAULT 'skeleton',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT recommendedConfigurationIsJsonObject CHECK(jsonb_typeof(recommendedConfiguration) = 'object'),
+  CONSTRAINT settings_allowedMagnificationsIsJsonObject CHECK(jsonb_typeof(settings_allowedMagnifications) = 'object')
 );
 
 CREATE TABLE webknossos.tasks(
@@ -239,6 +251,7 @@ CREATE TABLE webknossos.organizations(
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
+  enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -262,7 +275,8 @@ CREATE TABLE webknossos.users(
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.user_team_roles(
@@ -283,7 +297,8 @@ CREATE TABLE webknossos.user_dataSetConfigurations(
   _user CHAR(24) NOT NULL,
   _dataSet CHAR(24) NOT NULL,
   configuration JSONB NOT NULL,
-  PRIMARY KEY (_user, _dataSet)
+  PRIMARY KEY (_user, _dataSet),
+  CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
 );
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');

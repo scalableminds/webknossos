@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -19,8 +19,27 @@ case class DataStore(
     key: String,
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
-    isForeign: Boolean = false
+    isForeign: Boolean = false,
+    isConnector: Boolean = false
 )
+
+object DataStore {
+  implicit val dataStoreFormat: Format[DataStore] = Json.format[DataStore]
+
+  def fromForm(name: String,
+               url: String,
+               key: String,
+               isScratch: Option[Boolean],
+               isForeign: Option[Boolean],
+               isConnector: Option[Boolean]) =
+    DataStore(name,
+              url,
+              key,
+              isScratch.getOrElse(false),
+              isDeleted = false,
+              isForeign.getOrElse(false),
+              isConnector.getOrElse(false))
+}
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -32,7 +51,8 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "name" -> dataStore.name,
         "url" -> dataStore.url,
         "isForeign" -> dataStore.isForeign,
-        "isScratch" -> dataStore.isScratch
+        "isScratch" -> dataStore.isScratch,
+        "isConnector" -> dataStore.isConnector
       ))
 
   def validateAccess[A](name: String)(block: (DataStore) => Future[Result])(implicit request: Request[A],
@@ -42,7 +62,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
       key <- request.getQueryString("key").toFox
       _ <- bool2Fox(key == dataStore.key)
       result <- block(dataStore)
-    } yield result).getOrElse(Forbidden(Messages("dataStore.notFound")))
+    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound"))))
 
 }
 
@@ -61,17 +81,9 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.key,
         r.isscratch,
         r.isdeleted,
-        r.isforeign
+        r.isforeign,
+        r.isconnector
       ))
-
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
-    for {
-      rOpt <- run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
@@ -82,6 +94,12 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       parsed
     }
 
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
+    for {
+      r <- run(sql"select #${columns} from webknossos.datastores_ order by name".as[DatastoresRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(q.update(url)) } yield ()
@@ -89,8 +107,13 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign)
-                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign})""")
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, isScratch, isDeleted, isForeign, isConnector)
+                             values(${d.name}, ${d.url}, ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
+    } yield ()
+
+  def deleteOneByName(name: String) =
+    for {
+      _ <- run(sqlu"""update webknossos.dataStores set isDeleted = true where name = $name""")
     } yield ()
 
 }

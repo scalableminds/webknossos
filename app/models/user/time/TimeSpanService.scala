@@ -86,9 +86,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   def loggedTimePerInterval[T](groupingF: TimeSpan => T,
                                start: Option[Long] = None,
-                               end: Option[Long] = None): Fox[Map[T, Duration]] =
+                               end: Option[Long] = None,
+                               organizationId: ObjectId): Fox[Map[T, Duration]] =
     for {
-      timeTrackingOpt <- timeSpanDAO.findAll(start, end).futureBox
+      timeTrackingOpt <- timeSpanDAO.findAll(start, end, organizationId).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>
@@ -159,7 +160,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
-    last._annotation == annotation.map(_.id)
+    last._annotation.map(_.id) == annotation.map(_.id)
 
   private def logTimeToAnnotation(duration: Long, annotation: Option[ObjectId]): Fox[Unit] =
     // Log time to annotation
@@ -230,7 +231,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.updateOne"
       _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
       annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"

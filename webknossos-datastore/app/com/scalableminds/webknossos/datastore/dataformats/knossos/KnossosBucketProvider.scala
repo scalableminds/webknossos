@@ -5,7 +5,6 @@ import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Path
 
-import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -20,7 +19,7 @@ import org.apache.commons.lang3.reflect.FieldUtils
 import scala.concurrent.ExecutionContext
 
 class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: RandomAccessFile)
-  extends Cube
+    extends Cube
     with LazyLogging {
 
   // We are using reflection here to access a couple of fields from the underlying mapped byte
@@ -33,17 +32,21 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
   private val address =
     FieldUtils.readField(mappedData, "address", true).asInstanceOf[Long]
 
-  private  val arrayBaseOffset =
+  private val arrayBaseOffset =
     FieldUtils.readField(mappedData, "arrayBaseOffset", true).asInstanceOf[Long]
 
   private val unsafeCopy = {
     val m = unsafe.getClass.getDeclaredMethod("copyMemory",
-      classOf[Object], classOf[Long], classOf[Object], classOf[Long], classOf[Long])
+                                              classOf[Object],
+                                              classOf[Long],
+                                              classOf[Object],
+                                              classOf[Long],
+                                              classOf[Long])
     m.setAccessible(true)
     m
   }
 
-  def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = {
+  def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] =
     try {
       val offset: VoxelPosition = bucket.topLeft
       val bytesPerElement = dataLayer.bytesPerElement
@@ -79,7 +82,6 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
         logger.error("Failed to cut out bucket: " + e.getMessage)
         Failure("Failed to cut bucket", Full(e), Empty)
     }
-  }
 
   override protected def onFinalize(): Unit = {
     logger.trace(s"Closed file '${raf.getPath}'")
@@ -87,7 +89,7 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
     raf.close()
   }
 
-  private def copyTo(offset: Long, other: Array[Byte], destPos: Long, length: java.lang.Long): Boolean = {
+  private def copyTo(offset: Long, other: Array[Byte], destPos: Long, length: java.lang.Long): Boolean =
     // Any regularly called log statements in here should be avoided as they drastically slow down this method.
     if (offset + length <= mappedData.limit()) {
       try {
@@ -105,7 +107,6 @@ class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: Rando
     } else {
       false
     }
-  }
 }
 
 object KnossosCube {
@@ -119,16 +120,16 @@ object KnossosCube {
 
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[KnossosCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[KnossosCube] =
     for {
       section <- layer.sections.find(_.doesContainCube(readInstruction.cube))
       knossosFile <- loadKnossosFile(readInstruction, section)
     } yield {
       KnossosCube(knossosFile)
     }
-  }
 
-  private def knossosFilePath(readInstruction: DataReadInstruction, section: KnossosSection): Path = {
+  private def knossosFilePath(readInstruction: DataReadInstruction, section: KnossosSection): Path =
     readInstruction.baseDir
       .resolve(readInstruction.dataSource.id.team)
       .resolve(readInstruction.dataSource.id.name)
@@ -138,7 +139,6 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
       .resolve("x%04d".format(readInstruction.cube.x))
       .resolve("y%04d".format(readInstruction.cube.y))
       .resolve("z%04d".format(readInstruction.cube.z))
-  }
 
   private def loadKnossosFile(readInstruction: DataReadInstruction, section: KnossosSection): Box[RandomAccessFile] = {
     val dataDirectory = knossosFilePath(readInstruction, section)

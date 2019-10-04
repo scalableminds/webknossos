@@ -1,7 +1,7 @@
 #!/bin/bash
 
 testBundlePath="public/test-bundle"
-jsPath="app/assets/javascripts"
+jsPath="frontend/javascripts"
 FIND=find
 
 if [ -x "$(command -v gfind)" ]; then

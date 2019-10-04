@@ -19,8 +19,8 @@ trait ResultBox extends I18nSupport {
   def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = b match {
     case Full(result) =>
       result
-    case ParamFailure(msg, _, _, statusCode: Int) =>
-      new JsonResult(statusCode)(Messages(msg))
+    case ParamFailure(msg, _, chain, statusCode: Int) =>
+      new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
     case ParamFailure(msg, _, _, msgs: JsArray) =>
       new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
     case Failure(msg, _, chain) =>
@@ -31,7 +31,7 @@ trait ResultBox extends I18nSupport {
 
   def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
     case Full(failure) => Some(formatChain(chain))
-    case _ => None
+    case _             => None
   }
 
   private def formatChain(chain: Box[Failure])(implicit messages: MessagesProvider): String = chain match {
@@ -41,16 +41,17 @@ trait ResultBox extends I18nSupport {
   }
 
   def jsonMessages(msgs: JsArray)(implicit messages: MessagesProvider): JsObject =
-    Json.obj(
-      "messages" -> msgs)
+    Json.obj("messages" -> msgs)
 }
 
-trait ResultImplicits extends ResultBox with I18nSupport{
+trait ResultImplicits extends ResultBox with I18nSupport {
 
-  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] =
+  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext,
+                                                        messages: MessagesProvider): Future[Result] =
     b.futureBox.map(asResult)
 
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] = {
+  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext,
+                                                                messages: MessagesProvider): Future[Result] =
     b match {
       case Full(f) =>
         f.map(value => asResult(Full(value)))
@@ -59,28 +60,27 @@ trait ResultImplicits extends ResultBox with I18nSupport{
       case f: Failure =>
         Future.successful(asResult(f))
     }
-  }
 
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext, messages: MessagesProvider): Future[Result] = {
-    f.map {
-      b =>
-        asResult(b)
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext,
+                                                                messages: MessagesProvider): Future[Result] =
+    f.map { b =>
+      asResult(b)
     }
-  }
 
   implicit def box2Result[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result =
     asResult(b)
 
 }
 
-class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity) with JsonResultAttribues {
+class JsonResult(status: Int)
+    extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity)
+    with JsonResultAttribues {
 
   val isSuccess = List(OK) contains status
 
   def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
-    Result(
-      header = ResponseHeader(status),
-      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+    Result(header = ResponseHeader(status),
+           body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
   def messageTypeFromStatus =
     if (isSuccess)
@@ -119,7 +119,7 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
     apply(Html(""), message, chain)
 
   def namedChain(chainOpt: Option[String]) = chainOpt match {
-    case None => None
+    case None        => None
     case Some(chain) => Some("chain" -> chain)
   }
 
@@ -135,8 +135,7 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
   }
 
   def jsonMessages(messages: Seq[(String, String)]): JsObject =
-    Json.obj(
-      "messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
+    Json.obj("messages" -> messages.map(m => Json.obj(m._1 -> m._2)))
 }
 
 trait JsonResults extends JsonResultAttribues {
@@ -158,7 +157,7 @@ trait PostRequestHelpers {
 }
 
 trait ExtendedController
-  extends JsonResults
+    extends JsonResults
     with BoxImplicits
     with FoxImplicits
     with ResultImplicits

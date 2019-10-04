@@ -39,7 +39,7 @@ class TimeController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         users <- Fox.combined(userString.split(",").toList.map(email => userService.findOneByEmail(email))) ?~> "user.email.invalid"
-        _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised"
+        _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
       } yield {
         Ok(js)
@@ -50,8 +50,9 @@ class TimeController @Inject()(userService: UserService,
     implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId)
-        user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound"
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)) ?~> "user.notAuthorised"
+        user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound" ~> NOT_FOUND
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
+        _ <- bool2Fox(isTeamManagerOrAdmin || user == request.identity) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
       } yield {
         Ok(js)

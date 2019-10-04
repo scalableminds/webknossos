@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-USER_UID=$(id -u) USER_GID=$(id -g) docker-compose up webknossos
+mkdir -p binaryData
+
+USER_UID=$(id -u) USER_GID=$(id -g) docker-compose up webknossos webknossos-connect

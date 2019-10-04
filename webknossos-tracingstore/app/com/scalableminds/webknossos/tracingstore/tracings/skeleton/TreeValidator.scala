@@ -8,7 +8,7 @@ import net.liftweb.util.A
 import scala.collection.mutable
 
 object TreeValidator {
-  def validateTrees(trees: Seq[Tree]): Box[Unit] = {
+  def validateTrees(trees: Seq[Tree]): Box[Unit] =
     for {
       _ <- checkNoDuplicateTreeIds(trees)
       _ <- checkNoDuplicateNodeIds(trees)
@@ -17,7 +17,6 @@ object TreeValidator {
       _ <- checkNoEdgesWithSameSourceAndTarget(trees)
       _ <- checkTreesAreConnected(trees)
     } yield Full(())
-  }
 
   private def checkNoDuplicateTreeIds(trees: Seq[Tree]): Box[Unit] = {
     val treeIds = trees.map(_.treeId)
@@ -70,7 +69,8 @@ object TreeValidator {
       if (nodesOnlyInEdges.isEmpty) {
         Full(())
       } else {
-        Failure(s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
+        Failure(
+          s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
       }
     }
 
@@ -82,7 +82,8 @@ object TreeValidator {
       if (invalidEdges.isEmpty) {
         Full(())
       } else {
-        Failure(s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}")
+        Failure(
+          s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}")
       }
     }
 
@@ -94,7 +95,7 @@ object TreeValidator {
       }
       val treeComponentCount = treeComponents.size
 
-      if (treeComponentCount == 1) {
+      if (treeComponentCount <= 1) {
         Full(())
       } else {
         Failure(s"Tree ${tree.treeId} is not fully connected, but consists of $treeComponentCount components.")
@@ -129,21 +130,19 @@ object TreeValidator {
     }
   }
 
-  private def foldOverTrees(trees: Seq[Tree])(block: Tree => Box[Unit]) = {
+  private def foldOverTrees(trees: Seq[Tree])(block: Tree => Box[Unit]) =
     trees.foldLeft[Box[Unit]](Full(())) {
       case (Full(()), tree) =>
         block(tree)
       case (f, _) =>
         f
     }
-  }
 
-  private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] = {
+  private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] =
     treeGroups match {
-      case (head :: tail) => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
-      case _ => ids
+      case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
+      case _            => ids
     }
-  }
 
   private def checkAllNodesUsedExist(trees: Seq[Tree], usedNodes: Seq[Int], nodeName: String) = {
     val nodesInAllTrees = trees.flatMap(_.nodes).map(_.id)
@@ -152,6 +151,7 @@ object TreeValidator {
     if (nodesUsedButNonExistent.isEmpty) {
       Full(())
     } else {
-      Failure(s"Some $nodeName refer to non-existent nodes. $nodeName: ${nodesUsedButNonExistent.mkString(", ")}")    }
+      Failure(s"Some $nodeName refer to non-existent nodes. $nodeName: ${nodesUsedButNonExistent.mkString(", ")}")
+    }
   }
 }

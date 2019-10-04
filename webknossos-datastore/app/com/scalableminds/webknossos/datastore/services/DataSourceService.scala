@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
@@ -25,16 +26,18 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
-                                   config: DataStoreConfig,
-                                   dataSourceRepository: DataSourceRepository,
-                                   val lifecycle: ApplicationLifecycle,
-                                   @Named("webknossos-datastore") val system: ActorSystem
-                                 ) extends IntervalScheduler with LazyLogging with FoxImplicits {
+    config: DataStoreConfig,
+    dataSourceRepository: DataSourceRepository,
+    val lifecycle: ApplicationLifecycle,
+    @Named("webknossos-datastore") val system: ActorSystem
+) extends IntervalScheduler
+    with LazyLogging
+    with FoxImplicits {
 
   override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
-  private val MaxNumberOfFilesForDataFormatGuessing = 10
+  private val MaxNumberOfFilesForDataFormatGuessing = 50
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
@@ -45,22 +48,22 @@ class DataSourceService @Inject()(
     logger.info(s"Scanning inbox at: $dataBaseDir")
     for {
       _ <- PathUtils.listDirectories(dataBaseDir) match {
-              case Full(dirs) =>
-                for {
-                  _ <- Fox.successful(())
-                  foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-                  dataSourceString = foundInboxSources.map { ds =>
-                    s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-                  }.mkString(", ")
+        case Full(dirs) =>
+          for {
+            _ <- Fox.successful(())
+            foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+            dataSourceString = foundInboxSources.map { ds =>
+              s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+            }.mkString(", ")
 
-                  _ = logger.info(s"Finished scanning inbox: $dataSourceString")
-                  _ <- dataSourceRepository.updateDataSources(foundInboxSources)
-                } yield ()
-              case e =>
-                val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
-                logger.error(errorMsg)
-                Fox.failure(errorMsg)
-            }
+            _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+            _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+          } yield ()
+        case e =>
+          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+          logger.error(errorMsg)
+          Fox.failure(errorMsg)
+      }
     } yield ()
   }
 
@@ -79,7 +82,11 @@ class DataSourceService @Inject()(
 
     for {
       _ <- ensureDirectory(dataSourceDir)
-      unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true, Some(Category.values.map(_.toString).toList))
+      unzipResult = ZipIO.unzipToFolder(dataSetZip,
+                                        dataSourceDir,
+                                        includeHiddenFiles = false,
+                                        truncateCommonPrefix = true,
+                                        Some(Category.values.map(_.toString).toList))
       _ <- unzipResult match {
         case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
         case e => {
@@ -102,6 +109,9 @@ class DataSourceService @Inject()(
     }
   }
 
+  def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+    MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
 
@@ -112,15 +122,19 @@ class DataSourceService @Inject()(
 
     val errors = List(
       Check(dataSource.scale.isValid, "DataSource scale is invalid"),
-      Check(resolutionsByX == resolutionsByY && resolutionsByX == resolutionsByZ, "Scales do not monotonically increase in all dimensions"),
+      Check(resolutionsByX == resolutionsByY && resolutionsByX == resolutionsByZ,
+            "Scales do not monotonically increase in all dimensions"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
-      Check(dataSource.dataLayers.forall {
-        case layer: SegmentationLayer =>
-          layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxValue(layer.elementClass)
-        case _ =>
-          true
-      }, "Largest segment ID invalid")
+      Check(
+        dataSource.dataLayers.forall {
+          case layer: SegmentationLayer =>
+            layer.largestSegmentId > 0 && layer.largestSegmentId < ElementClass.maxSegmentIdValue(layer.elementClass)
+          case _ =>
+            true
+        },
+        "Largest segment ID invalid"
+      )
     ).flatten
 
     if (errors.isEmpty) {
@@ -130,14 +144,13 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Fox[Unit] = {
+  def updateDataSource(dataSource: DataSource): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
       propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
-  }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
@@ -148,7 +161,7 @@ class DataSourceService @Inject()(
         Nil
       case Full(dirs) =>
         val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
-        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ") }")
+        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ")}")
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
@@ -156,7 +169,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
+  def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
     val id = DataSourceId(path.getFileName.toString, organization)
     val propertiesFile = path.resolve(propertiesFileName)
 
@@ -173,7 +186,7 @@ class DataSourceService @Inject()(
   }
 
   private def guessDataFormat(path: Path): Box[DataSourceImporter] = {
-    val dataFormats = List(KnossosDataFormat, WKWDataFormat)
+    val dataFormats = List(WKWDataFormat, KnossosDataFormat)
 
     PathUtils.lazyFileStreamRecursive(path) { files =>
       val fileNames = files.take(MaxNumberOfFilesForDataFormatGuessing).map(_.getFileName.toString).toList

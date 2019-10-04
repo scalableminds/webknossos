@@ -1,19 +1,21 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis.
-Current solutions require an efficient integration of automated image analysis with massive manual data annotation.
-To scale such annotation efforts it is decisive to be able to crowd source data analysis online.
-Here we present **webKnossos**.
+<img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
+webKnossos is an open-source tool for annotating and exploring large 3D image datasets.
 
-> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
-webKnossos: efficient online 3D data annotation for connectomics.
-[Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
+* Fly through your data for fast skeletonization and proof-reading
+* Create 3D training data for automated segmentations efficiently
+* Scale data reconstruction projects with crowdsourcing workflows
+* Share datasets and annotations with collaborating scientists
 
-![webKnossos logo](https://webknossos.org/images/oxalis.svg)
+[Start using webKnossos](https://webknossos.org) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
 
-[![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
+[![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
+[![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
+[![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
+[![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
 
 ## Demo
-[https://demo.webknossos.org/](https://demo.webknossos.org/)
+[https://webknossos.org/](https://webknossos.org/)
 
 ## Features
 * Exploration of large 3D image datasets
@@ -24,14 +26,23 @@ webKnossos: efficient online 3D data annotation for connectomics.
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets)
+* [Supported dataset formats: WKW, KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
-* [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
+* [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
 * [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
+* [Detailed Documentation](https://docs.webknossos.org)
+
+## Publication
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
+> webKnossos: efficient online 3D data annotation for connectomics.  
+> [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
+
+[Read more about the original publication.](https://publication.webknossos.org)
 
 
-## Development setup
+## Development installation
 ### Docker
 This is the fastest way to try webKnossos.
 Docker CE 17+ and Docker Compose 1.18+ is required.
@@ -39,8 +50,13 @@ This is only recommended for testing.
 [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
+git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
+cd webknossos
+docker-compose pull webknossos
 ./start-docker.sh
 ```
+
+Open your local webknossos instance on [localhost:9000](http://localhost:9000).
 
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 
@@ -50,6 +66,7 @@ See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for i
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
+* [Redis 5+](https://redis.io/)
 * [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
@@ -65,7 +82,7 @@ Or install Java manually and run:
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 # Install git, node.js, postgres, sbt, gfind, gsed
-brew install git node postgresql sbt findutils coreutils gnu-sed
+brew install git node postgresql sbt findutils coreutils gnu-sed redis
 npm install -g yarn
 
 # Start postgres
@@ -91,13 +108,13 @@ echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
 curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
+sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn redis-server
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -118,32 +135,23 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 * Install PostgreSQL from https://www.postgresql.org/download/
 * PostgreSQL version **10+ is required**
 
+##### Redis
+* Install Redis from https://redis.io/download
+
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **9+ is required**
+* node version **10+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
 ```bash
-sbt run
+yarn install
+yarn start
 ```
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
+Make sure that the PostgreSQL and Redis services are running before you start the application.
 
-### Run on a remote machine
-```bash
-sbt "run -Dhttp.uri=http://<remote address>:9000"
-```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000.
-Make sure that the PostgreSQL service is running before you start sbt.
-
-Make sure to open port `9000` in your firewall.
-This is only recommended for development purposes.
-See below for a recommended production setup.
-
-## Production setup
-[See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
-
+## Upgrades
 For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
 
 ## Tests
@@ -173,6 +181,8 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
+
+webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI

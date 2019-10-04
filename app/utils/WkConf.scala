@@ -12,6 +12,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Application {
 
     val insertInitialData = get[Boolean]("application.insertInitialData")
+    val insertLocalConnectDatastore = get[Boolean]("application.insertLocalConnectDatastore")
+    val title = get[String]("application.title")
 
     object Authentication {
       object DefaultUser {
@@ -20,8 +22,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
         val isSuperUser = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey = get[String]("application.authentication.ssoKey")
-      val enableDevAutoVerify = get[Boolean]("application.authentication.enableDevAutoVerify")
-      val enableDevAutoAdmin = get[Boolean]("application.authentication.enableDevAutoAdmin")
       val enableDevAutoLogin = get[Boolean]("application.authentication.enableDevAutoLogin")
       val children = List(DefaultUser)
     }
@@ -30,6 +30,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Http {
     val uri = get[String]("http.uri")
+    val port = get[Int]("http.port")
   }
 
   object Mail {
@@ -87,7 +88,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   object Features {
-    val allowOrganizationCreation = get[Boolean]("features.allowOrganizationCreation")
+    val isDemoInstance = get[Boolean]("features.isDemoInstance")
   }
 
   val operatorData = get[String]("operatorData")
@@ -117,6 +118,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val environment = get[String]("airbrake.environment")
   }
 
+  object SlackNotifications {
+    val url = get[String]("slackNotifications.url")
+  }
+
   object Google {
     object Analytics {
       val trackingID = get[String]("google.analytics.trackingID")
@@ -125,5 +130,16 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   }
 
   val children =
-    List(Application, Http, Mail, WebKnossos, Datastore, User, Braintracing, Features, Silhouette, Airbrake, Google)
+    List(Application,
+         Http,
+         Mail,
+         WebKnossos,
+         Datastore,
+         Tracingstore,
+         User,
+         Braintracing,
+         Features,
+         Silhouette,
+         Airbrake,
+         Google)
 }

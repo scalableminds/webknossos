@@ -45,7 +45,9 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
       Fox.empty
     else {
       for {
-        mergedTracingReference <- mergeTracingsOfAnnotations(annotations, _dataSet, persistTracing)
+        (mergedSkeletonTracingReference, mergedVolumeTracingReference) <- mergeTracingsOfAnnotations(annotations,
+                                                                                                     _dataSet,
+                                                                                                     persistTracing)
       } yield {
         Annotation(
           newId,
@@ -53,22 +55,49 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
           None,
           _team,
           _user,
-          Some(mergedTracingReference),
-          None,
+          mergedSkeletonTracingReference,
+          mergedVolumeTracingReference,
           typ = typ
         )
       }
     }
 
   private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetId: ObjectId, persistTracing: Boolean)(
-      implicit ctx: DBAccessContext): Fox[String] =
+      implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
     for {
       dataSet <- dataSetDAO.findOne(dataSetId)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      skeletonTracingIds <- Fox.combined(annotations.map(_.skeletonTracingId.toFox))
-      tracingReference <- tracingStoreClient.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
+      tracingStoreClient: TracingStoreRpcClient <- tracingStoreService.clientFor(dataSet)
+      (skeletonTracingReference, volumeTracingReference) <- mergeOrDuplicate(tracingStoreClient,
+                                                                             persistTracing,
+                                                                             annotations)
     } yield {
-      tracingReference
+      (skeletonTracingReference, volumeTracingReference)
     }
+
+  private def mergeOrDuplicate(tracingStoreClient: TracingStoreRpcClient,
+                               persistTracing: Boolean,
+                               annotations: List[Annotation]): Fox[(Option[String], Option[String])] =
+    if (isSingleVolume(annotations))
+      for {
+        singleVolumeTracingId <- extractSingleVolumeTracingId(annotations) ?~> "Failed to duplicate volume tracing"
+        volumeTracingReference <- tracingStoreClient.duplicateVolumeTracing(singleVolumeTracingId) ?~> "Failed to duplicate volume tracing."
+      } yield (None, Some(volumeTracingReference))
+    else
+      for {
+        _ <- bool2Fox(containsNoVolumes(annotations))
+        skeletonTracingIds = annotations.map(_.skeletonTracingId)
+        skeletonTracingReference <- tracingStoreClient.mergeSkeletonTracingsByIds(skeletonTracingIds, persistTracing) ?~> "Failed to merge skeleton tracings."
+      } yield (Some(skeletonTracingReference), None)
+
+  private def isSingleVolume(annotations: List[Annotation]): Boolean =
+    annotations.flatMap(_.skeletonTracingId).lengthCompare(0) == 0 && annotations
+      .flatMap(_.volumeTracingId)
+      .lengthCompare(1) == 0
+
+  private def containsNoVolumes(annotations: List[Annotation]): Boolean =
+    annotations.flatMap(_.volumeTracingId).isEmpty
+
+  private def extractSingleVolumeTracingId(annotations: List[Annotation]): Fox[String] =
+    annotations.flatMap(_.volumeTracingId).headOption.toFox
 
 }

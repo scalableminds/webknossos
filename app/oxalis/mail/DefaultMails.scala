@@ -36,11 +36,12 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(organization.overTimeMailingList)
     )
 
-  def registerMail(name: String, receiver: String, brainDBresult: Option[String])(implicit messages: Messages) =
+  def registerMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
+      implicit messages: Messages) =
     Mail(
       from = defaultFrom,
       subject = "Thanks for your registration on " + uri,
-      bodyText = html.mail.register(name, brainDBresult.map(Messages(_))).body,
+      bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
 

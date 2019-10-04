@@ -4,12 +4,15 @@ import java.io.ByteArrayInputStream
 
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.geometry.{Point3D, Vector3D}
+import javax.inject.Inject
 import models.annotation.nml.{NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}
 import org.scalatest.FlatSpec
+import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.iteratee.Iteratee
+import play.api.test.FakeRequest
 import utils.ObjectId
 
 import scala.concurrent.Await
@@ -17,11 +20,15 @@ import scala.concurrent.duration.Duration
 
 
 class NMLUnitTestSuite extends FlatSpec {
+  implicit val messagesProvider: MessagesProvider = new MessagesProvider {
+    val m = new DefaultMessagesApi()
+    override def messages: Messages = m.preferred({FakeRequest("GET", "/")})
+  }
 
   def getObjectId = ObjectId.generate
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
-    val nmlEnumarator = new NmlWriter().toNmlStream(Some(skeletonTracing), None, None, None, "testOrganization", None, None)
+    val nmlEnumarator = new NmlWriter().toNmlStream(Some(skeletonTracing), None, None, None, None, "testOrganization", None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
     NmlParser.parse("", new ByteArrayInputStream(array))

@@ -9,7 +9,12 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D, Vector3I
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  DataServiceRequestSettings
+}
 import net.liftweb.common.{Box, Failure}
 import java.nio._
 
@@ -21,19 +26,19 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
 case class IsosurfaceRequest(
-                              dataSource: DataSource,
-                              dataLayer: SegmentationLayer,
-                              cuboid: Cuboid,
-                              segmentId: Long,
-                              voxelDimensions: Vector3I,
-                              mapping: Option[String] = None
-                            )
+    dataSource: DataSource,
+    dataLayer: SegmentationLayer,
+    cuboid: Cuboid,
+    segmentId: Long,
+    voxelDimensions: Vector3I,
+    mapping: Option[String] = None
+)
 
 case class DataTypeFunctors[T, B](
-                                   getTypedBufferFn: ByteBuffer => B,
-                                   copyDataFn: (B, Array[T]) => Unit,
-                                   fromLong: Long => T
-                                 )
+    getTypedBufferFn: ByteBuffer => B,
+    copyDataFn: (B, Array[T]) => Unit,
+    fromLong: Long => T
+)
 
 class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuration) extends Actor {
 
@@ -41,53 +46,61 @@ class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuratio
     case request: IsosurfaceRequest =>
       sender() ! Await.result(service.requestIsosurface(request).futureBox, timeout)
     case _ =>
-        sender ! Failure("Unexpected message sent to IsosurfaceActor.")
+      sender ! Failure("Unexpected message sent to IsosurfaceActor.")
   }
 }
 
 class IsosurfaceService @Inject()(
-                                   actorSystem: ActorSystem,
-                                   dataServicesHolder: BinaryDataServiceHolder,
-                                   mappingService: MappingService,
-                                   config: DataStoreConfig,
-                                 )(implicit ec: ExecutionContext) extends FoxImplicits {
+    actorSystem: ActorSystem,
+    dataServicesHolder: BinaryDataServiceHolder,
+    mappingService: MappingService,
+    config: DataStoreConfig,
+)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
   implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
 
-  val actor = actorSystem.actorOf(RoundRobinPool(config.Braingames.Binary.isosurfaceActorPoolSize).props(
-    Props(new IsosurfaceActor(this, timeout.duration))))
+  val actor = actorSystem.actorOf(
+    RoundRobinPool(config.Braingames.Binary.isosurfaceActorPoolSize)
+      .props(Props(new IsosurfaceActor(this, timeout.duration))))
 
-  def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[Array[Float]] = {
-    actor.ask(request).mapTo[Box[Array[Float]]].recover {
+  def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+    actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
       case e: Exception => Failure(e.getMessage)
     }
-  }
 
-  def requestIsosurface(request: IsosurfaceRequest): Fox[Array[Float]] = {
+  def requestIsosurface(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     request.dataLayer.elementClass match {
       case ElementClass.uint8 =>
-        generateIsosurfaceImpl[Byte, ByteBuffer](request, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+        generateIsosurfaceImpl[Byte, ByteBuffer](request,
+                                                 DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 =>
-        generateIsosurfaceImpl[Short, ShortBuffer](request, DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+        generateIsosurfaceImpl[Short, ShortBuffer](
+          request,
+          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
       case ElementClass.uint32 =>
-        generateIsosurfaceImpl[Int, IntBuffer](request, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+        generateIsosurfaceImpl[Int, IntBuffer](request,
+                                               DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
       case ElementClass.uint64 =>
-        generateIsosurfaceImpl[Long, LongBuffer](request, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+        generateIsosurfaceImpl[Long, LongBuffer](request,
+                                                 DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
     }
-  }
 
-  private def generateIsosurfaceImpl[T:ClassTag, B <: Buffer](request: IsosurfaceRequest, dataTypeFunctors: DataTypeFunctors[T, B]): Fox[Array[Float]] = {
+  private def generateIsosurfaceImpl[T: ClassTag, B <: Buffer](
+      request: IsosurfaceRequest,
+      dataTypeFunctors: DataTypeFunctors[T, B]): Fox[(Array[Float], List[Int])] = {
 
-    def applyMapping(data: Array[T]): Fox[Array[T]] = {
+    def applyMapping(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
-          mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName), data, dataTypeFunctors.fromLong)
+          mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
+                                      data,
+                                      dataTypeFunctors.fromLong)
         case _ =>
           Fox.successful(data)
       }
-    }
 
     def convertData(data: Array[Byte]): Array[T] = {
       val srcBuffer = dataTypeFunctors.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
@@ -97,7 +110,10 @@ class IsosurfaceService @Inject()(
       dstArray
     }
 
-    def subVolumeContainsSegmentId[T](data: Array[T], dataDimensions: Vector3I, boundingBox: BoundingBox, segmentId: T): Boolean = {
+    def subVolumeContainsSegmentId[T](data: Array[T],
+                                      dataDimensions: Vector3I,
+                                      boundingBox: BoundingBox,
+                                      segmentId: T): Boolean = {
       for {
         x <- boundingBox.topLeft.x until boundingBox.bottomRight.x
         y <- boundingBox.topLeft.y until boundingBox.bottomRight.y
@@ -109,15 +125,39 @@ class IsosurfaceService @Inject()(
       false
     }
 
+    def findNeighbors[T](data: Array[T], dataDimensions: Vector3I, segmentId: T): List[Int] = {
+      val x = dataDimensions.x - 1
+      val y = dataDimensions.y - 1
+      val z = dataDimensions.z - 1
+      val front_xy = BoundingBox(Point3D(0, 0, 0), x, y, 1)
+      val front_xz = BoundingBox(Point3D(0, 0, 0), 1, y, z)
+      val front_yz = BoundingBox(Point3D(0, 0, 0), x, 1, z)
+      val back_xy = BoundingBox(Point3D(0, 0, z), x, y, 1)
+      val back_xz = BoundingBox(Point3D(0, y, 0), 1, y, z)
+      val back_yz = BoundingBox(Point3D(x, 0, 0), x, 1, z)
+      val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
+      surfaceBoundingBoxes.zipWithIndex.filter {
+        case (surfaceBoundingBox, index) => {
+          subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
+        }
+      }.map {
+        case (surfaceBoundingBox, index) => index
+      }
+    }
+
     val cuboid = request.cuboid
     val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
 
-    val dataRequest = DataServiceDataRequest(request.dataSource, request.dataLayer, request.mapping, cuboid, DataServiceRequestSettings.default, request.voxelDimensions)
+    val dataRequest = DataServiceDataRequest(request.dataSource,
+                                             request.dataLayer,
+                                             request.mapping,
+                                             cuboid,
+                                             DataServiceRequestSettings.default,
+                                             request.voxelDimensions)
 
-    val dataDimensions = Vector3I(
-      math.ceil(cuboid.width / voxelDimensions.x).toInt,
-      math.ceil(cuboid.height / voxelDimensions.y).toInt,
-      math.ceil(cuboid.depth / voxelDimensions.z).toInt)
+    val dataDimensions = Vector3I(math.ceil(cuboid.width / voxelDimensions.x).toInt,
+                                  math.ceil(cuboid.height / voxelDimensions.y).toInt,
+                                  math.ceil(cuboid.depth / voxelDimensions.z).toInt)
 
     val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
     val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
@@ -131,22 +171,29 @@ class IsosurfaceService @Inject()(
       typedData = convertData(data)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
+      neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)
     } yield {
       for {
         x <- 0 until dataDimensions.x by 32
         y <- 0 until dataDimensions.y by 32
         z <- 0 until dataDimensions.z by 32
       } {
-        val boundingBox = BoundingBox(
-          Point3D(x, y, z),
-          math.min(dataDimensions.x - x, 33),
-          math.min(dataDimensions.y - y, 33),
-          math.min(dataDimensions.z - z, 33))
+        val boundingBox = BoundingBox(Point3D(x, y, z),
+                                      math.min(dataDimensions.x - x, 33),
+                                      math.min(dataDimensions.y - y, 33),
+                                      math.min(dataDimensions.z - z, 33))
         if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
-          MarchingCubes.marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, voxelDimensions, offset, scale, vertexBuffer)
+          MarchingCubes.marchingCubes[T](mappedData,
+                                         dataDimensions,
+                                         boundingBox,
+                                         mappedSegmentId,
+                                         voxelDimensions,
+                                         offset,
+                                         scale,
+                                         vertexBuffer)
         }
       }
-      vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray
+      (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)
     }
   }
 }

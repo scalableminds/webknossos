@@ -131,6 +131,8 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
 
+  private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
+
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
@@ -156,16 +158,26 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
+      implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"
-          .as[TasksRow])
+        sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
+              order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
+  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select count(*) from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"""
+          .as[Int])
+      parsed <- r.headOption
+    } yield parsed
+
+  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false) =
     s"""
         select ${columnsWithPrefix("webknossos.tasks_.")}
            from
@@ -176,7 +188,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}' and not ($isTeamManagerOrAdmin and state = '${AnnotationState.Cancelled}')) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
@@ -185,13 +197,14 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
            limit 1
       """
 
-  def assignNext(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[(Task, ObjectId)] = {
+  def assignNext(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[(Task, ObjectId)] = {
 
     val annotationId = ObjectId.generate
     val dummyTracingId = Random.alphanumeric.take(36).mkString
 
     val insertAnnotationQ = sqlu"""
-           with task as (#${findNextTaskQ(userId, teamIds)}),
+           with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption
@@ -223,9 +236,10 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield (parsed, annotationId)
   }
 
-  def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Task] =
+  def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[Task] =
     for {
-      rList <- run(sql"#${findNextTaskQ(userId, teamIds)}".as[TasksRow])
+      rList <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
@@ -263,7 +277,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       projectFilter <- projectFilterFox
-      accessQuery <- readAccessQuery
+      accessQuery <- userIdFromCtx.map(listAccessQ).getOrElse("false")
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t
                 #${userJoin}
@@ -286,9 +300,11 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption.toFox
     } yield firstResult
 
-  def countAllOpenInstances(implicit ctx: DBAccessContext): Fox[Int] =
+  def countAllOpenInstancesForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      result <- run(sql"select sum(openInstances) from webknossos.tasks_".as[Int])
+      result <- run(
+        sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where ${organizationId} in (select _organization from webknossos.users_ where _id = p._owner)"
+          .as[Int])
       firstResult <- result.headOption
     } yield firstResult
 

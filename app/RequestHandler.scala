@@ -1,38 +1,43 @@
-import java.nio.file.Paths
-
-import controllers.{Assets, AssetsFinder}
+import com.typesafe.scalalogging.LazyLogging
+import controllers.{Assets, SitemapController}
 import javax.inject.Inject
-import play.api.Environment
+import play.api.{Environment, OptionalDevContext}
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
+import play.core.WebCommands
 import utils.WkConf
 
-class RequestHandler @Inject()(router: Router,
+class RequestHandler @Inject()(webCommands: WebCommands,
+                               optionalDevContext: OptionalDevContext,
+                               router: Router,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
                                filters: HttpFilters,
                                conf: WkConf,
                                assets: Assets,
-                               af: AssetsFinder,
-                               env: Environment)
+                               env: Environment,
+                               sitemapController: SitemapController)
     extends DefaultHttpRequestHandler(
+      webCommands,
+      optionalDevContext,
       router,
       errorHandler,
       httpConfiguration,
       filters
     )
-    with InjectedController {
+    with InjectedController
+    with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
+    } else if (request.uri.matches("^(/assets/).*$")) {
+      val path = request.path.replaceFirst("^(/assets/)", "")
+      Some(assets.at(path = "/public", file = path))
+    } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
+      Some(sitemapController.getSitemap(Some(conf.Http.uri)))
     } else {
-      val file =
-        Paths.get(env.rootPath + af.assetsBasePath + request.path).toFile
-      if (request.path.matches("^.+\\..+$") || (file.exists && file.isFile))
-        Some(assets.at(path = "/public", file = request.path))
-      else
-        Some(Action { Ok(views.html.main(conf)) })
+      Some(Action { Ok(views.html.main(conf)) })
     }
 }

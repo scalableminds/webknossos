@@ -109,22 +109,38 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
+  private def getStateQuery(isFinished: Option[Boolean]) =
+    isFinished match {
+      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
+      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
+      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
+    }
+
   def findAllFor(userId: ObjectId,
                  isFinished: Option[Boolean],
                  annotationType: AnnotationType,
                  limit: Int,
                  pageNumber: Int = 0)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = {
-    val stateQuery = isFinished match {
-      case Some(true)  => s"state = '${AnnotationState.Finished.toString}'"
-      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
-      case None        => s"state != '${AnnotationState.Cancelled.toString}'"
-    }
+    val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
                      order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
+  def countAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType)(
+      implicit ctx: DBAccessContext) = {
+    val stateQuery = getStateQuery(isFinished)
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        sql"""select count(*) from #${existingCollectionName}
+                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}"""
+          .as[Int])
+      parsed <- r.headOption
     } yield parsed
   }
 
@@ -204,6 +220,14 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       accessQuery <- readAccessQuery
       countList <- run(
         sql"""select count(*) from (select _id from #${existingCollectionName} where _task = ${taskId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) q"""
+          .as[Int])
+      count <- countList.headOption
+    } yield count
+
+  def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      countList <- run(
+        sql"select count(*) from (select a._id from #${existingCollectionName} a join webknossos.users_ u on a._user = u._id where u._organization = ${organizationId}) q"
           .as[Int])
       count <- countList.headOption
     } yield count

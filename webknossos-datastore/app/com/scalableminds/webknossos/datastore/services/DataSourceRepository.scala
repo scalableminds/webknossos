@@ -7,13 +7,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataS
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceRepository @Inject()(
-                                      webKnossosServer: DataStoreWkRpcClient,
-                                      @Named("webknossos-datastore") val system: ActorSystem
-                                    )
-    extends TemporaryStore[DataSourceId, InboxDataSource](system)
+    webKnossosServer: DataStoreWkRpcClient,
+    @Named("webknossos-datastore") val system: ActorSystem
+) extends TemporaryStore[DataSourceId, InboxDataSource](system)
+    with LazyLogging
     with FoxImplicits {
 
   def findUsable(id: DataSourceId): Option[DataSource] =

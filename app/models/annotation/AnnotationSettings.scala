@@ -9,7 +9,9 @@ case class AnnotationSettings(
     allowedModes: List[String] = SKELETON_MODES,
     preferredMode: Option[String] = None,
     branchPointsAllowed: Boolean = true,
-    somaClickingAllowed: Boolean = true
+    somaClickingAllowed: Boolean = true,
+    mergerMode: Boolean = false,
+    allowedMagnifications: Option[JsValue] = None
 )
 
 object AnnotationSettings {

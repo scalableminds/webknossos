@@ -8,14 +8,13 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
-import com.newrelic.api.agent.NewRelic
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-object MappingParser  extends LazyLogging {
+object MappingParser extends LazyLogging {
 
-  def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] = {
+  def parse[T](r: Reader, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     try {
       parseImpl(r, fromLongFn)
     } catch {
@@ -28,7 +27,6 @@ object MappingParser  extends LazyLogging {
     } finally {
       r.close()
     }
-  }
 
   def parse[T](p: Path, fromLongFn: Long => T): Box[DataLayerMapping[T]] =
     parse(new FileReader(new File(p.toString)), fromLongFn)
@@ -57,7 +55,7 @@ object MappingParser  extends LazyLogging {
     jsonReader.endObject()
 
     val end = System.currentTimeMillis()
-    NewRelic.recordMetric("Custom/FileDataStore/MappingParser/parsingTime", end-start)
+    logger.info(s"Mapping parsing took ${end - start} ms")
 
     for {
       name <- nameOpt

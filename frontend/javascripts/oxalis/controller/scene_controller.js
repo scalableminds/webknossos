@@ -195,11 +195,11 @@ class SceneController {
     this.updateDiameter();
   };
 
-  updateDiameterToCameraMatrix = (matrix: Matrix4x4) => {
-    if (!matrix || !this.diameter) {
+  updateDiameterToCameraMatrix = (cameraMatrix: Matrix4x4) => {
+    const { diameter } = this;
+    if (!cameraMatrix || !diameter) {
       return;
     }
-    const diameter = this.diameter;
     const currentMatrix = diameter.matrix.elements;
     const currentPosition = new THREE.Vector3(
       currentMatrix[12],
@@ -207,30 +207,30 @@ class SceneController {
       currentMatrix[14],
     );
     diameter.matrix.set(
-      matrix[0],
-      matrix[4],
-      matrix[8],
-      matrix[12],
-      matrix[1],
-      matrix[5],
-      matrix[9],
-      matrix[13],
-      matrix[2],
-      matrix[6],
-      matrix[10],
-      matrix[14],
-      matrix[3],
-      matrix[7],
-      matrix[11],
-      matrix[15],
+      cameraMatrix[0],
+      cameraMatrix[4],
+      cameraMatrix[8],
+      cameraMatrix[12],
+      cameraMatrix[1],
+      cameraMatrix[5],
+      cameraMatrix[9],
+      cameraMatrix[13],
+      cameraMatrix[2],
+      cameraMatrix[6],
+      cameraMatrix[10],
+      cameraMatrix[14],
+      cameraMatrix[3],
+      cameraMatrix[7],
+      cameraMatrix[11],
+      cameraMatrix[15],
     );
     diameter.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
     diameter.matrix.setPosition(currentPosition);
-
-    const pointWithXRadius = diameter.geometry.vertices[0].clone();
-    const pointWithYRadius = diameter.geometry.vertices[
-      Math.floor(numbOfVerticesInEllipse / 4)
-    ].clone();
+    const { position } = diameter.geometry.attributes;
+    const pointWithXRadius = new THREE.Vector3();
+    pointWithXRadius.fromBufferAttribute(position, 0);
+    const pointWithYRadius = new THREE.Vector3();
+    pointWithYRadius.fromBufferAttribute(position, Math.floor(numbOfVerticesInEllipse / 4));
     pointWithXRadius.applyMatrix4(diameter.matrix);
     pointWithYRadius.applyMatrix4(diameter.matrix);
     // distance is not correct after multiplying (maybe because of the scale that is included into the matrix)
@@ -261,13 +261,13 @@ class SceneController {
     // TODO display this information somehow to the user
     console.log("xRadius length", xExtent.length());
     console.log("yRadius length", yExtent.length());
-    /* debug: having different resolutions in each direction does not affact the length of a radius calculated. 
-    Maybe this calulcation is already done by the sacling of the passed camera matrix??? */
+    /* debug: having different resolutions in each direction does not affect the length of a radius calculated. 
+    Maybe this calulcation is already done by the scaling of the passed camera matrix??? */
     diameter.matrixWorldNeedsUpdate = true;
   };
 
   updateDiameter(): void {
-    const showDiameter = Store.getState().userConfiguration.showDiameter;
+    const { showDiameter } = Store.getState().userConfiguration;
     if (!showDiameter) {
       return;
     }
@@ -277,7 +277,7 @@ class SceneController {
       return;
     }
 
-    const position = activeNode.position;
+    const { position } = activeNode;
     const curve = new THREE.EllipseCurve(
       0, // posX
       0, // posY
@@ -288,8 +288,8 @@ class SceneController {
       false, // aClockwise
       (rotationAngle / 180) * Math.PI, // aRotation
     );
-    const path = new THREE.Path(curve.getPoints(numbOfVerticesInEllipse));
-    const geometrycirc = path.createPointsGeometry(50);
+    const points = curve.getPoints(numbOfVerticesInEllipse);
+    const geometrycirc = new THREE.BufferGeometry().setFromPoints(points);
     const materialcirc = new THREE.LineBasicMaterial({
       color: 0xff0000,
     });

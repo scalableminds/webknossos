@@ -18,7 +18,7 @@ import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 export const currentLayoutVersion = 8;
 export const layoutHeaderHeight = 20;
 const dummyExtent = 500;
-export const show3DViewportInArbitrary = true;
+export const show3DViewportInArbitrary = false;
 
 const LayoutSettings = {
   showPopoutIcon: false,

@@ -21,6 +21,7 @@ import {
   enforceSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { setDiameterProperties } from "oxalis/model/actions/settings_actions";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -86,11 +87,9 @@ class SceneController {
     };
     this.planeShift = [0, 0, 0];
     this.diameter = null;
-    this.diameterProperties = {
-      xRadius: 20,
-      yRadius: 20,
-      rotationAngle: 0,
-    };
+    // TODO: Load diameter from active cell
+    // TODO: Listen to active cell property
+    this.diameterProperties = Store.getState().temporaryConfiguration.diameterProperties;
   }
 
   initialize() {
@@ -155,23 +154,30 @@ class SceneController {
 
   getDiameter = () => this.diameter;
 
-  resetDiameter = () => {
-    this.diameterProperties = {
-      xRadius: 20,
-      yRadius: 20,
-      rotationAngle: 0,
-    };
+  showDiameter = () => {
     this.updateDiameter();
   };
 
   hideDiameter = () => {
     if (this.diameter) {
       this.rootGroup.remove(this.diameter);
+      this.diameter = null;
       window.needsRerender = true;
     }
   };
 
+  setDiameterVisibility = visible => {
+    if (visible && !this.diameter) {
+      this.showDiameter();
+    } else if (!visible && this.diameter) {
+      this.hideDiameter();
+    }
+  };
+
   changeXRadiusOfDiameterBy = (value: number) => {
+    if (!Store.getState().userConfiguration.showDiameter) {
+      return;
+    }
     this.diameterProperties = {
       ...this.diameterProperties,
       xRadius: this.diameterProperties.xRadius + value,
@@ -180,6 +186,9 @@ class SceneController {
   };
 
   changeYRadiusOfDiameterBy = (value: number) => {
+    if (!Store.getState().userConfiguration.showDiameter) {
+      return;
+    }
     this.diameterProperties = {
       ...this.diameterProperties,
       yRadius: this.diameterProperties.yRadius + value,
@@ -235,21 +244,21 @@ class SceneController {
     pointWithYRadius.applyMatrix4(diameter.matrix);
     // distance is not correct after multiplying (maybe because of the scale that is included into the matrix)
     /* Add points for debugging 
-	---------
-	const dotGeometry1 = new THREE.Geometry();
-    const dotGeometry2 = new THREE.Geometry();
-    dotGeometry1.vertices.push(pointWithXRadius);
-    dotGeometry2.vertices.push(pointWithYRadius);
-    const dotMaterial = new THREE.PointsMaterial({
-      size: 1,
-      sizeAttenuation: false,
-      color: 0x008800,
-    });
-    const dot1 = new THREE.Points(dotGeometry1, dotMaterial);
-    const dot2 = new THREE.Points(dotGeometry2, dotMaterial);
-    this.rootGroup.add(dot1);
-	this.rootGroup.add(dot2); 
-	---------- */
+    ---------
+    const dotGeometry1 = new THREE.Geometry();
+      const dotGeometry2 = new THREE.Geometry();
+      dotGeometry1.vertices.push(pointWithXRadius);
+      dotGeometry2.vertices.push(pointWithYRadius);
+      const dotMaterial = new THREE.PointsMaterial({
+        size: 1,
+        sizeAttenuation: false,
+        color: 0x008800,
+      });
+      const dot1 = new THREE.Points(dotGeometry1, dotMaterial);
+      const dot2 = new THREE.Points(dotGeometry2, dotMaterial);
+      this.rootGroup.add(dot1);
+    this.rootGroup.add(dot2); 
+    ---------- */
     // calulation
     const xExtent = new THREE.Vector3().subVectors(pointWithXRadius, currentPosition);
     const yExtent = new THREE.Vector3().subVectors(pointWithYRadius, currentPosition);
@@ -259,19 +268,20 @@ class SceneController {
     xExtent.multiply(scaleAsVector);
     yExtent.multiply(scaleAsVector);
     // TODO display this information somehow to the user
-    console.log("xRadius length", xExtent.length());
-    console.log("yRadius length", yExtent.length());
+    this.diameterProperties = {
+      ...this.diameterProperties,
+      scaledXRadius: xExtent.length(),
+      scaledYRadius: yExtent.length(),
+    };
+    Store.dispatch(setDiameterProperties(this.diameterProperties));
     /* debug: having different resolutions in each direction does not affect the length of a radius calculated. 
-    Maybe this calulcation is already done by the scaling of the passed camera matrix??? */
+    Maybe this calculation is already done by the scaling of the passed camera matrix??? */
     diameter.matrixWorldNeedsUpdate = true;
   };
 
   updateDiameter(): void {
-    const { showDiameter } = Store.getState().userConfiguration;
-    if (!showDiameter) {
-      return;
-    }
     const { xRadius, yRadius, rotationAngle } = this.diameterProperties;
+
     const activeNode = this.getActiveNode();
     if (!activeNode) {
       return;
@@ -642,6 +652,11 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.userConfiguration.clippingDistance,
       clippingDistance => this.setClippingDistance(clippingDistance),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.showDiameter,
+      showDiameter => this.setDiameterVisibility(showDiameter),
     );
 
     listenToStoreProperty(

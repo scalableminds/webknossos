@@ -56,6 +56,7 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import { number } from "prop-types";
 
 export type CommentType = {|
   +content: string,
@@ -274,9 +275,18 @@ export type RecommendedConfiguration = $Shape<{
 
 export type Mapping = { [key: number]: number };
 
+export type DiameterProperties = {
+  +xRadius: number,
+  +yRadius: number,
+  +scaledXRadius: number,
+  +scaledYRadius: number,
+  +rotation: number,
+};
+
 export type TemporaryConfiguration = {
   +viewMode: ViewMode,
   +flightmodeRecording: boolean,
+  +diameterProperties: DiameterProperties,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +hoveredIsosurfaceId: number,

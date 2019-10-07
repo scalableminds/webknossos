@@ -165,7 +165,12 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
-    const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
+    const {
+      displayScalebars,
+      isDatasetOnScratchVolume,
+      isUpdateTracingAllowed,
+      displayDiameterInformation,
+    } = this.props;
 
     return (
       <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
@@ -255,24 +260,28 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   key="xy"
                   portalKey="xy"
                   displayScalebars={displayScalebars}
+                  displayDiameterInformation={false}
                 />
                 <InputCatcher
                   viewportID={OrthoViews.PLANE_YZ}
                   key="yz"
                   portalKey="yz"
                   displayScalebars={displayScalebars}
+                  displayDiameterInformation={false}
                 />
                 <InputCatcher
                   viewportID={OrthoViews.PLANE_XZ}
                   key="xz"
                   portalKey="xz"
                   displayScalebars={displayScalebars}
+                  displayDiameterInformation={false}
                 />
                 <InputCatcher
                   viewportID={OrthoViews.TDView}
                   key="td"
                   portalKey="td"
                   displayScalebars={displayScalebars}
+                  displayDiameterInformation={false}
                 >
                   <TDViewControls />
                 </InputCatcher>
@@ -280,6 +289,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   viewportID={ArbitraryViewport}
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
+                  displayDiameterInformation={displayDiameterInformation}
                 >
                   {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
                 </InputCatcher>
@@ -313,6 +323,7 @@ function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     displayScalebars: state.userConfiguration.displayScalebars,
+    displayDiameterInformation: state.userConfiguration.showDiameter,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
     isUpdateTracingAllowed: state.tracing.restrictions.allowUpdate,
     showVersionRestore: state.uiInformation.showVersionRestore,

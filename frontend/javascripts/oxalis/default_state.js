@@ -10,6 +10,14 @@ const defaultViewportRect = {
   height: Constants.VIEWPORT_WIDTH,
 };
 
+export const defaultDiameterProperties = {
+  xRadius: 20,
+  yRadius: 20,
+  scaledXRadius: 20,
+  scaledYRadius: 20,
+  rotationAngle: 0,
+};
+
 const initialAnnotationInfo = {
   annotationId: "",
   restrictions: {
@@ -79,6 +87,7 @@ const defaultState: OxalisState = {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
+    diameterProperties: defaultDiameterProperties,
     mousePosition: null,
     hoveredIsosurfaceId: 0,
     activeMapping: {

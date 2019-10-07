@@ -292,14 +292,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <SwitchSetting
             label={settingsLabels.showDiameter}
             value={this.props.userConfiguration.showDiameter}
-            onChange={enabled => {
-              this.onChangeUser.showDiameter(enabled);
-              if (enabled) {
-                getSceneController().resetDiameter();
-              } else {
-                getSceneController().hideDiameter();
-              }
-            }}
+            onChange={this.onChangeUser.showDiameter}
           />
         </Panel>,
       );

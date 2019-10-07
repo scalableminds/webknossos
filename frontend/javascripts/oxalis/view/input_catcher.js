@@ -5,6 +5,7 @@ import * as React from "react";
 import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
+import DiameterInformation from "oxalis/view/diameter_information";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 
@@ -12,6 +13,7 @@ type Props = {
   viewportID: Viewport,
   children?: React.Node,
   displayScalebars?: boolean,
+  displayDiameterInformation: boolean,
 };
 
 function ignoreContextMenu(event: SyntheticInputEvent<>) {
@@ -75,8 +77,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
   }
 
   render() {
-    const { viewportID } = this.props;
-
+    const { viewportID, displayScalebars, children, displayDiameterInformation } = this.props;
     return (
       <div className="gl-dont-overflow">
         <div
@@ -89,10 +90,11 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{ position: "relative" }}
         >
-          {this.props.displayScalebars && viewportID !== "arbitraryViewport" ? (
+          {displayScalebars && viewportID !== "arbitraryViewport" ? (
             <Scalebar viewportID={viewportID} />
           ) : null}
-          {this.props.children}
+          {displayDiameterInformation ? <DiameterInformation /> : null}
+          {children}
         </div>
       </div>
     );

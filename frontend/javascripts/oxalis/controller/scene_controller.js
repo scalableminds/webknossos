@@ -166,7 +166,7 @@ class SceneController {
 
   showDiameter = () => {
     const currentNode = this.getActiveNode();
-    this.diameterProperties = currentNode.diameterProperties || defaultDiameterProperties;
+    this.diameterProperties = currentNode && currentNode.diameterProperties || defaultDiameterProperties;
     this.updateDiameter();
   };
 
@@ -329,6 +329,9 @@ class SceneController {
   }
 
   setDiameterForNode(nodeId: number) {
+    if(nodeId == null){
+      return;
+    }
     const { id, diameterProperties } = this.getActiveNode();
     if(this.isInitialSetDiameterForNodeCall){
       /* When a tracing is loaded the following problem might occure:

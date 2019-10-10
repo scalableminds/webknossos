@@ -62,7 +62,7 @@ export type DiameterProperties = {
   +yRadius: number,
   +scaledXRadius: number,
   +scaledYRadius: number,
-  +rotation: number,
+  +rotationAngle: number,
 };
 
 export type CommentType = {|

@@ -62,13 +62,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   nmlWriter: NmlWriter,
                                   temporaryFileCreator: TemporaryFileCreator,
                                   meshDAO: MeshDAO,
-                                  meshService: MeshService)(implicit ec: ExecutionContext)
+                                  meshService: MeshService,
+                                  listedAnnotationsDAO: ListedAnnotationsDAO)(implicit ec: ExecutionContext)
     extends BoxImplicits
     with FoxImplicits
     with TextUtils
     with ProtoGeometryImplicits
     with LazyLogging {
-
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
@@ -401,6 +401,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
            tuple._3))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
+
+  def listedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    for {
+      listedAnnotationIds <- listedAnnotationsDAO.findAllListedForTeams(userTeams)
+      annotations <- Fox.serialCombined(listedAnnotationIds)(annotationDAO.findOne(_)(GlobalAccessContext))
+    } yield annotations
 
   private def flattenTupledLists[A, B, C, D, E, F, G, H, I](
       tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G], List[H], List[I])]) =

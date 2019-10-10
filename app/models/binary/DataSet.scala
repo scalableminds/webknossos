@@ -453,7 +453,7 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
     val clearQuery =
       sqlu"""delete from webknossos.dataSet_allowedTeams
                              where _dataSet = (
-                               select _id from webknossos.dataSets where _id = ${_id}
+                               select _id from webknossos.dataSets where _id = ${_id} //really necessary subquery?
                              )"""
 
     val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)

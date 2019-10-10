@@ -277,6 +277,14 @@ class AnnotationController @Inject()(
     }
   }
 
+  def listedAnnotations() = sil.SecuredAction.async { implicit request =>
+    for {
+      userTeams <- userService.teamIdsFor(request.identity._id)
+      listedAnnotations <- annotationService.listedAnnotationsFor(userTeams)
+      json <- Fox.serialCombined(listedAnnotations)(annotationService.publicWrites(_))
+    } yield Ok(Json.toJson(json))
+  }
+
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {

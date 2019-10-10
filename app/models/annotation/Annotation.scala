@@ -12,7 +12,7 @@ import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
 
@@ -351,4 +351,32 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateObjectIdCol(id, _._User, userId)
+}
+
+class ListedAnnotationsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+
+  def findAllListedForTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+    val composedQuery = DBIO.sequence(teams.map(team =>
+      sql"select _annotation from webknossos.annotation_listedTeams where _team = ${team}".as[String]))
+    for {
+      result <- run(composedQuery)
+    } yield result.flatten.distinct.map(ObjectId(_))
+  }
+
+  def updateTeamsForListedAnnotation(_id: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
+    val clearQuery =
+      sqlu"""delete from webknossos.annotation_listedTeams where _annotation = ${_id}"""
+
+    val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_listedTeams(_annotation, _team)
+                                                              values(${_id}, ${teamId.id})""")
+
+    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+    for {
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
+               retryCount = 50,
+               retryIfErrorContains = List(transactionSerializationError))
+    } yield ()
+  }
+
 }

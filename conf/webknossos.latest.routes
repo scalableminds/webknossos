@@ -111,6 +111,8 @@ GET           /annotations/:typ/:id/download                                    
 
 GET           /annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
+GET           /annotations/listed                                               controllers.AnnotationController.listedAnnotations()
+
 # Meshes
 POST          /meshes                                                           controllers.MeshController.create
 PUT           /meshes/:id                                                       controllers.MeshController.update(id: String)

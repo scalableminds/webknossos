@@ -229,6 +229,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("bitDepth", n.bitDepth.toString)
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
+        n.diameterProperties.foreach(d => Xml.withinElementSync("diameterProperties")(writeDiameterPropertiesAsXml(d)))
       }
     }
 
@@ -264,6 +265,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writeTreeGroupsAsXml(t.children)
       }
     }
+
+  def writeDiameterPropertiesAsXml(d: DiameterProperties)(implicit writer: XMLStreamWriter): Unit = {
+    writer.writeAttribute("xRadius", d.xRadius.toString)
+    writer.writeAttribute("yRadius", d.yRadius.toString)
+    writer.writeAttribute("scaledXRadius", d.scaledXRadius.toString)
+    writer.writeAttribute("scaledYRadius", d.scaledYRadius.toString)
+    writer.writeAttribute("rotationAngle", d.rotationAngle.toString)
+  }
 
   def writeMetaData(annotationOpt: Option[Annotation], userOpt: Option[User], taskOpt: Option[Task])(
       implicit writer: XMLStreamWriter): Unit = {

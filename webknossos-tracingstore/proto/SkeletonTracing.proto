@@ -4,6 +4,14 @@ package com.scalableminds.webknossos.tracingstore;
 
 import "geometry.proto";
 
+message DiameterProperties {
+    required double xRadius = 1;
+    required double yRadius = 2;
+    required double scaledXRadius = 3;
+    required double scaledYRadius = 4;
+    required double rotationAngle = 5;
+}
+
 message Node {
     required int32 id = 1;
     required Point3D position = 2;
@@ -14,6 +22,7 @@ message Node {
     required int32 bitDepth = 7;
     required bool interpolation = 8;
     required int64 createdTimestamp = 9;
+    optional DiameterProperties diameterProperties = 10;
 }
 
 message Edge {

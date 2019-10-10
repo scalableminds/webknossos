@@ -27,4 +27,12 @@ trait SkeletonUpdateActionHelper {
   }
   protected def convertTreeGroup(aTreeGroup: UpdateActionTreeGroup): TreeGroup =
     TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup))
+  protected def convertDiameterProperties(aDiameterProperties: UpdateActionDiameterProperties) =
+    DiameterProperties(
+      aDiameterProperties.xRadius,
+      aDiameterProperties.yRadius,
+      aDiameterProperties.scaledXRadius,
+      aDiameterProperties.scaledYRadius,
+      aDiameterProperties.rotationAngle
+    )
 }

@@ -175,6 +175,7 @@ case class CreateNodeSkeletonAction(id: Int,
                                     bitDepth: Option[Int],
                                     interpolation: Option[Boolean],
                                     treeId: Int,
+                                    diameterProperties: Option[UpdateActionDiameterProperties],
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
@@ -192,7 +193,8 @@ case class CreateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      timestamp,
+      diameterProperties.map(convertDiameterProperties)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -214,6 +216,7 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     bitDepth: Option[Int],
                                     interpolation: Option[Boolean],
                                     treeId: Int,
+                                    diameterProperties: Option[UpdateActionDiameterProperties],
                                     timestamp: Long,
                                     actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
@@ -232,7 +235,8 @@ case class UpdateNodeSkeletonAction(id: Int,
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = timestamp
+      timestamp,
+      diameterProperties.map(convertDiameterProperties)
     )
 
     def treeTransform(tree: Tree) =

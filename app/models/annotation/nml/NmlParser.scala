@@ -16,7 +16,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
@@ -310,11 +310,42 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseTimestamp(node: NodeSeq) =
     (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
 
+  private def parseDiameterProperties(node: NodeSeq, nodeId: Int)(implicit m: MessagesProvider) = {
+    val diameterProperties = (node \ "diameterProperties")
+    if (diameterProperties.nonEmpty) {
+      for {
+        xRadius <- (diameterProperties \ "@xRadius").text.toDoubleOpt ?~ Messages("nml.node.attribute.invalid",
+                                                                                  "xRadius",
+                                                                                  nodeId)
+        yRadius <- (diameterProperties \ "@yRadius").text.toDoubleOpt ?~ Messages("nml.node.attribute.invalid",
+                                                                                  "yRadius",
+                                                                                  nodeId)
+        scaledXRadius <- (diameterProperties \ "@scaledXRadius").text.toDoubleOpt ?~ Messages(
+          "nml.node.attribute.invalid",
+          "scaledXRadius",
+          nodeId)
+        scaledYRadius <- (diameterProperties \ "@scaledYRadius").text.toDoubleOpt ?~ Messages(
+          "nml.node.attribute.invalid",
+          "scaledYRadius",
+          nodeId)
+        rotationAngle <- (diameterProperties \ "@rotationAngle").text.toDoubleOpt ?~ Messages(
+          "nml.node.attribute.invalid",
+          "rotationAngle",
+          nodeId)
+      } yield Some(DiameterProperties(xRadius, yRadius, scaledXRadius, scaledYRadius, rotationAngle))
+    } else {
+      Full(None)
+    }
+  }
+
   private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] =
     for {
       id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.node.id.invalid", "", (node \ "@id").text)
       radius <- (node \ "@radius").text.toFloatOpt ?~ Messages("nml.node.attribute.invalid", "radius", id)
       position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      diameterProperties <- parseDiameterProperties(node, id) ?~ Messages("nml.node.attribute.invalid",
+                                                                          "diameterProperties",
+                                                                          id)
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)
@@ -322,7 +353,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
+      Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp, diameterProperties)
     }
 
 }

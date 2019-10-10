@@ -244,6 +244,27 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             })
             .getOrElse(state);
         }
+        case "SET_NODE_DIAMETER_PROPERTIES": {
+          const { nodeId, treeId, diameterProperties } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .map(([tree, node]) => {
+              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
+              const newDiffableMap = diffableMap.set(
+                node.id,
+                update(node, { diameterProperties: { $set: diameterProperties } }),
+              );
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
 
         case "CREATE_BRANCHPOINT": {
           const { timestamp, nodeId, treeId } = action;

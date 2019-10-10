@@ -15,6 +15,7 @@ import Store, {
   type SkeletonTracing,
   type TreeGroup,
   type TreeMap,
+  type DiameterProperties,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -54,6 +55,12 @@ type SetNodeRadiusAction = {
   radius: number,
   nodeId: ?number,
   treeId: ?number,
+};
+type SetNodeDiameterPropertiesAction = {
+  type: "SET_NODE_DIAMETER_PROPERTIES",
+  nodeId: number,
+  treeId: number,
+  diameterProperties?: DiameterProperties,
 };
 type CreateBranchPointAction = {
   type: "CREATE_BRANCHPOINT",
@@ -116,6 +123,7 @@ export type SkeletonTracingAction =
   | SetActiveGroupAction
   | DeselectActiveGroupAction
   | SetNodeRadiusAction
+  | SetNodeDiameterPropertiesAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
   | RequestDeleteBranchPointAction
@@ -148,6 +156,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
   "DELETE_NODE",
+  "SET_NODE_DIAMETER_PROPERTIES",
   "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
@@ -242,6 +251,17 @@ export const setNodeRadiusAction = (
   radius,
   nodeId,
   treeId,
+});
+
+export const setNodeDiameterPropertiesAction = (
+  nodeId: number,
+  treeId: number,
+  diameterProperties?: DiameterProperties,
+): SetNodeDiameterPropertiesAction => ({
+  type: "SET_NODE_DIAMETER_PROPERTIES",
+  nodeId,
+  treeId,
+  diameterProperties,
 });
 
 export const createBranchPointAction = (

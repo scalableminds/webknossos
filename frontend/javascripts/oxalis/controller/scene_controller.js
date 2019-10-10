@@ -22,6 +22,7 @@ import {
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setDiameterProperties } from "oxalis/model/actions/settings_actions";
+import { setNodeDiameterPropertiesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -34,6 +35,7 @@ import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Store from "oxalis/store";
+import { defaultDiameterProperties } from "oxalis/default_state";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
@@ -70,6 +72,8 @@ class SceneController {
   stlMeshes: { [key: string]: THREE.Mesh } = {};
   diameter: ?THREE.Line;
   diameterProperties: Object;
+  // We need to ignore the first calls of setDiameterForNode as it is called each time when loading a tracing. This might cause the 
+  isInitialSetDiameterForNodeCall: boolean;
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   isosurfacesRootGroup: THREE.Group;
@@ -90,6 +94,7 @@ class SceneController {
     // TODO: Load diameter from active cell
     // TODO: Listen to active cell property
     this.diameterProperties = Store.getState().temporaryConfiguration.diameterProperties;
+    this.isInitialSetDiameterForNodeCall = true;
   }
 
   initialize() {
@@ -152,9 +157,16 @@ class SceneController {
     return currentNode;
   };
 
+  getActiveTreeId = () => {
+    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    return skeletonTracing.activeTreeId;
+  };
+
   getDiameter = () => this.diameter;
 
   showDiameter = () => {
+    const currentNode = this.getActiveNode();
+    this.diameterProperties = currentNode.diameterProperties || defaultDiameterProperties;
     this.updateDiameter();
   };
 
@@ -242,24 +254,7 @@ class SceneController {
     pointWithYRadius.fromBufferAttribute(position, Math.floor(numbOfVerticesInEllipse / 4));
     pointWithXRadius.applyMatrix4(diameter.matrix);
     pointWithYRadius.applyMatrix4(diameter.matrix);
-    // distance is not correct after multiplying (maybe because of the scale that is included into the matrix)
-    /* Add points for debugging 
-    ---------
-    const dotGeometry1 = new THREE.Geometry();
-      const dotGeometry2 = new THREE.Geometry();
-      dotGeometry1.vertices.push(pointWithXRadius);
-      dotGeometry2.vertices.push(pointWithYRadius);
-      const dotMaterial = new THREE.PointsMaterial({
-        size: 1,
-        sizeAttenuation: false,
-        color: 0x008800,
-      });
-      const dot1 = new THREE.Points(dotGeometry1, dotMaterial);
-      const dot2 = new THREE.Points(dotGeometry2, dotMaterial);
-      this.rootGroup.add(dot1);
-    this.rootGroup.add(dot2); 
-    ---------- */
-    // calulation
+    // Calculation
     const xExtent = new THREE.Vector3().subVectors(pointWithXRadius, currentPosition);
     const yExtent = new THREE.Vector3().subVectors(pointWithYRadius, currentPosition);
     // multiply with dataset resolution and then take the length
@@ -274,8 +269,10 @@ class SceneController {
       scaledYRadius: yExtent.length(),
     };
     Store.dispatch(setDiameterProperties(this.diameterProperties));
-    /* debug: having different resolutions in each direction does not affect the length of a radius calculated. 
-    Maybe this calculation is already done by the scaling of the passed camera matrix??? */
+    // hier auch die node aktualisieren
+    const { id } = this.getActiveNode();
+    const treeId = this.getActiveTreeId();
+    Store.dispatch(setNodeDiameterPropertiesAction(id, treeId, this.diameterProperties));
     diameter.matrixWorldNeedsUpdate = true;
   };
 
@@ -329,6 +326,27 @@ class SceneController {
 
     this.rootGroup.add(ellipse);
     window.needsRerender = true;
+  }
+
+  setDiameterForNode(nodeId: number) {
+    const { id, diameterProperties } = this.getActiveNode();
+    if(this.isInitialSetDiameterForNodeCall){
+      /* When a tracing is loaded the following problem might occure:
+       * If the "showDiameter" option is active and the there is an active cell, 
+       * the functions setDiameterForNode and setDiameterVisibility get called due to listening to those store properties.
+       * Both functions call updateDiameter asynchronosly which might cause a creation of two diameters / ellipses causing a visual bug.
+       * To avoid this, we ignore the inital call of setDiameterForNode. */
+      this.isInitialSetDiameterForNodeCall = false;
+      return;
+    }
+    if (id !== nodeId) {
+      return;
+    }
+    this.diameterProperties = diameterProperties || defaultDiameterProperties;
+    const isVisible = Store.getState().userConfiguration.showDiameter;
+    if(isVisible){
+      this.updateDiameter();
+    }
   }
 
   getIsosurfaceGeometry(cellId: number): THREE.Geometry {
@@ -692,6 +710,11 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
       isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
+    );
+
+    listenToStoreProperty(
+      storeState => enforceSkeletonTracing(storeState.tracing).activeNodeId,
+      activeNodeId => this.setDiameterForNode(activeNodeId),
     );
   }
 }

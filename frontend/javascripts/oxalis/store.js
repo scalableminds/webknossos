@@ -56,7 +56,14 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
-import { number } from "prop-types";
+
+export type DiameterProperties = {
+  +xRadius: number,
+  +yRadius: number,
+  +scaledXRadius: number,
+  +scaledYRadius: number,
+  +rotation: number,
+};
 
 export type CommentType = {|
   +content: string,
@@ -78,6 +85,7 @@ export type Node = {
   +radius: number,
   +timestamp: number,
   +interpolation: boolean,
+  +diameterProperties?: ?DiameterProperties,
 };
 
 export type BranchPoint = {
@@ -274,14 +282,6 @@ export type RecommendedConfiguration = $Shape<{
 }>;
 
 export type Mapping = { [key: number]: number };
-
-export type DiameterProperties = {
-  +xRadius: number,
-  +yRadius: number,
-  +scaledXRadius: number,
-  +scaledYRadius: number,
-  +rotation: number,
-};
 
 export type TemporaryConfiguration = {
   +viewMode: ViewMode,

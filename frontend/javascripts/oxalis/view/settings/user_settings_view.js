@@ -51,8 +51,6 @@ import Constants, {
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
-import getSceneController from "../../controller/scene_controller_provider";
-
 const { Panel } = Collapse;
 
 type UserSettingsViewProps = {

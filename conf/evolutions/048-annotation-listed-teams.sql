@@ -9,6 +9,10 @@ CREATE TABLE webknossos.annotation_listedTeams(
   PRIMARY KEY (_annotation, _team)
 );
 
+ALTER TABLE webknossos.annotation_listedTeams
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
+
 UPDATE webknossos.releaseInformation SET schemaVersion = 48;
 
 COMMIT TRANSACTION;

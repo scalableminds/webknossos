@@ -72,7 +72,7 @@ class SceneController {
   stlMeshes: { [key: string]: THREE.Mesh } = {};
   diameter: ?THREE.Line;
   diameterProperties: Object;
-  // We need to ignore the first calls of setDiameterForNode as it is called each time when loading a tracing. This might cause the 
+  // We need to ignore the first calls of setDiameterForNode as it is called each time when loading a tracing. This might cause the
   isInitialSetDiameterForNodeCall: boolean;
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
@@ -166,7 +166,8 @@ class SceneController {
 
   showDiameter = () => {
     const currentNode = this.getActiveNode();
-    this.diameterProperties = currentNode && currentNode.diameterProperties || defaultDiameterProperties;
+    this.diameterProperties =
+      (currentNode && currentNode.diameterProperties) || defaultDiameterProperties;
     this.updateDiameter();
   };
 
@@ -329,13 +330,13 @@ class SceneController {
   }
 
   setDiameterForNode(nodeId: number) {
-    if(nodeId == null){
+    if (nodeId == null) {
       return;
     }
     const { id, diameterProperties } = this.getActiveNode();
-    if(this.isInitialSetDiameterForNodeCall){
+    if (this.isInitialSetDiameterForNodeCall) {
       /* When a tracing is loaded the following problem might occure:
-       * If the "showDiameter" option is active and the there is an active cell, 
+       * If the "showDiameter" option is active and the there is an active cell,
        * the functions setDiameterForNode and setDiameterVisibility get called due to listening to those store properties.
        * Both functions call updateDiameter asynchronosly which might cause a creation of two diameters / ellipses causing a visual bug.
        * To avoid this, we ignore the inital call of setDiameterForNode. */
@@ -347,7 +348,7 @@ class SceneController {
     }
     this.diameterProperties = diameterProperties || defaultDiameterProperties;
     const isVisible = Store.getState().userConfiguration.showDiameter;
-    if(isVisible){
+    if (isVisible) {
       this.updateDiameter();
     }
   }

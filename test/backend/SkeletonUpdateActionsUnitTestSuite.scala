@@ -134,6 +134,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
+      None,
       Dummies.timestamp
     )
     val result = applyUpdateAction(createNodeSkeletonAction)
@@ -156,6 +157,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
+      None,
       Dummies.timestamp
     )
     val result = applyUpdateAction(updateNodeSkeletonAction)
@@ -178,6 +180,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       Option(newNode.bitDepth),
       Option(newNode.interpolation),
       treeId = 1,
+      None,
       Dummies.timestamp
     )
     val deleteNodeSkeletonAction = new DeleteNodeSkeletonAction(newNode.id, treeId = 1)

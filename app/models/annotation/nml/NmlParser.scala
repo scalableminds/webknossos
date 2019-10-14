@@ -310,29 +310,32 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseTimestamp(node: NodeSeq) =
     (node \ "@time").text.toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
 
-  private def parseDiameterProperties(node: NodeSeq, nodeId: Int)(implicit m: MessagesProvider) = {
-    val diameterProperties = (node \ "diameterProperties")
-    if (diameterProperties.nonEmpty) {
-      for {
-        xRadius <- (diameterProperties \ "@xRadius").text.toDoubleOpt ?~ Messages("nml.node.attribute.invalid",
-                                                                                  "xRadius",
-                                                                                  nodeId)
-        yRadius <- (diameterProperties \ "@yRadius").text.toDoubleOpt ?~ Messages("nml.node.attribute.invalid",
-                                                                                  "yRadius",
-                                                                                  nodeId)
-        scaledXRadius <- (diameterProperties \ "@scaledXRadius").text.toDoubleOpt ?~ Messages(
-          "nml.node.attribute.invalid",
-          "scaledXRadius",
-          nodeId)
-        scaledYRadius <- (diameterProperties \ "@scaledYRadius").text.toDoubleOpt ?~ Messages(
-          "nml.node.attribute.invalid",
-          "scaledYRadius",
-          nodeId)
-        rotationAngle <- (diameterProperties \ "@rotationAngle").text.toDoubleOpt ?~ Messages(
-          "nml.node.attribute.invalid",
-          "rotationAngle",
-          nodeId)
-      } yield Some(DiameterProperties(xRadius, yRadius, scaledXRadius, scaledYRadius, rotationAngle))
+  @SuppressWarnings(Array("OptionGet"))
+  private def parseDiameterProperties(node: NodeSeq, nodeId: Int)(
+      implicit m: MessagesProvider): Box[Option[DiameterProperties]] = {
+    val xRadius = (node \ "@xRadius").text.toDoubleOpt
+    val yRadius = (node \ "@yRadius").text.toDoubleOpt
+    val scaledXRadius = (node \ "@scaledXRadius").text.toDoubleOpt
+    val scaledYRadius = (node \ "@scaledYRadius").text.toDoubleOpt
+    val rotationAngle = (node \ "@rotationAngle").text.toDoubleOpt
+    val allAtributeOptions = Map(("xRadius", xRadius),
+                                 ("yRadius", yRadius),
+                                 ("scaledXRadius", scaledXRadius),
+                                 ("scaledYRadius", scaledYRadius),
+                                 ("rotationAngle", rotationAngle))
+    val undefinedAttributes = allAtributeOptions.filterNot(_._2.isDefined)
+
+    if (undefinedAttributes.nonEmpty && undefinedAttributes.size < allAtributeOptions.size) {
+      def failureIter(failure: Failure, undefinedAttributes: List[String]): Failure =
+        undefinedAttributes match {
+          case List() => failure
+          case head :: tail =>
+            failureIter(Failure(Messages("nml.node.attribute.invalid", head, nodeId), Empty, Full(failure)), tail)
+        }
+
+      failureIter(Failure(""), undefinedAttributes.keys.toList.reverse)
+    } else if (undefinedAttributes.isEmpty) {
+      Full(Some(DiameterProperties(xRadius.get, yRadius.get, scaledXRadius.get, scaledYRadius.get, rotationAngle.get)))
     } else {
       Full(None)
     }
@@ -340,12 +343,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] =
     for {
-      id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.node.id.invalid", "", (node \ "@id").text)
-      radius <- (node \ "@radius").text.toFloatOpt ?~ Messages("nml.node.attribute.invalid", "radius", id)
-      position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
-      diameterProperties <- parseDiameterProperties(node, id) ?~ Messages("nml.node.attribute.invalid",
-                                                                          "diameterProperties",
-                                                                          id)
+      id <- (node \ "@id").text.toIntOpt ?~! Messages("nml.node.id.invalid", "", (node \ "@id").text)
+      radius <- (node \ "@radius").text.toFloatOpt ?~! Messages("nml.node.attribute.invalid", "radius", id)
+      position <- parsePoint3D(node) ?~! Messages("nml.node.attribute.invalid", "position", id)
+      diameterProperties <- parseDiameterProperties(node, id) ?~! Messages("nml.node.attribute.invalid",
+                                                                           "diameterProperties",
+                                                                           id)
     } yield {
       val viewport = parseViewport(node)
       val resolution = parseResolution(node)

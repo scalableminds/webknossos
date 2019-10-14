@@ -229,7 +229,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("bitDepth", n.bitDepth.toString)
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
-        n.diameterProperties.foreach(d => Xml.withinElementSync("diameterProperties")(writeDiameterPropertiesAsXml(d)))
+        n.diameterProperties.foreach(d => writeDiameterPropertiesAsXml(d))
       }
     }
 

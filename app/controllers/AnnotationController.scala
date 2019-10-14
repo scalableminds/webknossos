@@ -285,6 +285,19 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
+  def updateListedTeams(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyAs[List[String]] { teams =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+        userTeams <- userService.teamIdsFor(request.identity._id)
+        updateTeams = teamIdsValidated.intersect(userTeams)
+        _ <- annotationService.updateTeamsForListedAnnotation(annotation._id, updateTeams)
+      } yield Ok(Json.toJson(updateTeams.map(_.toString)))
+    }
+  }
+
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {

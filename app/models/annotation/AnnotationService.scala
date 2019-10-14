@@ -408,6 +408,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       annotations <- Fox.serialCombined(listedAnnotationIds)(annotationDAO.findOne(_)(GlobalAccessContext))
     } yield annotations
 
+  def updateTeamsForListedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    listedAnnotationsDAO.updateTeamsForListedAnnotation(annotationId, teams)
+
   private def flattenTupledLists[A, B, C, D, E, F, G, H, I](
       tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G], List[H], List[I])]) =
     tupledLists.flatMap(tuple =>

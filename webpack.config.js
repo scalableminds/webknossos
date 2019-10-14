@@ -5,6 +5,7 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+  const DarkTheme = require("@ant-design/dark-theme").default;
 
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
@@ -89,6 +90,7 @@ module.exports = function(env = {}) {
               loader: "less-loader",
               options: {
                 javascriptEnabled: true,
+                modifyVars: DarkTheme,
               },
             },
           ],
@@ -102,6 +104,7 @@ module.exports = function(env = {}) {
               loader: "less-loader",
               options: {
                 javascriptEnabled: true,
+                modifyVars: DarkTheme,
               },
             },
           ],

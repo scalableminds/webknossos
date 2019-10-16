@@ -247,7 +247,7 @@ const PricingView = () => (
         >
           <h2>Looking for Automated Image Analysis?</h2>
           <p>
-            Check out the BioVision tools and services from scalable minds. Reconstruct rich
+            Check out Voxelytics and image analysis services from scalable minds. Reconstruct rich
             information from microscopy images with machine learning-based tools. Automate tasks
             such as image alignment, registration, dense segmentation, and object detection.
           </p>

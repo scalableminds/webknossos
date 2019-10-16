@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Fixed
--
+- Cleaned up error reporting wording in case of dataset access failures (e.g. due to not being logged in). [#4301](https://github.com/scalableminds/webknossos/pull/4301)
 
 ### Removed
 -

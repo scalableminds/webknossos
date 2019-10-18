@@ -221,6 +221,13 @@ function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTraci
 
   const { controlMode } = Store.getState().temporaryConfiguration;
   if (controlMode === ControlModeEnum.TRACE) {
+    if (Utils.getUrlParamValue("sandbox")) {
+      annotation.restrictions.allowUpdate = true;
+      annotation.restrictions.allowSave = false;
+    } else {
+      annotation.restrictions.allowSave = annotation.restrictions.allowUpdate;
+    }
+
     Store.dispatch(initializeAnnotationAction(annotation));
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {

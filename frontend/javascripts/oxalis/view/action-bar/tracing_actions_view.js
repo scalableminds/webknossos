@@ -284,6 +284,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             <Tooltip
               placement="bottom"
               title="This tracing was opened in sandbox mode. You can edit it, but changes cannot be saved. Log in to save tracings."
+              key="sandbox-tooltip"
             >
               <Button disabled type="primary" icon="code-sandbox">
                 Sandbox

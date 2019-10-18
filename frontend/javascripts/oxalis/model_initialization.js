@@ -212,9 +212,10 @@ function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
   }
 }
 
-function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTracing) {
+function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTracing) {
   // This method is not called for the View mode
   const { dataset } = Store.getState();
+  let annotation = _annotation;
 
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
   _.extend(annotation.settings, { allowedModes, preferredMode });
@@ -222,10 +223,22 @@ function initializeTracing(annotation: APIAnnotation, tracing: HybridServerTraci
   const { controlMode } = Store.getState().temporaryConfiguration;
   if (controlMode === ControlModeEnum.TRACE) {
     if (Utils.getUrlParamValue("sandbox")) {
-      annotation.restrictions.allowUpdate = true;
-      annotation.restrictions.allowSave = false;
+      annotation = {
+        ...annotation,
+        restrictions: {
+          ...annotation.restrictions,
+          allowUpdate: true,
+          allowSave: false,
+        },
+      };
     } else {
-      annotation.restrictions.allowSave = annotation.restrictions.allowUpdate;
+      annotation = {
+        ...annotation,
+        restrictions: {
+          ...annotation.restrictions,
+          allowSave: annotation.restrictions.allowUpdate,
+        },
+      };
     }
 
     Store.dispatch(initializeAnnotationAction(annotation));

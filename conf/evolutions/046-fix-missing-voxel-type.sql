@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
+-- https://github.com/scalableminds/webknossos/pull/4303
 
 -- fixes the line missing in evolution 038-more-voxel-types.sql – schema.sql actually includes this since then
 

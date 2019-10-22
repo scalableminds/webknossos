@@ -8,7 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 
 ### Postgres Evolutions:
--
+- [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)
 
 ## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30
 ### Postgres Evolutions:

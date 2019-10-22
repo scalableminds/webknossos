@@ -7,6 +7,6 @@
 
 --unfortunately, in postgresql, ALTER TYPE ... ADD cannot run inside a transaction block, so no transaction here
 
-ALTER TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS ADD VALUE 'int64';
+ALTER TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS ADD VALUE 'uint64';
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 46;

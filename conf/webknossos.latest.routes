@@ -83,11 +83,13 @@ POST          /datastores/:name/verifyUpload                                    
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                       controllers.DataStoreController.create
 DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)
+PUT           /datastores/:name                                                 controllers.DataStoreController.update(name: String)
 
 # Tracingstores
-GET           /tracingstore                                                     controllers.WKTracingStoreController.listOne
+GET           /tracingstore                                                     controllers.TracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
 POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
+PUT           /tracingstores/:name                                              controllers.TracingStoreController.update(name: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                               controllers.UserTokenController.generateTokenForDataStore

@@ -29,12 +29,12 @@
 
 // ----------------------- MAIN STYLES
 body {
-  color: @mainColor;
+  color: @text-color;
+  background-color: @layout-body-background;
   font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-    sans-serif;
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-weight: 400;
-  font-size: 16px;
+  font-size: @font-size-base;
   -webkit-font-smoothing: antialised;
   height: 100vh;
   padding-top: @navbar-height;
@@ -49,10 +49,6 @@ body {
   .ant-menu {
     background-color: #c00 !important;
   }
-}
-
-.construction {
-  background: repeating-linear-gradient(45deg, #ffdc00, #ffdc00 20px, #111111 20px, #111111 40px);
 }
 
 .ant-layout-header {
@@ -123,7 +119,7 @@ td.nowrap * {
   font-size: 80px;
   font-size: 80px;
   line-height: normal;
-  color: #000;
+  color: @heading-color;
   margin-left: 30px;
 
   img {
@@ -364,6 +360,16 @@ img.img-50 {
 .Aligner-item--fixed {
   flex: none;
   max-width: 50%;
+}
+
+.loading-screen {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  background: @layout-body-background;
+  z-index: 300;
 }
 
 // Minimalistic progress bar

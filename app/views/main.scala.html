@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)" />
     <title>@(conf.Application.title)</title>
     @if(conf.Features.isDemoInstance){
@@ -22,13 +22,7 @@
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
-    />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      media="screen"
-      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/light_style.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     @if(conf.Application.Authentication.enableDevAutoLogin){
     <script src="/api/auth/autoLogin"></script>

@@ -5,12 +5,14 @@ module.exports = function(env = {}) {
   var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-  const DarkTheme = require("@ant-design/dark-theme").default;
 
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
-  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
+  var srcPath = [
+    path.resolve(__dirname, "frontend/javascripts/"),
+    path.resolve(__dirname, "frontend/stylesheets/"),
+  ];
   var nodePath = path.join(__dirname, "node_modules/");
   var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
 
@@ -57,6 +59,8 @@ module.exports = function(env = {}) {
   return {
     entry: {
       main: "main.js",
+      light_style: "main.less",
+      dark_style: "dark.less",
     },
     mode: env.production ? "production" : "development",
     output: {
@@ -90,7 +94,6 @@ module.exports = function(env = {}) {
               loader: "less-loader",
               options: {
                 javascriptEnabled: true,
-                modifyVars: DarkTheme,
               },
             },
           ],
@@ -104,7 +107,6 @@ module.exports = function(env = {}) {
               loader: "less-loader",
               options: {
                 javascriptEnabled: true,
-                modifyVars: DarkTheme,
               },
             },
           ],
@@ -135,7 +137,7 @@ module.exports = function(env = {}) {
       net: "{}",
     },
     resolve: {
-      modules: [srcPath, nodePath, protoPath],
+      modules: [...srcPath, nodePath, protoPath],
     },
     optimization: {
       minimize: false,

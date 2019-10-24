@@ -23,10 +23,19 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   val dataStoreReads: Reads[DataStore] =
     ((__ \ 'name).read[String] and
       (__ \ 'url).read[String] and
+      (__ \ 'publicUrl).read[String] and
       (__ \ 'key).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
       (__ \ 'isForeign).readNullable[Boolean] and
       (__ \ 'isConnector).readNullable[Boolean])(DataStore.fromForm _)
+
+  val dataStorePublicReads: Reads[DataStore] =
+    ((__ \ 'name).read[String] and
+      (__ \ 'url).read[String] and
+      (__ \ 'publicUrl).read[String] and
+      (__ \ 'isScratch).readNullable[Boolean] and
+      (__ \ 'isForeign).readNullable[Boolean] and
+      (__ \ 'isConnector).readNullable[Boolean])(DataStore.fromUpdateForm _)
 
   def list = sil.UserAwareAction.async { implicit request =>
     for {
@@ -45,7 +54,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
             _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
-          } yield { Ok(js) }
+          } yield { Ok(Json.toJson(js)) }
         case _ => Future.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
       }
     }
@@ -56,5 +65,17 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       _ <- bool2Fox(request.identity.isAdmin) ?~> "notAllowed" ~> FORBIDDEN
       _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
     } yield Ok
+  }
+
+  def update(name: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyUsing(dataStorePublicReads) { dataStore =>
+      for {
+        _ <- bool2Fox(request.identity.isAdmin)
+        _ <- dataStoreDAO.findOneByName(name) ?~> "dataStore.notFound" ~> NOT_FOUND
+        _ <- bool2Fox(dataStore.name == name)
+        _ <- dataStoreDAO.updateOne(dataStore) ?~> "dataStore.create.failed"
+        js <- dataStoreService.publicWrites(dataStore)
+      } yield { Ok(Json.toJson(js)) }
+    }
   }
 }

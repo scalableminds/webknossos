@@ -50,11 +50,13 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def save = Action.async(validateProto[T]) { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          val tracing = request.body
-          tracingService.save(tracing, None, 0).map { newId =>
-            Ok(Json.toJson(newId))
+      logTime {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            val tracing = request.body
+            tracingService.save(tracing, None, 0).map { newId =>
+              Ok(Json.toJson(newId))
+            }
           }
         }
       }
@@ -63,15 +65,17 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def saveMultiple = Action.async(validateProto[Ts]) { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
-            tracingOpt match {
-              case Some(tracing) => tracingService.save(tracing, None, 0, toCache = false).map(Some(_))
-              case _             => Fox.successful(None)
-            }
-          })
-          savedIds.map(id => Ok(Json.toJson(id)))
+      logTime {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
+              tracingOpt match {
+                case Some(tracing) => tracingService.save(tracing, None, 0, toCache = false).map(Some(_))
+                case _             => Fox.successful(None)
+              }
+            })
+            savedIds.map(id => Ok(Json.toJson(id)))
+          }
         }
       }
     }
@@ -107,18 +111,20 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-        AllowRemoteOrigin {
-          val updateGroups = request.body
-          val userToken = request.getQueryString("token")
-          if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-            commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
-          } else {
-            updateGroups
-              .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
-              }
-              .map(_ => Ok)
+      logTime {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+          AllowRemoteOrigin {
+            val updateGroups = request.body
+            val userToken = request.getQueryString("token")
+            if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
+              commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
+            } else {
+              updateGroups
+                .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
+                  handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
+                }
+                .map(_ => Ok)
+            }
           }
         }
       }

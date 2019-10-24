@@ -29,6 +29,19 @@ trait RequestLogging extends AbstractRequestLogging {
       _ = logRequestFormatted(request, result)
     } yield result
 
+  def logTime(block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
+    def logTimeFormatted(executionTime: Long, request: Request[_], result: Result) =
+      logger.info(
+        s"Request ${request.method} ${request.uri} took ${executionTime} nano seconds and was${if (result.header.status != 200) " not "
+        else " "}successfull")
+
+    val start = System.nanoTime()
+    for {
+      result: Result <- block
+      _ = logTimeFormatted(System.nanoTime() - start, request, result)
+    } yield result
+  }
+
   def log(block: => Result)(implicit request: Request[_], ec: ExecutionContext): Result = {
     val result: Result = block
     logRequestFormatted(request, result)

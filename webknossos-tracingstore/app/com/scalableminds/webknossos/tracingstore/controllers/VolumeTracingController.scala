@@ -48,13 +48,15 @@ class VolumeTracingController @Inject()(
 
   def initialData(tracingId: String) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          for {
-            initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
-          } yield Ok(Json.toJson(tracingId))
+      logTime {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+            } yield Ok(Json.toJson(tracingId))
+          }
         }
       }
     }
@@ -113,13 +115,15 @@ class VolumeTracingController @Inject()(
 
   def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            newId <- tracingService.duplicate(tracingId, tracing)
-          } yield {
-            Ok(Json.toJson(newId))
+      logTime {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              newId <- tracingService.duplicate(tracingId, tracing)
+            } yield {
+              Ok(Json.toJson(newId))
+            }
           }
         }
       }

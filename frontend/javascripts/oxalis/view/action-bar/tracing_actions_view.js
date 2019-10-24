@@ -278,7 +278,19 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 </ButtonComponent>,
               ]
             : null,
-          <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />,
+          restrictions.allowSave ? (
+            <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
+          ) : (
+            <Tooltip
+              placement="bottom"
+              title="This tracing was opened in sandbox mode. You can edit it, but changes cannot be saved. Log in to save tracings."
+              key="sandbox-tooltip"
+            >
+              <Button disabled type="primary" icon="code-sandbox">
+                Sandbox
+              </Button>
+            </Tooltip>
+          ),
         ]
       : [
           <ButtonComponent key="read-only-button" type="danger" disabled>

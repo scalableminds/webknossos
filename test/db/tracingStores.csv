@@ -1,2 +1,2 @@
-name,url,key,isDeleted
-'localhost','http://localhost:9000','something-secure',f
+name,url,publicUrl,key,isDeleted
+'localhost','http://localhost:9000','http://localhost:9000','something-secure',f

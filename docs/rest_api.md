@@ -126,7 +126,7 @@ List the task annotations of a user
 ---
 ### `GET /users/:id/annotations`
 
-List the explorative annotations of a uaser
+List the explorative annotations of a user
 
 #### Expects
  - In the url: `:id` id of a user
@@ -188,7 +188,86 @@ To get the actual resolutions, please use `GET /datasets/:organizationName/:data
 #### Returns
  - JSON object containing dataset information
 
+---
+### `GET /datastores`
 
+Lists all available datastores
+
+#### Returns
+ - JSON list of objects containing datastore information
+
+---
+### `POST /datastores`
+
+Create a new datastore
+
+#### Expects
+ - JSON object
+    - `"name"` `[STRING]` name of the datastore
+    - `"url"` `[STRING]` url from the datastore, used for communication with wk
+    - `"publicUrl"` `[STRING]` publicly accessible url from the datastore, used for user facing links
+    - `"key"` `[STRING]` key used to identify the datastore
+    - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
+    - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
+    - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
+    
+
+#### Returns
+ - JSON object containing information about the newly created datastore
+ 
+#### Note
+ - This route is only accessible for administrators.
+ 
+---
+### `DELETE /datastores/:name`
+
+Deletes a datastore from the wk database
+
+#### Expects
+ - In the url: `:name` - the name of the datastore which should be deleted
+ 
+#### Note
+ - This route is only accessible for administrators.
+ 
+---
+### `PUT /datastores/:name`
+
+Update an existing datastore
+
+#### Expects
+ - In the url: `:name` - the name of the datastore which should be deleted
+ - JSON object
+    - `"name"` `[STRING]` name of the datastore
+    - `"url"` `[STRING]` url from the datastore, used for communication with wk
+    - `"publicUrl"` `[STRING]` publicly accessible url from the datastore, used for user facing links
+    - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
+    - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
+    - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
+    
+
+#### Returns
+ - JSON object containing information about the updated datastore
+ 
+#### Note
+ - This route is only accessible for administrators.
+ 
+---
+### `PUT /tracingstores/:name`
+
+Update an existing tracingstore
+
+#### Expects
+ - In the url: `:name` - the name of the tracingstore which should be deleted
+ - JSON object
+    - `"name"` `[STRING]` name of the tracingstore
+    - `"url"` `[STRING]` url from the tracingstore, used for communication with wk
+    - `"publicUrl"` `[STRING]` publicly accessible url from the tracingstore, used for user facing links
+    
+#### Returns
+ - JSON object containing information about the updated tracingstore
+ 
+#### Note
+ - This route is only accessible for administrators.
 
 ---
 ### `GET  /annotations/:typ/:id/info`

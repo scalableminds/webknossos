@@ -13,6 +13,6 @@ UPDATE webknossos.dataStores SET publicUrl = url;
 ALTER TABLE webknossos.dataStores ALTER COLUMN publicUrl SET NOT NULL;
 ALTER TABLE webknossos.dataStores ADD CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$');
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 46;
+UPDATE webknossos.releaseInformation SET schemaVersion = 47;
 
 COMMIT TRANSACTION;

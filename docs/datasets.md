@@ -106,6 +106,7 @@ The system architecture of webKnossos allows for versatile deployment options wh
 This may be useful when dealing with large datasets that should remain in your data center.
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup.
 
-We also offer dataset alignment services, click [here](https://scalableminds.com/biovision-registration) to find out more.
+scalable minds also offers a dataset alignment tools called **Voxelytics Align**.
+[Learn more.](https://scalableminds.com/voxelytics-align)
 
 {% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%} 

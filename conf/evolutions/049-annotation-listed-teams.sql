@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/X
+-- https://github.com/scalableminds/webknossos/pull/4304
 
 
 START TRANSACTION;
@@ -13,6 +13,6 @@ ALTER TABLE webknossos.annotation_listedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 48;
+UPDATE webknossos.releaseInformation SET schemaVersion = 49;
 
 COMMIT TRANSACTION;

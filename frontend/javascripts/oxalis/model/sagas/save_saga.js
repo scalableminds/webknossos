@@ -269,7 +269,10 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   }
   yield* take("WK_READY");
   const initialAllowUpdate = yield* select(
-    state => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
+    state =>
+      state.tracing[tracingType] &&
+      state.tracing.restrictions.allowUpdate &&
+      state.tracing.restrictions.allowSave,
   );
   if (!initialAllowUpdate) return;
 
@@ -281,7 +284,10 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     }
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
-      state => state.tracing[tracingType] && state.tracing.restrictions.allowUpdate,
+      state =>
+        state.tracing[tracingType] &&
+        state.tracing.restrictions.allowUpdate &&
+        state.tracing.restrictions.allowSave,
     );
     if (!allowUpdate) return;
 

@@ -15,6 +15,7 @@ const initialAnnotationInfo = {
   restrictions: {
     branchPointsAllowed: false,
     allowUpdate: false,
+    allowSave: false,
     allowFinish: false,
     allowAccess: true,
     allowDownload: false,

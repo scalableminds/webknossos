@@ -216,6 +216,7 @@ export type APIRestrictions = {|
   +allowUpdate: boolean,
   +allowFinish: boolean,
   +allowDownload: boolean,
+  +allowSave?: boolean,
 |};
 
 export type APIAllowedMode = "orthogonal" | "oblique" | "flight" | "volume";

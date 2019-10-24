@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(46);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(48);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -141,6 +141,7 @@ CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
 CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  publicUrl VARCHAR(512) UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
@@ -151,6 +152,7 @@ CREATE TABLE webknossos.dataStores(
 CREATE TABLE webknossos.tracingStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
+  publicUrl VARCHAR(512) UNIQUE NOT NULL CHECK (publicUrl ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

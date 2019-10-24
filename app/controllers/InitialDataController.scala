@@ -207,7 +207,7 @@ Samplecountry
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("inserting local datastore")
-          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.key))
+          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Http.uri, conf.Datastore.key))
         }
       }
     } else Fox.successful(())
@@ -217,7 +217,8 @@ Samplecountry
       dataStoreDAO.findOneByName("connect").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("inserting connect datastore")
-          dataStoreDAO.insertOne(DataStore("connect", "http://localhost:8000", "secret-key", isConnector = true))
+          dataStoreDAO.insertOne(
+            DataStore("connect", "http://localhost:8000", "http://localhost:8000", "secret-key", isConnector = true))
         }
       }
     } else Fox.successful(())
@@ -227,7 +228,7 @@ Samplecountry
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("inserting local tracingstore")
-          tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Tracingstore.key))
+          tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Http.uri, conf.Tracingstore.key))
         }
       }
     } else Fox.successful(())

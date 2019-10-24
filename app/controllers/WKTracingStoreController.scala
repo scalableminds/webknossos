@@ -23,15 +23,6 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
 
   val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def listOne = sil.UserAwareAction.async { implicit request =>
-    for {
-      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.list.failed"
-      js <- tracingStoreService.publicWrites(tracingStore)
-    } yield {
-      Ok(Json.toJson(js))
-    }
-  }
-
   def handleTracingUpdateReport(name: String) = Action.async(parse.json) { implicit request =>
     tracingStoreService.validateAccess(name) { dataStore =>
       for {

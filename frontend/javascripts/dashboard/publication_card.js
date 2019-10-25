@@ -216,7 +216,8 @@ class PublicationCard extends React.PureComponent<Props, State> {
                   backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
                 }}
               />
-              {segmentationThumbnailURL ? (
+              {activeDataset.name !== "2012-09-28_ex145_07x2_ROI2017" &&
+              segmentationThumbnailURL ? (
                 <div
                   className="dataset-thumbnail-image absolute segmentation"
                   style={{

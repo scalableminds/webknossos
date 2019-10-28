@@ -53,6 +53,7 @@ type StateProps = {|
   showVersionRestore: boolean,
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
+  displayDiameterInformation: boolean,
   autoSaveLayouts: boolean,
 |};
 type DispatchProps = {|

@@ -13,6 +13,7 @@ export const userSettings = {
   moveValue3d: { type: "number", minimum: 30, maximum: 14000 },
   newNodeNewTree: { type: "boolean" },
   highlightCommentedNodes: { type: "boolean" },
+  showDiameter: { type: "boolean" },
   // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
   nodeRadius: { type: "number", minimum: 1, maximum: 5000 },
   overrideNodeRadius: { type: "boolean" },

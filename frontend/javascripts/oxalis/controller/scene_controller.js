@@ -34,7 +34,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store from "oxalis/store";
+import Store, { type Node } from "oxalis/store";
 import { defaultDiameterProperties } from "oxalis/default_state";
 import * as Utils from "libs/utils";
 import app from "app";
@@ -148,7 +148,7 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getActiveNode = () => {
+  getActiveNode = (): ?Node => {
     const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
     let currentNode = null;
     getActiveNode(skeletonTracing).map(activeNode => {
@@ -166,8 +166,10 @@ class SceneController {
 
   showDiameter = () => {
     const currentNode = this.getActiveNode();
-    this.diameterProperties =
-      (currentNode && currentNode.diameterProperties) || defaultDiameterProperties;
+    if (!currentNode) {
+      return;
+    }
+    this.diameterProperties = currentNode.diameterProperties || defaultDiameterProperties;
     this.updateDiameter();
   };
 
@@ -271,9 +273,13 @@ class SceneController {
     };
     Store.dispatch(setDiameterProperties(this.diameterProperties));
     // hier auch die node aktualisieren
-    const { id } = this.getActiveNode();
+    const activeNode = this.getActiveNode();
     const treeId = this.getActiveTreeId();
-    Store.dispatch(setNodeDiameterPropertiesAction(id, treeId, this.diameterProperties));
+    if (activeNode && treeId != null) {
+      Store.dispatch(
+        setNodeDiameterPropertiesAction(activeNode.id, treeId, this.diameterProperties),
+      );
+    }
     diameter.matrixWorldNeedsUpdate = true;
   };
 
@@ -333,9 +339,8 @@ class SceneController {
     if (nodeId == null) {
       return;
     }
-    const { id, diameterProperties } = this.getActiveNode();
     if (this.isInitialSetDiameterForNodeCall) {
-      /* When a tracing is loaded the following problem might occure:
+      /* When a tracing is loaded the following problem might occur:
        * If the "showDiameter" option is active and the there is an active cell,
        * the functions setDiameterForNode and setDiameterVisibility get called due to listening to those store properties.
        * Both functions call updateDiameter asynchronosly which might cause a creation of two diameters / ellipses causing a visual bug.
@@ -343,10 +348,11 @@ class SceneController {
       this.isInitialSetDiameterForNodeCall = false;
       return;
     }
-    if (id !== nodeId) {
+    const activeNode = this.getActiveNode();
+    if (!activeNode || activeNode.id !== nodeId) {
       return;
     }
-    this.diameterProperties = diameterProperties || defaultDiameterProperties;
+    this.diameterProperties = activeNode.diameterProperties || defaultDiameterProperties;
     const isVisible = Store.getState().userConfiguration.showDiameter;
     if (isVisible) {
       this.updateDiameter();
@@ -718,7 +724,7 @@ class SceneController {
 
     listenToStoreProperty(
       storeState => enforceSkeletonTracing(storeState.tracing).activeNodeId,
-      activeNodeId => this.setDiameterForNode(activeNodeId),
+      activeNodeId => (activeNodeId != null ? this.setDiameterForNode(activeNodeId) : undefined),
     );
   }
 }

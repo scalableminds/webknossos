@@ -18,9 +18,15 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TracingStore(
     name: String,
     url: String,
+    publicUrl: String,
     key: String,
     isDeleted: Boolean = false
 )
+
+object TracingStore {
+  def fromUpdateForm(name: String, url: String, publicUrl: String) =
+    TracingStore(name, url, publicUrl, "")
+}
 
 class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
@@ -30,7 +36,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
     Fox.successful(
       Json.obj(
         "name" -> tracingStore.name,
-        "url" -> tracingStore.url
+        "url" -> tracingStore.publicUrl
       ))
 
   def validateAccess[A](name: String)(block: (TracingStore) => Future[Result])(implicit request: Request[A],
@@ -60,6 +66,7 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       TracingStore(
         r.name,
         r.url,
+        r.publicurl,
         r.key,
         r.isdeleted
       ))
@@ -95,8 +102,18 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, key, isDeleted)
-                         values(${t.name}, ${t.url}, ${t.key}, ${t.isDeleted})""")
+      _ <- run(sqlu"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
+                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""")
     } yield ()
 
+  def deleteOneByName(name: String): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""update webknossos.tracingStores set isDeleted = true where name = $name""")
+    } yield ()
+
+  def updateOne(t: TracingStore) =
+    for {
+      _ <- run(
+        sqlu""" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}""")
+    } yield ()
 }

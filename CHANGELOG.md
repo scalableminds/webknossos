@@ -10,13 +10,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...HEAD)
 
 ### Added
--
+- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
 
 ### Changed
 -
 
 ### Fixed
 - Cleaned up error reporting wording in case of dataset access failures (e.g. due to not being logged in). [#4301](https://github.com/scalableminds/webknossos/pull/4301)
+- Fixed handling of uint64 data layers in sql evolution. [4303](https://github.com/scalableminds/webknossos/pull/4303)
 
 ### Removed
 -

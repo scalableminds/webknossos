@@ -8,6 +8,10 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 
 ### Postgres Evolutions:
+-
+
+## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
+### Postgres Evolutions:
 - [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)
 - [047-add-datastore-publicUrl.sql](conf/evolutions/046-add-datastore-publicUrl.sql)
 - [048-add-tracingstore-publicUrl.sql](conf/evolutions/047-add-tracingstore-publicUrl.sql)

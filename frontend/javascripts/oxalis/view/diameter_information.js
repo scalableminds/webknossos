@@ -2,13 +2,13 @@
 
 import { connect } from "react-redux";
 import * as React from "react";
-
+import { getActiveNodeDirectly } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, DiameterProperties } from "oxalis/store";
 
 type OwnProps = {||};
 
 type StateProps = {|
-  diameterProperties: DiameterProperties,
+  diameterProperties: ?DiameterProperties,
 |};
 
 type Props = {|
@@ -17,6 +17,9 @@ type Props = {|
 |};
 
 function DiameterInformation({ diameterProperties }: Props) {
+  if (!diameterProperties) {
+    return null;
+  }
   const { scaledXRadius, scaledYRadius, rotationAngle } = diameterProperties;
   const majorAxis = Math.max(scaledXRadius, scaledYRadius).toFixed(2);
   const minorAxis = Math.min(scaledXRadius, scaledYRadius).toFixed(2);
@@ -41,8 +44,9 @@ function DiameterInformation({ diameterProperties }: Props) {
   );
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  diameterProperties: state.temporaryConfiguration.diameterProperties,
-});
+const mapStateToProps = (state: OxalisState): StateProps => {
+  const activeNode = getActiveNodeDirectly(state);
+  return { diameterProperties: activeNode ? activeNode.diameterProperties : null };
+};
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DiameterInformation);

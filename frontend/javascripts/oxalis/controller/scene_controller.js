@@ -19,14 +19,16 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceSkeletonTracing,
-  getActiveNode,
+  getActiveNodeDirectly,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { setDiameterProperties } from "oxalis/model/actions/settings_actions";
 import { setNodeDiameterPropertiesAction } from "oxalis/model/actions/skeletontracing_actions";
 import { getRenderer } from "oxalis/controller/renderer";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import {
+  listenToStoreProperty,
+  listenToMultipleStoreProperties,
+} from "oxalis/model/helpers/listener_helpers";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import Cube from "oxalis/geometries/cube";
@@ -34,7 +36,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store, { type Node } from "oxalis/store";
+import Store, { type Node, type DiameterProperties } from "oxalis/store";
 import { defaultDiameterProperties } from "oxalis/default_state";
 import * as Utils from "libs/utils";
 import app from "app";
@@ -71,9 +73,10 @@ class SceneController {
 
   stlMeshes: { [key: string]: THREE.Mesh } = {};
   diameter: ?THREE.Line;
-  diameterProperties: Object;
+  diameterProperties: DiameterProperties;
   // We need to ignore the first calls of setDiameterForNode as it is called each time when loading a tracing. This might cause the
   isInitialSetDiameterForNodeCall: boolean;
+  isDiameterVisible: boolean;
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
   isosurfacesRootGroup: THREE.Group;
@@ -93,8 +96,9 @@ class SceneController {
     this.diameter = null;
     // TODO: Load diameter from active cell
     // TODO: Listen to active cell property
-    this.diameterProperties = Store.getState().temporaryConfiguration.diameterProperties;
+    this.diameterProperties = defaultDiameterProperties;
     this.isInitialSetDiameterForNodeCall = true;
+    this.isDiameterVisible = false;
   }
 
   initialize() {
@@ -148,14 +152,7 @@ class SceneController {
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getActiveNode = (): ?Node => {
-    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-    let currentNode = null;
-    getActiveNode(skeletonTracing).map(activeNode => {
-      currentNode = activeNode;
-    });
-    return currentNode;
-  };
+  getActiveNode = (): ?Node => getActiveNodeDirectly(Store.getState());
 
   getActiveTreeId = () => {
     const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
@@ -181,16 +178,19 @@ class SceneController {
     }
   };
 
-  setDiameterVisibility = visible => {
-    if (visible && !this.diameter) {
+  setDiameterVisibility = ({ showDiameter, viewMode }) => {
+    // Only show the diameter in oblique mode.
+    if (showDiameter && viewMode === constants.MODE_ARBITRARY_PLANE) {
+      this.isDiameterVisible = true;
       this.showDiameter();
-    } else if (!visible && this.diameter) {
+    } else {
+      this.isDiameterVisible = false;
       this.hideDiameter();
     }
   };
 
   changeXRadiusOfDiameterBy = (value: number) => {
-    if (!Store.getState().userConfiguration.showDiameter) {
+    if (!this.isDiameterVisible) {
       return;
     }
     this.diameterProperties = {
@@ -201,7 +201,7 @@ class SceneController {
   };
 
   changeYRadiusOfDiameterBy = (value: number) => {
-    if (!Store.getState().userConfiguration.showDiameter) {
+    if (!this.isDiameterVisible) {
       return;
     }
     this.diameterProperties = {
@@ -271,8 +271,6 @@ class SceneController {
       scaledXRadius: xExtent.length(),
       scaledYRadius: yExtent.length(),
     };
-    Store.dispatch(setDiameterProperties(this.diameterProperties));
-    // hier auch die node aktualisieren
     const activeNode = this.getActiveNode();
     const treeId = this.getActiveTreeId();
     if (activeNode && treeId != null) {
@@ -330,21 +328,17 @@ class SceneController {
     ellipse.rotation.x = Math.PI;
     ellipse.matrixAutoUpdate = false;
     ellipse.material.side = THREE.DoubleSide;
-
     this.rootGroup.add(ellipse);
     window.needsRerender = true;
   }
 
   setDiameterForNode(nodeId: number) {
-    if (nodeId == null) {
-      return;
-    }
     if (this.isInitialSetDiameterForNodeCall) {
       /* When a tracing is loaded the following problem might occur:
        * If the "showDiameter" option is active and the there is an active cell,
        * the functions setDiameterForNode and setDiameterVisibility get called due to listening to those store properties.
-       * Both functions call updateDiameter asynchronosly which might cause a creation of two diameters / ellipses causing a visual bug.
-       * To avoid this, we ignore the inital call of setDiameterForNode. */
+       * Both functions call updateDiameter asynchronously which might cause a creation of two diameters / ellipses causing a visual bug.
+       * To avoid this, we ignore the initial call of setDiameterForNode. */
       this.isInitialSetDiameterForNodeCall = false;
       return;
     }
@@ -353,8 +347,7 @@ class SceneController {
       return;
     }
     this.diameterProperties = activeNode.diameterProperties || defaultDiameterProperties;
-    const isVisible = Store.getState().userConfiguration.showDiameter;
-    if (isVisible) {
+    if (this.isDiameterVisible) {
       this.updateDiameter();
     }
   }
@@ -683,11 +676,6 @@ class SceneController {
     );
 
     listenToStoreProperty(
-      storeState => storeState.userConfiguration.showDiameter,
-      showDiameter => this.setDiameterVisibility(showDiameter),
-    );
-
-    listenToStoreProperty(
       storeState => storeState.userConfiguration.displayCrosshair,
       displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
     );
@@ -725,6 +713,14 @@ class SceneController {
     listenToStoreProperty(
       storeState => enforceSkeletonTracing(storeState.tracing).activeNodeId,
       activeNodeId => (activeNodeId != null ? this.setDiameterForNode(activeNodeId) : undefined),
+    );
+
+    listenToMultipleStoreProperties(
+      [
+        storeState => storeState.userConfiguration.showDiameter,
+        storeState => storeState.temporaryConfiguration.viewMode,
+      ],
+      ([showDiameter, viewMode]) => this.setDiameterVisibility({ showDiameter, viewMode }),
     );
   }
 }

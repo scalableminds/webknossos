@@ -12,6 +12,7 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
   Node,
+  OxalisState,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -50,6 +51,15 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
     return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.get(activeNodeId));
   }
   return Maybe.Nothing();
+}
+
+export function getActiveNodeDirectly(storeState: OxalisState): ?Node {
+  const skeletonTracing = enforceSkeletonTracing(storeState.tracing);
+  let currentNode = null;
+  getActiveNode(skeletonTracing).map(activeNode => {
+    currentNode = activeNode;
+  });
+  return currentNode;
 }
 
 export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {

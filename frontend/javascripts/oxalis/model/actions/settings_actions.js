@@ -40,7 +40,6 @@ export type InitializeSettingsAction = {
   initialDatasetSettings: DatasetConfiguration,
 };
 type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
-type SetDiameterProperties = { type: "SET_DIAMETER_PROPERTIES", properties: DiameterProperties };
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
 type InitializeGpuSetupAction = {
@@ -65,7 +64,6 @@ export type SettingAction =
   | InitializeSettingsAction
   | UpdateLayerSettingAction
   | SetViewModeAction
-  | SetDiameterProperties
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
@@ -129,10 +127,6 @@ export const initializeSettingsAction = (
 export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",
   viewMode,
-});
-export const setDiameterProperties = (properties: DiameterProperties): SetDiameterProperties => ({
-  type: "SET_DIAMETER_PROPERTIES",
-  properties,
 });
 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingAction => ({

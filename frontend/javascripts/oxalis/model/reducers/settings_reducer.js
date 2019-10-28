@@ -131,9 +131,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         return state;
       }
     }
-    case "SET_DIAMETER_PROPERTIES": {
-      return updateTemporaryConfig(state, { diameterProperties: action.properties });
-    }
     case "SET_FLIGHTMODE_RECORDING": {
       return updateTemporaryConfig(state, { flightmodeRecording: action.value });
     }

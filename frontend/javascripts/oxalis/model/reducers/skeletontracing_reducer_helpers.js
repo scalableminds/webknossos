@@ -771,6 +771,7 @@ function serverNodeToNode(n: ServerNode): Node {
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
+    diameterProperties: n.diameterProperties,
     resolution: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,

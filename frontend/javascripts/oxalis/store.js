@@ -286,7 +286,6 @@ export type Mapping = { [key: number]: number };
 export type TemporaryConfiguration = {
   +viewMode: ViewMode,
   +flightmodeRecording: boolean,
-  +diameterProperties: DiameterProperties,
   +controlMode: ControlMode,
   +mousePosition: ?Vector2,
   +hoveredIsosurfaceId: number,

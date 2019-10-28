@@ -19,6 +19,7 @@ type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: strin
 
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 75;
+const blacklistedSegmentationNames = ["2012-09-28_ex145_07x2_ROI2017"];
 
 function getDisplayName(dataset: APIDataset): string {
   return dataset.displayName != null && dataset.displayName !== ""
@@ -117,7 +118,7 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
                     }}
                     onMouseEnter={() => setActiveDataset(dataset)}
                   >
-                    {dataset.name !== "2012-09-28_ex145_07x2_ROI2017" && (
+                    {!blacklistedSegmentationNames.includes(dataset.name) && (
                       <div
                         className="mini-dataset-thumbnail absolute segmentation"
                         style={{
@@ -216,7 +217,7 @@ class PublicationCard extends React.PureComponent<Props, State> {
                   backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
                 }}
               />
-              {activeDataset.name !== "2012-09-28_ex145_07x2_ROI2017" &&
+              {!blacklistedSegmentationNames.includes(activeDataset.name) &&
               segmentationThumbnailURL ? (
                 <div
                   className="dataset-thumbnail-image absolute segmentation"

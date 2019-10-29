@@ -19,6 +19,7 @@ type ExtendedDatasetDetails = { ...APIDatasetDetails, name: string, scale: strin
 
 const thumbnailDimension = 500;
 const miniThumbnailDimension = 75;
+const blacklistedSegmentationNames = ["2012-09-28_ex145_07x2_ROI2017"];
 
 function getDisplayName(dataset: APIDataset): string {
   return dataset.displayName != null && dataset.displayName !== ""
@@ -117,14 +118,16 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
                     }}
                     onMouseEnter={() => setActiveDataset(dataset)}
                   >
-                    <div
-                      className="mini-dataset-thumbnail absolute segmentation"
-                      style={{
-                        background: `url('${getSegmentationThumbnailURL(
-                          dataset,
-                        )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
-                      }}
-                    />
+                    {!blacklistedSegmentationNames.includes(dataset.name) && (
+                      <div
+                        className="mini-dataset-thumbnail absolute segmentation"
+                        style={{
+                          background: `url('${getSegmentationThumbnailURL(
+                            dataset,
+                          )}?w=${miniThumbnailDimension}&h=${miniThumbnailDimension}')`,
+                        }}
+                      />
+                    )}
                   </Button>
                 </div>
               </Link>
@@ -214,7 +217,8 @@ class PublicationCard extends React.PureComponent<Props, State> {
                   backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
                 }}
               />
-              {segmentationThumbnailURL ? (
+              {!blacklistedSegmentationNames.includes(activeDataset.name) &&
+              segmentationThumbnailURL ? (
                 <div
                   className="dataset-thumbnail-image absolute segmentation"
                   style={{

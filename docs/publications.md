@@ -2,6 +2,10 @@
 The following publications used webKnossos for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@scalableminds.com) if your publication is missing.
 
 ## 2019
+* Alessandro Motta, Manuel Berning, Kevin M. Boergens, Benedikt Staffler, Marcel Beining, Sahil Loomba, Philipp Hennig, Heiko Wissler, Moritz Helmstaedter.
+  Dense connectomic reconstruction in layer 4 of the somatosensory cortex.
+  [Science (2019) DOI: 10.1126/science.aay3134.](https://science.sciencemag.org/content/early/2019/10/23/science.aay3134)
+
 * Ali Karimi, Jan Odenthal, Florian Drawitsch, Kevin M. Boergens, Moritz Helmstaedter.  
   Cell-type specific innervation of cortical pyramidal cells at their apical tufts.   
  [bioRxiv (2019) DOI:10.1101/571695.](https://www.biorxiv.org/content/10.1101/571695v1.abstract) 

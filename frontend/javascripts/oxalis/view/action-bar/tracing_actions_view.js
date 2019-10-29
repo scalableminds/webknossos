@@ -341,6 +341,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         key="share-modal"
         isVisible={this.state.isShareModalOpen}
         onOk={this.handleShareClose}
+        annotationType={this.props.annotationType}
+        annotationId={this.props.annotationId}
       />,
     );
     elements.push(

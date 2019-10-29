@@ -359,6 +359,11 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 class ListedAnnotationsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
+  def listedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
+    for (result <- run(
+           sql"select _team from webknossos.annotation_listedTeams where _annotation = ${annotationId}".as[String]))
+      yield result.toList
+
   def findAllListedForTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     val composedQuery = DBIO.sequence(teams.map(team =>
       sql"select _annotation from webknossos.annotation_listedTeams where _team = ${team}".as[String]))

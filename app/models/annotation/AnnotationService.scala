@@ -31,7 +31,7 @@ import models.binary._
 import models.mesh.{MeshDAO, MeshService}
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
 import play.api.i18n.{I18nSupport, Messages, MessagesApi, MessagesProvider}
@@ -54,6 +54,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   tracingStoreService: TracingStoreService,
                                   tracingStoreDAO: TracingStoreDAO,
                                   taskDAO: TaskDAO,
+                                  teamDAO: TeamDAO,
                                   userService: UserService,
                                   dataStoreDAO: DataStoreDAO,
                                   projectDAO: ProjectDAO,
@@ -410,6 +411,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def updateTeamsForListedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
     listedAnnotationsDAO.updateTeamsForListedAnnotation(annotationId, teams)
+
+  def listedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      teamIds <- listedAnnotationsDAO.listedTeamsFor(annotationId)
+      teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
+      teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
+    } yield teams
 
   private def flattenTupledLists[A, B, C, D, E, F, G, H, I](
       tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G], List[H], List[I])]) =

@@ -7,20 +7,30 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.11.0...HEAD)
 
 ### Added
-- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
+-
 
 ### Changed
 -
 
 ### Fixed
-- Cleaned up error reporting wording in case of dataset access failures (e.g. due to not being logged in). [#4301](https://github.com/scalableminds/webknossos/pull/4301)
-- Fixed handling of uint64 data layers in sql evolution. [4303](https://github.com/scalableminds/webknossos/pull/4303)
+-
 
 ### Removed
 -
+
+
+## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
+[Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...19.11.0)
+
+### Added
+- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
+
+### Fixed
+- Cleaned up error reporting wording in case of dataset access failures (e.g. due to not being logged in). [#4301](https://github.com/scalableminds/webknossos/pull/4301)
+- Fixed handling of uint64 data layers in sql evolution. [4303](https://github.com/scalableminds/webknossos/pull/4303)
 
 
 ## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30

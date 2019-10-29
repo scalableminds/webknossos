@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers
@@ -18,7 +19,8 @@ import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
                                           val webKnossosServer: TracingStoreWkRpcClient,
-                                          val accessTokenService: TracingStoreAccessTokenService)(
+                                          val accessTokenService: TracingStoreAccessTokenService,
+                                          val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[SkeletonTracing, SkeletonTracings] {

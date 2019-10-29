@@ -43,7 +43,7 @@ trait RequestLogging extends AbstractRequestLogging {
     for {
       result: Result <- block
       executionTime = System.nanoTime() - start
-      _ = if (request.uri.contains("volume") && executionTime > 4e9) logTimeFormatted(executionTime, request, result)
+      _ = if (request.uri.contains("volume") && executionTime > 3e9) logTimeFormatted(executionTime, request, result)
     } yield result
   }
 

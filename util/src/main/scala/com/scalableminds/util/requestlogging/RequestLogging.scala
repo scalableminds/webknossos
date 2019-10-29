@@ -36,7 +36,7 @@ trait RequestLogging extends AbstractRequestLogging {
         .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
       else " "}successfull"
       logger.info(debugString)
-
+      notifier(debugString)
     }
 
     val start = System.nanoTime()

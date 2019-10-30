@@ -664,6 +664,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      user <- userDAO.findOne(annotation._user)(GlobalAccessContext) ?~> "user.notFound"
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -679,7 +680,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "organization" -> organization.name,
         "isPublic" -> annotation.isPublic,
         "tracingTime" -> annotation.tracingTime,
-        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString))
+        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
+        "owner" -> s"${user.firstName} ${user.lastName}"
       )
     }
 }

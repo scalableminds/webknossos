@@ -63,7 +63,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     );
     return (
       <React.Fragment>
-        {tracing.name}
+        <span style={{ margin: "0 10px", display: "inline-block" }}>{tracing.name}</span>
         {hasDescription ? (
           <Tooltip title="Show description" placement="bottom">
             <Popover title="Description" trigger="click" content={markdownDescription}>
@@ -105,6 +105,15 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
           sorter={Utils.localeCompareBy(typeHint, annotation => annotation.name)}
           render={(name: string, tracing: APIAnnotationCompact) =>
             this.renderNameWithDescription(tracing)
+          }
+        />
+        <Column
+          title="Creator"
+          width={280}
+          dataIndex="owner"
+          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.owner)}
+          render={(name: string, tracing: APIAnnotationCompact) =>
+            tracing.owner ? tracing.owner : ""
           }
         />
         <Column

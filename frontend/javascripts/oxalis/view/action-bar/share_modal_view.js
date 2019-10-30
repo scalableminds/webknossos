@@ -1,5 +1,5 @@
 // @flow
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
@@ -204,21 +204,24 @@ class ShareModalView extends PureComponent<Props, State> {
           </Col>
         </Row>
         <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-          {<i className="fa fa-share-alt" />}
-          Sharing
+          <Icon type="share-alt" />
+          Team Sharing
         </Divider>
         <Row>
-          <Col span={6} style={{ lineHeight: "30px" }}>
+          <Col span={6} style={{ lineHeight: "22px" }}>
             Should this tracing appear in the sharing tab?
           </Col>
           <Col span={18}>
-            Choose teams to share your tracing with
             <TeamSelectionComponent
               mode="multiple"
               allowNonEditableTeams
               value={this.state.listedTeams}
               onChange={value => this.setState({ listedTeams: _.flatten([value]) })}
             />
+            <Hint style={{ margin: "6px 12px" }}>
+              Choose teams to share your tracing with. Member of these teams can see this tracing in
+              their shared annotations tab.
+            </Hint>
           </Col>
         </Row>
       </Modal>

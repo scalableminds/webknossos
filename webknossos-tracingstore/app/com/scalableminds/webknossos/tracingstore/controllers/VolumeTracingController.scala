@@ -18,6 +18,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingSe
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
@@ -27,12 +28,14 @@ import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
-class VolumeTracingController @Inject()(
-    val tracingService: VolumeTracingService,
-    val webKnossosServer: TracingStoreWkRpcClient,
-    val accessTokenService: TracingStoreAccessTokenService,
-    config: TracingStoreConfig,
-    tracingDataStore: TracingDataStore)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
+                                        val webKnossosServer: TracingStoreWkRpcClient,
+                                        val accessTokenService: TracingStoreAccessTokenService,
+                                        config: TracingStoreConfig,
+                                        tracingDataStore: TracingDataStore,
+                                        val slackNotificationService: SlackNotificationService)(
+    implicit val ec: ExecutionContext,
+    val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
@@ -48,7 +51,7 @@ class VolumeTracingController @Inject()(
 
   def initialData(tracingId: String) = Action.async { implicit request =>
     log {
-      logTime {
+      logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
@@ -115,7 +118,7 @@ class VolumeTracingController @Inject()(
 
   def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      logTime {
+      logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {

@@ -31,5 +31,8 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     val children = List(WebKnossos, Fossildb)
   }
 
+  object SlackNotifications {
+    val url = get[String]("slackNotifications.url")
+  }
   val children = List(Http, Tracingstore)
 }

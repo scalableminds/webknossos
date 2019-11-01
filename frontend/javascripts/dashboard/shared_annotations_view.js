@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Table, Tag, Icon, Popover, Tooltip } from "antd";
+import { Spin, Table, Tag, Icon, Popover, Tooltip, Row, Col } from "antd";
 import Markdown from "react-remarkable";
 import * as React from "react";
 import type { APIAnnotationCompact } from "admin/api_flow_types";
@@ -75,6 +75,19 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
+  renderPlaceholder = () =>
+    this.state.isLoading ? null : (
+      <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
+        <Col span={18}>
+          <div style={{ paddingBottom: 32, textAlign: "center" }}>
+            There are no shared annotations available yet. You can share your annotations with
+            selected teams in the sharing modal in the tracing view. These annotations appear in the
+            shared tab of all members of these teams.
+          </div>
+        </Col>
+      </Row>
+    );
+
   renderTable = () => {
     const sortedAnnotations = this.state.annotations.sort(
       Utils.compareBy(typeHint, annotation => annotation.modified, false),
@@ -111,7 +124,9 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
           title="Creator"
           width={280}
           dataIndex="owner"
-          sorter={Utils.localeCompareBy(typeHint, annotation => annotation.owner)}
+          sorter={Utils.localeCompareBy(typeHint, annotation =>
+            annotation.owner ? annotation.owner : "",
+          )}
           render={(name: string, tracing: APIAnnotationCompact) =>
             tracing.owner ? tracing.owner : ""
           }
@@ -158,10 +173,15 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
 
   render = () => (
     <div className="TestExplorativeAnnotationsView">
-      <h3>Shared Annotations</h3>
+      <h3>
+        Shared Annotations{" "}
+        <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the tracing view.">
+          <Icon type="info-circle-o" style={{ color: "gray" }} />
+        </Tooltip>
+      </h3>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       <Spin spinning={this.state.isLoading} size="large">
-        {this.renderTable()}
+        {this.state.annotations.length === 0 ? this.renderPlaceholder() : this.renderTable()}
       </Spin>
     </div>
   );

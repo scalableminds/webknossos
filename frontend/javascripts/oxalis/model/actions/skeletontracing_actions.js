@@ -1,6 +1,7 @@
 // @flow
 import { Modal } from "antd";
 import React from "react";
+import { batchActions } from "redux-batched-actions";
 
 import type { ServerSkeletonTracing } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
@@ -479,13 +480,14 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
 export const deleteMultipleTreesAsUserAction = (treeIds: Array<number>): NoAction => {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  treeIds.forEach(id => {
+  const actions = treeIds.map(id => {
     const tree = skeletonTracing.trees[id];
     if (state.task != null && tree.nodes.has(1)) {
       confirmDeletingInitialNode(id);
+      return noAction();
     } else {
-      Store.dispatch(deleteTreeAction(id));
+      return deleteTreeAction(id);
     }
   });
-  return noAction();
+  return batchActions(actions, "DELETE_TREE");
 };

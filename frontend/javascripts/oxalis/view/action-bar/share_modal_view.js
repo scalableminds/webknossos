@@ -17,6 +17,7 @@ import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
+import messages from "messages";
 
 const RadioGroup = Radio.Group;
 
@@ -118,7 +119,8 @@ class ShareModalView extends PureComponent<Props, State> {
       this.props.annotationType,
       this.props.annotationId,
       this.state.listedTeams.map(team => team.id),
-    );
+    ).then(() => Toast.success(messages["annotation.shared_teams_edited"]));
+
     this.props.setAnnotationPublic(this.state.isPublic);
     this.props.onOk();
   };

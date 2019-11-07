@@ -405,9 +405,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   def listedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext) =
     for {
-      listedAnnotationIds <- listedAnnotationsDAO.findAllListedForTeams(userTeams)
-      annotations <- Fox.serialCombined(listedAnnotationIds)(annotationDAO.findOne(_)(GlobalAccessContext))
-    } yield annotations
+      listedAnnotations <- listedAnnotationsDAO.findAllListedForTeams(userTeams)
+    } yield listedAnnotations
 
   def updateTeamsForListedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
     listedAnnotationsDAO.updateTeamsForListedAnnotation(annotationId, teams)

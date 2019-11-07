@@ -356,7 +356,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     updateObjectIdCol(id, _._User, userId)
 }
 
-class ListedAnnotationsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ListedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def listedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
@@ -364,17 +364,18 @@ class ListedAnnotationsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executio
            sql"select _team from webknossos.annotation_listedTeams where _annotation = ${annotationId}".as[String]))
       yield result.toList
 
-  def findAllListedForTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
-    val composedQuery = DBIO.sequence(teams.map(team =>
-      sql"select _annotation from webknossos.annotation_listedTeams where _team = ${team}".as[String]))
+  def findAllListedForTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
-      result <- run(composedQuery)
-    } yield result.flatten.distinct.map(ObjectId(_))
-  }
+      result <- run(
+        sql"""select distinct #${annotationDAO.columnsWithPrefix("a.")} from webknossos.annotations_ a
+                            join webknossos.annotation_listedTeams l on a._id = l._annotation
+                            where l._team in #${writeStructTupleWithQuotes(teams.map(t => sanitize(t.toString)))}"""
+          .as[AnnotationsRow])
+      parsed <- Fox.combined(result.toList.map(annotationDAO.parse))
+    } yield parsed
 
   def updateTeamsForListedAnnotation(_id: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) = {
-    val clearQuery =
-      sqlu"""delete from webknossos.annotation_listedTeams where _annotation = ${_id}"""
+    val clearQuery = sqlu"delete from webknossos.annotation_listedTeams where _annotation = ${_id}"
 
     val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_listedTeams(_annotation, _team)
                                                               values(${_id}, ${teamId.id})""")

@@ -12,7 +12,7 @@ import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserService}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.cache.SyncCacheApi
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
@@ -94,8 +94,7 @@ class DataSetController @Inject()(userService: UserService,
       }
 
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
         _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
           "dataLayer.notFound",
@@ -177,8 +176,7 @@ class DataSetController @Inject()(userService: UserService,
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
-        "dataSet.notFound",
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
         dataSetName) ~> NOT_FOUND
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
       users <- userService.findByTeams(allowedTeams)
@@ -196,8 +194,7 @@ class DataSetController @Inject()(userService: UserService,
           organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             organizationName)
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
@@ -213,8 +210,7 @@ class DataSetController @Inject()(userService: UserService,
     implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
       for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> Messages(
-          "dataSet.notFound",
+        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(ctx) ?~> notFoundMessage(
           dataSetName) ~> NOT_FOUND
         dataSource <- dataSetService.dataSourceFor(dataSet) ?~> "dataSource.notFound" ~> NOT_FOUND
         usableDataSource <- dataSource.toUsable.toFox ?~> "dataSet.notImported"
@@ -232,8 +228,7 @@ class DataSetController @Inject()(userService: UserService,
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, displayName, sortingKey, isPublic) =>
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox
             .assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
@@ -256,8 +251,7 @@ class DataSetController @Inject()(userService: UserService,
     implicit request =>
       withJsonBodyAs[List[String]] { teams =>
         for {
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> Messages(
-            "dataSet.notFound",
+          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> notFoundMessage(
             dataSetName) ~> NOT_FOUND
           _ <- Fox
             .assertTrue(dataSetService.isEditableBy(dataSet, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
@@ -302,5 +296,11 @@ class DataSetController @Inject()(userService: UserService,
       organization <- organizationDAO.findOne(organizationId)
     } yield Ok(Json.obj("organizationName" -> organization.name))
   }
+
+  private def notFoundMessage(dataSetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =
+    ctx.data match {
+      case Some(user: User) => Messages("dataSet.notFound", dataSetName)
+      case _                => Messages("dataSet.notFoundConsiderLogin", dataSetName)
+    }
 
 }

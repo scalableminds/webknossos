@@ -149,26 +149,27 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  selectGroupById = (groupId: number) => {
+    this.props.deselectAllTrees();
+    this.props.onSetActiveGroup(groupId);
+  };
+
   onSelectGroup = (evt: SyntheticMouseEvent<*>) => {
     // $FlowFixMe .dataset is unknown to flow
     const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
-    const selectGroup = () => {
-      this.props.deselectAllTrees();
-      this.props.onSetActiveGroup(groupId);
-    };
     if (numberOfSelectedTrees > 0) {
       Modal.confirm({
         title: "Do you really want to select this group?",
         content: `You have ${numberOfSelectedTrees} selected Trees. Do you really want to select this group?
         This will deselect all selected trees.`,
         onOk() {
-          selectGroup();
+          this.selectGroupById(groupId);
         },
         onCancel() {},
       });
     } else {
-      selectGroup();
+      this.selectGroupById(groupId);
     }
   };
 
@@ -240,6 +241,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       });
     }
     this.props.onUpdateTreeGroups(newTreeGroups);
+    this.selectGroupById(newGroupId);
   }
 
   deleteGroup(groupId: number) {

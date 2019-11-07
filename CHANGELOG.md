@@ -7,7 +7,39 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.09.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.11.0...HEAD)
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
+
+## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
+[Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...19.11.0)
+
+### Added
+- Added an API to manage DataStores and TracingStores as admin. [#4286](https://github.com/scalableminds/webknossos/pull/4286)
+
+### Fixed
+- Cleaned up error reporting wording in case of dataset access failures (e.g. due to not being logged in). [#4301](https://github.com/scalableminds/webknossos/pull/4301)
+- Fixed handling of uint64 data layers in sql evolution. [4303](https://github.com/scalableminds/webknossos/pull/4303)
+
+
+## [19.10.0](https://github.com/scalableminds/webknossos/releases/tag/19.10.0) - 2019-09-30
+[Commits](https://github.com/scalableminds/webknossos/compare/19.09.0...19.10.0)
+
+### Highlights
+- Clicking on an experience domain of a user, while multiple users are selected will edit the domain of all selected users (instead of only the domain of the clicked row). [#4280](https://github.com/scalableminds/webknossos/pull/4280)
+- Creating a new skeleton tree group will always activate that group. [#4282](https://github.com/scalableminds/webknossos/pull/4282)
+- Resetting a task to the initials state is now also allowed for volume tasks. [#4276](https://github.com/scalableminds/webknossos/pull/4276)
 
 ### Added
 - Reset to base is now also allowed for volume tasks. [#4276](https://github.com/scalableminds/webknossos/pull/4276)
@@ -16,10 +48,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 - Renamed "Expected Time" to "Time Limit" in the project table. [#4278](https://github.com/scalableminds/webknossos/pull/4278)
 - Clicking on an experience domain of a user, while multiple users are selected will edit the domain of all selected users (instead of only the domain of the clicked row). [#4280](https://github.com/scalableminds/webknossos/pull/4280)
+- Creating a new skeleton tree group will always activate that group. [#4282](https://github.com/scalableminds/webknossos/pull/4282)
 
 ### Fixed
 - When creating tasks from zip, the individual nml names are used again, rather than the zip name. [#4277](https://github.com/scalableminds/webknossos/pull/4277)
 
+### Removed
+- Removed the Search shortcut (Ctrl+Shift+F) for comments in the tracing view, since that shortcut collides with the tree search. [#4291](https://github.com/scalableminds/webknossos/pull/4291)
 
 ## [19.09.0](https://github.com/scalableminds/webknossos/releases/tag/19.09.0) - 2019-08-28
 [Commits](https://github.com/scalableminds/webknossos/compare/19.08.0...19.09.0)
@@ -56,9 +91,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed the upload of volume tracings by recognizing the correct format of the fallback layer. [#4248](https://github.com/scalableminds/webknossos/pull/4248)
 - Fixed an imprecision when exporting an NML via the front-end. [#4262](https://github.com/scalableminds/webknossos/pull/4262)
 - Fixed viewing and tracing of datasets which only contain a segmentation layer. [#4265](https://github.com/scalableminds/webknossos/pull/4265)
-
-### Removed
--
 
 
 ## [19.08.0](https://github.com/scalableminds/webknossos/releases/tag/19.08.0) - 2019-07-29

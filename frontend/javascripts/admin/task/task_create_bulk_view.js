@@ -12,7 +12,7 @@ import Messages from "messages";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
-const TextArea = Input.TextArea;
+const { TextArea } = Input;
 
 const NUM_TASKS_PER_BATCH = 100;
 
@@ -66,7 +66,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   }
 
   isValidTask(task: NewTask): boolean {
-    const boundingBox = task.boundingBox;
+    const { boundingBox } = task;
 
     if (
       !_.isString(task.neededExperience.domain) ||
@@ -275,8 +275,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <br />
               If you want to define some (but not all) of the optional values, please list all
               optional values and use an empty value for the ones you do not want to set (e.g.,
-              someValue,,someOtherValue if you want to omit the second value). If you don not want
-              to define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
+              someValue,,someOtherValue if you want to omit the second value). If you do not want to
+              define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

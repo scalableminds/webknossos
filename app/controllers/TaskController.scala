@@ -98,7 +98,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
   def create = sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     for {
-      _ <- bool2Fox(request.body.length <= 1000) ?~> "task.create.limitExceeded"
+      isVolumeOrHybrid <- isVolumeOrHybridTaskType(request.body)
+      _ <- bool2Fox(if (isVolumeOrHybrid) request.body.length <= 100 else request.body.length <= 1000) ?~> "task.create.limitExceeded"
       taskParameters <- duplicateAllBaseTracings(request.body, request.identity._organization)
       skeletonBaseOpts: List[Option[SkeletonTracing]] <- createTaskSkeletonTracingBases(taskParameters)
       volumeBaseOpts: List[Option[VolumeTracing]] <- createTaskVolumeTracingBases(taskParameters,
@@ -474,6 +475,16 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
         }).flatten
       }
     }).flatten
+
+  private def isVolumeOrHybridTaskType(taskParameters: List[TaskParameters])(implicit ctx: DBAccessContext) =
+    Fox
+      .serialCombined(taskParameters) { param =>
+        for {
+          taskTypeIdValidated <- ObjectId.parse(param.taskTypeId) ?~> "taskType.id.invalid"
+          taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
+      }
+      .map(_.exists(_ == true))
 
   def peekNext = sil.SecuredAction.async { implicit request =>
     val user = request.identity

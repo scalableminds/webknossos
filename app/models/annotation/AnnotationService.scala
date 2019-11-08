@@ -42,6 +42,16 @@ import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, Json}
 
+case class DownloadAnnotation(skeletonTracingOpt: Option[SkeletonTracing],
+                              volumeTracingOpt: Option[VolumeTracing],
+                              volumeDataOpt: Option[Array[Byte]],
+                              name: String,
+                              scaleOpt: Option[Scale],
+                              annotation: Annotation,
+                              user: User,
+                              taskOpt: Option[Task],
+                              organizationName: String)
+
 class AnnotationService @Inject()(annotationInformationProvider: AnnotationInformationProvider,
                                   savedTracingInformationHandler: SavedTracingInformationHandler,
                                   annotationDAO: AnnotationDAO,
@@ -238,7 +248,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(Option[String], Option[String])] =
     for {
-      dataSource <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonId: Option[String] <- Fox.runOptional(annotationBase.skeletonTracingId)(skeletonId =>
         tracingStoreClient.duplicateSkeletonTracing(skeletonId))
@@ -345,7 +355,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
+      _ <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(ObjectId.generate,
                                   dataSetId,
@@ -385,62 +395,42 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       implicit m: MessagesProvider,
       ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
-      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
-      tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(
-        tuple =>
-          (nmlWriter.toNmlStream(tuple._1,
-                                 tuple._2,
-                                 Some(tuple._6),
-                                 tuple._5,
-                                 Some(tuple._4 + "_data.zip"),
-                                 tuple._9,
-                                 Some(tuple._7),
-                                 tuple._8),
-           tuple._4,
-           tuple._3))
+      downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
+      nmlsAndNames = downloadAnnotations.flatten.map {
+        case DownloadAnnotation(skeletonTracingOpt,
+                                volumeTracingOpt,
+                                volumeDataOpt,
+                                name,
+                                scaleOpt,
+                                annotation,
+                                user,
+                                taskOpt,
+                                organizationName) =>
+          (nmlWriter.toNmlStream(skeletonTracingOpt,
+                                 volumeTracingOpt,
+                                 Some(annotation),
+                                 scaleOpt,
+                                 Some(name + "_data.zip"),
+                                 organizationName,
+                                 Some(user),
+                                 taskOpt),
+           name,
+           volumeDataOpt)
+      }
+
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
-  private def flattenTupledLists[A, B, C, D, E, F, G, H, I](
-      tupledLists: List[(List[A], List[B], List[C], List[D], List[E], List[F], List[G], List[H], List[I])]) =
-    tupledLists.flatMap(tuple =>
-      zippedEightLists(tuple._1, tuple._2, tuple._3, tuple._4, tuple._5, tuple._6, tuple._7, tuple._8, tuple._9))
-
-  private def zippedEightLists[A, B, C, D, E, F, G, H, I](l1: List[A],
-                                                          l2: List[B],
-                                                          l3: List[C],
-                                                          l4: List[D],
-                                                          l5: List[E],
-                                                          l6: List[F],
-                                                          l7: List[G],
-                                                          l8: List[H],
-                                                          l9: List[I]): List[(A, B, C, D, E, F, G, H, I)] =
-    ((((((((l1, l2).zipped.toList, l3).zipped.toList, l4).zipped.toList, l5).zipped.toList, l6).zipped.toList, l7).zipped.toList,
-      l8).zipped.toList,
-     l9).zipped.toList.map { tuple: ((((((((A, B), C), D), E), F), G), H), I) =>
-      (tuple._1._1._1._1._1._1._1._1,
-       tuple._1._1._1._1._1._1._1._2,
-       tuple._1._1._1._1._1._1._2,
-       tuple._1._1._1._1._1._2,
-       tuple._1._1._1._1._2,
-       tuple._1._1._1._2,
-       tuple._1._1._2,
-       tuple._1._2,
-       tuple._2)
-    }
-
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext): Fox[
-    List[(List[Option[SkeletonTracing]],
-          List[Option[VolumeTracing]],
-          List[Option[Array[Byte]]],
-          List[String],
-          List[Option[Scale]],
-          List[Annotation],
-          List[User],
-          List[Option[Task]],
-          List[String])]] = {
+      implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
+
+    def getSingleDownloadAnnotation(annotation: Annotation, dataSetId: ObjectId, scaleOpt: Option[Scale]) =
+      for {
+        user <- userService.findOneById(annotation._user, useCache = true) ?~> "user.notFound"
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
+        name <- savedTracingInformationHandler.nameForAnnotation(annotation)
+        organizationName <- organizationDAO.findOrganizationNameForAnnotation(annotation._id)
+      } yield DownloadAnnotation(None, None, None, name, scaleOpt, annotation, user, taskOpt, organizationName)
 
     def getSkeletonTracings(dataSetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {
@@ -465,28 +455,16 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         dataSet <- dataSetDAO.findOne(dataSetId)
         tracingStoreClient <- tracingStoreService.clientFor(dataSet)
         tracingDataObjects: List[Option[Array[Byte]]] <- Fox.serialCombined(tracingIds) {
-          case None                              => Fox.successful(None)
-          case Some(tracingId) if skipVolumeData => Fox.successful(None)
-          case Some(tracingId)                   => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
+          case None                      => Fox.successful(None)
+          case Some(_) if skipVolumeData => Fox.successful(None)
+          case Some(tracingId)           => tracingStoreClient.getVolumeData(tracingId).map(Some(_))
         }
       } yield tracingDataObjects
-
-    def getUsers(userIds: List[ObjectId]) =
-      Fox.serialCombined(userIds)(userService.findOneById(_, useCache = true))
-
-    def getTasks(taskIds: List[Option[ObjectId]]) =
-      Fox.serialCombined(taskIds)(taskIdOpt => Fox.runOptional(taskIdOpt)(taskDAO.findOne))
 
     def getDatasetScale(dataSetId: ObjectId) =
       for {
         dataSet <- dataSetDAO.findOne(dataSetId)
       } yield dataSet.scale
-
-    def getNames(annotations: List[Annotation]) =
-      Fox.combined(annotations.map(a => savedTracingInformationHandler.nameForAnnotation(a).toFox))
-
-    def getOrganizationNames(annotations: List[Annotation]) =
-      Fox.combined(annotations.map(a => organizationDAO.findOrganizationNameForAnnotation(a._id)))
 
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataSet)
     val tracingsGrouped = annotationsGrouped.map {
@@ -496,21 +474,27 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           skeletonTracings <- getSkeletonTracings(dataSetId, annotations.map(_.skeletonTracingId))
           volumeTracings <- getVolumeTracings(dataSetId, annotations.map(_.volumeTracingId))
           volumeDataObjects <- getVolumeDataObjects(dataSetId, annotations.map(_.volumeTracingId))
-          users <- getUsers(annotations.map(_._user)) ?~> "user.notFound"
-          taskOpts <- getTasks(annotations.map(_._task)) ?~> "task.notFound"
-          names <- getNames(annotations)
-          organizationNames <- getOrganizationNames(annotations)
+          incompleteDownloadAnnotations <- Fox.serialCombined(annotations)(
+            getSingleDownloadAnnotation(_, dataSetId, scale))
         } yield
-          (skeletonTracings,
-           volumeTracings,
-           volumeDataObjects,
-           names,
-           annotations.map(a => scale),
-           annotations,
-           users,
-           taskOpts,
-           organizationNames)
+          incompleteDownloadAnnotations
+            .zip(skeletonTracings)
+            .map {
+              case (downloadAnnotation, skeletonTracingOpt) =>
+                downloadAnnotation.copy(skeletonTracingOpt = skeletonTracingOpt)
+            }
+            .zip(volumeTracings)
+            .map {
+              case (downloadAnnotation, volumeTracingOpt) =>
+                downloadAnnotation.copy(volumeTracingOpt = volumeTracingOpt)
+            }
+            .zip(volumeDataObjects)
+            .map {
+              case (downloadAnnotation, volumeDataOpt) =>
+                downloadAnnotation.copy(volumeDataOpt = volumeDataOpt)
+            }
     }
+
     Fox.combined(tracingsGrouped.toList)
   }
 

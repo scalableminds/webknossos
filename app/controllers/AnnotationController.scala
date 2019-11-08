@@ -210,11 +210,11 @@ class AnnotationController @Inject()(
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       name = (request.body \ "name").asOpt[String]
       description = (request.body \ "description").asOpt[String]
-      isPublic = (request.body \ "isPublic").asOpt[Boolean]
+      visibility = (request.body \ "isPublic").asOpt[String]
       tags = (request.body \ "tags").asOpt[List[String]]
       _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> "annotation.edit.failed"
       _ <- Fox.runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> "annotation.edit.failed"
-      _ <- Fox.runOptional(isPublic)(annotationDAO.updateIsPublic(annotation._id, _)) ?~> "annotation.edit.failed"
+      _ <- Fox.runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> "annotation.edit.failed"
       _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> "annotation.edit.failed"
     } yield {
       JsonOk(Messages("annotation.edit.success"))

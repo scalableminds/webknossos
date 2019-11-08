@@ -25,7 +25,7 @@ case class Annotation(
     skeletonTracingId: Option[String],
     volumeTracingId: Option[String],
     description: String = "",
-    isPublic: Boolean = false,
+    visibility: AnnotationVisibility.Value = AnnotationVisibility.Organization,
     name: String = "",
     state: AnnotationState.Value = Active,
     statistics: JsObject = Json.obj(),
@@ -64,6 +64,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
+      visibility <- AnnotationVisibility.fromString(r.visibility).toFox
     } yield {
       Annotation(
         ObjectId(r._Id),
@@ -74,7 +75,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         r.skeletontracingid,
         r.volumetracingid,
         r.description,
-        r.ispublic,
+        visibility,
         r.name,
         state,
         Json.parse(r.statistics).as[JsObject],
@@ -89,9 +90,14 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = "isPublic"
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
-       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
-        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    s"""( visibility = '${AnnotationVisibility.Public}'
+          or (visibility = '${AnnotationVisibility.Organization}' and (select _organization from webknossos.teams where webknossos.teams._id = _team)
+            in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))
+          or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}' and isTeamManager)
+          or _user = '${requestingUserId.id}'
+          or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+            in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
@@ -237,10 +243,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def insertOne(a: Annotation): Fox[Unit] =
     for {
       _ <- run(sqlu"""
-               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                values(${a._id.id}, ${a._dataSet.id}, ${a._task
         .map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.skeletonTracingId},
-                   ${a.volumeTracingId}, ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(
+                   ${a.volumeTracingId}, ${a.description}, '#${a.visibility.toString}', ${a.name}, '#${a.state.toString}', '#${sanitize(
         a.statistics.toString)}',
                    '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(
         a.created)},
@@ -259,7 +265,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                skeletonTracingId = ${a.skeletonTracingId},
                volumeTracingId = ${a.volumeTracingId},
                description = ${a.description},
-               isPublic = ${a.isPublic},
+               visibility = ${a.visibility.toString},
                name = ${a.name},
                state = '#${a.state.toString}',
                statistics = '#${sanitize(a.statistics.toString)}',
@@ -313,8 +319,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext) =
     updateStringCol(id, _.name, name)
 
-  def updateIsPublic(id: ObjectId, isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    updateBooleanCol(id, _.ispublic, isPublic)
+  def updateVisibility(id: ObjectId, visibilityString: String)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- AnnotationVisibility.fromString(visibilityString).toFox
+    } yield updateStringCol(id, _.visibility, visibilityString)
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

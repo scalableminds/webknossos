@@ -50,14 +50,18 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
     new AnnotationRestrictions {
       override def allowAccess(userOption: Option[User]) =
-        if (annotation.isPublic) Fox.successful(true)
-        else
+        if (annotation.visibility == AnnotationVisibility.Public) Fox.successful(true)
+        else if (annotation.visibility == AnnotationVisibility.Organization) {
           (for {
             user <- option2Fox(userOption)
             owner <- userService.findOneById(annotation._user, true)(GlobalAccessContext)
-          } yield {
-            owner._organization == user._organization
-          }).orElse(Fox.successful(false))
+          } yield owner._organization == user._organization).orElse(Fox.successful(false))
+        } else {
+          (for {
+            user <- option2Fox(userOption)
+            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+          } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
+        }
 
       override def allowUpdate(user: Option[User]) =
         Fox.successful(user.exists { user =>

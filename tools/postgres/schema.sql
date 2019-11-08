@@ -36,6 +36,7 @@ CREATE TABLE webknossos.analytics(
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
+CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Organization', 'Public');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _dataSet CHAR(24) NOT NULL,
@@ -45,7 +46,7 @@ CREATE TABLE webknossos.annotations(
   skeletonTracingId CHAR(36) UNIQUE,
   volumeTracingId CHAR(36) UNIQUE, -- has to be unique even over both skeletonTracingId and volumeTracingId. Enforced by datastore.
   description TEXT NOT NULL DEFAULT '',
-  isPublic BOOLEAN NOT NULL DEFAULT false,
+  visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Organization',
   name VARCHAR(256) NOT NULL DEFAULT '',
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   statistics JSONB NOT NULL,

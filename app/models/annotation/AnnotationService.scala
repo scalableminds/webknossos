@@ -632,7 +632,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "organization" -> organization.name,
         "dataStore" -> dataStoreJs,
         "tracingStore" -> tracingStoreJs,
-        "isPublic" -> annotation.isPublic,
+        "visibility" -> annotation.visibility,
         "settings" -> settings,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
@@ -660,7 +660,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "tracing" -> Json.obj("skeleton" -> annotation.skeletonTracingId, "volume" -> annotation.volumeTracingId),
         "dataSetName" -> dataSet.name,
         "organization" -> organization.name,
-        "isPublic" -> annotation.isPublic,
+        "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString))
       )

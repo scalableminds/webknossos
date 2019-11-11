@@ -370,6 +370,31 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             })
             .getOrElse(state);
         }
+        case "SET_ACTIVE_TREE_BY_NAME": {
+          const { treeName } = action;
+          const { trees } = skeletonTracing;
+          let treeWithMatchingName = null;
+          Object.keys(trees).forEach(treeId => {
+            const treeIdAsNumber = ((treeId: any): number);
+            if (trees[treeIdAsNumber].name === treeName) {
+              treeWithMatchingName = trees[treeIdAsNumber];
+            }
+          });
+          if (!treeWithMatchingName) {
+            return state;
+          }
+          const newActiveNodeId = _.max(treeWithMatchingName.nodes.map(el => el.id)) || null;
+
+          return update(state, {
+            tracing: {
+              skeleton: {
+                activeNodeId: { $set: newActiveNodeId },
+                activeTreeId: { $set: treeWithMatchingName.treeId },
+                activeGroupId: { $set: null },
+              },
+            },
+          });
+        }
 
         case "DESELECT_ACTIVE_TREE": {
           return update(state, {

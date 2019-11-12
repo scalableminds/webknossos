@@ -107,7 +107,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       files.map(async file => {
         const ext = _.last(file.name.split("."));
         try {
-          if (ext == "nml") {
+          if (ext === "nml") {
             const nmlString = await readFileAsText(file);
             const { trees, treeGroups, datasetName } = await parseNml(
               nmlString,
@@ -131,7 +131,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
         } catch (e) {
           throw new Error(
-            `"${file.name}" could not be parsed as ${ext == "nml" ? "NML" : "protobuf"}. ${
+            `"${file.name}" could not be parsed as ${ext === "nml" ? "NML" : "protobuf"}. ${
               e.message
             }`,
           );

@@ -101,7 +101,7 @@ type State = {
   groupToDelete: ?number,
 };
 
-export async function importNmls(files: Array<File>, createGroupForEachFile: boolean) {
+export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {

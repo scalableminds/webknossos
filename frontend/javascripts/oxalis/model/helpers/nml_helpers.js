@@ -401,11 +401,12 @@ function getEdgeHash(source: number, target: number) {
   return source < target ? `${source}-${target}` : `${target}-${source}`;
 }
 
-function wrapInNewGroup(
+export function wrapInNewGroup(
   originalTrees: TreeMap,
-  originalTreeGroups: Array<TreeGroup>,
+  _originalTreeGroups: ?Array<TreeGroup>,
   wrappingGroupName: string,
 ): [TreeMap, Array<TreeGroup>] {
+  const originalTreeGroups = _originalTreeGroups || [];
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash
   // with the nml itself.
@@ -429,7 +430,6 @@ function wrapInNewGroup(
 
 export function parseNml(
   nmlString: string,
-  wrappingGroupName?: ?string,
 ): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
@@ -611,20 +611,7 @@ export function parseNml(
         }
       })
       .on("end", () => {
-        if (wrappingGroupName != null) {
-          const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(
-            trees,
-            treeGroups,
-            wrappingGroupName,
-          );
-          resolve({
-            trees: wrappedTrees,
-            treeGroups: wrappedTreeGroups,
-            datasetName,
-          });
-        } else {
-          resolve({ trees, treeGroups, datasetName });
-        }
+        resolve({ trees, treeGroups, datasetName });
       })
       .on("error", reject);
 

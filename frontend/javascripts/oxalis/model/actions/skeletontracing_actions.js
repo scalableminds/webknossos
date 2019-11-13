@@ -270,11 +270,11 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
 
 export const addTreesAndGroupsAction = (
   trees: TreeMap,
-  treeGroups: Array<TreeGroup>,
+  treeGroups: ?Array<TreeGroup>,
 ): AddTreesAndGroupsAction => ({
   type: "ADD_TREES_AND_GROUPS",
   trees,
-  treeGroups,
+  treeGroups: treeGroups || [],
 });
 
 export const deleteTreeAction = (

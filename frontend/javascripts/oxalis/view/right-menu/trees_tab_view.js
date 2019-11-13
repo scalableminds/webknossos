@@ -121,6 +121,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             const nmlProtoBuffer = await readFileAsArrayBuffer(file);
             const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
+            if (!parsedTracing.trees) {
+              // This check is only for flow to realize that we have a skeleton tracing
+              // on our hands.
+              throw new Error("Skeleton tracing doesn't contain trees");
+            }
+
             return {
               importAction: addTreesAndGroupsAction(
                 createTreeMapFromTreeArray(parsedTracing.trees),

@@ -3,10 +3,12 @@
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
 import { connect } from "react-redux";
+import { batchActions } from "redux-batched-actions";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
+import { type Action } from "oxalis/model/actions/actions";
 import update from "immutability-helper";
 import {
   MISSING_GROUP_ID,
@@ -56,7 +58,7 @@ type Props = {
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
-  onSetTreeGroup: (?number, number) => void,
+  onBatchActions: (Array<Action>, string) => void,
 };
 
 type State = {
@@ -215,12 +217,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (node.type === TYPE_TREE) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-      allTreesToMove.forEach(treeId =>
-        this.props.onSetTreeGroup(
+      const moveActions = allTreesToMove.map(treeId =>
+        setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
           parseInt(treeId, 10),
         ),
       );
+      this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree
       // Exclude root group and remove trees from groupTree object
@@ -436,8 +439,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onUpdateTreeGroups(treeGroups) {
     dispatch(setTreeGroupsAction(treeGroups));
   },
-  onSetTreeGroup(groupId, treeId) {
-    dispatch(setTreeGroupAction(groupId, treeId));
+  onBatchActions(actions, actionName) {
+    dispatch(batchActions(actions, actionName));
   },
 });
 

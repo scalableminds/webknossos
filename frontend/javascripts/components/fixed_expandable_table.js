@@ -3,7 +3,7 @@ import { Table } from "antd";
 import * as React from "react";
 
 type Props = {
-  children: React.Node,
+  children: Array<React.Element<typeof Table.Column>>,
   expandedRowRender: Function,
 };
 
@@ -26,7 +26,11 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
   render() {
     const { expandedColumns } = this.state;
     const { children, ...restProps } = this.props;
-    const columnsWithAdjustedFixedProp = React.Children.map(children, child => {
+
+    // Don't use React.Children.map here, since this adds .$ prefixes
+    // to the keys. However, the keys are needed when managing the sorters
+    // of the table.
+    const columnsWithAdjustedFixedProp = children.map(child => {
       const columnFixed = expandedColumns.length > 0 ? false : child.props.fixed;
       return React.cloneElement(child, { fixed: columnFixed });
     });

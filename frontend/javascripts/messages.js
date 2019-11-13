@@ -92,7 +92,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
-    "This tree contains the initial node. Do you really want to delete the whole tree?",
+    "The tree(s) you want to delete contain(s) the initial node. Do you really want to proceed with the deletion?",
   "tracing.delete_multiple_trees": _.template(
     "You have <%- countOfTrees %> trees selected, do you really want to delete all those trees?",
   ),

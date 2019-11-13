@@ -248,9 +248,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
-  handleDropdownClick = (params: { item: *, key: string }) => {
-    const { item, key } = params;
-    const { groupId } = item.props;
+  handleDropdownClick = (params: { domEvent: SyntheticMouseEvent<*>, key: string }) => {
+    const { domEvent, key } = params;
+    // $FlowFixMe .dataset is unknown to flow
+    const groupId = parseInt(domEvent.target.dataset.groupId, 10);
     if (key === "create") {
       this.createGroup(groupId);
     } else if (key === "delete") {
@@ -285,22 +286,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const hasSubgroup = anySatisfyDeep(node.children, child => child.type === TYPE_GROUP);
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
-        <Menu.Item key="create" groupId={id}>
+        <Menu.Item key="create" data-group-id={id}>
           <Icon type="plus" />
           Create new group
         </Menu.Item>
-        <Menu.Item key="delete" groupId={id} disabled={isRoot}>
+        <Menu.Item key="delete" data-group-id={id} disabled={isRoot}>
           <Icon type="delete" />
           Delete
         </Menu.Item>
         {hasSubgroup ? (
-          <Menu.Item key="collapseSubgroups" groupId={id} disabled={!hasExpandedSubgroup}>
+          <Menu.Item key="collapseSubgroups" data-group-id={id} disabled={!hasExpandedSubgroup}>
             <Icon type="shrink" />
             Collapse all subgroups
           </Menu.Item>
         ) : null}
         {hasSubgroup ? (
-          <Menu.Item key="expandSubgroups" groupId={id} disabled={!hasCollapsedSubgroup}>
+          <Menu.Item key="expandSubgroups" data-group-id={id} disabled={!hasCollapsedSubgroup}>
             <Icon type="shrink" />
             Expand all subgroups
           </Menu.Item>

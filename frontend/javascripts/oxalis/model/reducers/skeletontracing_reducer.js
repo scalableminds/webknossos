@@ -373,13 +373,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "SET_ACTIVE_TREE_BY_NAME": {
           const { treeName } = action;
           const { trees } = skeletonTracing;
-          let treeWithMatchingName = null;
-          Object.keys(trees).forEach(treeId => {
-            const treeIdAsNumber = ((treeId: any): number);
-            if (trees[treeIdAsNumber].name === treeName) {
-              treeWithMatchingName = trees[treeIdAsNumber];
-            }
-          });
+          const treeWithMatchingName = _.values(trees).find(tree => tree.name === treeName);
           if (!treeWithMatchingName) {
             return state;
           }

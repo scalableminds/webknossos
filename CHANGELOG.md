@@ -10,13 +10,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.11.0...HEAD)
 
 ### Added
--
+- Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
+- Added an API to set a tree active by name. [#4317](https://github.com/scalableminds/webknossos/pull/4317)
 
 ### Changed
 -
 
 ### Fixed
 - Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
+- Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
 
 ### Removed
 -

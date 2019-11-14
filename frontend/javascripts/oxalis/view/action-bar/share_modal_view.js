@@ -119,7 +119,8 @@ class ShareModalView extends PureComponent<Props, State> {
       this.props.annotationType,
       this.props.annotationId,
       this.state.listedTeams.map(team => team.id),
-    ).then(() => Toast.success(messages["annotation.shared_teams_edited"]));
+    );
+    Toast.success(messages["annotation.shared_teams_edited"]);
 
     this.props.setAnnotationPublic(this.state.isPublic);
     this.props.onOk();
@@ -221,8 +222,8 @@ class ShareModalView extends PureComponent<Props, State> {
               onChange={value => this.setState({ listedTeams: _.flatten([value]) })}
             />
             <Hint style={{ margin: "6px 12px" }}>
-              Choose the teams to share your tracing with. Members of these teams can see this tracing in
-              their shared annotations tab.
+              Choose the teams to share your tracing with. Members of these teams can see this
+              tracing in their shared annotations tab.
             </Hint>
           </Col>
         </Row>

@@ -1,8 +1,7 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tag, Icon, Popover, Tooltip } from "antd";
-import Markdown from "react-remarkable";
+import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -24,7 +23,6 @@ import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
-import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import Store from "oxalis/store";
@@ -33,6 +31,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import UserLocalStorage from "libs/user_local_storage";
+import TextWithDescription from "components/text_with_description";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -365,30 +364,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   renderNameWithDescription(tracing: APIAnnotationCompact) {
-    const hasDescription = tracing.description !== "";
-    const markdownDescription = (
-      <div style={{ maxWidth: 400 }}>
-        <Markdown
-          source={tracing.description}
-          options={{ html: false, breaks: true, linkify: true }}
-        />
-      </div>
-    );
     return (
-      <React.Fragment>
-        <EditableTextLabel
-          value={tracing.name}
-          onChange={newName => this.renameTracing(tracing, newName)}
-          label="Annotation Name"
-        />
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <i className="fa fa-align-justify" style={{ cursor: "pointer" }} />
-            </Popover>
-          </Tooltip>
-        ) : null}
-      </React.Fragment>
+      <TextWithDescription
+        isEditable
+        value={tracing.name}
+        onChange={newName => this.renameTracing(tracing, newName)}
+        label="Annotation Name"
+        description={tracing.description}
+      />
     );
   }
 

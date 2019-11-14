@@ -1,7 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Table, Tag, Icon, Popover, Tooltip, Row, Col } from "antd";
-import Markdown from "react-remarkable";
+import { Spin, Table, Tag, Icon, Tooltip, Row, Col } from "antd";
 import * as React from "react";
 import type { APIAnnotationCompact } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
@@ -10,6 +9,7 @@ import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";
 import Persistence from "libs/persistence";
+import TextWithDescription from "components/text_with_description";
 
 const { Column } = Table;
 
@@ -52,26 +52,12 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renderNameWithDescription(tracing: APIAnnotationCompact) {
-    const hasDescription = tracing.description !== "";
-    const markdownDescription = (
-      <div style={{ maxWidth: 400 }}>
-        <Markdown
-          source={tracing.description}
-          options={{ html: false, breaks: true, linkify: true }}
-        />
-      </div>
-    );
     return (
-      <React.Fragment>
-        <span style={{ margin: "0 10px", display: "inline-block" }}>{tracing.name}</span>
-        {hasDescription ? (
-          <Tooltip title="Show description" placement="bottom">
-            <Popover title="Description" trigger="click" content={markdownDescription}>
-              <i className="fa fa-align-justify" style={{ cursor: "pointer" }} />
-            </Popover>
-          </Tooltip>
-        ) : null}
-      </React.Fragment>
+      <TextWithDescription
+        isEditable={false}
+        value={tracing.name}
+        description={tracing.description}
+      />
     );
   }
 
@@ -80,9 +66,9 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
         <Col span={18}>
           <div style={{ paddingBottom: 32, textAlign: "center" }}>
-            There are no shared annotations available yet. You can share your annotations with
-            other teams in the sharing modal in the tracing view. These annotations appear in the
-            shared tab of all members of the selected teams.
+            There are no shared annotations available yet. You can share your annotations with other
+            teams in the sharing modal in the tracing view. These annotations appear in the shared
+            tab of all members of the selected teams.
           </div>
         </Col>
       </Row>

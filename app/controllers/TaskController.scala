@@ -22,6 +22,7 @@ import models.team.TeamDAO
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WkEnv
+import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.{PlayBodyParsers, Result}
@@ -78,6 +79,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                                taskDAO: TaskDAO,
                                taskService: TaskService,
                                nmlService: NmlService,
+                               slackNotificationService: SlackNotificationService,
                                conf: WkConf,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -300,11 +302,14 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
     for {
       _ <- assertEachHasEitherSkeletonOrVolume ?~> "task.create.needsEitherSkeletonOrVolume"
-      firstDatasetName <- requestedTasks.headOption.map(_._1.dataSet).toFox
+      headTask <- requestedTasks.headOption.toFox
+      firstDatasetName = headTask._1.dataSet
       _ <- assertAllOnSameDataset(firstDatasetName)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
         firstDatasetName) ~> NOT_FOUND
+      _ = if (requestedTasks.exists(task => task._1.baseAnnotation.isDefined))
+        slackNotificationService.noticeBaseAnnotationTaskCreation(headTask._1.taskTypeId, requestedTasks.size)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))

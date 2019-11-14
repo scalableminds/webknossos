@@ -173,7 +173,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
 
   render = () => (
     <div className="TestExplorativeAnnotationsView">
-      <h3 style={{ display: "inline-block", "margin-right": "10px" }}>Shared Annotations</h3>
+      <h3 style={{ display: "inline-block", "margin-right": "5px" }}>Shared Annotations</h3>
       <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the tracing view.">
         <Icon type="info-circle-o" style={{ color: "gray" }} />
       </Tooltip>

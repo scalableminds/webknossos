@@ -82,7 +82,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
           <div style={{ paddingBottom: 32, textAlign: "center" }}>
             There are no shared annotations available yet. You can share your annotations with
             other teams in the sharing modal in the tracing view. These annotations appear in the
-            shared tab of all members of these teams.
+            shared tab of all members of the selected teams.
           </div>
         </Col>
       </Row>

@@ -139,7 +139,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     );
   }
 
-  importNmls = async () => {
+  importTracingFiles = async () => {
     this.setState({ isImporting: true });
     try {
       await this.props.onImport(
@@ -196,7 +196,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         footer={
           <React.Fragment>
             {this.state.files.length > 1 ? createGroupsCheckbox : null}
-            <Button key="submit" type="primary" onClick={this.importNmls}>
+            <Button key="submit" type="primary" onClick={this.importTracingFiles}>
               Import
             </Button>
           </React.Fragment>

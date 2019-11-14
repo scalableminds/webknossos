@@ -81,6 +81,7 @@ type AddTreesAndGroupsAction = {
 type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type ResetSkeletonTracingAction = { type: "RESET_SKELETON_TRACING" };
 type SetActiveTreeAction = { type: "SET_ACTIVE_TREE", treeId: number };
+type SetActiveTreeByNameAction = { type: "SET_ACTIVE_TREE_BY_NAME", treeName: string };
 type DeselectActiveTreeAction = { type: "DESELECT_ACTIVE_TREE" };
 type SetActiveGroupAction = { type: "SET_ACTIVE_GROUP", groupId: number };
 type DeselectActiveGroupAction = { type: "DESELECT_ACTIVE_GROUP" };
@@ -124,6 +125,7 @@ export type SkeletonTracingAction =
   | DeleteTreeAction
   | ResetSkeletonTracingAction
   | SetActiveTreeAction
+  | SetActiveTreeByNameAction
   | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
@@ -157,6 +159,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
+  "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
@@ -328,6 +331,11 @@ export const toggleTreeGroupAction = (groupId: number): ToggleTreeGroupAction =>
 export const setActiveTreeAction = (treeId: number): SetActiveTreeAction => ({
   type: "SET_ACTIVE_TREE",
   treeId,
+});
+
+export const setActiveTreeByNameAction = (treeName: string): SetActiveTreeByNameAction => ({
+  type: "SET_ACTIVE_TREE_BY_NAME",
+  treeName,
 });
 
 export const deselectActiveTreeAction = (): DeselectActiveTreeAction => ({

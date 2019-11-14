@@ -29,7 +29,7 @@ import MergerModeController from "oxalis/controller/merger_mode_controller";
 import TDViewControls from "oxalis/view/td_view_controls";
 import Toast from "libs/toast";
 import TracingView from "oxalis/view/tracing_view";
-import TreesTabView, { importNmls } from "oxalis/view/right-menu/trees_tab_view";
+import TreesTabView, { importTracingFiles } from "oxalis/view/right-menu/trees_tab_view";
 import VersionView from "oxalis/view/version_view";
 import messages from "messages";
 import window, { document, location } from "libs/window";
@@ -168,7 +168,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
     return (
-      <NmlUploadZoneContainer onImport={importNmls} isAllowed={isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer onImport={importTracingFiles} isAllowed={isUpdateTracingAllowed}>
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}

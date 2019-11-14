@@ -221,7 +221,7 @@ class ShareModalView extends PureComponent<Props, State> {
               onChange={value => this.setState({ listedTeams: _.flatten([value]) })}
             />
             <Hint style={{ margin: "6px 12px" }}>
-              Choose teams to share your tracing with. Member of these teams can see this tracing in
+              Choose the teams to share your tracing with. Members of these teams can see this tracing in
               their shared annotations tab.
             </Hint>
           </Col>

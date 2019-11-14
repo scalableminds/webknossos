@@ -27,6 +27,15 @@ const onMessage = event => {
       api.tracing.resetSkeletonTracing();
       break;
     }
+    case "setActiveTreeByName": {
+      const treeName = args[0];
+      if (_.isString(treeName)) {
+        api.tracing.setActiveTreeByName(treeName);
+      } else {
+        console.warn("The first argument needs to be the name of the tree.");
+      }
+      break;
+    }
     case "importNml": {
       const nmlAsString = args[0];
       if (_.isString(nmlAsString)) {

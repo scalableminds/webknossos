@@ -63,6 +63,7 @@ import {
   setNodeRadiusAction,
   setTreeNameAction,
   setActiveTreeAction,
+  setActiveTreeByNameAction,
   setTreeColorIndexAction,
   setTreeVisibilityAction,
   setTreeGroupAction,
@@ -284,6 +285,18 @@ class TracingApi {
     const { tracing } = Store.getState();
     assertSkeleton(tracing);
     Store.dispatch(setActiveTreeAction(treeId));
+  }
+
+  /**
+   * Makes the tree specified by name active. Within the tree, the node with the highest ID will be activated.
+   *
+   * @example
+   * api.tracing.setActiveTree("tree_1");
+   */
+  setActiveTreeByName(treeName: string) {
+    const { tracing } = Store.getState();
+    assertSkeleton(tracing);
+    Store.dispatch(setActiveTreeByNameAction(treeName));
   }
 
   /**

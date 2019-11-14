@@ -287,7 +287,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
               key="sandbox-tooltip"
             >
               <Button disabled type="primary" icon="code-sandbox">
-                Sandbox
+                <span className="hide-on-small-screen">Sandbox</span>
               </Button>
             </Tooltip>
           ),

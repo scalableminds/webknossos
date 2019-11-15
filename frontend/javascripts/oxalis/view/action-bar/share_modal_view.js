@@ -38,7 +38,7 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isPublic: boolean,
   sharingToken: string,
-  listedTeams: Array<APITeam>,
+  sharedTeams: Array<APITeam>,
 };
 
 function Hint({ children, style }) {
@@ -60,7 +60,7 @@ class ShareModalView extends PureComponent<Props, State> {
   state = {
     isPublic: this.props.isPublic,
     sharingToken: "",
-    listedTeams: [],
+    sharedTeams: [],
   };
 
   componentDidMount() {
@@ -82,11 +82,11 @@ class ShareModalView extends PureComponent<Props, State> {
     const datasetId = { name, owningOrganization };
     try {
       const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
-      const listedTeams = await getTeamsForSharedAnnotation(
+      const sharedTeams = await getTeamsForSharedAnnotation(
         this.props.annotationType,
         this.props.annotationId,
       );
-      this.setState({ sharingToken, listedTeams });
+      this.setState({ sharingToken, sharedTeams });
     } catch (error) {
       console.error(error);
     }
@@ -118,7 +118,7 @@ class ShareModalView extends PureComponent<Props, State> {
     await updateTeamsForSharedAnnotation(
       this.props.annotationType,
       this.props.annotationId,
-      this.state.listedTeams.map(team => team.id),
+      this.state.sharedTeams.map(team => team.id),
     );
     Toast.success(messages["annotation.shared_teams_edited"]);
 
@@ -218,8 +218,8 @@ class ShareModalView extends PureComponent<Props, State> {
             <TeamSelectionComponent
               mode="multiple"
               allowNonEditableTeams
-              value={this.state.listedTeams}
-              onChange={value => this.setState({ listedTeams: _.flatten([value]) })}
+              value={this.state.sharedTeams}
+              onChange={value => this.setState({ sharedTeams: _.flatten([value]) })}
             />
             <Hint style={{ margin: "6px 12px" }}>
               Choose the teams to share your tracing with. Members of these teams can see this

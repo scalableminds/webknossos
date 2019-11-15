@@ -64,7 +64,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   temporaryFileCreator: TemporaryFileCreator,
                                   meshDAO: MeshDAO,
                                   meshService: MeshService,
-                                  listedAnnotationsDAO: ListedAnnotationsDAO)(implicit ec: ExecutionContext)
+                                  sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext)
     extends BoxImplicits
     with FoxImplicits
     with TextUtils
@@ -403,17 +403,15 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
 
-  def listedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    for {
-      listedAnnotations <- listedAnnotationsDAO.findAllListedForTeams(userTeams)
-    } yield listedAnnotations
+  def sharedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
 
-  def updateTeamsForListedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    listedAnnotationsDAO.updateTeamsForListedAnnotation(annotationId, teams)
+  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
-  def listedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
+  def sharedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      teamIds <- listedAnnotationsDAO.listedTeamsFor(annotationId)
+      teamIds <- sharedAnnotationsDAO.sharedTeamsFor(annotationId)
       teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
       teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
     } yield teams

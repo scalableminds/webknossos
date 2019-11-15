@@ -278,24 +278,24 @@ class AnnotationController @Inject()(
     }
   }
 
-  def listedAnnotations() = sil.SecuredAction.async { implicit request =>
+  def sharedAnnotations() = sil.SecuredAction.async { implicit request =>
     for {
       userTeams <- userService.teamIdsFor(request.identity._id)
-      listedAnnotations <- annotationService.listedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(listedAnnotations)(annotationService.compactWrites(_))
+      sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
     } yield Ok(Json.toJson(json))
   }
 
-  def getListedTeams(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+  def getSharedTeams(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
-      teams <- annotationService.listedTeamsFor(annotation._id)
+      teams <- annotationService.sharedTeamsFor(annotation._id)
       json <- Fox.serialCombined(teams)(teamService.publicWrites(_))
     } yield Ok(Json.toJson(json))
   }
 
-  def updateListedTeams(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def updateSharedTeams(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
@@ -303,7 +303,7 @@ class AnnotationController @Inject()(
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- userService.teamIdsFor(request.identity._id)
         updateTeams = teamIdsValidated.intersect(userTeams)
-        _ <- annotationService.updateTeamsForListedAnnotation(annotation._id, updateTeams)
+        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, updateTeams)
       } yield Ok(Json.toJson(updateTeams.map(_.toString)))
     }
   }

@@ -1,8 +1,8 @@
 
 START TRANSACTION;
 
-DROP TABLE webknossos.annotation_listedTeams;
+DROP TABLE webknossos.annotation_sharedTeams;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 47;
+UPDATE webknossos.releaseInformation SET schemaVersion = 48;
 
 COMMIT TRANSACTION;

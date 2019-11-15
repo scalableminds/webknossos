@@ -51,7 +51,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
     new AnnotationRestrictions {
       override def allowAccess(userOption: Option[User]) =
         if (annotation.visibility == AnnotationVisibility.Public) Fox.successful(true)
-        else if (annotation.visibility == AnnotationVisibility.Organization) {
+        else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
             user <- option2Fox(userOption)
             owner <- userService.findOneById(annotation._user, true)(GlobalAccessContext)

@@ -6,6 +6,7 @@ import {
   type APIAnnotation,
   type APIAnnotationCompact,
   type APIAnnotationWithTask,
+  type APIAnnotationVisibility,
   type APIBuildInfo,
   type APIDataSource,
   type APIDataSourceWithMessages,
@@ -497,7 +498,7 @@ export function reOpenAnnotation(
 export type EditableAnnotation = {
   name: string,
   description: string,
-  isPublic: boolean,
+  visibility: APIAnnotationVisibility,
   tags: Array<string>,
 };
 

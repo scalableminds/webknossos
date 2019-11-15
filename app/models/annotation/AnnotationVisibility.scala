@@ -6,7 +6,7 @@ import utils.EnumUtils
 object AnnotationVisibility extends Enumeration {
   type AnnotationVisibility = Value
 
-  val Private, Organization, Public = Value
+  val Private, Internal, Public = Value
 
   implicit val enumReads: Reads[AnnotationVisibility.Value] = EnumUtils.enumReads(AnnotationVisibility)
 

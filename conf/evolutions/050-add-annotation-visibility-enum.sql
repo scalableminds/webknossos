@@ -4,9 +4,9 @@ START TRANSACTION;
 
 DROP VIEW webknossos.annotations_;
 
-CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Organization', 'Public');
+CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
 
-ALTER TABLE webknossos.annotations ADD COLUMN visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Organization' ;
+ALTER TABLE webknossos.annotations ADD COLUMN visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal' ;
 
 UPDATE webknossos.annotations SET visibility = CASE WHEN (isPublic) THEN 'Public' END;
 

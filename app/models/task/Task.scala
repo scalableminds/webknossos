@@ -206,11 +206,11 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     val insertAnnotationQ = sqlu"""
            with task as (#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}),
            dataset as (select _id from webknossos.datasets_ limit 1)
-           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption
       .map(_.id)
       .getOrElse("")}, ${userId.id}, ${dummyTracingId},
-                    null, '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
+                    null, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
            from task, dataset

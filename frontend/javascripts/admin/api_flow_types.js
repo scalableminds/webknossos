@@ -245,6 +245,8 @@ export const APIAnnotationTypeEnum = Enum.make({
 
 export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
+export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
+
 export type APITaskType = {
   +id: string,
   +summary: string,
@@ -340,7 +342,7 @@ export type APIAnnotationCompact = {
   +formattedHash: string,
   +modified: number,
   +id: string,
-  +isPublic: boolean,
+  +visibility: APIAnnotationVisibility,
   +name: string,
   +state: string,
   +stats: SkeletonTracingStats | {||},

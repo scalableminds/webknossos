@@ -302,14 +302,14 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
     for {
       _ <- assertEachHasEitherSkeletonOrVolume ?~> "task.create.needsEitherSkeletonOrVolume"
-      headTask <- requestedTasks.headOption.toFox
-      firstDatasetName = headTask._1.dataSet
+      firstDatasetName <- requestedTasks.headOption.map(_._1.dataSet).toFox
       _ <- assertAllOnSameDataset(firstDatasetName)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(firstDatasetName, request.identity._organization) ?~> Messages(
         "dataSet.notFound",
         firstDatasetName) ~> NOT_FOUND
       _ = if (requestedTasks.exists(task => task._1.baseAnnotation.isDefined))
-        slackNotificationService.noticeBaseAnnotationTaskCreation(headTask._1.taskTypeId, requestedTasks.size)
+        slackNotificationService.noticeBaseAnnotationTaskCreation(requestedTasks.map(_._1.taskTypeId).distinct,
+                                                                  requestedTasks.count(_._1.baseAnnotation.isDefined))
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))

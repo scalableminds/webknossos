@@ -26,14 +26,14 @@ class SlackNotificationService @Inject()(rpc: RPC, conf: WkConf) extends LazyLog
             ))))
     }
 
-  def noticeBaseAnnotationTaskCreation(taskType: String, numberOfTasks: Int): Unit =
+  def noticeBaseAnnotationTaskCreation(taskType: List[String], numberOfTasks: Int): Unit =
     if (url != "empty") {
       rpc(url).postJson(
         Json.obj(
           "attachments" -> Json.arr(
             Json.obj(
               "title" -> s"Notification from webKnossos at ${conf.Http.uri}",
-              "text" -> s"$numberOfTasks tasks with BaseAnnotation for TaskType $taskType have been created",
+              "text" -> s"$numberOfTasks tasks with BaseAnnotation for TaskTypes ${taskType.mkString(", ")} have been created",
               "color" -> "#01781f"
             )
           )

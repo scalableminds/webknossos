@@ -31,7 +31,7 @@ type StateProps = {|
   annotationType: string,
 |};
 type DispatchProps = {|
-  addTreesAndGroupsAction: (TreeMap, Array<TreeGroup>) => void,
+  addTreesAndGroupsAction: (TreeMap, ?Array<TreeGroup>) => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
@@ -169,7 +169,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.setState({ isUploading: true });
     // Wait for an animation frame so that the loading animation is kicked off
     await Utils.animationFrame();
-    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups);
     this.setState({ isUploading: false });
     Toast.success(messages["tracing.merged"]);
     this.props.onOk();
@@ -263,7 +263,7 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  addTreesAndGroupsAction(trees: TreeMap, treeGroups: Array<TreeGroup>) {
+  addTreesAndGroupsAction(trees: TreeMap, treeGroups: ?Array<TreeGroup>) {
     dispatch(addTreesAndGroupsAction(trees, treeGroups));
   },
 });

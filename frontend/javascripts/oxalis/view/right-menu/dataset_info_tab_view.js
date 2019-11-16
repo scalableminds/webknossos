@@ -135,7 +135,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
     return isDatasetViewMode ? (
       <img
-        style={{ maxHeight: 250, maxWidth: 100%, objectFit: "contain" }}
+        style={{ maxHeight: 250, maxWidth: "100%", objectFit: "contain" }}
         src={this.props.dataset.logoUrl}
         alt={`${this.props.dataset.owningOrganization} Logo`}
       />

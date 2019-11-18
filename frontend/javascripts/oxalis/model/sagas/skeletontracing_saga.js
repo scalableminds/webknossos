@@ -176,6 +176,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   yield _takeEvery(
     [
       "SET_ACTIVE_TREE",
+      "SET_ACTIVE_TREE_BY_NAME",
       "SET_ACTIVE_NODE",
       "DELETE_NODE",
       "DELETE_BRANCHPOINT",

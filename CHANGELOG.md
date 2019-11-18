@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
 - Added an API to set a tree active by name. [#4317](https://github.com/scalableminds/webknossos/pull/4317)
+- Added possibility to disable saving in an explorative annotation. This feature can save a lot of resources when dealing with very large NMLs which don't need to be persisted. [#4321](https://github.com/scalableminds/webknossos/pull/4321)
 
 ### Changed
 -

@@ -128,6 +128,9 @@ In order to restore the current window, a reload is necessary.`,
   "task.domain_does_not_exist":
     "No matching experience domain. Assign this domain to a user to add it to the listed options.",
   "annotation.reset_success": "Annotation was successfully reset.",
+  "annotation.disable_saving": "Are you sure you want to disable saving?",
+  "annotation.disable_saving.content":
+    "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary tracings to save resources.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

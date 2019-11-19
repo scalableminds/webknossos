@@ -31,6 +31,7 @@ type SetVersionNumberAction = {
 };
 type UndoAction = { type: "UNDO" };
 type RedoAction = { type: "REDO" };
+type DisableSavingAction = { type: "DISABLE_SAVING" };
 export type SaveAction =
   | PushSaveQueueTransaction
   | SaveNowAction
@@ -40,7 +41,8 @@ export type SaveAction =
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
   | UndoAction
-  | RedoAction;
+  | RedoAction
+  | DisableSavingAction;
 
 export const pushSaveQueueTransaction = (
   items: Array<UpdateAction>,
@@ -97,4 +99,8 @@ export const undoAction = (): UndoAction => ({
 
 export const redoAction = (): RedoAction => ({
   type: "REDO",
+});
+
+export const disableSavingAction = (): DisableSavingAction => ({
+  type: "DISABLE_SAVING",
 });

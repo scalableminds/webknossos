@@ -3,10 +3,12 @@
 import { AutoSizer } from "react-virtualized";
 import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
 import { connect } from "react-redux";
+import { batchActions } from "redux-batched-actions";
 import * as React from "react";
 import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
+import { type Action } from "oxalis/model/actions/actions";
 import update from "immutability-helper";
 import {
   MISSING_GROUP_ID,
@@ -56,7 +58,7 @@ type Props = {
   onToggleAllTrees: () => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
-  onSetTreeGroup: (?number, number) => void,
+  onBatchActions: (Array<Action>, string) => void,
 };
 
 type State = {
@@ -215,12 +217,13 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     if (node.type === TYPE_TREE) {
       const allTreesToMove = [...this.props.selectedTrees, node.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-      allTreesToMove.forEach(treeId =>
-        this.props.onSetTreeGroup(
+      const moveActions = allTreesToMove.map(treeId =>
+        setTreeGroupAction(
           nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
           parseInt(treeId, 10),
         ),
       );
+      this.props.onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree
       // Exclude root group and remove trees from groupTree object
@@ -248,9 +251,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onDeleteGroup(groupId);
   }
 
-  handleDropdownClick = (params: { item: *, key: string }) => {
-    const { item, key } = params;
-    const { groupId } = item.props;
+  handleDropdownClick = (params: { domEvent: SyntheticMouseEvent<*>, key: string }) => {
+    const { domEvent, key } = params;
+    // $FlowFixMe .dataset is unknown to flow
+    const groupId = parseInt(domEvent.target.dataset.groupId, 10);
     if (key === "create") {
       this.createGroup(groupId);
     } else if (key === "delete") {
@@ -285,22 +289,22 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const hasSubgroup = anySatisfyDeep(node.children, child => child.type === TYPE_GROUP);
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
-        <Menu.Item key="create" groupId={id}>
+        <Menu.Item key="create" data-group-id={id}>
           <Icon type="plus" />
           Create new group
         </Menu.Item>
-        <Menu.Item key="delete" groupId={id} disabled={isRoot}>
+        <Menu.Item key="delete" data-group-id={id} disabled={isRoot}>
           <Icon type="delete" />
           Delete
         </Menu.Item>
         {hasSubgroup ? (
-          <Menu.Item key="collapseSubgroups" groupId={id} disabled={!hasExpandedSubgroup}>
+          <Menu.Item key="collapseSubgroups" data-group-id={id} disabled={!hasExpandedSubgroup}>
             <Icon type="shrink" />
             Collapse all subgroups
           </Menu.Item>
         ) : null}
         {hasSubgroup ? (
-          <Menu.Item key="expandSubgroups" groupId={id} disabled={!hasCollapsedSubgroup}>
+          <Menu.Item key="expandSubgroups" data-group-id={id} disabled={!hasCollapsedSubgroup}>
             <Icon type="shrink" />
             Expand all subgroups
           </Menu.Item>
@@ -435,8 +439,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onUpdateTreeGroups(treeGroups) {
     dispatch(setTreeGroupsAction(treeGroups));
   },
-  onSetTreeGroup(groupId, treeId) {
-    dispatch(setTreeGroupAction(groupId, treeId));
+  onBatchActions(actions, actionName) {
+    dispatch(batchActions(actions, actionName));
   },
 });
 

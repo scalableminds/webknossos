@@ -113,24 +113,24 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
     isMarkdownModalVisible: false,
   };
 
-  static getDerivedStateFromProps(
-    props: PropsWithSkeleton,
-    state: CommentTabState,
-  ): $Shape<CommentTabState> {
-    const sortedTrees = _.values(props.skeletonTracing.trees)
-      .filter(tree => tree.comments.length > 0)
-      .sort(getTreeSorter(state));
+  // static getDerivedStateFromProps(
+  //   props: PropsWithSkeleton,
+  //   state: CommentTabState,
+  // ): $Shape<CommentTabState> {
+  //   const sortedTrees = _.values(props.skeletonTracing.trees)
+  //     .filter(tree => tree.comments.length > 0)
+  //     .sort(getTreeSorter(state));
 
-    const data = sortedTrees.reduce((result, tree) => {
-      result.push(tree);
-      const isCollapsed = state.collapsedTreeIds[tree.treeId];
-      return isCollapsed
-        ? result
-        : result.concat(tree.comments.slice().sort(getCommentSorter(state)));
-    }, []);
+  //   const data = sortedTrees.reduce((result, tree) => {
+  //     result.push(tree);
+  //     const isCollapsed = state.collapsedTreeIds[tree.treeId];
+  //     return isCollapsed
+  //       ? result
+  //       : result.concat(tree.comments.slice().sort(getCommentSorter(state)));
+  //   }, []);
 
-    return { data };
-  }
+  //   return { data };
+  // }
 
   componentDidMount() {
     this.storePropertyUnsubscribers.push(
@@ -323,99 +323,100 @@ class CommentTabView extends React.PureComponent<PropsWithSkeleton, CommentTabSt
   };
 
   render() {
-    const activeCommentMaybe = this.getActiveComment();
-    // Replace line breaks as they will otherwise be stripped when shown in an input field
-    const activeCommentContent = activeCommentMaybe
-      .map(comment => comment.content)
-      .getOrElse("")
-      .replace(/\r?\n/g, "\\n");
-    const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
-    const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
+    return null;
+    // const activeCommentMaybe = this.getActiveComment();
+    // // Replace line breaks as they will otherwise be stripped when shown in an input field
+    // const activeCommentContent = activeCommentMaybe
+    //   .map(comment => comment.content)
+    //   .getOrElse("")
+    //   .replace(/\r?\n/g, "\\n");
+    // const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
+    // const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
 
-    const findCommentIndexFn = commentOrTree =>
-      commentOrTree.nodeId != null &&
-      commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
-    const findTreeIndexFn = commentOrTree =>
-      commentOrTree.treeId != null &&
-      commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
+    // const findCommentIndexFn = commentOrTree =>
+    //   commentOrTree.nodeId != null &&
+    //   commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
+    // const findTreeIndexFn = commentOrTree =>
+    //   commentOrTree.treeId != null &&
+    //   commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
 
-    // If the activeNode has a comment, scroll to it,
-    // otherwise scroll to the activeTree
-    const scrollIndex = _.findIndex(
-      this.state.data,
-      activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
-    );
-    return (
-      <div className="flex-column padded-tab-content" style={{ height: "inherit" }}>
-        {this.renderMarkdownModal()}
-        <InputGroup compact>
-          <AdvancedSearchPopover
-            onSelect={comment => this.props.setActiveNode(comment.nodeId)}
-            data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
-            searchKey="content"
-            targetId={commentListId}
-          >
-            <ButtonComponent icon="search" title="Search through comments" />
-          </AdvancedSearchPopover>
-          <ButtonComponent
-            title="Jump to previous comment"
-            onClick={this.previousComment}
-            icon="arrow-left"
-          />
-          <InputComponent
-            value={activeCommentContent}
-            disabled={activeNodeMaybe.isNothing}
-            onChange={evt => this.handleChangeInput(evt, true)}
-            onPressEnter={evt => evt.target.blur()}
-            placeholder="Add comment"
-            style={{ width: "50%" }}
-          />
-          <ButtonComponent
-            onClick={() => this.setMarkdownModalVisibility(true)}
-            disabled={activeNodeMaybe.isNothing}
-            type={isMultilineComment ? "primary" : "button"}
-            icon="edit"
-            title="Open dialog to edit comment in multi-line mode"
-          />
-          <ButtonComponent
-            title="Jump to next comment"
-            onClick={this.nextComment}
-            icon="arrow-right"
-          />
-          <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
-            <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
-              {this.renderSortIcon()}
-            </ButtonComponent>
-          </Dropdown>
-          <ButtonComponent
-            onClick={this.toggleExpandForAllTrees}
-            icon="shrink"
-            title="Collapse or expand groups"
-          />
-        </InputGroup>
-        <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
-          <AutoSizer>
-            {({ height, width }) => (
-              <div style={{ height, width }} className="flex-overflow">
-                <List
-                  id={commentListId}
-                  height={height}
-                  width={width}
-                  rowCount={this.state.data.length}
-                  rowHeight={21}
-                  rowRenderer={this.renderRow}
-                  scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
-                  tabIndex={null}
-                  ref={listEl => {
-                    this.listRef = listEl;
-                  }}
-                />
-              </div>
-            )}
-          </AutoSizer>
-        </div>
-      </div>
-    );
+    // // If the activeNode has a comment, scroll to it,
+    // // otherwise scroll to the activeTree
+    // const scrollIndex = _.findIndex(
+    //   this.state.data,
+    //   activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
+    // );
+    // return (
+    //   <div className="flex-column padded-tab-content" style={{ height: "inherit" }}>
+    //     {this.renderMarkdownModal()}
+    //     <InputGroup compact>
+    //       <AdvancedSearchPopover
+    //         onSelect={comment => this.props.setActiveNode(comment.nodeId)}
+    //         data={_.flatMap(this.props.skeletonTracing.trees, tree => tree.comments)}
+    //         searchKey="content"
+    //         targetId={commentListId}
+    //       >
+    //         <ButtonComponent icon="search" title="Search through comments" />
+    //       </AdvancedSearchPopover>
+    //       <ButtonComponent
+    //         title="Jump to previous comment"
+    //         onClick={this.previousComment}
+    //         icon="arrow-left"
+    //       />
+    //       <InputComponent
+    //         value={activeCommentContent}
+    //         disabled={activeNodeMaybe.isNothing}
+    //         onChange={evt => this.handleChangeInput(evt, true)}
+    //         onPressEnter={evt => evt.target.blur()}
+    //         placeholder="Add comment"
+    //         style={{ width: "50%" }}
+    //       />
+    //       <ButtonComponent
+    //         onClick={() => this.setMarkdownModalVisibility(true)}
+    //         disabled={activeNodeMaybe.isNothing}
+    //         type={isMultilineComment ? "primary" : "button"}
+    //         icon="edit"
+    //         title="Open dialog to edit comment in multi-line mode"
+    //       />
+    //       <ButtonComponent
+    //         title="Jump to next comment"
+    //         onClick={this.nextComment}
+    //         icon="arrow-right"
+    //       />
+    //       <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
+    //         <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
+    //           {this.renderSortIcon()}
+    //         </ButtonComponent>
+    //       </Dropdown>
+    //       <ButtonComponent
+    //         onClick={this.toggleExpandForAllTrees}
+    //         icon="shrink"
+    //         title="Collapse or expand groups"
+    //       />
+    //     </InputGroup>
+    //     <div style={{ flex: "1 1 auto", marginTop: 20, listStyle: "none" }}>
+    //       <AutoSizer>
+    //         {({ height, width }) => (
+    //           <div style={{ height, width }} className="flex-overflow">
+    //             <List
+    //               id={commentListId}
+    //               height={height}
+    //               width={width}
+    //               rowCount={this.state.data.length}
+    //               rowHeight={21}
+    //               rowRenderer={this.renderRow}
+    //               scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
+    //               tabIndex={null}
+    //               ref={listEl => {
+    //                 this.listRef = listEl;
+    //               }}
+    //             />
+    //           </div>
+    //         )}
+    //       </AutoSizer>
+    //     </div>
+    //   </div>
+    // );
   }
 }
 

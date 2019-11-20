@@ -123,33 +123,33 @@ jobs:
           name: Build webknossos-tracingstore docker image
           command: docker-compose build --pull webknossos-tracingstore
 
-      - run:
-          name: Lint frontend code
-          command: |
-            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
-      - run:
-          name: Run frontend tests
-          command: |
-            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
-      - run:
-          name: Lint backend code
-          command: |
-            .circleci/not-on-master.sh docker-compose run backend-lint-format
-      - run:
-          name: Run backend tests
-          command: |
-            .circleci/not-on-master.sh docker-compose run backend-tests
-      - run:
-          name: Run end-to-end tests
-          command: |
-            for i in {1..3}; do # retry
-              .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
-            done
-            (exit $s)
-      - run:
-          name: Validate frontend types with flow
-          command: |
-            .circleci/not-on-master.sh docker-compose run base yarn flow
+      # - run:
+      #     name: Lint frontend code
+      #     command: |
+      #       .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
+      # - run:
+      #     name: Run frontend tests
+      #     command: |
+      #       .circleci/not-on-master.sh docker-compose run base yarn test-verbose
+      # - run:
+      #     name: Lint backend code
+      #     command: |
+      #       .circleci/not-on-master.sh docker-compose run backend-lint-format
+      # - run:
+      #     name: Run backend tests
+      #     command: |
+      #       .circleci/not-on-master.sh docker-compose run backend-tests
+      # - run:
+      #     name: Run end-to-end tests
+      #     command: |
+      #       for i in {1..3}; do # retry
+      #         .circleci/not-on-master.sh docker-compose run e2e-tests && s=0 && break || s=$?
+      #       done
+      #       (exit $s)
+      # - run:
+      #     name: Validate frontend types with flow
+      #     command: |
+      #       .circleci/not-on-master.sh docker-compose run base yarn flow
       - run:
           name: Start webknossos
           background: true

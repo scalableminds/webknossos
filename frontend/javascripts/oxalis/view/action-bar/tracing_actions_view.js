@@ -13,7 +13,7 @@ import {
 import { copyAnnotationToUserAccount, downloadNml, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
@@ -217,6 +217,16 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleDisableSaving = () => {
+    Modal.confirm({
+      title: messages["annotation.disable_saving"],
+      content: messages["annotation.disable_saving.content"],
+      onOk: () => {
+        Store.dispatch(disableSavingAction());
+      },
+    });
+  };
+
   handleShareOpen = () => {
     this.setState({ isShareModalOpen: true });
   };
@@ -283,7 +293,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           ) : (
             <Tooltip
               placement="bottom"
-              title="This tracing was opened in sandbox mode. You can edit it, but changes cannot be saved. Log in to save tracings."
+              title="This tracing was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
               key="sandbox-tooltip"
             >
               <Button disabled type="primary" icon="code-sandbox">
@@ -322,6 +332,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         </Menu.Item>,
       );
     }
+
     if (restrictions.allowDownload) {
       elements.push(
         <Menu.Item key="download-button" onClick={this.handleDownload}>
@@ -389,6 +400,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     );
 
     elements.push(this.props.layoutMenu);
+
+    if (restrictions.allowSave && !this.props.task) {
+      elements.push(
+        <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
+          <Icon type="stop-o" />
+          Disable saving
+        </Menu.Item>,
+      );
+    }
 
     const menu = <Menu>{elements}</Menu>;
 

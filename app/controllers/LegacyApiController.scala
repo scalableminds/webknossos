@@ -108,13 +108,14 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     val oldRequest = request.request
     val newRequest =
       if (request.body.as[JsObject].keys.contains("isPublic"))
-        request.copy(request = oldRequest.withBody(Json.toJson(insertVibilityInJsObject(oldRequest.body.as[JsObject]))))
+        request.copy(
+          request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
       else request
 
     annotationController.editAnnotation(typ, id)(newRequest)
   }
 
-  private def insertVibilityInJsObject(jsObject: JsObject) = {
+  private def insertVisibilityInJsObject(jsObject: JsObject) = {
     val isPublic = (jsObject \ "isPublic").as[Boolean]
     val newJson = jsObject + ("visibility" -> Json.toJson(if (isPublic) "Public" else "Internal"))
     newJson - "isPublic"

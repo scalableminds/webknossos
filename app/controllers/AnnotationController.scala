@@ -23,6 +23,9 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
+object CreateExplorationalParameters { implicit val jsonFormat = Json.format[CreateExplorationalParameters] }
+
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     taskDAO: TaskDAO,
@@ -130,9 +133,6 @@ class AnnotationController @Inject()(
       JsonOk(json, Messages("annotation.reopened"))
     }
   }
-
-  case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
-  object CreateExplorationalParameters { implicit val jsonFormat = Json.format[CreateExplorationalParameters] }
 
   def createExplorational(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>

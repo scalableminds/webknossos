@@ -5,6 +5,7 @@
 
 import { createStore, applyMiddleware, type Dispatch } from "redux";
 import createSagaMiddleware from "redux-saga";
+import { enableBatching } from "redux-batched-actions";
 
 import type {
   APIAllowedMode,
@@ -430,7 +431,7 @@ const combinedReducers = reduceReducers(
 );
 
 const store = createStore<OxalisState, Action, Dispatch<*>>(
-  combinedReducers,
+  enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
 );

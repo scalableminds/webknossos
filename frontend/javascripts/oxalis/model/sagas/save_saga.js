@@ -278,7 +278,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   while (true) {
     if (tracingType === "skeleton") {
-      yield* take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "UNDO", "REDO"]);
+      yield* take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "SET_TRACING"]);
     } else {
       yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }

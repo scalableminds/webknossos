@@ -7,21 +7,40 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.11.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...HEAD)
 
 ### Added
-- Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
-- Added an API to set a tree active by name. [#4317](https://github.com/scalableminds/webknossos/pull/4317)
+-
 
 ### Changed
 -
 
 ### Fixed
-- Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
-- Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
+-
 
 ### Removed
 -
+
+
+## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25
+[Commits](https://github.com/scalableminds/webknossos/compare/19.11.0...19.12.0)
+
+### Highlights
+- Added possibility to disable saving in an explorative annotation. This feature can save a lot of resources when dealing with very large NMLs which don't need to be persisted. [#4321](https://github.com/scalableminds/webknossos/pull/4321)
+- Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
+- Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
+
+### Added
+- Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
+- Added an API to set a tree active by name. [#4317](https://github.com/scalableminds/webknossos/pull/4317)
+- Added possibility to disable saving in an explorative annotation. This feature can save a lot of resources when dealing with very large NMLs which don't need to be persisted. [#4321](https://github.com/scalableminds/webknossos/pull/4321)
+
+### Changed
+- Some user actions, like deleting a group with all subtrees, resulted in lots of entries in the undo stack (one for each deleted tree). Those actions are now handled as a single atomic change and can be undone with a single undo invocation. [#4312](https://github.com/scalableminds/webknossos/pull/4312)
+
+### Fixed
+- Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
+- Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
 
 
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28

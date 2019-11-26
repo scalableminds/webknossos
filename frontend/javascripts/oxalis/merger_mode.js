@@ -144,12 +144,15 @@ function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerM
 
 /* Overwrite the "deleteActiveTree" method in such a way that all segment changes back its color as soon as all
    nodes are deleted from it. */
-function deleteActiveTreeOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  const activeTreeId = api.tracing.getActiveTreeId();
-  if (activeTreeId == null) {
+function deleteTree(store, action, mergerModeState: MergerModeState) {
+  let { treeId } = action;
+  if (treeId == null) {
+    treeId = api.tracing.getActiveTreeId();
+  }
+  if (treeId == null) {
     return;
   }
-  const deletedTree = api.tracing.getAllTrees()[activeTreeId];
+  const deletedTree = api.tracing.getAllTrees()[treeId];
   let didMappingChange = false;
   for (const nodeId of deletedTree.nodes.keys()) {
     didMappingChange = onNodeDeleted(mergerModeState, nodeId) || didMappingChange;
@@ -157,6 +160,19 @@ function deleteActiveTreeOverwrite(store, call, action, mergerModeState: MergerM
   if (didMappingChange) {
     api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
   }
+}
+
+// Overwrite deleting multiple trees as part of a batched action
+function deleteTreesBatchedOverwrite(store, call, action, mergerModeState: MergerModeState) {
+  for (const subAction of action.payload) {
+    if (subAction.type === "DELETE_TREE") deleteTree(store, subAction, mergerModeState);
+  }
+  call(action);
+}
+
+// Overwrite deleting a single tree
+function deleteTreeOverwrite(store, call, action, mergerModeState: MergerModeState) {
+  deleteTree(store, action, mergerModeState);
   call(action);
 }
 
@@ -280,7 +296,12 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
   );
   unregisterOverwrites.push(
     api.utils.registerOverwrite("DELETE_TREE", (store, next, originalAction) =>
-      deleteActiveTreeOverwrite(store, next, originalAction, mergerModeState),
+      deleteTreeOverwrite(store, next, originalAction, mergerModeState),
+    ),
+  );
+  unregisterOverwrites.push(
+    api.utils.registerOverwrite("DELETE_GROUP_AND_TREES", (store, next, originalAction) =>
+      deleteTreesBatchedOverwrite(store, next, originalAction, mergerModeState),
     ),
   );
   // Register the additional key handlers

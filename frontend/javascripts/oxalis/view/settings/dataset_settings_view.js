@@ -8,6 +8,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
+import { V3 } from "libs/mjs";
 
 import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
@@ -20,7 +21,11 @@ import {
 import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
-import { hasSegmentation, getElementClass } from "oxalis/model/accessors/dataset_accessor";
+import {
+  hasSegmentation,
+  getElementClass,
+  getLayerBoundaries,
+} from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
@@ -307,7 +312,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       layerName,
     );
     if (!position || !resolution) {
-      Toast.warning(`Couldn't find data within layer "${layerName}."`);
+      const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
+      const centerPosition = V3.add(lowerBoundary, upperBoundary).map(el => el / 2);
+
+      Toast.warning(
+        `Couldn't find data within layer "${layerName}." Jumping to the center of the layer's bounding box.`,
+      );
+      this.props.onSetPosition(centerPosition);
       return;
     }
 

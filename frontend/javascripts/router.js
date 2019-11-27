@@ -364,6 +364,12 @@ class ReactRouter extends React.Component<Props> {
                 component={ScriptListView}
                 exact
               />
+              <Route
+                path="/help/keyboardshortcuts"
+                render={() => (
+                  <Redirect to="https://docs.webknossos.org/reference/keyboard_shortcuts" />
+                )}
+              />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"

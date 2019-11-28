@@ -175,11 +175,24 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       case _ => Fox.failure("Access denied.")
     }
 
+  def accessQueryFromAccessQ(accessQ: ObjectId => String)(implicit ctx: DBAccessContext): Fox[String] =
+    if (ctx.globalAccess) Fox.successful("true")
+    else {
+      for {
+        userIdBox <- userIdFromCtx.futureBox
+      } yield {
+        userIdBox match {
+          case Full(userId) => "(" + accessQ(userId) + ")"
+          case _            => "(false)"
+        }
+      }
+    }
+
   private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] =
     ctx.data match {
       case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
       case Some(userSharingTokenContainer: UserSharingTokenContainer) =>
-        userSharingTokenContainer.sharingToken.map(sanitize(_))
+        userSharingTokenContainer.sharingToken.map(sanitize)
       case _ => None
     }
 

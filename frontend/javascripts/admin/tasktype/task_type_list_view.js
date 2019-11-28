@@ -184,15 +184,16 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 width={200}
                 render={(settings, taskType) =>
                   [
-                    taskType.tracingType === "skeleton" ? (
+                    taskType.tracingType === "skeleton" || taskType.tracingType === "hybrid" ? (
                       <Tag color="green" key="tracingType">
                         skeleton
                       </Tag>
-                    ) : (
+                    ) : null,
+                    taskType.tracingType === "volume" || taskType.tracingType === "hybrid" ? (
                       <Tag color="orange" key="tracingType">
                         volume
                       </Tag>
-                    ),
+                    ) : null,
                   ].concat(
                     settings.allowedModes.map(mode => (
                       <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>

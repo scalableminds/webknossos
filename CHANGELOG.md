@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
 - Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
+- Fixed permissions to all task lists, so only administrable tasks can get accessed. [#4331](https://github.com/scalableminds/webknossos/pull/4331)
 
 ### Removed
 -

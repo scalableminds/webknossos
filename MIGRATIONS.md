@@ -10,6 +10,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 -
 
+## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25
+No migrations necessary.
+
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
 ### Postgres Evolutions:
 - [046-fix-missing-voxel-type.sql](conf/evolutions/046-fix-missing-voxel-type.sql)

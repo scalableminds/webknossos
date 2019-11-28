@@ -407,7 +407,6 @@ export class InputMouse {
   }
 
   mouseDown = (event: MouseEvent): void => {
-    event.preventDefault();
     isDragging = true;
     this.lastPosition = this.getRelativeMousePosition(event);
 

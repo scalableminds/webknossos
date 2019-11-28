@@ -229,6 +229,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   <Radio value="volume" disabled={isEditingMode}>
                     Volume
                   </Radio>
+                  <Radio value="hybrid" disabled={isEditingMode}>
+                    Hybrid
+                  </Radio>
                 </RadioGroup>,
               )}
             </FormItem>
@@ -265,7 +268,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             <div
               style={{
                 display:
-                  this.props.form.getFieldValue("tracingType") === "skeleton" ? "block" : "none",
+                  this.props.form.getFieldValue("tracingType") === "volume" ? "none" : "block",
               }}
             >
               <FormItem label="Settings">

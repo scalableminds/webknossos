@@ -39,6 +39,15 @@ You can also add custom tags to annotations in order to organize them.
 ![Manage and resume Explorative Annotations](./images/dashboard_annotations.png)
 ![View archived Explorative Annotations](./images/dashboard_archive.png)
 
+
+## Shared Annotations
+This screen shows all skeleton or volume annotations that were shared with one of your teams.
+You can directly view the linked annotations and copy them to your account.
+
+Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing)
+
+![View Shared Annotations](./images/shared_annotations_tab.png)
+
 ## Dataset Gallery
 
 This screen is the same gallery that is used on the public webKnossos screen.

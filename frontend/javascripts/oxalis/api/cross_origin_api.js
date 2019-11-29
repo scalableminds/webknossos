@@ -56,6 +56,13 @@ const CrossOriginApi = () => {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  useEffect(() => {
+    if (window.webknossos && window.parent) {
+      window.webknossos.apiReady().then(() => {
+        window.parent.postMessage({ message: "api ready" }, "*");
+      });
+    }
+  }, [window.webknossos]);
 
   return null;
 };

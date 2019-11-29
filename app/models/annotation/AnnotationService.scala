@@ -355,7 +355,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
       _ <- bool2Fox(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
-      _ <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationBase = Annotation(ObjectId.generate,
                                   dataSetId,

@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...HEAD)
 
 ### Added
--
+- Added new viewing permission for annotations: public, internal, private
 
 ### Changed
 -

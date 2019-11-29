@@ -18,10 +18,12 @@ GET      /v1/annotations/:typ/:id/info                                        co
 PATCH    /v1/annotations/:typ/:id/makeHybrid                                  controllers.LegacyApiController.annotationMakeHybrid(typ: String, id: String)
 POST     /v1/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMerge(typ: String, id: String, mergedTyp: String, mergedId: String)
 POST     /v1/datasets/:organizationName/:dataSetName/createExplorational      controllers.LegacyApiController.annotationCreateExplorational(organizationName: String, dataSetName: String)
+GET      /v1/user/annotations                                                 controllers.LegacyApiController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v1/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v1/users/:id/annotations                                            controllers.LegacyApiController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET      /v1/users/:id/tasks                                                  controllers.LegacyApiController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 POST     /v1/user/tasks/request                                               controllers.LegacyApiController.taskRequest
 GET      /v1/tasks/:id/annotations                                            controllers.LegacyApiController.annotationsForTask(id: String)
-GET      /v1/user/tasks                                                       controllers.LegacyApiController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET      /v1/users/:id/tasks                                                  controllers.LegacyApiController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 
 ->       /v1/                                                                 webknossos.latest.Routes

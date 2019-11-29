@@ -8,7 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 
 ### Postgres Evolutions:
--
+- [050-add-annotation-visibility-enum.sql](conf/evolutions/050-add-annotation-visibility-enum.sql)
 
 ## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25
 No migrations necessary.

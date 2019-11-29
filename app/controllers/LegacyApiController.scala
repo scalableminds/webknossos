@@ -73,6 +73,25 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       } yield replaceVisibilityInResultJson(result)
     }
 
+  def annotations(isFinished: Option[Boolean],
+                  limit: Option[Int],
+                  pageNumber: Option[Int],
+                  includeTotalCount: Option[Boolean]) = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
+    } yield replaceVisibilityInResultJson(result)
+  }
+
+  def userAnnotations(id: String,
+                      isFinished: Option[Boolean],
+                      limit: Option[Int],
+                      pageNumber: Option[Int],
+                      includeTotalCount: Option[Boolean]) = sil.SecuredAction.async { implicit request =>
+    for {
+      result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
+    } yield replaceVisibilityInResultJson(result)
+  }
+
   def taskRequest = sil.SecuredAction.async { implicit request =>
     for {
       result <- taskController.request()(request)

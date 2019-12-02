@@ -186,7 +186,11 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
         </a>
       </Menu.Item>
       <Menu.Item key="keyboard-shortcuts">
-        <a target="_blank" href="/help/keyboardshortcuts" rel="noopener noreferrer">
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+          rel="noopener noreferrer"
+        >
           Keyboard Shortcuts
         </a>
       </Menu.Item>

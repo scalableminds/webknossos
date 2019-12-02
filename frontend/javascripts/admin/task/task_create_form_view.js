@@ -1,4 +1,5 @@
 // @flow
+import { type RouterHistory, withRouter } from "react-router-dom";
 import {
   Row,
   Col,
@@ -11,9 +12,9 @@ import {
   Modal,
   Icon,
   InputNumber,
+  Input,
   Spin,
 } from "antd";
-import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
@@ -23,21 +24,26 @@ import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector6 } from "oxalis/constants";
 import {
+  createTaskFromNML,
+  createTasks,
   getActiveDatasets,
+  getAnnotationInformation,
   getProjects,
   getScripts,
-  getTaskTypes,
   getTask,
-  createTasks,
-  createTaskFromNML,
+  getTaskTypes,
   updateTask,
 } from "admin/admin_rest_api";
+import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
+import Enum from "Enumjs";
 
 const FormItem = Form.Item;
 const { Option } = Select;
 const RadioGroup = Radio.Group;
+
+const fullWidth = { width: "100%" };
 
 type Props = {
   form: Object,
@@ -45,12 +51,19 @@ type Props = {
   history: RouterHistory,
 };
 
+export const SpecificationEnum = Enum.make({
+  Manual: "Manual",
+  Nml: "Nml",
+  BaseAnnotation: "BaseAnnotation",
+});
+type Specification = $Keys<typeof SpecificationEnum>;
+
 type State = {
   datasets: Array<APIDataset>,
   taskTypes: Array<APITaskType>,
   projects: Array<APIProject>,
   scripts: Array<APIScript>,
-  isNMLSpecification: boolean,
+  specificationType: Specification,
   isUploading: boolean,
 };
 
@@ -103,7 +116,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     taskTypes: [],
     projects: [],
     scripts: [],
-    isNMLSpecification: false,
+    specificationType: SpecificationEnum.Manual,
     isUploading: false,
   };
 
@@ -166,7 +179,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           // or create a new one either from the form values or with an NML file
           let response;
           try {
-            if (this.state.isNMLSpecification) {
+            if (this.state.specificationType === SpecificationEnum.Nml) {
               // Workaround: Antd replaces file objects in the formValues with a wrapper file
               // The original file object is contained in the originFileObj property
               // This is most likely not intentional and may change in a future Antd version
@@ -175,6 +188,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               );
               response = await createTaskFromNML(formValues);
             } else {
+              if (this.state.specificationType !== SpecificationEnum.BaseAnnotation) {
+                // Ensure that the base annotation field is null, if the specification mode
+                // does not include that field.
+                formValues.baseAnnotation = null;
+              }
               response = await createTasks([formValues]);
             }
             handleTaskCreationResponse(response);
@@ -205,17 +223,121 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
   onChangeTaskType = (taskTypeId: string) => {
     if (this.isVolumeTaskType(taskTypeId)) {
-      this.setState({ isNMLSpecification: false });
+      this.setState({ specificationType: SpecificationEnum.Manual });
     }
   };
+
+  renderSpecification() {
+    const { getFieldDecorator } = this.props.form;
+    const isEditingMode = this.props.taskId != null;
+
+    if (this.state.specificationType === SpecificationEnum.Nml) {
+      return (
+        <FormItem label="NML Files" hasFeedback>
+          {getFieldDecorator("nmlFiles", {
+            rules: [{ required: true }],
+            valuePropName: "fileList",
+            getValueFromEvent: this.normFile,
+          })(
+            <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
+              <p className="ant-upload-drag-icon">
+                <Icon type="inbox" />
+              </p>
+              <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
+              <p>
+                Every nml creates a new task. You can upload multiple NML files or zipped
+                collections of nml files (.zip).
+              </p>
+            </Upload.Dragger>,
+          )}
+        </FormItem>
+      );
+    } else {
+      return (
+        <div>
+          {this.state.specificationType === SpecificationEnum.BaseAnnotation ? (
+            <FormItem label="Base Annotation ID" hasFeedback>
+              {getFieldDecorator("baseAnnotation.baseId", {
+                rules: [
+                  { required: true },
+                  {
+                    validator: async (rule, value, callback) => {
+                      const response =
+                        (await tryToAwaitPromise(
+                          getAnnotationInformation(value, "Task", {
+                            showErrorToast: false,
+                          }),
+                        )) ||
+                        (await tryToAwaitPromise(
+                          getAnnotationInformation(value, "Explorational", {
+                            showErrorToast: false,
+                          }),
+                        ));
+
+                      if (response != null && response.dataSetName != null) {
+                        this.props.form.setFieldsValue({ dataSet: response.dataSetName });
+                        return callback();
+                      } else {
+                        this.props.form.setFieldsValue({ dataSet: null });
+                        return callback("Invalid base annotation id.");
+                      }
+                    },
+                  },
+                ],
+              })(<Input style={fullWidth} disabled={isEditingMode} />)}
+            </FormItem>
+          ) : null}
+
+          <FormItem label="Dataset" hasFeedback>
+            {getFieldDecorator("dataSet", {
+              rules: [{ required: true }],
+            })(
+              <Select
+                showSearch
+                placeholder={
+                  this.state.specificationType === SpecificationEnum.BaseAnnotation
+                    ? "The dataset is inferred from the base annotation."
+                    : "Select a Dataset"
+                }
+                optionFilterProp="children"
+                style={fullWidth}
+                autoFocus
+                disabled={
+                  isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
+                }
+              >
+                {this.state.datasets.map((dataset: APIDataset) => (
+                  <Option key={dataset.name} value={dataset.name}>
+                    {dataset.name}
+                  </Option>
+                ))}
+              </Select>,
+            )}
+          </FormItem>
+
+          <FormItem label="Starting Position" hasFeedback>
+            {getFieldDecorator("editPosition", {
+              rules: [{ required: true }],
+              initialValue: [0, 0, 0],
+            })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
+          </FormItem>
+
+          <FormItem label="Starting Rotation" hasFeedback>
+            {getFieldDecorator("editRotation", {
+              rules: [{ required: true }],
+              initialValue: [0, 0, 0],
+            })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
+          </FormItem>
+        </div>
+      );
+    }
+  }
 
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
     const titleLabel = isEditingMode ? `Update Task ${this.props.taskId || ""}` : "Create Task";
     const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
-
-    const fullWidth = { width: "100%" };
 
     return (
       <div className="container" style={{ paddingTop: 20 }}>
@@ -325,78 +447,30 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               <FormItem label="Task Specification" hasFeedback>
                 <RadioGroup
-                  value={this.state.isNMLSpecification ? "nml" : "manual"}
+                  value={this.state.specificationType}
                   onChange={(evt: SyntheticInputEvent<*>) =>
-                    this.setState({ isNMLSpecification: evt.target.value === "nml" })
+                    this.setState({
+                      // $FlowFixMe Inference for enum.coalesce does not work properly anymore? Flow update might help
+                      specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
+                    })
                   }
-                  disabled={this.isVolumeTaskType()}
                 >
-                  <Radio value="manual" disabled={isEditingMode}>
-                    Manually Specify Starting Postion
+                  <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
+                    Manual Specification
                   </Radio>
-                  <Radio value="nml" disabled={isEditingMode}>
+                  <Radio
+                    value={SpecificationEnum.Nml}
+                    disabled={isEditingMode || this.isVolumeTaskType()}
+                  >
                     Upload NML File
+                  </Radio>
+                  <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
+                    Use Annotation ID as Base
                   </Radio>
                 </RadioGroup>
               </FormItem>
 
-              {this.state.isNMLSpecification ? (
-                <FormItem label="NML Files" hasFeedback>
-                  {getFieldDecorator("nmlFiles", {
-                    rules: [{ required: true }],
-                    valuePropName: "fileList",
-                    getValueFromEvent: this.normFile,
-                  })(
-                    <Upload.Dragger accept=".nml,.zip" name="nmlFiles" beforeUpload={() => false}>
-                      <p className="ant-upload-drag-icon">
-                        <Icon type="inbox" />
-                      </p>
-                      <p className="ant-upload-text">Click or Drag Files to This Area to Upload</p>
-                      <p>
-                        Every nml creates a new task. You can upload multiple NML files or zipped
-                        collections of nml files (.zip).
-                      </p>
-                    </Upload.Dragger>,
-                  )}
-                </FormItem>
-              ) : (
-                <div>
-                  <FormItem label="Dataset" hasFeedback>
-                    {getFieldDecorator("dataSet", {
-                      rules: [{ required: true }],
-                    })(
-                      <Select
-                        showSearch
-                        placeholder="Select a Dataset"
-                        optionFilterProp="children"
-                        style={fullWidth}
-                        autoFocus
-                        disabled={isEditingMode}
-                      >
-                        {this.state.datasets.map((dataset: APIDataset) => (
-                          <Option key={dataset.name} value={dataset.name}>
-                            {dataset.name}
-                          </Option>
-                        ))}
-                      </Select>,
-                    )}
-                  </FormItem>
-
-                  <FormItem label="Starting Position" hasFeedback>
-                    {getFieldDecorator("editPosition", {
-                      rules: [{ required: true }],
-                      initialValue: [0, 0, 0],
-                    })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
-                  </FormItem>
-
-                  <FormItem label="Starting Rotation" hasFeedback>
-                    {getFieldDecorator("editRotation", {
-                      rules: [{ required: true }],
-                      initialValue: [0, 0, 0],
-                    })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
-                  </FormItem>
-                </div>
-              )}
+              {this.renderSpecification()}
 
               <FormItem>
                 <Button type="primary" htmlType="submit">

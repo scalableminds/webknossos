@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Added support for importing tracings in a binary protobuf format via drag and drop. [#4320](https://github.com/scalableminds/webknossos/pull/4320)
 - Added an API to set a tree active by name. [#4317](https://github.com/scalableminds/webknossos/pull/4317)
+- Added scale to y-axis to histograms. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
 
 ### Changed
 -

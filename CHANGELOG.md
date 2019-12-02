@@ -37,6 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Some user actions, like deleting a group with all subtrees, resulted in lots of entries in the undo stack (one for each deleted tree). Those actions are now handled as a single atomic change and can be undone with a single undo invocation. [#4312](https://github.com/scalableminds/webknossos/pull/4312)
+- The "Find Data" feature will jump to the center of the layer's bounding box, if no data could be found. The "Find Data" feature can be found next to each layer's name in the dataset settings tab. [#4346](https://github.com/scalableminds/webknossos/pull/4346)
 
 ### Fixed
 - Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)

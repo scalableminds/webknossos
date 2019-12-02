@@ -37,10 +37,12 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Some user actions, like deleting a group with all subtrees, resulted in lots of entries in the undo stack (one for each deleted tree). Those actions are now handled as a single atomic change and can be undone with a single undo invocation. [#4312](https://github.com/scalableminds/webknossos/pull/4312)
+- The "Find Data" feature will jump to the center of the layer's bounding box, if no data could be found. The "Find Data" feature can be found next to each layer's name in the dataset settings tab. [#4346](https://github.com/scalableminds/webknossos/pull/4346)
 
 ### Fixed
 - Fixed broken sorting in the dataset table of the dashboard. [#4318](https://github.com/scalableminds/webknossos/pull/4318)
 - Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
+- Fixed the name of downloaded annotation zips. [#4330](https://github.com/scalableminds/webknossos/pull/4330)
 
 
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
@@ -88,6 +90,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 
 ### Added
+- Added the possibility to have an existing annotation as a base for a new task, thus making it also possible to have a base tracing for volume tasks. [#4198](https://github.com/scalableminds/webknossos/pull/4198)
 - Indicating active nml downloads with a loading icon. [#4228](https://github.com/scalableminds/webknossos/pull/4228)
 - Added possibility for users to see their own time statistics. [#4220](https://github.com/scalableminds/webknossos/pull/4220)
 - Added merger mode as a setting for task types. Enabling this setting will automatically activate merger mode in tasks. [#4269](https://github.com/scalableminds/webknossos/pull/4269)

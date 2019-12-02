@@ -11,6 +11,7 @@ import {
   pushAnnotationAsync,
   saveTracingAsync,
   collectUndoStates,
+  toggleErrorHighlighting,
 } from "oxalis/model/sagas/save_saga";
 import {
   warnAboutSegmentationOpacity,
@@ -55,6 +56,7 @@ function* restartableSaga(): Saga<void> {
   } catch (err) {
     console.error(err);
     ErrorHandling.notify(err, {});
+    toggleErrorHighlighting(true);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.

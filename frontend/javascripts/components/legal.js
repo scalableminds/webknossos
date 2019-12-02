@@ -172,16 +172,6 @@ export class Privacy extends LegalBase {
                     and improve the service. Read more below.
                   </li>
                   <li>
-                    New Relic is a systems monitoring and diagnostics tool. Server requests and
-                    internal systems diagnostics are logged in NewRelic. As part of this logging,
-                    personal data including IP addresses are transmitted to NewRelic. Diagnostics
-                    are used for resolving errors and monitoring unusual resource consumption and
-                    therefore to ensure uninterrupted service. After 8 days only aggregated data is
-                    stored, thus anonymizing any personal data. NewRelic is operated by New Relic,
-                    Inc., 188 Spear Street San Francisco, CA 94105, USA. The legal basis for using
-                    NewRelic is a legitimate interest to provide and improve the service.
-                  </li>
-                  <li>
                     Airbrake is an error reporting tool. System errors that occur in the application
                     are logged in Airbrake. When an error occurs the IP address of the user, as well
                     as the user account information of registered users, are transmitted to

@@ -69,6 +69,17 @@ function getMaximumTreeId(trees: TreeMap): number {
   return _.max(_.map(trees, "treeId"));
 }
 
+function getNextTreeWithHigherId(treeId: number, trees: TreeMap): Tree {
+  let foundTree: ?Tree = null;
+  const upperLimit = getMaximumTreeId(trees);
+  for (let currentTreeId = treeId + 1; !foundTree && currentTreeId <= upperLimit; ++currentTreeId) {
+    if (trees[currentTreeId] != null) {
+      foundTree = trees[currentTreeId];
+    }
+  }
+  return foundTree;
+}
+
 export function* mapGroups<R>(
   groups: Array<TreeGroup>,
   callback: TreeGroup => R,
@@ -418,8 +429,7 @@ export function deleteBranchPoint(
   if (branchPointsAllowed && allowUpdate && hasBranchPoints) {
     // Find most recent branchpoint across all trees
     const treesWithBranchPoints = _.values(trees).filter(tree => !_.isEmpty(tree.branchPoints));
-    const treeId = _.maxBy(treesWithBranchPoints, tree => _.last(tree.branchPoints).timestamp)
-      .treeId;
+    const { treeId } = _.maxBy(treesWithBranchPoints, tree => _.last(tree.branchPoints).timestamp);
     const branchPoint = _.last(trees[treeId].branchPoints);
 
     if (branchPoint) {
@@ -587,11 +597,15 @@ export function deleteTree(
         newActiveTreeId = newTree.treeId;
         newActiveNodeId = null;
       } else {
-        // just set the last tree to be the active one
-        const maxTreeId = getMaximumTreeId(newTrees);
-        newActiveTreeId = maxTreeId;
+        // Setting the tree active whose id is the next hightest compared to the id of the deleted tree.
+        const newTree = getNextTreeWithHigherId(tree.treeId, newTrees);
+        if (newTree) {
+          newActiveTreeId = newTree.treeId;
+        } else {
+          newActiveTreeId = getMaximumTreeId(newTrees);
+        }
         // Object.keys returns strings and the newActiveNodeId should be an integer
-        newActiveNodeId = +_.first(Array.from(newTrees[maxTreeId].nodes.keys())) || null;
+        newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
       }
       const newMaxNodeId = getMaximumNodeId(newTrees);
 
@@ -668,7 +682,7 @@ export function createComment(
 
   if (allowUpdate) {
     // Gather all comments other than the activeNode's comments
-    const comments = tree.comments;
+    const { comments } = tree;
     const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     const newComment: CommentType = {
@@ -692,7 +706,7 @@ export function deleteComment(
   const { allowUpdate } = restrictions;
 
   if (allowUpdate) {
-    const comments = tree.comments;
+    const { comments } = tree;
     const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     return Maybe.Just(commentsWithoutActiveNodeComment);

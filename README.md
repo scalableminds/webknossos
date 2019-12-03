@@ -13,6 +13,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
 [![](https://img.shields.io/github/license/scalableminds/webknossos.svg?colorB=success)](https://github.com/scalableminds/webknossos/blob/master/LICENSE)
 [![Twitter](https://img.shields.io/twitter/url/http/webknossos.svg?style=social)](https://twitter.com/webknossos)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fscalableminds%2Fwebknossos.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fscalableminds%2Fwebknossos?ref=badge_shield)
 
 ## Demo
 [https://webknossos.org/](https://webknossos.org/)
@@ -191,3 +192,6 @@ webKnossos was inspired by [KNOSSOS](https://knossos.app).
 
 # License
 AGPLv3
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fscalableminds%2Fwebknossos.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fscalableminds%2Fwebknossos?ref=badge_large)

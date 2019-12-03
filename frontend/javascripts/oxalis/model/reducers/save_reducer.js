@@ -13,6 +13,7 @@ import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
+import { updateKey2 } from "oxalis/model/helpers/deep_update";
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -113,6 +114,16 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_VERSION_NUMBER": {
       return update(state, {
         tracing: { [action.tracingType]: { version: { $set: action.version } } },
+      });
+    }
+
+    case "DISABLE_SAVING": {
+      if (state.task != null) {
+        // Don't disable saving in a task, even when this action was dispatched somehow.
+        return state;
+      }
+      return updateKey2(state, "tracing", "restrictions", {
+        allowSave: false,
       });
     }
 

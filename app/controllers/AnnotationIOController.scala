@@ -9,7 +9,7 @@ import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
@@ -301,10 +301,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       project <- projectDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team)) ?~> "notAllowed" ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectIdValidated)
-      zip <- annotationService.zipAnnotations(annotations, project.name + "_nmls.zip", skipVolumeData)
+      zip <- annotationService.zipAnnotations(annotations, project.name, skipVolumeData)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false)
+      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(project.name + "_nmls.zip"))
     }
 
   private def downloadTask(taskId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
@@ -312,7 +312,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     def createTaskZip(task: Task): Fox[TemporaryFile] = annotationService.annotationsFor(task._id).flatMap {
       annotations =>
         val finished = annotations.filter(_.state == Finished)
-        annotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip", skipVolumeData)
+        annotationService.zipAnnotations(finished, task._id.toString, skipVolumeData)
     }
 
     for {
@@ -322,7 +322,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       zip <- createTaskZip(task)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false)
+      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(task._id.toString + "_nmls.zip"))
     }
   }
 
@@ -336,17 +336,17 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           .map(_.flatten)
           .toFox
         finishedAnnotations = annotations.filter(_.state == Finished)
-        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary + "_nmls.zip", skipVolumeData)
+        zip <- annotationService.zipAnnotations(finishedAnnotations, taskType.summary, skipVolumeData)
       } yield zip
 
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
-      tasktype <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, tasktype._team)) ?~> "notAllowed" ~> FORBIDDEN
-      zip <- createTaskTypeZip(tasktype)
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+      zip <- createTaskTypeZip(taskType)
     } yield {
       val file = new File(zip.path.toString)
-      Ok.sendFile(file, inline = false)
+      Ok.sendFile(file, inline = false, fileName = _ => TextUtils.normalize(taskType.summary + "_nmls.zip"))
     }
   }
 }

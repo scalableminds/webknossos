@@ -175,6 +175,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
+  // Composited actions, only dispatched using `batchActions`
+  "DELETE_GROUP_AND_TREES",
 ];
 
 const noAction = (): NoAction => ({
@@ -481,19 +483,5 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   });
   // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
   // if the user confirms
-  return noAction();
-};
-
-export const deleteMultipleTreesAsUserAction = (treeIds: Array<number>): NoAction => {
-  const state = Store.getState();
-  const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  treeIds.forEach(id => {
-    const tree = skeletonTracing.trees[id];
-    if (state.task != null && tree.nodes.has(1)) {
-      confirmDeletingInitialNode(id);
-    } else {
-      Store.dispatch(deleteTreeAction(id));
-    }
-  });
   return noAction();
 };

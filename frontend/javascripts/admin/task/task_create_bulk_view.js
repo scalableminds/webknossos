@@ -12,7 +12,7 @@ import Messages from "messages";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
-const TextArea = Input.TextArea;
+const { TextArea } = Input;
 
 const NUM_TASKS_PER_BATCH = 100;
 
@@ -26,7 +26,7 @@ type State = {
   tasksProcessed: number,
 };
 
-export type NewTask = {
+export type NewTask = {|
   +boundingBox: ?BoundingBoxObject,
   +dataSet: string,
   +editPosition: Vector3,
@@ -42,7 +42,10 @@ export type NewTask = {
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFiles?: File,
-};
+  +baseAnnotation?: ?{
+    baseId: string,
+  },
+|};
 
 export type TaskCreationResponse = {
   status: number,
@@ -63,7 +66,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   }
 
   isValidTask(task: NewTask): boolean {
-    const boundingBox = task.boundingBox;
+    const { boundingBox } = task;
 
     if (
       !_.isString(task.neededExperience.domain) ||
@@ -101,10 +104,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   }
 
   splitToWords(string: string): Array<string> {
-    return string
-      .split(",")
-      .map(word => word.trim())
-      .filter(word => word !== "");
+    return string.split(",").map(word => word.trim());
   }
 
   parseText(bulkText: string): Array<NewTask> {
@@ -135,7 +135,13 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
-    const scriptId = words[19] || undefined;
+
+    // mapOptional takes care of treating empty strings as null
+    function mapOptional<U>(word, fn: string => U): ?U {
+      return word != null && word !== "" ? fn(word) : undefined;
+    }
+    const scriptId = mapOptional(words[19], a => a);
+    const baseAnnotation = mapOptional(words[20], word => ({ baseId: word }));
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -162,7 +168,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       },
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
-      isForAnonymous: false,
+      baseAnnotation,
     };
   }
 
@@ -265,7 +271,12 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
               experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
               <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
+              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>, baseAnnotationId]
+              <br />
+              If you want to define some (but not all) of the optional values, please list all
+              optional values and use an empty value for the ones you do not want to set (e.g.,
+              someValue,,someOtherValue if you want to omit the second value). If you do not want to
+              define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>
@@ -289,7 +300,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                 })(
                   <TextArea
                     className="input-monospace"
-                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
+                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                     autosize={{ minRows: 6 }}
                     style={{
                       fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',

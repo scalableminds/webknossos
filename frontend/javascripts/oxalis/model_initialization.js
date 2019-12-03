@@ -308,13 +308,14 @@ function initializeDataset(
   Store.dispatch(setDatasetAction(dataset));
 }
 
-function ensureDenseLayerResolutions(dataset: APIDataset) {
+export function ensureDenseLayerResolutions(dataset: APIDataset) {
+  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
   for (const layer of dataset.dataSource.dataLayers) {
-    layer.resolutions = convertToDenseResolution(layer.resolutions);
+    layer.resolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
   }
 }
 
-function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
   const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
   for (const layer of dataset.dataSource.dataLayers) {
     for (const resolution of layer.resolutions) {
@@ -325,7 +326,10 @@ function ensureMatchingLayerResolutions(dataset: APIDataset): void {
   }
 }
 
-function convertToDenseResolution(resolutions: Array<Vector3>) {
+export function convertToDenseResolution(
+  resolutions: Array<Vector3>,
+  fallbackDenseResolutions?: Array<Vector3>,
+): Array<Vector3> {
   // Each resolution entry can be characterized by it's greatest resolution dimension.
   // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
   // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
@@ -339,11 +343,13 @@ function convertToDenseResolution(resolutions: Array<Vector3>) {
   }
   const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
   const resolutionsLookUp = _.keyBy(resolutions, _.max);
+  const fallbackResolutionsLookUp = _.keyBy(fallbackDenseResolutions || [], _.max);
 
   return _.range(0, paddedResolutionCount).map(exp => {
     const resPower = 2 ** exp;
-    // If the resolution does not exist, use a fallback resolution
-    return resolutionsLookUp[resPower] || [resPower, resPower, resPower];
+    // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
+    const fallback = fallbackResolutionsLookUp[resPower] || [resPower, resPower, resPower];
+    return resolutionsLookUp[resPower] || fallback;
   });
 }
 

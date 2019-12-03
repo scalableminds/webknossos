@@ -245,6 +245,8 @@ export const APIAnnotationTypeEnum = Enum.make({
 
 export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
+export type TracingType = "skeleton" | "volume" | "hybrid";
+
 export type APITaskType = {
   +id: string,
   +summary: string,
@@ -253,10 +255,8 @@ export type APITaskType = {
   +teamName: string,
   +settings: APISettings,
   +recommendedConfiguration: ?RecommendedConfiguration,
-  +tracingType: "skeleton" | "volume",
+  +tracingType: TracingType,
 };
-
-export type TracingType = "skeleton" | "volume" | "hybrid";
 
 export type TaskStatus = { +open: number, +active: number, +finished: number };
 

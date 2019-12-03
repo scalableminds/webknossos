@@ -10282,6 +10282,11 @@ redent@^2.0.0:
     indent-string "^3.0.0"
     strip-indent "^2.0.0"
 
+redux-batched-actions@^0.4.1:
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/redux-batched-actions/-/redux-batched-actions-0.4.1.tgz#a8de8cef50a1db4f009d5222820c836515597e22"
+  integrity sha512-r6tLDyBP3U9cXNLEHs0n1mX5TQfmk6xE0Y9uinYZ5HOyAWDgIJxYqRRkU/bC6XrJ4nS7tasNbxaHJHVmf9UdkA==
+
 redux-mock-store@^1.2.2:
   version "1.5.3"
   resolved "https://registry.yarnpkg.com/redux-mock-store/-/redux-mock-store-1.5.3.tgz#1f10528949b7ce8056c2532624f7cafa98576c6d"

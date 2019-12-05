@@ -486,6 +486,25 @@ export function getCompactAnnotationsForUser(
   );
 }
 
+export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
+  return Request.receiveJSON("/api/annotations/shared");
+}
+
+export function getTeamsForSharedAnnotation(typ: string, id: string): Promise<Array<APITeam>> {
+  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`);
+}
+
+export function updateTeamsForSharedAnnotation(
+  typ: string,
+  id: string,
+  teamIds: Array<string>,
+): Promise<Array<APITeam>> {
+  return Request.sendJSONReceiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`, {
+    data: teamIds,
+    method: "PATCH",
+  });
+}
+
 export function reOpenAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,

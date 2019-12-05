@@ -1,22 +1,45 @@
 // @flow
-import { Alert, Divider, Radio, Modal, Input, Button, Row, Col } from "antd";
+import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
 
+<<<<<<< HEAD
 import type { APIDataset, APIAnnotationVisibility } from "admin/api_flow_types";
+||||||| merged common ancestors
+import type { APIDataset } from "admin/api_flow_types";
+=======
+import type { APIDataset, APIAnnotationType, APITeam } from "admin/api_flow_types";
+>>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
+<<<<<<< HEAD
 import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 import { getDatasetSharingToken } from "admin/admin_rest_api";
+||||||| merged common ancestors
+import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
+import { getDatasetSharingToken } from "admin/admin_rest_api";
+=======
+import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
+import {
+  getDatasetSharingToken,
+  getTeamsForSharedAnnotation,
+  updateTeamsForSharedAnnotation,
+} from "admin/admin_rest_api";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+>>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
 import Toast from "libs/toast";
 import window from "libs/window";
+import _ from "lodash";
+import messages from "messages";
 
 const RadioGroup = Radio.Group;
 
 type OwnProps = {|
   isVisible: boolean,
   onOk: () => void,
+  annotationType: APIAnnotationType,
+  annotationId: string,
 |};
 type StateProps = {|
   visibility: APIAnnotationVisibility,
@@ -29,6 +52,7 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   visibility: APIAnnotationVisibility,
   sharingToken: string,
+  sharedTeams: Array<APITeam>,
 };
 
 function Hint({ children, style }) {
@@ -50,6 +74,7 @@ class ShareModalView extends PureComponent<Props, State> {
   state = {
     visibility: this.props.visibility,
     sharingToken: "",
+    sharedTeams: [],
   };
 
   componentDidMount() {
@@ -65,7 +90,8 @@ class ShareModalView extends PureComponent<Props, State> {
   componentDidUpdate(prevProps: Props) {
     if (
       this.props.dataset.name !== prevProps.dataset.name ||
-      this.props.dataset.owningOrganization !== prevProps.dataset.owningOrganization
+      this.props.dataset.owningOrganization !== prevProps.dataset.owningOrganization ||
+      this.props.annotationId !== prevProps.annotationId
     ) {
       this.fetch();
     }
@@ -76,7 +102,11 @@ class ShareModalView extends PureComponent<Props, State> {
     const datasetId = { name, owningOrganization };
     try {
       const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
-      this.setState({ sharingToken });
+      const sharedTeams = await getTeamsForSharedAnnotation(
+        this.props.annotationType,
+        this.props.annotationId,
+      );
+      this.setState({ sharingToken, sharedTeams });
     } catch (error) {
       console.error(error);
     }
@@ -104,8 +134,23 @@ class ShareModalView extends PureComponent<Props, State> {
     this.setState({ visibility: ((event.target.value: any): APIAnnotationVisibility) });
   };
 
+<<<<<<< HEAD
   handleOk = () => {
     this.props.setAnnotationVisibility(this.state.visibility);
+||||||| merged common ancestors
+  handleOk = () => {
+    this.props.setAnnotationPublic(this.state.isPublic);
+=======
+  handleOk = async () => {
+    await updateTeamsForSharedAnnotation(
+      this.props.annotationType,
+      this.props.annotationId,
+      this.state.sharedTeams.map(team => team.id),
+    );
+    Toast.success(messages["annotation.shared_teams_edited"]);
+
+    this.props.setAnnotationPublic(this.state.isPublic);
+>>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
     this.props.onOk();
   };
 
@@ -208,6 +253,27 @@ class ShareModalView extends PureComponent<Props, State> {
                 Anyone with the link can see this tracing without having to log in.
               </Hint>
             </RadioGroup>
+          </Col>
+        </Row>
+        <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
+          <Icon type="share-alt" />
+          Team Sharing
+        </Divider>
+        <Row>
+          <Col span={6} style={{ lineHeight: "22px" }}>
+            Should this tracing appear in the sharing tab?
+          </Col>
+          <Col span={18}>
+            <TeamSelectionComponent
+              mode="multiple"
+              allowNonEditableTeams
+              value={this.state.sharedTeams}
+              onChange={value => this.setState({ sharedTeams: _.flatten([value]) })}
+            />
+            <Hint style={{ margin: "6px 12px" }}>
+              Choose the teams to share your tracing with. Members of these teams can see this
+              tracing in their shared annotations tab.
+            </Hint>
           </Col>
         </Row>
       </Modal>

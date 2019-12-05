@@ -349,6 +349,7 @@ export type APIAnnotationCompact = {
   +tags: Array<string>,
   +tracingTime: ?number,
   +typ: APIAnnotationType,
+  +owner?: string,
 };
 
 export type LocalMeshMetaData = {|

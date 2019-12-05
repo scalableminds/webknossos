@@ -10,6 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...HEAD)
 
 ### Added
+- Added a new way of sharing annotations. You can share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard.
 - Added new viewing permission for annotations: public, internal, private
 
 ### Changed

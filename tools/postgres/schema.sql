@@ -61,6 +61,12 @@ CREATE TABLE webknossos.annotations(
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
 );
 
+CREATE TABLE webknossos.annotation_sharedTeams(
+  _annotation CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_annotation, _team)
+);
+
 CREATE TABLE webknossos.meshes(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _annotation CHAR(24) NOT NULL,
@@ -374,6 +380,9 @@ ALTER TABLE webknossos.annotations
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
+ALTER TABLE webknossos.annotation_sharedTeams
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataSets

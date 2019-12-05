@@ -14,7 +14,7 @@ import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamService}
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.PlayBodyParsers
@@ -31,6 +31,7 @@ class AnnotationController @Inject()(
     dataSetService: DataSetService,
     annotationService: AnnotationService,
     userService: UserService,
+    teamService: TeamService,
     projectDAO: ProjectDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
@@ -274,6 +275,36 @@ class AnnotationController @Inject()(
         .publicWrites(newAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
     } yield {
       JsonOk(json)
+    }
+  }
+
+  def sharedAnnotations() = sil.SecuredAction.async { implicit request =>
+    for {
+      userTeams <- userService.teamIdsFor(request.identity._id)
+      sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
+      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites(_))
+    } yield Ok(Json.toJson(json))
+  }
+
+  def getSharedTeams(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      annotation <- provider.provideAnnotation(typ, id, request.identity)
+      _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+      teams <- annotationService.sharedTeamsFor(annotation._id)
+      json <- Fox.serialCombined(teams)(teamService.publicWrites(_))
+    } yield Ok(Json.toJson(json))
+  }
+
+  def updateSharedTeams(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+    withJsonBodyAs[List[String]] { teams =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+        userTeams <- userService.teamIdsFor(request.identity._id)
+        updateTeams = teamIdsValidated.intersect(userTeams)
+        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, updateTeams)
+      } yield Ok(Json.toJson(updateTeams.map(_.toString)))
     }
   }
 

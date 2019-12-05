@@ -44,7 +44,7 @@ You can also add custom tags to annotations in order to organize them.
 This screen shows all skeleton or volume annotations that were shared with one of your teams.
 You can directly view the linked annotations and copy them to your account.
 
-Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing)
+Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
 
 ![View Shared Annotations](./images/shared_annotations_tab.png)
 

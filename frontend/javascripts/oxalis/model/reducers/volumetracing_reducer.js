@@ -54,10 +54,16 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
     .map(volumeTracing => {
       switch (action.type) {
         case "SET_TOOL": {
+          if (!state.tracing.restrictions.allowUpdate) {
+            return state;
+          }
           return setToolReducer(state, volumeTracing, action.tool);
         }
 
         case "CYCLE_TOOL": {
+          if (!state.tracing.restrictions.allowUpdate) {
+            return state;
+          }
           const tools = Object.keys(VolumeToolEnum);
           const currentToolIndex = tools.indexOf(volumeTracing.activeTool);
           const newTool = tools[(currentToolIndex + 1) % tools.length];

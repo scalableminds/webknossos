@@ -78,7 +78,7 @@ const Toast = {
 
     if (type === "error") {
       toastConfig = Object.assign(toastConfig, {
-        icon: <Icon type="cross-circle-o" className="alert-wiggle" style={{ color: "#a94442" }} />,
+        icon: <Icon type="close-circle-o" className="alert-wiggle" style={{ color: "#a94442" }} />,
         style: {
           backgroundColor: "#f2dede",
           borderColor: "#ebccd1",

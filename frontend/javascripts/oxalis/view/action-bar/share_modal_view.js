@@ -5,29 +5,20 @@ import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
 
-<<<<<<< HEAD
-import type { APIDataset, APIAnnotationVisibility } from "admin/api_flow_types";
-||||||| merged common ancestors
-import type { APIDataset } from "admin/api_flow_types";
-=======
-import type { APIDataset, APIAnnotationType, APITeam } from "admin/api_flow_types";
->>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
+import type {
+  APIDataset,
+  APIAnnotationVisibility,
+  APIAnnotationType,
+  APITeam,
+} from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
-<<<<<<< HEAD
 import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
-import { getDatasetSharingToken } from "admin/admin_rest_api";
-||||||| merged common ancestors
-import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
-import { getDatasetSharingToken } from "admin/admin_rest_api";
-=======
-import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
->>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
 import Toast from "libs/toast";
 import window from "libs/window";
 import _ from "lodash";
@@ -134,13 +125,6 @@ class ShareModalView extends PureComponent<Props, State> {
     this.setState({ visibility: ((event.target.value: any): APIAnnotationVisibility) });
   };
 
-<<<<<<< HEAD
-  handleOk = () => {
-    this.props.setAnnotationVisibility(this.state.visibility);
-||||||| merged common ancestors
-  handleOk = () => {
-    this.props.setAnnotationPublic(this.state.isPublic);
-=======
   handleOk = async () => {
     await updateTeamsForSharedAnnotation(
       this.props.annotationType,
@@ -149,8 +133,7 @@ class ShareModalView extends PureComponent<Props, State> {
     );
     Toast.success(messages["annotation.shared_teams_edited"]);
 
-    this.props.setAnnotationPublic(this.state.isPublic);
->>>>>>> 18f48ba2e35fb598f046c002e22eac6727e7a14c
+    this.props.setAnnotationVisibility(this.state.visibility);
     this.props.onOk();
   };
 
@@ -160,7 +143,10 @@ class ShareModalView extends PureComponent<Props, State> {
       message = "You don't have the permission to edit the visibility of this tracing.";
     } else if (!this.props.dataset.isPublic && this.state.visibility === "Public") {
       message =
-        "The dataset of this tracing is not public. The sharing link will make the dataset accessible to everyone you share it with.";
+        "The dataset of this tracing is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
+    } else if (this.state.visibility === "Private") {
+      message =
+        "The annotation is currently private, so Team Sharing is disabled and only admins and team managers can use the Sharing Link.";
     }
 
     return message != null ? (
@@ -269,6 +255,7 @@ class ShareModalView extends PureComponent<Props, State> {
               allowNonEditableTeams
               value={this.state.sharedTeams}
               onChange={value => this.setState({ sharedTeams: _.flatten([value]) })}
+              disabled={!this.props.restrictions.allowUpdate || this.state.visibility === "Private"}
             />
             <Hint style={{ margin: "6px 12px" }}>
               Choose the teams to share your tracing with. Members of these teams can see this

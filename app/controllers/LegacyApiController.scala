@@ -153,7 +153,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       }
 
       val newJson = bodyJsonValue match {
-        case JsArray(value) => Json.toJson(value.map(el => replaceVisibilityInJsObject(el.as[JsObject])))
+        case JsArray(value)  => Json.toJson(value.map(el => replaceVisibilityInJsObject(el.as[JsObject])))
         case jsObj: JsObject => Json.toJson(replaceVisibilityInJsObject(jsObj))
       }
 

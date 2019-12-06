@@ -299,7 +299,7 @@ class AnnotationController @Inject()(
     withJsonBodyAs[List[String]] { teams =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- bool2Fox(annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> "notAllowed" ~> FORBIDDEN
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- userService.teamIdsFor(request.identity._id)
         updateTeams = teamIdsValidated.intersect(userTeams)

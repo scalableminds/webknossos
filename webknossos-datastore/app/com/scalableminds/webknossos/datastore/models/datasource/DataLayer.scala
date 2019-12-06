@@ -72,6 +72,12 @@ object ElementClass extends Enumeration {
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
+case class LayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], intensityRange: Option[(Int, Int)])
+
+object LayerViewConfiguration {
+  implicit val layerViewConfigurationFormat: Format[LayerViewConfiguration] = Json.format[LayerViewConfiguration]
+}
+
 trait DataLayerLike {
 
   def name: String
@@ -90,6 +96,8 @@ trait DataLayerLike {
   }
 
   def elementClass: ElementClass.Value
+
+  def defaultViewConfiguration: Option[LayerViewConfiguration]
 }
 
 object DataLayerLike {
@@ -187,7 +195,8 @@ case class AbstractDataLayer(
     category: Category.Value,
     boundingBox: BoundingBox,
     resolutions: List[Point3D],
-    elementClass: ElementClass.Value
+    elementClass: ElementClass.Value,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -205,7 +214,8 @@ case class AbstractSegmentationLayer(
     resolutions: List[Point3D],
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
-    mappings: Set[String]
+    mappings: Set[String],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {

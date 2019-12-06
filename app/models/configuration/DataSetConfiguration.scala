@@ -16,11 +16,12 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
   def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
-    } yield
-      constructInitialDefault(
+      defaultConfig = constructInitialDefault(
         dataSource.toUsable
           .map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name))
-          .getOrElse(List()))
+          .getOrElse(List())).configuration
+      sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
+    } yield DataSetConfiguration(defaultConfig ++ sourceDefaultConfig)
 
   def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {
     val layerValues = Json.toJson(layerNames.map(layerName => (layerName -> initialDefaultPerLayer)).toMap)

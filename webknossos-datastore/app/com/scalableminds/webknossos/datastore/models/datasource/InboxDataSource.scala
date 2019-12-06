@@ -16,10 +16,11 @@ package object inbox {
     def scaleOpt: Option[Scale]
 
     def statusOpt: Option[String]
+
+    def defaultViewConfigurationOpt: Option[ViewConfiguration]
   }
 
   object GenericInboxDataSource {
-
     implicit def inboxDataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericInboxDataSource[T]] =
       new Format[GenericInboxDataSource[T]] {
         def reads(json: JsValue): JsResult[GenericInboxDataSource[T]] =
@@ -40,26 +41,13 @@ package object inbox {
     val scaleOpt: Option[Scale] = scale
 
     val statusOpt: Option[String] = Some(status)
+
+    val defaultViewConfigurationOpt: Option[ViewConfiguration] = None
   }
 
   object UnusableDataSource {
-
     implicit def unusableDataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[UnusableDataSource[T]] =
-      new Format[UnusableDataSource[T]] {
-        def reads(json: JsValue): JsResult[UnusableDataSource[T]] =
-          for {
-            id <- (json \ "id").validate[DataSourceId]
-            status <- (json \ "status").validate[String]
-            scale <- (json \ "scale").validateOpt[Scale]
-          } yield UnusableDataSource(id, status, scale)
-
-        def writes(ds: UnusableDataSource[T]): JsValue =
-          Json.obj(
-            "id" -> Json.toJson(ds.id),
-            "status" -> ds.status,
-            "scale" -> ds.scale.map(Scale.scaleWrites.writes)
-          )
-      }
+      Json.format[UnusableDataSource[T]]
   }
 
   type InboxDataSource = GenericInboxDataSource[DataLayer]

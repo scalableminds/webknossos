@@ -92,6 +92,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   inboxSourceHash INT,
+  sourceDefaultConfiguration JSONB,
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -107,6 +108,7 @@ CREATE TABLE webknossos.dataSets(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
+  CONSTRAINT sourceDefaultConfigurationIsJsonObject CHECK(jsonb_typeof(sourceDefaultConfiguration) = 'object'),
   CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
   CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );

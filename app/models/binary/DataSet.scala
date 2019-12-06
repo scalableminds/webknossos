@@ -3,6 +3,7 @@ package models.binary
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.datasource.ViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
@@ -37,6 +38,7 @@ case class DataSet(
     _organization: ObjectId,
     _publication: Option[ObjectId],
     inboxSourceHash: Option[Int],
+    sourceDefaultConfiguration: Option[ViewConfiguration] = None,
     defaultConfiguration: Option[DataSetConfiguration] = None,
     description: Option[String] = None,
     displayName: Option[String] = None,
@@ -81,6 +83,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def parse(r: DatasetsRow): Fox[DataSet] =
     for {
       scale <- parseScaleOpt(r.scale)
+      sourceDefaultConfigurationOpt <- Fox.runOptional(r.sourcedefaultconfiguration)(
+        JsonHelper.parseJsonToFox[ViewConfiguration](_))
       defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(
         JsonHelper.parseJsonToFox[DataSetConfiguration](_))
       details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToFox[JsObject](_))
@@ -91,6 +95,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         ObjectId(r._Organization),
         r._Publication.map(ObjectId(_)),
         r.inboxsourcehash,
+        sourceDefaultConfigurationOpt,
         defaultConfigurationOpt,
         r.description,
         r.displayname,
@@ -267,10 +272,12 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                                                 isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
+      sourceDefaultConfig: Option[String] = source.defaultViewConfigurationOpt.map(Json.toJson(_).toString)
       q = sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
                         _organization = ${organization._id.id},
                         inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
+                        sourceDefaultConfiguration = #${optionLiteral(sourceDefaultConfig)},
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
                         status = ${source.statusOpt.getOrElse("")}

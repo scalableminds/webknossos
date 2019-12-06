@@ -12,7 +12,31 @@ package object datasource {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]
   }
 
-  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale)
+  case class ViewConfiguration(position: Option[Point3D],
+                               zoom: Option[Point3D],
+                               segmentationOpacity: Option[Int],
+                               interpolation: Option[Boolean]) {
+
+    def toMap: Map[String, JsValue] = {
+      def getSeqFromNameAndValue[T](name: String, value: Option[T])(implicit fmt: Format[T]) =
+        value.map(v => Seq(name -> Json.toJson(v))).getOrElse(Nil)
+
+      val positionSeq = getSeqFromNameAndValue("position", position)
+      val zoomSeq = getSeqFromNameAndValue("zoom", zoom)
+      val segmentationOpacitySeq = getSeqFromNameAndValue("segmentationOpacity", segmentationOpacity)
+      val interpolationSeq = getSeqFromNameAndValue("interpolation", interpolation)
+      (positionSeq ++ zoomSeq ++ segmentationOpacitySeq ++ interpolationSeq).toMap
+    }
+  }
+
+  object ViewConfiguration {
+    implicit val viewConfigurationFormat: Format[ViewConfiguration] = Json.format[ViewConfiguration]
+  }
+
+  case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
+                                                    dataLayers: List[T],
+                                                    scale: Scale,
+                                                    defaultViewConfigurationOpt: Option[ViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
@@ -31,25 +55,8 @@ package object datasource {
   }
 
   object GenericDataSource {
-
     implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] =
-      new Format[GenericDataSource[T]] {
-
-        def reads(json: JsValue): JsResult[GenericDataSource[T]] =
-          for {
-            id <- (json \ "id").validate[DataSourceId]
-            dataLayers <- (json \ "dataLayers").validate[List[T]]
-            scale <- (json \ "scale").validate[Scale]
-          } yield {
-            GenericDataSource(id, dataLayers, scale)
-          }
-
-        def writes(ds: GenericDataSource[T]) = Json.obj(
-          "id" -> DataSourceId.dataSourceIdFormat.writes(ds.id),
-          "dataLayers" -> ds.dataLayers.map(Json.toJson(_)),
-          "scale" -> Scale.scaleWrites.writes(ds.scale)
-        )
-      }
+      Json.format[GenericDataSource[T]]
   }
 
   type DataSource = GenericDataSource[DataLayer]

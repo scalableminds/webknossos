@@ -15,7 +15,7 @@ import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxa
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 8;
+export const currentLayoutVersion = 9;
 export const layoutHeaderHeight = 20;
 const dummyExtent = 500;
 export const show3DViewportInArbitrary = false;
@@ -40,6 +40,7 @@ const Panes = {
   AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
   Mappings: Pane("Segmentation", "MappingInfoView"),
+  LiveTrainingView: Pane("Live Training", "LiveTrainingView"),
   Meshes: Pane("Meshes", "MeshesView"),
 };
 
@@ -64,6 +65,7 @@ const SkeletonRightHandColumnItems = [
   Panes.AbstractTreeTabView,
   Panes.Mappings,
   Panes.Meshes,
+  Panes.LiveTrainingView,
 ];
 const SkeletonRightHandColumn = Stack(...SkeletonRightHandColumnItems);
 

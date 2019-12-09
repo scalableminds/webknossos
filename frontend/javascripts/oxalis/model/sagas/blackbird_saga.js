@@ -18,6 +18,7 @@ import {
 } from "oxalis/model/sagas/effect-generators";
 import window from "libs/window";
 import * as tf from "@tensorflow/tfjs";
+import api from "oxalis/api/internal_api";
 
 async function train() {
   const cuboidData = await api.data.getDataFor2DBoundingBox("float32x16-layer", {

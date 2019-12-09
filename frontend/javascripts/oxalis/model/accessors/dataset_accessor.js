@@ -227,6 +227,8 @@ export function getBitDepth(layerInfo: DataLayerType): number {
       return 32;
     case "int64":
       return 64;
+    case "float32x16":
+      return 32*16;
     default:
       throw new Error("Unknown element class");
   }
@@ -242,6 +244,7 @@ export function isElementClassSupported(layerInfo: DataLayerType): boolean {
     case "int16":
     case "int32":
     case "float":
+    case "float32x16":
       return true;
     case "int64":
     case "uint64":

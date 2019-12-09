@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Icon, Select, Switch, Table, Tooltip } from "antd";
+import { Icon, Select, Switch, Table, Tooltip, Radio, Button, Progress } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -36,14 +36,16 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
-  isCurrentlyReapplying: boolean,
+  currentLabel: string,
+  isRetraining: boolean,
 };
 
 class LiveTrainingView extends React.Component<Props, State> {
   isMounted: boolean = false;
 
   state = {
-    isCurrentlyReapplying: false,
+    currentLabel: "foreground",
+    isRetraining: false,
   };
 
   componentDidMount() {
@@ -56,33 +58,41 @@ class LiveTrainingView extends React.Component<Props, State> {
 
   render() {
     return (
-      <div style={{ marginBottom: 6 }}>
-        <label className="setting-label">
-          Annotate Class rather than Background
-          <Switch
-            onChange={this.handleSetMappingEnabled}
-            checked={this.state.shouldMappingBeEnabled}
-            style={{ float: "right" }}
-            loading={this.state.isRefreshingMappingList}
-          />
-        </label>
+      <div id="live-training" className="padded-tab-content" style={{ maxWidth: 500 }}>
+        <div style={{ marginBottom: 6 }}>
+          <label className="setting-label">
+            Brush to label…
+            <Radio.Group
+              value={this.state.currentLabel}
+              onChange={this.handleChangeLabel}
+              style={{ marginLeft: 6 }}
+            >
+              <Radio.Button value="foreground">Foreground</Radio.Button>
+              <Radio.Button value="background">Background</Radio.Button>
+            </Radio.Group>
+          </label>
+        </div>
+
+        <Button type="primary">Retrain and Predict</Button>
+        <div style={{ display: "block", marginTop: 6 }}>
+          <Progress type="circle" percent={70} />
+        </div>
       </div>
     );
 
-    //train + predict button
+    // train + predict button
   }
-}
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  });
-
-
-function mapStateToProps(state: OxalisState) {
-  return {
-
+  handleChangeLabel = (changeEvent: event): void => {
+    this.setState({ currentLabel: changeEvent.target.value });
   };
 }
 
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({});
+
+function mapStateToProps(state: OxalisState) {
+  return {};
+}
 
 const debounceTime = 100;
 export default connect<Props, OwnProps, _, _, _, _>(

@@ -19,23 +19,33 @@ import {
 import window from "libs/window";
 import * as tf from "@tensorflow/tfjs";
 import api from "oxalis/api/internal_api";
+import { V3 } from "libs/mjs";
 
 async function train() {
-  const bbox = {
-    min: [0, 0, 0],
-    max: [250, 250, 30],
-  };
-  const featureBankLayerName = api.data.getFeatureBankLayerName();
-  if (!featureBankLayerName) {
-    console.error("Couldn't find a layer with element class float32x16.");
-    return;
-  }
-  const featureData = await api.data.getDataFor2DBoundingBox(featureBankLayerName, bbox);
-  const labeledLayerName = await api.data.getVolumeTracingLayerName();
-  const labeledData = await api.data.getDataFor2DBoundingBox(labeledLayerName, bbox);
+  try {
+    const bbox = {
+      min: [0, 0, 0],
+      max: [250, 250, 30],
+    };
+    const size = V3.toArray(V3.sub(bbox.max, bbox.min));
 
-  console.log("featureData", featureData);
-  console.log("labeledData", labeledData);
+    const featureBankLayerName = api.data.getFeatureBankLayerName();
+    if (!featureBankLayerName) {
+      console.error("Couldn't find a layer with element class float32x16.");
+      return;
+    }
+    const featureData = await api.data.getDataFor2DBoundingBox(featureBankLayerName, bbox);
+    const labeledLayerName = await api.data.getVolumeTracingLayerName();
+    const labeledData = await api.data.getDataFor2DBoundingBox(labeledLayerName, bbox);
+
+    let featureTensor = tf.tensor4d(featureData, size.concat([16]));
+    let labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
+
+    console.log("featureData", featureTensor);
+    console.log("labeledData", labeledTensor);
+  } catch (exception) {
+    console.error(exception);
+  }
 }
 
 function* trainClassifier(action): Saga<void> {

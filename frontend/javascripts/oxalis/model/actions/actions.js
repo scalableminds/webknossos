@@ -11,6 +11,7 @@ import type { UiAction } from "oxalis/model/actions/ui_actions";
 import type { UserAction } from "oxalis/model/actions/user_actions";
 import type { ViewModeAction } from "oxalis/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
+import type { BlackbirdAction } from "oxalis/model/actions/blackbird_actions";
 
 export type Action =
   | SkeletonTracingAction
@@ -24,7 +25,8 @@ export type Action =
   | FlycamAction
   | UserAction
   | UiAction
-  | IsosurfaceAction;
+  | IsosurfaceAction
+  | BlackbirdAction;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

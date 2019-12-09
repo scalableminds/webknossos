@@ -20,6 +20,7 @@ import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { trainClassifierAction, predictAction } from "oxalis/model/actions/blackbird_actions";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
@@ -73,7 +74,15 @@ class LiveTrainingView extends React.Component<Props, State> {
           </label>
         </div>
 
-        <Button type="primary">Retrain and Predict</Button>
+        <Button
+          type="primary"
+          onClick={() => {
+            this.props.handleTrain();
+            this.props.handlePredict();
+          }}
+        >
+          Retrain and Predict
+        </Button>
         <div style={{ display: "block", marginTop: 6 }}>
           <Progress type="circle" percent={70} />
         </div>
@@ -88,7 +97,15 @@ class LiveTrainingView extends React.Component<Props, State> {
   };
 }
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({});
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  handleTrain() {
+    dispatch(trainClassifierAction());
+  },
+
+  handlePredict() {
+    dispatch(predictAction());
+  },
+});
 
 function mapStateToProps(state: OxalisState) {
   return {};

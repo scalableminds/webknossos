@@ -159,6 +159,9 @@ export default class LayerRenderingManager {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): ?Vector4 {
+    if (this.textureBucketManager == null) {
+      return null;
+    }
     const state = Store.getState();
     const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);

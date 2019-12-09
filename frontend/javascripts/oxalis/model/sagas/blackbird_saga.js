@@ -20,6 +20,7 @@ import window from "libs/window";
 import * as tf from "@tensorflow/tfjs";
 import api from "oxalis/api/internal_api";
 import { V3 } from "libs/mjs";
+import * as blackbirdModel from "oxalis/model/blackbird_model.js";
 
 async function train() {
   try {
@@ -41,6 +42,18 @@ async function train() {
 
     let featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
     let labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
+
+    const model = blackbirdModel.createModel();
+    blackbirdModel.train(
+      model,
+      {
+        xs: featureTensor,
+        labels: labeledTensor,
+      },
+      () => {
+        console.log("iteration done");
+      },
+    );
 
     console.log("featureData", featureTensor);
     console.log("labeledData", labeledTensor);

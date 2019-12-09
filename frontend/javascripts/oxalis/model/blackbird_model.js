@@ -1,4 +1,4 @@
-import tf from "tensorflow";
+import * as tf from "@tensorflow/tfjs";
 
 async function filterUnlabeledExamples(data, numClasses = 3) {
   const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
@@ -8,9 +8,7 @@ async function filterUnlabeledExamples(data, numClasses = 3) {
   const labelsFilteredRenorm = labelsFiltered.sub(tf.tensor1d([1], "int32"));
   const labelsFilteredOneHot = tf.oneHot(labelsFilteredRenorm, numClasses);
   // Dispose all unused tensors
-  [features, labels, featuresReshaped, labelsReshaped, mask, labelsFiltered].forEach(x =>
-    x.dispose(),
-  );
+  [featuresReshaped, labelsReshaped, mask, labelsFiltered].forEach(x => x.dispose());
   return { xs: featuresFiltered, labels: labelsFilteredOneHot };
 }
 
@@ -96,11 +94,14 @@ export async function train(model, trainData, onIteration = () => {}) {
   console.log(`Final validation accuracy: ${finalValAccPercent.toFixed(1)}%; `);
 }
 
-export async function predict(model, data) {
+export async function predict(model, data, numClasses = 3) {
   const { xs } = reshapeInputData(data);
-  const output = model
+  const predictions = await model
     .predict(xs)
-    .argMax(1)
-    .add(1);
-  const predictions = await output.data();
+    // Reshape to voxels
+    .reshape([data.xs.shape[0], data.xs.shape[1], data.xs.shape[2], numClasses])
+    // Convert 0-1 to 0-255
+    .mul(255)
+    .data();
+  return new Uint8Array(predictions);
 }

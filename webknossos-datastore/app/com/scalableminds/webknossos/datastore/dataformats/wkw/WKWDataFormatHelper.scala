@@ -69,21 +69,23 @@ trait WKWDataFormatHelper {
       case (VoxelType.Int16, 2)  => Full(ElementClass.int16)
       case (VoxelType.Int32, 4)  => Full(ElementClass.int32)
       case (VoxelType.Int64, 8)  => Full(ElementClass.int64)
+      case (VoxelType.Float, 64) => Full(ElementClass.float32x16)
       case _                     => Failure("VoxelType is not supported.")
     }
 
   def elementClassToVoxelType(elementClass: ElementClass.Value): (VoxelType.Value, Int) =
     elementClass match {
-      case ElementClass.uint8  => (VoxelType.UInt8, 1)
-      case ElementClass.uint16 => (VoxelType.UInt16, 1)
-      case ElementClass.uint24 => (VoxelType.UInt8, 3)
-      case ElementClass.uint32 => (VoxelType.UInt32, 1)
-      case ElementClass.uint64 => (VoxelType.UInt64, 1)
-      case ElementClass.float  => (VoxelType.Float, 1)
-      case ElementClass.double => (VoxelType.Double, 1)
-      case ElementClass.int8   => (VoxelType.Int8, 1)
-      case ElementClass.int16  => (VoxelType.Int16, 1)
-      case ElementClass.int32  => (VoxelType.Int32, 1)
-      case ElementClass.int64  => (VoxelType.Int64, 1)
+      case ElementClass.uint8      => (VoxelType.UInt8, 1)
+      case ElementClass.uint16     => (VoxelType.UInt16, 1)
+      case ElementClass.uint24     => (VoxelType.UInt8, 3)
+      case ElementClass.uint32     => (VoxelType.UInt32, 1)
+      case ElementClass.uint64     => (VoxelType.UInt64, 1)
+      case ElementClass.float      => (VoxelType.Float, 1)
+      case ElementClass.double     => (VoxelType.Double, 1)
+      case ElementClass.int8       => (VoxelType.Int8, 1)
+      case ElementClass.int16      => (VoxelType.Int16, 1)
+      case ElementClass.int32      => (VoxelType.Int32, 1)
+      case ElementClass.int64      => (VoxelType.Int64, 1)
+      case ElementClass.float32x16 => (VoxelType.Float, 16)
     }
 }

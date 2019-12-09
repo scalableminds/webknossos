@@ -33,22 +33,23 @@ object Category extends Enumeration {
 
 object ElementClass extends Enumeration {
 
-  val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
+  val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64, float32x16 = Value
 
   implicit val dataLayerElementClassFormat = Format(Reads.enumNameReads(ElementClass), Writes.enumNameWrites)
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
-    case ElementClass.uint8  => 1
-    case ElementClass.uint16 => 2
-    case ElementClass.uint24 => 3
-    case ElementClass.uint32 => 4
-    case ElementClass.uint64 => 8
-    case ElementClass.float  => 4
-    case ElementClass.double => 8
-    case ElementClass.int8   => 1
-    case ElementClass.int16  => 2
-    case ElementClass.int32  => 4
-    case ElementClass.int64  => 8
+    case ElementClass.uint8      => 1
+    case ElementClass.uint16     => 2
+    case ElementClass.uint24     => 3
+    case ElementClass.uint32     => 4
+    case ElementClass.uint64     => 8
+    case ElementClass.float      => 4
+    case ElementClass.double     => 8
+    case ElementClass.int8       => 1
+    case ElementClass.int16      => 2
+    case ElementClass.int32      => 4
+    case ElementClass.int64      => 8
+    case ElementClass.float32x16 => 4 * 16
   }
 
   /* ambiguous, we will always guess the unsigned integer options */

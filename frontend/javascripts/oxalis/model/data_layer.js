@@ -24,6 +24,7 @@ class DataLayer {
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
+  layerInfo: DataLayerType;
 
   constructor(
     layerInfo: DataLayerType,
@@ -35,6 +36,7 @@ class DataLayer {
     this.name = layerInfo.name;
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.resolutions = layerInfo.resolutions;
+    this.layerInfo = layerInfo;
 
     const { dataset } = Store.getState();
     const isSegmentation = layerInfo.category === "segmentation";

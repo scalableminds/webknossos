@@ -698,6 +698,15 @@ class DataApi {
     return segmentationLayer.name;
   }
 
+  getFeatureBankLayerName(): ?string {
+    for (const layer of Object.values(this.model.dataLayers)) {
+      if (layer.layerInfo.elementClass == "float32x16") {
+        return layer.name;
+      }
+    }
+    return null;
+  }
+
   /**
    * Invalidates all downloaded buckets so that they are reloaded on the next movement.
    */

@@ -236,6 +236,10 @@ class PlaneMaterialFactory {
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
+      if (dataLayer.cube.elementClass == "float32x16") {
+        continue;
+      }
+
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
 
       this.uniforms[`${sanitizeName(name)}_textures`] = {

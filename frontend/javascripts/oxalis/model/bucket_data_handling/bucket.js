@@ -78,6 +78,8 @@ export const getConstructorForElementClass = (type: ElementClass) => {
       return [Uint32Array, 1];
     case "float":
       return [Float32Array, 1];
+    case "float32x16":
+      return [Float32Array, 16];
     default:
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }

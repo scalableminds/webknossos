@@ -351,7 +351,13 @@ class SceneController {
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      anchorPoint = dataLayer.layerRenderingManager.updateDataTextures(globalPosition, zoomStep);
+      let potentialAnchorPoint = dataLayer.layerRenderingManager.updateDataTextures(
+        globalPosition,
+        zoomStep,
+      );
+      if (potentialAnchorPoint != null) {
+        anchorPoint = potentialAnchorPoint;
+      }
     }
 
     if (optArbitraryPlane) {

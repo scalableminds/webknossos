@@ -55,83 +55,34 @@ class LiveTrainingView extends React.Component<Props, State> {
   }
 
   render() {
-    return "Hello World";
-
-
-    # toggle to select class
-    # train + predict button
-
-    const availableMappings =
-      this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
-        ? this.props.segmentationLayer.mappings
-        : [];
-
-    // Antd does not render the placeholder when a value is defined (even when it's null).
-    // That's why, we only pass the value when it's actually defined.
-    const selectValueProp =
-      this.props.mappingName != null
-        ? {
-            value: this.props.mappingName,
-          }
-        : {};
-
     return (
-      <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
-        {this.renderIdTable()}
-        {/* Only display the mapping selection when merger mode is not active
-            to avoid conflicts in the logic of the UI. */
-        !this.props.isMergerModeEnabled ? (
-          <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
-            <div style={{ marginBottom: 6 }}>
-              <label className="setting-label">
-                ID Mapping
-                <Switch
-                  onChange={this.handleSetMappingEnabled}
-                  checked={this.state.shouldMappingBeEnabled}
-                  style={{ float: "right" }}
-                  loading={this.state.isRefreshingMappingList}
-                />
-              </label>
-            </div>
-
-            {/*
-            Show mapping-select even when the mapping is disabled but the UI was used before
-            (i.e., mappingName != null)
-          */}
-            {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
-              <Select
-                placeholder="Select mapping"
-                defaultActiveFirstOption={false}
-                style={{ width: "100%" }}
-                {...selectValueProp}
-                onChange={this.handleChangeMapping}
-                notFoundContent="No mappings found."
-              >
-                {availableMappings
-                  .slice()
-                  .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
-                  .map(mapping => (
-                    <Option key={mapping} value={mapping}>
-                      {mapping}
-                    </Option>
-                  ))}
-              </Select>
-            ) : null}
-          </div>
-        ) : null}
+      <div style={{ marginBottom: 6 }}>
+        <label className="setting-label">
+          Annotate Class rather than Background
+          <Switch
+            onChange={this.handleSetMappingEnabled}
+            checked={this.state.shouldMappingBeEnabled}
+            style={{ float: "right" }}
+            loading={this.state.isRefreshingMappingList}
+          />
+        </label>
       </div>
     );
+
+    //train + predict button
   }
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   });
 
+
 function mapStateToProps(state: OxalisState) {
   return {
 
   };
 }
+
 
 const debounceTime = 100;
 export default connect<Props, OwnProps, _, _, _, _>(

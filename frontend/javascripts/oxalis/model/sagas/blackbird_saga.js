@@ -27,6 +27,7 @@ async function train() {
       min: [0, 0, 0],
       max: [250, 250, 30],
     };
+    const featureChannelCount = 16;
     const size = V3.toArray(V3.sub(bbox.max, bbox.min));
 
     const featureBankLayerName = api.data.getFeatureBankLayerName();
@@ -38,7 +39,7 @@ async function train() {
     const labeledLayerName = await api.data.getVolumeTracingLayerName();
     const labeledData = await api.data.getDataFor2DBoundingBox(labeledLayerName, bbox);
 
-    let featureTensor = tf.tensor4d(featureData, size.concat([16]));
+    let featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
     let labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
 
     console.log("featureData", featureTensor);

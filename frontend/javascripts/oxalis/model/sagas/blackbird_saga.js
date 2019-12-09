@@ -9,6 +9,11 @@ import {
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
+  getPosition,
+  getPlaneExtentInVoxelFromStore,
+} from "oxalis/model/accessors/flycam_accessor";
+import Model from "oxalis/model";
+import {
   type Saga,
   _takeEvery,
   call,
@@ -20,7 +25,11 @@ import window from "libs/window";
 import * as tf from "@tensorflow/tfjs";
 import api from "oxalis/api/internal_api";
 import { V3 } from "libs/mjs";
-import * as blackbirdModel from "oxalis/model/blackbird_model.js";
+import * as blackbirdModel from "oxalis/model/blackbird_model";
+
+const model = blackbirdModel.createModel();
+const featureChannelCount = 16;
+const numClasses = 3;
 
 async function train() {
   try {
@@ -28,7 +37,6 @@ async function train() {
       min: [0, 0, 0],
       max: [250, 250, 30],
     };
-    const featureChannelCount = 16;
     const size = V3.toArray(V3.sub(bbox.max, bbox.min));
 
     const featureBankLayerName = api.data.getFeatureBankLayerName();
@@ -40,10 +48,9 @@ async function train() {
     const labeledLayerName = await api.data.getVolumeTracingLayerName();
     const labeledData = await api.data.getDataFor2DBoundingBox(labeledLayerName, bbox);
 
-    let featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
-    let labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
+    const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
+    const labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
 
-    const model = blackbirdModel.createModel();
     blackbirdModel.train(
       model,
       {
@@ -69,6 +76,39 @@ function* trainClassifier(action): Saga<void> {
 
 function* predict(action): Saga<void> {
   console.log("predict action");
+  const position = yield* select(state => getPosition(state.flycam));
+  const bbox = {
+    min: [0, 0, position[2]],
+    max: [250, 250, position[2] + 1],
+  };
+  const size = V3.toArray(V3.sub(bbox.max, bbox.min));
+
+  const colorLayerName = "prediction";
+  const predictionCube = yield* call([Model, Model.getCubeByLayerName], colorLayerName);
+  const featureBankLayerName = api.data.getFeatureBankLayerName();
+  if (!featureBankLayerName) {
+    console.error("Couldn't find a layer with element class float32x16.");
+    return;
+  }
+  const featureData = yield* call(
+    [api.data, api.data.getDataFor2DBoundingBox],
+    featureBankLayerName,
+    bbox,
+  );
+  const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
+  const predictedData = yield* call(blackbirdModel.predict, model, { xs: featureTensor });
+
+  for (let x = 0; x <= size[0]; x++) {
+    for (let y = 0; y <= size[1]; y++) {
+      for (let z = 0; z <= size[2]; z++) {
+        const index = x + y * size[0] + z * size[0] * size[1];
+        const channels = predictedData.slice(index, index + numClasses);
+        const maxChannel = Math.max(...channels);
+        const classId = channels.indexOf(maxChannel);
+        predictionCube.labelVoxel([bbox.min[0] + x, bbox.min[1] + y, bbox.min[2] + z], classId + 1);
+      }
+    }
+  }
 }
 
 export default function* isosurfaceSaga(): Saga<void> {

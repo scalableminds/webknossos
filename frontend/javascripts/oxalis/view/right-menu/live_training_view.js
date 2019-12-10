@@ -99,9 +99,7 @@ class LiveTrainingView extends React.Component<Props, State> {
               }}
               style={{ height: 48, width: 180 }}
             >
-              {isTraining
-                ? `Training... (${Math.floor(liveTrainingProgress)}%)`
-                : "Retrain and Predict"}
+              {isTraining ? `Training... (${liveTrainingProgress}%)` : "Retrain and Predict"}
             </Button>
             <Button
               disabled={isTraining || isLiveTrainingPredicting}

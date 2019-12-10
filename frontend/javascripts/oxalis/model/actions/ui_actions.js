@@ -35,6 +35,11 @@ type SetLiveTrainingProgressAction = {
   value: number,
 };
 
+type SetIsLiveTrainingPredictingAction = {
+  type: "SET_IS_LIVE_TRAINING_PREDICTING_ACTION",
+  value: boolean,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
@@ -42,7 +47,8 @@ export type UiAction =
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
   | SetHasOrganizationsAction
-  | SetLiveTrainingProgressAction;
+  | SetLiveTrainingProgressAction
+  | SetIsLiveTrainingPredictingAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -78,7 +84,14 @@ export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAc
   value,
 });
 
-export const setLiveTrainingProgressAction = (value: boolean): SetLiveTrainingProgressAction => ({
+export const setLiveTrainingProgressAction = (value: number): SetLiveTrainingProgressAction => ({
   type: "SET_LIVE_TRAINING_PROGRESS",
+  value,
+});
+
+export const setIsLiveTrainingPredictingAction = (
+  value: boolean,
+): SetLiveTrainingProgressAction => ({
+  type: "SET_IS_LIVE_TRAINING_PREDICTING_ACTION",
   value,
 });

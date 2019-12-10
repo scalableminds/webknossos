@@ -201,6 +201,7 @@ const defaultState: OxalisState = {
     isInAnnotationView: false,
     hasOrganizations: false,
     liveTrainingProgress: 0,
+    isLiveTrainingPredicting: 0,
   },
 };
 

@@ -35,6 +35,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { liveTrainingProgress: action.value });
     }
 
+    case "SET_IS_LIVE_TRAINING_PREDICTING_ACTION": {
+      return updateKey(state, "uiInformation", { isLiveTrainingPredicting: action.value });
+    }
+
     default:
       return state;
   }

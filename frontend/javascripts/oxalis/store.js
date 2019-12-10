@@ -395,6 +395,7 @@ type UiInformation = {
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
   +liveTrainingProgress: number,
+  +isLiveTrainingPredicting: boolean,
 };
 
 export type OxalisState = {|

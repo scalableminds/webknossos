@@ -156,10 +156,9 @@ function* predict(action): Saga<void> {
         // const maxChannel = Math.max(...channels);
         // const classId = channels.indexOf(maxChannel);
         const voxelPosition = [bbox.min[0] + x, bbox.min[1] + y, bbox.min[2] + z];
-        channels.map((value, cidx) => {
-          const voxelIndex = getVoxelIndex(voxelPosition, cidx);
-          predictionCube.labelVoxel(voxelPosition, value, null, voxelIndex);
-        });
+        // Hardcode channel 0 (foreground) and channel index 3 for blue
+        const voxelIndex = getVoxelIndex(voxelPosition, 3);
+        predictionCube.labelVoxel(voxelPosition, channels[0], null, voxelIndex);
       }
     }
   }

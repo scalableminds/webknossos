@@ -53,6 +53,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         convertDataImpl[Float, FloatBuffer](
           data,
           DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
+      case ElementClass.float32x16 =>
+        convertDataImpl[Float, FloatBuffer](
+          data,
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
     }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],

@@ -80,31 +80,37 @@ class LiveTrainingView extends React.Component<Props, State> {
               }}
             />
           </div>
-          <ol>
-            <li>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</li>
-            <li>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</li>
-            <li>Lorem Ipsum is simply dummy text of the printing and typesetting industry.</li>
+          <ol style={{ "line-height": "1.3", "font-size": 18 }}>
+            <li style={{ margin: 12 }}>
+              Use the volume brush to sparsely label examples of foreground and background.
+            </li>
+            <li style={{ margin: 12 }}>Train the machine learning model.</li>
+            <li style={{ margin: 12 }}>
+              Improve the model quality by adding new training examples.
+            </li>
           </ol>
           <div style={{ marginTop: 16, marginLeft: 6, display: "flex", justifyContent: "center" }}>
             <Button
               type="primary"
               disabled={isTraining || isLiveTrainingPredicting}
-              loading={isTraining}
               size="large"
               onClick={() => {
                 this.props.handleTrain();
               }}
+              style={{ height: 48, width: 180 }}
             >
-              Retrain and Predict {isTraining ? `(${liveTrainingProgress}%)` : null}
+              {isTraining
+                ? `Training... (${Math.floor(liveTrainingProgress)}%)`
+                : "Retrain and Predict"}
             </Button>
             <Button
               disabled={isTraining || isLiveTrainingPredicting}
-              loading={isLiveTrainingPredicting}
               style={{ marginLeft: 24 }}
               size="large"
               onClick={() => {
                 this.props.handlePredict();
               }}
+              style={{ height: 48, marginLeft: 10 }}
             >
               Predict
             </Button>

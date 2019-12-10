@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/actions/ui_actions";
 import { V3 } from "libs/mjs";
 import * as blackbirdModel from "oxalis/model/blackbird_model";
+import * as Utils from "libs/utils";
 
 const numClasses = 2;
 const featureChannelCount = 16;
@@ -21,7 +22,8 @@ const bucketWidth = constants.BUCKET_WIDTH;
 
 async function train() {
   try {
-    Store.dispatch(setLiveTrainingProgressAction(0));
+    Store.dispatch(setLiveTrainingProgressAction(0.1));
+    await Utils.sleep(10);
     const bbox = {
       min: [0, 0, 0],
       max: [250, 250, 30],
@@ -81,6 +83,7 @@ function getVoxelIndex(voxel: Vector3, channelIndex: number): number {
 function* predict(): Saga<void> {
   console.log("predict action");
   Store.dispatch(setIsLiveTrainingPredictingAction(true));
+  yield* call([Utils, Utils.sleep], 10);
   const position = yield* select(state => getPosition(state.flycam));
   const bbox = {
     min: [0, 0, Math.floor(position[2])],
@@ -107,6 +110,7 @@ function* predict(): Saga<void> {
 
   console.log("Labeling in bounding box:", bbox);
   console.time("labeling");
+  let timeForLabelVoxel = 0;
   for (let x = 0; x <= size[0]; x++) {
     for (let y = 0; y <= size[1]; y++) {
       for (let z = 0; z <= size[2]; z++) {

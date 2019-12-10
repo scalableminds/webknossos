@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...HEAD)
 
 ### Added
-- Added scale to y-axis to histograms and smoothing out small values. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
+- Added a scale to the y-axis of histograms to indicate the logarithmic representation. Additionally, small histogram values are smoothed out. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
 ### Changed
 -
 

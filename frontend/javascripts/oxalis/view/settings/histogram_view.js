@@ -83,7 +83,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     // Here we normalize all values to the interval of 0 - 9 and then add 1
-    // to gain an interval reaching from 1 - 10.
+    // to gain an interval reaching from 1 - 10, since values between 0 and 1 would be negative, otherwise.
     const downscalingFactor = 9 / maxValue;
     const downscaledData = elementCounts.map(
       value => Math.log10(downscalingFactor * value + 1) * canvasHeight,

@@ -69,7 +69,7 @@ function getMaximumTreeId(trees: TreeMap): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function getNextTreeWithHigherId(treeId: number, trees: TreeMap): Tree {
+function getNextTreeWithHigherId(treeId: number, trees: TreeMap): ?Tree {
   let foundTree: ?Tree = null;
   const upperLimit = getMaximumTreeId(trees);
   for (let currentTreeId = treeId + 1; !foundTree && currentTreeId <= upperLimit; ++currentTreeId) {

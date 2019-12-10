@@ -46,7 +46,7 @@ function reshapeInputData(data) {
 }
 
 export async function train(model, trainData, onIteration: (progress: number) => void) {
-  console.log("Training model...");
+  console.log("Preparing data for training...");
   const optimizer = "adam";
   model.compile({
     optimizer,
@@ -57,10 +57,12 @@ export async function train(model, trainData, onIteration: (progress: number) =>
   const validationSplit = 0.15;
   const trainEpochs = 50;
   const filteredTrainData = await filterUnlabeledExamples(trainData);
-  const totalNumBatches =
-    Math.ceil((filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize) * trainEpochs;
+  const totalNumBatches = Math.ceil(
+    (filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize,
+  );
+
+  console.log("Training model...");
   let trainBatchCount = 0;
-  let valAcc;
   await model.fit(filteredTrainData.xs, filteredTrainData.labels, {
     batchSize,
     validationSplit,
@@ -69,23 +71,28 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     callbacks: {
       onBatchEnd: async batch => {
         trainBatchCount++;
-        const progressPercentage = _.round((trainBatchCount / totalNumBatches) * 100, 1);
-        console.log(
-          "Training... (" +
-            `${progressPercentage}%` +
-            ` complete of ${totalNumBatches} batches). To stop training, refresh or close page.`,
+        const progressPercentage = _.round(
+          (trainBatchCount / (totalNumBatches * trainEpochs)) * 100,
+          1,
         );
-        // plotLoss(trainBatchCount, logs.loss, "train");
-        // plotAccuracy(trainBatchCount, logs.acc, "train");
+        // console.log(`Batch (${batch + 1}/${totalNumBatches})`);
         if (onIteration && batch % 10 === 0) {
           onIteration(progressPercentage);
         }
         await tf.nextFrame();
       },
       onEpochEnd: async (epoch, logs) => {
-        valAcc = logs.val_acc;
-        // plotLoss(trainBatchCount, logs.val_loss, "validation");
-        // plotAccuracy(trainBatchCount, logs.val_acc, "validation");
+        console.log(
+          `Epoch (${epoch + 1}/${trainEpochs})`,
+          "acc=",
+          _.round(logs.acc, 3),
+          "loss=",
+          _.round(logs.loss, 3),
+          "val_acc=",
+          _.round(logs.val_acc, 3),
+          "val_loss=",
+          _.round(logs.val_loss, 3),
+        );
         if (onIteration) {
           const progressPercentage = _.round(((epoch + 1) / trainEpochs) * 100, 1);
           onIteration(progressPercentage);
@@ -94,8 +101,7 @@ export async function train(model, trainData, onIteration: (progress: number) =>
       },
     },
   });
-  const finalValAccPercent = valAcc * 100;
-  console.log(`Final validation accuracy: ${finalValAccPercent.toFixed(1)}%; `);
+  console.log("Training complete");
 }
 
 export async function predict(model, data) {

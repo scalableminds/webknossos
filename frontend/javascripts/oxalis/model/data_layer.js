@@ -9,7 +9,7 @@ import ErrorHandling from "libs/error_handling";
 import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import PushQueue, { NullPushQueue } from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type DataLayerType } from "oxalis/store";
 
 // TODO: Non-reactive
@@ -56,7 +56,8 @@ class DataLayer {
       this.connectionInfo,
       dataset.dataStore,
     );
-    this.pushQueue = new PushQueue(this.cube);
+    this.pushQueue = isSegmentation ? new PushQueue(this.cube) : new NullPushQueue(this.cube);
+
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
     this.mappings = new Mappings(layerInfo.name, fallbackLayerName);

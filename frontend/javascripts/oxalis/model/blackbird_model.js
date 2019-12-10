@@ -39,7 +39,7 @@ function reshapeInputData(data) {
   const { xs, labels } = data;
   return {
     xs: xs.reshape([-1, xs.shape[xs.shape.length - 1]]),
-    labels: labels.reshape([-1]),
+    ...(labels != null ? { labels: labels.reshape([-1]) } : {}),
   };
 }
 
@@ -94,12 +94,10 @@ export async function train(model, trainData, onIteration = () => {}) {
   console.log(`Final validation accuracy: ${finalValAccPercent.toFixed(1)}%; `);
 }
 
-export async function predict(model, data, numClasses = 3) {
+export async function predict(model, data) {
   const { xs } = reshapeInputData(data);
   const predictions = await model
     .predict(xs)
-    // Reshape to voxels
-    .reshape([data.xs.shape[0], data.xs.shape[1], data.xs.shape[2], numClasses])
     // Convert 0-1 to 0-255
     .mul(255)
     .data();

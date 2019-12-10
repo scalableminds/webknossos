@@ -5,7 +5,9 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
--
+- The initial organization was renamed to `sample`. Make sure to move the data over or to put a symlink in place.
+- The default `operatorData` was replaced. Make sure to update with valid information for public deployments.
+- The config `uri` has been refactored. Pairs of `uri` and `secured` have been replaced with just `uri` which now requires a `http://` or `https://` prefix.
 
 ### Postgres Evolutions:
 - [049-annotation-listed-teams.sql](conf/evolutions/049-annotation-listed-teams.sql)

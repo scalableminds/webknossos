@@ -32,6 +32,9 @@ services:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
       # - -Dplay.http.router="noDS.Routes"
+      # the following lines need to be adapted for non-localhost deployments
+      # - -Dtracingstore.publicUrl=http://example.org:9000
+      # - -Ddatastore.publicUrl=http://example.org:9000
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:

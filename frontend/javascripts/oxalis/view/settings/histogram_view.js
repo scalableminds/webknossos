@@ -79,13 +79,16 @@ class Histogram extends React.PureComponent<HistogramProps> {
     const { min, max } = this.props;
     const { min: minRange, max: maxRange, elementCounts } = histogram;
     const rangeLength = maxRange - minRange;
+    this.drawYAxis(ctx);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
-    const downscaledData = elementCounts.map(value =>
-      value > 0 ? (Math.log(value) / Math.log(maxValue)) * canvasHeight : 0,
+    // Here we normalize all values to the interval of 0 - 9 and then add 1
+    // to gain an interval reaching from 1 - 10, since values between 0 and 1 would be negative, otherwise.
+    const downscalingFactor = 9 / maxValue;
+    const downscaledData = elementCounts.map(
+      value => Math.log10(downscalingFactor * value + 1) * canvasHeight,
     );
     const activeRegion = new Path2D();
-    ctx.beginPath();
     ctx.moveTo(0, downscaledData[0]);
     activeRegion.moveTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     for (let i = 0; i < downscaledData.length; i++) {
@@ -102,6 +105,22 @@ class Histogram extends React.PureComponent<HistogramProps> {
     activeRegion.lineTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
+  };
+
+  drawYAxis = (ctx: CanvasRenderingContext2D) => {
+    // Maximum value of the y axis is always 10. Therefore the axis is independent from any data.
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, canvasHeight);
+    const numberOfScaleLines = 5;
+    const lineWidth = 8;
+    const intervalSize = 2;
+    for (let interval = 1; interval <= numberOfScaleLines; interval++) {
+      // We use canvasHeight - 1 because else half of the top line would be cut off.
+      const lineHeight = Math.round(Math.log10(intervalSize * interval) * (canvasHeight - 1));
+      ctx.moveTo(0, lineHeight);
+      ctx.lineTo(lineWidth, lineHeight);
+    }
   };
 
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {
@@ -122,7 +141,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
           ref={ref => {
             this.canvasRef = ref;
           }}
-          width={300}
+          width={canvasWidth}
           height={canvasHeight}
         />
         <Slider
@@ -133,7 +152,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
-          style={{ width: 300, margin: 0, marginBottom: 18 }}
+          style={{ width: canvasWidth, margin: 0, marginBottom: 18 }}
           step={(maxRange - minRange) / 255}
           tipFormatter={val => roundTo(val, 2).toString()}
         />

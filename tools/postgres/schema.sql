@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(48);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(49);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -58,6 +58,12 @@ CREATE TABLE webknossos.annotations(
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
   CHECK (COALESCE(skeletonTracingId,volumeTracingId) IS NOT NULL),
   CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
+);
+
+CREATE TABLE webknossos.annotation_sharedTeams(
+  _annotation CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_annotation, _team)
 );
 
 CREATE TABLE webknossos.meshes(
@@ -373,6 +379,9 @@ ALTER TABLE webknossos.annotations
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE;
+ALTER TABLE webknossos.annotation_sharedTeams
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
 ALTER TABLE webknossos.dataSets

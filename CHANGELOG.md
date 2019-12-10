@@ -11,6 +11,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Added a scale to the y-axis of histograms to indicate the logarithmic representation. Additionally, small histogram values are smoothed out. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
+- Added a new way of sharing annotations. You can share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard. [#4304](https://github.com/scalableminds/webknossos/pull/4304)
+
 ### Changed
 -
 

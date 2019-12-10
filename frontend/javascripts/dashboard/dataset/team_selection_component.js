@@ -4,7 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import type { APITeam } from "admin/api_flow_types";
-import { getEditableTeams } from "admin/admin_rest_api";
+import { getEditableTeams, getTeams } from "admin/admin_rest_api";
 
 const { Option } = Select;
 
@@ -12,17 +12,18 @@ type Props = {
   value?: APITeam | Array<APITeam>,
   onChange?: (value: APITeam | Array<APITeam>) => void,
   mode?: "default" | "multiple",
+  allowNonEditableTeams?: boolean,
 };
 
 type State = {
-  editableTeams: Array<APITeam>,
-  allowedTeams: Array<APITeam>,
+  possibleTeams: Array<APITeam>,
+  selectedTeams: Array<APITeam>,
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
-    editableTeams: [],
-    allowedTeams: this.props.value ? _.flatten([this.props.value]) : [],
+    possibleTeams: [],
+    selectedTeams: this.props.value ? _.flatten([this.props.value]) : [],
   };
 
   componentDidMount() {
@@ -32,15 +33,17 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
   componentWillReceiveProps(newProps: Props) {
     if (newProps.value) {
       this.setState({
-        allowedTeams: _.flatten([newProps.value]),
+        selectedTeams: _.flatten([newProps.value]),
       });
     }
   }
 
   async fetchData() {
-    const editableTeams = await getEditableTeams();
+    const possibleTeams = this.props.allowNonEditableTeams
+      ? await getTeams()
+      : await getEditableTeams();
     this.setState({
-      editableTeams,
+      possibleTeams,
     });
   }
 
@@ -50,17 +53,17 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
       ? selectedTeamIdsOrId
       : [selectedTeamIdsOrId];
     const allTeams = this.getAllTeams();
-    const allowedTeams = _.compact(selectedTeamIds.map(id => allTeams.find(t => t.id === id)));
+    const selectedTeams = _.compact(selectedTeamIds.map(id => allTeams.find(t => t.id === id)));
     if (this.props.onChange) {
-      this.props.onChange(Array.isArray(selectedTeamIdsOrId) ? allowedTeams : allowedTeams[0]);
+      this.props.onChange(Array.isArray(selectedTeamIdsOrId) ? selectedTeams : selectedTeams[0]);
     }
     this.setState({
-      allowedTeams,
+      selectedTeams,
     });
   };
 
   getAllTeams = (): Array<APITeam> =>
-    _.unionBy(this.state.editableTeams, this.state.allowedTeams, t => t.id);
+    _.unionBy(this.state.possibleTeams, this.state.selectedTeams, t => t.id);
 
   render() {
     return (
@@ -73,12 +76,12 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         }
         optionFilterProp="children"
         onChange={this.onSelectTeams}
-        value={this.state.allowedTeams.map(t => t.id)}
+        value={this.state.selectedTeams.map(t => t.id)}
         filterOption
       >
         {this.getAllTeams().map(team => (
           <Option
-            disabled={this.state.editableTeams.find(t => t.id === team.id) == null}
+            disabled={this.state.possibleTeams.find(t => t.id === team.id) == null}
             key={team.id}
           >
             {team.name}

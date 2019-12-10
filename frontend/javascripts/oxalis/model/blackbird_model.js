@@ -1,6 +1,18 @@
 // @flow
 import * as tf from "@tensorflow/tfjs";
-import * as _ from "lodash";
+import _ from "lodash";
+
+async function computeClassWeight(trainData) {
+  const classWeight = [];
+  const [length, numClasses] = trainData.labels.shape;
+  // Sum up the 1s of each column, because the labels are one-hot encoded
+  const classCountTensor = await trainData.labels.sum(0).data();
+  for (let i = 0; i < numClasses; i++) {
+    const classCount = classCountTensor[i];
+    classWeight[i] = classCount === 0 ? 1 : length / classCount / numClasses;
+  }
+  return classWeight;
+}
 
 async function filterUnlabeledExamples(data, numClasses = 2) {
   const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
@@ -57,6 +69,10 @@ export async function train(model, trainData, onIteration: (progress: number) =>
   const validationSplit = 0.15;
   const trainEpochs = 50;
   const filteredTrainData = await filterUnlabeledExamples(trainData);
+  const classWeight = await computeClassWeight(
+    filteredTrainData,
+    filteredTrainData.labels.shape[1],
+  );
   const totalNumBatches = Math.ceil(
     (filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize,
   );
@@ -68,6 +84,7 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     validationSplit,
     epochs: trainEpochs,
     shuffle: true,
+    classWeight,
     callbacks: {
       onBatchEnd: async batch => {
         trainBatchCount++;

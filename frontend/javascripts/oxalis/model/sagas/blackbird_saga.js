@@ -96,9 +96,12 @@ function* predict(): Saga<void> {
     bbox,
   );
   const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
+  console.time("prediction");
   const predictedData = yield* call(blackbirdModel.predict, model, { xs: featureTensor });
+  console.timeEnd("prediction");
 
   console.log("Labeling in bounding box:", bbox);
+  console.time("labeling");
   for (let x = 0; x <= size[0]; x++) {
     for (let y = 0; y <= size[1]; y++) {
       for (let z = 0; z <= size[2]; z++) {
@@ -115,11 +118,12 @@ function* predict(): Saga<void> {
       }
     }
   }
+  console.timeEnd("labeling");
   console.log("Finished labeling.");
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("TRAIN_CLASSIFIER", trainClassifier);
-  // yield _takeEvery("PREDICT", predict);
+  yield _takeEvery("PREDICT", predict);
 }

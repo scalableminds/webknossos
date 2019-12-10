@@ -73,7 +73,6 @@ class LiveTrainingView extends React.Component<Props, State> {
           onClick={() => {
             Store.dispatch(setLiveTrainingProgressAction(0));
             this.props.handleTrain();
-            this.props.handlePredict();
           }}
         >
           Retrain and Predict

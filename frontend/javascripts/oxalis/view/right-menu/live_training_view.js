@@ -99,7 +99,9 @@ class LiveTrainingView extends React.Component<Props, State> {
               }}
               style={{ height: 48, width: 180 }}
             >
-              {isTraining ? `Training... (${liveTrainingProgress}%)` : "Retrain and Predict"}
+              {isTraining
+                ? `Training... (${Math.floor(liveTrainingProgress)}%)`
+                : "Retrain and Predict"}
             </Button>
             <Button
               disabled={isTraining || isLiveTrainingPredicting}
@@ -139,7 +141,7 @@ function mapStateToProps(state: OxalisState) {
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
-    liveTrainingProgress: Math.round(state.uiInformation.liveTrainingProgress),
+    liveTrainingProgress: state.uiInformation.liveTrainingProgress,
     isLiveTrainingPredicting: state.uiInformation.isLiveTrainingPredicting,
   };
 }

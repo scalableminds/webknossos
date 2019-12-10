@@ -11,9 +11,11 @@ import {
   setIsLiveTrainingPredictingAction,
 } from "oxalis/model/actions/ui_actions";
 import { V3 } from "libs/mjs";
+import _ from "lodash";
 import * as blackbirdModel from "oxalis/model/blackbird_model";
 import * as Utils from "libs/utils";
 
+const predictionWindow = 20;
 const numClasses = 2;
 const featureChannelCount = 16;
 const channelCount = 3;
@@ -84,10 +86,29 @@ function* predict(): Saga<void> {
   console.log("predict action");
   Store.dispatch(setIsLiveTrainingPredictingAction(true));
   yield* call([Utils, Utils.sleep], 10);
+  const datasetBbox = yield* select(
+    state => state.dataset.dataSource.dataLayers.find(layer => layer.name === "color").boundingBox,
+  );
   const position = yield* select(state => getPosition(state.flycam));
   const bbox = {
-    min: [0, 0, Math.floor(position[2])],
-    max: [250, 250, Math.floor(position[2] + 1)],
+    min: [
+      datasetBbox.topLeft[0],
+      datasetBbox.topLeft[1],
+      _.clamp(
+        Math.floor(position[2] - predictionWindow / 2),
+        datasetBbox.topLeft[2],
+        datasetBbox.topLeft[2] + datasetBbox.depth,
+      ),
+    ],
+    max: [
+      datasetBbox.topLeft[0] + datasetBbox.width,
+      datasetBbox.topLeft[1] + datasetBbox.height,
+      _.clamp(
+        Math.floor(position[2] + predictionWindow / 2 + 1),
+        datasetBbox.topLeft[2],
+        datasetBbox.topLeft[2] + datasetBbox.depth,
+      ),
+    ],
   };
   const size = V3.toArray(V3.sub(bbox.max, bbox.min));
 

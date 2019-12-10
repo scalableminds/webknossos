@@ -31,6 +31,10 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "uiInformation", { hasOrganizations: action.value });
     }
 
+    case "SET_LIVE_TRAINING_PROGRESS": {
+      return updateKey(state, "uiInformation", { liveTrainingProgress: action.value });
+    }
+
     default:
       return state;
   }

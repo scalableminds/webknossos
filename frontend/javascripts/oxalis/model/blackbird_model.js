@@ -1,4 +1,6 @@
+// @flow
 import * as tf from "@tensorflow/tfjs";
+import * as _ from "lodash";
 
 async function filterUnlabeledExamples(data, numClasses = 2) {
   const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
@@ -43,7 +45,11 @@ function reshapeInputData(data) {
   };
 }
 
-export async function train(model, trainData, onIteration = () => {}) {
+export async function train(
+  model,
+  trainData,
+  onIteration = (progress: number, epoch: Object, log: string) => {},
+) {
   console.log("Training model...");
   const optimizer = "adam";
   model.compile({
@@ -65,17 +71,18 @@ export async function train(model, trainData, onIteration = () => {}) {
     epochs: trainEpochs,
     shuffle: true,
     callbacks: {
-      onBatchEnd: async (batch, logs) => {
+      onBatchEnd: async batch => {
         trainBatchCount++;
+        const progressPercentage = _.round((trainBatchCount / totalNumBatches) * 100, 1);
         console.log(
-          `Training... (` +
-            `${((trainBatchCount / totalNumBatches) * 100).toFixed(1)}%` +
+          "Training... (" +
+            `${progressPercentage}%` +
             ` complete of ${totalNumBatches} batches). To stop training, refresh or close page.`,
         );
         // plotLoss(trainBatchCount, logs.loss, "train");
         // plotAccuracy(trainBatchCount, logs.acc, "train");
         if (onIteration && batch % 10 === 0) {
-          onIteration("onBatchEnd", batch, logs);
+          onIteration(progressPercentage);
         }
         await tf.nextFrame();
       },
@@ -84,7 +91,8 @@ export async function train(model, trainData, onIteration = () => {}) {
         // plotLoss(trainBatchCount, logs.val_loss, "validation");
         // plotAccuracy(trainBatchCount, logs.val_acc, "validation");
         if (onIteration) {
-          onIteration("onEpochEnd", epoch, logs);
+          const progressPercentage = _.round(((epoch + 1) / trainEpochs) * 100, 1);
+          onIteration(progressPercentage);
         }
         await tf.nextFrame();
       },

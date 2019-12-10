@@ -15,7 +15,7 @@ const LAST_X_DAYS = 2 * 365;
 const MIN_TRACING_MINUTES = 60;
 
 const ANNOTATIONS_SQL = `
-SELECT annotations._id, tracing_id, _task, firstname, lastname, modified,
+SELECT annotations._id, skeletontracingid, volumetracingid, _task, firstname, lastname, modified,
   annotations.tracingtime, json_extract_path_text(statistics::json,'nodeCount') AS nodecount,
   _project, projects.name
 FROM webknossos.annotations
@@ -62,9 +62,10 @@ async function connect() {
         entry.firstname
       } ${entry.lastname}, TracingTime: ${tracingTimeInMinutes}m${tracingTimeSeconds}s, TaskId: ${
         entry._task
-      }, AnnotationId: ${entry._id}, TracingId: ${entry.tracing_id}, ProjectId: ${
-        entry._project
-      }, ProjectName: ${entry.name}, Modified: ${entry.modified}`,
+      }, AnnotationId: ${entry._id}, TracingId: ${entry.skeletontracingid ||
+        entry.volumetracingid}, ProjectId: ${entry._project}, ProjectName: ${
+        entry.name
+      }, Modified: ${entry.modified}`,
     );
   }
 

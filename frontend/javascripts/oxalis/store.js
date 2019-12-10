@@ -394,6 +394,7 @@ type UiInformation = {
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
+  +liveTrainingProgress: number,
 };
 
 export type OxalisState = {|

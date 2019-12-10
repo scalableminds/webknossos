@@ -61,7 +61,7 @@ Samplecountry
 """
   val organizationTeamId = ObjectId.generate
   val defaultOrganization =
-    Organization(ObjectId.generate, "sample", additionalInformation, "/assets/images/oxalis.svg", "Sample Organization")
+    Organization(ObjectId.generate, "sample_organization", additionalInformation, "/assets/images/oxalis.svg", "Sample Organization")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(
     ObjectId.generate,

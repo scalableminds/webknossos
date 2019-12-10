@@ -92,10 +92,8 @@ async function train() {
         xs: featureTensor,
         labels: labeledTensor,
       },
-      (progress: number, epoch: Object, log: string) => {
-        Store.dispatch(setLiveTrainingProgressAction(progress));
-        console.log("progress at ", progress, "%");
-        console.log("iteration done");
+      (progressPercentage: number) => {
+        Store.dispatch(setLiveTrainingProgressAction(progressPercentage));
       },
     );
 

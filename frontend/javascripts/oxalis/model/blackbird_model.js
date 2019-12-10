@@ -1,5 +1,6 @@
 // @flow
 import * as tf from "@tensorflow/tfjs";
+import * as _ from "lodash";
 
 async function filterUnlabeledExamples(data, numClasses = 2) {
   const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
@@ -72,16 +73,16 @@ export async function train(
     callbacks: {
       onBatchEnd: async (batch, logs) => {
         trainBatchCount++;
-        const progress = ((trainBatchCount / totalNumBatches) * 100).toFixed(1);
+        const progressPercentage = _.round((trainBatchCount / totalNumBatches) * 100, 1);
         console.log(
           "Training... (" +
-            `${progress}%` +
+            `${progressPercentage}%` +
             ` complete of ${totalNumBatches} batches). To stop training, refresh or close page.`,
         );
         // plotLoss(trainBatchCount, logs.loss, "train");
         // plotAccuracy(trainBatchCount, logs.acc, "train");
         if (onIteration && batch % 10 === 0) {
-          onIteration(progress, batch, logs);
+          onIteration(progressPercentage);
         }
         await tf.nextFrame();
       },
@@ -90,7 +91,8 @@ export async function train(
         // plotLoss(trainBatchCount, logs.val_loss, "validation");
         // plotAccuracy(trainBatchCount, logs.val_acc, "validation");
         if (onIteration) {
-          onIteration(((trainBatchCount / totalNumBatches) * 100).toFixed(1), epoch, logs);
+          const progressPercentage = _.round(((epoch + 1) / trainEpochs) * 100, 1);
+          onIteration(progressPercentage);
         }
         await tf.nextFrame();
       },

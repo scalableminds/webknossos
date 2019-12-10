@@ -8,7 +8,8 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import debounceRender from "react-debounce-render";
-
+import Store from "oxalis/store";
+import { setLiveTrainingProgressAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState } from "oxalis/store";
 import { trainClassifierAction, predictAction } from "oxalis/model/actions/blackbird_actions";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -72,6 +73,7 @@ class LiveTrainingView extends React.Component<Props, State> {
         <Button
           type="primary"
           onClick={() => {
+            Store.dispatch(setLiveTrainingProgressAction(0));
             this.props.handleTrain();
             this.props.handlePredict();
           }}

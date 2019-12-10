@@ -72,7 +72,6 @@ class LiveTrainingView extends React.Component<Props, State> {
           disabled={isTraining || isLiveTrainingPredicting}
           onClick={() => {
             this.props.handleTrain();
-            this.props.handlePredict();
           }}
         >
           Retrain and Predict

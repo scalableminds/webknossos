@@ -53,16 +53,17 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     loss: "categoricalCrossentropy",
     metrics: ["accuracy"],
   });
-  const batchSize = 2 ** 13;
+  const filteredTrainData = await filterUnlabeledExamples(trainData);
+  const batchSize = filteredTrainData.xs.size;
   const validationSplit = 0.15;
   const trainEpochs = 50;
-  const filteredTrainData = await filterUnlabeledExamples(trainData);
   const totalNumBatches = Math.ceil(
     (filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize,
   );
 
   console.log("Training model...");
   let trainBatchCount = 0;
+  console.time("training");
   await model.fit(filteredTrainData.xs, filteredTrainData.labels, {
     batchSize,
     validationSplit,
@@ -101,13 +102,15 @@ export async function train(model, trainData, onIteration: (progress: number) =>
       },
     },
   });
+  console.timeEnd("training");
   console.log("Training complete");
 }
 
 export async function predict(model, data) {
+  const batchSize = data.xs.size;
   const { xs } = reshapeInputData(data);
   const predictions = await model
-    .predict(xs)
+    .predict(xs, { batchSize })
     // Convert 0-1 to 0-255
     .mul(255)
     .data();

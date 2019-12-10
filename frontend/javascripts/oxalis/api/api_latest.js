@@ -700,7 +700,7 @@ class DataApi {
 
   getFeatureBankLayerName(): ?string {
     for (const layer of Object.values(this.model.dataLayers)) {
-      if (layer.layerInfo.elementClass == "float32x16") {
+      if (layer.layerInfo.elementClass === "float32x16") {
         return layer.name;
       }
     }

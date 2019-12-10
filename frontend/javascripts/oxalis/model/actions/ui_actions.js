@@ -30,13 +30,19 @@ type SetHasOrganizationsAction = {
   value: boolean,
 };
 
+type SetLiveTrainingProgressAction = {
+  type: "SET_LIVE_TRAINING_PROGRESS",
+  value: number,
+};
+
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
   | SetImportingMeshStateAction
   | SetStoredLayoutsAction
   | SetIsInAnnotationViewAction
-  | SetHasOrganizationsAction;
+  | SetHasOrganizationsAction
+  | SetLiveTrainingProgressAction;
 
 export const setDropzoneModalVisibilityAction = (
   visible: boolean,
@@ -69,5 +75,10 @@ export const setIsInAnnotationViewAction = (value: boolean): SetIsInAnnotationVi
 
 export const setHasOrganizationsAction = (value: boolean): SetHasOrganizationsAction => ({
   type: "SET_HAS_ORGANIZATIONS",
+  value,
+});
+
+export const setLiveTrainingProgressAction = (value: boolean): SetLiveTrainingProgressAction => ({
+  type: "SET_LIVE_TRAINING_PROGRESS",
   value,
 });

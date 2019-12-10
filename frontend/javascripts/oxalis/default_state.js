@@ -200,6 +200,7 @@ const defaultState: OxalisState = {
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,
+    liveTrainingProgress: 0,
   },
 };
 

@@ -24,6 +24,8 @@ import {
 import window from "libs/window";
 import * as tf from "@tensorflow/tfjs";
 import api from "oxalis/api/internal_api";
+import Store from "oxalis/store";
+import { setLiveTrainingProgressAction } from "oxalis/model/actions/ui_actions";
 import { V3 } from "libs/mjs";
 import * as blackbirdModel from "oxalis/model/blackbird_model";
 
@@ -86,7 +88,9 @@ async function train() {
         xs: featureTensor,
         labels: labeledTensor,
       },
-      () => {
+      (progress: number, epoch: Object, log: string) => {
+        Store.dispatch(setLiveTrainingProgressAction(progress));
+        console.log("progress at ", progress, "%");
         console.log("iteration done");
       },
     );

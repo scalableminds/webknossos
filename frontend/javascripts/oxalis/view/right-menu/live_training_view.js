@@ -19,6 +19,7 @@ type OwnProps = {|
 |};
 type StateProps = {|
   activeCellId: number,
+  liveTrainingProgress: number,
 |};
 type DispatchProps = {|
   onChangeActiveCellId: number => void,
@@ -51,13 +52,14 @@ class LiveTrainingView extends React.Component<Props, State> {
   };
 
   render() {
+    const { activeCellId, liveTrainingProgress } = this.props;
     return (
       <div id="live-training" className="padded-tab-content" style={{ maxWidth: 500 }}>
         <div style={{ marginBottom: 6 }}>
           <label className="setting-label">
             Brush to label…
             <Radio.Group
-              value={this.props.activeCellId}
+              value={activeCellId}
               onChange={this.handleChangeLabel}
               style={{ marginLeft: 6 }}
             >
@@ -77,7 +79,7 @@ class LiveTrainingView extends React.Component<Props, State> {
           Retrain and Predict
         </Button>
         <div style={{ display: "block", marginTop: 6 }}>
-          <Progress type="circle" percent={70} />
+          <Progress type="circle" percent={liveTrainingProgress} />
         </div>
       </div>
     );
@@ -104,6 +106,7 @@ function mapStateToProps(state: OxalisState) {
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
+    liveTrainingProgress: state.uiInformation.liveTrainingProgress,
   };
 }
 

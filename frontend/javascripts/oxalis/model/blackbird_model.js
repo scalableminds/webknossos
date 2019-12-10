@@ -1,3 +1,4 @@
+// @flow
 import * as tf from "@tensorflow/tfjs";
 
 async function filterUnlabeledExamples(data, numClasses = 3) {
@@ -43,7 +44,11 @@ function reshapeInputData(data) {
   };
 }
 
-export async function train(model, trainData, onIteration = () => {}) {
+export async function train(
+  model,
+  trainData,
+  onIteration = (progress: number, epoch: Object, log: string) => {},
+) {
   console.log("Training model...");
   const optimizer = "adam";
   model.compile({
@@ -67,15 +72,16 @@ export async function train(model, trainData, onIteration = () => {}) {
     callbacks: {
       onBatchEnd: async (batch, logs) => {
         trainBatchCount++;
+        const progress = ((trainBatchCount / totalNumBatches) * 100).toFixed(1);
         console.log(
-          `Training... (` +
-            `${((trainBatchCount / totalNumBatches) * 100).toFixed(1)}%` +
+          "Training... (" +
+            `${progress}%` +
             ` complete of ${totalNumBatches} batches). To stop training, refresh or close page.`,
         );
         // plotLoss(trainBatchCount, logs.loss, "train");
         // plotAccuracy(trainBatchCount, logs.acc, "train");
         if (onIteration && batch % 10 === 0) {
-          onIteration("onBatchEnd", batch, logs);
+          onIteration(progress, batch, logs);
         }
         await tf.nextFrame();
       },
@@ -84,7 +90,7 @@ export async function train(model, trainData, onIteration = () => {}) {
         // plotLoss(trainBatchCount, logs.val_loss, "validation");
         // plotAccuracy(trainBatchCount, logs.val_acc, "validation");
         if (onIteration) {
-          onIteration("onEpochEnd", epoch, logs);
+          onIteration(((trainBatchCount / totalNumBatches) * 100).toFixed(1), epoch, logs);
         }
         await tf.nextFrame();
       },

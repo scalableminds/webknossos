@@ -29,16 +29,12 @@ type DispatchProps = {|
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
-type State = {
-  isRetraining: boolean,
-};
+type State = {};
 
 class LiveTrainingView extends React.Component<Props, State> {
   isMounted: boolean = false;
 
-  state = {
-    isRetraining: false,
-  };
+  state = {};
 
   componentDidMount() {
     this.isMounted = true;
@@ -54,6 +50,7 @@ class LiveTrainingView extends React.Component<Props, State> {
 
   render() {
     const { activeCellId, liveTrainingProgress } = this.props;
+    const isTraining = liveTrainingProgress > 0 && liveTrainingProgress < 100;
     return (
       <div id="live-training" className="padded-tab-content" style={{ maxWidth: 500 }}>
         <div style={{ marginBottom: 6 }}>
@@ -72,6 +69,7 @@ class LiveTrainingView extends React.Component<Props, State> {
 
         <Button
           type="primary"
+          disabled={isTraining}
           onClick={() => {
             Store.dispatch(setLiveTrainingProgressAction(0));
             this.props.handleTrain();
@@ -80,8 +78,23 @@ class LiveTrainingView extends React.Component<Props, State> {
         >
           Retrain and Predict
         </Button>
+        <Button
+          type="primary"
+          disabled={isTraining}
+          style={{ marginLeft: 24 }}
+          onClick={() => {
+            this.props.handlePredict();
+          }}
+        >
+          Predict
+        </Button>
         <div style={{ display: "block", marginTop: 6 }}>
-          <Progress type="circle" percent={liveTrainingProgress} />
+          {isTraining ? (
+            <React.Fragment>
+              <div>Training ...</div>
+              <Progress type="circle" percent={liveTrainingProgress} />
+            </React.Fragment>
+          ) : null}
         </div>
       </div>
     );

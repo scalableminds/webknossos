@@ -45,11 +45,7 @@ function reshapeInputData(data) {
   };
 }
 
-export async function train(
-  model,
-  trainData,
-  onIteration = (progress: number, epoch: Object, log: string) => {},
-) {
+export async function train(model, trainData, onIteration: (progress: number) => void) {
   console.log("Training model...");
   const optimizer = "adam";
   model.compile({

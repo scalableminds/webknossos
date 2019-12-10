@@ -61,9 +61,9 @@ Samplecountry
 """
   val organizationTeamId = ObjectId.generate
   val defaultOrganization = Organization(ObjectId.generate,
-                                         "Connectomics_Department",
+                                         "sample_orga",
                                          additionalInformation,
-                                         "/assets/images/mpi-logos.svg",
+                                         "/assets/images/sample-orga-logo.svg",
                                          "MPI for Brain Research")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(
@@ -207,7 +207,7 @@ Samplecountry
       dataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("inserting local datastore")
-          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Http.uri, conf.Datastore.key))
+          dataStoreDAO.insertOne(DataStore("localhost", conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key))
         }
       }
     } else Fox.successful(())
@@ -228,7 +228,7 @@ Samplecountry
       tracingStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           logger.info("inserting local tracingstore")
-          tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Http.uri, conf.Tracingstore.key))
+          tracingStoreDAO.insertOne(TracingStore("localhost", conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Tracingstore.key))
         }
       }
     } else Fox.successful(())

@@ -1,6 +1,4 @@
 // @flow
-import type { Vector3, OrthoView } from "oxalis/constants";
-
 type TrainClassifierAction = { type: "TRAIN_CLASSIFIER" };
 type PredictAction = { type: "PREDICT" };
 

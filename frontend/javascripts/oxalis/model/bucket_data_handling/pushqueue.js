@@ -19,13 +19,11 @@ class PushQueue {
   dataSetName: string;
   cube: DataCube;
   taskQueue: AsyncTaskQueue;
-  sendData: boolean;
   queue: Set<DataBucket>;
 
-  constructor(cube: DataCube, sendData: boolean = true) {
+  constructor(cube: DataCube) {
     this.cube = cube;
     this.taskQueue = new AsyncTaskQueue(Infinity);
-    this.sendData = sendData;
     this.queue = new Set();
 
     const autoSaveFailureMessage = "Auto-Save failed!";
@@ -66,9 +64,6 @@ class PushQueue {
 
   pushImpl = async () => {
     await this.cube.temporalBucketManager.getAllLoadedPromise();
-    if (!this.sendData) {
-      return;
-    }
 
     while (this.queue.size) {
       let batchSize = Math.min(BATCH_SIZE, this.queue.size);
@@ -95,6 +90,16 @@ class PushQueue {
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
     return sendToStore(batch);
+  }
+}
+
+export class NullPushQueue extends PushQueue {
+  stateSaved(): boolean {
+    return true;
+  }
+
+  pushBatch(batch: Array<DataBucket>): Promise<void> {
+    return Promise.resolve();
   }
 }
 

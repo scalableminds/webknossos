@@ -67,7 +67,7 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     epochs: trainEpochs,
     shuffle: true,
     callbacks: {
-      onBatchEnd: async (batch, logs) => {
+      onBatchEnd: async batch => {
         trainBatchCount++;
         const progressPercentage = _.round((trainBatchCount / totalNumBatches) * 100, 1);
         console.log(

@@ -61,10 +61,10 @@ Samplecountry
 """
   val organizationTeamId = ObjectId.generate
   val defaultOrganization = Organization(ObjectId.generate,
-                                         "sample_orga",
+                                         "sample",
                                          additionalInformation,
-                                         "/assets/images/sample-orga-logo.svg",
-                                         "MPI for Brain Research")
+                                         "/assets/images/oxalis.svg",
+                                         "Sample Organization")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val defaultUser = User(
     ObjectId.generate,

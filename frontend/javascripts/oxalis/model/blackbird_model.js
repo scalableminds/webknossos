@@ -1,7 +1,7 @@
 // @flow
 import * as tf from "@tensorflow/tfjs";
 
-async function filterUnlabeledExamples(data, numClasses = 3) {
+async function filterUnlabeledExamples(data, numClasses = 2) {
   const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
   const mask = labelsReshaped.notEqual(0);
   const featuresFiltered = await tf.booleanMaskAsync(featuresReshaped, mask);
@@ -13,7 +13,7 @@ async function filterUnlabeledExamples(data, numClasses = 3) {
   return { xs: featuresFiltered, labels: labelsFilteredOneHot };
 }
 
-export function createModel(numClasses = 3, numFeatures = 16) {
+export function createModel(numClasses, numFeatures) {
   const model = tf.sequential();
   const initializer = "glorotUniform";
   const activation = "relu";

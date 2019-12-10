@@ -6,7 +6,7 @@ import {
   changeActiveIsosurfaceCellAction,
   type ChangeActiveIsosurfaceCellAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { ControlModeEnum, type Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   getPosition,
@@ -29,9 +29,11 @@ import { setLiveTrainingProgressAction } from "oxalis/model/actions/ui_actions";
 import { V3 } from "libs/mjs";
 import * as blackbirdModel from "oxalis/model/blackbird_model";
 
-const model = blackbirdModel.createModel();
+const numClasses = 2;
 const featureChannelCount = 16;
-const numClasses = 3;
+const channelCount = 3;
+const model = blackbirdModel.createModel(numClasses, featureChannelCount);
+const bucketWidth = constants.BUCKET_WIDTH;
 
 function writePrediction(position, value) {
   let predictionLayer = null;
@@ -46,13 +48,15 @@ function writePrediction(position, value) {
     return;
   }
   const shape = [20, 20, 20];
-  const channelCount = 3;
   for (let x = position[0]; x < position[0] + shape[0]; x++) {
     for (let y = position[1]; y < position[1] + shape[1]; y++) {
       for (let z = position[2]; z < position[2] + shape[2]; z++) {
         for (let cidx = 0; cidx < channelCount; cidx++) {
           const voxelIdx =
-            channelCount * x + cidx + y * (32 * channelCount) + z * channelCount * 32 ** 2;
+            channelCount * x +
+            cidx +
+            y * (bucketWidth * channelCount) +
+            z * channelCount * bucketWidth ** 2;
           predictionLayer.cube.labelVoxel([x, y, z], value[cidx], null, voxelIdx);
         }
       }
@@ -82,7 +86,7 @@ async function train() {
     const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
     const labeledTensor = tf.tensor4d(new Uint8Array(labeledData), size.concat([1]));
 
-    blackbirdModel.train(
+    await blackbirdModel.train(
       model,
       {
         xs: featureTensor,
@@ -105,14 +109,29 @@ async function train() {
 function* trainClassifier(action): Saga<void> {
   console.log("train action");
   yield* call(train);
+  yield* call(predict);
+}
+
+function getVoxelIndex(voxel: Vector3, channelIndex: number): number {
+  // No `map` for performance reasons
+  const voxelOffset = [0, 0, 0];
+  for (let i = 0; i < 3; i++) {
+    voxelOffset[i] = Math.floor(voxel[i]) % constants.BUCKET_WIDTH;
+  }
+  const voxelIndex =
+    channelCount * voxelOffset[0] +
+    channelIndex +
+    voxelOffset[1] * (bucketWidth * channelCount) +
+    voxelOffset[2] * channelCount * bucketWidth ** 2;
+  return voxelIndex;
 }
 
 function* predict(action): Saga<void> {
   console.log("predict action");
   const position = yield* select(state => getPosition(state.flycam));
   const bbox = {
-    min: [0, 0, position[2]],
-    max: [250, 250, position[2] + 1],
+    min: [0, 0, Math.floor(position[2])],
+    max: [250, 250, Math.floor(position[2] + 1)],
   };
   const size = V3.toArray(V3.sub(bbox.max, bbox.min));
 
@@ -131,21 +150,28 @@ function* predict(action): Saga<void> {
   const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
   const predictedData = yield* call(blackbirdModel.predict, model, { xs: featureTensor });
 
+  console.log("Labeling in bounding box:", bbox);
   for (let x = 0; x <= size[0]; x++) {
     for (let y = 0; y <= size[1]; y++) {
       for (let z = 0; z <= size[2]; z++) {
-        const index = x + y * size[0] + z * size[0] * size[1];
-        const channels = predictedData.slice(index, index + numClasses);
-        const maxChannel = Math.max(...channels);
-        const classId = channels.indexOf(maxChannel);
-        predictionCube.labelVoxel([bbox.min[0] + x, bbox.min[1] + y, bbox.min[2] + z], classId + 1);
+        const predictionIndex =
+          x * numClasses + y * size[0] * numClasses + z * size[0] * size[1] * numClasses;
+        const channels = predictedData.slice(predictionIndex, predictionIndex + numClasses);
+        // const maxChannel = Math.max(...channels);
+        // const classId = channels.indexOf(maxChannel);
+        const voxelPosition = [bbox.min[0] + x, bbox.min[1] + y, bbox.min[2] + z];
+        channels.map((value, cidx) => {
+          const voxelIndex = getVoxelIndex(voxelPosition, cidx);
+          predictionCube.labelVoxel(voxelPosition, value, null, voxelIndex);
+        });
       }
     }
   }
+  console.log("Finished labeling.");
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
-  yield _takeEvery("PREDICT", predict);
   yield _takeEvery("TRAIN_CLASSIFIER", trainClassifier);
+  // yield _takeEvery("PREDICT", predict);
 }

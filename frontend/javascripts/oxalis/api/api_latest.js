@@ -929,17 +929,18 @@ class DataApi {
         y = Math.max(bbox.min[1], bucketTopLeft[1]);
         while (y < yMax) {
           const dataOffset =
-            (x % bucketWidth) +
-            (y % bucketWidth) * bucketWidth +
-            (z % bucketWidth) * bucketWidth * bucketWidth;
+            ((x % bucketWidth) +
+              (y % bucketWidth) * bucketWidth +
+              (z % bucketWidth) * bucketWidth * bucketWidth) *
+            channelCount;
           const rx = x - bbox.min[0];
           const ry = y - bbox.min[1];
           const rz = z - bbox.min[2];
 
-          const resultOffset = rx + ry * extent[0] + rz * extent[0] * extent[1];
+          const resultOffset = (rx + ry * extent[0] + rz * extent[0] * extent[1]) * channelCount;
           const data =
             bucket.type !== "null" ? bucket.getData() : new TypedArrayClass(Constants.BUCKET_SIZE);
-          const length = xMax - x;
+          const length = (xMax - x) * channelCount;
           result.set(data.slice(dataOffset, dataOffset + length), resultOffset);
           y += 1;
         }

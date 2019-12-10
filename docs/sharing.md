@@ -100,7 +100,12 @@ To share an annotation, follow these steps:
 3. Copy the sharing URL for private access.
 4. Enable public sharing with the checkbox, if required.
 
-![Configure the Annotation Sharing](images/tracing_ui_sharing.png)
+In addition to sharing your annotation via link, you can also share your annotations with colleagues in the shared annotations tab.
+In the sharing modal, which was described above, you can select teams you want to share your annotation with.
+If they open their [Shared Annotations Dashboard Tab](./dashboard.md#shared-annotations) they will see your annotation.
+This is the simplest way to share an annotation with a whole group of people.
+
+![Configure the Annotation Sharing](images/sharing_modal.png)
 
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
 Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.

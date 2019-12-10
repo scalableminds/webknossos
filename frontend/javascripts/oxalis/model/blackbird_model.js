@@ -53,10 +53,16 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     loss: "categoricalCrossentropy",
     metrics: ["accuracy"],
   });
-  const filteredTrainData = await filterUnlabeledExamples(trainData);
+  const filteredTrainDataSorted = await filterUnlabeledExamples(trainData);
+  const inds = tf.util.createShuffledIndices(filteredTrainDataSorted.labels.shape[0]);
+  const shuffledIndices = tf.tensor1d(new Int32Array(inds));
+  const filteredTrainData = {
+    xs: tf.gather(filteredTrainDataSorted.xs, shuffledIndices),
+    labels: tf.gather(filteredTrainDataSorted.labels, shuffledIndices),
+  };
   const batchSize = filteredTrainData.xs.size;
-  const validationSplit = 0.15;
-  const trainEpochs = 50;
+  const validationSplit = 0.25;
+  const trainEpochs = 150;
   const totalNumBatches = Math.ceil(
     (filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize,
   );

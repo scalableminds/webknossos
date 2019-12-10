@@ -112,7 +112,6 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-const debounceTime = 100;
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
@@ -120,4 +119,4 @@ export default connect<Props, OwnProps, _, _, _, _>(
   {
     pure: false,
   },
-)(debounceRender(LiveTrainingView, debounceTime));
+)(LiveTrainingView);

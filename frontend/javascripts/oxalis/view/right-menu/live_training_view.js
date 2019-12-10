@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Radio, Button, Progress } from "antd";
+import { Radio, Button, Progress, Spin, Icon } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -92,6 +92,15 @@ class LiveTrainingView extends React.Component<Props, State> {
             <React.Fragment>
               <div>Training ...</div>
               <Progress type="circle" percent={liveTrainingProgress} />
+            </React.Fragment>
+          ) : null}
+          {isLiveTrainingPredicting ? (
+            <React.Fragment>
+              <div>Predicting ...</div>
+              <Spin
+                size="large"
+                indicator={<Icon style={{ fontSize: 56 }} type="loading" spin />}
+              />
             </React.Fragment>
           ) : null}
         </div>

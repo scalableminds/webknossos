@@ -335,7 +335,7 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  labelVoxel(voxel: Vector3, label: number, activeCellId: ?number): void {
+  labelVoxel(voxel: Vector3, label: number, activeCellId: ?number, voxelIdx: ?number): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
@@ -344,7 +344,7 @@ class DataCube {
       const address = this.positionToBaseAddress(voxel);
       const bucket = this.getOrCreateBucket(address);
       if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel);
+        const voxelIndex = voxelIdx != null ? voxelIdx : this.getVoxelIndex(voxel);
 
         let shouldUpdateVoxel = true;
         if (activeCellId != null) {

@@ -22,7 +22,36 @@ import api from "oxalis/api/internal_api";
 import { V3 } from "libs/mjs";
 import * as blackbirdModel from "oxalis/model/blackbird_model.js";
 
+function writePrediction(position, value) {
+  let predictionLayer = null;
+
+  for (const layer of Object.values(api.data.model.dataLayers)) {
+    if (layer.name == "prediction") {
+      predictionLayer = layer;
+    }
+  }
+  if (!predictionLayer) {
+    console.error("No layer found with name `prediction`.");
+    return;
+  }
+  const shape = [20, 20, 20];
+  const channelCount = 3;
+  for (let x = position[0]; x < position[0] + shape[0]; x++) {
+    for (let y = position[1]; y < position[1] + shape[1]; y++) {
+      for (let z = position[2]; z < position[2] + shape[2]; z++) {
+        for (let cidx = 0; cidx < channelCount; cidx++) {
+          const voxelIdx =
+            channelCount * x + cidx + y * (32 * channelCount) + z * channelCount * 32 ** 2;
+          predictionLayer.cube.labelVoxel([x, y, z], value[cidx], null, voxelIdx);
+        }
+      }
+    }
+  }
+}
+
 async function train() {
+  writePrediction([5, 5, 5], [255, 255, 0]);
+
   try {
     const bbox = {
       min: [0, 0, 0],
@@ -30,8 +59,8 @@ async function train() {
     };
     const featureChannelCount = 16;
     const size = V3.toArray(V3.sub(bbox.max, bbox.min));
-
     const featureBankLayerName = api.data.getFeatureBankLayerName();
+
     if (!featureBankLayerName) {
       console.error("Couldn't find a layer with element class float32x16.");
       return;

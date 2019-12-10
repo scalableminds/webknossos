@@ -135,7 +135,7 @@ function mapStateToProps(state: OxalisState) {
     activeCellId: getVolumeTracing(state.tracing)
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
-    liveTrainingProgress: state.uiInformation.liveTrainingProgress,
+    liveTrainingProgress: Math.round(state.uiInformation.liveTrainingProgress),
     isLiveTrainingPredicting: state.uiInformation.isLiveTrainingPredicting,
   };
 }

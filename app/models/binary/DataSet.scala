@@ -273,7 +273,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                         inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
-                        status = ${source.statusOpt.getOrElse("")}
+                        status = ${source.statusOpt.getOrElse("").take(1024)}
                    where _id = ${id}"""
       _ <- run(q)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
@@ -450,15 +450,10 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
 
   def updateAllowedTeamsForDataSet(_id: ObjectId, allowedTeams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery =
-      sqlu"""delete from webknossos.dataSet_allowedTeams
-                             where _dataSet = (
-                               select _id from webknossos.dataSets where _id = ${_id}
-                             )"""
+    val clearQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataSet = ${_id}"
 
     val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
-                                                              values((select _id from webknossos.dataSets where _id = ${_id}),
-                                                                     ${teamId.id})""")
+                                                              values(${_id}, ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {

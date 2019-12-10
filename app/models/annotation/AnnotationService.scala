@@ -31,7 +31,7 @@ import models.binary._
 import models.mesh.{MeshDAO, MeshService}
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
 import utils.ObjectId
 import play.api.i18n.{I18nSupport, Messages, MessagesApi, MessagesProvider}
@@ -64,6 +64,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   tracingStoreService: TracingStoreService,
                                   tracingStoreDAO: TracingStoreDAO,
                                   taskDAO: TaskDAO,
+                                  teamDAO: TeamDAO,
                                   userService: UserService,
                                   dataStoreDAO: DataStoreDAO,
                                   projectDAO: ProjectDAO,
@@ -72,13 +73,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   nmlWriter: NmlWriter,
                                   temporaryFileCreator: TemporaryFileCreator,
                                   meshDAO: MeshDAO,
-                                  meshService: MeshService)(implicit ec: ExecutionContext)
+                                  meshService: MeshService,
+                                  sharedAnnotationsDAO: SharedAnnotationsDAO)(implicit ec: ExecutionContext)
     extends BoxImplicits
     with FoxImplicits
     with TextUtils
     with ProtoGeometryImplicits
     with LazyLogging {
-
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
@@ -390,6 +391,19 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
+  def sharedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
+
+  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext) =
+    sharedAnnotationsDAO.updateTeamsForSharedAnnotation(annotationId, teams)
+
+  def sharedTeamsFor(annotationId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      teamIds <- sharedAnnotationsDAO.sharedTeamsFor(annotationId)
+      teamIdsValidated <- Fox.serialCombined(teamIds)(ObjectId.parse(_))
+      teams <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_))
+    } yield teams
+
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
       implicit m: MessagesProvider,
       ctx: DBAccessContext): Fox[TemporaryFile] =
@@ -630,6 +644,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      user <- userDAO.findOne(annotation._user)(GlobalAccessContext) ?~> "user.notFound"
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -645,7 +660,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "organization" -> organization.name,
         "isPublic" -> annotation.isPublic,
         "tracingTime" -> annotation.tracingTime,
-        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString))
+        "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
+        "owner" -> s"${user.firstName} ${user.lastName}"
       )
     }
 }

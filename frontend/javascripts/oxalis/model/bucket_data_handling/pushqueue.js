@@ -101,6 +101,10 @@ export class NullPushQueue extends PushQueue {
   pushBatch(batch: Array<DataBucket>): Promise<void> {
     return Promise.resolve();
   }
+
+  insert(bucket: DataBucket): void {
+    return;
+  }
 }
 
 export default PushQueue;

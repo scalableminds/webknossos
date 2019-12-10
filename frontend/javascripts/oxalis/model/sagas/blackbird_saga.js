@@ -6,7 +6,10 @@ import { type Saga, _takeEvery, call, select, take } from "oxalis/model/sagas/ef
 import * as tf from "@tensorflow/tfjs";
 import api from "oxalis/api/internal_api";
 import Store from "oxalis/store";
-import { setLiveTrainingProgressAction } from "oxalis/model/actions/ui_actions";
+import {
+  setLiveTrainingProgressAction,
+  setIsLiveTrainingPredictingAction,
+} from "oxalis/model/actions/ui_actions";
 import { V3 } from "libs/mjs";
 import * as blackbirdModel from "oxalis/model/blackbird_model";
 
@@ -18,6 +21,7 @@ const bucketWidth = constants.BUCKET_WIDTH;
 
 async function train() {
   try {
+    Store.dispatch(setLiveTrainingProgressAction(0));
     const bbox = {
       min: [0, 0, 0],
       max: [250, 250, 30],
@@ -76,6 +80,7 @@ function getVoxelIndex(voxel: Vector3, channelIndex: number): number {
 
 function* predict(): Saga<void> {
   console.log("predict action");
+  Store.dispatch(setIsLiveTrainingPredictingAction(true));
   const position = yield* select(state => getPosition(state.flycam));
   const bbox = {
     min: [0, 0, Math.floor(position[2])],
@@ -96,9 +101,12 @@ function* predict(): Saga<void> {
     bbox,
   );
   const featureTensor = tf.tensor4d(featureData, size.concat([featureChannelCount]));
+  console.time("prediction");
   const predictedData = yield* call(blackbirdModel.predict, model, { xs: featureTensor });
+  console.timeEnd("prediction");
 
   console.log("Labeling in bounding box:", bbox);
+  console.time("labeling");
   for (let x = 0; x <= size[0]; x++) {
     for (let y = 0; y <= size[1]; y++) {
       for (let z = 0; z <= size[2]; z++) {
@@ -115,11 +123,13 @@ function* predict(): Saga<void> {
       }
     }
   }
+  console.timeEnd("labeling");
+  Store.dispatch(setIsLiveTrainingPredictingAction(false));
   console.log("Finished labeling.");
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("TRAIN_CLASSIFIER", trainClassifier);
-  // yield _takeEvery("PREDICT", predict);
+  yield _takeEvery("PREDICT", predict);
 }

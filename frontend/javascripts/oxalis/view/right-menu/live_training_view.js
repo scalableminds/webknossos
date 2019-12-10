@@ -3,11 +3,10 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Radio, Button, Progress } from "antd";
+import { Radio, Button, Progress, Spin, Icon } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-import debounceRender from "react-debounce-render";
 import Store from "oxalis/store";
 import { setLiveTrainingProgressAction } from "oxalis/model/actions/ui_actions";
 import type { OxalisState } from "oxalis/store";
@@ -21,6 +20,7 @@ type OwnProps = {|
 type StateProps = {|
   activeCellId: number,
   liveTrainingProgress: number,
+  isLiveTrainingPredicting: boolean,
 |};
 type DispatchProps = {|
   onChangeActiveCellId: number => void,
@@ -49,7 +49,7 @@ class LiveTrainingView extends React.Component<Props, State> {
   };
 
   render() {
-    const { activeCellId, liveTrainingProgress } = this.props;
+    const { activeCellId, liveTrainingProgress, isLiveTrainingPredicting } = this.props;
     const isTraining = liveTrainingProgress > 0 && liveTrainingProgress < 100;
     return (
       <div id="live-training" className="padded-tab-content" style={{ maxWidth: 500 }}>
@@ -69,18 +69,16 @@ class LiveTrainingView extends React.Component<Props, State> {
 
         <Button
           type="primary"
-          disabled={isTraining}
+          disabled={isTraining || isLiveTrainingPredicting}
           onClick={() => {
-            Store.dispatch(setLiveTrainingProgressAction(0));
             this.props.handleTrain();
-            this.props.handlePredict();
           }}
         >
           Retrain and Predict
         </Button>
         <Button
           type="primary"
-          disabled={isTraining}
+          disabled={isTraining || isLiveTrainingPredicting}
           style={{ marginLeft: 24 }}
           onClick={() => {
             this.props.handlePredict();
@@ -93,6 +91,15 @@ class LiveTrainingView extends React.Component<Props, State> {
             <React.Fragment>
               <div>Training ...</div>
               <Progress type="circle" percent={liveTrainingProgress} />
+            </React.Fragment>
+          ) : null}
+          {isLiveTrainingPredicting ? (
+            <React.Fragment>
+              <div>Predicting ...</div>
+              <Spin
+                size="large"
+                indicator={<Icon style={{ fontSize: 56 }} type="loading" spin />}
+              />
             </React.Fragment>
           ) : null}
         </div>
@@ -122,6 +129,7 @@ function mapStateToProps(state: OxalisState) {
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
     liveTrainingProgress: state.uiInformation.liveTrainingProgress,
+    isLiveTrainingPredicting: state.uiInformation.isLiveTrainingPredicting,
   };
 }
 

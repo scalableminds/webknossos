@@ -59,7 +59,7 @@ function writePrediction(position, value) {
 }
 
 async function train() {
-  writePrediction([5, 5, 5], [255, 255, 0]);
+  // writePrediction([5, 5, 5], [255, 255, 0]);
 
   try {
     const bbox = {

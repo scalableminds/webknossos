@@ -2,11 +2,11 @@
 import * as tf from "@tensorflow/tfjs";
 import _ from "lodash";
 
-async function computeClassWeight(trainData) {
+function computeClassWeight(trainData) {
   const classWeight = [];
   const [length, numClasses] = trainData.labels.shape;
   // Sum up the 1s of each column, because the labels are one-hot encoded
-  const classCountTensor = await trainData.labels.sum(0).data();
+  const classCountTensor = trainData.labels.sum(0).dataSync();
   for (let i = 0; i < numClasses; i++) {
     const classCount = classCountTensor[i];
     classWeight[i] = classCount === 0 ? 1 : length / classCount / numClasses;
@@ -14,16 +14,22 @@ async function computeClassWeight(trainData) {
   return classWeight;
 }
 
-async function filterUnlabeledExamples(data, numClasses = 2) {
-  const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
-  const mask = labelsReshaped.notEqual(0);
-  const featuresFiltered = await tf.booleanMaskAsync(featuresReshaped, mask);
-  const labelsFiltered = await tf.booleanMaskAsync(labelsReshaped, mask);
-  const labelsFilteredRenorm = labelsFiltered.sub(tf.tensor1d([1], "int32"));
-  const labelsFilteredOneHot = tf.oneHot(labelsFilteredRenorm, numClasses);
-  // Dispose all unused tensors
-  [featuresReshaped, labelsReshaped, mask, labelsFiltered].forEach(x => x.dispose());
-  return { xs: featuresFiltered, labels: labelsFilteredOneHot };
+function filterUnlabeledExamples(data, numClasses = 2) {
+  return tf.tidy(() => {
+    const { xs: featuresReshaped, labels: labelsReshaped } = reshapeInputData(data);
+    const mask = labelsReshaped.dataSync();
+    const indices = [];
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] !== 0) {
+        indices.push(i);
+      }
+    }
+    const featuresFiltered = tf.gather(featuresReshaped, indices);
+    const labelsFiltered = tf.gather(labelsReshaped, indices);
+    const labelsFilteredRenorm = labelsFiltered.sub(tf.tensor1d([1], "int32"));
+    const labelsFilteredOneHot = tf.oneHot(labelsFilteredRenorm, numClasses);
+    return { xs: featuresFiltered, labels: labelsFilteredOneHot };
+  });
 }
 
 export function createModel(numClasses, numFeatures) {
@@ -65,8 +71,9 @@ export async function train(model, trainData, onIteration: (progress: number) =>
     loss: "categoricalCrossentropy",
     metrics: ["accuracy"],
   });
-  const filteredTrainData = await filterUnlabeledExamples(trainData);
-  const classWeight = await computeClassWeight(filteredTrainData);
+
+  const filteredTrainData = filterUnlabeledExamples(trainData);
+  const classWeight = computeClassWeight(filteredTrainData);
   const batchSize = filteredTrainData.xs.size;
   const validationSplit = 0.15;
   const trainEpochs = 50;

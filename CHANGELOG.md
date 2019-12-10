@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Changed
--
+- Changed the way of selection the next active tree after a tree is deleted. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [\#4370](https://github.com/scalableminds/webknossos/pull/4370)
 
 ### Fixed
 - Fixed an issue where webKnossos would complain in certain scenarios when resolutions of datasets were not complete. [#4344](https://github.com/scalableminds/webknossos/pull/4344)

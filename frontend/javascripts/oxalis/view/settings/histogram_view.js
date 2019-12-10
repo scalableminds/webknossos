@@ -113,12 +113,13 @@ class Histogram extends React.PureComponent<HistogramProps> {
     ctx.moveTo(0, 0);
     ctx.lineTo(0, canvasHeight);
     const numberOfScaleLines = 5;
+    const lineWidth = 8;
     const intervalSize = 2;
     for (let interval = 1; interval <= numberOfScaleLines; interval++) {
       // We use canvasHeight - 1 because else half of the top line would be cut off.
       const lineHeight = Math.round(Math.log10(intervalSize * interval) * (canvasHeight - 1));
       ctx.moveTo(0, lineHeight);
-      ctx.lineTo(8, lineHeight);
+      ctx.lineTo(lineWidth, lineHeight);
     }
   };
 

@@ -80,8 +80,8 @@ export async function train(model, trainData, onIteration: (progress: number) =>
   };
   const classWeight = computeClassWeight(filteredTrainData);
   const batchSize = filteredTrainData.xs.size;
-  const validationSplit = 0.25;
-  const trainEpochs = 150;
+  const validationSplit = 0.1;
+  const trainEpochs = 250;
   const totalNumBatches = Math.ceil(
     (filteredTrainData.xs.shape[0] * (1 - validationSplit)) / batchSize,
   );

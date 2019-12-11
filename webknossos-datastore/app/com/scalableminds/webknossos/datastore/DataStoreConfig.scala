@@ -37,7 +37,6 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     val name = get[String]("datastore.name")
     object WebKnossos {
       val uri = get[String]("datastore.webKnossos.uri")
-      val secured = get[Boolean]("datastore.webKnossos.secured")
       val pingIntervalMinutes = get[Int]("datastore.webKnossos.pingIntervalMinutes") minutes
     }
     val children = List(WebKnossos)

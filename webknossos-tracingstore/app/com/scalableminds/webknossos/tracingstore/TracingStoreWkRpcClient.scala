@@ -25,13 +25,7 @@ class TracingStoreWkRpcClient @Inject()(
   private val tracingStoreName: String = config.Tracingstore.name
   private val tracingStoreUrl: String = config.Http.uri
 
-  private val webKnossosUrl = {
-    val url = config.Tracingstore.WebKnossos.uri
-    if (config.Tracingstore.WebKnossos.secured)
-      s"https://$url"
-    else
-      s"http://$url"
-  }
+  private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
 
   def reportTracingUpdates(tracingId: String,
                            timestamps: List[Long],

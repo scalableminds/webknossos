@@ -1,7 +1,6 @@
-version: '2.2'
+version: "2.2"
 
 services:
-
   # Production
   webknossos:
     build: .
@@ -33,6 +32,9 @@ services:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
       # - -Dplay.http.router="noDS.Routes"
+      # the following lines need to be adapted for non-localhost deployments
+      # - -Dtracingstore.publicUrl=http://example.org:9000
+      # - -Ddatastore.publicUrl=http://example.org:9000
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:
@@ -131,8 +133,6 @@ services:
         condition: service_healthy
       fossildb-dev:
         condition: service_healthy
-      webknossos-connect:
-        condition: service_healthy
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     command:
@@ -161,8 +161,8 @@ services:
     extends:
       service: base
     ports:
-    - "5005:5005"
-    - "9000:9000"
+      - "5005:5005"
+      - "9000:9000"
     command: sbt ";scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
 
   e2e-tests:
@@ -232,7 +232,7 @@ services:
     extends:
       service: postgres
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - "./pg/dev-db:/var/lib/postgresql/data/"
 
@@ -259,7 +259,6 @@ services:
         condition: service_healthy
     environment:
       PGPASSWORD: postgres
-
 
   # FossilDB
   fossildb:
@@ -298,4 +297,3 @@ services:
       timeout: 1s
       interval: 5s
       retries: 10
-

@@ -273,7 +273,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                         inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
-                        status = ${source.statusOpt.getOrElse("")}
+                        status = ${source.statusOpt.getOrElse("").take(1024)}
                    where _id = ${id}"""
       _ <- run(q)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)

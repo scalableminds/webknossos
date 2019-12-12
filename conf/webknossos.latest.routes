@@ -51,7 +51,7 @@ POST          /users/loggedTime                                                 
 GET           /users/:id/annotations                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 # Team
-GET           /teams                                                            controllers.TeamController.list
+GET           /teams                                                            controllers.TeamController.list(isEditable: Option[Boolean])
 POST          /teams                                                            controllers.TeamController.create
 DELETE        /teams/:id                                                        controllers.TeamController.delete(id: String)
 GET           /teams/:id/openTasksOverview                                      controllers.ReportController.openTasksOverview(id: String)
@@ -112,6 +112,10 @@ POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  
 GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])
 
 GET           /annotations/:typ/:id/loggedTime                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
+
+GET           /annotations/shared                                               controllers.AnnotationController.sharedAnnotations()
+GET           /annotations/:typ/:id/sharedTeams                                 controllers.AnnotationController.getSharedTeams(typ: String, id: String)
+PATCH         /annotations/:typ/:id/sharedTeams                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: String)
 
 # Meshes
 POST          /meshes                                                           controllers.MeshController.create

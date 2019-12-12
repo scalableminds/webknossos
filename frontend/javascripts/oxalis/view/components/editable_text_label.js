@@ -12,7 +12,7 @@ type Rule = {
   type?: string,
 };
 
-type EditableTextLabelProp = {
+export type EditableTextLabelProp = {
   value: string,
   onChange: Function,
   rules?: Rule,
@@ -41,7 +41,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   }
 
   componentWillReceiveProps(newProps: EditableTextLabelProp) {
-    this.setState({ value: newProps.value });
+    if (this.props.value !== newProps.value) this.setState({ value: newProps.value });
   }
 
   handleInputChange = (event: SyntheticInputEvent<>) => {

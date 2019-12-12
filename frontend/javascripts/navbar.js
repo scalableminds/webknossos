@@ -227,6 +227,9 @@ function DashboardSubMenu({ collapse, ...other }) {
       <Menu.Item key="/dashboard/annotations">
         <Link to="/dashboard/annotations">My Explorative Annotations</Link>
       </Menu.Item>
+      <Menu.Item key="/dashboard/shared">
+        <Link to="/dashboard/shared">Shared Annotations</Link>
+      </Menu.Item>
     </SubMenu>
   );
 }

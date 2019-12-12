@@ -39,13 +39,7 @@ class DataStoreWkRpcClient @Inject()(
   private val dataStoreName: String = config.Datastore.name
   private val dataStoreUrl: String = config.Http.uri
 
-  private val webKnossosUrl = {
-    val url = config.Datastore.WebKnossos.uri
-    if (config.Datastore.WebKnossos.secured)
-      s"https://$url"
-    else
-      s"http://$url"
-  }
+  private val webKnossosUrl: String = config.Datastore.WebKnossos.uri
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingIntervalMinutes
 

@@ -73,7 +73,9 @@ class ConfigurationController @Inject()(userService: UserService,
   def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
-        case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+        case Some(c) =>
+          Fox.successful(
+            Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
         case _ =>
           dataSetConfigurationDefaults
             .constructInitialDefault(dataSet)

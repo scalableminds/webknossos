@@ -72,7 +72,18 @@ object ElementClass extends Enumeration {
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
-case class LayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], intensityRange: Option[(Int, Int)])
+case class LayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], intensityRange: Option[(Int, Int)]) {
+
+  def toMap: Map[String, JsValue] = {
+    def getSeqFromNameAndValue[T](name: String, value: Option[T])(implicit fmt: Format[T]) =
+      value.map(v => Seq(name -> Json.toJson(v))).getOrElse(Nil)
+
+    val colorSeq = getSeqFromNameAndValue("color", color)
+    val alphaSeq = getSeqFromNameAndValue("alpha", alpha)
+    val intensityRangeSeq = getSeqFromNameAndValue("intensityRange", intensityRange)
+    (colorSeq ++ alphaSeq ++ intensityRangeSeq).toMap
+  }
+}
 
 object LayerViewConfiguration {
   implicit val layerViewConfigurationFormat: Format[LayerViewConfiguration] = Json.format[LayerViewConfiguration]

@@ -2,7 +2,7 @@ package models.configuration
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.Category
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, ViewConfiguration}
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetService}
 import play.api.libs.json._
@@ -16,15 +16,23 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
   def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
-      defaultConfig = constructInitialDefault(
-        dataSource.toUsable
-          .map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name))
-          .getOrElse(List())).configuration
+      dataLayers = dataSource.toUsable
+        .map(d => d.dataLayers.filter(_.category != Category.segmentation))
+        .getOrElse(List())
+      defaultConfig = constructInitialDefault(dataLayers.map(_.name),
+                                              dataLayers.map(_.defaultViewConfiguration.map(_.toMap))).configuration
       sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
     } yield DataSetConfiguration(defaultConfig ++ sourceDefaultConfig)
 
-  def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {
-    val layerValues = Json.toJson(layerNames.map(layerName => (layerName -> initialDefaultPerLayer)).toMap)
+  def constructInitialDefault(layerNames: List[String],
+                              layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {
+    val layerValues = Json.toJson(
+      layerNames
+        .zipAll(layerDefaults, "", None)
+        .map {
+          case (layerName, layerDefault) => layerName -> (initialDefaultPerLayer ++ layerDefault.getOrElse(Map.empty))
+        }
+        .toMap)
 
     DataSetConfiguration(
       Map(
@@ -39,14 +47,17 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
     )
   }
 
-  def configurationOrDefaults(configuration: DataSetConfiguration): Map[String, JsValue] =
-    constructInitialDefault(List()).configuration ++ configuration.configuration
+  def configurationOrDefaults(configuration: DataSetConfiguration,
+                              sourceDefaultConfiguration: Option[ViewConfiguration] = None): Map[String, JsValue] =
+    constructInitialDefault(List()).configuration ++
+      sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty) ++
+      configuration.configuration
 
-  val initialDefaultPerLayer: JsObject = Json.obj(
-    "brightness" -> 0,
-    "contrast" -> 1,
+  val initialDefaultPerLayer: Map[String, JsValue] = Map(
+    "brightness" -> JsNumber(0),
+    "contrast" -> JsNumber(1),
     "color" -> Json.arr(255, 255, 255),
-    "alpha" -> 100
+    "alpha" -> JsNumber(100)
   )
 
 }

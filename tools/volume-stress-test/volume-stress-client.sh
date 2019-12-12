@@ -3,7 +3,7 @@
 authtoken=secretScmBoyToken
 host=http://localhost:9000
 datastorehost=http://localhost:9000
-dataset=Connectomics_Department/e2006-x4y1z1
+dataset=sample_organization/e2006-x4y1z1
 
 volumeid0=$(curl -s $host'/api/datasets/'$dataset'/createExplorational' -H 'X-Auth-Token: '$authtoken -H 'Accept: application/json' -H 'content-type: application/json' -H 'Connection: keep-alive' --data '{"typ":"volume","withFallback":false}' | jq -r '.tracing.volume')
 volumeid1=$(curl -s $host'/api/datasets/'$dataset'/createExplorational' -H 'X-Auth-Token: '$authtoken -H 'Accept: application/json' -H 'content-type: application/json' -H 'Connection: keep-alive' --data '{"typ":"volume","withFallback":false}' | jq -r '.tracing.volume')

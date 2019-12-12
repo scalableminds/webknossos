@@ -280,10 +280,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-      - nightly:
-          filters:
-            tags:
-              only: /.*/
 
   circleci_nightly:
     jobs:

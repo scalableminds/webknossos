@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Fixed an issue where webKnossos would complain in certain scenarios when resolutions of datasets were not complete. [#4344](https://github.com/scalableminds/webknossos/pull/4344)
+- Fixed permissions to all task lists, so only administrable tasks can get accessed. [#4331](https://github.com/scalableminds/webknossos/pull/4331)
 
 ### Removed
 -
@@ -47,7 +48,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed annotation access to match the text in the modal. [#4314](https://github.com/scalableminds/webknossos/pull/4314)
 - Fixed that the brush tool could be selected in an read-only tracing. [#4345](https://github.com/scalableminds/webknossos/pull/4345)
 - Fixed the name of downloaded annotation zips. [#4330](https://github.com/scalableminds/webknossos/pull/4330)
-
 
 ## [19.11.0](https://github.com/scalableminds/webknossos/releases/tag/19.11.0) - 2019-10-28
 [Commits](https://github.com/scalableminds/webknossos/compare/19.10.0...19.11.0)

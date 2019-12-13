@@ -123,7 +123,9 @@ CREATE TABLE webknossos.dataSet_layers(
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
   largestSegmentId BIGINT,
   mappings VARCHAR(256)[],
-  PRIMARY KEY(_dataSet, name)
+  defaultViewConfiguration JSONB,
+  PRIMARY KEY(_dataSet, name),
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object' OR defaultViewConfiguration is null)
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(

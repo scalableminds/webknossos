@@ -38,7 +38,7 @@ case class WKWDataLayer(
     boundingBox: BoundingBox,
     wkwResolutions: List[WKWResolution],
     elementClass: ElementClass.Value,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None
+    defaultViewConfiguration: Option[ColorLayerViewConfiguration] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -52,7 +52,7 @@ case class WKWSegmentationLayer(
     elementClass: ElementClass.Value,
     mappings: Set[String],
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 ) extends SegmentationLayer
     with WKWLayer
 

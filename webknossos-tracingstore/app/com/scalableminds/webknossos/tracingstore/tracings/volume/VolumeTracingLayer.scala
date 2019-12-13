@@ -36,7 +36,7 @@ case class VolumeTracingLayer(
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 )(implicit val volumeDataStore: FossilDBClient)
     extends SegmentationLayer {
 

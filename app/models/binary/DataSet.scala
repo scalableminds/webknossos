@@ -3,19 +3,22 @@ package models.binary
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.ViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   Category,
+  ColorLayerViewConfiguration,
   DataSourceId,
   ElementClass,
   GenericDataSource,
+  LayerViewConfiguration,
+  SegmentationLayerViewConfiguration,
+  ViewConfiguration,
   DataLayerLike => DataLayer
+}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  UnusableDataSource,
+  InboxDataSourceLike => InboxDataSource
 }
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
@@ -249,14 +252,15 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
   def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
+    val sourceDefaultConfiguration: Option[String] = d.sourceDefaultConfiguration.map(Json.toJson(_).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultConfiguration, description, displayName,
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, sourceDefaultConfiguration, defaultConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
-          defaultConfiguration.map(sanitize))},
+          sourceDefaultConfiguration.map(sanitize))}, #${optionLiteral(defaultConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
           .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
@@ -366,6 +370,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       standinResolutions: Option[List[Point3D]] = if (skipResolutions) Some(List.empty) else None
       resolutions <- Fox.fillOption(standinResolutions)(
         dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
+      defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
+        JsonHelper.parseJsonToFox[ColorLayerViewConfiguration](_))
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -377,7 +383,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               resolutions.sortBy(_.maxDim),
               elementClass,
               segmentId,
-              parseArrayTuple(mappings).toSet
+              parseArrayTuple(mappings).toSet,
+              defaultViewConfigurationOpt.map(SegmentationLayerViewConfiguration.from)
             ))
         case (None, None) =>
           Fox.successful(
@@ -386,7 +393,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               category,
               boundingBox,
               resolutions.sortBy(_.maxDim),
-              elementClass
+              elementClass,
+              defaultViewConfigurationOpt
             ))
         case _ => Fox.failure("Could not match Dataset Layer")
       }
@@ -417,15 +425,17 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
   def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer) =
     layer match {
       case s: AbstractSegmentationLayer => {
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings)
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration)
                     values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
-          s.mappings.map(sanitize(_)).toList)}')"""
+          s.mappings.map(sanitize(_)).toList)}', #${optionLiteral(
+          s.defaultViewConfiguration.map(d => Json.toJson(d).toString))})"""
       }
       case d: AbstractDataLayer => {
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox)
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration)
                     values(${_dataSet.id}, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
-                     '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}')"""
+                     '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}', #${optionLiteral(
+          d.defaultViewConfiguration.map(d => Json.toJson(d).toString))})"""
       }
       case _ => throw new Exception("DataLayer type mismatch")
     }

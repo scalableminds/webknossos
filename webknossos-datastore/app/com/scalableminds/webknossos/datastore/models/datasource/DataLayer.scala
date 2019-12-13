@@ -72,12 +72,21 @@ object ElementClass extends Enumeration {
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
-case class LayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], intensityRange: Option[(Int, Int)]) {
+trait LayerViewConfiguration {
+  def color: Option[Point3D]
+  def alpha: Option[Int]
+  def intensityRange: Option[(Int, Int)]
+
+  def toMap: Map[String, JsValue]
+
+  protected def getSeqFromNameAndValue[T](name: String, value: Option[T])(implicit fmt: Format[T]) =
+    value.map(v => Seq(name -> Json.toJson(v))).getOrElse(Nil)
+}
+
+case class ColorLayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], intensityRange: Option[(Int, Int)])
+    extends LayerViewConfiguration {
 
   def toMap: Map[String, JsValue] = {
-    def getSeqFromNameAndValue[T](name: String, value: Option[T])(implicit fmt: Format[T]) =
-      value.map(v => Seq(name -> Json.toJson(v))).getOrElse(Nil)
-
     val colorSeq = getSeqFromNameAndValue("color", color)
     val alphaSeq = getSeqFromNameAndValue("alpha", alpha)
     val intensityRangeSeq = getSeqFromNameAndValue("intensityRange", intensityRange)
@@ -85,8 +94,28 @@ case class LayerViewConfiguration(color: Option[Point3D], alpha: Option[Int], in
   }
 }
 
-object LayerViewConfiguration {
-  implicit val layerViewConfigurationFormat: Format[LayerViewConfiguration] = Json.format[LayerViewConfiguration]
+object ColorLayerViewConfiguration {
+  implicit val colorLayerViewConfigurationFormat: Format[ColorLayerViewConfiguration] =
+    Json.format[ColorLayerViewConfiguration]
+
+  def from(vc: LayerViewConfiguration): ColorLayerViewConfiguration =
+    ColorLayerViewConfiguration(vc.color, vc.alpha, vc.intensityRange)
+}
+
+case class SegmentationLayerViewConfiguration(alpha: Option[Int]) extends LayerViewConfiguration {
+  val color: Option[Point3D] = None
+  val intensityRange: Option[(Int, Int)] = None
+
+  def toMap: Map[String, JsValue] =
+    getSeqFromNameAndValue("alpha", alpha).toMap
+}
+
+object SegmentationLayerViewConfiguration {
+  implicit val segmentationLayerViewConfigurationFormat: Format[SegmentationLayerViewConfiguration] =
+    Json.format[SegmentationLayerViewConfiguration]
+
+  def from(vc: LayerViewConfiguration): SegmentationLayerViewConfiguration =
+    SegmentationLayerViewConfiguration(vc.alpha)
 }
 
 trait DataLayerLike {
@@ -132,6 +161,8 @@ trait SegmentationLayerLike extends DataLayerLike {
   def largestSegmentId: Long
 
   def mappings: Set[String]
+
+  def defaultViewConfiguration: Option[SegmentationLayerViewConfiguration]
 }
 
 trait DataLayer extends DataLayerLike {
@@ -207,13 +238,18 @@ case class AbstractDataLayer(
     boundingBox: BoundingBox,
     resolutions: List[Point3D],
     elementClass: ElementClass.Value,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None
+    defaultViewConfiguration: Option[ColorLayerViewConfiguration] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
 
   def from(layer: DataLayerLike): AbstractDataLayer =
-    AbstractDataLayer(layer.name, layer.category, layer.boundingBox, layer.resolutions, layer.elementClass)
+    AbstractDataLayer(layer.name,
+                      layer.category,
+                      layer.boundingBox,
+                      layer.resolutions,
+                      layer.elementClass,
+                      layer.defaultViewConfiguration.map(ColorLayerViewConfiguration.from))
 
   implicit val abstractDataLayerFormat = Json.format[AbstractDataLayer]
 }
@@ -226,7 +262,7 @@ case class AbstractSegmentationLayer(
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     mappings: Set[String],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -239,7 +275,8 @@ object AbstractSegmentationLayer {
       layer.resolutions,
       layer.elementClass,
       layer.largestSegmentId,
-      layer.mappings
+      layer.mappings,
+      layer.defaultViewConfiguration
     )
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]

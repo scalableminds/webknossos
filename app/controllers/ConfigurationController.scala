@@ -49,7 +49,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }.orElse(
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          config <- dataSet.defaultConfiguration
+          config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
         } yield config
       )
       .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))

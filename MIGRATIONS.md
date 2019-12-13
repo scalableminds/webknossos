@@ -11,6 +11,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ### Postgres Evolutions:
 - [049-annotation-listed-teams.sql](conf/evolutions/049-annotation-listed-teams.sql)
+- [051-add-source-view-configuration.sql](conf/evolutions/051-add-source-view-configuration.sql)
 
 ## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25
 No migrations necessary.

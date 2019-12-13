@@ -182,7 +182,7 @@ To get the actual resolutions, please use `GET /datasets/:organizationName/:data
 ### `GET /datasets/:organizationName/:dataSetName`
 
 #### Expects
- - In the url: `:organizationName` the url-safe name of your organization, e.g. `Connectomics_Department`
+ - In the url: `:organizationName` the url-safe name of your organization, e.g. `sample_organization`
  - In the url: `:dataSetName` the name of the dataset
 
 #### Returns

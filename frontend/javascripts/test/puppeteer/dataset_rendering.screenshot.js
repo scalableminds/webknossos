@@ -139,7 +139,7 @@ datasetNames.map(async datasetName => {
     await withRetry(
       3,
       async () => {
-        const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
+        const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
         const { screenshot, width, height } = await screenshotDataset(
           await getNewPage(t.context.browser),
           URL,
@@ -173,7 +173,7 @@ test.serial("it should render a dataset with mappings correctly", async t => {
   await withRetry(
     3,
     async () => {
-      const datasetId = { name: datasetName, owningOrganization: "Connectomics_Department" };
+      const datasetId = { name: datasetName, owningOrganization: "sample_organization" };
       const { screenshot, width, height } = await screenshotDatasetWithMapping(
         await getNewPage(t.context.browser),
         URL,

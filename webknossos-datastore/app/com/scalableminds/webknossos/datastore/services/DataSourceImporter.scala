@@ -40,7 +40,10 @@ trait DataSourceImporter {
         val previousLayer = previous.flatMap(_.getDataLayer(layerName))
         exploreLayer(layerName, layerDir, previousLayer)(report.withContext(_.resolve(layerName)))
       }
-      GenericDataSource(id, layers, previous.map(_.scale).getOrElse(Scale.default))
+      GenericDataSource(id,
+                        layers,
+                        previous.map(_.scale).getOrElse(Scale.default),
+                        previous.flatMap(_.defaultViewConfigurationOpt))
     }
 
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(

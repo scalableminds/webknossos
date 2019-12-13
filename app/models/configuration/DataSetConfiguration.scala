@@ -16,21 +16,23 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
   def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
-      dataLayers = dataSource.toUsable
-        .map(d => d.dataLayers.filter(_.category != Category.segmentation))
-        .getOrElse(List())
-      defaultConfig = constructInitialDefault(dataLayers.map(_.name),
+      dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
+      defaultConfig = constructInitialDefault(dataLayers.map(dl => (dl.name, dl.category)),
                                               dataLayers.map(_.defaultViewConfiguration.map(_.toMap))).configuration
       sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
     } yield DataSetConfiguration(defaultConfig ++ sourceDefaultConfig)
 
-  def constructInitialDefault(layerNames: List[String],
+  def constructInitialDefault(layers: List[(String, Category.Value)],
                               layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {
     val layerValues = Json.toJson(
-      layerNames
-        .zipAll(layerDefaults, "", None)
+      layers
+        .zipAll(layerDefaults, ("", Category.color), None)
         .map {
-          case (layerName, layerDefault) => layerName -> (initialDefaultPerLayer ++ layerDefault.getOrElse(Map.empty))
+          case ((name, category), default) =>
+            category match {
+              case Category.color        => name -> (initialDefaultPerColorLayer ++ default.getOrElse(Map.empty))
+              case Category.segmentation => name -> (initialDefaultPerSegmentationLayer ++ default.getOrElse(Map.empty))
+            }
         }
         .toMap)
 
@@ -39,7 +41,6 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
         "fourBit" -> JsBoolean(false),
         "quality" -> JsNumber(0),
         "interpolation" -> JsBoolean(true),
-        "segmentationOpacity" -> JsNumber(20),
         "highlightHoveredCellId" -> JsBoolean(true),
         "renderMissingDataBlack" -> JsBoolean(true),
         "layers" -> layerValues
@@ -53,11 +54,13 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
       sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty) ++
       configuration.configuration
 
-  val initialDefaultPerLayer: Map[String, JsValue] = Map(
+  val initialDefaultPerColorLayer: Map[String, JsValue] = Map(
     "brightness" -> JsNumber(0),
     "contrast" -> JsNumber(1),
     "color" -> Json.arr(255, 255, 255),
     "alpha" -> JsNumber(100)
   )
+
+  val initialDefaultPerSegmentationLayer: Map[String, JsValue] = Map("alpha" -> JsNumber(20))
 
 }

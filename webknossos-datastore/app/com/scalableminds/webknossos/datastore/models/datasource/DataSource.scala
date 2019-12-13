@@ -12,10 +12,7 @@ package object datasource {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]
   }
 
-  case class ViewConfiguration(position: Option[Point3D],
-                               zoom: Option[Point3D],
-                               segmentationOpacity: Option[Int],
-                               interpolation: Option[Boolean]) {
+  case class ViewConfiguration(position: Option[Point3D], zoom: Option[Point3D], interpolation: Option[Boolean]) {
 
     def toMap: Map[String, JsValue] = {
       def getSeqFromNameAndValue[T](name: String, value: Option[T])(implicit fmt: Format[T]) =
@@ -23,9 +20,8 @@ package object datasource {
 
       val positionSeq = getSeqFromNameAndValue("position", position)
       val zoomSeq = getSeqFromNameAndValue("zoom", zoom)
-      val segmentationOpacitySeq = getSeqFromNameAndValue("segmentationOpacity", segmentationOpacity)
       val interpolationSeq = getSeqFromNameAndValue("interpolation", interpolation)
-      (positionSeq ++ zoomSeq ++ segmentationOpacitySeq ++ interpolationSeq).toMap
+      (positionSeq ++ zoomSeq ++ interpolationSeq).toMap
     }
   }
 

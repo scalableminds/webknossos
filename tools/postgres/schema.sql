@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(49);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(51);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -125,7 +125,7 @@ CREATE TABLE webknossos.dataSet_layers(
   mappings VARCHAR(256)[],
   defaultViewConfiguration JSONB,
   PRIMARY KEY(_dataSet, name),
-  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object' OR defaultViewConfiguration is null)
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(

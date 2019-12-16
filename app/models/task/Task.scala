@@ -144,24 +144,18 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns} from #${existingCollectionName} where _taskType = ${taskTypeId.id} and #${accessQuery}"
-          .as[TasksRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
+    findAllByProjectAndTaskTypeAndIdsAndUser(None, Some(taskTypeId), None, None, None)
 
   def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
       implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
-      accessQuery <- readAccessQuery
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(
         sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
               order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
@@ -277,7 +271,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
 
     for {
       projectFilter <- projectFilterFox
-      accessQuery <- userIdFromCtx.map(listAccessQ).getOrElse("false")
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t
                 #${userJoin}

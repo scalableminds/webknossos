@@ -129,8 +129,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         project <- projectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
-        tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))(
-          GlobalAccessContext)
+        tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))
         taskCount <- Fox.runOptional(includeTotalCount.flatMap(BoolToOption.convert))(_ =>
           taskDAO.countAllByProject(project._id)(GlobalAccessContext))
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))

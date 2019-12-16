@@ -60,6 +60,8 @@ Open your local webknossos instance on [localhost:9000](http://localhost:9000).
 
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 
+For non-localhost deployments, make sure to set the `datastore.publicUri` and `tracingstore.publicUri` entries in the config.
+
 
 ### Dependencies
 

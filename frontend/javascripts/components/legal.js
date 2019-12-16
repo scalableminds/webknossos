@@ -50,17 +50,20 @@ export class Imprint extends LegalBase {
               />
             </Card>
             <p />
-            {this.state.organizationData.map(org => (
-              <React.Fragment key={org.name}>
-                <Card>
-                  <Markdown
-                    source={org.additionalInformation}
-                    options={{ html: false, breaks: true, linkify: true }}
-                  />
-                </Card>
-                <p />
-              </React.Fragment>
-            ))}
+            {this.state.organizationData.map(
+              org =>
+                org.additionalInformation !== "" && (
+                  <React.Fragment key={org.name}>
+                    <Card>
+                      <Markdown
+                        source={org.additionalInformation}
+                        options={{ html: false, breaks: true, linkify: true }}
+                      />
+                    </Card>
+                    <p />
+                  </React.Fragment>
+                ),
+            )}
           </Col>
         </Row>
       </div>

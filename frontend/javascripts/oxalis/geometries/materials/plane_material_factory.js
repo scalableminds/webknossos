@@ -51,11 +51,13 @@ export type Uniforms = {
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 function sanitizeName(name: ?string): string {
-  // Make sure name starts with a letter and contains no "-" characters
   if (name == null) {
     return "";
   }
-  return `layer_${name.replace(/-/g, "_")}`;
+  // Variables must start with a-z,A-Z or _. Names can contain a-z,A-Z,0-9 or _.
+  // User variable names cannot start with gl_ or contain a double _.
+  // Base64 encode the layer name and remove = characters to make sure variable names are valid
+  return `layer_${btoa(name).replace(/=+/g, "")}`;
 }
 
 function getColorLayerNames() {
@@ -202,7 +204,7 @@ class PlaneMaterialFactory {
     };
 
     for (const dataLayer of Model.getAllLayers()) {
-      this.uniforms[sanitizeName(`${dataLayer.name}_maxZoomStep`)] = {
+      this.uniforms[`${sanitizeName(dataLayer.name)}_maxZoomStep`] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
       };
@@ -248,7 +250,7 @@ class PlaneMaterialFactory {
         value: dataLayer.layerRenderingManager.textureWidth,
       };
 
-      this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {
+      this.uniforms[`${sanitizeName(name)}_lookup_texture`] = {
         type: "t",
         value: lookUpTexture,
       };
@@ -262,15 +264,15 @@ class PlaneMaterialFactory {
         mappingLookupTexture,
         mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
-      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
+      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_texture`] = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
+      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_lookup_texture`] = {
         type: "t",
         value: mappingLookupTexture,
       };
-      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_color_texture`)] = {
+      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_color_texture`] = {
         type: "t",
         value: mappingColorTexture,
       };

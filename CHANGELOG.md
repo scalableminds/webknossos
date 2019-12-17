@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added an option to invert the color values of color layers. [#4382](https://github.com/scalableminds/webknossos/pull/4382)
 
 ### Changed
+- Changed the way the new active tree is selected after deleting a tree. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [#4370](https://github.com/scalableminds/webknossos/pull/4370)
 - Consolidates URI handling in the config. Pairs of `uri` and `secured` entries are now specified as just `uri` and require either `http://` or `https://` prefix. [#4368](https://github.com/scalableminds/webknossos/pull/4368)
 - Renamed initial organization for the dev deployment to `sample_organization`. [#4368](https://github.com/scalableminds/webknossos/pull/4368)
 

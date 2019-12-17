@@ -225,7 +225,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>{layerName}</span>
+          <span style={{ fontWeight: 700 }}>{isColorLayer ? layerName : "Volume Layer"}</span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
         </Col>

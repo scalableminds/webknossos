@@ -69,15 +69,18 @@ function getMaximumTreeId(trees: TreeMap): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function getNextTreeWithHigherId(treeId: number, trees: TreeMap): ?Tree {
-  let foundTree: ?Tree = null;
-  const upperLimit = getMaximumTreeId(trees);
-  for (let currentTreeId = treeId + 1; !foundTree && currentTreeId <= upperLimit; ++currentTreeId) {
-    if (trees[currentTreeId] != null) {
-      foundTree = trees[currentTreeId];
-    }
+function getNearestTreeId(treeId: number, trees: TreeMap): ?Tree {
+  const sortedTreeIds = Object.keys(trees)
+    .map(currentTreeId => parseInt(currentTreeId))
+    .sort((firstId, secId) => firstId > secId);
+  if (sortedTreeIds.length === 0) {
+    return 0;
   }
-  return foundTree;
+  // Uses a binary search to determine the lowest index at which treeId should be inserted into sortedTreeIds in order to maintain its sort order.
+  // This corresponds to the original index of the deleted treeId.
+  const originalIndex = _.sortedIndex(sortedTreeIds, treeId);
+  const higherOrNearestId = Math.min(originalIndex, sortedTreeIds.length - 1);
+  return sortedTreeIds[higherOrNearestId];
 }
 
 export function* mapGroups<R>(
@@ -598,12 +601,7 @@ export function deleteTree(
         newActiveNodeId = null;
       } else {
         // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
-        const newTree = getNextTreeWithHigherId(tree.treeId, newTrees);
-        if (newTree) {
-          newActiveTreeId = newTree.treeId;
-        } else {
-          newActiveTreeId = getMaximumTreeId(newTrees);
-        }
+        newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
         // Object.keys returns strings and the newActiveNodeId should be an integer
         newActiveNodeId = +_.first(Array.from(newTrees[newActiveTreeId].nodes.keys())) || null;
       }

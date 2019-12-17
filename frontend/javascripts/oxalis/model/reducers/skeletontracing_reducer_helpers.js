@@ -69,10 +69,10 @@ function getMaximumTreeId(trees: TreeMap): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function getNearestTreeId(treeId: number, trees: TreeMap): ?Tree {
+function getNearestTreeId(treeId: number, trees: TreeMap): number {
   const sortedTreeIds = Object.keys(trees)
     .map(currentTreeId => parseInt(currentTreeId))
-    .sort((firstId, secId) => firstId > secId);
+    .sort((firstId, secId) => (firstId > secId ? 1 : -1));
   if (sortedTreeIds.length === 0) {
     return 0;
   }

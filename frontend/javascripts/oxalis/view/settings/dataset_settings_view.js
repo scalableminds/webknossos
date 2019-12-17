@@ -272,19 +272,28 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
             />
             {isColorLayer && layer != null ? (
-              <React.Fragment>
-                <SwitchSetting
-                  label={settings.invertColor}
-                  value={layer.isInverted}
-                  onChange={_.partial(this.props.onChangeLayer, layerName, "isInverted")}
-                />
-                <ColorSetting
-                  label="Color"
-                  value={Utils.rgbToHex(layer.color)}
-                  onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-                  className="ant-btn"
-                />
-              </React.Fragment>
+              <Row className="margin-bottom" align="top">
+                <Col span={9}>
+                  <label className="setting-label">{settings.invertColor}</label>
+                </Col>
+                <Col span={4}>
+                  <Switch
+                    size="small"
+                    checked={layer.isInverted}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "isInverted")}
+                  />
+                </Col>
+                <Col span={9}>
+                  <label className="setting-label">Color</label>
+                </Col>
+                <Col span={2}>
+                  <ColorSetting
+                    value={Utils.rgbToHex(layer.color)}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+                    className="ant-btn"
+                  />
+                </Col>
+              </Row>
             ) : (
               <SwitchSetting
                 label={settings.highlightHoveredCellId}

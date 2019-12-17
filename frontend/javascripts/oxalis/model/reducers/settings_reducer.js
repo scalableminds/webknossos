@@ -11,6 +11,7 @@ import {
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
+import { getElementClass } from "oxalis/model/accessors/dataset_accessor";
 import { userSettings } from "libs/user_settings.schema";
 
 //
@@ -91,6 +92,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const layerSettingsDefaults = _.transform(
         colorLayers,
         (result, layer) => {
+          const elementClass = getElementClass(state.dataset, layer.name);
+          const intensityRange = elementClass === "uint16" ? [0, 65535] : [0, 255];
           result[layer.name] = Object.assign(
             {},
             {
@@ -98,7 +101,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               contrast: 1,
               color: [255, 255, 255],
               alpha: 100,
-              intensityRange: [0, 255],
+              intensityRange,
               isDisabled: false,
             },
             initialLayerSettings[layer.name],
@@ -106,7 +109,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         },
         {},
       );
-
+      
       const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
         layers: layerSettingsDefaults,
       });

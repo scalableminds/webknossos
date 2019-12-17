@@ -178,7 +178,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange } = layer;
     let histograms = [
-      { numberOfElements: 256, elementCounts: new Array(256).fill(0), min: 0, max: 255 },
+      {
+        numberOfElements: intensityRange[1] + 1,
+        elementCounts: new Array(intensityRange[1] + 1).fill(0),
+        min: 0,
+        max: intensityRange[1],
+      },
     ];
     if (this.state.histograms && this.state.histograms[layerName]) {
       histograms = this.state.histograms[layerName];

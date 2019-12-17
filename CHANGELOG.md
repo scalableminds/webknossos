@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added a new way of sharing annotations. You can share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard. [#4304](https://github.com/scalableminds/webknossos/pull/4304)
 
 ### Changed
-- Changed the way of selection the next active tree after a tree is deleted. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [\#4370](https://github.com/scalableminds/webknossos/pull/4370)
+- Changed the way the new active tree is selected after deleting a tree. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [#4370](https://github.com/scalableminds/webknossos/pull/4370)
 - Consolidates URI handling in the config. Pairs of `uri` and `secured` entries are now specified as just `uri` and require either `http://` or `https://` prefix. [#4368](https://github.com/scalableminds/webknossos/pull/4368)
 - Renamed initial organization for the dev deployment to `sample_organization`. [#4368](https://github.com/scalableminds/webknossos/pull/4368)
 

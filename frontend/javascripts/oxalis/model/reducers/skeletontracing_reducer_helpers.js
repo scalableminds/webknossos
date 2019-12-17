@@ -597,7 +597,7 @@ export function deleteTree(
         newActiveTreeId = newTree.treeId;
         newActiveNodeId = null;
       } else {
-        // Setting the tree active whose id is the next hightest compared to the id of the deleted tree.
+        // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
         const newTree = getNextTreeWithHigherId(tree.treeId, newTrees);
         if (newTree) {
           newActiveTreeId = newTree.treeId;

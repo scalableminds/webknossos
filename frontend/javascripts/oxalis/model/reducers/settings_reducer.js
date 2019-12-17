@@ -109,7 +109,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         },
         {},
       );
-      
+
       const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
         layers: layerSettingsDefaults,
       });

@@ -904,6 +904,13 @@ export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId)
   );
 }
 
+export async function clearCache(dataset: APIMaybeUnimportedDataset) {
+  return Promise.all([
+    triggerDatasetClearCache(dataset.dataStore.url, dataset),
+    triggerDatasetClearThumbnailCache(dataset),
+  ]);
+}
+
 export async function getDatasetSharingToken(
   datasetId: APIDatasetId,
   options?: RequestOptions,

@@ -699,6 +699,17 @@ class DataApi {
   }
 
   /**
+   * Invalidates all downloaded buckets of the given layer so that they are reloaded on the next movement.
+   */
+  reloadBuckets(layerName: string): void {
+    _.forEach(this.model.dataLayers, dataLayer => {
+      if (dataLayer.name === layerName) {
+        dataLayer.cube.collectAllBuckets();
+      }
+    });
+  }
+
+  /**
    * Invalidates all downloaded buckets so that they are reloaded on the next movement.
    */
   reloadAllBuckets(): void {

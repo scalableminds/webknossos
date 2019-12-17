@@ -12,6 +12,7 @@ import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
+import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
@@ -38,6 +39,7 @@ export const urlTokenToTabKeyMap = {
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
+  shared: "sharedAnnotations",
 };
 
 class DashboardView extends React.PureComponent<PropsWithRouter, State> {
@@ -91,6 +93,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
+      sharedAnnotations: true,
     };
   }
 
@@ -112,6 +115,9 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
           />
+        </TabPane>,
+        <TabPane tab="Shared Annotations" key="sharedAnnotations">
+          <SharedAnnotationsView />
         </TabPane>,
       ];
     } else {

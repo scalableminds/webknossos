@@ -66,11 +66,13 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object Datastore {
     val enabled = get[Boolean]("datastore.enabled")
     val key = get[String]("datastore.key")
+    val publicUri = getOptional[String]("datastore.publicUri")
   }
 
   object Tracingstore {
     val enabled = get[Boolean]("tracingstore.enabled")
     val key = get[String]("tracingstore.key")
+    val publicUri = getOptional[String]("tracingstore.publicUri")
   }
 
   object User {

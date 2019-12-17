@@ -531,8 +531,16 @@ export class InputMouse {
     this.trigger("scroll", delta, modifier);
   };
 
-  getRelativeMousePosition = (pagePosition: { pageX: number, pageY: number }) => {
+  getRelativeMousePosition = (pagePosition: {
+    pageX: number,
+    pageY: number,
+    touches?: Array<{ pageX: number, pageY: number }>,
+  }) => {
     const offset = this.getElementOffset();
+    if (pagePosition.pageX == null && pagePosition.touches != null) {
+      pagePosition.pageX = pagePosition.touches[0].pageX;
+      pagePosition.pageY = pagePosition.touches[0].pageY;
+    }
 
     return {
       x: pagePosition.pageX - offset.left,

@@ -24,9 +24,10 @@ class TeamController @Inject()(teamDAO: TeamDAO,
   private def teamNameReads: Reads[String] =
     (__ \ "name").read[String]
 
-  def list = sil.SecuredAction.async { implicit request =>
+  def list(isEditable: Option[Boolean]) = sil.SecuredAction.async { implicit request =>
+    val onlyEditableTeams = isEditable.getOrElse(false)
     for {
-      allTeams <- teamDAO.findAllEditable
+      allTeams <- if (onlyEditableTeams) teamDAO.findAllEditable else teamDAO.findAll
       js <- Fox.serialCombined(allTeams)(t => teamService.publicWrites(t))
     } yield {
       Ok(Json.toJson(js))

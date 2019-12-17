@@ -59,7 +59,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_alpha;
   uniform float <%= name %>_min;
   uniform float <%= name %>_max;
-  uniform float <%= name %>_inverting_factor;
+  uniform float <%= name %>_is_inverted;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -185,7 +185,7 @@ void main() {
     color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
 
     // Maybe invert the color using the inverting_factor
-    color_value = abs(color_value - <%= name %>_inverting_factor);
+    color_value = abs(color_value - <%= name %>_is_inverted);
     // Multiply with color and alpha for <%= name %>
     data_color += color_value * <%= name %>_alpha * <%= name %>_color;
   <% }) %>

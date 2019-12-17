@@ -227,7 +227,7 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1.0,
       };
-      this.uniforms[`${name}_inverting_factor`] = {
+      this.uniforms[`${name}_is_inverted`] = {
         type: "f",
         value: 0,
       };
@@ -533,7 +533,7 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
     this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
-    this.uniforms[`${name}_inverting_factor`].value = isInverted ? 1.0 : 0;
+    this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);

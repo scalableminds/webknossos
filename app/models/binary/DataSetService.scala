@@ -210,24 +210,26 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } else Fox.successful(None)
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(
-      implicit ctx: DBAccessContext): Fox[List[Unit]] = {
-    val dataSourcesByOrganizationName: Map[String, List[InboxDataSource]] = dataSources.groupBy(_.id.team)
-    Fox.serialCombined(dataSourcesByOrganizationName.keys.toList) { organizationName =>
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    if (dataSources.isEmpty) {
+      dataSetDAO.deactivateAllForDataStore(dataStoreName, unreportedStatus)
+    } else {
+      val dataSourcesByOrganizationName: Map[String, List[InboxDataSource]] = dataSources.groupBy(_.id.team)
       for {
-        organizationBox <- organizationDAO.findOneByName(organizationName).futureBox
-        _ <- organizationBox match {
-          case Full(organization) =>
-            dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name),
-                                            organization._id,
-                                            dataStoreName,
-                                            unreportedStatus)
-          case _ =>
-            logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
-            Fox.successful(())
+        _ <- Fox.serialCombined(dataSourcesByOrganizationName.keys.toList) { organizationName =>
+          organizationDAO.findOneByName(organizationName).futureBox.flatMap {
+            case Full(organization) =>
+              dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name),
+                                              organization._id,
+                                              dataStoreName,
+                                              unreportedStatus)
+            case _ =>
+              logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
+              Fox.successful(())
+          }
         }
       } yield ()
     }
-  }
 
   def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
 

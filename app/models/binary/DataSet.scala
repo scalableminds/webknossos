@@ -283,8 +283,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                            organizationId: ObjectId,
                            dataStoreName: String,
                            unreportedStatus: String): Fox[Unit] = {
-    val inclusionPredicate =
-      if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
+    val inclusionPredicate = s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
     val deleteResolutionsQuery =
       sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
             (select _id from webknossos.dataSets where _dataStore = ${dataStoreName} and _organization = ${organizationId}
@@ -298,6 +297,22 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
              set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
              where _dataStore = ${dataStoreName} and _organization = ${organizationId}
              and #${inclusionPredicate}"""
+    for {
+      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+    } yield ()
+  }
+
+  def deactivateAllForDataStore(dataStoreName: String, unreportedStatus: String): Fox[Unit] = {
+    val deleteResolutionsQuery =
+      sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName})"""
+    val deleteLayersQuery =
+      sqlu"""delete from webknossos.dataSet_layers where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName})"""
+    val setToUnusableQuery =
+      sqlu"""update webknossos.datasets
+             set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
+             where _dataStore = ${dataStoreName}"""
     for {
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()

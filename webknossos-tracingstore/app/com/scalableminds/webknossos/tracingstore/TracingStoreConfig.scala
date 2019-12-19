@@ -18,7 +18,6 @@ class TracingStoreConfig @Inject()(configuration: Configuration) extends ConfigR
     val name = get[String]("tracingstore.name")
     object WebKnossos {
       val uri = get[String]("tracingstore.webKnossos.uri")
-      val secured = get[Boolean]("tracingstore.webKnossos.secured")
     }
     object Fossildb {
       val address = get[String]("tracingstore.fossildb.address")

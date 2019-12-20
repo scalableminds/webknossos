@@ -104,7 +104,6 @@ PATCH         /annotations/:typ/finish                                          
 PATCH         /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 PUT           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
-PATCH         /annotations/:typ/:id/undoFinish                                  controllers.AnnotationController.undoFinish(typ: String, id: String)
 
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
 PATCH         /annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)

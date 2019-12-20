@@ -119,7 +119,8 @@ class AnnotationController @Inject()(
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
-      } yield (annotation._user == user._id || isAdminOrTeamManager)
+      } yield
+        (isAdminOrTeamManager || (annotation._user == user._id && System.currentTimeMillis - annotation.modified < 360000)) && annotation.state == AnnotationState.Finished
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
@@ -202,20 +203,6 @@ class AnnotationController @Inject()(
         results.map { results =>
           JsonOk(Messages("annotation.allFinished"))
         }
-      }
-    }
-  }
-
-  def undoFinish(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
-    log {
-      for {
-        annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-        message <- annotationService.undoFinish(annotation, request.identity)
-        updated <- provider.provideAnnotation(typ, id, request.identity)
-        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-        json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
-      } yield {
-        JsonOk(json, Messages(message))
       }
     }
   }

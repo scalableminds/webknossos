@@ -232,18 +232,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     }).flatten
   }
 
-  def undoFinish(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[String] =
-    if (annotation.state == AnnotationState.Finished)
-      if (annotation._user == user._id && annotation._task.isDefined)
-        if (System.currentTimeMillis - annotation.modified < 30000)
-          annotationDAO.updateState(annotation._id, AnnotationState.Active).map(_ => "annotation.undoFinish.success")
-        else
-          Fox.failure("annotation.undoFinish.tooLate")
-      else
-        Fox.failure(
-          s"${annotation._task.map(_ => "annotation.undoFinish.onlyTask").getOrElse("annotation.undoFinish.notAllowed")}")
-    else Fox.failure("annotation.undoFinish.notFinished")
-
   def baseForTask(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
       list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)

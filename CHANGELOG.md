@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - Fixed an issue where webKnossos would complain in certain scenarios when resolutions of datasets were not complete. [#4344](https://github.com/scalableminds/webknossos/pull/4344)
 - Fixed permissions to all task lists, so only administrable tasks can get accessed. [#4331](https://github.com/scalableminds/webknossos/pull/4331)
+- Fixed the deactivation of datasets if no datasets are present. [#4388](https://github.com/scalableminds/webknossos/pull/4388)
 
 ### Removed
 -

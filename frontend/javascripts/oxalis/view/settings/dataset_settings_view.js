@@ -149,7 +149,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Tooltip title={tooltipText}>
         <AsyncIconButton
           type="reload"
-          onClick={() => this.reloadWholeDatasetData(layerName)}
+          onClick={() => this.reloadLayerData(layerName)}
           style={{
             float: "right",
             marginTop: 4,
@@ -351,8 +351,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
   };
 
-  reloadWholeDatasetData = async (layerName: string): Promise<void> => {
-    await clearCache(this.props.dataset);
+  reloadLayerData = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
     api.data.reloadBuckets(layerName);
     Toast.success(
       `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,

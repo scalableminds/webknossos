@@ -206,6 +206,20 @@ class AnnotationController @Inject()(
     }
   }
 
+  def undoFinish(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    log {
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        message <- annotationService.undoFinish(annotation, request.identity)
+        updated <- provider.provideAnnotation(typ, id, request.identity)
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
+      } yield {
+        JsonOk(json, Messages(message))
+      }
+    }
+  }
+
   def editAnnotation(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND

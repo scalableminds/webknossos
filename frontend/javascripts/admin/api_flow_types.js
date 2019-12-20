@@ -77,7 +77,7 @@ type APIDataSourceBase = {
 
 export type APIMaybeUnimportedDataSource = APIDataSourceBase & {
   +dataLayers?: Array<APIDataLayer>,
-  +scale: ?Vector3,
+  +scale?: ?Vector3,
 };
 
 export type APIDataSource = APIDataSourceBase & {

@@ -273,24 +273,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             />
             {isColorLayer && layer != null ? (
               <Row className="margin-bottom" align="top">
-                <Col span={9}>
-                  <label className="setting-label">{settings.invertColor}</label>
-                </Col>
-                <Col span={4}>
-                  <Switch
-                    size="small"
-                    checked={layer.isInverted}
-                    onChange={_.partial(this.props.onChangeLayer, layerName, "isInverted")}
-                  />
-                </Col>
-                <Col span={9}>
+                <Col span={7}>
                   <label className="setting-label">Color</label>
                 </Col>
-                <Col span={2}>
+                <Col span={4} style={{ textAlign: "right" }}>
                   <ColorSetting
                     value={Utils.rgbToHex(layer.color)}
                     onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
                     className="ant-btn"
+                  />
+                </Col>
+                <Col span={9}>
+                  <label className="setting-label" style={{ marginLeft: 12 }}>
+                    {settings.invertColor}
+                  </label>
+                </Col>
+                <Col span={4} style={{ textAlign: "right" }}>
+                  <Switch
+                    size="small"
+                    checked={layer.isInverted}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "isInverted")}
                   />
                 </Col>
               </Row>

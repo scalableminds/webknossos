@@ -6,7 +6,7 @@ export const settings = {
   displayCrosshair: "Show Crosshairs",
   displayScalebars: "Show Scalebars",
   dynamicSpaceDirection: "d/f-Switching",
-  invertColor: "Invert Color",
+  invertColor: "Invert",
   keyboardDelay: "Keyboard delay (ms)",
   moveValue: "Move Value (nm/s)",
   newNodeNewTree: "Single-node-tree mode (Soma clicking)",

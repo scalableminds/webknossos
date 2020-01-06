@@ -156,7 +156,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         // We want to intentionally manipulate the intensityRange although intensityRange is read-only.
         const writeableLayerConfig = (layerConfig: any);
         writeableLayerConfig.intensityRange = layerConfig.intensityRange || [0, 255];
-        console.log("setting intensity range to", writeableLayerConfig.intensityRange);
       }
 
       this.props.form.setFieldsValue({

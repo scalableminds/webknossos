@@ -199,6 +199,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
   ) => {
+    const { tracing } = this.props;
+    const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       if (isColorLayer) {
         this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
@@ -225,7 +227,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>{isColorLayer ? layerName : "Volume Layer"}</span>
+          <span style={{ fontWeight: 700 }}>
+            {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
+          </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
         </Col>
@@ -475,6 +479,7 @@ const mapStateToProps = (state: OxalisState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   hasSegmentation: hasSegmentation(state.dataset),
+  tracing: state.tracing,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

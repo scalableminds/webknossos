@@ -6,8 +6,8 @@ scriptdir="$(dirname "$0")"
 dbName="$("$scriptdir"/db_name.sh)"
 dbHost="$("$scriptdir"/db_host.sh)"
 
-DATABASE_EXISTENCE="$(PGPASSWORD=postgres psql -U postgres -h $dbHost -tAc "SELECT 1 FROM pg_database WHERE datname='$dbName'" )"
-if [ "$DATABASE_EXISTENCE" = '1' ]
+dbExistence="$(PGPASSWORD=postgres psql -U postgres -h $dbHost -tAc "SELECT 1 FROM pg_database WHERE datname='$dbName'" )"
+if [ "$dbExistence" = '1' ]
 then
     echo "Database already exists"
 else

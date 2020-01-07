@@ -357,6 +357,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     Toast.success(
       `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,
     );
+    window.needsRerender = true;
   };
 
   onChangeRenderMissingDataBlack = (value: boolean): void => {

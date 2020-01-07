@@ -354,10 +354,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
     api.data.reloadBuckets(layerName);
+    window.needsRerender = true;
     Toast.success(
       `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,
     );
-    window.needsRerender = true;
   };
 
   onChangeRenderMissingDataBlack = (value: boolean): void => {

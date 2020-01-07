@@ -103,7 +103,10 @@ export function getElementClass(dataset: APIDataset, layerName: string): Element
   return getLayerByName(dataset, layerName).elementClass;
 }
 
-export function getIntensityRangeOfLayer(dataset: APIDataset, layerName: string): [number, number] {
+export function getDefaultIntensityRangeOfLayer(
+  dataset: APIDataset,
+  layerName: string,
+): [number, number] {
   const elementClass = getElementClass(dataset, layerName);
   return elementClass === "uint16" ? [0, 65535] : [0, 255];
 }

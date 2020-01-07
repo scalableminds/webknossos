@@ -25,6 +25,7 @@ import {
   hasSegmentation,
   getElementClass,
   getLayerBoundaries,
+  getDefaultIntensityRangeOfLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -177,12 +178,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange } = layer;
+    const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
+    const highestRangeValue = defaultIntensityRange[1];
     let histograms = [
       {
-        numberOfElements: intensityRange[1] + 1,
-        elementCounts: new Array(intensityRange[1] + 1).fill(0),
+        numberOfElements: 5 * 256, // 0,
+        elementCounts: new Array(256).fill(5),
         min: 0,
-        max: intensityRange[1],
+        max: highestRangeValue,
       },
     ];
     if (this.state.histograms && this.state.histograms[layerName]) {
@@ -191,8 +194,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     return (
       <Histogram
         data={histograms}
-        min={intensityRange[0]}
-        max={intensityRange[1]}
+        intensityRangeMin={intensityRange[0]}
+        intensityRangeMax={intensityRange[1]}
         layerName={layerName}
       />
     );

@@ -23,7 +23,7 @@ import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
-import { getElementClass } from "oxalis/model/accessors/dataset_accessor";
+import { getIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
 import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
@@ -139,11 +139,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           dataSource.dataLayers.map(layer => {
             // Here we adjust the default intensity range if we have a uint16 layer.
             // This is because otherwise the default max value of the intensity range would be 255.
-            // And this is far to small for uint16.
+            // And this is far too small for uint16.
             const currentDefaultLayerConfig = _.clone(defaultConfigPerLayer);
-            const elementClass = getElementClass(dataset, layer.name);
-            currentDefaultLayerConfig.intensityRange =
-              elementClass === "uint16" ? [0, 65535] : [0, 255];
+            const intensityRange = getIntensityRangeOfLayer(dataset, layer.name);
+            currentDefaultLayerConfig.intensityRange = intensityRange;
             return [layer.name, currentDefaultLayerConfig];
           }),
         ),

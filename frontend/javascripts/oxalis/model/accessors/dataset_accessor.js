@@ -103,6 +103,11 @@ export function getElementClass(dataset: APIDataset, layerName: string): Element
   return getLayerByName(dataset, layerName).elementClass;
 }
 
+export function getIntensityRangeOfLayer(dataset: APIDataset, layerName: string): [number, number] {
+  const elementClass = getElementClass(dataset, layerName);
+  return elementClass === "uint16" ? [0, 65535] : [0, 255];
+}
+
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {

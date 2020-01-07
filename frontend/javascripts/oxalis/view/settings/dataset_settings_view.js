@@ -38,6 +38,7 @@ import Store, {
   type DatasetLayerConfiguration,
   type OxalisState,
   type UserConfiguration,
+  type Tracing,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -70,6 +71,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
+  tracing: Tracing,
 |};
 
 type State = {

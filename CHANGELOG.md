@@ -7,7 +7,27 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...HEAD)
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
+
+## [20.01.0](https://github.com/scalableminds/webknossos/releases/tag/20.01.0) - 2020-01-08
+[Commits](https://github.com/scalableminds/webknossos/compare/19.12.0...20.01.0)
+
+### Highlights
+- Added a scale to the y-axis of histograms to indicate the logarithmic representation. Additionally, small histogram values are smoothed out. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
+- You can now share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard. [#4304](https://github.com/scalableminds/webknossos/pull/4304)
 
 ### Added
 - Added `publicUri` configs for datastore and tracingstore for initial setup. [#4368](https://github.com/scalableminds/webknossos/pull/4368)
@@ -22,9 +42,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Fixed
 - Fixed an issue where webKnossos would complain in certain scenarios when resolutions of datasets were not complete. [#4344](https://github.com/scalableminds/webknossos/pull/4344)
 - Fixed permissions to all task lists, so only administrable tasks can get accessed. [#4331](https://github.com/scalableminds/webknossos/pull/4331)
-
-### Removed
--
 
 
 ## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25

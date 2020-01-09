@@ -239,6 +239,7 @@ task.noAnnotations=We couldn’t find finished annotations for this task
 task.annotation.failed=Failed to retrieve annotations for this task
 task.id.invalid=The provided task id is invalid.
 task.notOnSameDataSet=Cannot create tasks on multiple datasets in one go.
+task.notOneAnnotation=The specified task has not exactly one instance, which is finished.
 
 assignment.retrieval.failed=Failed to retrieve any assignment
 

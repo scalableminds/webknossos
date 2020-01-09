@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Changed
--
+- Changed the error message when importing a dataset without resolution directories. [#4389](https://github.com/scalableminds/webknossos/pull/4389)
 
 ### Fixed
 -

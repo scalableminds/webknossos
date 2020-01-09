@@ -55,8 +55,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
-            existingIds <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-            _ <- dataSetService.deactivateUnreportedDataSources(existingIds)(GlobalAccessContext)
+            _ <- dataSetService.deactivateUnreportedDataSources(dataStore.name, dataSources)(GlobalAccessContext)
+            _ <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
           } yield {
             JsonOk
           }

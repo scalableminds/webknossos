@@ -55,7 +55,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         .toSingleBox("Error reading resolutions")
         .flatMap(list =>
           if (list.isEmpty) {
-            Failure("No resolutions found. Maybe add a magnification folder")
+            Failure("No resolutions found. Consider adding resolution directories.")
           } else Full(list))
     }
 

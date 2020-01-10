@@ -272,10 +272,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                           getAnnotationInformation(value, "Explorational", {
                             showErrorToast: false,
                           }),
+                        )) ||
+                        (await tryToAwaitPromise(
+                          getTask(value)
                         ));
 
-                      if (response != null && response.dataSetName != null) {
-                        this.props.form.setFieldsValue({ dataSet: response.dataSetName });
+                      if (response != null && (response.dataSetName != null || (response.dataSet != null && response.status.open === 0 && response.status.finished === 1))) {
+                        this.props.form.setFieldsValue({ dataSet: response.dataSetName ? response.dataSetName : response.dataSet });
                         return callback();
                       } else {
                         this.props.form.setFieldsValue({ dataSet: null });

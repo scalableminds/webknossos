@@ -164,6 +164,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext,
       m: MessagesProvider) = {
 
+    @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTasks are empty before so head always works
     def checkForTask(taskId: ObjectId): Fox[Annotation] =
       (for {
         task <- taskDAO.findOne(taskId)

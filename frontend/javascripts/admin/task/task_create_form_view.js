@@ -262,7 +262,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   { required: true },
                   {
                     validator: async (rule, value, callback) => {
-                      if(value === "") return callback();
+                      if (value === "") return callback();
 
                       const annotationResponse =
                         (await tryToAwaitPromise(

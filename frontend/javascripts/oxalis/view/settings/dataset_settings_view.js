@@ -131,8 +131,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               : () => Promise.resolve()
           }
           style={{
-            float: "right",
-            marginTop: 4,
+            position: "absolute",
+            top: 4,
+            right: -16,
             cursor: !isDisabled ? "pointer" : "not-allowed",
           }}
         />
@@ -151,8 +152,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           type="reload"
           onClick={() => this.reloadLayerData(layerName)}
           style={{
-            float: "right",
-            marginTop: 4,
+            position: "absolute",
+            top: 4,
+            right: 6,
             cursor: "pointer",
           }}
         />

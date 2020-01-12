@@ -347,6 +347,7 @@ type ColorSettingPropTypes = {
   value: string,
   onChange: (value: Vector3) => void,
   disabled: boolean,
+  style?: Object,
 };
 
 export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
@@ -360,6 +361,8 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
 
   render() {
     const { value, disabled } = this.props;
+    let { style } = this.props;
+    style = style || {};
     return (
       <div
         id="color-picker-wrapper"
@@ -371,6 +374,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
           borderRadius: 3,
           boxShadow: "0px 0px 3px #cacaca",
           verticalAlign: "middle",
+          ...style,
         }}
       >
         <input

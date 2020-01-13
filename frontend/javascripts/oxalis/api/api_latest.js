@@ -699,10 +699,25 @@ class DataApi {
   }
 
   /**
-   * Invalidates all downloaded buckets so that they are reloaded on the next movement.
+   * Invalidates all downloaded buckets of the given layer so that they are reloaded.
+   */
+  reloadBuckets(layerName: string): void {
+    _.forEach(this.model.dataLayers, dataLayer => {
+      if (dataLayer.name === layerName) {
+        dataLayer.cube.collectAllBuckets();
+        dataLayer.layerRenderingManager.refresh();
+      }
+    });
+  }
+
+  /**
+   * Invalidates all downloaded buckets so that they are reloaded.
    */
   reloadAllBuckets(): void {
-    _.forEach(this.model.dataLayers, dataLayer => dataLayer.cube.collectAllBuckets());
+    _.forEach(this.model.dataLayers, dataLayer => {
+      dataLayer.cube.collectAllBuckets();
+      dataLayer.layerRenderingManager.refresh();
+    });
   }
 
   /**

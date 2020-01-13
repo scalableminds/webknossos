@@ -88,14 +88,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   loadAllHistograms = async () => {
     const { layers } = this.props.datasetConfiguration;
+    const { dataset } = this.props;
     const histograms: { string: APIHistogramData } = {};
     const histogramPromises = Object.keys(layers).map(async layerName => {
-      const data = await getHistogramForLayer(
-        this.props.dataset.dataStore.url,
-        this.props.dataset,
-        layerName,
-      );
+      const data = await getHistogramForLayer(dataset.dataStore.url, dataset, layerName);
       histograms[layerName] = data;
+      // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
+      const newIntensityRange = [
+        Math.max(layers[layerName].intensityRange[0], data[0].min),
+        Math.min(layers[layerName].intensityRange[1], data[0].max),
+      ];
+      this.props.onChangeLayer(layerName, "intensityRange", newIntensityRange);
       return data;
     });
     // Waiting for all Promises to be resolved.
@@ -117,7 +120,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       } else if (volume && !volume.fallbackLayer && !isDisabled) {
         isDisabled = true;
         tooltipText =
-          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers";
+          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers.";
       }
     }
 
@@ -182,8 +185,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const highestRangeValue = defaultIntensityRange[1];
     let histograms = [
       {
-        numberOfElements: 5 * 256, // 0,
-        elementCounts: new Array(256).fill(5),
+        numberOfElements: 0,
+        elementCounts: [],
         min: 0,
         max: highestRangeValue,
       },

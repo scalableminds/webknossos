@@ -107,8 +107,34 @@ export function getDefaultIntensityRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
 ): [number, number] {
+  const maxFloatValue = 3.40282347e38;
+  const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
-  return elementClass === "uint16" ? [0, 65535] : [0, 255];
+  switch (elementClass) {
+    case "uint8":
+      return [0, Math.pow(2, 8) - 1];
+    case "uint16":
+      return [0, Math.pow(2, 16) - 1];
+    case "utin24":
+      return [0, Math.pow(2, 24) - 1];
+    case "uint32":
+      return [0, Math.pow(2, 32) - 1];
+    case "uint64":
+      return [0, Math.pow(2, 64) - 1];
+    // We do not fully support signed int data;
+    case "int16":
+      return [0, Math.pow(2, 15) - 1];
+    case "int32":
+      return [0, Math.pow(2, 31) - 1];
+    case "int64":
+      return [0, Math.pow(2, 63) - 1];
+    case "float":
+      return [0, maxFloatValue];
+    case "double":
+      return [0, maxDoubleValue];
+    default:
+      return [0, 255];
+  }
 }
 
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };

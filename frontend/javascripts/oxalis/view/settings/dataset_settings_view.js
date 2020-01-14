@@ -95,11 +95,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       histograms[layerName] = data;
       // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
       const newIntensityRange = [
-        Math.max(layers[layerName].intensityRange[0], data[0].min),
-        Math.min(layers[layerName].intensityRange[1], data[0].max),
+        Math.max(
+          layers[layerName].intensityRange[0],
+          ...data.map(currentHistogramData => currentHistogramData.min),
+        ),
+        Math.min(
+          layers[layerName].intensityRange[1],
+          ...data.map(currentHistogramData => currentHistogramData.max),
+        ),
       ];
       this.props.onChangeLayer(layerName, "intensityRange", newIntensityRange);
-      return data;
     });
     // Waiting for all Promises to be resolved.
     await Promise.all(histogramPromises);

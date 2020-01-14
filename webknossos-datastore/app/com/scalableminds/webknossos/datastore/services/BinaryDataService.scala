@@ -168,9 +168,10 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
     result
   }
 
-  def clearCache(organizationName: String, dataSetName: String) = {
+  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]) = {
     def matchingPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == dataSetName
+      cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
+        _ == cubeKey.dataLayerName)
 
     cache.clear(matchingPredicate)
   }

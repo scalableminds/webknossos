@@ -43,9 +43,7 @@ trait LRUConcurrentCache[K, V] {
     cache.synchronized {
       val matching = cache.keySet.asScala.filter(predicate)
       val size = matching.size
-      matching.map { key =>
-        remove(key)
-      }
+      matching.foreach(remove)
       size
     }
 

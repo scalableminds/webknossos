@@ -49,7 +49,6 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
     if (!segmentationLayer) {
       return;
     }
-    const segmentationLayerName = segmentationLayer.name;
     const isDisallowed = yield* select(isVolumeTracingDisallowed);
     const isSegmentationMissing = yield* select(state =>
       isSegmentationMissingForZoomstep(state, segmentationLayer.cube.MAX_ZOOM_STEP),
@@ -68,6 +67,7 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
+    const segmentationLayerName = Model.getSegmentationLayerName();
     yield* take([
       "ZOOM_IN",
       "ZOOM_OUT",
@@ -77,7 +77,7 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
       action =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
-        propertyName === "alpha",
+        action.propertyName === "alpha",
     ]);
     yield* warnMaybe();
   }

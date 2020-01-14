@@ -278,33 +278,44 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
             />
             {isColorLayer && layer != null ? (
-              <React.Fragment>
-                <Row className="margin-bottom" align="top">
-                  <Col span={12}>
-                    <label className="setting-label">Color</label>
-                  </Col>
-                  <Col span={12}>
-                    <ColorSetting
-                      value={Utils.rgbToHex(layer.color)}
-                      onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-                      className="ant-btn"
-                      style={{ marginLeft: 6 }}
-                    />
-                  </Col>
-                </Row>
-                <Row className="margin-bottom" align="top">
-                  <Col span={12}>
-                    <label className="setting-label">{settings.invertColor}</label>
-                  </Col>
-                  <Col span={12}>
-                    <Switch
-                      size="small"
-                      checked={layer.isInverted}
-                      onChange={_.partial(this.props.onChangeLayer, layerName, "isInverted")}
-                    />
-                  </Col>
-                </Row>
-              </React.Fragment>
+              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+                <Col span={12}>
+                  <label className="setting-label">Color</label>
+                </Col>
+                <Col span={10}>
+                  <ColorSetting
+                    value={Utils.rgbToHex(layer.color)}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+                    className="ant-btn"
+                    style={{ marginLeft: 6 }}
+                  />
+                </Col>
+                <Col span={2}>
+                  <Tooltip title="Invert the color of this layer.">
+                    <div
+                      style={{
+                        borderRadius: 4,
+                        padding: 3,
+                        position: "absolute",
+                        top: 0,
+                        right: -9,
+                        display: "inline-flex",
+                        backgroundColor: layer.isInverted
+                          ? "rgba(145, 213, 255, 1.0)"
+                          : "rgba(0, 0, 0, 0.0)",
+                      }}
+                    >
+                      <Icon
+                        type="swap"
+                        style={{ margin: 0 }}
+                        onClick={() =>
+                          this.props.onChangeLayer(layerName, "isInverted", !layer.isInverted)
+                        }
+                      />
+                    </div>
+                  </Tooltip>
+                </Col>
+              </Row>
             ) : (
               <SwitchSetting
                 label={settings.highlightHoveredCellId}

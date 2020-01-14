@@ -18,13 +18,12 @@ import {
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
-  isColorLayer,
   getDataLayers,
   getResolutions,
   getByteCount,
   getElementClass,
   getBoundaries,
-  isSegmentationLayer,
+  getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -35,7 +34,6 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { type ElementClass } from "admin/api_flow_types";
-import { isSegmentationLayer } from "../../model/accessors/dataset_accessor";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean,
@@ -107,10 +105,6 @@ class PlaneMaterialFactory {
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
-      alpha: {
-        type: "f",
-        value: 0,
-      },
       highlightHoveredCellId: {
         type: "b",
         value: true,
@@ -204,19 +198,20 @@ class PlaneMaterialFactory {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
     };
-
     for (const dataLayer of Model.getAllLayers()) {
-      this.uniforms[`${sanitizeName(dataLayer.name)}_maxZoomStep`] = {
+      const layerName = sanitizeName(dataLayer.name);
+      this.uniforms[`${layerName}_maxZoomStep`] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
+      };
+
+      this.uniforms[`${layerName}_alpha`] = {
+        type: "f",
+        value: 1,
       };
     }
 
     for (const name of getColorLayerNames()) {
-      this.uniforms[`${name}_alpha`] = {
-        type: "f",
-        value: 1,
-      };
       this.uniforms[`${name}_color`] = {
         type: "v3",
         value: DEFAULT_COLOR,
@@ -241,18 +236,18 @@ class PlaneMaterialFactory {
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
-
-      this.uniforms[`${sanitizeName(name)}_textures`] = {
+      const layerName = sanitizeName(name);
+      this.uniforms[`${layerName}_textures`] = {
         type: "tv",
         value: dataTextures,
       };
 
-      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
+      this.uniforms[`${layerName}_data_texture_width`] = {
         type: "f",
         value: dataLayer.layerRenderingManager.textureWidth,
       };
 
-      this.uniforms[`${sanitizeName(name)}_lookup_texture`] = {
+      this.uniforms[`${layerName}_lookup_texture`] = {
         type: "t",
         value: lookUpTexture,
       };
@@ -266,15 +261,16 @@ class PlaneMaterialFactory {
         mappingLookupTexture,
         mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_texture`] = {
+      const sanitizedSegmentationLayerName = sanitizeName(segmentationLayer.name);
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_texture`] = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_lookup_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_lookup_texture`] = {
         type: "t",
         value: mappingLookupTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_color_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_color_texture`] = {
         type: "t",
         value: mappingColorTexture,
       };
@@ -411,7 +407,7 @@ class PlaneMaterialFactory {
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const name = sanitizeName(dataLayer.name);
-              const isSegmentationLayer = segmentationLayerName === name;
+              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
               this.updateUniformsForLayer(
                 settings,
                 name,

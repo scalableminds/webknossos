@@ -69,7 +69,12 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         }
       }
 
-      resolutionHeaders.toSingleBox("Error reading resolutions")
+      resolutionHeaders
+        .toSingleBox("Error reading resolutions")
+        .flatMap(list =>
+          if (list.isEmpty) {
+            Failure("No resolutions found. Consider adding resolution directories.")
+          } else Full(list))
     }
 
   private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(

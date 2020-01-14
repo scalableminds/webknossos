@@ -319,16 +319,9 @@ export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-  viewMode: ViewMode,
 ): boolean {
-  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
-  if (isSegmentationLayer(dataset, layerName)) {
-    // Segmentation layers are only displayed in plane mode for now
-    return datasetConfiguration.segmentationOpacity > 0 && isPlaneMode;
-  } else {
-    const layerConfig = datasetConfiguration.layers[layerName];
-    return !layerConfig.isDisabled && layerConfig.alpha > 0;
-  }
+  const layerConfig = datasetConfiguration.layers[layerName];
+  return !layerConfig.isDisabled && layerConfig.alpha > 0;
 }
 
 export default {};

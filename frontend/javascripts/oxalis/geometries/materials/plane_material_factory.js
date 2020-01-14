@@ -18,12 +18,13 @@ import {
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
-  getColorLayers,
+  isColorLayer,
   getDataLayers,
   getResolutions,
   getByteCount,
   getElementClass,
   getBoundaries,
+  isSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -34,6 +35,7 @@ import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { type ElementClass } from "admin/api_flow_types";
+import { isSegmentationLayer } from "../../model/accessors/dataset_accessor";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean,
@@ -298,16 +300,6 @@ class PlaneMaterialFactory {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
-    this.material.setSegmentationAlpha = alpha => {
-      this.uniforms.alpha.value = alpha / 100;
-    };
-
-    this.material.setSegmentationVisibility = isVisible => {
-      this.uniforms.alpha.value = isVisible
-        ? Store.getState().datasetConfiguration.segmentationOpacity / 100
-        : 0;
-    };
-
     this.material.setUseBilinearFiltering = isEnabled => {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
@@ -414,11 +406,18 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
         layerSettings => {
-          for (const colorLayer of getColorLayers(Store.getState().dataset)) {
-            const settings = layerSettings[colorLayer.name];
+          const segmentationLayerName = Model.getSegmentationLayerName();
+          for (const dataLayer of Model.getAllLayers()) {
+            const settings = layerSettings[dataLayer.name];
             if (settings != null) {
-              const name = sanitizeName(colorLayer.name);
-              this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
+              const name = sanitizeName(dataLayer.name);
+              const isSegmentationLayer = segmentationLayerName === name;
+              this.updateUniformsForLayer(
+                settings,
+                name,
+                dataLayer.elementClass,
+                isSegmentationLayer,
+              );
             }
           }
           // TODO: Needed?
@@ -522,18 +521,20 @@ class PlaneMaterialFactory {
     settings: DatasetLayerConfiguration,
     name: string,
     elementClass: ElementClass,
+    isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled } = settings;
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
-    const divisor = elementClass === "float" ? 1 : 255;
-    this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-    this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
-    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
-
-    if (settings.color != null) {
-      const color = this.convertColor(settings.color);
-      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    if (!isSegmentationLayer) {
+      const divisor = elementClass === "float" ? 1 : 255;
+      this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+      this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      if (settings.color != null) {
+        const color = this.convertColor(settings.color);
+        this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+      }
     }
+    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
   }
 
   getMaterial(): THREE.ShaderMaterial {

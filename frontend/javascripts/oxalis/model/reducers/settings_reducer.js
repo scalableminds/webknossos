@@ -82,14 +82,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
-      // Only color layers need layer settings
-      const colorLayers = _.filter(
-        state.dataset.dataSource.dataLayers,
-        layer => layer.category === "color",
-      );
       const initialLayerSettings = action.initialDatasetSettings.layers || {};
       const layerSettingsDefaults = _.transform(
-        colorLayers,
+        state.dataset.dataSource.dataLayers,
         (result, layer) => {
           result[layer.name] = Object.assign(
             {},
@@ -97,7 +92,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
-              alpha: 100,
+              alpha: layer.category === "color" ? 20 : 100,
               intensityRange: [0, 255],
               isDisabled: false,
             },

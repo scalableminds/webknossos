@@ -38,10 +38,10 @@ export function* watchDataRelevantChanges(): Saga<void> {
   );
 }
 
-function* shouldPrefetchForDataLayer(dataLayer: DataLayer, viewMode: ViewMode): Saga<boolean> {
+function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
   // There is no need to prefetch data for layers that are not visible
   return yield* select(state =>
-    isLayerVisible(state.dataset, dataLayer.name, state.datasetConfiguration, viewMode),
+    isLayerVisible(state.dataset, dataLayer.name, state.datasetConfiguration),
   );
 }
 
@@ -51,7 +51,7 @@ export function* triggerDataPrefetching(previousProperties: Object): Saga<void> 
 
   const dataLayers = yield* call([Model, Model.getAllLayers]);
   for (const dataLayer of dataLayers) {
-    if (yield* call(shouldPrefetchForDataLayer, dataLayer, viewMode)) {
+    if (yield* call(shouldPrefetchForDataLayer, dataLayer)) {
       if (isPlaneMode) {
         yield* call(prefetchForPlaneMode, dataLayer, previousProperties);
       } else {

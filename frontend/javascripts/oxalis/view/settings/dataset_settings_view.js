@@ -260,16 +260,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               label="Opacity"
               min={0}
               max={100}
-              value={
-                isColorLayer && layer != null
-                  ? layer.alpha
-                  : this.props.datasetConfiguration.segmentationOpacity
-              }
-              onChange={
-                isColorLayer
-                  ? _.partial(this.props.onChangeLayer, layerName, "alpha")
-                  : _.partial(this.props.onChange, "segmentationOpacity")
-              }
+              value={layer.alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
             {isColorLayer && layer != null ? (
               <ColorSetting

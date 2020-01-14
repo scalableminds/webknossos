@@ -26,6 +26,7 @@ export class OxalisModel {
   dataLayers: {
     [key: string]: DataLayer,
   };
+
   isMappingSupported: boolean = true;
   maximumDataTextureCountForLayer: number;
 
@@ -75,6 +76,11 @@ export class OxalisModel {
       dataLayer =>
         getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
     );
+  }
+
+  getSegmentationLayerName(): DataLayer {
+    const segmentation = this.getSegmentationLayer();
+    return segmentation != null ? segmentation.name : undefined;
   }
 
   getCubeByLayerName(name: string): DataCube {

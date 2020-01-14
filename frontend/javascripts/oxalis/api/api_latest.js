@@ -73,6 +73,7 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
+  updateLayerSettingAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
@@ -1026,7 +1027,25 @@ class DataApi {
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
   getConfiguration(key: $Keys<DatasetConfiguration>) {
-    return Store.getState().datasetConfiguration[key];
+    switch (key) {
+      case "segmentationOpacity": {
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        // TODO: Add warn message
+        return segmentationLayerName
+          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
+          : undefined;
+      }
+      case "isSegmentationDisabled": {
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        // TODO: Add warn message
+        return segmentationLayerName
+          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
+          : undefined;
+      }
+      default: {
+        return Store.getState().datasetConfiguration[key];
+      }
+    }
   }
 
   /**
@@ -1037,7 +1056,27 @@ class DataApi {
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfiguration>, value) {
-    Store.dispatch(updateDatasetSettingAction(key, value));
+    switch (key) {
+      case "segmentationOpacity": {
+        // TODO: Add warn message
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (segmentationLayerName) {
+          Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
+        }
+        break;
+      }
+      case "isSegmentationDisabled": {
+        // TODO: Add warn message
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (segmentationLayerName) {
+          Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));
+        }
+        break;
+      }
+      default: {
+        Store.dispatch(updateDatasetSettingAction(key, value));
+      }
+    }
   }
 }
 

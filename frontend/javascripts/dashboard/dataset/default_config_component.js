@@ -47,23 +47,6 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
           </FormItemWithInfo>
         </Col>
         <Col span={6}>
-          <FormItemWithInfo
-            label="Segmentation Opacity"
-            info="The segmentation layer will be overlayed using the specified percentage value (&ldquo;20&rdquo; means &ldquo;20%&rdquo; opacity)."
-          >
-            {getFieldDecorator("defaultConfiguration.segmentationOpacity", {
-              rules: [
-                {
-                  validator: syncValidator(
-                    value => value == null || (value >= 0 && value <= 100),
-                    "The segmentation opacity must be between 0 and 100.",
-                  ),
-                },
-              ],
-            })(<InputNumber style={{ width: "100%" }} />)}
-          </FormItemWithInfo>
-        </Col>
-        <Col span={6}>
           <FormItem label=" " colon={false}>
             {getFieldDecorator("defaultConfiguration.interpolation", {
               valuePropName: "checked",

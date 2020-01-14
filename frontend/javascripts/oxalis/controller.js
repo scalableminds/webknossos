@@ -18,7 +18,7 @@ import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import {
   setViewModeAction,
   updateUserSettingAction,
-  updateDatasetSettingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import ApiLoader from "oxalis/api/api_loader";
@@ -244,11 +244,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (!segmentationLayerName) {
+          return;
+        }
+        const isSegmentationDisabled = Store.getState().datasetConfiguration.layers[
+          segmentationLayerName
+        ].isDisabled;
         Store.dispatch(
-          updateDatasetSettingAction(
-            "isSegmentationDisabled",
-            !Store.getState().datasetConfiguration.isSegmentationDisabled,
-          ),
+          updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
         );
       },
     });

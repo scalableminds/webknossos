@@ -15,8 +15,8 @@ import { roundTo } from "libs/utils";
 type OwnProps = {|
   data: APIHistogramData,
   layerName: string,
-  intensityRangeMin: number,
-  intensityRangeMax: number,
+  min: number,
+  max: number,
 |};
 
 type HistogramProps = {
@@ -76,7 +76,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
     maxValue: number,
     color: Vector3,
   ) => {
-    const { intensityRangeMin, intensityRangeMax } = this.props;
+    const { min, max } = this.props;
     const { min: minRange, max: maxRange, elementCounts } = histogram;
     const rangeLength = maxRange - minRange;
     this.drawYAxis(ctx);
@@ -90,19 +90,19 @@ class Histogram extends React.PureComponent<HistogramProps> {
     );
     const activeRegion = new Path2D();
     ctx.moveTo(0, downscaledData[0]);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / rangeLength) * canvasWidth, 0);
+    activeRegion.moveTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     for (let i = 0; i < downscaledData.length; i++) {
       const x = (i / downscaledData.length) * canvasWidth;
       const xValue = minRange + i * (rangeLength / downscaledData.length);
-      if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
+      if (xValue >= min && xValue <= max) {
         activeRegion.lineTo(x, downscaledData[i]);
       }
       ctx.lineTo(x, downscaledData[i]);
     }
     ctx.stroke();
     ctx.closePath();
-    activeRegion.lineTo(((intensityRangeMax - minRange) / rangeLength) * canvasWidth, 0);
-    activeRegion.lineTo(((intensityRangeMin - minRange) / rangeLength) * canvasWidth, 0);
+    activeRegion.lineTo(((max - minRange) / rangeLength) * canvasWidth, 0);
+    activeRegion.lineTo(((min - minRange) / rangeLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -133,7 +133,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
   };
 
   render() {
-    const { intensityRangeMin, intensityRangeMax, data } = this.props;
+    const { min, max, data } = this.props;
     const { min: minRange, max: maxRange } = data[0];
     return (
       <React.Fragment>
@@ -145,7 +145,7 @@ class Histogram extends React.PureComponent<HistogramProps> {
           height={canvasHeight}
         />
         <Slider
-          value={[intensityRangeMin, intensityRangeMax]}
+          value={[min, max]}
           min={minRange}
           max={maxRange}
           range

@@ -3,8 +3,6 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "ant
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
-import type { Dispatch } from "redux";
-
 import type {
   APIDataset,
   APIAnnotationVisibility,
@@ -12,7 +10,6 @@ import type {
   APITeam,
 } from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
-import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,

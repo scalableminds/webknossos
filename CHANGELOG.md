@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Fixed the deactivation of datasets if no datasets are present. [#4388](https://github.com/scalableminds/webknossos/pull/4388)
+- Fixed the team sharing settings for private annotations. [#4409](https://github.com/scalableminds/webknossos/pull/4409)
 
 ### Removed
 -

@@ -212,6 +212,9 @@ class AnnotationController @Inject()(
       name = (request.body \ "name").asOpt[String]
       description = (request.body \ "description").asOpt[String]
       visibility = (request.body \ "visibility").asOpt[String]
+      _ <- if (visibility.contains("Private"))
+        annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
+      else Fox.successful(())
       tags = (request.body \ "tags").asOpt[List[String]]
       _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> "annotation.edit.failed"
       _ <- Fox.runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> "annotation.edit.failed"

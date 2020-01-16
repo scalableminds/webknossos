@@ -3,8 +3,6 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "ant
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
-import type { Dispatch } from "redux";
-
 import type {
   APIDataset,
   APIAnnotationVisibility,
@@ -12,11 +10,11 @@ import type {
   APITeam,
 } from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
-import { setAnnotationVisibilityAction } from "oxalis/model/actions/annotation_actions";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
+  editAnnotation,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -36,7 +34,6 @@ type StateProps = {|
   visibility: APIAnnotationVisibility,
   dataset: APIDataset,
   restrictions: RestrictionsAndSettings,
-  setAnnotationVisibility: Function,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -126,14 +123,19 @@ class ShareModalView extends PureComponent<Props, State> {
   };
 
   handleOk = async () => {
-    await updateTeamsForSharedAnnotation(
-      this.props.annotationType,
-      this.props.annotationId,
-      this.state.sharedTeams.map(team => team.id),
-    );
-    Toast.success(messages["annotation.shared_teams_edited"]);
+    await editAnnotation(this.props.annotationId, this.props.annotationType, {
+      visibility: this.state.visibility,
+    });
 
-    this.props.setAnnotationVisibility(this.state.visibility);
+    if (this.state.visibility !== "Private") {
+      await updateTeamsForSharedAnnotation(
+        this.props.annotationType,
+        this.props.annotationId,
+        this.state.sharedTeams.map(team => team.id),
+      );
+      Toast.success(messages["annotation.shared_teams_edited"]);
+    }
+
     this.props.onOk();
   };
 
@@ -274,13 +276,4 @@ const mapStateToProps = (state: OxalisState) => ({
   restrictions: state.tracing.restrictions,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setAnnotationVisibility(visibility: APIAnnotationVisibility) {
-    dispatch(setAnnotationVisibilityAction(visibility));
-  },
-});
-
-export default connect<Props, OwnProps, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(ShareModalView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ShareModalView);

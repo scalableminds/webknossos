@@ -13,6 +13,7 @@ type Props = {
   onChange?: (value: APITeam | Array<APITeam>) => void,
   mode?: "default" | "multiple",
   allowNonEditableTeams?: boolean,
+  disabled?: boolean,
 };
 
 type State = {
@@ -78,6 +79,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         onChange={this.onSelectTeams}
         value={this.state.selectedTeams.map(t => t.id)}
         filterOption
+        disabled={this.props.disabled ? this.props.disabled : false}
       >
         {this.getAllTeams().map(team => (
           <Option

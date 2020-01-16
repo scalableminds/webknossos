@@ -9,6 +9,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
+import api from "oxalis/api/internal_api";
 
 import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
@@ -18,7 +19,7 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, getHistogramForLayer } from "admin/admin_rest_api";
+import { findDataPositionForLayer, getHistogramForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -130,9 +131,31 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               : () => Promise.resolve()
           }
           style={{
-            float: "right",
-            marginTop: 4,
+            position: "absolute",
+            top: 4,
+            right: -16,
             cursor: !isDisabled ? "pointer" : "not-allowed",
+          }}
+        />
+      </Tooltip>
+    );
+  };
+
+  getReloadDataButton = (layerName: string) => {
+    const tooltipText =
+      "Reload the data from the server. Use this when the data on the server changed.";
+    // If the tracing contains a volume tracing, the backend can only
+    // search in the fallback layer of the segmentation layer for data.
+    return (
+      <Tooltip title={tooltipText}>
+        <AsyncIconButton
+          type="reload"
+          onClick={() => this.reloadLayerData(layerName)}
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 6,
+            cursor: "pointer",
           }}
         />
       </Tooltip>
@@ -228,6 +251,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <span style={{ fontWeight: 700 }}>{layerName}</span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
+          {this.getReloadDataButton(layerName)}
         </Col>
       </Row>
     );
@@ -318,6 +342,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const zoomValue = this.props.onZoomToResolution(resolution);
     Toast.success(
       `Jumping to position ${position.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
+    );
+  };
+
+  reloadLayerData = async (layerName: string): Promise<void> => {
+    await clearCache(this.props.dataset, layerName);
+    api.data.reloadBuckets(layerName);
+    window.needsRerender = true;
+    Toast.success(
+      `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,
     );
   };
 

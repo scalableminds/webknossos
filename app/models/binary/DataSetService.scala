@@ -64,7 +64,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None,
       isActive: Boolean = false
-  ): Fox[ObjectId] = {
+  ): Fox[Unit] = {
     implicit val ctx = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
@@ -93,7 +93,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         ))
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(newId, List())
-    } yield newId
+    } yield ()
   }
 
   def addForeignDataSet(dataStoreName: String, dataSetName: String, organizationName: String)(
@@ -117,7 +117,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
-      implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+      implicit ctx: DBAccessContext): Fox[List[Unit]] = {
     logger.info(
       s"[${dataStore.name}] Available datasets: " +
         s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
@@ -150,7 +150,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore: DataStore,
       dataSource: InboxDataSource,
       foundDatasets: Map[String, List[DataSet]]
-  )(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  )(implicit ctx: DBAccessContext): Fox[Unit] = {
     val foundDataSetOpt = foundDatasets.get(dataSource.id.name).flatMap(_.headOption)
     foundDataSetOpt match {
       case Some(foundDataSet) if foundDataSet._dataStore == dataStore.name =>
@@ -163,9 +163,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   private def updateKnownDataSource(foundDataSet: DataSet, dataSource: InboxDataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Future[Box[ObjectId]] =
+      implicit ctx: DBAccessContext): Future[Box[Unit]] =
     if (foundDataSet.inboxSourceHash.contains(dataSource.hashCode))
-      Fox.successful(foundDataSet._id)
+      Fox.successful(())
     else
       for {
         _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
@@ -174,12 +174,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                   dataSource,
                                                                   dataSource.isUsable)(GlobalAccessContext)
         _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
-      } yield foundDataSet._id
+      } yield ()
 
   private def updateDataSourceDifferentDataStore(
       foundDataSet: DataSet,
       dataSource: InboxDataSource,
-      dataStore: DataStore)(implicit ctx: DBAccessContext): Future[Box[ObjectId]] =
+      dataStore: DataStore)(implicit ctx: DBAccessContext): Future[Box[Unit]] =
     // The dataSet is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataSet._dataStore)
@@ -194,7 +194,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                     dataSource,
                                                                     dataSource.isUsable)(GlobalAccessContext)
           _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
-        } yield foundDataSet._id
+        } yield ()
       } else {
         logger.info(
           s"Dataset ${foundDataSet.name}, as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
@@ -217,8 +217,25 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       }
     } else Fox.successful(None)
 
-  def deactivateUnreportedDataSources(existingDataSetIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
-    dataSetDAO.deactivateUnreported(existingDataSetIds, unreportedStatus)
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(
+      implicit ctx: DBAccessContext): Fox[List[Unit]] = {
+    val dataSourcesByOrganizationName: Map[String, List[InboxDataSource]] = dataSources.groupBy(_.id.team)
+    Fox.serialCombined(dataSourcesByOrganizationName.keys.toList) { organizationName =>
+      for {
+        organizationBox <- organizationDAO.findOneByName(organizationName).futureBox
+        _ <- organizationBox match {
+          case Full(organization) =>
+            dataSetDAO.deactivateUnreported(dataSourcesByOrganizationName(organizationName).map(_.id.name),
+                                            organization._id,
+                                            dataStoreName,
+                                            unreportedStatus)
+          case _ =>
+            logger.info(s"Ignoring reported dataset for non-existing organization $organizationName")
+            Fox.successful(())
+        }
+      } yield ()
+    }
+  }
 
   def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
 

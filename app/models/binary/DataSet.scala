@@ -276,7 +276,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                                                 isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
-      sourceDefaultConfig: Option[String] = source.defaultViewConfigurationOpt.map(Json.toJson(_).toString)
+      sourceDefaultConfig: Option[String] = source.defaultViewConfiguration.map(Json.toJson(_).toString)
       q = sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
                         _organization = ${organization._id.id},

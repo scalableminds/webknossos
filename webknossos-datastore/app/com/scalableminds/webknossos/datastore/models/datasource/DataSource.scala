@@ -32,7 +32,7 @@ package object datasource {
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
                                                     scale: Scale,
-                                                    defaultViewConfigurationOpt: Option[ViewConfiguration] = None)
+                                                    defaultViewConfiguration: Option[ViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)

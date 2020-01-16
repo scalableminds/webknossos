@@ -17,7 +17,7 @@ package object inbox {
 
     def statusOpt: Option[String]
 
-    def defaultViewConfigurationOpt: Option[ViewConfiguration]
+    def defaultViewConfiguration: Option[ViewConfiguration]
   }
 
   object GenericInboxDataSource {
@@ -42,7 +42,7 @@ package object inbox {
 
     val statusOpt: Option[String] = Some(status)
 
-    val defaultViewConfigurationOpt: Option[ViewConfiguration] = None
+    val defaultViewConfiguration: Option[ViewConfiguration] = None
   }
 
   object UnusableDataSource {

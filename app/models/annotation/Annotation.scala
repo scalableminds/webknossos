@@ -324,7 +324,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
 
   def updateVisibility(id: ObjectId, visibilityString: String)(implicit ctx: DBAccessContext) =
     for {
-      visibility <- AnnotationVisibility.fromString(visibilityString).toFox
+      _ <- AnnotationVisibility.fromString(visibilityString).toFox
       _ <- run(sqlu"update webknossos.annotations_ set visibility = '#$visibilityString' where _id = $id")
     } yield ()
 
@@ -387,7 +387,7 @@ class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQ
     val clearQuery = sqlu"delete from webknossos.annotation_sharedTeams where _annotation = ${_id}"
 
     val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
-                                                              values(${_id}, ${teamId})""")
+                                                              values(${_id}, $teamId)""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {

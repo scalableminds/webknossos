@@ -164,15 +164,17 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext,
       m: MessagesProvider) = {
 
-    @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTasks are empty before so head always works
+    @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTaskAnnotations are empty before so head always works
     def checkForTask(taskId: ObjectId): Fox[Annotation] =
       (for {
         task <- taskDAO.findOne(taskId)
         annotations <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
       } yield {
-        val nonCancelledTasks = annotations.filter(_.state != AnnotationState.Cancelled)
-        if (task.totalInstances == 1 && task.openInstances == 0 && nonCancelledTasks.nonEmpty && nonCancelledTasks.head.state == AnnotationState.Finished)
-          Fox.successful(nonCancelledTasks.head)
+        val nonCancelledTaskAnnotations = annotations.filter(_.state != AnnotationState.Cancelled)
+        if (task.totalInstances == 1 && task.openInstances == 0 &&
+            nonCancelledTaskAnnotations.nonEmpty &&
+            nonCancelledTaskAnnotations.head.state == AnnotationState.Finished)
+          Fox.successful(nonCancelledTaskAnnotations.head)
         else Fox.failure("task.notOneAnnotation")
       }).flatten
 

@@ -281,26 +281,25 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                           dataSet: annotationResponse.dataSetName,
                         });
                         return callback();
-                      } else {
-                        const taskResponse = await tryToAwaitPromise(
-                          getTask(value, {
-                            showErrorToast: false,
-                          }),
-                        );
-                        if (
-                          taskResponse != null &&
-                          taskResponse.dataSet != null &&
-                          _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
-                        ) {
-                          this.props.form.setFieldsValue({
-                            dataSet: taskResponse.dataSet,
-                          });
-                          return callback();
-                        } else {
-                          this.props.form.setFieldsValue({ dataSet: null });
-                          return callback("Invalid base annotation id.");
-                        }
                       }
+
+                      const taskResponse = await tryToAwaitPromise(
+                        getTask(value, { showErrorToast: false }),
+                      );
+
+                      if (
+                        taskResponse != null &&
+                        taskResponse.dataSet != null &&
+                        _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
+                      ) {
+                        this.props.form.setFieldsValue({
+                          dataSet: taskResponse.dataSet,
+                        });
+                        return callback();
+                      }
+
+                      this.props.form.setFieldsValue({ dataSet: null });
+                      return callback("Invalid base annotation id.");
                     },
                   },
                 ],

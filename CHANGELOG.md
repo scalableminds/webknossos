@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Changed the error message when importing a dataset without resolution directories. [#4389](https://github.com/scalableminds/webknossos/pull/4389)
 
 ### Fixed
--
+- Fixed the deactivation of datasets if no datasets are present. [#4388](https://github.com/scalableminds/webknossos/pull/4388)
 
 ### Removed
 -

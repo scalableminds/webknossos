@@ -17,6 +17,7 @@ import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
+  editAnnotation,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -36,7 +37,6 @@ type StateProps = {|
   visibility: APIAnnotationVisibility,
   dataset: APIDataset,
   restrictions: RestrictionsAndSettings,
-  setAnnotationVisibility: Function,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -126,14 +126,19 @@ class ShareModalView extends PureComponent<Props, State> {
   };
 
   handleOk = async () => {
-    await updateTeamsForSharedAnnotation(
-      this.props.annotationType,
-      this.props.annotationId,
-      this.state.sharedTeams.map(team => team.id),
-    );
-    Toast.success(messages["annotation.shared_teams_edited"]);
+    await editAnnotation(this.props.annotationId, this.props.annotationType, {
+      visibility: this.state.visibility,
+    });
 
-    this.props.setAnnotationVisibility(this.state.visibility);
+    if (this.state.visibility !== "Private") {
+      await updateTeamsForSharedAnnotation(
+        this.props.annotationType,
+        this.props.annotationId,
+        this.state.sharedTeams.map(team => team.id),
+      );
+      Toast.success(messages["annotation.shared_teams_edited"]);
+    }
+
     this.props.onOk();
   };
 
@@ -274,13 +279,4 @@ const mapStateToProps = (state: OxalisState) => ({
   restrictions: state.tracing.restrictions,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setAnnotationVisibility(visibility: APIAnnotationVisibility) {
-    dispatch(setAnnotationVisibilityAction(visibility));
-  },
-});
-
-export default connect<Props, OwnProps, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(ShareModalView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ShareModalView);

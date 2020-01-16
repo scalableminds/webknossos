@@ -135,11 +135,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                 foundDatasetsByName = foundDatasets.groupBy(_.name)
                 existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
                   updateDataSource(dataStore, dataSource, foundDatasetsByName))
-              } yield
-                existingIds.foldRight(List.empty[ObjectId]) {
-                  case (None, l)    => l
-                  case (Some(v), l) => v :: l
-                }
+              } yield existingIds.flatten
             case _ =>
               logger.info(
                 s"Ignoring ${orgaTuple._2.length} reported datasets for non-existing organization ${orgaTuple._1}")
@@ -159,7 +155,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     foundDataSetOpt match {
       case Some(foundDataSet) if foundDataSet._dataStore == dataStore.name =>
         updateKnownDataSource(foundDataSet, dataSource, dataStore).toFox.map(Some(_))
-      case Some(foundDataSet) =>
+      case Some(foundDataSet) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
         updateDataSourceDifferentDataStore(foundDataSet, dataSource, dataStore)
       case _ =>
         insertNewDataSet(dataSource, dataStore).toFox.map(Some(_))
@@ -200,7 +196,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       } else {
         logger.info(
           s"Dataset ${foundDataSet.name}, as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
-        //Fox.failure("dataset.name.alreadyInUse")
         Fox.successful(None)
       }
     }).flatten.futureBox

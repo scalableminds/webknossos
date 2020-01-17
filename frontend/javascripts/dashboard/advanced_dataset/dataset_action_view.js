@@ -46,16 +46,6 @@ type Props = {
 type State = {};
 
 class DatasetActionView extends React.PureComponent<Props, State> {
-  createTracing = async (
-    dataset: APIMaybeUnimportedDataset,
-    type: TracingType,
-    withFallback: boolean,
-  ) => {
-    const annotation = await createExplorational(dataset, type, withFallback);
-    trackAction(`Create ${type} tracing`);
-    this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
-  };
-
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     await clearCache(dataset);
     Toast.success(messages["dataset.clear_cache_success"]);

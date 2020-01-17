@@ -23,7 +23,7 @@ const initialAnnotationInfo = {
     mergerMode: false,
     allowedModes: ["orthogonal", "oblique", "flight"],
   },
-  isPublic: false,
+  visibility: "Internal",
   tags: [],
   description: "",
   name: "",

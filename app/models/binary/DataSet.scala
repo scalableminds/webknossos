@@ -279,30 +279,24 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
 
-  def deactivateUnreported(names: List[String],
-                           organizationId: ObjectId,
+  def deactivateUnreported(existingDataSetIds: List[ObjectId],
                            dataStoreName: String,
                            unreportedStatus: String): Fox[Unit] = {
     val inclusionPredicate =
-      if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
+      if (existingDataSetIds.isEmpty) "true"
+      else s"_id not in ${writeStructTupleWithQuotes(existingDataSetIds.map(_.id))}"
     val deleteResolutionsQuery =
-      sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
-            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName} and _organization = ${organizationId}
-             and #${inclusionPredicate})"""
+      sqlu"""delete from webknossos.dataSet_resolutions where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
     val deleteLayersQuery =
-      sqlu"""delete from webknossos.dataSet_layers where _dataSet in
-            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName} and _organization = ${organizationId}
-             and #${inclusionPredicate})"""
+      sqlu"""delete from webknossos.dataSet_layers where _dataset in (select _id from webknossos.datasets where _dataStore = $dataStoreName and #$inclusionPredicate)"""
     val setToUnusableQuery =
       sqlu"""update webknossos.datasets
              set isUsable = false, status = $unreportedStatus, scale = NULL, inboxSourceHash = NULL
-             where _dataStore = ${dataStoreName} and _organization = ${organizationId}
-             and #${inclusionPredicate}"""
+             where _dataStore = $dataStoreName and #$inclusionPredicate"""
     for {
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
-
 }
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

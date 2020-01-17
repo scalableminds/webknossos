@@ -4,6 +4,7 @@ import type {
   LocalMeshMetaData,
   MeshMetaData,
   RemoteMeshMetaData,
+  APIAnnotationVisibility,
 } from "admin/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 
@@ -17,9 +18,9 @@ type SetAnnotationNameAction = {
   name: string,
 };
 
-type SetAnnotationPublicAction = {
-  type: "SET_ANNOTATION_PUBLIC",
-  isPublic: boolean,
+type SetAnnotationVisibilityAction = {
+  type: "SET_ANNOTATION_VISIBILITY",
+  visibility: APIAnnotationVisibility,
 };
 
 type SetAnnotationDescriptionAction = {
@@ -82,7 +83,7 @@ export type RemoveIsosurfaceAction = {
 export type AnnotationActionTypes =
   | InitializeAnnotation
   | SetAnnotationNameAction
-  | SetAnnotationPublicAction
+  | SetAnnotationVisibilityAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
@@ -105,9 +106,11 @@ export const setAnnotationNameAction = (name: string): SetAnnotationNameAction =
   name,
 });
 
-export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPublicAction => ({
-  type: "SET_ANNOTATION_PUBLIC",
-  isPublic,
+export const setAnnotationVisibilityAction = (
+  visibility: APIAnnotationVisibility,
+): SetAnnotationVisibilityAction => ({
+  type: "SET_ANNOTATION_VISIBILITY",
+  visibility,
 });
 
 export const setAnnotationDescriptionAction = (

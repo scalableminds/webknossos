@@ -490,8 +490,12 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
-export function getTeamsForSharedAnnotation(typ: string, id: string): Promise<Array<APITeam>> {
-  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`);
+export function getTeamsForSharedAnnotation(
+  typ: string,
+  id: string,
+  options?: RequestOptions,
+): Promise<Array<APITeam>> {
+  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`, options);
 }
 
 export function updateTeamsForSharedAnnotation(

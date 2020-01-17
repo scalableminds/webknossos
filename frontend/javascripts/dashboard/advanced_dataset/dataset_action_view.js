@@ -9,23 +9,29 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 
-export const createTracingOverlayMenu = (
-  dataset: APIMaybeUnimportedDataset,
-  type: TracingType,
-  onClick: (APIMaybeUnimportedDataset, TracingType, boolean) => Promise<void>,
-) => {
+export const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
   const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
   return (
     <Menu>
-      <Menu.Item key="existing" onClick={() => onClick(dataset, type, true)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+      <Menu.Item key="existing">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/true`}
+          title={`Create ${typeCapitalized} Tracing`}
+        >
           Use Existing Segmentation Layer
-        </a>
+        </Link>
       </Menu.Item>
-      <Menu.Item key="new" onClick={() => onClick(dataset, type, false)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+      <Menu.Item key="new">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/false`}
+          title={`Create ${typeCapitalized} Tracing`}
+        >
           Use a New Segmentation Layer
-        </a>
+        </Link>
       </Menu.Item>
     </Menu>
   );
@@ -63,7 +69,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const volumeTracingMenu = (
       <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "volume", this.createTracing)}
+        overlay={createTracingOverlayMenu(dataset, "volume")}
         trigger={["click"]}
       >
         <a href="#" title="Create Volume Tracing">
@@ -79,7 +85,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const hybridTracingMenu = (
       <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid", this.createTracing)}
+        overlay={createTracingOverlayMenu(dataset, "hybrid")}
         trigger={["click"]}
       >
         <a href="#" title="Create Hybrid (Skeleton + Volume) Tracing">
@@ -132,9 +138,10 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             </Link>
             {!dataset.isForeign ? (
               <React.Fragment>
-                <a
-                  href="#"
-                  onClick={() => this.createTracing(dataset, "skeleton", false)}
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${
+                    dataset.name
+                  }/createExplorative/skeleton/false`}
                   title="Create Skeleton Tracing"
                 >
                   <img
@@ -143,7 +150,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                     style={centerBackgroundImageStyle}
                   />{" "}
                   Start Skeleton Tracing
-                </a>
+                </Link>
                 {volumeTracingMenu}
                 {hybridTracingMenu}
               </React.Fragment>

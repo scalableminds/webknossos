@@ -10,7 +10,11 @@ import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
-import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
+import {
+  getAnnotationInformation,
+  getOrganizationForDataset,
+  createExplorational,
+} from "admin/admin_rest_api";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import AsyncRedirect from "components/redirect";
 import AuthTokenView from "admin/auth/auth_token_view";
@@ -49,6 +53,7 @@ import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import features from "features";
 import window from "libs/window";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const { Content } = Layout;
 
@@ -424,6 +429,24 @@ class ReactRouter extends React.Component<Props> {
                       return `/datasets/${organizationName}/${datasetName}/view${location.search}${
                         location.hash
                       }`;
+                    }}
+                  />
+                )}
+              />
+              <Route
+                path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
+                render={({ match, location }: ContextRouter) => (
+                  <AsyncRedirect
+                    redirectTo={async () => {
+                      const dataset = {
+                        owningOrganization: match.params.organizationName,
+                        name: match.params.dataSetName,
+                      };
+                      const type = match.params.type;
+                      const withFallback = match.params.withFallback == "true";
+                      const annotation = await createExplorational(dataset, type, withFallback);
+                      trackAction(`Create ${type} tracing`);
+                      return `/annotations/${annotation.typ}/${annotation.id}`;
                     }}
                   />
                 )}

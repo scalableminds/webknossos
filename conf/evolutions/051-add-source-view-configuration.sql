@@ -30,6 +30,6 @@ SET defaultConfiguration = jsonb_set(
         (defaultConfiguration->'configuration')::jsonb - 'segmentationOpacity')
 WHERE defaultconfiguration->'configuration' ? 'segmentationOpacity';
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 50;
+UPDATE webknossos.releaseInformation SET schemaVersion = 51;
 
 COMMIT TRANSACTION;

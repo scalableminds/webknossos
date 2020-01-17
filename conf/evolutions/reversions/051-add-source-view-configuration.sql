@@ -11,8 +11,6 @@ ALTER TABLE webknossos.dataSets DROP CONSTRAINT sourceDefaultConfigurationIsJson
 ALTER TABLE webknossos.dataSet_layers DROP COLUMN defaultViewConfiguration;
 ALTER TABLE webknossos.dataSet_layers DROP CONSTRAINT defaultViewConfigurationIsJsonObject;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 49;
-
 -- set segmentationOpacity based on layer alpha value
 UPDATE webknossos.datasets
 SET defaultConfiguration = jsonb_set(
@@ -30,5 +28,7 @@ SET defaultConfiguration = jsonb_set(
         (defaultConfiguration->'configuration'->'layers')::jsonb - dl.name)
 from webknossos.dataSet_layers dl
 WHERE _id = dl._dataset and dl.category = 'segmentation' and defaultconfiguration->'configuration' ? 'segmentationOpacity';
+
+UPDATE webknossos.releaseInformation SET schemaVersion = 50;
 
 COMMIT TRANSACTION;

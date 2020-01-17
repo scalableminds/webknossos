@@ -24,7 +24,7 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
   // The extra type annotaton is needed here for flow
   const editObject: $Shape<EditableAnnotation> = {
     name: tracing.name,
-    isPublic: tracing.isPublic,
+    visibility: tracing.visibility,
     description: tracing.description,
   };
   yield* call(editAnnotation, tracing.annotationId, tracing.annotationType, editObject);
@@ -85,6 +85,6 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
 
 export function* watchAnnotationAsync(): Saga<void> {
   yield _takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
-  yield _takeEvery("SET_ANNOTATION_PUBLIC", pushAnnotationUpdateAsync);
+  yield _takeEvery("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield _takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
 }

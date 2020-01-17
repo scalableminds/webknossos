@@ -75,15 +75,15 @@ test.serial("editAnnotation()", async t => {
     annotationId,
     APIAnnotationTypeEnum.Explorational,
   );
-  const { name, isPublic, description } = originalAnnotation;
+  const { name, visibility, description } = originalAnnotation;
 
   const newName = "new name";
-  const newIsPublic = !isPublic;
+  const newVisibility = "Public";
   const newDescription = "new description";
 
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
     name: newName,
-    isPublic: newIsPublic,
+    visibility: newVisibility,
     description: newDescription,
   });
   const editedAnnotation = await api.getAnnotationInformation(
@@ -92,7 +92,7 @@ test.serial("editAnnotation()", async t => {
   );
 
   t.is(editedAnnotation.name, newName);
-  t.is(editedAnnotation.isPublic, newIsPublic);
+  t.is(editedAnnotation.visibility, newVisibility);
   t.is(editedAnnotation.description, newDescription);
   t.is(editedAnnotation.id, annotationId);
   t.is(editedAnnotation.tracing.skeleton, "ae417175-f7bb-4a34-8187-d9c3b50143af");
@@ -100,7 +100,7 @@ test.serial("editAnnotation()", async t => {
 
   await api.editAnnotation(annotationId, APIAnnotationTypeEnum.Explorational, {
     name,
-    isPublic,
+    visibility,
     description,
   });
 });

@@ -10,6 +10,7 @@ import { enableBatching } from "redux-batched-actions";
 import type {
   APIAllowedMode,
   APIAnnotationType,
+  APIAnnotationVisibility,
   APIDataLayer,
   APIDataStore,
   APIDataset,
@@ -137,13 +138,14 @@ export type TreeMap = { +[number]: Tree };
 export type TemporaryMutableTreeMap = { [number]: Tree };
 
 export type AnnotationType = APIAnnotationType;
+export type AnnotationVisibility = APIAnnotationVisibility;
 
 export type RestrictionsAndSettings = {| ...Restrictions, ...Settings |};
 
 export type Annotation = {|
   +annotationId: string,
   +restrictions: RestrictionsAndSettings,
-  +isPublic: boolean,
+  +visibility: AnnotationVisibility,
   +tags: Array<string>,
   +description: string,
   +name: string,

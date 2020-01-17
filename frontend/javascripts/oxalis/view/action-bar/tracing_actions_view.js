@@ -10,12 +10,17 @@ import {
   type LayoutKeys,
   mapLayoutKeysToLanguage,
 } from "oxalis/view/layouting/default_layout_configs";
-import { copyAnnotationToUserAccount, downloadNml, finishAnnotation } from "admin/admin_rest_api";
+import {
+  copyAnnotationToUserAccount,
+  downloadNml,
+  finishAnnotation,
+  reOpenAnnotation,
+} from "admin/admin_rest_api";
 import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
@@ -42,6 +47,9 @@ type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
+  isReopenAllowed: boolean,
+  oldAnnotationType: ?APIAnnotationType,
+  oldAnnotationId: ?string,
 };
 
 export type LayoutProps = {
@@ -172,6 +180,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     isShareModalOpen: false,
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
+    isReopenAllowed: false,
+    oldAnnotationId: null,
+    oldAnnotationType: null,
   };
 
   modalWrapper: ?HTMLDivElement = null;
@@ -241,7 +252,23 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleFinishAndGetNextTask = async () => {
+    this.setState({
+      isReopenAllowed: true,
+      oldAnnotationId: this.props.annotationId,
+      oldAnnotationType: this.props.annotationType,
+    });
+    setTimeout(() => this.setState({ isReopenAllowed: false }), 15000);
     api.tracing.finishAndGetNextTask();
+  };
+
+  handleReopenTask = async () => {
+    const annotationId = this.state.oldAnnotationId;
+    const annotationType = this.state.oldAnnotationType;
+    if (annotationId && annotationType) {
+      await reOpenAnnotation(annotationId, annotationType);
+      await api.tracing.restart(annotationType, annotationId, ControlModeEnum.TRACE);
+      this.setState({ isReopenAllowed: false });
+    }
   };
 
   handleMergeOpen = () => {
@@ -321,6 +348,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           Finish and Get Next Task
         </ButtonComponent>
       ) : null;
+
+    const reopenTaskButton = this.state.isReopenAllowed ? (
+      <ButtonComponent key="reopen-button" icon="verticle-right" onClick={this.handleReopenTask}>
+        Undo Finish and Reopen Task
+      </ButtonComponent>
+    ) : null;
 
     const elements = [];
     const modals = [];
@@ -417,6 +450,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         <Button.Group>
           {saveButton}
           {finishAndNextTaskButton}
+          {reopenTaskButton}
           {modals}
           <Dropdown overlay={menu} trigger={["click"]}>
             <ButtonComponent className="narrow">

@@ -293,24 +293,29 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
                 <Col span={2}>
                   <Tooltip title="Invert the color of this layer.">
                     <div
+                      onClick={() =>
+                        this.props.onChangeLayer(
+                          layerName,
+                          "isInverted",
+                          layer ? !layer.isInverted : false,
+                        )
+                      }
                       style={{
-                        borderRadius: 4,
-                        padding: 3,
                         position: "absolute",
                         top: 0,
                         right: -9,
                         display: "inline-flex",
-                        backgroundColor: layer.isInverted
-                          ? "rgba(145, 213, 255, 1.0)"
-                          : "rgba(0, 0, 0, 0.0)",
                       }}
                     >
-                      <Icon
-                        type="swap"
-                        style={{ margin: 0 }}
-                        onClick={() =>
-                          this.props.onChangeLayer(layerName, "isInverted", !layer.isInverted)
-                        }
+                      <i
+                        className={`fa fa-adjust ${layer.isInverted ? "flip-horizontally" : ""}`}
+                        style={{
+                          margin: 0,
+                          transition: "transform 0.5s ease 0s",
+                          color: layer.isInverted
+                            ? "rgba(24, 144, 255, 1.0)"
+                            : "rgba(0, 0, 0, 0.65)",
+                        }}
                       />
                     </div>
                   </Tooltip>

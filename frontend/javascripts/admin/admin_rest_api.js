@@ -6,6 +6,7 @@ import {
   type APIAnnotation,
   type APIAnnotationCompact,
   type APIAnnotationWithTask,
+  type APIAnnotationVisibility,
   type APIBuildInfo,
   type APIDataSource,
   type APIDataSourceWithMessages,
@@ -516,7 +517,7 @@ export function reOpenAnnotation(
 export type EditableAnnotation = {
   name: string,
   description: string,
-  isPublic: boolean,
+  visibility: APIAnnotationVisibility,
   tags: Array<string>,
 };
 
@@ -886,10 +887,13 @@ export async function triggerDatasetCheck(datastoreHost: string): Promise<void> 
 export async function triggerDatasetClearCache(
   datastoreHost: string,
   datasetId: APIDatasetId,
+  layerName?: string,
 ): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(
-      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}`,
+      `/data/triggers/reload/${datasetId.owningOrganization}/${datasetId.name}?token=${token}${
+        layerName ? `&layerName=${layerName}` : ""
+      }`,
       {
         host: datastoreHost,
       },
@@ -902,6 +906,13 @@ export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId)
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
     { method: "PUT" },
   );
+}
+
+export async function clearCache(dataset: APIMaybeUnimportedDataset, layerName?: string) {
+  return Promise.all([
+    triggerDatasetClearCache(dataset.dataStore.url, dataset, layerName),
+    triggerDatasetClearThumbnailCache(dataset),
+  ]);
 }
 
 export async function getDatasetSharingToken(

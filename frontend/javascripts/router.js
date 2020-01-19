@@ -272,7 +272,7 @@ class ReactRouter extends React.Component<Props> {
                       Enum.coalesce(APIAnnotationTypeEnum, match.params.type) ||
                         APIAnnotationTypeEnum.Explorational,
                     );
-                    return annotationInformation.isPublic;
+                    return annotationInformation.visibility === "Public";
                   } catch (ex) {
                     // Annotation could not be found
                   }

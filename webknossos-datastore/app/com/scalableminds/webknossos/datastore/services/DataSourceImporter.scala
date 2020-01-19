@@ -43,7 +43,7 @@ trait DataSourceImporter {
       GenericDataSource(id,
                         layers,
                         previous.map(_.scale).getOrElse(Scale.default),
-                        previous.flatMap(_.defaultViewConfigurationOpt))
+                        previous.flatMap(_.defaultViewConfiguration))
     }
 
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(

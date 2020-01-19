@@ -76,7 +76,7 @@ export const annotation: APIAnnotation = {
   description: "",
   state: "Active",
   id: "598b52293c00009906f043e7",
-  isPublic: false,
+  visibility: "Internal",
   modified: 1529066010230,
   name: "",
   typ: "Explorational",

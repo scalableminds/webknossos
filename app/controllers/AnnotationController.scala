@@ -23,6 +23,9 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
+case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
+object CreateExplorationalParameters { implicit val jsonFormat = Json.format[CreateExplorationalParameters] }
+
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     taskDAO: TaskDAO,
@@ -132,22 +135,19 @@ class AnnotationController @Inject()(
     }
   }
 
-  case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
-  object CreateExplorationalParameters { implicit val jsonFormat = Json.format[CreateExplorationalParameters] }
-
   def createExplorational(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSetSQL <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
+        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
           "dataSet.notFound",
           dataSetName) ~> NOT_FOUND
         tracingType <- TracingType.values.find(_.toString == request.body.typ).toFox
         annotation <- annotationService.createExplorationalFor(
           request.identity,
-          dataSetSQL._id,
+          dataSet._id,
           tracingType,
           request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
@@ -211,11 +211,14 @@ class AnnotationController @Inject()(
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       name = (request.body \ "name").asOpt[String]
       description = (request.body \ "description").asOpt[String]
-      isPublic = (request.body \ "isPublic").asOpt[Boolean]
+      visibility = (request.body \ "visibility").asOpt[String]
+      _ <- if (visibility.contains("Private"))
+        annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
+      else Fox.successful(())
       tags = (request.body \ "tags").asOpt[List[String]]
       _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> "annotation.edit.failed"
       _ <- Fox.runOptional(description)(annotationDAO.updateDescription(annotation._id, _)) ?~> "annotation.edit.failed"
-      _ <- Fox.runOptional(isPublic)(annotationDAO.updateIsPublic(annotation._id, _)) ?~> "annotation.edit.failed"
+      _ <- Fox.runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> "annotation.edit.failed"
       _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> "annotation.edit.failed"
     } yield {
       JsonOk(Messages("annotation.edit.success"))
@@ -299,7 +302,7 @@ class AnnotationController @Inject()(
     withJsonBodyAs[List[String]] { teams =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- bool2Fox(annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> "notAllowed" ~> FORBIDDEN
         teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
         userTeams <- userService.teamIdsFor(request.identity._id)
         updateTeams = teamIdsValidated.intersect(userTeams)

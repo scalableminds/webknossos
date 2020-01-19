@@ -78,7 +78,7 @@ export class OxalisModel {
     );
   }
 
-  getSegmentationLayerName(): DataLayer {
+  getSegmentationLayerName(): ?string {
     const segmentation = this.getSegmentationLayer();
     return segmentation != null ? segmentation.name : undefined;
   }

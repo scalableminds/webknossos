@@ -99,6 +99,8 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
 
+type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
+
 function assertExists(value: any, message: string) {
   if (value == null) {
     throw new Error(message);
@@ -1026,7 +1028,7 @@ class DataApi {
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-  getConfiguration(key: $Keys<DatasetConfiguration>) {
+  getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
     switch (key) {
       case "segmentationOpacity": {
         const segmentationLayerName = Model.getSegmentationLayerName();
@@ -1055,7 +1057,7 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration>, value) {
+  setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
     switch (key) {
       case "segmentationOpacity": {
         // TODO: Add warn message

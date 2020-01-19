@@ -404,16 +404,12 @@ class PlaneMaterialFactory {
         layerSettings => {
           const segmentationLayerName = Model.getSegmentationLayerName();
           for (const dataLayer of Model.getAllLayers()) {
+            const { elementClass } = dataLayer;
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const name = sanitizeName(dataLayer.name);
               const isSegmentationLayer = segmentationLayerName === dataLayer.name;
-              this.updateUniformsForLayer(
-                settings,
-                name,
-                dataLayer.elementClass,
-                isSegmentationLayer,
-              );
+              this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
           // TODO: Needed?

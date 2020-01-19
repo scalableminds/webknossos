@@ -235,17 +235,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getLayerSettings = (
     layerName: string,
-    layer: ?DatasetLayerConfiguration,
+    layerConfiguration: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that a color layer needs a layer.
-    if (isColorLayer && !layer) {
+    // Ensure that a every layer needs a layer configuration.
+    if (!layerConfiguration) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const isDisabled =
-      isColorLayer && layer != null
-        ? layer.isDisabled
+      isColorLayer && layerConfiguration != null
+        ? layerConfiguration.isDisabled
         : this.props.datasetConfiguration.isSegmentationDisabled;
 
     return (
@@ -253,20 +253,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
         {isDisabled ? null : (
           <React.Fragment>
-            {isHistogramSupported(elementClass) && layerName != null && layer != null
-              ? this.getHistogram(layerName, layer)
+            {isHistogramSupported(elementClass) &&
+            layerName != null &&
+            layerConfiguration != null &&
+            isColorLayer
+              ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting
               label="Opacity"
               min={0}
               max={100}
-              value={layer.alpha}
+              value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
-            {isColorLayer && layer != null ? (
+            {isColorLayer && layerConfiguration != null ? (
               <ColorSetting
                 label="Color"
-                value={Utils.rgbToHex(layer.color)}
+                value={Utils.rgbToHex(layerConfiguration.color)}
                 onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
                 className="ant-btn"
               />
@@ -332,12 +335,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   };
 
   getSegmentationPanel() {
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (!segmentationLayerName) {
+    const { layers } = this.props.datasetConfiguration;
+    const segmentationLayerName = Model.getSegmentationLayerName();
+    if (!segmentationLayerName || !layers[segmentationLayerName]) {
       return null;
     }
-    return this.getLayerSettings(segmentationLayerName, null, false);
+    return this.getLayerSettings(segmentationLayerName, layers[segmentationLayerName], false);
   }
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>

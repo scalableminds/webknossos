@@ -404,7 +404,7 @@ class PlaneMaterialFactory {
         layerSettings => {
           const segmentationLayerName = Model.getSegmentationLayerName();
           for (const dataLayer of Model.getAllLayers()) {
-            const { elementClass } = dataLayer;
+            const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const name = sanitizeName(dataLayer.name);

@@ -3,7 +3,7 @@ webKnossos is built for working collaboratively and sharing your work with the c
 webKnossos can share both skeleton annotations of large structures as well as raw datasets and segmentations for showcasing the data.
 The sharing features discussed here refer to sharing scenarios with colleagues, reviewers, and publishers outside of your webKnossos organization or your lab.
 
-To manage access rights to certain datasets for webKnossos users check out [the Datasets guide](./datasets.md#dataset-permissions).
+To manage access rights to certain datasets for webKnossos users check out [the Datasets guide](./datasets.md#general).
 
 ## Dataset Sharing
 
@@ -74,42 +74,68 @@ Both are featured next to a preview of the dataset in the gallery of promoted pu
 
 
 ## Annotation Sharing
-Besides sharing just the data layers for viewing, webKnossos can also share complete annotation, e.g. a large skeleton reconstruction.
+Besides sharing just the data layers for viewing, webKnossos can also share complete annotations, e.g. a large skeleton reconstruction.
 Annotation sharing works for both skeletons and volume tracings.
 
-Annotations can be shared publicly and privately.
-Public tracings do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
-Unlike with datasets, publicly shared annotations are not featured in a gallery.
+### Annotation Permissions
+There are three options to control, who can see an annotation if they know the annotation url. To learn how to get the url, look at the following paragraph about [Link Sharing](#link-sharing).
 
-Private sharing requires the recipient of a link to log in with his webKnossos accounts.
+1. `Private`: Only you and your team manager have access to the annotation.
+2. `Internal`: All members of your organization have access to the annotation. 
+3. `Public`: Everybody, regardless their login status, has access to the annotation.
+
+The default option is `Internal`.
+
+To change the visibility of an annotation, follow these steps:
+
+1. Open your annotation in the regular tracing view. 
+2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+3. Select the desired option from the three available options.
+
+![Configure the Annotation Permissions](images/sharing_modal_visibility.png)
+
+### Link Sharing
+Annotations can be shared via a link. People, who obtain the link, must have access to the annotation according to the permissions above to view the tracing.
+
+`Public` tracings do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
+Unlike with datasets, publicly shared annotations are not featured in a gallery.
+For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
+Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.
+[Learn how to share datasets publicly above.](#public-sharing)
+
+`Internal` tracings require the recipient of a link to log in with his webKnossos account.
 This is primarily used for sharing annotations with your co-workers, e.g. for highlighting interesting positions in your work.
 Since your position, rotation, zoom etc. is encoded in the URL, it is a great way for working collaboratively.
 Just send an URL to your co-workers in an email or blog post and they may jump right into the annotation at your location.
+
+`Private` tracings don't allow sharing. However, your direct supervisor and admins can still view the annotation.
 
 Since every annotation is tied to an individual webKnossos user, co-workers cannot modify your annotation if you share it with them.
 Instead, the shared annotation will be read-only.
 If your co-workers want to make modifications to the annotation, they can click the `Copy to my Account` button in the toolbar.
 This will make a copy of the annotation, link it to the co-workers' accounts and enable modifications again.
-Think of this feature like GitHub forks.
-Changes made to the copy are not automatically synced with the original.
+Think of this feature like GitHub forks. Changes made to the copy are not automatically synced with the original.
 
-To share an annotation, follow these steps:
+To get the sharing link of an annotation, follow the same steps as for changing the viewing permissions:
 
 1. Open your annotation in the regular tracing view. 
 2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
-3. Copy the sharing URL for private access.
-4. Enable public sharing with the checkbox, if required.
+3. Copy the sharing URL.
 
-In addition to sharing your annotation via link, you can also share your annotations with colleagues in the shared annotations tab.
-In the sharing modal, which was described above, you can select teams you want to share your annotation with.
-If they open their [Shared Annotations Dashboard Tab](./dashboard.md#shared-annotations) they will see your annotation.
-This is the simplest way to share an annotation with a whole group of people.
+![Get the Annotation Sharing Link](images/sharing_modal_link.png)
 
-![Configure the Annotation Sharing](images/sharing_modal.png)
+### Team Sharing
+In addition to sharing your annotation via a link, you can also share your annotations with colleagues in the shared annotations tab.
+This is the simplest way to share an annotation with a whole team.
 
-For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
-Otherwise, the annotation and data cannot be loaded by webKnossos and an error will occur.
-[Learn how to share datasets publicly above.](#public-sharing)
+To share an annotation with a certain team, follow these steps:
+1. Open your annotation in the regular tracing view. 
+2. From the [toolbar](./tracing_ui.md/#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+3. Select the teams from the dropdown menu.
+
+If members of these teams open their [Shared Annotations Dashboard Tab](./dashboard.md#shared-annotations), they will see your annotation.
+
+![Enable Team Sharing for your annotation](images/sharing_modal_team.png)
 
 {% hint style='info' %}
 Next to the integrated Annotation Sharing features, you can also download [NML files](./data_formats.md#nml) and send them via email to collaborators.

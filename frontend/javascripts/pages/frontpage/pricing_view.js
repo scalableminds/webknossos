@@ -431,15 +431,16 @@ const PricingView = () => (
           <p>
             We constantly develop new features and continuously improve webKnossos. As an
             open-source project, you can extend webKnossos yourself. webKnossos also comes with a
-            rich <a href="https://webknossos.org/docs/frontend-api/index.html">frontend API</a> and{" "}
-            <a href="https://docs.webknossos.org/reference/rest_api">REST interface</a> for
+            rich{" "}
+            <a href="https://webknossos.org/assets/docs/frontend-api/index.html">frontend API</a>{" "}
+            and <a href="https://docs.webknossos.org/reference/rest_api">REST interface</a> for
             scripting new workflows. Alternatively, you can hire us to help you with custom feature
             development.
           </p>
           <p>
             We are always interested in learning about new ideas and gathering feedback.{" "}
             <a href="mailto:hello@scalableminds.com" onClick={() => trackAction("EmailContact")}>
-              get in touch with us and let us know.
+              Get in touch with us and let us know.
             </a>
           </p>
         </FAQItem>

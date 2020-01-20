@@ -89,7 +89,7 @@ export const annotation: APIAnnotation = {
     isConnector: false,
   },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
-  isPublic: false,
+  visibility: "Internal",
   settings: {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,

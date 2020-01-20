@@ -14,10 +14,10 @@ export function test1(state: OxalisState) {
   updateKey(state, "tracing", { notExisting: true });
 
   // $ExpectError tracing exists in state, but the value is wrong
-  updateKey(state, "tracing", { isPublic: "wrong type" });
+  updateKey(state, "tracing", { visibility: "wrong type" });
 
   // No error
-  updateKey(state, "tracing", { isPublic: true });
+  updateKey(state, "tracing", { visibility: "Public" });
 }
 
 export function test2(state: OxalisState) {

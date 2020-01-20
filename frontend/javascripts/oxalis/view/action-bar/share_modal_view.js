@@ -3,15 +3,18 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "ant
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
-import type { Dispatch } from "redux";
-
-import type { APIDataset, APIAnnotationType, APITeam } from "admin/api_flow_types";
+import type {
+  APIDataset,
+  APIAnnotationVisibility,
+  APIAnnotationType,
+  APITeam,
+} from "admin/api_flow_types";
 import type { OxalisState, RestrictionsAndSettings } from "oxalis/store";
-import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,
   updateTeamsForSharedAnnotation,
+  editAnnotation,
 } from "admin/admin_rest_api";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import Toast from "libs/toast";
@@ -28,15 +31,14 @@ type OwnProps = {|
   annotationId: string,
 |};
 type StateProps = {|
-  isPublic: boolean,
+  visibility: APIAnnotationVisibility,
   dataset: APIDataset,
   restrictions: RestrictionsAndSettings,
-  setAnnotationPublic: Function,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
-  isPublic: boolean,
+  visibility: APIAnnotationVisibility,
   sharingToken: string,
   sharedTeams: Array<APITeam>,
 };
@@ -58,13 +60,19 @@ function Hint({ children, style }) {
 
 class ShareModalView extends PureComponent<Props, State> {
   state = {
-    isPublic: this.props.isPublic,
+    visibility: this.props.visibility,
     sharingToken: "",
     sharedTeams: [],
   };
 
   componentDidMount() {
     this.fetch();
+  }
+
+  componentWillReceiveProps(newProps: Props) {
+    if (this.props.visibility !== newProps.visibility) {
+      this.setState({ visibility: newProps.visibility });
+    }
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -97,7 +105,7 @@ class ShareModalView extends PureComponent<Props, State> {
     const { pathname, origin, hash } = location;
     // Append a dataset token if the dataset is not public, but the annotation should be public
     const query =
-      !this.props.dataset.isPublic && this.state.isPublic
+      !this.props.dataset.isPublic && this.state.visibility === "Public"
         ? `?token=${this.state.sharingToken}`
         : "";
     const url = `${origin}${pathname}${query}${hash}`;
@@ -111,18 +119,23 @@ class ShareModalView extends PureComponent<Props, State> {
   };
 
   handleCheckboxChange = (event: SyntheticInputEvent<>) => {
-    this.setState({ isPublic: Boolean(event.target.value) });
+    this.setState({ visibility: ((event.target.value: any): APIAnnotationVisibility) });
   };
 
   handleOk = async () => {
-    await updateTeamsForSharedAnnotation(
-      this.props.annotationType,
-      this.props.annotationId,
-      this.state.sharedTeams.map(team => team.id),
-    );
-    Toast.success(messages["annotation.shared_teams_edited"]);
+    await editAnnotation(this.props.annotationId, this.props.annotationType, {
+      visibility: this.state.visibility,
+    });
 
-    this.props.setAnnotationPublic(this.state.isPublic);
+    if (this.state.visibility !== "Private") {
+      await updateTeamsForSharedAnnotation(
+        this.props.annotationType,
+        this.props.annotationId,
+        this.state.sharedTeams.map(team => team.id),
+      );
+      Toast.success(messages["annotation.shared_teams_edited"]);
+    }
+
     this.props.onOk();
   };
 
@@ -130,9 +143,12 @@ class ShareModalView extends PureComponent<Props, State> {
     let message;
     if (!this.props.restrictions.allowUpdate) {
       message = "You don't have the permission to edit the visibility of this tracing.";
-    } else if (!this.props.dataset.isPublic && this.state.isPublic) {
+    } else if (!this.props.dataset.isPublic && this.state.visibility === "Public") {
       message =
-        "The dataset of this tracing is not public. The sharing link will make the dataset accessible to everyone you share it with.";
+        "The dataset of this tracing is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
+    } else if (this.state.visibility === "Private") {
+      message =
+        "The annotation is currently private, so Team Sharing is disabled and only admins and team managers can use the Sharing Link.";
     }
 
     return message != null ? (
@@ -145,6 +161,12 @@ class ShareModalView extends PureComponent<Props, State> {
       display: "block",
       height: "30px",
       lineHeight: "30px",
+    };
+
+    const iconMap = {
+      Public: "globe",
+      Internal: "users",
+      Private: "lock",
     };
 
     return (
@@ -174,7 +196,7 @@ class ShareModalView extends PureComponent<Props, State> {
           </Col>
         </Row>
         <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-          {<i className={`fa fa-${this.state.isPublic ? "globe" : "lock"}`} />}
+          {<i className={`fa fa-${iconMap[this.state.visibility]}`} />}
           Visibility
         </Divider>
         {this.maybeShowWarning()}
@@ -183,13 +205,24 @@ class ShareModalView extends PureComponent<Props, State> {
             Who can view this tracing?
           </Col>
           <Col span={18}>
-            <RadioGroup onChange={this.handleCheckboxChange} value={this.state.isPublic}>
+            <RadioGroup onChange={this.handleCheckboxChange} value={this.state.visibility}>
               <Radio
                 style={radioStyle}
-                value={false}
+                value="Private"
                 disabled={!this.props.restrictions.allowUpdate}
               >
-                Non-public
+                Private
+              </Radio>
+              <Hint style={{ marginLeft: 24 }}>
+                Only you and your team manager can view this tracing.
+              </Hint>
+
+              <Radio
+                style={radioStyle}
+                value="Internal"
+                disabled={!this.props.restrictions.allowUpdate}
+              >
+                Internal
               </Radio>
               <Hint style={{ marginLeft: 24 }}>
                 All users in your organization{" "}
@@ -197,7 +230,11 @@ class ShareModalView extends PureComponent<Props, State> {
                 tracing and copy it to their accounts to edit it.
               </Hint>
 
-              <Radio style={radioStyle} value disabled={!this.props.restrictions.allowUpdate}>
+              <Radio
+                style={radioStyle}
+                value="Public"
+                disabled={!this.props.restrictions.allowUpdate}
+              >
                 Public
               </Radio>
               <Hint style={{ marginLeft: 24 }}>
@@ -220,6 +257,7 @@ class ShareModalView extends PureComponent<Props, State> {
               allowNonEditableTeams
               value={this.state.sharedTeams}
               onChange={value => this.setState({ sharedTeams: _.flatten([value]) })}
+              disabled={!this.props.restrictions.allowUpdate || this.state.visibility === "Private"}
             />
             <Hint style={{ margin: "6px 12px" }}>
               Choose the teams to share your tracing with. Members of these teams can see this
@@ -233,18 +271,9 @@ class ShareModalView extends PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  isPublic: state.tracing.isPublic,
+  visibility: state.tracing.visibility,
   dataset: state.dataset,
   restrictions: state.tracing.restrictions,
 });
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setAnnotationPublic(isPublic: boolean) {
-    dispatch(setAnnotationPublicAction(isPublic));
-  },
-});
-
-export default connect<Props, OwnProps, _, _, _, _>(
-  mapStateToProps,
-  mapDispatchToProps,
-)(ShareModalView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ShareModalView);

@@ -38,6 +38,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added a button to delete all cached data buckets of color layer and the reload them. [#4383](https://github.com/scalableminds/webknossos/pull/4383)
 - Added a scale to the y-axis of histograms to indicate the logarithmic representation. Additionally, small histogram values are smoothed out. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
 - Added a new way of sharing annotations. You can share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard. [#4304](https://github.com/scalableminds/webknossos/pull/4304)
+- Added an option to invert the color values of color layers. [#4382](https://github.com/scalableminds/webknossos/pull/4382)
 
 ### Changed
 - Changed the way the new active tree is selected after deleting a tree. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [#4370](https://github.com/scalableminds/webknossos/pull/4370)

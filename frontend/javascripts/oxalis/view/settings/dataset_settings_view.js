@@ -41,6 +41,7 @@ import Store, {
   type OxalisState,
   type UserConfiguration,
   type HistogramDataForAllLayers,
+  type Tracing,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -74,6 +75,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
+  tracing: Tracing,
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -203,6 +205,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     layerName: string,
     elementClass: string,
   ) => {
+    const { tracing } = this.props;
+    const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       if (isColorLayer) {
         this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
@@ -229,7 +233,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>{layerName}</span>
+          <span style={{ fontWeight: 700 }}>
+            {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
+          </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
@@ -277,12 +283,49 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               }
             />
             {isColorLayer && layer != null ? (
-              <ColorSetting
-                label="Color"
-                value={Utils.rgbToHex(layer.color)}
-                onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-                className="ant-btn"
-              />
+              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+                <Col span={12}>
+                  <label className="setting-label">Color</label>
+                </Col>
+                <Col span={10}>
+                  <ColorSetting
+                    value={Utils.rgbToHex(layer.color)}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+                    className="ant-btn"
+                    style={{ marginLeft: 6 }}
+                  />
+                </Col>
+                <Col span={2}>
+                  <Tooltip title="Invert the color of this layer.">
+                    <div
+                      onClick={() =>
+                        this.props.onChangeLayer(
+                          layerName,
+                          "isInverted",
+                          layer ? !layer.isInverted : false,
+                        )
+                      }
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        right: -9,
+                        display: "inline-flex",
+                      }}
+                    >
+                      <i
+                        className={`fa fa-adjust ${layer.isInverted ? "flip-horizontally" : ""}`}
+                        style={{
+                          margin: 0,
+                          transition: "transform 0.5s ease 0s",
+                          color: layer.isInverted
+                            ? "rgba(24, 144, 255, 1.0)"
+                            : "rgba(0, 0, 0, 0.65)",
+                        }}
+                      />
+                    </div>
+                  </Tooltip>
+                </Col>
+              </Row>
             ) : (
               <SwitchSetting
                 label={settings.highlightHoveredCellId}
@@ -472,6 +515,7 @@ const mapStateToProps = (state: OxalisState) => ({
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   hasSegmentation: hasSegmentation(state.dataset),
+  tracing: state.tracing,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

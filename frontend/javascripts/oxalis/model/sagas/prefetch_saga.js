@@ -1,6 +1,6 @@
 // @flow
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, HistogramDataForAllLayers } from "oxalis/store";
 import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import {
   PrefetchStrategySkeleton,
@@ -13,10 +13,17 @@ import {
   getRequestLogZoomStep,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
+import {
+  setHistogramDataAction,
+  updateLayerSettingAction,
+} from "oxalis/model/actions/settings_actions";
+import { getHistogramForLayer } from "admin/admin_rest_api";
 import { getResolutions, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import constants, { type Vector3, type ViewMode } from "oxalis/constants";
+import type { APIDataset } from "admin/api_flow_types";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -189,6 +196,53 @@ export function* prefetchForArbitraryMode(
   previousProperties.lastMatrix = matrix;
   previousProperties.lastZoomStep = zoomStep;
   previousProperties.lastBucketPickerTick = currentBucketPickerTick;
+}
+
+async function fetchAllHistogramsForLayers(
+  dataLayers: Array<DataLayer>,
+  dataset: APIDataset,
+): Promise<HistogramDataForAllLayers> {
+  const histograms: HistogramDataForAllLayers = {};
+  const histogramPromises = dataLayers.map(async dataLayer => {
+    try {
+      const data = await getHistogramForLayer(dataset.dataStore.url, dataset, dataLayer.name);
+      histograms[dataLayer.name] = data;
+    } catch (e) {
+      console.warn(`Error: Could not fetch the hisogram data for layer ${dataLayer.name}.`, e);
+    }
+  });
+  await Promise.all(histogramPromises);
+  return histograms;
+}
+
+export function* prefetchHistorgramData(): Saga<void> {
+  yield* take("WK_READY");
+  const dataLayers = yield* call([Model, Model.getAllLayers]);
+  const dataset = yield* select(state => state.dataset);
+  const layerConfigurations = yield* select(state => state.datasetConfiguration.layers);
+  const histograms = yield* call(fetchAllHistogramsForLayers, dataLayers, dataset);
+
+  Object.keys(histograms).forEach(layerName => {
+    // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
+    const histogram = histograms[layerName];
+    const minimumInHistogramData = Math.min(
+      ...histogram.map(currentHistogramData => currentHistogramData.min),
+    );
+    const maximumInHistogramData = Math.max(
+      ...histogram.map(currentHistogramData => currentHistogramData.max),
+    );
+    let newIntensityRange = [];
+    if (layerConfigurations[layerName]) {
+      newIntensityRange = [
+        Math.max(layerConfigurations[layerName].intensityRange[0], minimumInHistogramData),
+        Math.min(layerConfigurations[layerName].intensityRange[1], maximumInHistogramData),
+      ];
+    } else {
+      newIntensityRange = [minimumInHistogramData, maximumInHistogramData];
+    }
+    Store.dispatch(updateLayerSettingAction(layerName, "intensityRange", newIntensityRange));
+  });
+  Store.dispatch(setHistogramDataAction(histograms));
 }
 
 export default {};

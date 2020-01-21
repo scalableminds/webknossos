@@ -11,7 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
-import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
@@ -19,7 +19,7 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, getHistogramForLayer, clearCache } from "admin/admin_rest_api";
+import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -40,6 +40,7 @@ import Store, {
   type DatasetLayerConfiguration,
   type OxalisState,
   type UserConfiguration,
+  type HistogramDataForAllLayers,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -67,6 +68,7 @@ type DatasetSettingsProps = {|
     value: any,
   ) => void,
   viewMode: ViewMode,
+  histogramData: HistogramDataForAllLayers,
   controlMode: ControlMode,
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
@@ -74,44 +76,7 @@ type DatasetSettingsProps = {|
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
 |};
 
-type State = {
-  histograms: { string: APIHistogramData },
-};
-
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
-  state = {
-    histograms: {},
-  };
-
-  componentDidMount() {
-    this.loadAllHistograms();
-  }
-
-  loadAllHistograms = async () => {
-    const { layers } = this.props.datasetConfiguration;
-    const { dataset } = this.props;
-    const histograms: { string: APIHistogramData } = {};
-    const histogramPromises = Object.keys(layers).map(async layerName => {
-      const data = await getHistogramForLayer(dataset.dataStore.url, dataset, layerName);
-      histograms[layerName] = data;
-      // Adjust the intensityRange of the layer to be within the range of the actual (sampled) data.
-      const newIntensityRange = [
-        Math.max(
-          layers[layerName].intensityRange[0],
-          ...data.map(currentHistogramData => currentHistogramData.min),
-        ),
-        Math.min(
-          layers[layerName].intensityRange[1],
-          ...data.map(currentHistogramData => currentHistogramData.max),
-        ),
-      ];
-      this.props.onChangeLayer(layerName, "intensityRange", newIntensityRange);
-    });
-    // Waiting for all Promises to be resolved.
-    await Promise.all(histogramPromises);
-    this.setState({ histograms });
-  };
-
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
@@ -219,8 +184,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         max: highestRangeValue,
       },
     ];
-    if (this.state.histograms && this.state.histograms[layerName]) {
-      histograms = this.state.histograms[layerName];
+    if (this.props.histogramData && this.props.histogramData[layerName]) {
+      histograms = this.props.histogramData[layerName];
     }
     return (
       <Histogram
@@ -503,6 +468,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
+  histogramData: state.temporaryConfiguration.histogramData,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   hasSegmentation: hasSegmentation(state.dataset),

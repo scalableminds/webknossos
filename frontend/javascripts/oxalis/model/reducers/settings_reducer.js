@@ -133,6 +133,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         return state;
       }
     }
+    case "SET_HISTOGRAM_DATA": {
+      return updateTemporaryConfig(state, { histogramData: action.histogramData });
+    }
     case "SET_FLIGHTMODE_RECORDING": {
       return updateTemporaryConfig(state, { flightmodeRecording: action.value });
     }

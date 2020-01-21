@@ -95,6 +95,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               alpha: layer.category === "color" ? 20 : 100,
               intensityRange: [0, 255],
               isDisabled: false,
+              isInverted: false,
             },
             initialLayerSettings[layer.name],
           );

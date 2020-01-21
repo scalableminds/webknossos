@@ -99,6 +99,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
         alpha: 100,
         intensityRange: [0, 255],
         isDisabled: false,
+        isInverted: false,
       },
     },
     quality: 0,

@@ -294,6 +294,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
 
   const navbarStyle: Object = {
     padding: 0,
+    overflowX: "auto",
     position: "fixed",
     width: "100%",
     zIndex: 1000,

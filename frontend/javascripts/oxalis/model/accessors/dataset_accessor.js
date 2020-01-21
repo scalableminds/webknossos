@@ -12,12 +12,7 @@ import type {
 } from "admin/api_flow_types";
 import type { Settings, DataLayerType, DatasetConfiguration } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, {
-  ViewModeValues,
-  type Vector3,
-  Vector3Indicies,
-  type ViewMode,
-} from "oxalis/constants";
+import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";

@@ -16,7 +16,7 @@ import {
 import { getResolutions, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import constants, { type Vector3, type ViewMode } from "oxalis/constants";
+import constants, { type Vector3 } from "oxalis/constants";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;

@@ -10,13 +10,16 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...HEAD)
 
 ### Added
+- Added new viewing permission for annotations: public (everyone with the link has access, logged in or not), internal (everyone from your organization has access), private (only you and your team managers and admins have access). The new default is internal as it is the old default non-public.
 - Added support for using task ids as base for a new task, if the corresponding task only has one (finished) instance. [#4404](https://github.com/scalableminds/webknossos/pull/4404)
 
 ### Changed
 - Changed the error message when importing a dataset without resolution directories. [#4389](https://github.com/scalableminds/webknossos/pull/4389)
 
 ### Fixed
--
+- Fixed the deactivation of datasets if no datasets are present. [#4388](https://github.com/scalableminds/webknossos/pull/4388)
+- Fixed the team sharing settings for private annotations. [#4409](https://github.com/scalableminds/webknossos/pull/4409)
+- Fixed the team sharing loading for read only tracings. [#4411](https://github.com/scalableminds/webknossos/pull/4411)
 
 ### Removed
 -
@@ -34,6 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added a button to delete all cached data buckets of color layer and the reload them. [#4383](https://github.com/scalableminds/webknossos/pull/4383)
 - Added a scale to the y-axis of histograms to indicate the logarithmic representation. Additionally, small histogram values are smoothed out. [#4349](https://github.com/scalableminds/webknossos/pull/4349)
 - Added a new way of sharing annotations. You can share your annotations with selected teams. These annotations appear in the Shared Annotations Tab in the dashboard. [#4304](https://github.com/scalableminds/webknossos/pull/4304)
+- Added an option to invert the color values of color layers. [#4382](https://github.com/scalableminds/webknossos/pull/4382)
 
 ### Changed
 - Changed the way the new active tree is selected after deleting a tree. Now the tree with the next highest id, compared to the id of the deleted tree, is selected. [#4370](https://github.com/scalableminds/webknossos/pull/4370)

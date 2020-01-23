@@ -56,7 +56,7 @@ export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): 
 export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnotation): Annotation {
   const {
     id: annotationId,
-    isPublic,
+    visibility,
     tags,
     description,
     name,
@@ -72,7 +72,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
   return {
     annotationId,
     restrictions,
-    isPublic,
+    visibility,
     tags,
     description,
     name,

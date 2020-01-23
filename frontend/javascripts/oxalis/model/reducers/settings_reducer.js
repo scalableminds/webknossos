@@ -100,6 +100,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               alpha: 100,
               intensityRange: [0, 255],
               isDisabled: false,
+              isInverted: false,
             },
             initialLayerSettings[layer.name],
           );

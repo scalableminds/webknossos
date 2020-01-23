@@ -23,10 +23,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_ANNOTATION_PUBLIC": {
-      const { isPublic } = action;
+    case "SET_ANNOTATION_VISIBILITY": {
+      const { visibility } = action;
       return updateTracing(state, {
-        isPublic,
+        visibility,
       });
     }
 

@@ -13,7 +13,7 @@ The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a t
 Read more in the [Data Formats documentation](./data_formats.md).
 
 ### Uploading through the File System
-To efficienty import large datasets, we recommend to place them directly in the file system:
+To efficiently import large datasets, we recommend to place them directly in the file system:
 
 * Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/srv/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)

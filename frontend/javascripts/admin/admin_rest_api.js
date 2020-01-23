@@ -424,8 +424,8 @@ export function createTaskFromNML(task: NewTask): Promise<Array<TaskCreationResp
   });
 }
 
-export async function getTask(taskId: string): Promise<APITask> {
-  const task = await Request.receiveJSON(`/api/tasks/${taskId}`);
+export async function getTask(taskId: string, options?: RequestOptions = {}): Promise<APITask> {
+  const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
   return transformTask(task);
 }
 

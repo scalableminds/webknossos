@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Added new viewing permission for annotations: public (everyone with the link has access, logged in or not), internal (everyone from your organization has access), private (only you and your team managers and admins have access). The new default is internal as it is the old default non-public.
+- Added support for using task ids as base for a new task, if the corresponding task only has one (finished) instance. [#4404](https://github.com/scalableminds/webknossos/pull/4404)
 
 ### Changed
 - Changed the error message when importing a dataset without resolution directories. [#4389](https://github.com/scalableminds/webknossos/pull/4389)

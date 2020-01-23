@@ -256,13 +256,15 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       return (
         <div>
           {this.state.specificationType === SpecificationEnum.BaseAnnotation ? (
-            <FormItem label="Base Annotation ID" hasFeedback>
+            <FormItem label="Base ID" hasFeedback>
               {getFieldDecorator("baseAnnotation.baseId", {
                 rules: [
                   { required: true },
                   {
                     validator: async (rule, value, callback) => {
-                      const response =
+                      if (value === "") return callback();
+
+                      const annotationResponse =
                         (await tryToAwaitPromise(
                           getAnnotationInformation(value, "Task", {
                             showErrorToast: false,
@@ -274,13 +276,30 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                           }),
                         ));
 
-                      if (response != null && response.dataSetName != null) {
-                        this.props.form.setFieldsValue({ dataSet: response.dataSetName });
+                      if (annotationResponse != null && annotationResponse.dataSetName != null) {
+                        this.props.form.setFieldsValue({
+                          dataSet: annotationResponse.dataSetName,
+                        });
                         return callback();
-                      } else {
-                        this.props.form.setFieldsValue({ dataSet: null });
-                        return callback("Invalid base annotation id.");
                       }
+
+                      const taskResponse = await tryToAwaitPromise(
+                        getTask(value, { showErrorToast: false }),
+                      );
+
+                      if (
+                        taskResponse != null &&
+                        taskResponse.dataSet != null &&
+                        _.isEqual(taskResponse.status, { open: 0, active: 0, finished: 1 })
+                      ) {
+                        this.props.form.setFieldsValue({
+                          dataSet: taskResponse.dataSet,
+                        });
+                        return callback();
+                      }
+
+                      this.props.form.setFieldsValue({ dataSet: null });
+                      return callback("Invalid base annotation id.");
                     },
                   },
                 ],

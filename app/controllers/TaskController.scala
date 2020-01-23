@@ -14,21 +14,13 @@ import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicit
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.NmlService
-import models.annotation.{
-  Annotation,
-  AnnotationDAO,
-  AnnotationService,
-  AnnotationState,
-  AnnotationType,
-  TracingStoreRpcClient,
-  TracingStoreService
-}
+import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
 import models.team.TeamDAO
 import models.user._
-import net.liftweb.common.{Box, Empty, EmptyBox, Failure, Full}
+import net.liftweb.common.{Box, Full}
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}

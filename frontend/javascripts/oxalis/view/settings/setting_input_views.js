@@ -345,9 +345,9 @@ export class Vector6InputSetting extends React.PureComponent<
 
 type ColorSettingPropTypes = {
   value: string,
-  label: string,
   onChange: (value: Vector3) => void,
   disabled: boolean,
+  style?: Object,
 };
 
 export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
@@ -360,39 +360,38 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
   };
 
   render() {
-    const { label, value, disabled } = this.props;
+    const { value, disabled } = this.props;
+    let { style } = this.props;
+    style = style || {};
     return (
-      <Row className="margin-bottom" align="top">
-        <Col span={9}>
-          <label className="setting-label">{label}</label>
-        </Col>
-        <Col span={15}>
-          <div
-            id="color-picker-wrapper"
-            style={{
-              backgroundColor: value,
-              display: "block",
-              width: 16,
-              height: 16,
-              borderRadius: 3,
-              boxShadow: "0px 0px 3px #cacaca",
-            }}
-          >
-            <input
-              type="color"
-              style={{
-                opacity: 0,
-                display: "block",
-                border: "none",
-                cursor: disabled ? "not-allowed" : "pointer",
-              }}
-              onChange={this.onColorChange}
-              value={value}
-              disabled={disabled}
-            />
-          </div>
-        </Col>
-      </Row>
+      <div
+        id="color-picker-wrapper"
+        style={{
+          backgroundColor: value,
+          display: "inline-block",
+          width: 16,
+          height: 16,
+          borderRadius: 3,
+          boxShadow: "0px 0px 3px #cacaca",
+          verticalAlign: "middle",
+          ...style,
+        }}
+      >
+        <input
+          type="color"
+          style={{
+            opacity: 0,
+            display: "block",
+            border: "none",
+            cursor: disabled ? "not-allowed" : "pointer",
+            width: "100%",
+            height: "100%",
+          }}
+          onChange={this.onColorChange}
+          value={value}
+          disabled={disabled}
+        />
+      </div>
     );
   }
 }

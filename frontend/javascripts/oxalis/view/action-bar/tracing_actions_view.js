@@ -4,7 +4,7 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIAnnotationType, APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   type LayoutKeys,
@@ -20,7 +20,7 @@ import { location } from "libs/window";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { undoAction, redoAction, disableSavingAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import Model from "oxalis/model";
 import SaveButton from "oxalis/view/action-bar/save_button";
@@ -30,6 +30,7 @@ import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import UserLocalStorage from "libs/user_local_storage";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -48,8 +49,6 @@ type State = {
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
   isReopenAllowed: boolean,
-  oldAnnotationType: ?APIAnnotationType,
-  oldAnnotationId: ?string,
 };
 
 export type LayoutProps = {
@@ -181,11 +180,22 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
-    oldAnnotationId: null,
-    oldAnnotationType: null,
   };
 
   modalWrapper: ?HTMLDivElement = null;
+
+  componentDidUpdate = () => {
+    const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
+    if (this.props.task && localStorageEntry) {
+      const { finishedTime } = JSON.parse(localStorageEntry);
+      if (Date.now() - finishedTime < 30000) {
+        this.setState({
+          isReopenAllowed: true,
+        });
+        setTimeout(() => this.setState({ isReopenAllowed: false }), 30000);
+      }
+    }
+  };
 
   handleSave = async (event?: SyntheticInputEvent<>) => {
     if (event != null) {
@@ -252,22 +262,32 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleFinishAndGetNextTask = async () => {
-    this.setState({
-      isReopenAllowed: true,
-      oldAnnotationId: this.props.annotationId,
-      oldAnnotationType: this.props.annotationType,
-    });
-    setTimeout(() => this.setState({ isReopenAllowed: false }), 15000);
+    UserLocalStorage.setItem(
+      "lastFinishedTask",
+      JSON.stringify({ annotationId: this.props.annotationId, finishedTime: Date.now() }),
+    );
     api.tracing.finishAndGetNextTask();
   };
 
   handleReopenTask = async () => {
-    const annotationId = this.state.oldAnnotationId;
-    const annotationType = this.state.oldAnnotationType;
-    if (annotationId && annotationType) {
-      await reOpenAnnotation(annotationId, annotationType);
-      await api.tracing.restart(annotationType, annotationId, ControlModeEnum.TRACE);
-      this.setState({ isReopenAllowed: false });
+    const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
+    if (!localStorageEntry) return;
+
+    const { annotationId } = JSON.parse(localStorageEntry);
+
+    if (annotationId) {
+      await Model.ensureSavedState();
+
+      Modal.confirm({
+        title: messages["annotation.undoFinish.confirm"],
+        content: messages["annotation.undoFinish.content"],
+        onOk: async () => {
+          await reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
+          UserLocalStorage.removeItem("lastFinishedTask");
+          const newTaskUrl = `/annotations/${APIAnnotationTypeEnum.Task}/${annotationId}`;
+          location.href = newTaskUrl;
+        },
+      });
     }
   };
 
@@ -350,8 +370,13 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       ) : null;
 
     const reopenTaskButton = this.state.isReopenAllowed ? (
-      <ButtonComponent key="reopen-button" icon="verticle-right" onClick={this.handleReopenTask}>
-        Undo Finish and Reopen Task
+      <ButtonComponent
+        key="reopen-button"
+        icon="verticle-right"
+        onClick={this.handleReopenTask}
+        type="danger"
+      >
+        Undo Finish
       </ButtonComponent>
     ) : null;
 

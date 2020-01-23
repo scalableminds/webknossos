@@ -123,7 +123,7 @@ class AnnotationController @Inject()(
       for {
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
       } yield
-        (isAdminOrTeamManager || (annotation._user == user._id && System.currentTimeMillis - annotation.modified < 360000)) && annotation.state == AnnotationState.Finished
+        (isAdminOrTeamManager || (annotation._user == user._id && System.currentTimeMillis - annotation.modified < 300000)) && annotation.state == AnnotationState.Finished
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)

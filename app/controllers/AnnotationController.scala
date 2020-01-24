@@ -47,6 +47,7 @@ class AnnotationController @Inject()(
     with FoxImplicits {
 
   implicit val timeout = Timeout(5 seconds)
+  val taskReopenAllowed = conf.WebKnossos.Tasks.reopenAllowedBackend.toMillis
 
   def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
     log {
@@ -122,12 +123,14 @@ class AnnotationController @Inject()(
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
-      } yield
-        (isAdminOrTeamManager || (annotation._user == user._id && System.currentTimeMillis - annotation.modified < 300000)) && annotation.state == AnnotationState.Finished
+        _ <- bool2Fox(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
+        _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
+        _ <- bool2Fox(isAdminOrTeamManager || System.currentTimeMillis - annotation.modified < taskReopenAllowed) ?~> "annotation.reopen.tooLate"
+      } yield ()
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- Fox.assertTrue(isReopenAllowed(request.identity, annotation)) ?~> "reopen.notAllowed" ~> FORBIDDEN
+      _ <- isReopenAllowed(request.identity, annotation) ?~> "annotation.reopen.failed"
       _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> "annotation.invalid"
       updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"

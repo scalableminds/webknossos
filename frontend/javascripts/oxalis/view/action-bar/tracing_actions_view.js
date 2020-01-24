@@ -31,6 +31,7 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import UserLocalStorage from "libs/user_local_storage";
+import features from "features";
 
 type OwnProps = {|
   layoutMenu: React.Node,
@@ -188,11 +189,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (this.props.task && localStorageEntry) {
       const { finishedTime } = JSON.parse(localStorageEntry);
-      if (Date.now() - finishedTime < 30000) {
+      if (Date.now() - finishedTime < features().taskReopenAllowedFrontend) {
         this.setState({
           isReopenAllowed: true,
         });
-        setTimeout(() => this.setState({ isReopenAllowed: false }), 30000);
+        setTimeout(
+          () => this.setState({ isReopenAllowed: false }),
+          features().taskReopenAllowedFrontend,
+        );
       }
     }
   };
@@ -276,12 +280,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const { annotationId } = JSON.parse(localStorageEntry);
 
     if (annotationId) {
-      await Model.ensureSavedState();
-
       Modal.confirm({
         title: messages["annotation.undoFinish.confirm"],
         content: messages["annotation.undoFinish.content"],
         onOk: async () => {
+          await Model.ensureSavedState();
           await reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
           UserLocalStorage.removeItem("lastFinishedTask");
           const newTaskUrl = `/annotations/${APIAnnotationTypeEnum.Task}/${annotationId}`;

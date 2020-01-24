@@ -57,6 +57,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     }
     object Tasks {
       val maxOpenPerUser = get[Int]("webKnossos.tasks.maxOpenPerUser")
+      val reopenAllowedBackend = get[Int]("webKnossos.tasks.reopenAllowedBackend") seconds
     }
     val newOrganizationMailingList = get[String]("webKnossos.newOrganizationMailingList")
 

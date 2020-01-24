@@ -212,11 +212,10 @@ annotation.makeHybrid.failed=Could not convert to hybrid.
 annotation.makeHybrid.alreadyHybrid=Could not convert annotation to hybrid annotation because it is already a hybrid annotation.
 annotationType.notFound=Could not find the specified annotation type.
 annotation.cantMergeVolumes=This annotation collection contains volume tracings. Merging volume tracings is not yet supported. Please use download instead.
-annotation.undoFinish.success=Reactivated Annotation
-annotation.undoFinish.tooLate=It's not possible to reactivate an annotation if it was finished more than 30 seconds ago.
-annotation.undoFinish.notAllowed=You are not allowed to reactivate this annotation. Only the creator of an annotation can do this.
-annotation.undoFinish.onlyTask=Only tasks can be reactivated.
-annotation.undoFinish.notFinished=The requested annotation is not finished.
+annotation.reopen.tooLate=The annotation cannot be reopened anymore, since it's been finished for too long.
+annotation.reopen.notAllowed=You are not allowed to reopen this annotation.
+annotation.reopen.notFinished=The requested annotation is not finished.
+annotation.reopen.failed=Failed to reopen the annotation.
 
 mesh.notFound=Mesh couldn’t be found
 mesh.write.failed=Failed to convert mesh info to json

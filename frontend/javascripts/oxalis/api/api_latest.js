@@ -1044,22 +1044,20 @@ class DataApi {
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
   getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
-    const printDepricationWarning = (config, property) =>
-      console.warn(
-        `The ${config} property is no longer directly part of the data configuration. 
-        Use "const layerSettings = api.data.getConfiguration('layers'); const ${config} = layerSettings[<segmentationLayerName>].${property}" instead.`,
-      );
+    console.warn(
+      `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
+        To still access them use the segmentation layers settings. This object has the properties "alpha" and "isDisabled".
+        Use "const segmentationLayerSettings = api.data.getConfiguration('layers')[<segmentationLayerName>]" to access these properties.`,
+    );
     switch (key) {
       case "segmentationOpacity": {
         const segmentationLayerName = Model.getSegmentationLayerName();
-        printDepricationWarning("segmentationOpacity", "alpha");
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
           : undefined;
       }
       case "isSegmentationDisabled": {
         const segmentationLayerName = Model.getSegmentationLayerName();
-        printDepricationWarning("isSegmentationDisabled", "isDisabled");
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
           : undefined;
@@ -1078,15 +1076,14 @@ class DataApi {
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
-    const printDepricationWarning = (config, property) =>
-      console.warn(
-        `The ${config} property is no longer directly part of the data configuration. Use "const layerSettings = 
-        api.data.getConfiguration('layers'); layerSettings[<segmentationLayerName>].${property} = <value>; 
-        api.data.setConfiguration('layers', layerSettings)" instead.`,
-      );
+    console.warn(
+      `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. To still set 
+      them use the segmentation "layers" configuration. This object has settings for the segmentation layer with the properties "alpha" 
+      and "isDisabled". Use "const layerSettings = api.data.getConfiguration('layers'); layerSettings[<segmentationLayerName>].alpha = 40;
+      api.data.setConfiguration('layers', layerSettings);" to set these properties.`,
+    );
     switch (key) {
       case "segmentationOpacity": {
-        printDepricationWarning("segmentationOpacity", "alpha");
         const segmentationLayerName = Model.getSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
@@ -1094,7 +1091,6 @@ class DataApi {
         break;
       }
       case "isSegmentationDisabled": {
-        printDepricationWarning("isSegmentationDisabled", "isDisabled");
         const segmentationLayerName = Model.getSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));

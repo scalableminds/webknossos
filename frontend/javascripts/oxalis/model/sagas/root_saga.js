@@ -18,7 +18,6 @@ import {
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
-import { loadHistorgramData } from "oxalis/model/sagas/load_histogram_data";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
 import ErrorHandling from "libs/error_handling";
 import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
@@ -49,7 +48,6 @@ function* restartableSaga(): Saga<void> {
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(watchDataRelevantChanges),
-      _call(loadHistorgramData),
       _call(isosurfaceSaga),
       _call(watchTasksAsync),
       _call(handleMeshChanges),

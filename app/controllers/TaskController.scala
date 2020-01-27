@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicit
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.NmlService
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService, TracingStoreRpcClient, TracingStoreService}
+import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task._
@@ -154,13 +154,39 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
   def duplicateBaseTracings(baseAnnotation: BaseAnnotation, taskParameters: TaskParameters, organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider) =
+      m: MessagesProvider) = {
+
+    @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTaskAnnotations are empty before so head always works
+    def checkForTask(taskId: ObjectId): Fox[Annotation] =
+      (for {
+        task <- taskDAO.findOne(taskId)
+        annotations <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
+      } yield {
+        val nonCancelledTaskAnnotations = annotations.filter(_.state != AnnotationState.Cancelled)
+        if (task.totalInstances == 1 && task.openInstances == 0 &&
+            nonCancelledTaskAnnotations.nonEmpty &&
+            nonCancelledTaskAnnotations.head.state == AnnotationState.Finished)
+          Fox.successful(nonCancelledTaskAnnotations.head)
+        else Fox.failure("task.notOneAnnotation")
+      }).flatten
+
+    def useAnnotationIdOrCheckForTask(annotationOrTaskId: ObjectId): Fox[Annotation] =
+      annotationDAO
+        .findOne(annotationOrTaskId)
+        .futureBox
+        .map {
+          case Full(value) => Fox.successful(value)
+          case _           => checkForTask(annotationOrTaskId)
+        }
+        .toFox
+        .flatten
+
     for {
       taskTypeIdValidated <- ObjectId.parse(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
       dataSet <- dataSetDAO.findOneByNameAndOrganization(taskParameters.dataSet, organizationId)
       baseAnnotationIdValidated <- ObjectId.parse(baseAnnotation.baseId)
-      annotation <- annotationDAO.findOne(baseAnnotationIdValidated)
+      annotation <- useAnnotationIdOrCheckForTask(baseAnnotationIdValidated)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonId <- if (taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid)
         duplicateSkeletonTracingOrCreateSkeletonTracingBase(annotation, taskParameters, tracingStoreClient).map(Some(_))
@@ -170,6 +196,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
           .map(Some(_))
       else Fox.successful(None)
     } yield BaseAnnotation(baseAnnotationIdValidated.id, newSkeletonId, newVolumeId)
+  }
 
   def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
       implicit ctx: DBAccessContext,

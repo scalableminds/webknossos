@@ -7,23 +7,38 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...HEAD)
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
+- Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
+-
+
+### Removed
+-
+
+
+## [20.02.0](https://github.com/scalableminds/webknossos/releases/tag/20.02.0) - 2020-01-27
+[Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...20.02.0)
 
 ### Added
 - Added new viewing permission for annotations: public (everyone with the link has access, logged in or not), internal (everyone from your organization has access), private (only you and your team managers and admins have access). The new default is internal as it is the old default non-public.
+- Added support for using task ids as base for a new task, if the corresponding task only has one (finished) instance. [#4404](https://github.com/scalableminds/webknossos/pull/4404)
 
 ### Changed
 - Changed the error message when importing a dataset without resolution directories. [#4389](https://github.com/scalableminds/webknossos/pull/4389)
 
 ### Fixed
 
-- Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
 - Fixed the deactivation of datasets if no datasets are present. [#4388](https://github.com/scalableminds/webknossos/pull/4388)
 - Fixed the team sharing settings for private annotations. [#4409](https://github.com/scalableminds/webknossos/pull/4409)
-
-
-### Removed
--
+- Fixed the team sharing loading for read only tracings. [#4411](https://github.com/scalableminds/webknossos/pull/4411)
+- Fixed the renaming of annotations in the tracing view. [#4416](https://github.com/scalableminds/webknossos/pull/4416)
 
 
 ## [20.01.0](https://github.com/scalableminds/webknossos/releases/tag/20.01.0) - 2020-01-08

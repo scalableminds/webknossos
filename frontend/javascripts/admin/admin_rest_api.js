@@ -424,8 +424,8 @@ export function createTaskFromNML(task: NewTask): Promise<Array<TaskCreationResp
   });
 }
 
-export async function getTask(taskId: string): Promise<APITask> {
-  const task = await Request.receiveJSON(`/api/tasks/${taskId}`);
+export async function getTask(taskId: string, options?: RequestOptions = {}): Promise<APITask> {
+  const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
   return transformTask(task);
 }
 
@@ -490,8 +490,12 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
-export function getTeamsForSharedAnnotation(typ: string, id: string): Promise<Array<APITeam>> {
-  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`);
+export function getTeamsForSharedAnnotation(
+  typ: string,
+  id: string,
+  options?: RequestOptions,
+): Promise<Array<APITeam>> {
+  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`, options);
 }
 
 export function updateTeamsForSharedAnnotation(

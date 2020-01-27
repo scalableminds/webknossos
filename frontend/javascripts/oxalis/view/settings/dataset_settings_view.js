@@ -178,16 +178,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const { intensityRange } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
     const highestRangeValue = defaultIntensityRange[1];
-    let histograms = [
-      {
-        numberOfElements: 0,
-        elementCounts: [],
-        min: 0,
-        max: highestRangeValue,
-      },
-    ];
+    let histograms = [];
     if (this.props.histogramData && this.props.histogramData[layerName]) {
       histograms = this.props.histogramData[layerName];
+    } else {
+      histograms = [
+        {
+          numberOfElements: 0,
+          elementCounts: [],
+          min: 0,
+          max: highestRangeValue,
+        },
+      ];
     }
     return (
       <Histogram

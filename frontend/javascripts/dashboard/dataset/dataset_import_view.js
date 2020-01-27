@@ -138,9 +138,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       )) || {
         layers: _.fromPairs(
           dataSource.dataLayers.map(layer => {
-            // Here we adjust the default intensity range if we have a uint16 layer.
-            // This is because otherwise the default max value of the intensity range would be 255.
-            // And this is far too small for uint16.
+            // Here we adjust the default intensity range depending on the datatype of the layers.
+            // Otherwise, the default max value of the intensity range would always be 255 (which is too small for uint16 for example).
+            // The value can be overwritten by the user configuration (see loadHistorgramData saga)
             const currentDefaultLayerConfig = _.clone(defaultConfigPerLayer);
             const intensityRange = getDefaultIntensityRangeOfLayer(dataset, layer.name);
             currentDefaultLayerConfig.intensityRange = intensityRange;

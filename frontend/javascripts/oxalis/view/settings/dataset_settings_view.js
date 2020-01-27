@@ -282,10 +282,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
         {isDisabled ? null : (
           <React.Fragment>
-            {isHistogramSupported(elementClass) &&
-            layerName != null &&
-            layerConfiguration != null &&
-            isColorLayer
+            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting

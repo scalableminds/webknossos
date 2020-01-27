@@ -56,12 +56,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
     return;
   }
   const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
-  let isOpacityTooLow = false;
-  if (segmentationLayerName) {
-    isOpacityTooLow = yield* select(
-      state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
-    );
+  if (!segmentationLayerName) {
+    return;
   }
+  const isOpacityTooLow = yield* select(
+    state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
+  );
   if (isOpacityTooLow) {
     Toast.warning(
       'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',

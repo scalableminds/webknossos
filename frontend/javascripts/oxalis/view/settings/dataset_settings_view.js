@@ -268,15 +268,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerConfiguration: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that a every layer needs a layer configuration.
+    // Ensure that every layer needs a layer configuration.
     if (!layerConfiguration) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const isDisabled =
-      isColorLayer && layerConfiguration != null
-        ? layerConfiguration.isDisabled
-        : this.props.datasetConfiguration.isSegmentationDisabled;
+    const isDisabled = isColorLayer
+      ? layerConfiguration.isDisabled
+      : this.props.datasetConfiguration.isSegmentationDisabled;
 
     return (
       <div key={layerName}>
@@ -296,7 +295,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
-            {isColorLayer && layerConfiguration != null ? (
+            {isColorLayer ? (
               <Row className="margin-bottom" style={{ marginTop: 4 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>

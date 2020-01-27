@@ -698,7 +698,7 @@ class DataApi {
     // TODO: Rename method to getSegmentationLayerName() and increase api version
     const segmentationLayerName = this.model.getSegmentationLayerName();
     assertExists(segmentationLayerName, "Segmentation layer not found!");
-    return segmentationLayerName;
+    return segmentationLayerName || "";
   }
 
   /**

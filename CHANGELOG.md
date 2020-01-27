@@ -7,7 +7,23 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...HEAD)
+
+### Added
+-
+
+### Changed
+-
+
+### Fixed
+-
+
+### Removed
+-
+
+
+## [20.02.0](https://github.com/scalableminds/webknossos/releases/tag/20.02.0) - 2020-01-27
+[Commits](https://github.com/scalableminds/webknossos/compare/20.01.0...20.02.0)
 
 ### Added
 - Added new viewing permission for annotations: public (everyone with the link has access, logged in or not), internal (everyone from your organization has access), private (only you and your team managers and admins have access). The new default is internal as it is the old default non-public.
@@ -21,9 +37,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed the team sharing settings for private annotations. [#4409](https://github.com/scalableminds/webknossos/pull/4409)
 - Fixed the team sharing loading for read only tracings. [#4411](https://github.com/scalableminds/webknossos/pull/4411)
 - Fixed the renaming of annotations in the tracing view. [#4416](https://github.com/scalableminds/webknossos/pull/4416)
-
-### Removed
--
 
 
 ## [20.01.0](https://github.com/scalableminds/webknossos/releases/tag/20.01.0) - 2020-01-08

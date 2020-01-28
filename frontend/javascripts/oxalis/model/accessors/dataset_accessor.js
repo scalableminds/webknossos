@@ -180,10 +180,12 @@ export function getDatasetExtentAsString(
 
 export function determineAllowedModes(
   dataset: APIDataset,
-  settings: Settings,
+  settings?: Settings,
 ): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
   // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
-  let allowedModes = _.intersection(ViewModeValues, settings.allowedModes);
+  let allowedModes = settings
+    ? _.intersection(ViewModeValues, settings.allowedModes)
+    : ViewModeValues;
 
   const colorLayer = _.find(dataset.dataSource.dataLayers, {
     category: "color",
@@ -193,7 +195,7 @@ export function determineAllowedModes(
   }
 
   let preferredMode = null;
-  if (settings.preferredMode != null) {
+  if (settings && settings.preferredMode != null) {
     const modeId = settings.preferredMode;
     if (allowedModes.includes(modeId)) {
       preferredMode = modeId;

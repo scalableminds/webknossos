@@ -37,9 +37,15 @@ type Props = {
   history: RouterHistory,
 };
 
-type State = {};
+type State = {
+  isReloading: boolean,
+};
 
 class DatasetActionView extends React.PureComponent<Props, State> {
+  state = {
+    isReloading: false,
+  };
+
   createTracing = async (
     dataset: APIMaybeUnimportedDataset,
     type: TracingType,
@@ -51,12 +57,15 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
+    this.setState({ isReloading: true });
     await clearCache(dataset);
     Toast.success(messages["dataset.clear_cache_success"]);
+    this.setState({ isReloading: false });
   };
 
   render() {
     const { dataset } = this.props;
+    const { isReloading } = this.state;
     const centerBackgroundImageStyle = {
       verticalAlign: "middle",
     };
@@ -110,14 +119,25 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                  title="Edit Dataset"
+                  title={
+                    isReloading
+                      ? "You have to wait with the editing until this dataset is reloaded."
+                      : "Edit Dataset"
+                  }
+                  style={isReloading ? { textDecoration: "line-through" } : null}
+                  onClick={e => (isReloading ? e.preventDefault() : null)}
                 >
                   <Icon type="edit" />
                   Edit
                 </Link>
                 {!dataset.isForeign ? (
-                  <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
-                    <Icon type="retweet" />
+                  <a
+                    href="#"
+                    onClick={() => this.clearCache(dataset)}
+                    title="Reload Dataset"
+                    style={isReloading ? { pointerEvents: "none" } : null}
+                  >
+                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
                     Reload
                   </a>
                 ) : null}

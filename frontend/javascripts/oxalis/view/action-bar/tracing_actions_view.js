@@ -28,6 +28,7 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 
 type OwnProps = {|
   layoutMenu: React.Node,
+  hasVolume: boolean,
 |};
 type StateProps = {|
   annotationType: APIAnnotationType,
@@ -237,7 +238,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleDownload = async () => {
     await Model.ensureSavedState();
-    downloadNml(this.props.annotationId, this.props.annotationType);
+    const { annotationId, annotationType, hasVolume } = this.props;
+    downloadNml(annotationId, annotationType, hasVolume);
   };
 
   handleFinishAndGetNextTask = async () => {

@@ -127,7 +127,13 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           Transfer
         </Item>
         <Item key={`${annotation.id}-download`}>
-          <AsyncLink href="#" onClick={() => downloadNml(annotation.id, "Task")}>
+          <AsyncLink
+            href="#"
+            onClick={() => {
+              const isVolumeIncluded = annotation.task.type.tracingType !== "skeleton";
+              downloadNml(annotation.id, "Task", isVolumeIncluded);
+            }}
+          >
             <Icon type="download" />
             Download
           </AsyncLink>

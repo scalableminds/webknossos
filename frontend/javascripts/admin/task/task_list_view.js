@@ -303,7 +303,10 @@ class TaskListView extends React.PureComponent<Props, State> {
                   {task.status.finished > 0 ? (
                     <AsyncLink
                       href="#"
-                      onClick={() => downloadNml(task.id, "CompoundTask")}
+                      onClick={() => {
+                        const includesVolumeData = task.type.tracingType !== "skeleton";
+                        downloadNml(task.id, "CompoundTask", includesVolumeData);
+                      }}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />

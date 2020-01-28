@@ -251,7 +251,10 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     <br />
                     <AsyncLink
                       href="#"
-                      onClick={() => downloadNml(taskType.id, "CompoundTaskType")}
+                      onClick={() => {
+                        const includesVolumeData = taskType.tracingType !== "skeleton";
+                        downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
+                      }}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />

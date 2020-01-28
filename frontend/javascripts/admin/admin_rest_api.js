@@ -668,12 +668,16 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
 export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
+  showVolumeDownloadWarning?: boolean = false,
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
     // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
+  if (showVolumeDownloadWarning) {
+    Toast.info(messages["annotation.no_fallback_data_included"], { timeout: 12000 });
+  }
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,

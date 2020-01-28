@@ -253,7 +253,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                       href="#"
                       onClick={() => {
                         const includesVolumeData = taskType.tracingType !== "skeleton";
-                        downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
+                        return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
                       }}
                       title="Download all Finished Tracings"
                     >

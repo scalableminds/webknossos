@@ -697,8 +697,10 @@ class DataApi {
   getVolumeTracingLayerName(): string {
     // TODO: Rename method to getSegmentationLayerName() and increase api version
     const segmentationLayerName = this.model.getSegmentationLayerName();
-    assertExists(segmentationLayerName, "Segmentation layer not found!");
-    return segmentationLayerName || "";
+    if (!segmentationLayerName) {
+      throw new Error("Segmentation layer not found!");
+    }
+    return segmentationLayerName;
   }
 
   /**

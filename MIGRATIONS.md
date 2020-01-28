@@ -10,6 +10,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - [051-add-source-view-configuration.sql](conf/evolutions/051-add-source-view-configuration.sql)
 
+## [20.2.0](https://github.com/scalableminds/webknossos/releases/tag/20.2.0) - 2020-01-27
+No migrations necessary.
 
 ## [20.1.0](https://github.com/scalableminds/webknossos/releases/tag/20.1.0) - 2020-01-08
 - The initial organization was renamed to `sample_organization`. Make sure to move the data over or to put a symlink in place.

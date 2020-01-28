@@ -218,6 +218,7 @@ export type DatasetLayerConfiguration = {|
   +alpha: number,
   +intensityRange: Vector2,
   +isDisabled: boolean,
+  +isInverted: boolean,
 |};
 
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";

@@ -93,6 +93,7 @@ class ShareModalView extends PureComponent<Props, State> {
       const sharedTeams = await getTeamsForSharedAnnotation(
         this.props.annotationType,
         this.props.annotationId,
+        { showErrorToast: false },
       );
       this.setState({ sharingToken, sharedTeams });
     } catch (error) {

@@ -10,10 +10,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...HEAD)
 
 ### Added
--
+- Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
+
 
 ### Changed
--
+- Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 
 ### Fixed
 -

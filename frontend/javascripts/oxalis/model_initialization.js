@@ -132,6 +132,11 @@ export async function initialize(
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null && tracing != null) {
     initializeTracing(annotation, tracing);
+  } else {
+    // In view only tracings we need to set the view mode too.
+    const { allowedModes } = determineAllowedModes(dataset);
+    const mode = UrlManager.initialState.mode || allowedModes[0];
+    Store.dispatch(setViewModeAction(mode));
   }
 
   const defaultState = determineDefaultState(UrlManager.initialState, tracing);

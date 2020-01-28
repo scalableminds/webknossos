@@ -18,18 +18,21 @@ async function fetchAllHistogramsForLayers(
   const histogramPromises = dataLayers.map(async dataLayer => {
     try {
       const data = await getHistogramForLayer(dataset.dataStore.url, dataset, dataLayer.name);
-      histograms[dataLayer.name] = data;
+      if (Array.isArray(data) && data.length > 0) {
+        histograms[dataLayer.name] = data;
+      }
     } catch (e) {
-      console.warn(`Error: Could not fetch the hisogram data for layer ${dataLayer.name}.`, e);
+      console.warn(`Error: Could not fetch the histogram data for layer ${dataLayer.name}.`, e);
     }
   });
   await Promise.all(histogramPromises);
   return histograms;
 }
 
-export function* loadHistorgramData(): Saga<void> {
+export default function* loadHistogramData(): Saga<void> {
   yield* take("WK_READY");
-  const dataLayers = yield* call([Model, Model.getColorLayers]);
+  // Flow does not understand that Array<DataLayer> is returned for some reason.
+  const dataLayers: Array<DataLayer> = (yield* call([Model, Model.getColorLayers]): any);
   const dataset = yield* select(state => state.dataset);
   const layerConfigurations = yield* select(state => state.datasetConfiguration.layers);
   const histograms = yield* call(fetchAllHistogramsForLayers, dataLayers, dataset);
@@ -54,5 +57,3 @@ export function* loadHistorgramData(): Saga<void> {
   }
   yield* put(setHistogramDataAction(histograms));
 }
-
-export default {};

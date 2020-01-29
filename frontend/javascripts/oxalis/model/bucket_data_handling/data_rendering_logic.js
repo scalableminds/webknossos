@@ -179,7 +179,8 @@ function deriveSupportedFeatures<Layer>(
   console.log("necessaryTextureCount", necessaryTextureCount);
 
   if (necessaryTextureCount > specs.maxTextureCount) {
-    isBasicRenderingSupported = false;
+    console.log("not setting isBasicRenderingSupported to false");
+    // isBasicRenderingSupported = false;
   }
 
   // Count textures needed for mappings separately, because they are not strictly necessary

@@ -177,7 +177,6 @@ function deriveSupportedFeatures<Layer>(
   let isBasicRenderingSupported = true;
 
   console.log("necessaryTextureCount", necessaryTextureCount);
-  throw new Error();
 
   if (necessaryTextureCount > specs.maxTextureCount) {
     isBasicRenderingSupported = false;

@@ -185,7 +185,7 @@ function validateSpecsForLayers(
 
   if (!isBasicRenderingSupported) {
     const message = `Not enough textures available for rendering ${layers.length} layers`;
-    Toast.error(message);
+    Toast.error(message, { sticky: true });
     throw new Error(message);
   }
 

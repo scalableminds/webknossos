@@ -4,6 +4,7 @@ import _ from "lodash";
 import { document } from "libs/window";
 import constants, { type Vector3 } from "oxalis/constants";
 import { type ElementClass } from "admin/api_flow_types";
+import Toast from "libs/toast";
 
 type GpuSpecs = {
   supportedTextureSize: number,
@@ -29,17 +30,25 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   }
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-  const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+  const maxCombinedTextureImageUnits = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+  const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  return { supportedTextureSize, maxTextureCount };
+  console.log("maxCombinedTextureImageUnits", maxCombinedTextureImageUnits);
+  console.log("maxTextureImageUnits", maxTextureImageUnits);
+
+  return {
+    supportedTextureSize,
+    maxTextureCount: Math.min(maxTextureImageUnits, maxCombinedTextureImageUnits),
+  };
 }
 
 export function validateMinimumRequirements(specs: GpuSpecs): void {
-  if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
-    throw new Error(
-      "Minimum spec is not met. GPU should support at least a texture size of 4096 and 8 textures.",
-    );
-  }
+  // if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
+  //   const msg =
+  //     "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+  //   Toast.error(msg, { sticky: true });
+  //   throw new Error(msg);
+  // }
 }
 
 export type DataTextureSizeAndCount = {|
@@ -166,6 +175,9 @@ function deriveSupportedFeatures<Layer>(
 
   let isMappingSupported = true;
   let isBasicRenderingSupported = true;
+
+  console.log("necessaryTextureCount", necessaryTextureCount);
+  throw new Error();
 
   if (necessaryTextureCount > specs.maxTextureCount) {
     isBasicRenderingSupported = false;

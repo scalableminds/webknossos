@@ -61,6 +61,10 @@ function sanitizeName(name: ?string): string {
 }
 
 function getColorLayerNames() {
+  return getColorLayers(Store.getState().dataset).map(layer => layer.name);
+}
+
+function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
@@ -82,11 +86,14 @@ class PlaneMaterialFactory {
   attributes: Object;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
+  leastRecentlyVisibleLayers: Array<string>;
+  oldShaderCode: ?string;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
+    this.leastRecentlyVisibleLayers = [];
   }
 
   setup() {
@@ -210,7 +217,7 @@ class PlaneMaterialFactory {
       };
     }
 
-    for (const name of getColorLayerNames()) {
+    for (const name of getSanitizedColorLayerNames()) {
       this.uniforms[`${name}_alpha`] = {
         type: "f",
         value: 1,
@@ -414,6 +421,7 @@ class PlaneMaterialFactory {
       ),
     );
 
+    const oldVisibilityPerLayer = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
@@ -421,6 +429,18 @@ class PlaneMaterialFactory {
           for (const colorLayer of getColorLayers(Store.getState().dataset)) {
             const settings = layerSettings[colorLayer.name];
             if (settings != null) {
+              if (
+                oldVisibilityPerLayer[colorLayer.name] != null &&
+                oldVisibilityPerLayer[colorLayer.name] !== !settings.isDisabled
+              ) {
+                if (settings.isDisabled) {
+                  this.onDisableLayer(colorLayer.name);
+                } else {
+                  this.onEnableLayer(colorLayer.name);
+                }
+              }
+              oldVisibilityPerLayer[colorLayer.name] = !settings.isDisabled;
+
               const name = sanitizeName(colorLayer.name);
               this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
             }
@@ -545,8 +565,69 @@ class PlaneMaterialFactory {
     return this.material;
   }
 
-  getFragmentShader(): string {
+  recomputeFragmentShader() {
+    const newShaderCode = this.getFragmentShader();
+    // comparing to this.material.fragmentShader does not work. the code seems
+    // to be modified by a third party.
+    if (this.oldShaderCode != null && this.oldShaderCode === newShaderCode) {
+      return;
+    }
+    this.oldShaderCode = newShaderCode;
+
+    this.material.fragmentShader = newShaderCode;
+    this.material.needsUpdate = true;
+    window.needsRerender = true;
+  }
+
+  getLayersForGpu(maximumLayerCountToRender: number) {
     const colorLayerNames = getColorLayerNames();
+
+    const state = Store.getState();
+    const layerSettings = state.datasetConfiguration.layers;
+    const enabledLayers = getColorLayers(state.dataset)
+      .filter(layer => {
+        const settings = layerSettings[layer.name];
+        if (settings == null) {
+          return false;
+        }
+        return !settings.isDisabled;
+      })
+      .map(layer => layer.name);
+
+    // const enabledLayers = _.without(colorLayerNames, ...this.leastRecentlyVisibleLayers);
+
+    console.log("enabledLayers", enabledLayers);
+    console.log("this.leastRecentlyVisibleLayers", this.leastRecentlyVisibleLayers);
+
+    console.log(
+      "rendering",
+      enabledLayers
+        .concat(this.leastRecentlyVisibleLayers)
+        .slice(0, maximumLayerCountToRender)
+        .sort(),
+    );
+
+    return enabledLayers
+      .concat(this.leastRecentlyVisibleLayers)
+      .slice(0, maximumLayerCountToRender)
+      .sort()
+      .map(sanitizeName);
+  }
+
+  onDisableLayer = layerName => {
+    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
+    this.leastRecentlyVisibleLayers = [layerName, ...this.leastRecentlyVisibleLayers];
+
+    this.recomputeFragmentShader();
+  };
+
+  onEnableLayer = layerName => {
+    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
+    this.recomputeFragmentShader();
+  };
+
+  getFragmentShader(): string {
+    let colorLayerNames = getSanitizedColorLayerNames();
     const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
@@ -555,11 +636,18 @@ class PlaneMaterialFactory {
     // Don't compile code for segmentation in arbitrary mode
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    const lookupTextureWidth = getLookupBufferSize(
-      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
+    const {
+      initializedGpuFactor,
+      maximumLayerCountToRender,
+    } = Store.getState().temporaryConfiguration.gpuSetup;
+    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
-    const code = getMainFragmentShader({
+    // deal with segmentation (should probably be prioritized always?)
+    if (maximumLayerCountToRender < colorLayerNames.length) {
+      colorLayerNames = this.getLayersForGpu(maximumLayerCountToRender);
+    }
+
+    const fparams = {
       colorLayerNames,
       packingDegreeLookup,
       hasSegmentation,
@@ -571,8 +659,9 @@ class PlaneMaterialFactory {
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
-    });
+    };
 
+    const code = getMainFragmentShader(fparams);
     return code;
   }
 

@@ -125,8 +125,14 @@ export async function initialize(
     const { gpuMemoryFactor } = initialUserSettings;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
-    const { smallestCommonBucketCapacity } = initializationInformation;
-    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
+    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
+    Store.dispatch(
+      initializeGpuSetupAction(
+        smallestCommonBucketCapacity,
+        gpuMemoryFactor,
+        maximumLayerCountToRender,
+      ),
+    );
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -165,6 +171,7 @@ function validateSpecsForLayers(
   textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
   isMappingSupported: boolean,
   smallestCommonBucketCapacity: number,
+  maximumLayerCountToRender: number,
 } {
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
@@ -175,6 +182,7 @@ function validateSpecsForLayers(
     textureInformationPerLayer,
     isBasicRenderingSupported,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   } = computeDataTexturesSetup(
     specs,
     layers,
@@ -184,9 +192,11 @@ function validateSpecsForLayers(
   );
 
   if (!isBasicRenderingSupported) {
-    const message = `Not enough textures available for rendering ${layers.length} layers`;
+    const message = `Your hardware does not support rendering of all ${
+      layers.length
+    } layers. Instead, only ${maximumLayerCountToRender} will be rendered simultaneously. You can disable layers in the settings sidebar to influence which layers should be rendered.`;
     Toast.error(message, { sticky: true });
-    throw new Error(message);
+    // throw new Error(message);
   }
 
   if (!isMappingSupported) {
@@ -196,7 +206,12 @@ function validateSpecsForLayers(
 
   maybeWarnAboutUnsupportedLayers(layers);
 
-  return { isMappingSupported, textureInformationPerLayer, smallestCommonBucketCapacity };
+  return {
+    isMappingSupported,
+    textureInformationPerLayer,
+    smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
+  };
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -365,6 +380,7 @@ function initializeDataLayerInstances(
   isMappingSupported: boolean,
   maximumDataTextureCountForLayer: number,
   smallestCommonBucketCapacity: number,
+  maximumLayerCountToRender: number,
 } {
   const { dataset } = Store.getState();
   const layers = dataset.dataSource.dataLayers;
@@ -377,6 +393,7 @@ function initializeDataLayerInstances(
     textureInformationPerLayer,
     isMappingSupported,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   } = validateSpecsForLayers(layers, requiredBucketCapacity);
   const maximumDataTextureCountForLayer = _.max(
     Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
@@ -415,6 +432,7 @@ function initializeDataLayerInstances(
     isMappingSupported,
     maximumDataTextureCountForLayer,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   };
 }
 

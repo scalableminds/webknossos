@@ -10,6 +10,7 @@ type GpuSpecs = {
   supportedTextureSize: number,
   maxTextureCount: number,
 };
+const lookupTextureCountPerLayer = 1;
 
 export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
@@ -18,6 +19,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
     : ctxName => ({
         MAX_TEXTURE_SIZE: 0,
         MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
+        MAX_TEXTURE_IMAGE_UNITS: 1,
         getParameter(param) {
           return ctxName === "webgl" && param === 0 ? 4096 : 8192;
         },
@@ -31,7 +33,10 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxCombinedTextureImageUnits = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-  const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+  let maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+
+  // console.warn("overwriting maxTextureImageUnits");
+  // maxTextureImageUnits = 8;
 
   console.log("maxCombinedTextureImageUnits", maxCombinedTextureImageUnits);
   console.log("maxTextureImageUnits", maxTextureImageUnits);
@@ -43,12 +48,12 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 }
 
 export function validateMinimumRequirements(specs: GpuSpecs): void {
-  // if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
-  //   const msg =
-  //     "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
-  //   Toast.error(msg, { sticky: true });
-  //   throw new Error(msg);
-  // }
+  if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
+    const msg =
+      "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+    Toast.error(msg, { sticky: true });
+    throw new Error(msg);
+  }
 }
 
 export type DataTextureSizeAndCount = {|
@@ -154,7 +159,6 @@ function calculateNecessaryTextureCount<Layer>(
   const layers = Array.from(textureInformationPerLayer.values());
   const totalDataTextureCount = _.sum(layers.map(info => info.textureCount));
 
-  const lookupTextureCountPerLayer = 1;
   const necessaryTextureCount = layers.length * lookupTextureCountPerLayer + totalDataTextureCount;
 
   return necessaryTextureCount;
@@ -180,7 +184,7 @@ function deriveSupportedFeatures<Layer>(
 
   if (necessaryTextureCount > specs.maxTextureCount) {
     console.log("not setting isBasicRenderingSupported to false");
-    // isBasicRenderingSupported = false;
+    isBasicRenderingSupported = false;
   }
 
   // Count textures needed for mappings separately, because they are not strictly necessary
@@ -210,6 +214,20 @@ function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
   return _.min(capacities);
 }
 
+function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLayer) {
+  // Find out which layer needs the most textures. We assume that value uniformly for all layers,
+  // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
+  // here, but this would be harder to understand for the user and also more complex to maintain the cde.
+  const maximumTextureCountForLayer = _.max(
+    Array.from(textureInformationPerLayer.values()).map(
+      (sizeAndCount: DataTextureSizeAndCount) => sizeAndCount.textureCount,
+    ),
+  );
+  return Math.floor(
+    specs.maxTextureCount / (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+  );
+}
+
 export function computeDataTexturesSetup<Layer>(
   specs: GpuSpecs,
   // $FlowFixMe
@@ -225,6 +243,8 @@ export function computeDataTexturesSetup<Layer>(
     requiredBucketCapacity,
   );
   const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
+  const maximumLayerCountToRender = getRenderSupportedLayerCount(specs, textureInformationPerLayer);
+  console.log("maximumLayerCountToRender", maximumLayerCountToRender);
 
   const { isBasicRenderingSupported, isMappingSupported } = deriveSupportedFeatures(
     specs,
@@ -237,6 +257,7 @@ export function computeDataTexturesSetup<Layer>(
     isMappingSupported,
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   };
 }
 

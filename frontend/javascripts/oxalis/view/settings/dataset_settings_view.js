@@ -249,7 +249,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     };
 
     return (
-      <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
+      <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>

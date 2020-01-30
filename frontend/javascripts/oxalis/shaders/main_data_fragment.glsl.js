@@ -46,7 +46,7 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 export default function getMainFragmentShader(params: Params) {
   const { hasSegmentation } = params;
 
-  const colorLayerNames = params.colorLayerNames.slice(0, 4);
+  const colorLayerNames = params.colorLayerNames;
 
   return _.template(
     `

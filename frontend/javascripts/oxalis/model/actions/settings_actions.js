@@ -45,6 +45,7 @@ type InitializeGpuSetupAction = {
   type: "INITIALIZE_GPU_SETUP",
   bucketCapacity: number,
   gpuFactor: number,
+  maximumLayerCountToRender: number,
 };
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
@@ -161,8 +162,10 @@ export const setMappingAction = (
 export const initializeGpuSetupAction = (
   bucketCapacity: number,
   gpuFactor: number,
+  maximumLayerCountToRender: number,
 ): InitializeGpuSetupAction => ({
   type: "INITIALIZE_GPU_SETUP",
   bucketCapacity,
   gpuFactor,
+  maximumLayerCountToRender,
 });

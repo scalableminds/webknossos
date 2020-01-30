@@ -143,6 +143,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         gpuSetup: {
           smallestCommonBucketCapacity: action.bucketCapacity,
           initializedGpuFactor: action.gpuFactor,
+          maximumLayerCountToRender: action.maximumLayerCountToRender,
         },
       });
     }

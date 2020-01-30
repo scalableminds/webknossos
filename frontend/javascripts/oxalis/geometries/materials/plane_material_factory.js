@@ -583,17 +583,26 @@ class PlaneMaterialFactory {
     const state = Store.getState();
     const layerSettings = state.datasetConfiguration.layers;
     // todo: remove duplication with saga code
-    const enabledLayers = getColorLayers(state.dataset)
-      .filter(layer => {
-        const settings = layerSettings[layer.name];
-        if (settings == null) {
-          return false;
-        }
-        return !settings.isDisabled;
-      })
-      .map(layer => layer.name);
+    const extractName = layer => layer.name;
+    const [enabledLayers, disabledLayers] = _.partition(getColorLayers(state.dataset), layer => {
+      const settings = layerSettings[layer.name];
+      if (settings == null) {
+        return false;
+      }
+      return !settings.isDisabled;
+    }).map(layerList => layerList.map(extractName));
 
     console.log("enabledLayers", enabledLayers);
+
+    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers,
+    // append the disabled layers which are not already in that array.
+    // Note that the order of this array is important (earlier elements are more "recently used")
+    // which is why it is important how this operation is done.
+    this.leastRecentlyVisibleLayers = [
+      ...this.leastRecentlyVisibleLayers,
+      ..._.without(disabledLayers, ...this.leastRecentlyVisibleLayers),
+    ];
+
     console.log("this.leastRecentlyVisibleLayers", this.leastRecentlyVisibleLayers);
 
     console.log(

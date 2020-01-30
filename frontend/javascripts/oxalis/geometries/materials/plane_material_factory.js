@@ -580,10 +580,9 @@ class PlaneMaterialFactory {
   }
 
   getLayersForGpu(maximumLayerCountToRender: number) {
-    const colorLayerNames = getColorLayerNames();
-
     const state = Store.getState();
     const layerSettings = state.datasetConfiguration.layers;
+    // todo: remove duplication with saga code
     const enabledLayers = getColorLayers(state.dataset)
       .filter(layer => {
         const settings = layerSettings[layer.name];
@@ -593,8 +592,6 @@ class PlaneMaterialFactory {
         return !settings.isDisabled;
       })
       .map(layer => layer.name);
-
-    // const enabledLayers = _.without(colorLayerNames, ...this.leastRecentlyVisibleLayers);
 
     console.log("enabledLayers", enabledLayers);
     console.log("this.leastRecentlyVisibleLayers", this.leastRecentlyVisibleLayers);

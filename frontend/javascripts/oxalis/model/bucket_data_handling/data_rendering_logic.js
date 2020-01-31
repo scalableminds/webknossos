@@ -174,18 +174,12 @@ function deriveSupportedFeatures<Layer>(
   specs: GpuSpecs,
   textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
   hasSegmentation: boolean,
-): { isMappingSupported: boolean, isBasicRenderingSupported: boolean } {
+): { isMappingSupported: boolean } {
   const necessaryTextureCount = calculateNecessaryTextureCount(textureInformationPerLayer);
 
   let isMappingSupported = true;
-  let isBasicRenderingSupported = true;
 
   console.log("necessaryTextureCount", necessaryTextureCount);
-
-  if (necessaryTextureCount > specs.maxTextureCount) {
-    console.log("not setting isBasicRenderingSupported to false");
-    isBasicRenderingSupported = false;
-  }
 
   // Count textures needed for mappings separately, because they are not strictly necessary
   const notEnoughTexturesForMapping =
@@ -197,7 +191,6 @@ function deriveSupportedFeatures<Layer>(
 
   return {
     isMappingSupported,
-    isBasicRenderingSupported,
   };
 }
 
@@ -246,14 +239,13 @@ export function computeDataTexturesSetup<Layer>(
   const maximumLayerCountToRender = getRenderSupportedLayerCount(specs, textureInformationPerLayer);
   console.log("maximumLayerCountToRender", maximumLayerCountToRender);
 
-  const { isBasicRenderingSupported, isMappingSupported } = deriveSupportedFeatures(
+  const { isMappingSupported } = deriveSupportedFeatures(
     specs,
     textureInformationPerLayer,
     hasSegmentation,
   );
 
   return {
-    isBasicRenderingSupported,
     isMappingSupported,
     textureInformationPerLayer,
     smallestCommonBucketCapacity,

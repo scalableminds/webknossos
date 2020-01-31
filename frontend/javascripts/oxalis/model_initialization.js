@@ -180,7 +180,6 @@ function validateSpecsForLayers(
   const {
     isMappingSupported,
     textureInformationPerLayer,
-    isBasicRenderingSupported,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
   } = computeDataTexturesSetup(
@@ -190,14 +189,6 @@ function validateSpecsForLayers(
     hasSegmentation,
     requiredBucketCapacity,
   );
-
-  if (!isBasicRenderingSupported) {
-    const message = `Your hardware does not support rendering of all ${
-      layers.length
-    } layers. Instead, only ${maximumLayerCountToRender} will be rendered simultaneously. You can disable layers in the settings sidebar to influence which layers should be rendered.`;
-    Toast.error(message, { sticky: true });
-    // throw new Error(message);
-  }
 
   if (!isMappingSupported) {
     const message = messages["mapping.too_few_textures"];

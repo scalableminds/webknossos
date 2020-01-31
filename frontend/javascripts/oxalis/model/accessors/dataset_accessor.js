@@ -281,6 +281,30 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
 }
 
+export function getEnabledColorLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+  invert: boolean = false,
+): Array<DataLayerType> {
+  const colorLayers = getColorLayers(dataset);
+  const layerSettings = datasetConfiguration.layers;
+
+  return colorLayers.filter(layer => {
+    const settings = layerSettings[layer.name];
+    if (settings == null) {
+      return false;
+    }
+    return !settings.isDisabled !== invert;
+  });
+}
+
+export function isSegmentationLayerEnabled(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+): boolean {
+  return !datasetConfiguration.isSegmentationDisabled;
+}
+
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;

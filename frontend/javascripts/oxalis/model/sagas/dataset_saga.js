@@ -1,10 +1,12 @@
 // @flow
-import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import { type Saga, _takeEvery, select } from "oxalis/model/sagas/effect-generators";
+import {
+  getEnabledColorLayers,
+  isSegmentationLayerEnabled,
+} from "oxalis/model/accessors/dataset_accessor";
+import Toast from "libs/toast";
 import messages from "messages";
 
-// import { type Saga, select, take } from "oxalis/model/sagas/effect-generators";
-import Toast from "libs/toast";
 // import messages from "messages";
 
 export function* watchIsScratchSaga(): Saga<void> {
@@ -17,19 +19,21 @@ export function* watchIsScratchSaga(): Saga<void> {
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const allLayers = yield* select(state => getColorLayers(state.dataset));
-    const layerSettings = yield* select(state => state.datasetConfiguration.layers);
     const maximumLayerCountToRender = yield* select(
       state => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
     );
 
-    const enabledLayerCount = allLayers.filter(layer => {
-      const settings = layerSettings[layer.name];
-      if (settings == null) {
-        return false;
-      }
-      return !settings.isDisabled;
-    }).length;
+    const enabledLayerCount = yield* select(state => {
+      const colorLayerCount = getEnabledColorLayers(state.dataset, state.datasetConfiguration)
+        .length;
+      const enabledSegmentationCount = isSegmentationLayerEnabled(
+        state.dataset,
+        state.datasetConfiguration,
+      )
+        ? 1
+        : 0;
+      return colorLayerCount + enabledSegmentationCount;
+    });
 
     if (enabledLayerCount > maximumLayerCountToRender) {
       Toast.error(messages["webgl.too_many_active_layers"]({ maximumLayerCountToRender }), {
@@ -41,5 +45,5 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
     }
   }
 
-  yield _takeEvery("UPDATE_LAYER_SETTING", warnMaybe);
+  yield _takeEvery(["WK_READY", "UPDATE_LAYER_SETTING", "UPDATE_DATASET_SETTING"], warnMaybe);
 }

@@ -24,6 +24,7 @@ import {
   getByteCount,
   getElementClass,
   getBoundaries,
+  getEnabledColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -578,15 +579,16 @@ class PlaneMaterialFactory {
   }, RECOMPILATION_THROTTLE_TIME);
 
   getLayersToRender(maximumLayerCountToRender: number) {
-    // This function determines which for which layers
+    // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
-    // Otherwise, we prioritize which layers to render by taking
+    // Otherwise, we prioritize layers to render by taking
     // into account (a) which layers are activated and (b) which
-    // layers were least-recently activated (but are now disable).
+    // layers were least-recently activated (but are now disabled).
 
-    const state = Store.getState();
-    const colorLayers = getColorLayers(state.dataset);
+    if (maximumLayerCountToRender <= 0) {
+      return [];
+    }
 
     const colorLayerNames = getSanitizedColorLayerNames();
     if (maximumLayerCountToRender >= colorLayerNames.length) {
@@ -594,16 +596,15 @@ class PlaneMaterialFactory {
       return colorLayerNames;
     }
 
-    const layerSettings = state.datasetConfiguration.layers;
-    // todo: remove duplication with saga code
-    const extractName = layer => layer.name;
-    const [enabledLayerNames, disabledLayerNames] = _.partition(colorLayers, layer => {
-      const settings = layerSettings[layer.name];
-      if (settings == null) {
-        return false;
-      }
-      return !settings.isDisabled;
-    }).map(layerList => layerList.map(extractName));
+    const state = Store.getState();
+    const enabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration).map(
+      layer => layer.name,
+    );
+    const disabledLayerNames = getEnabledColorLayers(
+      state.dataset,
+      state.datasetConfiguration,
+      true,
+    ).map(layer => layer.name);
 
     // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
     // because they were already disabled on page load), append the disabled layers
@@ -640,9 +641,11 @@ class PlaneMaterialFactory {
       maximumLayerCountToRender,
     } = Store.getState().temporaryConfiguration.gpuSetup;
 
-    const colorLayerNames = this.getLayersToRender(maximumLayerCountToRender);
-    const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationLayer = Model.getSegmentationLayer();
+    const colorLayerNames = this.getLayersToRender(
+      maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
+    );
+    const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;

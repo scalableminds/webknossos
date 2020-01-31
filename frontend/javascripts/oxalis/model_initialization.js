@@ -10,7 +10,6 @@ import type {
   ServerVolumeTracing,
 } from "admin/api_flow_types";
 import {
-  type DataTextureSizeAndCount,
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
   validateMinimumRequirements,

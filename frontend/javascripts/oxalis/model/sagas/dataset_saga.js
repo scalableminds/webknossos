@@ -1,17 +1,6 @@
 // @flow
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
-import {
-  type Saga,
-  _take,
-  _takeEvery,
-  _takeLeading,
-  call,
-  fork,
-  put,
-  race,
-  select,
-  take,
-} from "oxalis/model/sagas/effect-generators";
+import { type Saga, _takeEvery, select } from "oxalis/model/sagas/effect-generators";
 import messages from "messages";
 
 // import { type Saga, select, take } from "oxalis/model/sagas/effect-generators";
@@ -43,12 +32,12 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
     }).length;
 
     if (enabledLayerCount > maximumLayerCountToRender) {
-      Toast.error(messages["webgl.too_many_layers"]({ maximumLayerCountToRender }), {
+      Toast.error(messages["webgl.too_many_active_layers"]({ maximumLayerCountToRender }), {
         sticky: true,
-        key: "TOO_MANY_LAYERS",
+        key: "TOO_MANY_ACTIVE_LAYERS",
       });
     } else {
-      Toast.close("TOO_MANY_LAYERS");
+      Toast.close("TOO_MANY_ACTIVE_LAYERS");
     }
   }
 

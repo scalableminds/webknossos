@@ -41,6 +41,8 @@ type ShaderMaterialOptions = {
   polygonOffsetUnits?: number,
 };
 
+const RECOMPILATION_THROTTLE_TIME = 500;
+
 export type Uniforms = {
   [key: string]: {
     type: "b" | "f" | "i" | "t" | "v2" | "v3" | "v4" | "tv",
@@ -58,10 +60,6 @@ function sanitizeName(name: ?string): string {
   // User variable names cannot start with gl_ or contain a double _.
   // Base64 encode the layer name and remove = characters to make sure variable names are valid
   return `layer_${btoa(name).replace(/=+/g, "")}`;
-}
-
-function getColorLayerNames() {
-  return getColorLayers(Store.getState().dataset).map(layer => layer.name);
 }
 
 function getSanitizedColorLayerNames() {
@@ -565,9 +563,9 @@ class PlaneMaterialFactory {
     return this.material;
   }
 
-  recomputeFragmentShader() {
+  recomputeFragmentShader = _.throttle(() => {
     const newShaderCode = this.getFragmentShader();
-    // comparing to this.material.fragmentShader does not work. the code seems
+    // Comparing to this.material.fragmentShader does not work. The code seems
     // to be modified by a third party.
     if (this.oldShaderCode != null && this.oldShaderCode === newShaderCode) {
       return;
@@ -577,14 +575,29 @@ class PlaneMaterialFactory {
     this.material.fragmentShader = newShaderCode;
     this.material.needsUpdate = true;
     window.needsRerender = true;
-  }
+  }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersForGpu(maximumLayerCountToRender: number) {
+  getLayersToRender(maximumLayerCountToRender: number) {
+    // This function determines which for which layers
+    // the shader code should be compiled. If the GPU supports
+    // all layers, we can simply return all layers here.
+    // Otherwise, we prioritize which layers to render by taking
+    // into account (a) which layers are activated and (b) which
+    // layers were least-recently activated (but are now disable).
+
     const state = Store.getState();
+    const colorLayers = getColorLayers(state.dataset);
+
+    const colorLayerNames = getSanitizedColorLayerNames();
+    if (maximumLayerCountToRender >= colorLayerNames.length) {
+      // We can simply render all available layers.
+      return colorLayerNames;
+    }
+
     const layerSettings = state.datasetConfiguration.layers;
     // todo: remove duplication with saga code
     const extractName = layer => layer.name;
-    const [enabledLayers, disabledLayers] = _.partition(getColorLayers(state.dataset), layer => {
+    const [enabledLayerNames, disabledLayerNames] = _.partition(colorLayers, layer => {
       const settings = layerSettings[layer.name];
       if (settings == null) {
         return false;
@@ -592,28 +605,17 @@ class PlaneMaterialFactory {
       return !settings.isDisabled;
     }).map(layerList => layerList.map(extractName));
 
-    console.log("enabledLayers", enabledLayers);
-
-    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers,
-    // append the disabled layers which are not already in that array.
+    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
+    // because they were already disabled on page load), append the disabled layers
+    // which are not already in that array.
     // Note that the order of this array is important (earlier elements are more "recently used")
     // which is why it is important how this operation is done.
     this.leastRecentlyVisibleLayers = [
       ...this.leastRecentlyVisibleLayers,
-      ..._.without(disabledLayers, ...this.leastRecentlyVisibleLayers),
+      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleLayers),
     ];
 
-    console.log("this.leastRecentlyVisibleLayers", this.leastRecentlyVisibleLayers);
-
-    console.log(
-      "rendering",
-      enabledLayers
-        .concat(this.leastRecentlyVisibleLayers)
-        .slice(0, maximumLayerCountToRender)
-        .sort(),
-    );
-
-    return enabledLayers
+    return enabledLayerNames
       .concat(this.leastRecentlyVisibleLayers)
       .slice(0, maximumLayerCountToRender)
       .sort()
@@ -633,7 +635,12 @@ class PlaneMaterialFactory {
   };
 
   getFragmentShader(): string {
-    let colorLayerNames = getSanitizedColorLayerNames();
+    const {
+      initializedGpuFactor,
+      maximumLayerCountToRender,
+    } = Store.getState().temporaryConfiguration.gpuSetup;
+
+    const colorLayerNames = this.getLayersToRender(maximumLayerCountToRender);
     const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
@@ -642,33 +649,21 @@ class PlaneMaterialFactory {
     // Don't compile code for segmentation in arbitrary mode
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    const {
-      initializedGpuFactor,
-      maximumLayerCountToRender,
-    } = Store.getState().temporaryConfiguration.gpuSetup;
     const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
-    // deal with segmentation (should probably be prioritized always?)
-    if (maximumLayerCountToRender < colorLayerNames.length) {
-      colorLayerNames = this.getLayersForGpu(maximumLayerCountToRender);
-    }
-
-    const fparams = {
+    return getMainFragmentShader({
       colorLayerNames,
       packingDegreeLookup,
       hasSegmentation,
       segmentationName,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
+      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
-    };
-
-    const code = getMainFragmentShader(fparams);
-    return code;
+    });
   }
 
   getVertexShader(): string {

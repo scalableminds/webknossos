@@ -179,8 +179,6 @@ function deriveSupportedFeatures<Layer>(
 
   let isMappingSupported = true;
 
-  console.log("necessaryTextureCount", necessaryTextureCount);
-
   // Count textures needed for mappings separately, because they are not strictly necessary
   const notEnoughTexturesForMapping =
     necessaryTextureCount + calculateMappingTextureCount() > specs.maxTextureCount;
@@ -208,17 +206,20 @@ function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
 }
 
 function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLayer) {
-  // Find out which layer needs the most textures. We assume that value uniformly for all layers,
+  // Find out which layer needs the most textures. We assume that value is equal for all layers
   // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
-  // here, but this would be harder to understand for the user and also more complex to maintain the cde.
+  // here (because some layers might need fewer textures), but this would be harder to communicate to
+  // the user and also more complex to maintain code-wise.
   const maximumTextureCountForLayer = _.max(
     Array.from(textureInformationPerLayer.values()).map(
       (sizeAndCount: DataTextureSizeAndCount) => sizeAndCount.textureCount,
     ),
   );
-  return Math.floor(
+  const maximumLayerCountToRender = Math.floor(
     specs.maxTextureCount / (lookupTextureCountPerLayer + maximumTextureCountForLayer),
   );
+
+  return { maximumLayerCountToRender, maximumTextureCountForLayer };
 }
 
 export function computeDataTexturesSetup<Layer>(
@@ -236,7 +237,10 @@ export function computeDataTexturesSetup<Layer>(
     requiredBucketCapacity,
   );
   const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
-  const maximumLayerCountToRender = getRenderSupportedLayerCount(specs, textureInformationPerLayer);
+  const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
+    specs,
+    textureInformationPerLayer,
+  );
   console.log("maximumLayerCountToRender", maximumLayerCountToRender);
 
   const { isMappingSupported } = deriveSupportedFeatures(
@@ -250,6 +254,7 @@ export function computeDataTexturesSetup<Layer>(
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
+    maximumTextureCountForLayer,
   };
 }
 

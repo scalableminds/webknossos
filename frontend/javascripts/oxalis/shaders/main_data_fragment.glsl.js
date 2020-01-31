@@ -46,8 +46,6 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 export default function getMainFragmentShader(params: Params) {
   const { hasSegmentation } = params;
 
-  const colorLayerNames = params.colorLayerNames;
-
   return _.template(
     `
 precision highp float;
@@ -217,12 +215,12 @@ void main() {
   `,
   )({
     ...params,
-    layerNamesWithSegmentation: colorLayerNames.concat(
+    layerNamesWithSegmentation: params.colorLayerNames.concat(
       params.hasSegmentation ? [params.segmentationName] : [],
     ),
     // Since we concat the segmentation to the color layers, its index is equal
     // to the length of the colorLayer array
-    segmentationLayerIndex: colorLayerNames.length,
+    segmentationLayerIndex: params.colorLayerNames.length,
     segmentationPackingDegree: params.hasSegmentation
       ? formatNumberAsGLSLFloat(params.packingDegreeLookup[params.segmentationName])
       : 0.0,

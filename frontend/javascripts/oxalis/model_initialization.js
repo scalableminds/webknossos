@@ -84,7 +84,7 @@ export async function initialize(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
@@ -164,25 +164,12 @@ async function fetchParallel(
   ]);
 }
 
-function validateSpecsForLayers(
-  layers: Array<APIDataLayer>,
-  requiredBucketCapacity: number,
-): {
-  textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
-  isMappingSupported: boolean,
-  smallestCommonBucketCapacity: number,
-  maximumLayerCountToRender: number,
-} {
+function validateSpecsForLayers(layers: Array<APIDataLayer>, requiredBucketCapacity: number): * {
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
 
   const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
-  const {
-    isMappingSupported,
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-  } = computeDataTexturesSetup(
+  const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
     layer => getBitDepth(layer) >> 3,
@@ -190,19 +177,14 @@ function validateSpecsForLayers(
     requiredBucketCapacity,
   );
 
-  if (!isMappingSupported) {
+  if (!setupDetails.isMappingSupported) {
     const message = messages["mapping.too_few_textures"];
     console.warn(message);
   }
 
   maybeWarnAboutUnsupportedLayers(layers);
 
-  return {
-    isMappingSupported,
-    textureInformationPerLayer,
-    smallestCommonBucketCapacity,
-    maximumLayerCountToRender,
-  };
+  return setupDetails;
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -369,7 +351,7 @@ function initializeDataLayerInstances(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
   smallestCommonBucketCapacity: number,
   maximumLayerCountToRender: number,
 } {
@@ -385,10 +367,8 @@ function initializeDataLayerInstances(
     isMappingSupported,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
+    maximumTextureCountForLayer,
   } = validateSpecsForLayers(layers, requiredBucketCapacity);
-  const maximumDataTextureCountForLayer = _.max(
-    Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
-  );
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
@@ -421,7 +401,7 @@ function initializeDataLayerInstances(
     dataLayers,
     connectionInfo,
     isMappingSupported,
-    maximumDataTextureCountForLayer,
+    maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
     maximumLayerCountToRender,
   };

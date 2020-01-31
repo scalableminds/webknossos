@@ -11,13 +11,18 @@ import UserSettingsView from "oxalis/view/settings/user_settings_view";
 
 const TabPane = Tabs.TabPane;
 
-const SettingsView = () => (
-  <Tabs destroyInactiveTabPane className="tracing-settings-menu">
+type Props = {
+  dontRenderContents: boolean,
+};
+
+const SettingsView = ({ dontRenderContents }: Props) => (
+  // Don't render contents to improve performance
+  <Tabs destroyInactiveTabPane className="tracing-settings-menu" defaultActiveKey="2">
     <TabPane tab="Tracing" key="1">
-      <UserSettingsView />
+      {!dontRenderContents && <UserSettingsView />}
     </TabPane>
     <TabPane tab="Dataset" key="2">
-      <DatasetSettingsView />
+      {!dontRenderContents && <DatasetSettingsView />}
     </TabPane>
   </Tabs>
 );

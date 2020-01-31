@@ -13,7 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
 ### Changed
--
+- Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)
 
 ### Fixed
 -

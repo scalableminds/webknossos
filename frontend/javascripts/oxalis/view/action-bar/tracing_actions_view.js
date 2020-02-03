@@ -313,7 +313,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           </AsyncButton>,
         ];
 
-    const finishAndNextTaskButtonWidth = restrictions.allowFinish && this.props.task ? 196 : 0;
     const finishAndNextTaskButton =
       restrictions.allowFinish && this.props.task ? (
         <ButtonComponent

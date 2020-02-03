@@ -33,7 +33,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxCombinedTextureImageUnits = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-  let maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+  const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
   // console.warn("overwriting maxTextureImageUnits");
   // maxTextureImageUnits = 8;

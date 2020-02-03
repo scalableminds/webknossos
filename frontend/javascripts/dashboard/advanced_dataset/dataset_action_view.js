@@ -59,7 +59,11 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({ isReloading: true });
     await clearCache(dataset);
-    Toast.success(messages["dataset.clear_cache_success"]);
+    Toast.success(
+      messages["dataset.clear_cache_success"]({
+        datasetName: dataset.name,
+      }),
+    );
     this.setState({ isReloading: false });
   };
 
@@ -69,11 +73,22 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     const centerBackgroundImageStyle = {
       verticalAlign: "middle",
     };
+    if (isReloading) {
+      // We need to explicitly grayscale the images when the dataset is being reloaded.
+      centerBackgroundImageStyle.filter = "grayscale(100%) opacity(25%)";
+    }
+    const disabledWhenReloadingStyle = isReloading
+      ? { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" }
+      : null;
+    const disabledWhenReloadingAction = e => (isReloading ? e.preventDefault() : null);
+    const waitUntilReloadingFinishedDescription =
+      "You have to wait until this dataset finished reloading.";
 
     const volumeTracingMenu = (
       <Dropdown
         overlay={createTracingOverlayMenu(dataset, "volume", this.createTracing)}
         trigger={["click"]}
+        disabled={isReloading}
       >
         <a href="#" title="Create Volume Tracing">
           <img
@@ -90,6 +105,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <Dropdown
         overlay={createTracingOverlayMenu(dataset, "hybrid", this.createTracing)}
         trigger={["click"]}
+        disabled={isReloading}
       >
         <a href="#" title="Create Hybrid (Skeleton + Volume) Tracing">
           <Icon type="swap" />
@@ -119,13 +135,9 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                  title={
-                    isReloading
-                      ? "You have to wait with the editing until this dataset is reloaded."
-                      : "Edit Dataset"
-                  }
-                  style={isReloading ? { textDecoration: "line-through" } : null}
-                  onClick={e => (isReloading ? e.preventDefault() : null)}
+                  title={isReloading ? waitUntilReloadingFinishedDescription : "Edit Dataset"}
+                  style={disabledWhenReloadingStyle}
+                  onClick={disabledWhenReloadingAction}
                 >
                   <Icon type="edit" />
                   Edit
@@ -134,8 +146,8 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   <a
                     href="#"
                     onClick={() => this.clearCache(dataset)}
-                    title="Reload Dataset"
-                    style={isReloading ? { pointerEvents: "none" } : null}
+                    title={isReloading ? waitUntilReloadingFinishedDescription : "Reload Dataset"}
+                    style={disabledWhenReloadingStyle}
                   >
                     {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
                     Reload
@@ -145,7 +157,9 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             ) : null}
             <Link
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-              title="View Dataset"
+              title={isReloading ? waitUntilReloadingFinishedDescription : "View Dataset"}
+              style={disabledWhenReloadingStyle}
+              onClick={disabledWhenReloadingAction}
             >
               <Icon type="eye-o" />
               View
@@ -154,8 +168,15 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <a
                   href="#"
-                  onClick={() => this.createTracing(dataset, "skeleton", false)}
-                  title="Create Skeleton Tracing"
+                  style={disabledWhenReloadingStyle}
+                  onClick={e =>
+                    isReloading
+                      ? e.preventDefault()
+                      : this.createTracing(dataset, "skeleton", false)
+                  }
+                  title={
+                    isReloading ? waitUntilReloadingFinishedDescription : "Create Skeleton Tracing"
+                  }
                 >
                   <img
                     src="/assets/images/skeleton.svg"
@@ -168,7 +189,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 {hybridTracingMenu}
               </React.Fragment>
             ) : (
-              <p>
+              <p style={disabledWhenReloadingStyle}>
                 Start Tracing &nbsp;
                 <Tooltip title="Cannot create tracings for read-only datasets">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />

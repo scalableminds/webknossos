@@ -40,6 +40,39 @@ services:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
+  webknossos-public:
+    build: .
+    image: scalableminds/webknossos:${DOCKER_TAG:-master}
+    ports:
+      - "9000:9000"
+    links:
+      - "fossildb-persisted:fossildb"
+      - "postgres-persisted:postgres"
+    depends_on:
+      postgres-persisted:
+        condition: service_healthy
+      fossildb-persisted:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      - -Dconfig.file=conf/application.conf
+      - -Djava.net.preferIPv4Stack=true
+      - -Dhttp.address=0.0.0.0
+      - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
+      - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
+      - -Dapplication.insertInitialData=false
+      - -Dapplication.authentication.enableDevAutoLogin=false
+      - -Dhttp.uri=${PUBLIC_URI}
+      - -Dtracingstore.publicUrl=${PUBLIC_URI}
+      - -Ddatastore.publicUrl=${PUBLIC_URI}
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
+
   webknossos-datastore:
     build: webknossos-datastore
     image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}

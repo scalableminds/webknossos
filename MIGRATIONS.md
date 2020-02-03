@@ -11,7 +11,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 -
 
 ## [20.2.0](https://github.com/scalableminds/webknossos/releases/tag/20.2.0) - 2020-01-27
-No migrations necessary.
+### Postgres Evolutions:
+- [050-add-annotation-visibility-enum.sql](conf/evolutions/050-add-annotation-visibility-enum.sql)
 
 ## [20.1.0](https://github.com/scalableminds/webknossos/releases/tag/20.1.0) - 2020-01-08
 - The initial organization was renamed to `sample_organization`. Make sure to move the data over or to put a symlink in place.
@@ -20,7 +21,6 @@ No migrations necessary.
 
 ### Postgres Evolutions:
 - [049-annotation-listed-teams.sql](conf/evolutions/049-annotation-listed-teams.sql)
-- [050-add-annotation-visibility-enum.sql](conf/evolutions/050-add-annotation-visibility-enum.sql)
 
 
 ## [19.12.0](https://github.com/scalableminds/webknossos/releases/tag/19.12.0) - 2019-11-25

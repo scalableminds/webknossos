@@ -303,6 +303,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     alignItems: "center",
     color: "rgba(255, 255, 255, 0.67)",
     background: "#001529",
+    whiteSpace: "nowrap",
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;

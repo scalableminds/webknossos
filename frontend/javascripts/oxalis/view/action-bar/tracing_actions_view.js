@@ -268,22 +268,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     const archiveButtonText = this.props.task ? "Finish and go to Dashboard" : "Archive";
     const { restrictions } = this.props;
 
-    let saveButtonMinWidth = 0;
-    if (restrictions.allowUpdate) {
-      if (isSkeletonMode) {
-        // We do not need to add the redo button, as it is hidden on small screens.
-        saveButtonMinWidth += 34;
-      }
-      if (restrictions.allowSave) {
-        // We only need to add the width of the icon, as the text "Sandbox" is hidden on small screens.
-        saveButtonMinWidth += 46;
-      } else {
-        saveButtonMinWidth += 46;
-      }
-    } else {
-      saveButtonMinWidth += 96 + 182;
-    }
-
     const saveButton = restrictions.allowUpdate
       ? [
           isSkeletonMode
@@ -430,11 +414,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     const menu = <Menu>{elements}</Menu>;
-    const dropdownMenuWidth = 34;
-    const totalTracingActionButtonsWidth =
-      saveButtonMinWidth + finishAndNextTaskButtonWidth + dropdownMenuWidth;
     return (
-      <div style={{ minWidth: totalTracingActionButtonsWidth }}>
+      <div>
         <Button.Group>
           {saveButton}
           {finishAndNextTaskButton}

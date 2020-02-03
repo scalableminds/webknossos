@@ -18,10 +18,25 @@ export function getSupportedTextureSpecs(): GpuSpecs {
     ? x => canvas.getContext(x)
     : ctxName => ({
         MAX_TEXTURE_SIZE: 0,
-        MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
         MAX_TEXTURE_IMAGE_UNITS: 1,
         getParameter(param) {
-          return ctxName === "webgl" && param === 0 ? 4096 : 8192;
+          if (ctxName === "webgl") {
+            const dummyValues = {
+              "0": 4096,
+              "1": 16,
+              "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
+            };
+            return dummyValues[param];
+          }
+          throw new Error(`Unknown call to getParameter: ${param}`);
+        },
+        getExtension(param) {
+          if (param === "WEBGL_debug_renderer_info") {
+            return {
+              UNMASKED_RENDERER_WEBGL: 4,
+            };
+          }
+          throw new Error(`Unknown call to getExtension: ${param}`);
         },
       });
 
@@ -32,19 +47,32 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   }
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-  const maxCombinedTextureImageUnits = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
   // console.warn("overwriting maxTextureImageUnits");
   // maxTextureImageUnits = 8;
 
-  console.log("maxCombinedTextureImageUnits", maxCombinedTextureImageUnits);
   console.log("maxTextureImageUnits", maxTextureImageUnits);
 
   return {
     supportedTextureSize,
-    maxTextureCount: Math.min(maxTextureImageUnits, maxCombinedTextureImageUnits),
+    maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
   };
+}
+
+function guardAgainstMesaLimit(maxSamplers, gl) {
+  // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
+
+  const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+
+  // Mesa drivers may crash with more than 16 samplers and Firefox
+  // will actively refuse to create shaders with more than 16 samplers.
+  if (renderer.slice(0, 4).toUpperCase() === "MESA") {
+    maxSamplers = Math.min(16, maxSamplers);
+  }
+
+  return maxSamplers;
 }
 
 export function validateMinimumRequirements(specs: GpuSpecs): void {

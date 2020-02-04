@@ -19,7 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
--
+- Fixed a bug that allowed to remove the initial tree in a skeleton or hybrid tracing using `Ctrl+Z`. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
 
 ### Removed
 -

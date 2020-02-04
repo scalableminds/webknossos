@@ -1048,8 +1048,10 @@ class DataApi {
   getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
     console.warn(
       `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
-        To still access them use the segmentation layers settings. This object has the properties "alpha" and "isDisabled".
-        Use "const segmentationLayerSettings = api.data.getConfiguration('layers')[<segmentationLayerName>]" to access these properties.`,
+      Instead, they are part of the segmentation layer configuration and can be accessed as follows: 
+      "const layerSettings = api.data.getConfiguration('layers');
+      const segmentationOpacity = layerSettings[segmentationLayerName].alpha;
+      const isSegmentationDisabled = layerSettings[segmentationLayerName].isDisabled;"`,
     );
     switch (key) {
       case "segmentationOpacity": {
@@ -1079,10 +1081,12 @@ class DataApi {
    */
   setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
     console.warn(
-      `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. To still set 
-      them use the segmentation "layers" configuration. This object has settings for the segmentation layer with the properties "alpha" 
-      and "isDisabled". Use "const layerSettings = api.data.getConfiguration('layers'); layerSettings[<segmentationLayerName>].alpha = 40;
-      api.data.setConfiguration('layers', layerSettings);" to set these properties.`,
+      `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
+      Instead, they are part of the segmentation layer configuration and can be set as follows: 
+      "const layerSettings = api.data.getConfiguration('layers');
+      layerSettings[<segmentationLayerName>].alpha = 40;
+      layerSettings[<segmentationLayerName>].isDisabled = false; 
+      api.data.setConfiguration('layers', layerSettings);"`,
     );
     switch (key) {
       case "segmentationOpacity": {

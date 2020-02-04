@@ -170,6 +170,8 @@ In order to restore the current window, a reload is necessary.`,
     "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
+  "annotation.no_fallback_data_included":
+    "This download does only include the volume data annotated in this annotation. The fallback volume data is excluded.",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
@@ -182,6 +184,8 @@ In order to restore the current window, a reload is necessary.`,
     "All active tasks were transferred to the selected user",
   "project.unsuccessful_active_tasks_transfer":
     "An error occurred while trying to transfer the tasks. Please check your permissions and the server logs",
+  "project.no_fallback_data_included":
+    "This download does only include the volume data annotated in the tasks of this project. The fallback volume data is excluded.",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",

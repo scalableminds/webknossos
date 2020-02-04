@@ -11,13 +11,14 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Added support for setting view configuration defaults in the `datasource-properties.json`. Use the `defaultViewConfiguration` field for Dataset settings and the `defaultViewConfiguration` field inside a layer for layer-specific settings. [#4357](https://github.com/scalableminds/webknossos/pull/4357)
-
-  
+- Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 
 ### Changed
--
+- Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
+- Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)
 
 ### Fixed
+- Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
 -
 
 ### Removed

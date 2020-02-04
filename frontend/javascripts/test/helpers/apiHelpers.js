@@ -112,7 +112,9 @@ let counter = 0;
 // important mocks. The leading underscores are there to make the import
 // appear at the top when sorting the imports with importjs.
 export function __setupOxalis(t, mode, apiVersion) {
-  UrlManager.initialState = { position: [1, 2, 3] };
+  UrlManager.initialState = {
+    position: [1, 2, 3],
+  };
   t.context.model = Model;
 
   const webknossos = new OxalisApi(Model);
@@ -125,6 +127,11 @@ export function __setupOxalis(t, mode, apiVersion) {
   const datasetClone = _.cloneDeep(DATASET);
 
   Request.receiveJSON
+    .withArgs(
+      `http://localhost:9000/data/datasets/Connectomics department/ROI2017_wkw/layers/color/mappings?token=${TOKEN}`,
+    )
+    .returns(Promise.resolve({}));
+  Request.receiveJSON
     .withArgs(`/api/datasets/${organizationName}/${ANNOTATION.dataSetName}`)
     // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
@@ -134,13 +141,22 @@ export function __setupOxalis(t, mode, apiVersion) {
     .returns(Promise.resolve(datasetClone));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
-    .withArgs("/api/userToken/generate", { method: "POST" })
-    .returns(Promise.resolve({ token: TOKEN }));
+    .withArgs("/api/userToken/generate", {
+      method: "POST",
+    })
+    .returns(
+      Promise.resolve({
+        token: TOKEN,
+      }),
+    );
   Request.receiveJSON.returns(Promise.resolve({}));
 
   return Model.fetch(
     ANNOTATION_TYPE,
-    { annotationId: ANNOTATION_ID, type: ControlModeEnum.TRACE },
+    {
+      annotationId: ANNOTATION_ID,
+      type: ControlModeEnum.TRACE,
+    },
     true,
   )
     .then(() => {

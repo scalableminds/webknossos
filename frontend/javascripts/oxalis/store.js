@@ -15,6 +15,7 @@ import type {
   APIDataStore,
   APIDataset,
   APIDatasetId,
+  APIHistogramData,
   APIRestrictions,
   APIScript,
   APISettings,
@@ -276,7 +277,12 @@ export type RecommendedConfiguration = $Shape<{
 
 export type Mapping = { [key: number]: number };
 
+export type HistogramDataForAllLayers = {
+  [name: string]: APIHistogramData,
+};
+
 export type TemporaryConfiguration = {
+  +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,

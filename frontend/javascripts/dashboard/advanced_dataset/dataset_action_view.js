@@ -70,7 +70,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   render() {
     const { dataset } = this.props;
     const { isReloading } = this.state;
-    const centerBackgroundImageStyle = {
+    const centerBackgroundImageStyle: { verticalAlign: string, filter?: string } = {
       verticalAlign: "middle",
     };
     if (isReloading) {

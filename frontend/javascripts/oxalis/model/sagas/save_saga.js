@@ -67,8 +67,9 @@ export function* collectUndoStates(): Saga<void> {
     });
     const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
     if (userAction) {
-      if (curTracing !== prevTracing) {
-        // Clear the redo stack when a new action is executed
+      const previousTracingHasTrees = Object.entries(prevTracing.trees).length < 0;
+      if (curTracing !== prevTracing && previousTracingHasTrees) {
+        // Clear the redo stack when a new action is executed.
         redoStack.splice(0);
         undoStack.push(prevTracing);
         if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
@@ -90,7 +91,7 @@ export function* collectUndoStates(): Saga<void> {
         Toast.info(messages["undo.no_redo"]);
       }
     }
-    // We need the updated tracing here
+    // We need the updated tracing here.
     prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
   }
 }

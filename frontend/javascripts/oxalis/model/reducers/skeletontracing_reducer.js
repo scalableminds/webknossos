@@ -41,6 +41,23 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "libs/user_settings.schema";
 
+function createTreeAndUpdate(state: OxalisState, timestamp: number) {
+  return createTree(state, timestamp)
+    .map(tree =>
+      update(state, {
+        tracing: {
+          skeleton: {
+            trees: { [tree.treeId]: { $set: tree } },
+            activeNodeId: { $set: null },
+            activeTreeId: { $set: tree.treeId },
+            activeGroupId: { $set: null },
+          },
+        },
+      }),
+    )
+    .getOrElse(state);
+}
+
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;
   switch (action.type) {
@@ -282,20 +299,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "CREATE_TREE": {
           const { timestamp } = action;
-          return createTree(state, timestamp)
-            .map(tree =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: { [tree.treeId]: { $set: tree } },
-                    activeNodeId: { $set: null },
-                    activeTreeId: { $set: tree.treeId },
-                    activeGroupId: { $set: null },
-                  },
-                },
-              }),
-            )
-            .getOrElse(state);
+          return createTreeAndUpdate(state, timestamp);
         }
 
         case "ADD_TREES_AND_GROUPS": {
@@ -556,13 +560,19 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_TRACING": {
-          return update(state, {
+          const { tracing } = action;
+          const newState = update(state, {
             tracing: {
               skeleton: {
-                $set: update(action.tracing, { version: { $set: skeletonTracing.version } }),
+                $set: update(tracing, { version: { $set: skeletonTracing.version } }),
               },
             },
           });
+          if (Object.entries(tracing.trees).length > 0) {
+            return newState;
+          }
+          // There are no trees in this tracing, thus we add one to enforce that atleast one tree always exists.
+          return createTreeAndUpdate(newState, Date.now());
         }
 
         case "TOGGLE_TREE": {

@@ -153,8 +153,7 @@
           "isDisabled": { "type": "boolean" },
           "isInverted": { "type": "boolean" },
           "alpha": { "type": "number" }
-        },
-        "required": ["color"]
+        }
       }
     }
   }

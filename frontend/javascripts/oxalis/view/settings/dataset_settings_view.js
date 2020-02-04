@@ -268,8 +268,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerConfiguration: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that every layer needs a layer configuration.
-    if (!layerConfiguration) {
+    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);

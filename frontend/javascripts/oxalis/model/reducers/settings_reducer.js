@@ -92,7 +92,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
-              alpha: layer.category === "color" ? 20 : 100,
+              alpha: layer.category === "color" ? 100 : 20,
               intensityRange: [0, 255],
               isDisabled: false,
               isInverted: false,

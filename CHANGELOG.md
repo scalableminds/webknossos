@@ -14,9 +14,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)
 
 ### Fixed
 - Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
 
 ### Removed
 -

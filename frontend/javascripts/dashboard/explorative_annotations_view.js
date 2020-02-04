@@ -209,7 +209,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (tracing.typ !== "Explorational") {
       return null;
     }
-
+    const hasVolumeTracing = tracing.tracing.volume != null;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
@@ -219,7 +219,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             Trace
           </Link>
           <br />
-          <AsyncLink href="#" onClick={() => downloadNml(id, typ)}>
+          <AsyncLink href="#" onClick={() => downloadNml(id, typ, hasVolumeTracing)}>
             <Icon type="download" />
             Download
           </AsyncLink>

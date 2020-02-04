@@ -294,6 +294,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
 
   const navbarStyle: Object = {
     padding: 0,
+    overflowX: "auto",
     position: "fixed",
     width: "100%",
     zIndex: 1000,
@@ -302,6 +303,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     alignItems: "center",
     color: "rgba(255, 255, 255, 0.67)",
     background: "#001529",
+    whiteSpace: "nowrap",
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;

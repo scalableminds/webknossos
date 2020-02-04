@@ -18,7 +18,9 @@ import {
   pauseProject,
   resumeProject,
   downloadNml,
+  getTasks,
 } from "admin/admin_rest_api";
+import Toast from "libs/toast";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
@@ -313,7 +315,17 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                     <br />
                     <AsyncLink
                       href="#"
-                      onClick={() => downloadNml(project.id, "CompoundProject")}
+                      onClick={async () => {
+                        downloadNml(project.id, "CompoundProject");
+                        const tasks = await getTasks({
+                          project: project.name,
+                        });
+                        if (tasks.some(task => task.type.tracingType !== "skeleton")) {
+                          Toast.info(messages["project.no_fallback_data_included"], {
+                            timeout: 12000,
+                          });
+                        }
+                      }}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />

@@ -254,7 +254,13 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         ) : null}
         {isAdmin ? (
           <div>
-            <AsyncLink href="#" onClick={() => downloadNml(annotation.id, "Task")}>
+            <AsyncLink
+              href="#"
+              onClick={() => {
+                const isVolumeIncluded = annotation.tracing.volume != null;
+                return downloadNml(annotation.id, "Task", isVolumeIncluded);
+              }}
+            >
               <Icon type="download" />
               Download
             </AsyncLink>

@@ -554,7 +554,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
-    const noTrees = _.size(trees) == 0;
+    const noTrees = _.size(trees) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     // Avoid that the title switches to the other title during the fadeout of the Modal

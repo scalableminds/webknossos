@@ -35,6 +35,7 @@ import features from "features";
 
 type OwnProps = {|
   layoutMenu: React.Node,
+  hasVolume: boolean,
 |};
 type StateProps = {|
   annotationType: APIAnnotationType,
@@ -262,7 +263,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleDownload = async () => {
     await Model.ensureSavedState();
-    downloadNml(this.props.annotationId, this.props.annotationType);
+    const { annotationId, annotationType, hasVolume } = this.props;
+    downloadNml(annotationId, annotationType, hasVolume);
   };
 
   handleFinishAndGetNextTask = async () => {
@@ -472,7 +474,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     }
 
     const menu = <Menu>{elements}</Menu>;
-
     return (
       <div>
         <Button.Group>

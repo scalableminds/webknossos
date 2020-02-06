@@ -107,8 +107,11 @@ class VersionList extends React.Component<Props, State> {
       Store.dispatch(setVersionRestoreVisibilityAction(false));
       Store.dispatch(setAnnotationAllowUpdateAction(true));
     } else {
-      const { annotationType, annotationId } = Store.getState().tracing;
-      downloadNml(annotationId, annotationType, { [this.props.tracingType]: version });
+      const { annotationType, annotationId, volume } = Store.getState().tracing;
+      const includesVolumeData = volume != null;
+      downloadNml(annotationId, annotationType, includesVolumeData, {
+        [this.props.tracingType]: version,
+      });
     }
   };
 

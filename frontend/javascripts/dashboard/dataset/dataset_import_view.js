@@ -23,6 +23,7 @@ import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
+import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
 import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
@@ -136,7 +137,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         this.props.datasetId,
       )) || {
         layers: _.fromPairs(
-          dataSource.dataLayers.map(layer => [layer.name, defaultConfigPerLayer]),
+          dataSource.dataLayers.map(layer => {
+            // Here we adjust the default intensity range depending on the datatype of the layers.
+            // Otherwise, the default max value of the intensity range would always be 255 (which is too small for uint16 for example).
+            // The value can be overwritten by the user configuration (see loadHistorgramData saga)
+            const currentDefaultLayerConfig = _.clone(defaultConfigPerLayer);
+            const intensityRange = getDefaultIntensityRangeOfLayer(dataset, layer.name);
+            currentDefaultLayerConfig.intensityRange = intensityRange;
+            return [layer.name, currentDefaultLayerConfig];
+          }),
         ),
       };
       // Remove unused brightness and contrast config and replace it with intensityRange if needed.

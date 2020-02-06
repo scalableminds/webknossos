@@ -185,22 +185,36 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   modalWrapper: ?HTMLDivElement = null;
+  reopenTimeout: ?TimeoutID;
 
   componentDidUpdate = () => {
     const localStorageEntry = UserLocalStorage.getItem("lastFinishedTask");
     if (this.props.task && localStorageEntry) {
       const { finishedTime } = JSON.parse(localStorageEntry);
-      if (Date.now() - finishedTime < features().taskReopenAllowedFrontend) {
+      const timeSinceFinish = Date.now() - finishedTime;
+      const reopenAllowedTime = features().taskReopenAllowedInSeconds * 1000;
+      if (timeSinceFinish < reopenAllowedTime) {
         this.setState({
           isReopenAllowed: true,
         });
-        setTimeout(
-          () => this.setState({ isReopenAllowed: false }),
-          features().taskReopenAllowedFrontend,
-        );
+        if (this.reopenTimeout != null) {
+          clearTimeout(this.reopenTimeout);
+          this.reopenTimeout = null;
+        }
+        this.reopenTimeout = setTimeout(() => {
+          this.setState({ isReopenAllowed: false });
+          UserLocalStorage.removeItem("lastFinishedTask");
+          this.reopenTimeout = null;
+        }, reopenAllowedTime - timeSinceFinish);
       }
     }
   };
+
+  componentWillUnmount() {
+    if (this.reopenTimeout != null) {
+      clearTimeout(this.reopenTimeout);
+    }
+  }
 
   handleSave = async (event?: SyntheticInputEvent<>) => {
     if (event != null) {

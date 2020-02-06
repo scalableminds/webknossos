@@ -515,7 +515,7 @@ export type APIFeatureToggles = {
   +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
-  +taskReopenAllowedFrontend: number,
+  +taskReopenAllowedInSeconds: number,
 };
 
 // Tracing related datatypes

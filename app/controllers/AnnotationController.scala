@@ -47,7 +47,7 @@ class AnnotationController @Inject()(
     with FoxImplicits {
 
   implicit val timeout = Timeout(5 seconds)
-  val taskReopenAllowed = conf.WebKnossos.Tasks.reopenAllowedBackend.toMillis
+  val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
 
   def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
     log {

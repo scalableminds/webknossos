@@ -284,7 +284,7 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
 export function getEnabledColorLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,
-  invert: boolean = false,
+  options: { invert?: boolean } = {},
 ): Array<DataLayerType> {
   const colorLayers = getColorLayers(dataset);
   const layerSettings = datasetConfiguration.layers;
@@ -294,7 +294,7 @@ export function getEnabledColorLayers(
     if (settings == null) {
       return false;
     }
-    return !settings.isDisabled !== invert;
+    return settings.isDisabled === options.invert;
   });
 }
 

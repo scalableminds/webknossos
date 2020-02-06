@@ -428,9 +428,10 @@ class PlaneMaterialFactory {
           for (const colorLayer of getColorLayers(Store.getState().dataset)) {
             const settings = layerSettings[colorLayer.name];
             if (settings != null) {
+              const isLayerEnabled = !settings.isDisabled;
               if (
                 oldVisibilityPerLayer[colorLayer.name] != null &&
-                oldVisibilityPerLayer[colorLayer.name] !== !settings.isDisabled
+                oldVisibilityPerLayer[colorLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
                   this.onDisableLayer(colorLayer.name);
@@ -438,7 +439,7 @@ class PlaneMaterialFactory {
                   this.onEnableLayer(colorLayer.name);
                 }
               }
-              oldVisibilityPerLayer[colorLayer.name] = !settings.isDisabled;
+              oldVisibilityPerLayer[colorLayer.name] = isLayerEnabled;
 
               const name = sanitizeName(colorLayer.name);
               this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
@@ -600,11 +601,9 @@ class PlaneMaterialFactory {
     const enabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration).map(
       layer => layer.name,
     );
-    const disabledLayerNames = getEnabledColorLayers(
-      state.dataset,
-      state.datasetConfiguration,
-      true,
-    ).map(layer => layer.name);
+    const disabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration, {
+      invert: true,
+    }).map(layer => layer.name);
 
     // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
     // because they were already disabled on page load), append the disabled layers

@@ -35,7 +35,7 @@ import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
-const cubeSize = [256, 256, 256];
+const cubeSize = [32,32,32];
 
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -132,19 +132,19 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  const isControlModeSupported = yield* select(
+  const renderIsosurfaces = true; // yield* select(state => state.datasetConfiguration.renderIsosurfaces);
+  const isControlModeSupported = true; /* yield* select(
     state =>
       state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces,
-  );
+  );*/
   if (!renderIsosurfaces || !isControlModeSupported) {
     return;
   }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
-  if (!layer) {
+  /*if (!layer) {
     return;
-  }
+  }*/
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
@@ -248,6 +248,7 @@ function* maybeLoadIsosurface(
 }
 
 function* downloadActiveIsosurfaceCell(): Saga<void> {
+  console.log("downloading Active isosurface")
   const currentId = yield* call(getCurrentCellId);
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(currentId);

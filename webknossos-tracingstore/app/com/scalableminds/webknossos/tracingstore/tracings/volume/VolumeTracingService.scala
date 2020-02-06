@@ -4,7 +4,7 @@ import java.io._
 import java.nio.file.Paths
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D, Vector3I}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
@@ -14,14 +14,16 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.BinaryDataService
+import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, FindDataService, IsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Concurrent.Channel
@@ -30,6 +32,7 @@ import scala.concurrent.duration._
 import play.api.libs.iteratee.{Concurrent, Enumerator, Input}
 import play.api.libs.json.{JsObject, Json}
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
@@ -216,7 +219,7 @@ class VolumeTracingService @Inject()(
     } yield ()
   }
 
-  private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer =
+  def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer =
     VolumeTracingLayer(tracingId, tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
 
   private def volumeTracingLayerWithFallback(tracingId: String,

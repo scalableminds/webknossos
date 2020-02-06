@@ -23,47 +23,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     extends FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
-  private def convertData(
-      data: Array[Byte],
-      elementClass: ElementClass.Value,
-      filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
-    elementClass match {
-      case ElementClass.uint8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-          .map(UShort(_))
-          .filter(!filterZeroes || _ != UShort(0))
-      case ElementClass.uint24 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-          .map(UInt(_))
-          .filter(!filterZeroes || _ != UInt(0))
-      case ElementClass.uint64 =>
-        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-          .map(ULong(_))
-          .filter(!filterZeroes || _ != ULong(0))
-      case ElementClass.float =>
-        convertDataImpl[Float, FloatBuffer](
-          data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
-    }
-
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
-    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-    srcBuffer.rewind()
-    val dstArray = Array.ofDim[T](srcBuffer.remaining())
-    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
-    dstArray
-  }
-
   private def combineBytes(data: Array[Byte], numBytes: Int = 3) = {
     val result = Array.ofDim[Byte](data.length / numBytes)
     for (i <- data.indices by numBytes) {
@@ -209,7 +168,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       implicit m: MessagesProvider): Fox[(Double, Double)] = {
 
     def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] =
-      convertData(data, elementClass, filterZeroes = true) match {
+      FindDataService.convertData(data, elementClass, filterZeroes = true) match {
         case d: Array[UByte]  => d.map(_.toDouble)
         case d: Array[UShort] => d.map(_.toDouble)
         case d: Array[UInt]   => d.map(_.toDouble)
@@ -278,12 +237,54 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "getting data failed"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
+        convertedData = FindDataService.convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
 
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
       Fox.empty ?~> "empty resolutions"
+  }
+}
+
+object FindDataService {
+  def convertData(data: Array[Byte],
+                  elementClass: ElementClass.Value,
+                  filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
+    elementClass match {
+      case ElementClass.uint8 =>
+        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+          .map(UByte(_))
+          .filter(!filterZeroes || _ != UByte(0))
+      case ElementClass.uint16 =>
+        convertDataImpl[Short, ShortBuffer](data,
+                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+          .map(UShort(_))
+          .filter(!filterZeroes || _ != UShort(0))
+      case ElementClass.uint24 =>
+        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
+          .map(UByte(_))
+          .filter(!filterZeroes || _ != UByte(0))
+      case ElementClass.uint32 =>
+        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
+          .map(UInt(_))
+          .filter(!filterZeroes || _ != UInt(0))
+      case ElementClass.uint64 =>
+        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
+          .map(ULong(_))
+          .filter(!filterZeroes || _ != ULong(0))
+      case ElementClass.float =>
+        convertDataImpl[Float, FloatBuffer](
+          data,
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
+    }
+
+  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
+                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
+    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
+    srcBuffer.rewind()
+    val dstArray = Array.ofDim[T](srcBuffer.remaining())
+    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
+    dstArray
   }
 }

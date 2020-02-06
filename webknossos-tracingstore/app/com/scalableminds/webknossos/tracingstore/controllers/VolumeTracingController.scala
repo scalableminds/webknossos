@@ -1,25 +1,22 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.util.geometry.{Scale, Vector3I}
+import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.{IsosurfaceRequest, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
+import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{IsosurfaceService, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig,
   TracingStoreWkRpcClient
 }
-import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.JsonHelper.optionFormat
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
@@ -28,14 +25,14 @@ import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
-class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
-                                        val webKnossosServer: TracingStoreWkRpcClient,
-                                        val accessTokenService: TracingStoreAccessTokenService,
-                                        config: TracingStoreConfig,
-                                        tracingDataStore: TracingDataStore,
-                                        val slackNotificationService: SlackNotificationService)(
-    implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+class VolumeTracingController @Inject()(
+    val tracingService: VolumeTracingService,
+    val webKnossosServer: TracingStoreWkRpcClient,
+    val accessTokenService: TracingStoreAccessTokenService,
+    config: TracingStoreConfig,
+    tracingDataStore: TracingDataStore,
+    val slackNotificationService: SlackNotificationService,
+    val isosurfaceService: IsosurfaceService)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
@@ -146,4 +143,42 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
   }
+
+  def requestIsosurface(tracingId: String) =
+    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+            volumeLayer = tracingService.volumeTracingLayer(tracingId, tracing)
+            datasource = GenericDataSource(DataSourceId("volumeDataSource", "volume"),
+                                           List(volumeLayer),
+                                           Scale(1, 1, 1))
+            layerRequest = request.body.copy(zoomStep = 0, voxelDimensions = Vector3I(1, 1, 1), mapping = None)
+            isosurfaceRequest = IsosurfaceRequest(null,
+                                                  volumeLayer,
+                                                  layerRequest.cuboid(volumeLayer),
+                                                  layerRequest.segmentId,
+                                                  layerRequest.voxelDimensions,
+                                                  None)
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
+            (vertices, neighbors) <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+          } yield {
+            // We need four bytes for each float
+            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+            responseBuffer.asFloatBuffer().put(vertices)
+            Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          }
+        }
+      }
+    }
+
+  private def getNeighborIndices(neighbors: List[Int]) =
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+
+  private def formatNeighborList(neighbors: List[Int]): String =
+    "[" + neighbors.mkString(", ") + "]"
+
 }

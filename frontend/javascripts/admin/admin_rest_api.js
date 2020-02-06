@@ -1207,10 +1207,11 @@ export function computeIsosurface(
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
   const { position, zoomStep, segmentId, voxelDimensions, cubeSize } = isosurfaceRequest;
   return doWithToken(async token => {
-    const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
+    const { buffer, headers } = await /*Request.sendJSONReceiveArraybufferWithHeaders(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
         layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-      }/isosurface?token=${token}`,
+      }/isosurface?token=${token}`,*/
+    Request.sendJSONReceiveArraybufferWithHeaders(`http://localhost:9000/tracings/volume/9fa18605-f667-437e-97f3-97410292e32c/isosurface?token=${token}`,
       {
         data: {
           // The back-end needs a small padding at the border of the

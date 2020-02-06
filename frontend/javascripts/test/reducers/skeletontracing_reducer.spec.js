@@ -786,8 +786,7 @@ test("SkeletonTracing should delete several trees", t => {
   const createTreeAction = SkeletonTracingActions.createTreeAction();
   const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 
-  // create a tree and delete it three times
-  // there should always be at least one tree in a tracing
+  // create trees and delete them
   const newState = ChainReducer(initialState)
     .apply(SkeletonTracingReducer, createTreeAction)
     .apply(SkeletonTracingReducer, deleteTreeAction)
@@ -796,9 +795,8 @@ test("SkeletonTracing should delete several trees", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.deepEqual(_.size(newState.tracing.skeleton.trees), 1);
+  t.deepEqual(_.size(newState.tracing.skeleton.trees), 0);
   t.not(newState.tracing.skeleton.trees, initialState.tracing.skeleton.trees);
-  t.is(Object.keys(newState.tracing.skeleton.trees).length, 1);
 });
 
 test("SkeletonTracing should set a new active tree", t => {

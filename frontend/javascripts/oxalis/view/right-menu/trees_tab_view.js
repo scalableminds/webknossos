@@ -554,7 +554,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
-    const noTrees = _.size(trees) === 0;
+    const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -621,7 +621,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <InputComponent
             onChange={this.handleChangeTreeName}
             value={activeTreeName || activeGroupName}
-            disabled={noTrees}
+            disabled={noTreesAndGroups}
             style={{ width: "60%" }}
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
@@ -633,7 +633,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             </ButtonComponent>
           </Dropdown>
         </InputGroup>
-        {noTrees ? (
+        {noTreesAndGroups ? (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
             description={

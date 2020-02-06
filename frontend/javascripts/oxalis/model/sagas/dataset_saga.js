@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable import/prefer-default-export */
 import { type Saga, _takeEvery, select } from "oxalis/model/sagas/effect-generators";
 import {
   getEnabledColorLayers,

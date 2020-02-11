@@ -3,8 +3,7 @@ import { Alert, Dropdown, Icon, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIDataset, APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
-import { createExplorational } from "admin/admin_rest_api";
+import type { APIDataset, APIUser } from "admin/api_flow_types";
 import {
   layoutEmitter,
   deleteLayout,
@@ -12,7 +11,6 @@ import {
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
 import { Link } from "react-router-dom";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -25,7 +23,6 @@ import TracingActionsView, {
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import AuthenticationModal from "admin/auth/authentication_modal";
 import { createTracingOverlayMenu } from "dashboard/advanced_dataset/dataset_action_view";
 
 const VersionRestoreWarning = (
@@ -53,13 +50,11 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
-  useExistingSegmentation: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
-    useExistingSegmentation: true,
   };
 
   handleResetLayout = () => {
@@ -84,14 +79,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
     if (addNewLayout(this.props.layoutProps.layoutKey, layoutName, configForLayout)) {
       this.props.layoutProps.setCurrentLayout(layoutName);
     }
-  };
-
-  createTracing = async (dataset: APIMaybeUnimportedDataset, useExistingSegmentation: boolean) => {
-    const annotation = await createExplorational(dataset, "hybrid", useExistingSegmentation);
-    trackAction("Create hybrid tracing (from view mode)");
-    location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
-      location.hash
-    }`;
   };
 
   renderStartTracingButton(): React.Node {
@@ -127,7 +114,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const {
       hasVolume,
       isReadOnly,
-      dataset,
       showVersionRestore,
       controlMode,
       viewMode,

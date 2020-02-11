@@ -41,7 +41,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = "Thanks for your registration on " + uri,
-      bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      bodyText = html.mail.register(name, conf.Features.isDemoInstance, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
 

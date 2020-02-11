@@ -28,6 +28,7 @@ import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_
 import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
+import ImportSharingComponent from "./import_sharing_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
@@ -501,22 +502,24 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     />
                   </Hideable>
                 </TabPane>
+
+                <TabPane tab={<span>Sharing</span>} key="sharing" forceRender>
+                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
+                    <ImportSharingComponent form={form} datasetId={this.props.datasetId} />
+                  </Hideable>
+                </TabPane>
+
                 <TabPane
                   tab={
                     <span>
-                      {" "}
-                      General {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
+                      Metadata {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
                     </span>
                   }
                   key="general"
                   forceRender
                 >
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <ImportGeneralComponent
-                      form={form}
-                      datasetId={this.props.datasetId}
-                      hasNoAllowedTeams={_hasNoAllowedTeams}
-                    />
+                    <ImportGeneralComponent form={form} hasNoAllowedTeams={_hasNoAllowedTeams} />
                   </Hideable>
                 </TabPane>
 

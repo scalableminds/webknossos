@@ -49,7 +49,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
         <Col span={6}>
           <FormItemWithInfo
             label="Segmentation Opacity"
-            info="The segmentation layer will be overlaid using the specified percentage value (&ldquo;20&rdquo; means &ldquo;20%&rdquo; opacity)."
+            info="The segmentation layer will be overlayed using the specified percentage value (&ldquo;20&rdquo; means &ldquo;20%&rdquo; opacity)."
           >
             {getFieldDecorator("defaultConfiguration.segmentationOpacity", {
               rules: [

@@ -45,12 +45,11 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 const shortcutColumns = [
   {
-    title: "Keyboard Shortcut",
     dataIndex: "keybinding",
     key: "keybinding",
+    width: 200
   },
   {
-    title: "Action",
     dataIndex: "action",
     key: "action",
   },
@@ -59,27 +58,50 @@ const shortcutColumns = [
 const shortcuts = [
   {
     key: "1",
-    keybinding: "I,O or Alt + Mousewheel",
+    keybinding: [
+      <span key="zoom-1" className="keyboard-key-icon">I</span>,
+      "/",
+      <span key="zoom-2" className="keyboard-key-icon">O</span>,
+      "or",
+      <span key="zoom-3" className="keyboard-key-icon">ALT</span>,
+      "+",
+      <img key="zoom-4" className="keyboard-mouse-icon" src="/assets/images/icon-mousewheel.svg" alt="Mouse Wheel"/>
+      ],
     action: "Zoom in/out",
   },
   {
     key: "2",
-    keybinding: "Mousewheel or D and F",
+    keybinding: [
+      <img key="move-1" className="keyboard-mouse-icon" src="/assets/images/icon-mousewheel.svg" alt="Mouse Wheel"/>,
+      "or",
+      <span key="move-2" className="keyboard-key-icon">D</span>,
+      "/",
+      <span key="move-3" className="keyboard-key-icon">F</span>,
+      ],
     action: "Move Along 3rd Axis",
   },
   {
     key: "3",
-    keybinding: "Left Mouse Drag or Arrow Keys",
+    keybinding: [
+      <img key="move" className="keyboard-mouse-icon" src="/assets/images/icon-mouse-left.svg" alt="Left Mouse Button"/>
+      ],
     action: "Move",
   },
   {
     key: "4",
-    keybinding: "Right Click Drag in 3D View",
+    keybinding: [
+      <img key="rotate" className="keyboard-mouse-icon" src="/assets/images/icon-mouse-right.svg" alt="Right Mouse Button"/>,
+      "in 3D View"
+      ],
     action: "Rotate 3D View",
   },
   {
     key: "5",
-    keybinding: "K,L",
+    keybinding: [
+      <span key="scale-1" className="keyboard-key-icon">K</span>,
+      "/",
+      <span key="scale-2" className="keyboard-key-icon">L</span>,
+      ],
     action: "Scale Up/Down Viewports",
   },
 ];
@@ -119,10 +141,11 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
       <Table
+        showHeader={false}
         dataSource={shortcuts}
         columns={shortcutColumns}
         pagination={false}
-        style={{ marginRight: 20, marginTop: 25, marginBottom: 25 }}
+        style={{ marginRight: 20, marginTop: 25, marginBottom: 25, maxWidth: 500 }}
         size="small"
       />
     ) : null;

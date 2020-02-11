@@ -170,7 +170,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
-          title="Scale & Extent"
+          title="Voxel Size & Extent"
           dataIndex="scale"
           key="scale"
           width={230}

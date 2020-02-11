@@ -26,6 +26,7 @@ import watchIsScratchSaga from "oxalis/model/sagas/dataset_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync from "oxalis/model/sagas/task_saga";
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
+import { receiveTracingUpdates } from "oxalis/model/sagas/live_update_saga";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -54,6 +55,7 @@ function* restartableSaga(): Saga<void> {
       _call(watchTasksAsync),
       _call(handleMeshChanges),
       _call(watchIsScratchSaga),
+      _call(receiveTracingUpdates),
     ]);
   } catch (err) {
     console.error(err);

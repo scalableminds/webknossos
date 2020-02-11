@@ -3,23 +3,19 @@
 import { type Saga } from "redux-saga";
 import Store from "oxalis/store";
 import { _delay, take, select } from "oxalis/model/sagas/effect-generators";
-import { createTreeAction, createNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import { applyUpdateActionsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { doWithToken } from "admin/admin_rest_api";
 
 function onMessage(event) {
   try {
     const data = JSON.parse(event.data);
     console.log("LiveUpdate websocket message (json):", data);
 
-    const currentVersion = Store.getState().tracing.version;
+    const currentVersion = Store.getState().tracing.skeleton.version;
 
-    if (data.version > currentVersion) {
-      for (const ua of data.actions) {
-        if (ua.name === "createTree") {
-          Store.dispatch(createTreeAction());
-        } else if (ua.name === "createNode") {
-          const { position, rotation, viewport, resolution, treeId } = ua.value;
-          Store.dispatch(createNodeAction(position, rotation, viewport, resolution, treeId));
-        }
+    if (data[0].version > currentVersion) {
+      for (const saveEntry of data) {
+        Store.dispatch(applyUpdateActionsAction(saveEntry.actions));
       }
     } else {
       console.log(
@@ -45,8 +41,13 @@ export function* receiveTracingUpdates(): Saga<void> {
   const wsUrl = `ws${tracingStoreUrl.slice(tracingStoreUrl.indexOf(":"))}`;
   const wsUrlWithCorrectPort = wsUrl.replace("9000", "9001");
 
+  let datastoreToken;
+  yield doWithToken(token => {
+    datastoreToken = token;
+  });
+
   const updateSocket = new WebSocket(
-    `${wsUrlWithCorrectPort}/tracings/skeleton/tracingId/liveUpdate`,
+    `${wsUrlWithCorrectPort}/tracings/skeleton/tracingId/liveUpdate?token=${datastoreToken}`,
   );
 
   updateSocket.onerror = event => console.log("LiveUpdate websocket error:", event);

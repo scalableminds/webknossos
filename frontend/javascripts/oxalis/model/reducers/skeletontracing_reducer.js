@@ -30,6 +30,8 @@ import {
   removeMissingGroupsFromTrees,
   getOrCreateTree,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -687,6 +689,98 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               },
             },
           });
+        }
+
+        case "APPLY_UPDATE_ACTIONS": {
+          const { actions } = action;
+
+          let newState = state;
+          for (const ua of actions) {
+            const { name: uaName, value } = ua;
+            switch (uaName) {
+              case "createTree": {
+                const {
+                  id,
+                  color,
+                  name,
+                  comments,
+                  timestamp,
+                  branchPoints,
+                  isVisible,
+                  groupId,
+                } = value;
+                newState = update(newState, {
+                  tracing: {
+                    skeleton: {
+                      trees: {
+                        [value.treeId]: {
+                          $set: {
+                            name,
+                            treeId: id,
+                            nodes: new DiffableMap(),
+                            timestamp,
+                            color,
+                            branchPoints,
+                            edges: new EdgeCollection(),
+                            comments,
+                            isVisible,
+                            groupId,
+                          },
+                        },
+                      },
+                    },
+                  },
+                });
+                break;
+              }
+              case "createNode": {
+                const { treeId, ...node } = value;
+                // eslint-disable-next-line no-loop-func
+                getOrCreateTree(state, skeletonTracing, treeId).chain(tree => {
+                  const diffableNodeMap = tree.nodes;
+                  const newDiffableMap = diffableNodeMap.set(node.id, node);
+                  const newTree = update(tree, {
+                    nodes: { $set: newDiffableMap },
+                  });
+                  newState = update(state, {
+                    tracing: {
+                      skeleton: {
+                        trees: {
+                          [tree.treeId]: { $set: newTree },
+                        },
+                      },
+                    },
+                  });
+                });
+                break;
+              }
+              case "createEdge": {
+                const { treeId, source, target } = value;
+                // eslint-disable-next-line no-loop-func
+                getOrCreateTree(state, skeletonTracing, treeId).chain(tree => {
+                  const newEdge = {
+                    source,
+                    target,
+                  };
+                  const edges = tree.edges.addEdge(newEdge);
+                  const newTree = update(tree, { edges: { $set: edges } });
+                  newState = update(state, {
+                    tracing: {
+                      skeleton: {
+                        trees: {
+                          [tree.treeId]: { $set: newTree },
+                        },
+                      },
+                    },
+                  });
+                });
+                break;
+              }
+              default:
+                continue;
+            }
+          }
+          return newState;
         }
 
         default:

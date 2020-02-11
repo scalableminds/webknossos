@@ -18,6 +18,7 @@ import Store, {
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
 type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -106,6 +107,7 @@ type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
+type ApplyUpdateActionsAction = { type: "APPLY_UPDATE_ACTIONS", actions: Array<UpdateAction> };
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -144,7 +146,8 @@ export type SkeletonTracingAction =
   | SetTracingAction
   | SetTreeGroupsAction
   | SetTreeGroupAction
-  | SetMergerModeEnabledAction;
+  | SetMergerModeEnabledAction
+  | ApplyUpdateActionsAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -420,6 +423,13 @@ export const setTreeGroupAction = (groupId: ?number, treeId?: number): SetTreeGr
 export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnabledAction => ({
   type: "SET_MERGER_MODE_ENABLED",
   active,
+});
+
+export const applyUpdateActionsAction = (
+  actions: Array<UpdateAction>,
+): ApplyUpdateActionsAction => ({
+  type: "APPLY_UPDATE_ACTIONS",
+  actions,
 });
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.

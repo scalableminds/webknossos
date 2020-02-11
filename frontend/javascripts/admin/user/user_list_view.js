@@ -510,7 +510,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 <span>
                   <Link to={`/users/${user.id}/details`}>
                     <Icon type="user" />
-                    Show Tracings
+                    Show Annotations
                   </Link>
                   <br />
                   {// eslint-disable-next-line no-nested-ternary

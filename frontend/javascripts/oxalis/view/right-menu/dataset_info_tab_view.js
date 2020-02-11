@@ -207,7 +207,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       // Or display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
-          Explorational Tracing:
+          Explorational Annotation:
           <EditableTextLabel
             value={tracingName}
             onChange={this.setAnnotationName}
@@ -256,7 +256,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isHybrid) {
       return (
         <p>
-          Tracing Type:{" "}
+          Annotation Type:{" "}
           <Tooltip title="Skeleton and Volume">
             Hybrid <Icon type="info-circle-o" />
           </Tooltip>
@@ -265,7 +265,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     } else {
       return (
         <p>
-          Tracing Type: {isVolume ? "Volume" : "Skeleton"}
+          Annotation Type: {isVolume ? "Volume" : "Skeleton"}
           {allowUpdate && isExplorational ? (
             <ButtonComponent
               style={{ marginLeft: 10 }}

@@ -11,7 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
-import type { APIDataset, APIHistogramData } from "admin/api_flow_types";
+import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
@@ -19,13 +19,14 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, getHistogramForLayer, clearCache } from "admin/admin_rest_api";
+import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
   hasSegmentation,
   getElementClass,
   getLayerBoundaries,
+  getDefaultIntensityRangeOfLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -39,6 +40,8 @@ import Store, {
   type DatasetLayerConfiguration,
   type OxalisState,
   type UserConfiguration,
+  type HistogramDataForAllLayers,
+  type Tracing,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -66,43 +69,16 @@ type DatasetSettingsProps = {|
     value: any,
   ) => void,
   viewMode: ViewMode,
+  histogramData: HistogramDataForAllLayers,
   controlMode: ControlMode,
   hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
+  tracing: Tracing,
 |};
 
-type State = {
-  histograms: { string: APIHistogramData },
-};
-
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
-  state = {
-    histograms: {},
-  };
-
-  componentDidMount() {
-    this.loadAllHistograms();
-  }
-
-  loadAllHistograms = async () => {
-    const { layers } = this.props.datasetConfiguration;
-    const histograms: { string: APIHistogramData } = {};
-    const histogramPromises = Object.keys(layers).map(async layerName => {
-      const data = await getHistogramForLayer(
-        this.props.dataset.dataStore.url,
-        this.props.dataset,
-        layerName,
-      );
-      histograms[layerName] = data;
-      return data;
-    });
-    // Waiting for all Promises to be resolved.
-    await Promise.all(histogramPromises);
-    this.setState({ histograms });
-  };
-
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
@@ -117,7 +93,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       } else if (volume && !volume.fallbackLayer && !isDisabled) {
         isDisabled = true;
         tooltipText =
-          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers";
+          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers.";
       }
     }
 
@@ -200,17 +176,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
     const { intensityRange } = layer;
-    let histograms = [
-      { numberOfElements: 256, elementCounts: new Array(256).fill(0), min: 0, max: 255 },
-    ];
-    if (this.state.histograms && this.state.histograms[layerName]) {
-      histograms = this.state.histograms[layerName];
+    const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
+    const highestRangeValue = defaultIntensityRange[1];
+    let histograms = [];
+    if (this.props.histogramData && this.props.histogramData[layerName]) {
+      histograms = this.props.histogramData[layerName];
+    } else {
+      histograms = [
+        {
+          numberOfElements: 0,
+          elementCounts: [],
+          min: 0,
+          max: highestRangeValue,
+        },
+      ];
     }
     return (
       <Histogram
         data={histograms}
-        min={intensityRange[0]}
-        max={intensityRange[1]}
+        intensityRangeMin={intensityRange[0]}
+        intensityRangeMax={intensityRange[1]}
         layerName={layerName}
       />
     );
@@ -222,6 +207,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName: string,
     elementClass: string,
   ) => {
+    const { tracing } = this.props;
+    const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       if (isColorLayer) {
         this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
@@ -248,7 +235,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
-          <span style={{ fontWeight: 700 }}>{layerName}</span>
+          <span style={{ fontWeight: 700 }}>
+            {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
+          </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
@@ -296,12 +285,49 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               }
             />
             {isColorLayer && layer != null ? (
-              <ColorSetting
-                label="Color"
-                value={Utils.rgbToHex(layer.color)}
-                onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
-                className="ant-btn"
-              />
+              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+                <Col span={12}>
+                  <label className="setting-label">Color</label>
+                </Col>
+                <Col span={10}>
+                  <ColorSetting
+                    value={Utils.rgbToHex(layer.color)}
+                    onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
+                    className="ant-btn"
+                    style={{ marginLeft: 6 }}
+                  />
+                </Col>
+                <Col span={2}>
+                  <Tooltip title="Invert the color of this layer.">
+                    <div
+                      onClick={() =>
+                        this.props.onChangeLayer(
+                          layerName,
+                          "isInverted",
+                          layer ? !layer.isInverted : false,
+                        )
+                      }
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        right: -9,
+                        display: "inline-flex",
+                      }}
+                    >
+                      <i
+                        className={`fa fa-adjust ${layer.isInverted ? "flip-horizontally" : ""}`}
+                        style={{
+                          margin: 0,
+                          transition: "transform 0.5s ease 0s",
+                          color: layer.isInverted
+                            ? "rgba(24, 144, 255, 1.0)"
+                            : "rgba(0, 0, 0, 0.65)",
+                        }}
+                      />
+                    </div>
+                  </Tooltip>
+                </Col>
+              </Row>
             ) : (
               <SwitchSetting
                 label={settings.highlightHoveredCellId}
@@ -487,9 +513,11 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
+  histogramData: state.temporaryConfiguration.histogramData,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   hasSegmentation: hasSegmentation(state.dataset),
+  tracing: state.tracing,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

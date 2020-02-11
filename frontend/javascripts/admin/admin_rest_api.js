@@ -424,8 +424,8 @@ export function createTaskFromNML(task: NewTask): Promise<Array<TaskCreationResp
   });
 }
 
-export async function getTask(taskId: string): Promise<APITask> {
-  const task = await Request.receiveJSON(`/api/tasks/${taskId}`);
+export async function getTask(taskId: string, options?: RequestOptions = {}): Promise<APITask> {
+  const task = await Request.receiveJSON(`/api/tasks/${taskId}`, options);
   return transformTask(task);
 }
 
@@ -490,8 +490,12 @@ export function getSharedAnnotations(): Promise<Array<APIAnnotationCompact>> {
   return Request.receiveJSON("/api/annotations/shared");
 }
 
-export function getTeamsForSharedAnnotation(typ: string, id: string): Promise<Array<APITeam>> {
-  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`);
+export function getTeamsForSharedAnnotation(
+  typ: string,
+  id: string,
+  options?: RequestOptions,
+): Promise<Array<APITeam>> {
+  return Request.receiveJSON(`/api/annotations/${typ}/${id}/sharedTeams`, options);
 }
 
 export function updateTeamsForSharedAnnotation(
@@ -664,12 +668,16 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
 export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
+  showVolumeDownloadWarning?: boolean = false,
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
     // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
+  if (showVolumeDownloadWarning) {
+    Toast.info(messages["annotation.no_fallback_data_included"], { timeout: 12000 });
+  }
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
   const { buffer, headers } = await Request.receiveArraybuffer(downloadUrl, {
     extractHeaders: true,

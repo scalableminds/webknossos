@@ -131,18 +131,27 @@ class ActionBarView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const isTraceMode = this.props.controlMode === ControlModeEnum.TRACE;
-    const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    const isArbitrarySupported =
-      this.props.hasSkeleton || this.props.controlMode === ControlModeEnum.VIEW;
+    const {
+      hasVolume,
+      isReadOnly,
+      dataset,
+      showVersionRestore,
+      controlMode,
+      viewMode,
+      hasSkeleton,
+      layoutProps,
+    } = this.props;
+    const isTraceMode = controlMode === ControlModeEnum.TRACE;
+    const isVolumeSupported = !Constants.MODES_ARBITRARY.includes(viewMode);
+    const isArbitrarySupported = hasSkeleton || controlMode === ControlModeEnum.VIEW;
     const layoutMenu = (
       <LayoutMenu
-        {...this.props.layoutProps}
+        {...layoutProps}
         addNewLayout={() => {
           this.setState({ isNewLayoutModalVisible: true });
         }}
         onResetLayout={this.handleResetLayout}
-        onSelectLayout={this.props.layoutProps.setCurrentLayout}
+        onSelectLayout={layoutProps.setCurrentLayout}
         onDeleteLayout={this.handleLayoutDeleted}
       />
     );
@@ -160,16 +169,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div className="action-bar">
-          {isTraceMode && !this.props.showVersionRestore ? (
-            <TracingActionsView layoutMenu={layoutMenu} />
+          {isTraceMode && !showVersionRestore ? (
+            <TracingActionsView layoutMenu={layoutMenu} hasVolume={hasVolume} />
           ) : (
             viewDropdown
           )}
-          {this.props.showVersionRestore ? VersionRestoreWarning : null}
+          {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!this.props.isReadOnly && this.props.hasVolume && isVolumeSupported ? (
-            <VolumeActionsView />
-          ) : null}
+          {!isReadOnly && hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
           {isArbitrarySupported ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
@@ -181,7 +188,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         <AuthenticationModal
           onLoggedIn={() => {
             this.setState({ isAuthenticationModalVisible: false });
-            this.createTracing(this.props.dataset, this.state.useExistingSegmentation);
+            this.createTracing(dataset, this.state.useExistingSegmentation);
           }}
           onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
           visible={this.state.isAuthenticationModalVisible}

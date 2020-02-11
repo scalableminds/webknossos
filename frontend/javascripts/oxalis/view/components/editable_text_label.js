@@ -37,7 +37,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
   };
 
   componentDidMount() {
-    this.componentWillReceiveProps(this.props);
+    this.setState({ value: this.props.value });
   }
 
   componentWillReceiveProps(newProps: EditableTextLabelProp) {

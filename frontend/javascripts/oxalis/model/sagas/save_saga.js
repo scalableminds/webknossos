@@ -29,7 +29,6 @@ import {
   select,
 } from "oxalis/model/sagas/effect-generators";
 import {
-  createTreeAction,
   SkeletonTracingSaveRelevantActions,
   setTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -262,11 +261,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   let prevTracing = yield* select(state => state.tracing);
   let prevFlycam = yield* select(state => state.flycam);
-  if (tracingType === "skeleton") {
-    if (yield* select(state => enforceSkeletonTracing(state.tracing).activeTreeId == null)) {
-      yield* put(createTreeAction());
-    }
-  }
+
   yield* take("WK_READY");
   const initialAllowUpdate = yield* select(
     state =>

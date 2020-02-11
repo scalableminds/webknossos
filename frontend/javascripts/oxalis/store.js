@@ -15,6 +15,7 @@ import type {
   APIDataStore,
   APIDataset,
   APIDatasetId,
+  APIHistogramData,
   APIRestrictions,
   APIScript,
   APISettings,
@@ -218,6 +219,7 @@ export type DatasetLayerConfiguration = {|
   +alpha: number,
   +intensityRange: Vector2,
   +isDisabled: boolean,
+  +isInverted: boolean,
 |};
 
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
@@ -276,7 +278,12 @@ export type RecommendedConfiguration = $Shape<{
 
 export type Mapping = { [key: number]: number };
 
+export type HistogramDataForAllLayers = {
+  [name: string]: APIHistogramData,
+};
+
 export type TemporaryConfiguration = {
+  +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
   +flightmodeRecording: boolean,
   +controlMode: ControlMode,

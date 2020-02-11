@@ -227,6 +227,10 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1.0,
       };
+      this.uniforms[`${name}_is_inverted`] = {
+        type: "f",
+        value: 0,
+      };
     }
   }
 
@@ -523,12 +527,13 @@ class PlaneMaterialFactory {
     name: string,
     elementClass: ElementClass,
   ): void {
-    const { alpha, intensityRange, isDisabled } = settings;
+    const { alpha, intensityRange, isDisabled, isInverted } = settings;
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     const divisor = elementClass === "float" ? 1 : 255;
     this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
     this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
+    this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 
     if (settings.color != null) {
       const color = this.convertColor(settings.color);

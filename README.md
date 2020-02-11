@@ -60,8 +60,14 @@ Open your local webknossos instance on [localhost:9000](http://localhost:9000).
 
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 
-For non-localhost deployments, make sure to set the `datastore.publicUri` and `tracingstore.publicUri` entries in the config.
+For non-localhost deployments, make sure to use the `webknossos-public` docker-compose service and set the `PUBLIC_URI` environment variable:
 
+```bash
+git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
+cd webknossos
+docker-compose pull webknossos
+PUBLIC_URI=http://example.org:9000 docker-compose up webknossos-public
+```
 
 ### Dependencies
 

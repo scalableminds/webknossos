@@ -106,8 +106,8 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
       <List header={<div style={{ fontWeight: "bold" }}>Dataset</div>}>
         <List.Item>
           <FormItemWithInfo
-            label="Scale"
-            info="The scale defines the extent (for x, y, z) of one voxel in nanometer."
+            label="Voxel Size"
+            info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
           >
             {getFieldDecorator("dataSource.scale", {
               rules: [

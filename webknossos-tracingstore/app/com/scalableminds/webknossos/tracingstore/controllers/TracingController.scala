@@ -122,7 +122,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           AllowRemoteOrigin {
             val updateGroups = request.body
             val userToken = request.getQueryString("token")
-            system.actorSelection("/user/*/flowActor") ! Json.toJson(updateGroups)
+            system.actorSelection("/user/*/flowActor") ! (request.getQueryString("token").get, Json.toJson(
+              updateGroups))
             if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
               commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
             } else {

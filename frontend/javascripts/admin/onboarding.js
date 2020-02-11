@@ -12,6 +12,7 @@ import {
   Icon,
   Card,
   AutoComplete,
+  Alert,
 } from "antd";
 import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
@@ -46,6 +47,46 @@ type State = {
   datasetNameToImport: ?string,
   showDatasetUploadModal: boolean,
 };
+
+export function WhatsNextHeader() {
+  const welcomeHeader = (
+    <Row type="flex" gutter={50}>
+      <Col span={4}>
+        <Icon type="rocket" className="icon-big" />
+      </Col>
+      <Col span={20}>
+        <h2>Welcome to your webKnossos account!</h2>
+        <p>
+          <strong>You are now logged in and ready to go!</strong>
+        </p>
+
+        <Row type="flex" gutter={50}>
+          <FeatureCard
+            header={<a href="/dashboard/publications">Start Exploring</a>}
+            icon={<Icon type="play-circle-o" />}
+          />
+          <FeatureCard
+            header={<a href="/datasets/upload">Upload your Data</a>}
+            icon={<Icon type="cloud-upload-o" />}
+          />
+          <FeatureCard
+            header={<a href="/users">Start Collaborating</a>}
+            icon={<Icon type="team" />}
+          />
+        </Row>
+      </Col>
+    </Row>
+  );
+
+  return (
+    <Alert
+      description={welcomeHeader}
+      type="info"
+      closable
+      style={{ marginTop: 20, marginBottom: 20, padding: 40, paddingLeft: 60 }}
+    />
+  );
+}
 
 function StepHeader({
   header,

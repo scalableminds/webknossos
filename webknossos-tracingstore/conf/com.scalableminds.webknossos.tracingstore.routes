@@ -30,5 +30,6 @@ GET         /skeleton/:tracingId/updateActionStatistics         @com.scalablemin
 GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(tracingId: String)
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple
 
+GET         /skeleton/tracingId/liveUpdate                      @com.scalableminds.webknossos.tracingstore.controllers.Application.liveUpdate
 POST        /skeleton/:tracingId/update                         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.update(tracingId: String)
 GET         /skeleton/:tracingId/duplicate                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(tracingId: String, version: Option[Long])

@@ -138,6 +138,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +owningOrganization: string,
   +publication: ?APIPublication,
 };
 

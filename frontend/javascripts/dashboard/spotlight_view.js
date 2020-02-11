@@ -94,7 +94,7 @@ const WelcomeHeader = ({ history }) => (
               </ul>
             </div>
 
-            <div style={{ marginTop: 20, paddingLeft: 60 }}>
+            <div style={{ marginBottom: 20, paddingLeft: 60 }}>
               <Link
                 to="/features"
                 className="spotlight-hero-button ant-btn ant-btn-lg ant-btn-background-ghost"
@@ -110,7 +110,13 @@ const WelcomeHeader = ({ history }) => (
             </div>
           </Col>
           <Col xs={{ span: 24 }} xl={{ span: 6 }}>
-            <div style={{ backgroundColor: "white", padding: 20 }}>
+            <div
+              style={{
+                backgroundColor: "white",
+                padding: 20,
+                boxShadow: "0 0 10px rgba(0, 0, 0, 0.38)",
+              }}
+            >
               <RegistrationForm
                 onRegistered={() => {
                   history.push("/dashboard");

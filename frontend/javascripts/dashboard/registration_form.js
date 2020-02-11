@@ -1,5 +1,6 @@
 // @flow
 import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
+import { Link } from "react-router-dom";
 import React from "react";
 
 import type { APIOrganization } from "admin/api_flow_types";
@@ -8,7 +9,6 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
-import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -16,6 +16,7 @@ const { Password } = Input;
 type Props = {|
   form: Object,
   onRegistered: () => void,
+  onLoginRedirect: () => void,
 |};
 
 type State = {
@@ -55,15 +56,13 @@ class RegistrationForm extends React.PureComponent<Props, State> {
         },
       });
 
-      Store.dispatch(setHasOrganizationsAction(true));
-
       const user = await loginUser({
         email: formValues.email,
         password: formValues.password.password1,
       });
       Store.dispatch(setActiveUserAction(user));
 
-      this.props.onRegistered(true);
+      this.props.onRegistered();
     });
   };
 
@@ -86,7 +85,6 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                 <Input
                   prefix={<Icon type="user" style={{ fontSize: 13 }} />}
                   placeholder="First Name"
-                  autoFocus
                 />,
               )}
             </FormItem>
@@ -170,11 +168,14 @@ class RegistrationForm extends React.PureComponent<Props, State> {
             </Checkbox>,
           )}
         </FormItem>
-        <FormItem>
+        <FormItem style={{ marginBottom: 10 }}>
           <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
             Create Free Account
           </Button>
         </FormItem>
+        <p style={{ textAlign: "center" }}>
+          <Link to="/auth/login">Login to existing account</Link>
+        </p>
       </Form>
     );
   }

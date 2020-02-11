@@ -147,6 +147,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         pagination={false}
         style={{ marginRight: 20, marginTop: 25, marginBottom: 25, maxWidth: 500 }}
         size="small"
+        bordered={false}
       />
     ) : null;
   }

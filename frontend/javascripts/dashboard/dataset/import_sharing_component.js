@@ -78,7 +78,7 @@ export default function ImportSharingComponent({ form, datasetId }: Props) {
     <div>
       <FormItemWithInfo
         label="Visibility"
-        info="If checked, the dataset will be listed when unregistered users visit webKnossos."
+        info="Make your dataset public, for anonymous/unregistered users to access your dataset."
       >
         {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
           <Checkbox>Make dataset publicly accessible </Checkbox>,
@@ -127,7 +127,7 @@ export default function ImportSharingComponent({ form, datasetId }: Props) {
       {form.getFieldValue("dataset.isPublic") && features().addForeignDataset && (
         <FormItemWithInfo
           label="Code for adding this dataset to other webKnossos instances"
-          info="Give this code to users with other webKnossos instances so that they can add this dataset"
+          info="Give this code to users with other webKnossos instances in order to add this dataset."
         >
           <Input.Group compact>
             <Input

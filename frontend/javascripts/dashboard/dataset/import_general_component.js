@@ -36,7 +36,7 @@ export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Prop
         <Col span={12}>
           <FormItemWithInfo
             label="Display Name"
-            info="The display name will be used by webKnossos to name this dataset. If the display name is not provided, the original name will be used."
+            info="Add a descriptive name for your dataset instead of the technical name."
           >
             {getFieldDecorator("dataset.displayName")(<Input placeholder="Display Name" />)}
           </FormItemWithInfo>
@@ -44,7 +44,7 @@ export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Prop
         <Col span={12}>
           <FormItemWithInfo
             label="Description"
-            info="The description may contain additional information about your dataset."
+            info="Add a description with additional information about your dataset. Format with Markdown."
           >
             {getFieldDecorator("dataset.description")(
               <Input.TextArea rows="3" placeholder="Description" />,
@@ -55,7 +55,7 @@ export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Prop
       {allowedTeamsComponent}
       <FormItemWithInfo
         label="Sorting Date"
-        info="This date can be used to sort the datasets within webKnossos. For example, if the dataset was published in a paper, you can input the publication date of the paper here."
+        info="Datasets are sorted by date. Specify the date (e.g. publication date) in order to influence the sorting order."
       >
         {getFieldDecorator("dataset.sortingKey")(
           <DatePicker placeholder="Select a Publication Date" />,

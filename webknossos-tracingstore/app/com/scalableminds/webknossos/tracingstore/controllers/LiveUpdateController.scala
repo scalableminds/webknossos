@@ -23,7 +23,7 @@ class LiveUpdateController @Inject()(tracingDataStore: TracingDataStore, redisCl
   val openWebSockets = mutable.Set[Source[String, Promise[Option[String]]]]()
 
   def liveUpdate(tracingId: String) = WebSocket.accept[String, String] { request =>
-    ActorFlow.actorRef(out => MyWebSocketActor.props(out))
+    ActorFlow.actorRef(out => MyWebSocketActor.props(out, request.getQueryString("token").get))
   }
 
   def a = Action { _ =>
@@ -32,14 +32,14 @@ class LiveUpdateController @Inject()(tracingDataStore: TracingDataStore, redisCl
   }
 
   object MyWebSocketActor {
-    def props(out: ActorRef) = Props(new MyWebSocketActor(out))
+    def props(out: ActorRef, token: String) = Props(new MyWebSocketActor(out, token))
   }
 
-  class MyWebSocketActor(out: ActorRef) extends Actor {
+  class MyWebSocketActor(out: ActorRef, token: String) extends Actor {
     def receive = {
       case msg: String =>
         out ! ("I received your message: " + msg)
-      case json: JsValue => out ! json.toString
+      case (key: String, value: JsValue) => if (key != token) out ! value.toString()
     }
   }
 

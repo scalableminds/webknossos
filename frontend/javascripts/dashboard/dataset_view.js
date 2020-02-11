@@ -13,6 +13,7 @@ import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import Persistence from "libs/persistence";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import * as Utils from "libs/utils";
+import features from "features";
 import renderIndependently from "libs/render_independently";
 import UserLocalStorage from "libs/user_local_storage";
 
@@ -165,7 +166,7 @@ class DatasetView extends React.PureComponent<Props, State> {
                 <Button>Upload your dataset</Button>
               </Link>
             }
-            height={250}
+            height={350}
           >
             You can also copy it directly onto the hosting server.{" "}
             <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
@@ -189,9 +190,14 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   renderTable() {
+    const filteredDatasets = features().isDemoInstance
+      ? this.state.datasets.filter(
+          d => !d.isPublic || d.owningOrganization === this.props.user.organization,
+        )
+      : this.state.datasets;
     return (
       <DatasetTable
-        datasets={this.state.datasets}
+        datasets={filteredDatasets}
         searchQuery={this.state.searchQuery}
         isUserAdmin={Utils.isUserAdmin(this.props.user)}
         datasetFilteringMode={this.state.datasetFilteringMode}

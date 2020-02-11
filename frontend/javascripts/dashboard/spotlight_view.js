@@ -1,6 +1,6 @@
 // @flow
-import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col, Card, Input } from "antd";
+import { Link, withRouter } from "react-router-dom";
+import { Spin, Layout, Row, Col, Card, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -8,9 +8,9 @@ import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
+import RegistrationForm from "./registration_form";
 import features from "features";
 
 const { Content } = Layout;
@@ -54,7 +54,7 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col xs={{ span: 24 }} xl={{ span: 20 }}>
+          <Col xs={{ span: 24 }} xl={{ span: 14 }}>
             <p
               style={{
                 fontSize: 58,
@@ -95,23 +95,27 @@ const WelcomeHeader = ({ history }) => (
             </div>
 
             <div style={{ marginTop: 20, paddingLeft: 60 }}>
-              <Button
-                type="primary"
-                size="large"
-                style={{ marginRight: 50 }}
-                onClick={() => {
-                  history.push("/onboarding");
-                  trackAction("[Spotlight] CreateFreeAccount");
-                }}
+              <Link
+                to="/features"
+                className="spotlight-hero-button ant-btn ant-btn-lg ant-btn-background-ghost"
               >
-                Create a Free Account
-              </Button>
-              <Link to="/features" className="spotlight-hero-button">
                 Learn More About the Features
               </Link>
-              <Link to="/pricing" className="spotlight-hero-button">
+              <Link
+                to="/pricing"
+                className="spotlight-hero-button ant-btn ant-btn-lg ant-btn-background-ghost"
+              >
                 Get Your Own webKnossos
               </Link>
+            </div>
+          </Col>
+          <Col xs={{ span: 24 }} xl={{ span: 6 }}>
+            <div style={{ backgroundColor: "white", padding: 20 }}>
+              <RegistrationForm
+                onRegistered={() => {
+                  history.push("/dashboard");
+                }}
+              />
             </div>
           </Col>
         </Row>

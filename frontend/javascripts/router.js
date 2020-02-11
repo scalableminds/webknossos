@@ -106,7 +106,7 @@ class ReactRouter extends React.Component<Props> {
       );
     }
 
-    return <h3>Invalid tracing URL.</h3>;
+    return <h3>Invalid annotation URL.</h3>;
   };
 
   tracingViewMode = ({ match }: ContextRouter) => (

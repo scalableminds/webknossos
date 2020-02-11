@@ -15,6 +15,7 @@ import PublicationView from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import { WhatsNextHeader } from "admin/onboarding";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
@@ -170,6 +171,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
         <div className="container">
+          <WhatsNextHeader activeUser={this.props.activeUser} />
           {userHeader}
           <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
             {this.getTabs(user)}

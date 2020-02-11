@@ -1,5 +1,5 @@
 // @flow
-import { Link, withRouter } from "react-router-dom";
+import { Link, withRouter, type RouterHistory } from "react-router-dom";
 import { Spin, Layout, Row, Col, Card, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";

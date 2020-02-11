@@ -11,11 +11,13 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
+import PublicationView from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import features from "features";
 
 const { TabPane } = Tabs;
 
@@ -36,6 +38,7 @@ type State = {
 };
 
 export const urlTokenToTabKeyMap = {
+  publications: "publications",
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
@@ -49,7 +52,12 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     const validTabKeys = this.getValidTabKeys();
     const { initialTabKey } = this.props;
     const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-    const defaultTabKey = this.props.isAdminView ? "tasks" : "datasets";
+    let defaultTabKey = "datasets";
+    if (this.props.isAdminView) {
+      defaultTabKey = "tasks";
+    } else if (features().isDemoInstance) {
+      defaultTabKey = "publications";
+    }
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
@@ -90,6 +98,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     const { isAdminView } = this.props;
 
     return {
+      publications: features().isDemoInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
@@ -102,6 +111,11 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       const validTabKeys = this.getValidTabKeys();
 
       return [
+        validTabKeys.publications ? (
+          <TabPane tab="Featured Publications" key="publications">
+            <PublicationView datasets={[]} searchQuery="" />
+          </TabPane>
+        ) : null,
         validTabKeys.datasets ? (
           <TabPane tab="Datasets" key="datasets">
             <DatasetView user={user} />

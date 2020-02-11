@@ -736,13 +736,13 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               case "createNode": {
                 const { treeId, ...node } = value;
                 // eslint-disable-next-line no-loop-func
-                getOrCreateTree(state, skeletonTracing, treeId).chain(tree => {
+                getTree(newState.tracing.skeleton, treeId).chain(tree => {
                   const diffableNodeMap = tree.nodes;
                   const newDiffableMap = diffableNodeMap.set(node.id, node);
                   const newTree = update(tree, {
                     nodes: { $set: newDiffableMap },
                   });
-                  newState = update(state, {
+                  newState = update(newState, {
                     tracing: {
                       skeleton: {
                         trees: {
@@ -757,14 +757,14 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               case "createEdge": {
                 const { treeId, source, target } = value;
                 // eslint-disable-next-line no-loop-func
-                getOrCreateTree(state, skeletonTracing, treeId).chain(tree => {
+                getTree(newState.tracing.skeleton, treeId).chain(tree => {
                   const newEdge = {
                     source,
                     target,
                   };
                   const edges = tree.edges.addEdge(newEdge);
                   const newTree = update(tree, { edges: { $set: edges } });
-                  newState = update(state, {
+                  newState = update(newState, {
                     tracing: {
                       skeleton: {
                         trees: {
@@ -777,9 +777,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 break;
               }
               default:
-                continue;
             }
           }
+          console.log("#########################");
           return newState;
         }
 

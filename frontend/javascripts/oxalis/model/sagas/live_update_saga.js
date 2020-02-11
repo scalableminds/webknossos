@@ -32,10 +32,10 @@ function onMessage(event) {
 export function* receiveTracingUpdates(): Saga<void> {
   yield* take("WK_READY");
 
-  const initialAllowUpdate = yield* select(
-    state => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
-  );
-  if (!initialAllowUpdate) return;
+  // const initialAllowUpdate = yield* select(
+  //   state => state.tracing.restrictions.allowUpdate && state.tracing.restrictions.allowSave,
+  // );
+  // if (!initialAllowUpdate) return;
 
   const tracingStoreUrl = yield* select(state => state.tracing.tracingStore.url);
   const wsUrl = `ws${tracingStoreUrl.slice(tracingStoreUrl.indexOf(":"))}`;

@@ -236,7 +236,8 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
         ...annotation,
         restrictions: {
           ...annotation.restrictions,
-          allowSave: annotation.restrictions.allowUpdate,
+          allowUpdate: true,
+          allowSave: true,
         },
       };
     }

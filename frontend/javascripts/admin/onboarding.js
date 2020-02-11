@@ -49,6 +49,8 @@ type State = {
 };
 
 export function WhatsNextHeader() {
+  const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
+
   const welcomeHeader = (
     <Row type="flex" gutter={50}>
       <Col span={4}>
@@ -61,18 +63,30 @@ export function WhatsNextHeader() {
         </p>
 
         <Row type="flex" gutter={50}>
-          <FeatureCard
-            header={<a href="/dashboard/publications">Start Exploring</a>}
-            icon={<Icon type="play-circle-o" />}
-          />
-          <FeatureCard
-            header={<a href="/datasets/upload">Upload your Data</a>}
-            icon={<Icon type="cloud-upload-o" />}
-          />
-          <FeatureCard
-            header={<a href="/users">Start Collaborating</a>}
-            icon={<Icon type="team" />}
-          />
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <a href="/dashboard/publications">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}><Icon type="play-circle-o" /></div>
+                <p style={{ fontWeight: "bold" }}>Start Exploring</p>
+              </Card>
+            </a>
+          </Col>
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <a href="/datasets/upload">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}><Icon type="cloud-upload-o" /></div>
+                <p style={{ fontWeight: "bold" }}>Upload your Data</p>
+              </Card>
+            </a>
+          </Col>
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <a href="/users">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}><Icon type="team" /></div>
+                <p style={{ fontWeight: "bold" }}>Start Collaborating</p>
+              </Card>
+            </a>
+          </Col>
         </Row>
       </Col>
     </Row>

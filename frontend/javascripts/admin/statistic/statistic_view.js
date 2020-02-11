@@ -127,7 +127,7 @@ class StatisticView extends React.PureComponent<{}, State> {
       <div className="statistics container">
         <Row gutter={16}>
           <Col span={16}>
-            <Card title="Overall Weekly Tracing Time">
+            <Card title="Overall Weekly Annotation Time">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
                 {rows.length > 0 ? (
                   <Chart

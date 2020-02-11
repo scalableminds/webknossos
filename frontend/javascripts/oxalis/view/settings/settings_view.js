@@ -18,7 +18,7 @@ type Props = {
 const SettingsView = ({ dontRenderContents }: Props) => (
   // Don't render contents to improve performance
   <Tabs destroyInactiveTabPane className="tracing-settings-menu" defaultActiveKey="2">
-    <TabPane tab="Tracing" key="1">
+    <TabPane tab="Annotation" key="1">
       {!dontRenderContents && <UserSettingsView />}
     </TabPane>
     <TabPane tab="Dataset" key="2">

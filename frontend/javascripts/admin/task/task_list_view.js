@@ -271,7 +271,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                     {status.finished}
                   </span>
                   <br />
-                  <span title="Tracing Time">
+                  <span title="Annotation Time">
                     <Icon type="clock-circle-o" />
                     {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
@@ -288,7 +288,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   {task.status.finished > 0 ? (
                     <a
                       href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Tracings"
+                      title="View all Finished Annotations"
                     >
                       <Icon type="eye-o" />
                       View
@@ -307,7 +307,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                         const includesVolumeData = task.type.tracingType !== "skeleton";
                         return downloadNml(task.id, "CompoundTask", includesVolumeData);
                       }}
-                      title="Download all Finished Tracings"
+                      title="Download all Finished Annotations"
                     >
                       <Icon type="download" />
                       Download

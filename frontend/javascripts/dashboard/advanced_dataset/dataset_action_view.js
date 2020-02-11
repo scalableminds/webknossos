@@ -18,12 +18,12 @@ export const createTracingOverlayMenu = (
   return (
     <Menu>
       <Menu.Item key="existing" onClick={() => onClick(dataset, type, true)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
           Use Existing Segmentation Layer
         </a>
       </Menu.Item>
       <Menu.Item key="new" onClick={() => onClick(dataset, type, false)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
           Use a New Segmentation Layer
         </a>
       </Menu.Item>
@@ -46,7 +46,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     withFallback: boolean,
   ) => {
     const annotation = await createExplorational(dataset, type, withFallback);
-    trackAction(`Create ${type} tracing`);
+    trackAction(`Create ${type} annotation`);
     this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
@@ -66,13 +66,13 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         overlay={createTracingOverlayMenu(dataset, "volume", this.createTracing)}
         trigger={["click"]}
       >
-        <a href="#" title="Create Volume Tracing">
+        <a href="#" title="Create Volume Annotation">
           <img
             src="/assets/images/volume.svg"
             alt="volume icon"
             style={centerBackgroundImageStyle}
           />{" "}
-          Start Volume Tracing
+          Start Volume Annotation
         </a>
       </Dropdown>
     );
@@ -82,9 +82,9 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         overlay={createTracingOverlayMenu(dataset, "hybrid", this.createTracing)}
         trigger={["click"]}
       >
-        <a href="#" title="Create Hybrid (Skeleton + Volume) Tracing">
+        <a href="#" title="Create Hybrid (Skeleton + Volume) Annotation">
           <Icon type="swap" />
-          Start Hybrid Tracing
+          Start Hybrid Annotation
         </a>
       </Dropdown>
     );
@@ -135,22 +135,22 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 <a
                   href="#"
                   onClick={() => this.createTracing(dataset, "skeleton", false)}
-                  title="Create Skeleton Tracing"
+                  title="Create Skeleton Annotation"
                 >
                   <img
                     src="/assets/images/skeleton.svg"
                     alt="skeleton icon"
                     style={centerBackgroundImageStyle}
                   />{" "}
-                  Start Skeleton Tracing
+                  Start Skeleton Annotation
                 </a>
                 {volumeTracingMenu}
                 {hybridTracingMenu}
               </React.Fragment>
             ) : (
               <p>
-                Start Tracing &nbsp;
-                <Tooltip title="Cannot create tracings for read-only datasets">
+                Start Annotation &nbsp;
+                <Tooltip title="Cannot create annotations for read-only datasets">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />
                 </Tooltip>
               </p>

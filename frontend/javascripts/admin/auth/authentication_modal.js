@@ -31,7 +31,7 @@ export default function AuthenticationModal({ onLoggedIn, onCancel, visible }: P
   return (
     <Modal title={step} onCancel={onCancel} visible={visible} footer={null} maskClosable={false}>
       <Alert
-        message="You have to register and/or login to create a tracing."
+        message="You have to register and/or login to create an annotation."
         type="info"
         showIcon
         style={{ marginBottom: 20 }}

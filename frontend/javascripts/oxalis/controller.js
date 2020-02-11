@@ -68,9 +68,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   //
   // We have a matrix of modes like this:
   //
-  //   Annotation Mode \ View mode    Plane       Arbitrary
-  //              Skeleton Tracing      X             X
-  //                Volume Tracing      X             /
+  //   Annotation Mode \ View mode       Plane       Arbitrary
+  //              Skeleton annotation      X             X
+  //                Volume annotation      X             /
   //
   // In order to maximize code reuse, there is - besides the main
   // controller - a controller for each row, each column and each
@@ -78,7 +78,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
-    // The tracing view should be rendered without the special mobile-friendly
+    // The annotation view should be rendered without the special mobile-friendly
     // viewport meta tag.
     Utils.disableViewportMetatag();
     this.isMounted = true;
@@ -90,7 +90,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
-    // Preview a working tracing version if the showVersionRestore URL parameter is supplied
+    // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)

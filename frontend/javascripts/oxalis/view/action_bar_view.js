@@ -90,7 +90,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       return (
         <Dropdown overlay={createTracingOverlayMenu(dataset, "hybrid")} trigger={["click"]}>
           <ButtonComponent style={{ marginLeft: 12 }} type="primary">
-            Create Tracing
+            Create Annotation
           </ButtonComponent>
         </Dropdown>
       );
@@ -101,9 +101,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/hybrid/false`}
-            title="Create Tracing"
+            title="Create Annotation"
           >
-            Create Tracing
+            Create Annotation
           </Link>
         </ButtonComponent>
       );

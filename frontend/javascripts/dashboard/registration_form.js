@@ -172,7 +172,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
           </Button>
         </FormItem>
         <p style={{ textAlign: "center" }}>
-          <Link to="/auth/login">Login to existing account</Link>
+          <Link to="/auth/login">Log in to existing account</Link>
         </p>
       </Form>
     );

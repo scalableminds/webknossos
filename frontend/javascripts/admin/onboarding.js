@@ -64,28 +64,34 @@ export function WhatsNextHeader() {
 
         <Row type="flex" gutter={50}>
           <Col {...columnSpan} style={{ padding: 12 }}>
-            <a href="/dashboard/publications">
+            <Link to="/dashboard/publications">
               <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}><Icon type="play-circle-o" /></div>
-                <p style={{ fontWeight: "bold" }}>Start Exploring</p>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="play-circle-o" />
+                </div>
+                <p style={{ fontWeight: "bold" }}>Start To Explore Datasets</p>
               </Card>
-            </a>
+            </Link>
           </Col>
           <Col {...columnSpan} style={{ padding: 12 }}>
-            <a href="/datasets/upload">
+            <Link to="/datasets/upload">
               <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}><Icon type="cloud-upload-o" /></div>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="cloud-upload-o" />
+                </div>
                 <p style={{ fontWeight: "bold" }}>Upload your Data</p>
               </Card>
-            </a>
+            </Link>
           </Col>
           <Col {...columnSpan} style={{ padding: 12 }}>
-            <a href="/users">
+            <Link to="/users">
               <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}><Icon type="team" /></div>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="team" />
+                </div>
                 <p style={{ fontWeight: "bold" }}>Start Collaborating</p>
               </Card>
-            </a>
+            </Link>
           </Col>
         </Row>
       </Col>

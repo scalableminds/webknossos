@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
@@ -35,7 +36,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
                                         tracingDataStore: TracingDataStore,
                                         val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+    val bodyParsers: PlayBodyParsers,
+    val system: ActorSystem)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings

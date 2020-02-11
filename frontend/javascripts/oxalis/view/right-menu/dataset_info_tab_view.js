@@ -162,7 +162,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
-      <table style={{ marginRight: 20, marginTop: 25, marginBottom: 25, maxWidth: 500 }}>
+      <table style={{ marginRight: 20, marginTop: 25, marginBottom: 25, maxWidth: 500, fontSize: 14 }}>
         <tbody>
           {shortcuts.map(shortcut => (
             <tr
@@ -198,12 +198,14 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isDatasetViewMode) {
       return (
         <div>
-          <p>Dataset: {displayName || datasetName}</p>
+          <p><strong>{displayName || datasetName}</strong></p>
           {datasetDescription ? (
-            <Markdown
-              source={datasetDescription}
-              options={{ html: false, breaks: true, linkify: true }}
-            />
+            <div style={{fontSize: 14}}>
+              <Markdown
+                source={datasetDescription}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
           ) : null}
         </div>
       );
@@ -340,12 +342,11 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
     const resolutionInfo =
       activeResolution != null ? (
-        <div className="info-tab-block">
-          Active Resolution: {activeResolution.join("-")}{" "}
-          <Tooltip
+        <Tooltip
             title={
               <div>
-                This dataset contains the following resolutions:
+                Currently rendered resolution {activeResolution.join("-")}.<br /><br />
+                Available resolutions:
                 <ul>
                   {resolutions.map(r => (
                     <li key={r.join()}>{r.join("-")}</li>
@@ -353,15 +354,21 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 </ul>
               </div>
             }
-            placement="right"
+            placement="left"
           >
-            <Icon type="info-circle" />
+          <tr>
+          <td style={{ paddingRight: 4, verticalAlign: top}}>
+              <img src="/assets/images/icon-downsampling.svg" style={{width: 24, height: 24}} />
+          </td>
+          <td>
+          {activeResolution.join("-")}
+          </td>
+          </tr>
           </Tooltip>
-        </div>
       ) : null;
 
     return (
-      <div className="flex-overflow padded-tab-content">
+      <div className="flex-overflow padded-tab-content" style={{padding: 8, paddingLeft: 20}}>
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
@@ -370,22 +377,35 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         </div>
 
         <div className="info-tab-block">
-          <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
-          <table>
+          <table style={{fontSize: 14}}>
             <tbody>
+              <Tooltip
+                    title="Dataset voxel size"
+                    placement="left"
+                  >
               <tr>
-                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{extentInVoxel}</td>
+                <td style={{ paddingRight: 4, verticalAlign: top}}>
+                    <img src="/assets/images/icon-voxelsize.svg" style={{width: 24, height: 24}} />
+                </td>
+                <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
               </tr>
-              <tr>
-                <td />
-                <td>{extentInLength}</td>
+              </Tooltip>
+              <Tooltip
+                    title="Dataset extent"
+                    placement="left"
+                  >
+               <tr>
+                <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+                    <img src="/assets/images/icon-extent.svg" style={{width: 24, height: 24}} />
+                </td>
+                <td style={{ paddingTop: 10, paddingTop: 10,  }}>{extentInVoxel}<br /> {extentInLength}</td>
               </tr>
+              </Tooltip>
+              {resolutionInfo}
             </tbody>
           </table>
         </div>
 
-        {resolutionInfo}
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}

@@ -1,15 +1,79 @@
-@( name: String, brainDBresult: Option[String], enableAutoVerify: Boolean )
-Hello @name,
+@( name: String, isDemoInstance: Boolean, brainDBresult: Option[String], enableAutoVerify: Boolean )
+@if(isDemoInstance) {
+<html>
+  <head>
+    <style>
+      * {
+        font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      <img
+        src="https://static.webknossos.org/mails/email-header.svg"
+        alt="webKnossos"
+        style="width: 100%; max-width: 900px;"
+      />
+    </p>
+    <p>Hi @name,</p>
 
-thank you for signing up for an webKnossos account!
-@if(!enableAutoVerify) {
-Your account is going to get activated after an administrator has reviewed your details.
-}
+    <p>
+      welcome to your new webKnossos account. You are ready to start exploring and collaboratively
+      annotate large 3D datasets.
+    </p>
+    <h2>Get started</h2>
+    <ul>
+      <li>
+        Use webKnossos for free with any of the public datasets on
+        <a href="https://webknossos.org">webknossos.org</a>. All webKnossos features can be used
+        with your new free account.
+      </li>
+      <li>
+        Upload your own dataset into your own space private workspace. If you want, you can publish
+        your dataset into our public gallery.
+      </li>
+      <li>
+        Invite colleagues from your lab or external collaborators to work with your data in
+        real-time. webKnossos works great for small teams and supports management of large
+        annotators crowds.
+      </li>
+    </ul>
 
-@if(brainDBresult.isDefined) {
-@brainDBresult.get
-}
+    <h2>Get support</h2>
+    <p>
+      To learn more about how to get the most out of webKnossos,
+      <a href="https://docs.webknossos.org">check out the documentation</a> or
+      <a href="https://youtube.com">watch this introductory video</a>.
+    </p>
+    <p>
+      <a href="https://docs.webknossos.org"
+        ><img src="https://static.webknossos.org/emails/docs.jpg" alt="screenshot of documentation"
+      /></a>
+      <a href="https://youtube.com"
+        ><img src="https://static.webknossos.org/emails/video.jpg" alt="screenshot of intro video"
+      /></a>
+    </p>
 
-Enjoy using webKnossos
+    <p>
+      Please don’t hesitate to get in touch with me, if you have any questions about using
+      webKnossos.
+    </p>
 
-Your webKnossos Team
+    <p>I am looking forward to hearing from you.</p>
+
+    <p>Best regards,<br />Norman</p>
+
+    <ul>
+      <li><a href="https://webknossos.org">webKnossos</a></li>
+      <li><a href="https://docs.webknossos.org">Documentation</a></li>
+      <li><a href="https://youtube.com">Youtube Channel</a></li>
+      <li><a href="https://twitter.com/webknossos">Twitter Channel</a></li>
+    </ul>
+  </body>
+</html>
+} else { Hello @name, thank you for signing up for an webKnossos account! @if(!enableAutoVerify) {
+Your account is going to get activated after an administrator has reviewed your details. }
+@if(brainDBresult.isDefined) { @brainDBresult.get } Enjoy using webKnossos Your webKnossos Team }

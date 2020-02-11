@@ -1,13 +1,12 @@
 // @flow
 import { Dropdown, Menu, Icon, Tooltip } from "antd";
-import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
 import type { APIMaybeUnimportedDataset, TracingType } from "admin/api_flow_types";
-import { createExplorational, clearCache } from "admin/admin_rest_api";
+import { clearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
 export const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
   const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
@@ -40,7 +39,6 @@ export const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, typ
 type Props = {
   dataset: APIMaybeUnimportedDataset,
   isUserAdmin: boolean,
-  history: RouterHistory,
 };
 
 type State = {};

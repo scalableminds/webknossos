@@ -3,12 +3,7 @@ import { Alert, Dropdown, Icon, Menu } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type {
-  APIDataset,
-  APIUser,
-  APIMaybeUnimportedDataset,
-  TracingType,
-} from "admin/api_flow_types";
+import type { APIDataset, APIUser, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,
@@ -58,14 +53,12 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isNewLayoutModalVisible: boolean,
-  isAuthenticationModalVisible: boolean,
   useExistingSegmentation: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
-    isAuthenticationModalVisible: false,
     useExistingSegmentation: true,
   };
 
@@ -104,7 +97,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   renderStartTracingButton(): React.Node {
     const { dataset } = this.props;
     const hasSegmentationLayer = dataset.dataSource.dataLayers.some(
-      layer => layer.category == "segmentation",
+      layer => layer.category === "segmentation",
     );
     if (hasSegmentationLayer) {
       return (
@@ -121,7 +114,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/hybrid/false`}
-            title={`Create Tracing`}
+            title="Create Tracing"
           >
             Create Tracing
           </Link>
@@ -184,14 +177,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
           addLayout={this.addNewLayout}
           visible={this.state.isNewLayoutModalVisible}
           onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
-        />
-        <AuthenticationModal
-          onLoggedIn={() => {
-            this.setState({ isAuthenticationModalVisible: false });
-            this.createTracing(dataset, this.state.useExistingSegmentation);
-          }}
-          onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
-          visible={this.state.isAuthenticationModalVisible}
         />
       </React.Fragment>
     );

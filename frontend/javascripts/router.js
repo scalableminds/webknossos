@@ -462,7 +462,7 @@ class ReactRouter extends React.Component<Props> {
                       const type =
                         Enum.coalesce(TracingTypeEnum, match.params.type) ||
                         TracingTypeEnum.skeleton;
-                      const withFallback = match.params.withFallback == "true";
+                      const withFallback = match.params.withFallback === "true";
                       const annotation = await createExplorational(dataset, type, withFallback);
                       trackAction(`Create ${type} tracing`);
                       return `/annotations/${annotation.typ}/${annotation.id}`;

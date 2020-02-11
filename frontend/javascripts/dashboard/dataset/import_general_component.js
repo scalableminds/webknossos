@@ -3,7 +3,6 @@
 import { Input, Col, Row, DatePicker } from "antd";
 import React from "react";
 
-import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
 import { FormItemWithInfo } from "./helper_components";

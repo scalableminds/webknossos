@@ -3,7 +3,6 @@ import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
 import { Link } from "react-router-dom";
 import React from "react";
 
-import type { APIOrganization } from "admin/api_flow_types";
 import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
@@ -16,7 +15,6 @@ const { Password } = Input;
 type Props = {|
   form: Object,
   onRegistered: () => void,
-  onLoginRedirect: () => void,
 |};
 
 type State = {

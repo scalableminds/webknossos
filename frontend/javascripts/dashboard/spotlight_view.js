@@ -10,8 +10,8 @@ import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
-import RegistrationForm from "./registration_form";
 import features from "features";
+import RegistrationForm from "./registration_form";
 
 const { Content } = Layout;
 const { Search } = Input;

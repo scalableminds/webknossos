@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
@@ -22,7 +23,8 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
                                           val accessTokenService: TracingStoreAccessTokenService,
                                           val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+    val bodyParsers: PlayBodyParsers,
+    val system: ActorSystem)
     extends TracingController[SkeletonTracing, SkeletonTracings] {
 
   implicit val tracingsCompanion = SkeletonTracings

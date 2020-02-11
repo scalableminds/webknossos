@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import akka.actor.ActorSystem
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
@@ -50,6 +51,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit val ec: ExecutionContext
 
   implicit val bodyParsers: PlayBodyParsers
+
+  implicit val system: ActorSystem
 
   def save = Action.async(validateProto[T]) { implicit request =>
     log {
@@ -119,6 +122,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
           AllowRemoteOrigin {
             val updateGroups = request.body
             val userToken = request.getQueryString("token")
+            system.actorSelection("/user/*/flowActor") ! Json.toJson(updateGroups)
             if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
               commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
             } else {

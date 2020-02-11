@@ -16,6 +16,7 @@ import {
   getLayoutConfig,
   addNewLayout,
 } from "oxalis/view/layouting/layout_persistence";
+import { Link } from "react-router-dom";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
@@ -101,31 +102,32 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartTracingButton(): React.Node {
-    const { activeUser, dataset } = this.props;
-    const needsAuthentication = activeUser == null;
-
-    const handleCreateTracing = async (
-      _dataset: APIMaybeUnimportedDataset,
-      _type: TracingType,
-      useExistingSegmentation: boolean,
-    ) => {
-      if (needsAuthentication) {
-        this.setState({ isAuthenticationModalVisible: true, useExistingSegmentation });
-      } else {
-        this.createTracing(dataset, useExistingSegmentation);
-      }
-    };
-
-    return (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid", handleCreateTracing)}
-        trigger={["click"]}
-      >
-        <ButtonComponent style={{ marginLeft: 12 }} type="primary">
-          Create Tracing
-        </ButtonComponent>
-      </Dropdown>
+    const { dataset } = this.props;
+    const hasSegmentationLayer = dataset.dataSource.dataLayers.some(
+      layer => layer.category == "segmentation",
     );
+    if (hasSegmentationLayer) {
+      return (
+        <Dropdown overlay={createTracingOverlayMenu(dataset, "hybrid")} trigger={["click"]}>
+          <ButtonComponent style={{ marginLeft: 12 }} type="primary">
+            Create Tracing
+          </ButtonComponent>
+        </Dropdown>
+      );
+    } else {
+      return (
+        <ButtonComponent style={{ marginLeft: 12 }} type="primary">
+          <Link
+            to={`/datasets/${dataset.owningOrganization}/${
+              dataset.name
+            }/createExplorative/hybrid/false`}
+            title={`Create Tracing`}
+          >
+            Create Tracing
+          </Link>
+        </ButtonComponent>
+      );
+    }
   }
 
   render() {

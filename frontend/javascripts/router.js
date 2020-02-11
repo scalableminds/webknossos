@@ -6,10 +6,11 @@ import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 
-import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import {
   getAnnotationInformation,
   getOrganizationForDataset,
@@ -437,12 +438,30 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
                 render={({ match, location }: ContextRouter) => (
                   <AsyncRedirect
+                    pushToHistory={false}
                     redirectTo={async () => {
+                      const needsAuthentication = Store.getState().activeUser == null;
+                      if (needsAuthentication) {
+                        return `/auth/login?redirectPage=${location.pathname}`;
+                      }
+
+                      if (
+                        !match.params.organizationName ||
+                        !match.params.dataSetName ||
+                        !match.params.type ||
+                        !match.params.withFallback
+                      ) {
+                        // Typehint for flow
+                        throw new Error("Invalid URL");
+                      }
+
                       const dataset = {
                         owningOrganization: match.params.organizationName,
                         name: match.params.dataSetName,
                       };
-                      const type = match.params.type;
+                      const type =
+                        Enum.coalesce(TracingTypeEnum, match.params.type) ||
+                        TracingTypeEnum.skeleton;
                       const withFallback = match.params.withFallback == "true";
                       const annotation = await createExplorational(dataset, type, withFallback);
                       trackAction(`Create ${type} tracing`);

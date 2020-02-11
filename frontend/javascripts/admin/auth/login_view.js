@@ -22,9 +22,14 @@ function LoginView({ history, redirect }: Props) {
         history.push("/dashboard");
       }
     } else {
-      // Use "redirectPage" URL parameter to cause a full page reload and redirecting to external sites
-      // e.g. Discuss
-      window.location.replace(Utils.getUrlParamValue("redirectPage"));
+      const redirectPage = Utils.getUrlParamValue("redirectPage");
+      if (redirectPage.startsWith("/")) {
+        history.push(redirectPage);
+      } else {
+        // Use "redirectPage" URL parameter to cause a full page reload and redirecting to external sites
+        // e.g. Discuss
+        window.location.replace(redirectPage);
+      }
     }
   };
 

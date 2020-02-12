@@ -162,19 +162,29 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
-      <table style={{ marginRight: 20, marginTop: 25, marginBottom: 25, maxWidth: 500, fontSize: 14 }}>
-        <tbody>
-          {shortcuts.map(shortcut => (
-            <tr
-              key={shortcut.key}
-              style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
-            >
-              <td style={{ width: 200 }}>{shortcut.keybinding}</td>
-              <td>{shortcut.action}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div style={{marginBottom: 25}}>
+        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+          <tbody>
+            {shortcuts.map(shortcut => (
+              <tr
+                key={shortcut.key}
+                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
+              >
+                <td style={{ width: 200 }}>{shortcut.keybinding}</td>
+                <td>{shortcut.action}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <a
+            target="_blank"
+            href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+            rel="noopener noreferrer"
+            style={{fontSize: 14}}
+          >
+          More shortcuts…
+        </a>
+      </div>
     ) : null;
   }
 
@@ -357,10 +367,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             placement="left"
           >
           <tr>
-          <td style={{ paddingRight: 4, verticalAlign: top}}>
+          <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               <img src="/assets/images/icon-downsampling.svg" style={{width: 24, height: 24}} />
           </td>
-          <td>
+          <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
           {activeResolution.join("-")}
           </td>
           </tr>
@@ -384,7 +394,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                     placement="left"
                   >
               <tr>
-                <td style={{ paddingRight: 4, verticalAlign: top}}>
+                <td style={{ paddingRight: 4, verticalAlign: "top"}}>
                     <img src="/assets/images/icon-voxelsize.svg" style={{width: 24, height: 24}} />
                 </td>
                 <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
@@ -398,7 +408,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                 <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
                     <img src="/assets/images/icon-extent.svg" style={{width: 24, height: 24}} />
                 </td>
-                <td style={{ paddingTop: 10, paddingTop: 10,  }}>{extentInVoxel}<br /> {extentInLength}</td>
+                <td style={{ paddingTop: 10 }}>{extentInVoxel}<br /> {extentInLength}</td>
               </tr>
               </Tooltip>
               {resolutionInfo}

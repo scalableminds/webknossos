@@ -454,6 +454,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").headOption.getOrElse("")))
+                    if (conf.Features.isDemoInstance) {
+                      Mailer ! Send(
+                        defaultMails.registerMail(user.name, user.email, None, organization.enableAutoVerify))
+                    }
                     Ok
                   }
                 }

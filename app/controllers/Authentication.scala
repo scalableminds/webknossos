@@ -168,6 +168,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       Some(finalName)
   }
 
+  def callMeMaybe = Action { implicit request => {
+      Mailer ! Send(
+        defaultMails.registerMailDemo("Neuer Nutzer", "n@scm.io"))
+      Ok
+    }
+  }
+
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
@@ -456,7 +463,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        request.headers.get("Host").headOption.getOrElse("")))
                     if (conf.Features.isDemoInstance) {
                       Mailer ! Send(
-                        defaultMails.registerMailDemo(user.firstName, user.email, None, organization.enableAutoVerify))
+                        defaultMails.registerMailDemo(user.firstName, user.email))
                     }
                     Ok
                   }

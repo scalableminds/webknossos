@@ -17,6 +17,8 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   val defaultFrom = "no-reply@webknossos.org"
 
+  val demoSender = conf.Mail.demoSender
+
   val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: Option[String], organization: Organization) =
@@ -48,7 +50,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def registerMailDemo(name: String, receiver: String)(
       implicit messages: Messages) =
     Mail(
-      from = defaultFrom,
+      from = demoSender,
       subject = "Welcome to webKnossos",
       bodyHtml = html.mail.registerDemo(name).body,
       recipients = List(receiver)

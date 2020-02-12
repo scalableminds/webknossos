@@ -368,7 +368,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           >
           <tr>
           <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
-              <img src="/assets/images/icon-downsampling.svg" style={{width: 24, height: 24}} />
+              <img src="/assets/images/icon-downsampling.svg" style={{width: 24, height: 24}} alt="Resolution"/>
           </td>
           <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
           {activeResolution.join("-")}
@@ -395,7 +395,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                   >
               <tr>
                 <td style={{ paddingRight: 4, verticalAlign: "top"}}>
-                    <img src="/assets/images/icon-voxelsize.svg" style={{width: 24, height: 24}} />
+                    <img src="/assets/images/icon-voxelsize.svg" style={{width: 24, height: 24}} alt="Voxel size" />
                 </td>
                 <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
               </tr>
@@ -406,7 +406,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
                   >
                <tr>
                 <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
-                    <img src="/assets/images/icon-extent.svg" style={{width: 24, height: 24}} />
+                    <img src="/assets/images/icon-extent.svg" style={{width: 24, height: 24}} alt="Dataset extent" />
                 </td>
                 <td style={{ paddingTop: 10 }}>{extentInVoxel}<br /> {extentInLength}</td>
               </tr>

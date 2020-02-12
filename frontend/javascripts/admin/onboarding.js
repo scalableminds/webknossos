@@ -18,7 +18,6 @@ import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
-import * as Utils from "libs/utils";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
@@ -70,7 +69,7 @@ export function WhatsNextBanner() {
                 <div style={{ fontSize: 30 }}>
                   <Icon type="play-circle-o" />
                 </div>
-                <p style={{ fontWeight: "bold" }}>Start To Explore Datasets</p>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start To Explore Datasets</p>
               </Card>
             </Link>
           </Col>
@@ -80,7 +79,7 @@ export function WhatsNextBanner() {
                 <div style={{ fontSize: 30 }}>
                   <Icon type="cloud-upload-o" />
                 </div>
-                <p style={{ fontWeight: "bold" }}>Upload your Data</p>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Upload your Data</p>
               </Card>
             </Link>
           </Col>
@@ -90,7 +89,7 @@ export function WhatsNextBanner() {
                 <div style={{ fontSize: 30 }}>
                   <Icon type="team" />
                 </div>
-                <p style={{ fontWeight: "bold" }}>Start Collaborating</p>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start Collaborating</p>
               </Card>
             </Link>
           </Col>

@@ -119,7 +119,7 @@ const WelcomeHeader = ({ history }) => (
             >
               <RegistrationForm
                 onRegistered={() => {
-                  history.push("/dashboard");
+                  history.push("/dashboard?showWhatsNextBanner");
                 }}
               />
             </div>

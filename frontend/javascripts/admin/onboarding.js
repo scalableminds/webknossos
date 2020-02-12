@@ -18,6 +18,7 @@ import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
+import * as Utils from "libs/utils";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
@@ -48,7 +49,7 @@ type State = {
   showDatasetUploadModal: boolean,
 };
 
-export function WhatsNextHeader() {
+export function WhatsNextBanner() {
   const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
 
   const welcomeHeader = (
@@ -64,7 +65,7 @@ export function WhatsNextHeader() {
 
         <Row type="flex" gutter={50}>
           <Col {...columnSpan} style={{ padding: 12 }}>
-            <Link to="/dashboard/publications">
+            <Link to="/dashboard/publications?showWhatsNextBanner">
               <Card style={{ textAlign: "center", height: "100%" }}>
                 <div style={{ fontSize: 30 }}>
                   <Icon type="play-circle-o" />

@@ -272,10 +272,15 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
   if (!initialAllowUpdate) return;
 
   while (true) {
+    let action;
     if (tracingType === "skeleton") {
-      yield* take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "SET_TRACING"]);
+      action = yield* take([
+        ...SkeletonTracingSaveRelevantActions,
+        ...FlycamActions,
+        "SET_TRACING",
+      ]);
     } else {
-      yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
+      action = yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
     }
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
@@ -288,15 +293,17 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
     const tracing = yield* select(state => state.tracing);
     const flycam = yield* select(state => state.flycam);
-    const items = compactUpdateActions(
-      // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
-      Array.from(
-        yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
-      ),
-      tracing,
-    );
-    if (items.length > 0) {
-      yield* put(pushSaveQueueTransaction(items, tracingType));
+    if (action.type !== "APPLY_UPDATE_ACTIONS") {
+      const items = compactUpdateActions(
+        // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
+        Array.from(
+          yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
+        ),
+        tracing,
+      );
+      if (items.length > 0) {
+        yield* put(pushSaveQueueTransaction(items, tracingType));
+      }
     }
     prevTracing = tracing;
     prevFlycam = flycam;

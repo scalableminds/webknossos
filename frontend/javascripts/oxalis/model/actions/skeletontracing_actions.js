@@ -107,7 +107,11 @@ type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
-type ApplyUpdateActionsAction = { type: "APPLY_UPDATE_ACTIONS", actions: Array<UpdateAction> };
+type ApplyUpdateActionsAction = {
+  type: "APPLY_UPDATE_ACTIONS",
+  actions: Array<UpdateAction>,
+  version: number,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -180,6 +184,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_INACTIVE_TREES",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
+  "APPLY_UPDATE_ACTIONS",
 ];
 
 const noAction = (): NoAction => ({
@@ -427,9 +432,11 @@ export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnable
 
 export const applyUpdateActionsAction = (
   actions: Array<UpdateAction>,
+  version: number,
 ): ApplyUpdateActionsAction => ({
   type: "APPLY_UPDATE_ACTIONS",
   actions,
+  version,
 });
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.

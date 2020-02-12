@@ -692,9 +692,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "APPLY_UPDATE_ACTIONS": {
-          const { actions } = action;
+          const { actions, version } = action;
 
-          let newState = state;
+          let newState = update(state, { tracing: { skeleton: { version: { $set: version } } } });
           for (const ua of actions) {
             const { name: uaName, value } = ua;
             switch (uaName) {
@@ -713,7 +713,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   tracing: {
                     skeleton: {
                       trees: {
-                        [value.treeId]: {
+                        [id]: {
                           $set: {
                             name,
                             treeId: id,
@@ -779,7 +779,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               default:
             }
           }
-          console.log("#########################");
           return newState;
         }
 

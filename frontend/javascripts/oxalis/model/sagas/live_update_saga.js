@@ -15,7 +15,7 @@ function onMessage(event) {
 
     if (data[0].version > currentVersion) {
       for (const saveEntry of data) {
-        Store.dispatch(applyUpdateActionsAction(saveEntry.actions));
+        Store.dispatch(applyUpdateActionsAction(saveEntry.actions, saveEntry.version));
       }
     } else {
       console.log(

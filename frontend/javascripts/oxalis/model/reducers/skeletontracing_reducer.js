@@ -748,6 +748,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                         trees: {
                           [tree.treeId]: { $set: newTree },
                         },
+                        cachedMaxNodeId: { $set: node.id },
                       },
                     },
                   });

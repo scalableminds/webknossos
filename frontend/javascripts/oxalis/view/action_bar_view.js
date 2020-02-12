@@ -132,10 +132,14 @@ class ActionBarView extends React.PureComponent<Props, State> {
       );
     } else {
       return (
-        <ButtonComponent style={{ marginLeft: 12 }} type="primary" onClick ={() => handleCreateTracing(dataset, "hybrid", false)}>
+        <ButtonComponent
+          style={{ marginLeft: 12 }}
+          type="primary"
+          onClick={() => handleCreateTracing(dataset, "hybrid", false)}
+        >
           Create Annotation
         </ButtonComponent>
-      )
+      );
     }
   }
 

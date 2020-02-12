@@ -1,6 +1,5 @@
 // @flow
 import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
-import { Link } from "react-router-dom";
 import React from "react";
 
 import { loginUser } from "admin/admin_rest_api";
@@ -14,7 +13,7 @@ const { Password } = Input;
 
 type Props = {|
   form: Object,
-  onRegistered: () => void,
+  onRegistered: true => void,
 |};
 
 type State = {
@@ -60,7 +59,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       });
       Store.dispatch(setActiveUserAction(user));
 
-      this.props.onRegistered();
+      this.props.onRegistered(true);
     });
   };
 
@@ -171,9 +170,6 @@ class RegistrationForm extends React.PureComponent<Props, State> {
             Create Free Account
           </Button>
         </FormItem>
-        <p style={{ textAlign: "center" }}>
-          <Link to="/auth/login">Log in to existing account</Link>
-        </p>
       </Form>
     );
   }

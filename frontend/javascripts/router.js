@@ -10,7 +10,6 @@ import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "admin/api_
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
-import Store from "oxalis/store";
 import {
   getAnnotationInformation,
   getOrganizationForDataset,
@@ -437,7 +436,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
-                render={({ match, location }: ContextRouter) => (
+                render={({ match, _location }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {

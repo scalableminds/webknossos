@@ -122,6 +122,9 @@ const WelcomeHeader = ({ history }) => (
                   history.push("/dashboard?showWhatsNextBanner");
                 }}
               />
+              <p style={{ textAlign: "center" }}>
+                <Link to="/auth/login">Log in to existing account</Link>
+              </p>
             </div>
           </Col>
         </Row>

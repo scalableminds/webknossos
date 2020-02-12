@@ -45,12 +45,12 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
   
-  def registerMailDemo(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
+  def registerMailDemo(name: String, receiver: String)(
       implicit messages: Messages) =
     Mail(
       from = defaultFrom,
       subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.registerDemo(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      bodyHtml = html.mail.registerDemo(name).body,
       recipients = List(receiver)
     )
 

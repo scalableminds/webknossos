@@ -4,6 +4,7 @@ import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
+import * as Utils from "libs/utils";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -15,7 +16,7 @@ import PublicationView from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import { WhatsNextHeader } from "admin/onboarding";
+import { WhatsNextBanner } from "admin/onboarding";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
@@ -36,6 +37,7 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 type State = {
   activeTabKey: string,
   user: ?APIUser,
+  showWhatsNextBanner: bool,
 };
 
 export const urlTokenToTabKeyMap = {
@@ -68,6 +70,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     this.state = {
       activeTabKey,
       user: null,
+      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner"),
     };
   }
 
@@ -168,10 +171,12 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       </h3>
     ) : null;
 
+    const whatsNextBanner = this.state.showWhatsNextBanner ? <WhatsNextBanner activeUser={this.props.activeUser} /> : null
+
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
         <div className="container">
-          <WhatsNextHeader activeUser={this.props.activeUser} />
+          {whatsNextBanner}
           {userHeader}
           <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
             {this.getTabs(user)}

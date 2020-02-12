@@ -37,7 +37,7 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 type State = {
   activeTabKey: string,
   user: ?APIUser,
-  showWhatsNextBanner: bool,
+  showWhatsNextBanner: boolean,
 };
 
 export const urlTokenToTabKeyMap = {
@@ -70,7 +70,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     this.state = {
       activeTabKey,
       user: null,
-      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner"),
+      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner") === "true",
     };
   }
 
@@ -171,7 +171,9 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       </h3>
     ) : null;
 
-    const whatsNextBanner = this.state.showWhatsNextBanner ? <WhatsNextBanner activeUser={this.props.activeUser} /> : null
+    const whatsNextBanner = this.state.showWhatsNextBanner ? (
+      <WhatsNextBanner activeUser={this.props.activeUser} />
+    ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>

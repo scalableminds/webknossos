@@ -11,7 +11,7 @@ import { handleGenericError } from "libs/error_handling";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
-import RegistrationForm from "./registration_form";
+import RegistrationForm from "dashboard/registration_form";
 
 const { Content } = Layout;
 const { Search } = Input;
@@ -122,6 +122,9 @@ const WelcomeHeader = ({ history }) => (
                   history.push("/dashboard?showWhatsNextBanner");
                 }}
               />
+              <p style={{ textAlign: "center" }}>
+                <Link to="/auth/login">Log in to existing account</Link>
+              </p>
             </div>
           </Col>
         </Row>

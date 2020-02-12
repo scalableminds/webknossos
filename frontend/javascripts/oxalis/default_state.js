@@ -98,6 +98,7 @@ const defaultState: OxalisState = {
         Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
     },
+    users: {},
   },
   task: null,
   dataset: {

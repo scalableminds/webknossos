@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import type { SkeletonTracing, Tree, Node } from "oxalis/store";
+import type { SkeletonTracing, Tree, Node, Users } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
@@ -16,8 +16,10 @@ import NodeShader, {
   NodeTypes,
   COLOR_TEXTURE_WIDTH,
 } from "oxalis/geometries/materials/node_shader";
+import ColorGenerator from "libs/color_generator";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const MAX_CAPACITY = 1000;
 
@@ -92,6 +94,7 @@ class Skeleton {
   nodes: BufferCollection;
   edges: BufferCollection;
   treeColorTexture: THREE.DataTexture;
+  userMarkers: { [string]: THREE.Object3D } = {};
 
   constructor() {
     this.rootNode = new THREE.Object3D();
@@ -110,6 +113,42 @@ class Skeleton {
         }
       });
     });
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.users,
+      users => this.updateUsers(users),
+      false,
+    );
+  }
+
+  updateUsers(users: Users) {
+    for (const user of Object.keys(users)) {
+      const userValues = users[user];
+      const { position } = userValues;
+      if (this.userMarkers[user] != null) {
+        const mesh = this.userMarkers[user];
+        mesh.position.set(...position);
+      } else {
+        const rgbColor = ColorGenerator.distinctColorForId(parseInt(user.match(/(\d+)/)));
+        const material = new THREE.LineBasicMaterial({
+          color: Utils.rgbToHex(rgbColor),
+          linewidth: 3,
+        });
+        const geometry = new THREE.CircleGeometry(64, 64);
+
+        geometry.vertices.shift();
+
+        const mesh = new THREE.LineLoop(geometry, material);
+        this.rootNode.add(mesh);
+
+        mesh.rotation.x = Math.PI;
+
+        mesh.position.set(...position);
+
+        mesh.doubleSided = true;
+        this.userMarkers[user] = mesh;
+      }
+    }
   }
 
   reset(skeletonTracing: SkeletonTracing) {

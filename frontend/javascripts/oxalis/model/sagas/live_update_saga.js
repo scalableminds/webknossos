@@ -5,18 +5,20 @@ import Store from "oxalis/store";
 import { _delay, take, select } from "oxalis/model/sagas/effect-generators";
 import { applyUpdateActionsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { doWithToken } from "admin/admin_rest_api";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 
 function onMessage(event) {
   try {
+    // $FlowFixMe
     const json = JSON.parse(event.data);
     const { token, value: data } = json;
     console.log("LiveUpdate websocket message (json):", data);
 
-    const currentVersion = Store.getState().tracing.skeleton.version;
+    const currentVersion = enforceSkeletonTracing(Store.getState().tracing).version;
 
     if (data[0].version > currentVersion) {
       for (const saveEntry of data) {
-        Store.dispatch(applyUpdateActionsAction(saveEntry.actions, saveEntry.version));
+        Store.dispatch(applyUpdateActionsAction(saveEntry.actions, saveEntry.version, token));
       }
     } else {
       console.log(
@@ -26,10 +28,11 @@ function onMessage(event) {
       );
     }
   } catch {
-    console.log(`LiveUpdate websocket message (non-json): ${event.data}`);
+    console.log("LiveUpdate websocket message (non-json):", event.data);
   }
 }
 
+// $FlowFixMe
 export function* receiveTracingUpdates(): Saga<void> {
   yield* take("WK_READY");
 
@@ -42,10 +45,13 @@ export function* receiveTracingUpdates(): Saga<void> {
   const wsUrl = `ws${tracingStoreUrl.slice(tracingStoreUrl.indexOf(":"))}`;
   const wsUrlWithCorrectPort = wsUrl.replace("9000", "9001");
 
-  let datastoreToken;
-  yield doWithToken(token => {
-    datastoreToken = token;
-  });
+  let datastoreToken = "";
+  yield doWithToken(
+    token =>
+      new Promise(() => {
+        datastoreToken = token;
+      }),
+  );
 
   const updateSocket = new WebSocket(
     `${wsUrlWithCorrectPort}/tracings/skeleton/tracingId/liveUpdate?token=${datastoreToken}`,

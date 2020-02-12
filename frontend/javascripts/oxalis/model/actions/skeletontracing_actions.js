@@ -111,6 +111,7 @@ type ApplyUpdateActionsAction = {
   type: "APPLY_UPDATE_ACTIONS",
   actions: Array<UpdateAction>,
   version: number,
+  author: string,
 };
 type NoAction = { type: "NONE" };
 
@@ -433,10 +434,12 @@ export const setMergerModeEnabledAction = (active: boolean): SetMergerModeEnable
 export const applyUpdateActionsAction = (
   actions: Array<UpdateAction>,
   version: number,
+  author: string,
 ): ApplyUpdateActionsAction => ({
   type: "APPLY_UPDATE_ACTIONS",
   actions,
   version,
+  author,
 });
 // The following actions have the prefix "AsUser" which means that they
 // offer some additional logic which is sensible from a user-centered point of view.

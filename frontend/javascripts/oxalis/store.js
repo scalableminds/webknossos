@@ -282,6 +282,8 @@ export type HistogramDataForAllLayers = {
   [name: string]: APIHistogramData,
 };
 
+export type Users = { [key: string]: { position: Vector3, activeNodeId: number } };
+
 export type TemporaryConfiguration = {
   +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
@@ -308,6 +310,7 @@ export type TemporaryConfiguration = {
     +smallestCommonBucketCapacity: number,
     +initializedGpuFactor: number,
   },
+  +users: Users,
 };
 
 export type Script = APIScript;

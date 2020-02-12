@@ -183,7 +183,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
           method: "POST",
           headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
-          compress: true,
+          compress: false,
         },
       );
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));

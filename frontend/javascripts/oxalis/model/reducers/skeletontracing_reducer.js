@@ -692,12 +692,21 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "APPLY_UPDATE_ACTIONS": {
-          const { actions, version } = action;
+          const { actions, version, author } = action;
 
           let newState = update(state, { tracing: { skeleton: { version: { $set: version } } } });
           for (const ua of actions) {
-            const { name: uaName, value } = ua;
-            switch (uaName) {
+            switch (ua.name) {
+              case "updateTracing": {
+                // $FlowFixMe
+                const { editPosition: position, activeNode: activeNodeId } = ua.value;
+                newState = update(newState, {
+                  temporaryConfiguration: {
+                    users: { [author]: { $set: { position, activeNodeId } } },
+                  },
+                });
+                break;
+              }
               case "createTree": {
                 const {
                   id,
@@ -708,7 +717,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   branchPoints,
                   isVisible,
                   groupId,
-                } = value;
+                } = ua.value;
                 newState = update(newState, {
                   tracing: {
                     skeleton: {
@@ -734,45 +743,49 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 break;
               }
               case "createNode": {
-                const { treeId, ...node } = value;
+                const { treeId, ...node } = ua.value;
                 // eslint-disable-next-line no-loop-func
-                getTree(newState.tracing.skeleton, treeId).chain(tree => {
-                  const diffableNodeMap = tree.nodes;
-                  const newDiffableMap = diffableNodeMap.set(node.id, node);
-                  const newTree = update(tree, {
-                    nodes: { $set: newDiffableMap },
-                  });
-                  newState = update(newState, {
-                    tracing: {
-                      skeleton: {
-                        trees: {
-                          [tree.treeId]: { $set: newTree },
+                getSkeletonTracing(newState.tracing).map(newSkeletonTracing => {
+                  getTree(newSkeletonTracing, treeId).map(tree => {
+                    const diffableNodeMap = tree.nodes;
+                    const newDiffableMap = diffableNodeMap.set(node.id, node);
+                    const newTree = update(tree, {
+                      nodes: { $set: newDiffableMap },
+                    });
+                    newState = update(newState, {
+                      tracing: {
+                        skeleton: {
+                          trees: {
+                            [tree.treeId]: { $set: newTree },
+                          },
+                          cachedMaxNodeId: { $set: node.id },
                         },
-                        cachedMaxNodeId: { $set: node.id },
                       },
-                    },
+                    });
                   });
                 });
                 break;
               }
               case "createEdge": {
-                const { treeId, source, target } = value;
+                const { treeId, source, target } = ua.value;
                 // eslint-disable-next-line no-loop-func
-                getTree(newState.tracing.skeleton, treeId).chain(tree => {
-                  const newEdge = {
-                    source,
-                    target,
-                  };
-                  const edges = tree.edges.addEdge(newEdge);
-                  const newTree = update(tree, { edges: { $set: edges } });
-                  newState = update(newState, {
-                    tracing: {
-                      skeleton: {
-                        trees: {
-                          [tree.treeId]: { $set: newTree },
+                getSkeletonTracing(newState.tracing).map(newSkeletonTracing => {
+                  getTree(newSkeletonTracing, treeId).map(tree => {
+                    const newEdge = {
+                      source,
+                      target,
+                    };
+                    const edges = tree.edges.addEdge(newEdge);
+                    const newTree = update(tree, { edges: { $set: edges } });
+                    newState = update(newState, {
+                      tracing: {
+                        skeleton: {
+                          trees: {
+                            [tree.treeId]: { $set: newTree },
+                          },
                         },
                       },
-                    },
+                    });
                   });
                 });
                 break;

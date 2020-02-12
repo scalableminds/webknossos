@@ -19,7 +19,7 @@ import net.liftweb.common.Failure
 import play.api.i18n.Messages
 
 import scala.concurrent.duration._
-import play.api.libs.json.{Format, Json, Reads}
+import play.api.libs.json.{Format, JsObject, Json, Reads}
 import play.api.mvc.PlayBodyParsers
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
@@ -122,7 +122,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         AllowRemoteOrigin {
           val updateGroups = request.body
           val userToken = request.getQueryString("token")
-          system.actorSelection("/user/*/flowActor") ! (request.getQueryString("token").get, Json.toJson(updateGroups))
+          system.actorSelection("/user/*/flowActor") ! (request.getQueryString("token").get, Json.toJson(
+            Json.obj("token" -> request.getQueryString("token").get, "value" -> Json.toJson(updateGroups))))
           if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
             commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
           } else {

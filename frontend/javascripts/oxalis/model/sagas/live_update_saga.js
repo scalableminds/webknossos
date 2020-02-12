@@ -8,7 +8,8 @@ import { doWithToken } from "admin/admin_rest_api";
 
 function onMessage(event) {
   try {
-    const data = JSON.parse(event.data);
+    const json = JSON.parse(event.data);
+    const { token, value: data } = json;
     console.log("LiveUpdate websocket message (json):", data);
 
     const currentVersion = Store.getState().tracing.skeleton.version;

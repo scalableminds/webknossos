@@ -27,7 +27,7 @@ class LiveUpdateController @Inject()(tracingDataStore: TracingDataStore, redisCl
   }
 
   def a = Action { _ =>
-    system.actorSelection("/user/*/flowActor") ! "msg"
+    system.actorSelection("/user/*/flowActor") ! Identify()
     Ok
   }
 

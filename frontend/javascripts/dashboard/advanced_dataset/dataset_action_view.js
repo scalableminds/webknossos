@@ -9,7 +9,35 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 
-export const createTracingOverlayMenu = (
+const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
+  const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+  return (
+    <Menu>
+      <Menu.Item key="existing">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/true`}
+          title={`Create ${typeCapitalized} Annotation`}
+        >
+          Use Existing Segmentation Layer
+        </Link>
+      </Menu.Item>
+      <Menu.Item key="new">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/false`}
+          title={`Create ${typeCapitalized} Annotation`}
+        >
+          Use a New Segmentation Layer
+        </Link>
+      </Menu.Item>
+    </Menu>
+  );
+};
+
+export const createTracingOverlayMenuWithCallback = (
   dataset: APIMaybeUnimportedDataset,
   type: TracingType,
   onClick: (APIMaybeUnimportedDataset, TracingType, boolean) => Promise<void>,
@@ -40,16 +68,6 @@ type Props = {
 type State = {};
 
 class DatasetActionView extends React.PureComponent<Props, State> {
-  createTracing = async (
-    dataset: APIMaybeUnimportedDataset,
-    type: TracingType,
-    withFallback: boolean,
-  ) => {
-    const annotation = await createExplorational(dataset, type, withFallback);
-    trackAction(`Create ${type} annotation`);
-    this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
-  };
-
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     await clearCache(dataset);
     Toast.success(messages["dataset.clear_cache_success"]);
@@ -62,10 +80,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     };
 
     const volumeTracingMenu = (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "volume", this.createTracing)}
-        trigger={["click"]}
-      >
+      <Dropdown overlay={createTracingOverlayMenu(dataset, "volume")} trigger={["click"]}>
         <a href="#" title="Create Volume Annotation">
           <img
             src="/assets/images/volume.svg"
@@ -78,10 +93,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     );
 
     const hybridTracingMenu = (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid", this.createTracing)}
-        trigger={["click"]}
-      >
+      <Dropdown overlay={createTracingOverlayMenu(dataset, "hybrid")} trigger={["click"]}>
         <a href="#" title="Create Hybrid (Skeleton + Volume) Annotation">
           <Icon type="swap" />
           Start Hybrid Annotation
@@ -132,18 +144,19 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             </Link>
             {!dataset.isForeign ? (
               <React.Fragment>
-                <a
-                  href="#"
-                  onClick={() => this.createTracing(dataset, "skeleton", false)}
-                  title="Create Skeleton Annotation"
-                >
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${
+                      dataset.name
+                  }/createExplorative/skeleton/false`}
+                  title="Create Skeleton Tracing"
+                  >
                   <img
                     src="/assets/images/skeleton.svg"
                     alt="skeleton icon"
                     style={centerBackgroundImageStyle}
                   />{" "}
                   Start Skeleton Annotation
-                </a>
+                </Link>
                 {volumeTracingMenu}
                 {hybridTracingMenu}
               </React.Fragment>

@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 import LoginForm from "./login_form";
-import RegistrationForm from "./registration_form";
+import RegistrationForm from "dashboard/registration_form";
 
 type Props = {
   onLoggedIn: () => void,

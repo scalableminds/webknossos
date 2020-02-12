@@ -456,7 +456,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        request.headers.get("Host").headOption.getOrElse("")))
                     if (conf.Features.isDemoInstance) {
                       Mailer ! Send(
-                        defaultMails.registerMail(user.name, user.email, None, organization.enableAutoVerify))
+                        defaultMails.registerMailDemo(user.firstName, user.email, None, organization.enableAutoVerify))
                     }
                     Ok
                   }

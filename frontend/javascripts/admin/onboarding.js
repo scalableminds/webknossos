@@ -18,7 +18,6 @@ import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { type Node, useState, useEffect } from "react";
-import * as Utils from "libs/utils";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";

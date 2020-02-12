@@ -168,9 +168,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       Some(finalName)
   }
 
-  def callMeMaybe = Action { implicit request => {
-      Mailer ! Send(
-        defaultMails.registerMailDemo("Neuer Nutzer", "n@scm.io"))
+  def callMeMaybe = Action { implicit request =>
+    {
+      Mailer ! Send(defaultMails.registerMailDemo("Neuer Nutzer", "n@scm.io"))
       Ok
     }
   }
@@ -462,8 +462,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").headOption.getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      Mailer ! Send(
-                        defaultMails.registerMailDemo(user.firstName, user.email))
+                      Mailer ! Send(defaultMails.registerMailDemo(user.firstName, user.email))
                     }
                     Ok
                   }

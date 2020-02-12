@@ -25,7 +25,8 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
-      subject = s"webKnossos | A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
+      subject =
+        s"webKnossos | A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )
@@ -46,9 +47,8 @@ class DefaultMails @Inject()(conf: WkConf) {
       bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
-  
-  def registerMailDemo(name: String, receiver: String)(
-      implicit messages: Messages) =
+
+  def registerMailDemo(name: String, receiver: String)(implicit messages: Messages) =
     Mail(
       from = demoSender,
       subject = "Welcome to webKnossos",
@@ -69,10 +69,12 @@ class DefaultMails @Inject()(conf: WkConf) {
          recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String) =
-    Mail(from = defaultFrom,
-         subject = "webKnossos | Confirm resetting your webKnossos password",
-         bodyText = html.mail.resetPassword(name, uri, token).body,
-         recipients = List(receiver))
+    Mail(
+      from = defaultFrom,
+      subject = "webKnossos | Confirm resetting your webKnossos password",
+      bodyText = html.mail.resetPassword(name, uri, token).body,
+      recipients = List(receiver)
+    )
 
   def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) =
     Mail(

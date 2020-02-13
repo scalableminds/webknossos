@@ -3,6 +3,16 @@
  * @flow
  */
 
+// const zipFileRaw: string = require("url-loader!../speed-src.wasm");
+// const [match, contentType, base64] = zipFileRaw.match(/^data:(.+);base64,(.*)$/);
+
+// // Convert the base64 to a Blob
+// // Souce: https://stackoverflow.com/a/20151856/626911
+// const file = base64toBlob(base64, contentType);
+
+// // Construct a 'change' event with file Blob
+// const event: any = { type: "change", target: { files: [file] } };
+
 import "es6-promise";
 import "whatwg-fetch";
 
@@ -59,3 +69,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   }
 });
+
+import zfp from "speed-src.js";
+import zfpModule from "speed-src.wasm";
+
+// Since webpack will change the name and potentially the path of the
+// `.wasm` file, we have to provide a `locateFile()` hook to redirect
+// to the appropriate URL.
+// More details: https://kripken.github.io/emscripten-site/docs/api_reference/module.html
+const module = zfp({
+  locateFile(path) {
+    if (path.endsWith(".wasm")) {
+      return zfpModule;
+    }
+    return path;
+  },
+});
+
+module.onRuntimeInitialized = () => {
+  console.log(module._fib(12));
+};

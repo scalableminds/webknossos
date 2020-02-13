@@ -84,7 +84,7 @@ function toBackend(req, res) {
 }
 
 function toWebpackDev(req, res) {
-  proxy.web(req, res, { target: `http://localhost:${PORT + 2}` });
+  proxy.web(req, res, { target: `http://localhost:8000` });
 }
 
 app.all("/assets/bundle/*", toWebpackDev);

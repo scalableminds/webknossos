@@ -82,9 +82,9 @@
     "terser-webpack-plugin": "^1.1.0",
     "tmp": "0.0.33",
     "url-loader": "^1.0.1",
-    "webpack": "^4.27.0",
+    "webpack": "^4.37.0",
     "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.2.1"
+    "webpack-dev-server": "^3.10.3"
   },
   "optionalDependencies": {
     "gl": "stackgl/headless-gl#4.5.0"
@@ -153,6 +153,7 @@
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^1.0.2",
     "es6-promise": "^3.0.2",
+    "exports-loader": "^0.7.0",
     "file-saver": "^2.0.1",
     "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
     "golden-layout": "^1.5.9",

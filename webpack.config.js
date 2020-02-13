@@ -33,9 +33,15 @@ module.exports = function(env = {}) {
       $: "jquery",
       jQuery: "jquery",
     }),
-    new CopyWebpackPlugin([{ from: "./public/tf-models/**", to: "tf-models", flatten: true }], {
-      dot: true,
-    }),
+    new CopyWebpackPlugin(
+      [
+        { from: "./public/tf-models/**", to: "tf-models", flatten: true },
+        // { from: "./public/tf-models/speed-src.*", to: "*", flatten: true },
+      ],
+      {
+        dot: true,
+      },
+    ),
   ];
 
   if (env.production) {
@@ -57,6 +63,9 @@ module.exports = function(env = {}) {
     entry: {
       main: "main.js",
     },
+    optimization: {
+      chunkIds: "deterministic", // To keep filename consistent between different modes (for example building only)
+    },
     mode: env.production ? "production" : "development",
     output: {
       path: `${__dirname}/public/bundle`,
@@ -66,6 +75,12 @@ module.exports = function(env = {}) {
     },
     module: {
       rules: [
+        // {
+        //   test: /speed-src\.js$/,
+        //   loader: "exports-loader",
+        // },
+        // wasm files should not be processed but just be emitted and we want
+        // to have their public URL.
         {
           test: /\.worker\.js$/,
           use: {
@@ -123,6 +138,14 @@ module.exports = function(env = {}) {
         { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
         { test: /\.jpg$/, use: "file-loader" },
         { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
+        {
+          test: /\.wasm$/,
+          use: "file-loader",
+        },
+        {
+          test: /speed-src\.js$/,
+          loader: "exports-loader",
+        },
       ],
     },
     externals: {
@@ -149,6 +172,7 @@ module.exports = function(env = {}) {
       port: env.PORT ? env.PORT : 9002,
       hot: false,
       inline: false,
+      writeToDisk: true,
     },
   };
 };

@@ -48,8 +48,9 @@ export function* receiveTracingUpdates(): Saga<void> {
   let datastoreToken = "";
   yield doWithToken(
     token =>
-      new Promise(() => {
+      new Promise(resolve => {
         datastoreToken = token;
+        resolve();
       }),
   );
 

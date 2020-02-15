@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Table, Tag, Icon, Tooltip, Row, Col } from "antd";
+import { Spin, Table, Tag, Icon, Tooltip } from "antd";
 import * as React from "react";
 import type { APIAnnotationCompact } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";

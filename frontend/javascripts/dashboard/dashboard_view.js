@@ -121,14 +121,14 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
           </TabPane>
         ) : null,
         validTabKeys.datasets ? (
-          <TabPane tab="Datasets" key="datasets">
+          <TabPane tab="My Datasets" key="datasets">
             <DatasetView user={user} />
           </TabPane>
         ) : null,
-        <TabPane tab="Tasks" key="tasks">
+        <TabPane tab="My Tasks" key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
+        <TabPane tab="My Annotations" key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}

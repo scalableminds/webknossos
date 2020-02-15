@@ -61,18 +61,24 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderPlaceholder = () =>
-    this.state.isLoading ? null : (
-      <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
-        <Col span={18}>
-          <div style={{ paddingBottom: 32, textAlign: "center" }}>
-            There are no shared annotations available yet. You can share your annotations with other
-            teams in the sharing modal in the tracing view. These annotations appear in the shared
-            tab of all members of the selected teams.
-          </div>
-        </Col>
-      </Row>
-    );
+  renderPlaceholder = () => (
+    <>
+      <p>There are no shared annotations available yet.</p>
+      <p>
+        You can share your annotations with your team from the sharing modal in the annotation view.
+        The annotations will then appear in the shared tab of all members of the selected teams.
+      </p>
+      <p>
+        <a
+          href="https://docs.webknossos.org/guides/sharing"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Read more about sharing in the documentation.
+        </a>
+      </p>
+    </>
+  );
 
   renderTable = () => {
     const sortedAnnotations = this.state.annotations.sort(
@@ -86,6 +92,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        locale={{ emptyText: this.renderPlaceholder() }}
         className="large-table"
         scroll={{ x: "max-content" }}
       >
@@ -165,7 +172,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
       </Tooltip>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       <Spin spinning={this.state.isLoading} size="large">
-        {this.state.annotations.length === 0 ? this.renderPlaceholder() : this.renderTable()}
+        {this.renderTable()}
       </Spin>
     </div>
   );

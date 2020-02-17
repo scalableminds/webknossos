@@ -64,9 +64,8 @@ services:
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
       - -Dapplication.authentication.enableDevAutoLogin=false
-      - -Dhttp.uri=${PUBLIC_URI}
-      - -Dtracingstore.publicUrl=${PUBLIC_URI}
-      - -Ddatastore.publicUrl=${PUBLIC_URI}
+      - -Dtracingstore.publicUri=${PUBLIC_URI}
+      - -Ddatastore.publicUri=${PUBLIC_URI}
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:

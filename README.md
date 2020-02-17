@@ -41,13 +41,66 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 
 [Read more about the original publication.](https://publication.webknossos.org)
 
+## Installation
+### Docker
+Docker 17+ and Docker Compose 1.18+ are required.
+
+This tutorial assumes that you wish to install webKnossos on a fresh VM which available over the public internet and has a domain name (or a subdomain) configured.
+
+```bash
+# Create a new folder for webknossos
+mkdir -p /opt/webknossos
+cd /opt/webknossos
+
+# Download the docker-compose.yml for hosting
+wget https://github.com/scalableminds/webknossos/raw/master/tools/hosting/docker-compose.yml
+
+# Create the data folder which will contain all your datasets
+mkdir data
+
+# The data folder needs to be readable/writable by user id=1000,gid=1000
+chown -R 1000:1000 data
+
+# Start webKnossos and supply the PUBLIC_HOST and LETSENCRYPT_EMAIL variables
+# In addition to webKnossos, we also start an nginx proxy with automatic 
+# SSL certificate management via letsencrypt
+PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
+docker-compose up webknossos nginx nginx-letsencrypt
+
+# Wait a couple of minutes for webKnossos to become available under your domain
+# e.g. https://webknossos.example.com
+# Set up your organization using the installation process in the browser
+
+# Start webKnossos in the background
+PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
+docker-compose up -d webknossos nginx nginx-letsencrypt
+
+# Stop everything
+docker-compose down
+```
+
+This setup does not support regular backups or monitoring. For production deployments, please refer to [our paid service plans](https://webknossos.org/pricing).
+
+When using symbolic links in your data directory, you need to adapt the `docker-compose.yml` to also mount the link targets. For example, you could have a link from `/opt/webknossos/data/sample_organization/awesome_dataset` to `/cluster/path/to/awesome_dataset`. In this case you would also need to mount the target (or a parent directory) in the webknossos container, e.g.,
+```yaml
+...
+services:
+  webknossos:
+    ...
+    volumes:
+      - ./data:/srv/webknossos/binaryData
+      - /cluster:/cluser
+...
+```
+
+For installations on localhost, please see below.
+
 
 ## Development installation
 ### Docker
 This is the fastest way to try webKnossos.
-Docker CE 17+ and Docker Compose 1.18+ is required.
-This is only recommended for testing.
-[For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
+Docker 17+ and Docker Compose 1.18+ are required.
+This is only recommended for local testing.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -60,7 +113,7 @@ Open your local webknossos instance on [localhost:9000](http://localhost:9000).
 
 See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
 
-For non-localhost deployments, make sure to use the `webknossos-public` docker-compose service and set the `PUBLIC_URI` environment variable:
+For non-localhost deployments, make sure to use the `webknossos` docker-compose service and set the `PUBLIC_URI` environment variable:
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git

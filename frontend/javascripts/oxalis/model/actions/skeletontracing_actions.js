@@ -78,7 +78,7 @@ type AddTreesAndGroupsAction = {
   trees: TreeMap,
   treeGroups: Array<TreeGroup>,
 };
-type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number, timestamp: number };
+type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number };
 type ResetSkeletonTracingAction = { type: "RESET_SKELETON_TRACING" };
 type SetActiveTreeAction = { type: "SET_ACTIVE_TREE", treeId: number };
 type SetActiveTreeByNameAction = { type: "SET_ACTIVE_TREE_BY_NAME", treeName: string };
@@ -282,13 +282,9 @@ export const addTreesAndGroupsAction = (
   treeGroups: treeGroups || [],
 });
 
-export const deleteTreeAction = (
-  treeId?: number,
-  timestamp: number = Date.now(),
-): DeleteTreeAction => ({
+export const deleteTreeAction = (treeId?: number): DeleteTreeAction => ({
   type: "DELETE_TREE",
   treeId,
-  timestamp,
 });
 
 export const resetSkeletonTracingAction = (): ResetSkeletonTracingAction => ({

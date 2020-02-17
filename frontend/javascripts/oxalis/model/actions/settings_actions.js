@@ -6,6 +6,7 @@ import type {
   DatasetLayerConfiguration,
   TemporaryConfiguration,
   Mapping,
+  HistogramDataForAllLayers,
 } from "oxalis/store";
 
 export type UpdateUserSettingAction = {
@@ -39,6 +40,10 @@ export type InitializeSettingsAction = {
   initialDatasetSettings: DatasetConfiguration,
 };
 type SetViewModeAction = { type: "SET_VIEW_MODE", viewMode: ViewMode };
+type SetHistogramDataAction = {
+  type: "SET_HISTOGRAM_DATA",
+  histogramData: HistogramDataForAllLayers,
+};
 type SetFlightmodeRecordingAction = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeAction = { type: "SET_CONTROL_MODE", controlMode: ControlMode };
 type InitializeGpuSetupAction = {
@@ -68,6 +73,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | SetMappingAction
+  | SetHistogramDataAction
   | InitializeGpuSetupAction;
 
 export const updateUserSettingAction = (
@@ -127,6 +133,13 @@ export const initializeSettingsAction = (
 export const setViewModeAction = (viewMode: ViewMode): SetViewModeAction => ({
   type: "SET_VIEW_MODE",
   viewMode,
+});
+
+export const setHistogramDataAction = (
+  histogramData: HistogramDataForAllLayers,
+): SetHistogramDataAction => ({
+  type: "SET_HISTOGRAM_DATA",
+  histogramData,
 });
 
 export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecordingAction => ({

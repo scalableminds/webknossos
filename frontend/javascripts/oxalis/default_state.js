@@ -77,6 +77,7 @@ const defaultState: OxalisState = {
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
+    histogramData: {},
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,

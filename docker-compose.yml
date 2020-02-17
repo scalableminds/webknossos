@@ -7,7 +7,6 @@ services:
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
-      - "8000:8000" # from webknossos-connect
     links:
       - "fossildb-persisted:fossildb"
       - "postgres-persisted:postgres"
@@ -26,15 +25,48 @@ services:
       - -Dtracingstore.redis.address=redis
       - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
       - -Dapplication.insertInitialData=false
-      - -Dapplication.insertLocalConnectDatastore=true
       - -Dapplication.authentication.enableDevAutoLogin=false
+      # the following lines need to be adapted for non-localhost deployments
+      # - -Dhttp.uri=http://example.org:9000
+      # - -Dtracingstore.publicUrl=http://example.org:9000
+      # - -Ddatastore.publicUrl=http://example.org:9000
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
       # - -Dplay.http.router="noDS.Routes"
-      # the following lines need to be adapted for non-localhost deployments
-      # - -Dtracingstore.publicUrl=http://example.org:9000
-      # - -Ddatastore.publicUrl=http://example.org:9000
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
+
+  webknossos-public:
+    build: .
+    image: scalableminds/webknossos:${DOCKER_TAG:-master}
+    ports:
+      - "9000:9000"
+    links:
+      - "fossildb-persisted:fossildb"
+      - "postgres-persisted:postgres"
+    depends_on:
+      postgres-persisted:
+        condition: service_healthy
+      fossildb-persisted:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command:
+      - -Dconfig.file=conf/application.conf
+      - -Djava.net.preferIPv4Stack=true
+      - -Dhttp.address=0.0.0.0
+      - -Dtracingstore.fossildb.address=fossildb
+      - -Dtracingstore.redis.address=redis
+      - -Dslick.db.url=jdbc:postgresql://postgres/webknossos
+      - -Dapplication.insertInitialData=false
+      - -Dapplication.authentication.enableDevAutoLogin=false
+      - -Dhttp.uri=${PUBLIC_URI}
+      - -Dtracingstore.publicUrl=${PUBLIC_URI}
+      - -Ddatastore.publicUrl=${PUBLIC_URI}
     volumes:
       - ./binaryData:/srv/webknossos/binaryData
     environment:
@@ -204,8 +236,6 @@ services:
     image: scalableminds/webknossos-connect:master__205
     volumes:
       - "./conf/connect:/app/data"
-    # Publish webknossos-connect ports in webknossos container
-    network_mode: service:webknossos
 
   # Postgres
   postgres:

@@ -22,6 +22,9 @@ declare module "antd" {
   }
   declare export class Divider<P> extends React$Component<P> {}
   declare export class Dropdown<P> extends React$Component<P> {}
+  declare export class Empty<P> extends React$Component<P> {
+    static PRESENTED_IMAGE_SIMPLE: string;
+  }
   declare export class Icon<P> extends React$Component<P> {}
   declare class InputGroup<P> extends React$Component<P> {}
   declare class InputPassword<P> extends React$Component<P> {}

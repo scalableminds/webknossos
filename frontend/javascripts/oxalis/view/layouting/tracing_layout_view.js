@@ -233,8 +233,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               width={350}
               style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
             >
-              {/* Don't render SettingsView if it's hidden to improve performance */}
-              {!this.state.isSettingsCollapsed ? <SettingsView /> : null}
+              <SettingsView dontRenderContents={this.state.isSettingsCollapsed} />
             </Sider>
             <MergerModeController />
             <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>

@@ -25,6 +25,7 @@ import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import watchTasksAsync from "oxalis/model/sagas/task_saga";
+import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
 
 export default function* rootSaga(): Saga<void> {
   while (true) {
@@ -47,6 +48,7 @@ function* restartableSaga(): Saga<void> {
       _call(disallowVolumeTracingWarning),
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
+      _call(loadHistogramData),
       _call(watchDataRelevantChanges),
       _call(isosurfaceSaga),
       _call(watchTasksAsync),

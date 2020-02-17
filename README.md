@@ -45,7 +45,8 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 ### Docker
 Docker 17+ and Docker Compose 1.18+ are required.
 
-This tutorial assumes that you wish to install webKnossos on a fresh VM which available over the public internet and has a domain name (or a subdomain) configured.
+This tutorial shows how to install webKnossos on a fresh VM which is available over the public internet and has a domain name (or a subdomain) already configured.
+webKnossos will then be available with over a secured connection (HTTPS) with automatic certificate management.
 
 ```bash
 # Create a new folder for webknossos

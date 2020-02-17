@@ -7,7 +7,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
+[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
 
 [![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -42,60 +42,11 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 [Read more about the original publication.](https://publication.webknossos.org)
 
 ## Installation
-### Docker
-Docker 17+ and Docker Compose 1.18+ are required.
+webKnossos is open-source, so you can install it on your own server.
 
-This tutorial shows how to install webKnossos on a fresh VM which is available over the public internet and has a domain name (or a subdomain) already configured.
-webKnossos will then be available with over a secured connection (HTTPS) with automatic certificate management.
-
-```bash
-# Create a new folder for webknossos
-mkdir -p /opt/webknossos
-cd /opt/webknossos
-
-# Download the docker-compose.yml for hosting
-wget https://github.com/scalableminds/webknossos/raw/master/tools/hosting/docker-compose.yml
-
-# Create the data folder which will contain all your datasets
-mkdir data
-
-# The data folder needs to be readable/writable by user id=1000,gid=1000
-chown -R 1000:1000 data
-
-# Start webKnossos and supply the PUBLIC_HOST and LETSENCRYPT_EMAIL variables
-# In addition to webKnossos, we also start an nginx proxy with automatic 
-# SSL certificate management via letsencrypt
-PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
-docker-compose up webknossos nginx nginx-letsencrypt
-
-# Wait a couple of minutes for webKnossos to become available under your domain
-# e.g. https://webknossos.example.com
-# Set up your organization using the installation process in the browser
-
-# Start webKnossos in the background
-PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
-docker-compose up -d webknossos nginx nginx-letsencrypt
-
-# Stop everything
-docker-compose down
-```
-
-This setup does not support regular backups or monitoring. For production deployments, please refer to [our paid service plans](https://webknossos.org/pricing).
-
-When using symbolic links in your data directory, you need to adapt the `docker-compose.yml` to also mount the link targets. For example, you could have a link from `/opt/webknossos/data/sample_organization/awesome_dataset` to `/cluster/path/to/awesome_dataset`. In this case you would also need to mount the target (or a parent directory) in the webknossos container, e.g.,
-```yaml
-...
-services:
-  webknossos:
-    ...
-    volumes:
-      - ./data:/srv/webknossos/binaryData
-      - /cluster:/cluser
-...
-```
+[Check out the documentation](https://docs.webknossos.org/guides/installation) for a tutorial on how to install webKnossos on your own server.
 
 For installations on localhost, please see below.
-
 
 ## Development installation
 ### Docker

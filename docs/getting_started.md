@@ -80,66 +80,7 @@ Feel free to explore more features of webKnossos in this documentation.
 * [Task and Project Management](./tasks.md)
 * [FAQ](./faq.md)
 
-If you need help with webKnossos, there is a [Community Support forum](https://support.webknososs.org) where members of the community and scalable minds are happy to answer your questions.
+If you need help with webKnossos, feel free to send contact us at [hello@scalableminds.com]((mailto:hello@scalableminds.com).
 [scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
-[Please contact us](mailto:hello@scalableminds.com) if you want to learn more.
 
-
-## webKnossos on Your Own Server
-webKnossos is open-source, so you can install it on your own server.
-We recommend a server with at least 4 CPU cores, 16 GB RAM, and as much disk space as you require for your datasets.
-As prerequisites, you need to install [Git](https://git-scm.com/), [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) on your server.
-
-### Installation
-To get started, simply clone the Git repository and start the docker containers:
-
-```bash
-git clone https://github.com/scalableminds/webknossos.git
-cd webknossos
-
-docker-compose pull webknossos
-./start-docker.sh
-```
-
-This will start an instance of webKnossos on http://localhost:9000/.
-Open the URL in your browser and configure your organization (see below).
-This will create a folder for your data at `webknossos/binaryData/<organization name>`.
-
-{% hint style='info' %}
-For production setups, we recommend more elaborate configurations with a public domain name and HTTPS support.
-[Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your production setup.
-{% endhint %}
-
-You may also install webKnossos without Docker.
-This may be useful if you intend to develop features for webKnossos.
-Please refer to the [Code Readme](../README.md) for details.
-
-### Onboarding
-When starting with webKnossos you first need to create an organization.
-An organization represents your lab in webKnossos and handles permissions for users and datasets.
-Choose a descriptive name for your organization, e.g. "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
-
-![Create your organization](./images/onboarding_organization.png)
-
-In the onboarding flow, you are asked to create a user account for yourself.
-This will be the first user of your organization which will automatically be activated and granted admin rights.
-Make sure to enter a correct email address.
-
-![Create your first user](./images/onboarding_user.png)
-
-
-### Your First Dataset
-Now that you've completed the onboarding, you need to import a dataset.
-Without any data, webKnossos is not fun.
-
-For small datasets (max. 1GB), you can use the upload functionality provide in the web interface.
-For larger datasets, we recommend the file system upload.
-Read more about the import functionality in the [Datasets guide](./datasets.md).
-
-If you do not have a compatible dataset available, you can use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
-
-By default, datasets are visible to all users in your organization.
-However, webKnossos includes fine-grained permissions to assign datasets to groups of users.
-
-![Upload your first dataset](./images/onboarding_data1.png)
-![Confirm the dataset properties](./images/onboarding_data2.png)
+[Read the installation tutorial](./installation.md), if you wish to install webKnossos on your own server.

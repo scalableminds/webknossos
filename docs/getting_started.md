@@ -80,7 +80,7 @@ Feel free to explore more features of webKnossos in this documentation.
 * [Task and Project Management](./tasks.md)
 * [FAQ](./faq.md)
 
-If you need help with webKnossos, feel free to send contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
-[scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
+If you need help with webKnossos, feel free to contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
+scalable minds also offers [commercial support, managed hosting and feature development services](https://webknossos.org/pricing).
 
 [Read the installation tutorial](./installation.md), if you wish to install webKnossos on your own server.

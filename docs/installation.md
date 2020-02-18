@@ -80,23 +80,3 @@ However, webKnossos includes fine-grained permissions to assign datasets to grou
 
 ![Upload your first dataset](./images/onboarding_data1.png)
 ![Confirm the dataset properties](./images/onboarding_data2.png)
-
-#### Using Symbolic Links
-
-You can also use symbolic links to import your data into webKnossos.
-However, when using Docker, the targets of the link also need to be available to the container through mounts.
-
-For example, you could have a link from `/opt/webknossos/binaryData/sample_organization/awesome_dataset` to `/cluster/path/to/dataset123`.
-In order to make this dataset available to the Docker container, you need to add `/cluster` as another volume mount.
-You can add this directly to the docker-compose.yml:
-
-```yaml
-...
-services:
-  webknossos:
-    ...
-    volumes:
-      - ./data:/srv/webknossos/binaryData
-      - /cluster:/cluster
-...
-```

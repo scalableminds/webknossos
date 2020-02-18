@@ -21,6 +21,26 @@ To efficiently import large datasets, we recommend to place them directly in the
 * Click `Import` for your new dataset
 * Complete the [Import screen](#importing-in-webknossos)
 
+#### Using Symbolic Links
+
+You can also use symbolic links to import your data into webKnossos.
+However, when using Docker, the targets of the link also need to be available to the container through mounts.
+
+For example, you could have a link from `/opt/webknossos/binaryData/sample_organization/awesome_dataset` to `/cluster/path/to/dataset123`.
+In order to make this dataset available to the Docker container, you need to add `/cluster` as another volume mount.
+You can add this directly to the docker-compose.yml:
+
+```yaml
+...
+services:
+  webknossos:
+    ...
+    volumes:
+      - ./data:/srv/webknossos/binaryData
+      - /cluster:/cluster
+...
+```
+
 ### Uploading through the web browser
 To quickly import a dataset, you may use the upload functionality from webKnossos.
 This is only recommended for datasets up to 1 GB.

@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Added support for datasets with more layers than the hardware can render simultaneously. The user can disable layers temporarily to control for which layers the GPU resources should be used. [#4424](https://github.com/scalableminds/webknossos/pull/4424)
 - Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
+- Added a simpler method to install webKnossos on an own server. [#4446](https://github.com/scalableminds/webknossos/pull/4446)
 
 ### Changed
 - Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)

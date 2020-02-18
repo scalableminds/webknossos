@@ -70,7 +70,7 @@ class VersionView extends React.Component<Props, State> {
               type="info"
               message={
                 <React.Fragment>
-                  You are currently previewing older versions of this annotation_actions. Either
+                  You are currently previewing older versions of this annotation. Either
                   restore a version by selecting it or close this view to continue annotating. The
                   shown annotation is in <b>read-only</b> mode as long as this view is opened.
                 </React.Fragment>

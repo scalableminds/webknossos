@@ -2,7 +2,7 @@
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { PureComponent, useContext } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
 
@@ -12,6 +12,9 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
+import DatasetCacheProvider, {
+  DatasetCacheContext,
+} from "dashboard/dataset/dataset_cache_provider";
 import PublicationView from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
@@ -48,7 +51,17 @@ export const urlTokenToTabKeyMap = {
   shared: "sharedAnnotations",
 };
 
-class DashboardView extends React.PureComponent<PropsWithRouter, State> {
+function PublicationWrapper() {
+  const context = useContext(DatasetCacheContext);
+  return (
+    <div>
+      <h3 className="TestDatasetHeadline">Featured Publications</h3>
+      <PublicationView datasets={context.datasets} searchQuery="" />
+    </div>
+  );
+}
+
+class DashboardView extends PureComponent<PropsWithRouter, State> {
   constructor(props: PropsWithRouter) {
     super(props);
 
@@ -117,7 +130,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       return [
         validTabKeys.publications ? (
           <TabPane tab="Featured Publications" key="publications">
-            <PublicationView datasets={[]} searchQuery="" />
+            <PublicationWrapper />
           </TabPane>
         ) : null,
         validTabKeys.datasets ? (
@@ -180,9 +193,11 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
         <div className="container">
           {whatsNextBanner}
           {userHeader}
-          <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
-            {this.getTabs(user)}
-          </Tabs>
+          <DatasetCacheProvider>
+            <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
+              {this.getTabs(user)}
+            </Tabs>
+          </DatasetCacheProvider>
         </div>
       </NmlUploadZoneContainer>
     );

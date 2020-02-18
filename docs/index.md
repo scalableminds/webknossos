@@ -13,7 +13,7 @@
 * [Managing Users and Access Rights](./users.md)
 * [Managing Tasks and Projects](./tasks.md)
 * [Sharing](./sharing.md)
-* [Installation on own Server](./installation.md)
+* [Installation on your own Server](./installation.md)
 
 ## Reference
 * [Supported Data Formats](./data_formats.md)

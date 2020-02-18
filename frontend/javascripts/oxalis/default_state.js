@@ -97,6 +97,7 @@ const defaultState: OxalisState = {
       smallestCommonBucketCapacity:
         Constants.GPU_FACTOR_MULTIPLIER * Constants.DEFAULT_GPU_MEMORY_FACTOR,
       initializedGpuFactor: Constants.GPU_FACTOR_MULTIPLIER,
+      maximumLayerCountToRender: 32,
     },
   },
   task: null,

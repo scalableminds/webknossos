@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-master}
+    image: scalableminds/webknossos:${DOCKER_TAG:-20.02.0}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:
@@ -86,7 +86,7 @@ services:
 
   # Nginx
   nginx:
-    image: scalableminds/nginx-proxy:master
+    image: scalableminds/nginx-proxy:master__117
     ports:
       - "80:80"
       - "443:443"

@@ -25,6 +25,7 @@ chown -R 1000:1000 binaryData
 # Start webKnossos and supply the PUBLIC_HOST and LETSENCRYPT_EMAIL variables
 # In addition to webKnossos, we also start an nginx proxy with automatic 
 # SSL certificate management via letsencrypt
+# Note that PUBLIC_HOST does not include http:// or https:// prefixes
 PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
 docker-compose up webknossos nginx nginx-letsencrypt
 
@@ -32,7 +33,7 @@ docker-compose up webknossos nginx nginx-letsencrypt
 # e.g. https://webknossos.example.com
 # Set up your organization and admin account using the onboarding screens (see below)
 
-# Start webKnossos in the background
+# After the initial run, you can start webKnossos in the background
 PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
 docker-compose up -d webknossos nginx nginx-letsencrypt
 
@@ -72,7 +73,7 @@ For small datasets (max. 1GB), you can use the upload functionality provide in t
 For larger datasets, we recommend the file system upload.
 Read more about the import functionality in the [Datasets guide](./datasets.md).
 
-If you do not have a compatible dataset available, you can use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
+If you do not have a compatible dataset available, you can convert your own data using [the webKnossos cuber tool](./tooling.md#webknossos-cuber) or use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
 
 By default, datasets are visible to all users in your organization.
 However, webKnossos includes fine-grained permissions to assign datasets to groups of users.

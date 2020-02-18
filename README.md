@@ -50,9 +50,7 @@ For installations on localhost, please see below.
 
 ## Development installation
 ### Docker
-This is the fastest way to try webKnossos.
-Docker 17+ and Docker Compose 1.18+ are required.
-This is only recommended for local testing.
+This is only recommended for local testing. Docker 17+ and Docker Compose 1.18+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -61,18 +59,12 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
-Open your local webknossos instance on [localhost:9000](http://localhost:9000).
+Open your local webknossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
+Now, you are ready to use your local webKnossos instance.
 
-See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
+See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
-For non-localhost deployments, make sure to use the `webknossos` docker-compose service and set the `PUBLIC_URI` environment variable:
-
-```bash
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
-cd webknossos
-docker-compose pull webknossos
-PUBLIC_URI=http://example.org:9000 docker-compose up webknossos-public
-```
+For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/guides/installation).
 
 ### Dependencies
 

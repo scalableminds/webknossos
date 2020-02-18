@@ -1,10 +1,11 @@
 // @flow
+import React, { createContext, useState, useEffect, type Node } from "react";
 import { useHistory } from "react-router-dom";
-import React, { createContext, useState, useEffect } from "react";
 import { PropTypes } from "@scalableminds/prop-types";
 
 import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import Persistence from "libs/persistence";
@@ -17,7 +18,14 @@ type Context = {
   fetchDatasets: (datasetFilteringMode?: DatasetFilteringMode) => Promise<void>,
 };
 
-const persistence: Persistence<State> = new Persistence(
+type PersistenceState = {
+  datasets: Array<APIMaybeUnimportedDataset>,
+  isLoading: boolean,
+  searchQuery: string,
+  datasetFilteringMode: DatasetFilteringMode,
+};
+
+const persistence: Persistence<PersistenceState> = new Persistence(
   {
     searchQuery: PropTypes.string,
     datasetFilteringMode: PropTypes.oneOf([
@@ -30,7 +38,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 const wkDatasetsCacheKey = "wk.datasets";
-const datasetCache = {
+export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
     UserLocalStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));
   },
@@ -42,7 +50,12 @@ const datasetCache = {
   },
 };
 
-export const DatasetCacheContext = createContext<Context>(null);
+export const DatasetCacheContext = createContext<Context>({
+  datasets: [],
+  isLoading: false,
+  fetchDatasets: async () => {},
+  checkDatasets: async () => {},
+});
 
 export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
@@ -94,7 +107,6 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       setDatasets([]);
       datasetCache.clear();
     }
-    fetchDatasets();
   }, []);
   return (
     <DatasetCacheContext.Provider value={{ datasets, isLoading, checkDatasets, fetchDatasets }}>

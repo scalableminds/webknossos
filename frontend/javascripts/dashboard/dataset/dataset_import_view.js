@@ -7,7 +7,7 @@ import moment from "moment";
 
 import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
-import { datasetCache } from "dashboard/dataset_view";
+import { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,

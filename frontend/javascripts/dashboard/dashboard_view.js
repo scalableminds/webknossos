@@ -2,7 +2,7 @@
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
-import React, { PureComponent, useContext } from "react";
+import React, { PureComponent } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
 
@@ -12,10 +12,8 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
-import DatasetCacheProvider, {
-  DatasetCacheContext,
-} from "dashboard/dataset/dataset_cache_provider";
-import PublicationView from "dashboard/publication_view";
+import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
+import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
@@ -50,16 +48,6 @@ export const urlTokenToTabKeyMap = {
   annotations: "explorativeAnnotations",
   shared: "sharedAnnotations",
 };
-
-function PublicationWrapper() {
-  const context = useContext(DatasetCacheContext);
-  return (
-    <div>
-      <h3 className="TestDatasetHeadline">Featured Publications</h3>
-      <PublicationView datasets={context.datasets} searchQuery="" />
-    </div>
-  );
-}
 
 class DashboardView extends PureComponent<PropsWithRouter, State> {
   constructor(props: PropsWithRouter) {
@@ -130,7 +118,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       return [
         validTabKeys.publications ? (
           <TabPane tab="Featured Publications" key="publications">
-            <PublicationWrapper />
+            <PublicationViewWithHeader />
           </TabPane>
         ) : null,
         validTabKeys.datasets ? (

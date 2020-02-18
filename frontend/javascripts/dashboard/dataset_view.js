@@ -1,8 +1,8 @@
 // @flow
 
-import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
+import React, { useState, useContext, useEffect } from "react";
 import { Link } from "react-router-dom";
-import React, { useState, useContext } from "react";
+import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
 
 import type { APIUser } from "admin/api_flow_types";
 import { OptionCard } from "admin/onboarding";
@@ -22,11 +22,15 @@ type Props = {
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 
 function DatasetView(props: Props) {
-  const context = useContext<Context>(DatasetCacheContext);
+  const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
     "onlyShowReported",
   );
+
+  useEffect(() => {
+    context.fetchDatasets();
+  }, []);
 
   function handleSearch(event: SyntheticInputEvent<>) {
     setSearchQuery(event.target.value);

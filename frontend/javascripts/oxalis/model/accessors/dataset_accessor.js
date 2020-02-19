@@ -112,22 +112,22 @@ export function getDefaultIntensityRangeOfLayer(
   const elementClass = getElementClass(dataset, layerName);
   switch (elementClass) {
     case "uint8":
-      return [0, Math.pow(2, 8) - 1];
-    case "uint16":
-      return [0, Math.pow(2, 16) - 1];
     case "uint24":
-      return [0, Math.pow(2, 24) - 1];
+      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
+      return [0, 2 ** 8 - 1];
+    case "uint16":
+      return [0, 2 ** 16 - 1];
     case "uint32":
-      return [0, Math.pow(2, 32) - 1];
+      return [0, 2 ** 32 - 1];
     case "uint64":
-      return [0, Math.pow(2, 64) - 1];
+      return [0, 2 ** 64 - 1];
     // We do not fully support signed int data;
     case "int16":
-      return [0, Math.pow(2, 15) - 1];
+      return [0, 2 ** 15 - 1];
     case "int32":
-      return [0, Math.pow(2, 31) - 1];
+      return [0, 2 ** 31 - 1];
     case "int64":
-      return [0, Math.pow(2, 63) - 1];
+      return [0, 2 ** 63 - 1];
     case "float":
       return [0, maxFloatValue];
     case "double":

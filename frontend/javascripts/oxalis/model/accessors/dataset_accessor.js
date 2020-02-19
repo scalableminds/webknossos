@@ -116,7 +116,7 @@ export function getDefaultIntensityRangeOfLayer(
     case "uint16":
       return [0, Math.pow(2, 16) - 1];
     case "uint24":
-      return [0, Math.pow(2, 24) - 1];
+      return [0, Math.pow(2, 8) - 1];
     case "uint32":
       return [0, Math.pow(2, 32) - 1];
     case "uint64":

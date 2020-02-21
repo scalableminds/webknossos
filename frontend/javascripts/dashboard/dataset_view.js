@@ -50,9 +50,12 @@ function DatasetView(props: Props) {
 
   useEffect(() => {
     const state = persistence.load(history);
-    setSearchQuery(state.searchQuery);
-    setDatasetFilteringMode(state.datasetFilteringMode);
-
+    if (state.searchQuery != null) {
+      setSearchQuery(state.searchQuery);
+    }
+    if (state.datasetFilteringMode != null) {
+      setDatasetFilteringMode(state.datasetFilteringMode);
+    }
     context.fetchDatasets();
   }, []);
 

@@ -1,8 +1,9 @@
 // @flow
 
 import React, { useState, useContext, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
+import { PropTypes } from "@scalableminds/prop-types";
 
 import type { APIUser } from "admin/api_flow_types";
 import { OptionCard } from "admin/onboarding";
@@ -12,6 +13,7 @@ import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
 import features from "features";
 import renderIndependently from "libs/render_independently";
+import Persistence from "libs/persistence";
 
 const { Search, Group: InputGroup } = Input;
 
@@ -21,7 +23,25 @@ type Props = {
 
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 
+type PersistenceState = {
+  searchQuery: string,
+  datasetFilteringMode: DatasetFilteringMode,
+};
+
+const persistence: Persistence<PersistenceState> = new Persistence(
+  {
+    searchQuery: PropTypes.string,
+    datasetFilteringMode: PropTypes.oneOf([
+      "showAllDatasets",
+      "onlyShowReported",
+      "onlyShowUnreported",
+    ]),
+  },
+  "datasetList",
+);
+
 function DatasetView(props: Props) {
+  const history = useHistory();
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [datasetFilteringMode, setDatasetFilteringMode] = useState<DatasetFilteringMode>(
@@ -29,8 +49,19 @@ function DatasetView(props: Props) {
   );
 
   useEffect(() => {
+    const state = persistence.load(history);
+    setSearchQuery(state.searchQuery);
+    setDatasetFilteringMode(state.datasetFilteringMode);
+
     context.fetchDatasets();
   }, []);
+
+  useEffect(() => {
+    persistence.persist(history, {
+      searchQuery,
+      datasetFilteringMode,
+    });
+  }, [searchQuery, datasetFilteringMode]);
 
   function handleSearch(event: SyntheticInputEvent<>) {
     setSearchQuery(event.target.value);
@@ -185,7 +216,7 @@ function DatasetView(props: Props) {
     </div>
   );
 
-  const isEmpty = context.datasets.length === 0;
+  const isEmpty = context.datasets.length === 0 && datasetFilteringMode !== "onlyShowUnreported";
   const content = isEmpty ? renderPlaceholder() : renderTable();
 
   return (

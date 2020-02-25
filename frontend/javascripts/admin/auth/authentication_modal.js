@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
 
-import RegistrationFormDemo from "dashboard/registration_form";
+import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
 import RegistrationForm from "./registration_form";
 import LoginForm from "./login_form";
 
@@ -31,7 +31,7 @@ export default function AuthenticationModal({ onLoggedIn, onCancel, visible }: P
   };
 
   const registrationForm = features().isDemoInstance ? (
-    <RegistrationFormDemo onRegistered={onRegistered} />
+    <SpotlightRegistrationForm onRegistered={onRegistered} />
   ) : (
     <RegistrationForm onRegistered={onRegistered} />
   );

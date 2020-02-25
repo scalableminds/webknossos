@@ -38,7 +38,7 @@ export function PublicationViewWithHeader() {
       <h3>Featured Publications</h3>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       <Spin size="large" spinning={context.isLoading}>
-        <div style={{ minHeight: "100px" }}>
+        <div style={{ minHeight: "100px", paddingLeft: 10, paddingRight: 10 }}>
           <PublicationView datasets={context.datasets} searchQuery={searchQuery} />
         </div>
       </Spin>

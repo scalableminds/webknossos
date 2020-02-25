@@ -11,7 +11,7 @@ import { handleGenericError } from "libs/error_handling";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
-import RegistrationForm from "dashboard/registration_form";
+import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
 
 const { Content } = Layout;
 const { Search } = Input;
@@ -117,7 +117,7 @@ const WelcomeHeader = ({ history }) => (
                 boxShadow: "0 0 10px rgba(0, 0, 0, 0.38)",
               }}
             >
-              <RegistrationForm
+              <SpotlightRegistrationForm
                 onRegistered={() => {
                   history.push("/dashboard?showWhatsNextBanner");
                 }}

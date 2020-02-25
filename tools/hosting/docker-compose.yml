@@ -24,7 +24,7 @@ services:
       - -Dtracingstore.publicUri=https://${PUBLIC_HOST}
       - -Ddatastore.publicUri=https://${PUBLIC_HOST}
     volumes:
-      - ./data:/srv/webknossos/binaryData
+      - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - VIRTUAL_HOST=${PUBLIC_HOST}

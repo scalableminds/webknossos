@@ -89,6 +89,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Features {
     val isDemoInstance = get[Boolean]("features.isDemoInstance")
+    val taskReopenAllowed = get[Int]("features.taskReopenAllowedInSeconds") seconds
   }
 
   val operatorData = get[String]("operatorData")

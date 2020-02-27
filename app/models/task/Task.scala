@@ -183,7 +183,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
              left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}' and not ($isTeamManagerOrAdmin and state = '${AnnotationState.Cancelled}')) as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-             join webknossos.dataSet_allowedTeams as allowedTeams on allowedTeams._team = webknossos.projects_._team and allowedTeams._dataset = (select _dataset from webknossos.annotations_ where _task = webknossos.tasks_._id and typ = '${AnnotationType.TracingBase}' and state != '${AnnotationState.Cancelled}')
+             join webknossos.dataSet_allowedTeams as allowedTeams on allowedTeams._team = webknossos.projects_._team and (allowedTeams._dataset = (select _dataset from webknossos.annotations_ where _task = webknossos.tasks_._id and typ = '${AnnotationType.TracingBase}' and state != '${AnnotationState.Cancelled}') or $isTeamManagerOrAdmin)
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null

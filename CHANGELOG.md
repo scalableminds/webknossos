@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...HEAD)
 
 ### Added
--
+- Added the possibility to reopen finished tasks as non-admin for a configurable time. [#4415](https://github.com/scalableminds/webknossos/pull/4415)
 
 ### Changed
 -

@@ -232,7 +232,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     };
 
     return (
-      <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
+      <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
@@ -383,9 +383,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     await clearCache(this.props.dataset, layerName);
     api.data.reloadBuckets(layerName);
     window.needsRerender = true;
-    Toast.success(
-      `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,
-    );
+    Toast.success(`Successfully deleted cached data of layer ${layerName}.`);
   };
 
   onChangeRenderMissingDataBlack = (value: boolean): void => {

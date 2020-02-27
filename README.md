@@ -7,7 +7,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
+[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
 
 [![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -41,13 +41,16 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 
 [Read more about the original publication.](https://publication.webknossos.org)
 
+## Installation
+webKnossos is open-source, so you can install it on your own server.
+
+[Check out the documentation](https://docs.webknossos.org/guides/installation) for a tutorial on how to install webKnossos on your own server.
+
+For installations on localhost, please see below.
 
 ## Development installation
 ### Docker
-This is the fastest way to try webKnossos.
-Docker CE 17+ and Docker Compose 1.18+ is required.
-This is only recommended for testing.
-[For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
+This is only recommended for local testing. Docker 17+ and Docker Compose 1.18+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -56,18 +59,12 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
-Open your local webknossos instance on [localhost:9000](http://localhost:9000).
+Open your local webknossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
+Now, you are ready to use your local webKnossos instance.
 
-See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
+See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
-For non-localhost deployments, make sure to use the `webknossos-public` docker-compose service and set the `PUBLIC_URI` environment variable:
-
-```bash
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
-cd webknossos
-docker-compose pull webknossos
-PUBLIC_URI=http://example.org:9000 docker-compose up webknossos-public
-```
+For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/guides/installation).
 
 ### Dependencies
 

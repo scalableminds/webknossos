@@ -4,11 +4,13 @@ import _ from "lodash";
 import { document } from "libs/window";
 import constants, { type Vector3 } from "oxalis/constants";
 import { type ElementClass } from "admin/api_flow_types";
+import Toast from "libs/toast";
 
 type GpuSpecs = {
   supportedTextureSize: number,
   maxTextureCount: number,
 };
+const lookupTextureCountPerLayer = 1;
 
 export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
@@ -16,9 +18,25 @@ export function getSupportedTextureSpecs(): GpuSpecs {
     ? x => canvas.getContext(x)
     : ctxName => ({
         MAX_TEXTURE_SIZE: 0,
-        MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
+        MAX_TEXTURE_IMAGE_UNITS: 1,
         getParameter(param) {
-          return ctxName === "webgl" && param === 0 ? 4096 : 8192;
+          if (ctxName === "webgl") {
+            const dummyValues = {
+              "0": 4096,
+              "1": 16,
+              "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
+            };
+            return dummyValues[param];
+          }
+          throw new Error(`Unknown call to getParameter: ${param}`);
+        },
+        getExtension(param) {
+          if (param === "WEBGL_debug_renderer_info") {
+            return {
+              UNMASKED_RENDERER_WEBGL: 4,
+            };
+          }
+          throw new Error(`Unknown call to getExtension: ${param}`);
         },
       });
 
@@ -29,16 +47,37 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   }
 
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-  const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+  const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  return { supportedTextureSize, maxTextureCount };
+  console.log("maxTextureImageUnits", maxTextureImageUnits);
+
+  return {
+    supportedTextureSize,
+    maxTextureCount: guardAgainstMesaLimit(maxTextureImageUnits, gl),
+  };
+}
+
+function guardAgainstMesaLimit(maxSamplers, gl) {
+  // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
+
+  const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+  const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+
+  // Mesa drivers may crash with more than 16 samplers and Firefox
+  // will actively refuse to create shaders with more than 16 samplers.
+  if (renderer.slice(0, 4).toUpperCase() === "MESA") {
+    maxSamplers = Math.min(16, maxSamplers);
+  }
+
+  return maxSamplers;
 }
 
 export function validateMinimumRequirements(specs: GpuSpecs): void {
   if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
-    throw new Error(
-      "Minimum spec is not met. GPU should support at least a texture size of 4096 and 8 textures.",
-    );
+    const msg =
+      "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+    Toast.error(msg, { sticky: true });
+    throw new Error(msg);
   }
 }
 
@@ -145,7 +184,6 @@ function calculateNecessaryTextureCount<Layer>(
   const layers = Array.from(textureInformationPerLayer.values());
   const totalDataTextureCount = _.sum(layers.map(info => info.textureCount));
 
-  const lookupTextureCountPerLayer = 1;
   const necessaryTextureCount = layers.length * lookupTextureCountPerLayer + totalDataTextureCount;
 
   return necessaryTextureCount;
@@ -161,15 +199,10 @@ function deriveSupportedFeatures<Layer>(
   specs: GpuSpecs,
   textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
   hasSegmentation: boolean,
-): { isMappingSupported: boolean, isBasicRenderingSupported: boolean } {
+): { isMappingSupported: boolean } {
   const necessaryTextureCount = calculateNecessaryTextureCount(textureInformationPerLayer);
 
   let isMappingSupported = true;
-  let isBasicRenderingSupported = true;
-
-  if (necessaryTextureCount > specs.maxTextureCount) {
-    isBasicRenderingSupported = false;
-  }
 
   // Count textures needed for mappings separately, because they are not strictly necessary
   const notEnoughTexturesForMapping =
@@ -181,7 +214,6 @@ function deriveSupportedFeatures<Layer>(
 
   return {
     isMappingSupported,
-    isBasicRenderingSupported,
   };
 }
 
@@ -196,6 +228,23 @@ function getSmallestCommonBucketCapacity(textureInformationPerLayer): number {
   );
 
   return _.min(capacities);
+}
+
+function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLayer) {
+  // Find out which layer needs the most textures. We assume that value is equal for all layers
+  // so that we can tell the user that X layers can be rendered simultaneously. We could be more precise
+  // here (because some layers might need fewer textures), but this would be harder to communicate to
+  // the user and also more complex to maintain code-wise.
+  const maximumTextureCountForLayer = _.max(
+    Array.from(textureInformationPerLayer.values()).map(
+      (sizeAndCount: DataTextureSizeAndCount) => sizeAndCount.textureCount,
+    ),
+  );
+  const maximumLayerCountToRender = Math.floor(
+    specs.maxTextureCount / (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+  );
+
+  return { maximumLayerCountToRender, maximumTextureCountForLayer };
 }
 
 export function computeDataTexturesSetup<Layer>(
@@ -213,18 +262,24 @@ export function computeDataTexturesSetup<Layer>(
     requiredBucketCapacity,
   );
   const smallestCommonBucketCapacity = getSmallestCommonBucketCapacity(textureInformationPerLayer);
+  const { maximumLayerCountToRender, maximumTextureCountForLayer } = getRenderSupportedLayerCount(
+    specs,
+    textureInformationPerLayer,
+  );
+  console.log("maximumLayerCountToRender", maximumLayerCountToRender);
 
-  const { isBasicRenderingSupported, isMappingSupported } = deriveSupportedFeatures(
+  const { isMappingSupported } = deriveSupportedFeatures(
     specs,
     textureInformationPerLayer,
     hasSegmentation,
   );
 
   return {
-    isBasicRenderingSupported,
     isMappingSupported,
     textureInformationPerLayer,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
+    maximumTextureCountForLayer,
   };
 }
 

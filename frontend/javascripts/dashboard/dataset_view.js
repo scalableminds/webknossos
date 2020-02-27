@@ -133,9 +133,7 @@ function DatasetView(props: Props) {
 
   function renderTable() {
     const filteredDatasets = features().isDemoInstance
-      ? context.datasets.filter(
-          d => !d.isPublic || d.owningOrganization === props.user.organization,
-        )
+      ? context.datasets.filter(d => d.owningOrganization === props.user.organization)
       : context.datasets;
     return (
       <DatasetTable

@@ -8,11 +8,16 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayerMapping,
+  DataLayer,
   DataLayerMapping,
   ElementClass
 }
-import com.scalableminds.webknossos.datastore.models.requests.{DataServiceMappingRequest, MappingReadInstruction}
-import com.scalableminds.webknossos.datastore.storage.ParsedMappingCache
+import com.scalableminds.webknossos.datastore.models.requests.{
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  MappingReadInstruction
+}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateCache, AgglomerateFileCache, ParsedMappingCache}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import javax.swing.tree.DefaultMutableTreeNode
@@ -21,28 +26,50 @@ import spire.math.{UByte, UInt, ULong, UShort}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
-//import hdf.`object`._
-//import ncsa.hdf.hdf5lib.HDF5Constants
 import ch.systemsx.cisd.hdf5._
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
-  lazy val cache = new ParsedMappingCache(config.Braingames.Binary.mappingCacheMaxSize)
-  lazy val loadedAgglomerate =
-    HDF5FactoryProvider.get
-      .openForReading(new File(
-        s"${config.Braingames.Binary.baseFolder}/sample_organization/test-agglomerate-file/segmentation/mappings/agglomerate_view_70.hdf5"))
-      .uint8()
-  val datasetName = "/segment_to_agglomerate"
+import scala.util.Try
 
-  def loadAgglomerates(segmentIds: mutable.HashSet[Long]): mutable.HashMap[Long, Long] = {
-    val result = mutable.HashMap[Long, Long]()
-    segmentIds.foreach(id => result += (id -> loadedAgglomerate.readArrayBlock(datasetName, 1, id).toSeq.head.toLong))
-    result
+class AgglomerateService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+  lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.mappingCacheMaxSize)
+  lazy val cache = new AgglomerateCache(config.Braingames.Binary.cacheMaxSize)
+
+  def applyAgglomerate(data: Array[Byte], request: DataServiceDataRequest): Fox[Array[Byte]] = {
+    def segmentToAgglomerate(segmentId: Long) =
+      cache.withCache(request, segmentId, cachedFileHandles)(initHDFReader)
+
+    def mapData(input: Array[UInt]): Fox[Array[Byte]] = {
+      val longs = input.map(_.toLong)
+      val agglomerateIds = Fox.combined(longs.map(segmentToAgglomerate))
+      agglomerateIds.map(_.foldLeft(ByteBuffer.allocate(4 * longs.length).order(ByteOrder.LITTLE_ENDIAN)) {
+        (buffer, lon) =>
+          buffer putInt lon.toInt
+      }.array)
+    }
+
+    convertData(data, request.dataLayer.elementClass) match {
+      case convertedData: Array[UInt] => mapData(convertedData)
+      case _                          => Fox.successful(data)
+    }
   }
 
-  def convertData(data: Array[Byte],
-                  elementClass: ElementClass.Value,
-                  filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
+  private def initHDFReader(request: DataServiceDataRequest) = {
+    val hdfFile = Try(
+      Paths
+        .get(config.Braingames.Binary.baseFolder)
+        .resolve(request.dataSource.id.team)
+        .resolve(request.dataSource.id.name)
+        .resolve(request.dataLayer.name)
+        .resolve("mappings")
+        .resolve(s"${request.settings.appliedAgglomerate.get}.hdf5")
+        .toFile)
+    try2Fox(hdfFile.map(HDF5FactoryProvider.get.openForReading))
+  }
+
+  private def convertData(
+      data: Array[Byte],
+      elementClass: ElementClass.Value,
+      filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
     elementClass match {
       case ElementClass.uint8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))

@@ -42,11 +42,13 @@ const createRequestBucketInfo = (
   zoomedAddress: Vector4,
   resolutions: Array<Vector3>,
   fourBit: boolean,
+  applyAgglomerate: ?string,
   version: ?number,
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
-  ...(version != null ? { version } : {}),
+  ...(applyAgglomerate != null ? { applyAgglomerate } : {}),
+  ...(version != null ? { version } : {})
 });
 
 function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3>): SendBucketInfo {
@@ -124,8 +126,9 @@ export async function requestFromStore(
   const resolutions = getResolutions(state.dataset);
   const version =
     isSegmentation && state.tracing.volume != null ? state.tracing.volume.version : null;
+    const applyAgglomerates = isSegmentation ? "agglomerate_view_70" : null;
   const bucketInfo = batch.map(zoomedAddress =>
-    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, version),
+    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
   );
 
   return doWithToken(async token => {

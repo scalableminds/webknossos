@@ -53,16 +53,20 @@ class BinaryDataService(dataBaseDir: Path,
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
-        handleDataRequest(request).map { data =>
+        handleDataRequest(request).flatMap { data =>
           val convertedData =
             if (request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation)
               convertToUInt32(data)
             else data
-          val resultData = applyAgglomerate(convertedData, request.dataLayer) //convertedData
+          val resultData =
+            if (request.settings.appliedAgglomerate.isDefined)
+              agglomerateService.applyAgglomerate(convertedData, request) //convertedData
+            else Fox.successful(convertedData)
+
           if (request.settings.halfByte) {
-            (convertToHalfByte(resultData), index)
+            resultData.map(array => (convertToHalfByte(array), index))
           } else {
-            (resultData, index)
+            resultData.map((_, index))
           }
         }
     }
@@ -173,32 +177,6 @@ class BinaryDataService(dataBaseDir: Path,
       }
     }
     result
-  }
-
-  private def applyAgglomerate(data: Array[Byte], dataLayer: DataLayer): Array[Byte] = {
-    def getAllSegmentIds(convertedData: Array[Long]): mutable.HashSet[Long] = {
-      val segmentIds = mutable.HashSet[Long]()
-      segmentIds ++ convertedData
-    }
-
-    def convertData(input: Array[UInt]): Array[Byte] = {
-      val longs = input.map(_.toLong)
-      val segmentToAgglomerate = agglomerateService.loadAgglomerates(getAllSegmentIds(longs))
-      longs
-        .map(segmentToAgglomerate)
-        .foldLeft(ByteBuffer.allocate(4 * longs.length).order(ByteOrder.LITTLE_ENDIAN)) { (buffer, lon) =>
-          buffer putInt lon.toInt
-        }
-        .array
-    }
-
-    if (dataLayer.elementClass == ElementClass.uint32) {
-      agglomerateService.convertData(data, dataLayer.elementClass) match {
-        case convertedData: Array[UInt] => convertData(convertedData)
-        case _                          => data
-      }
-    } else data
-
   }
 
   def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]) = {

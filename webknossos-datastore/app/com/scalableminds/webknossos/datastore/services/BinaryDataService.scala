@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Path, Paths}
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
@@ -15,11 +16,16 @@ import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import spire.math.UInt
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int)
+class BinaryDataService(dataBaseDir: Path,
+                        loadTimeout: FiniteDuration,
+                        maxCacheSize: Int,
+                        agglomerateService: AgglomerateService)
     extends FoxImplicits
     with LazyLogging {
 
@@ -52,10 +58,11 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
             if (request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation)
               convertToUInt32(data)
             else data
+          val resultData = applyAgglomerate(convertedData, request.dataLayer) //convertedData
           if (request.settings.halfByte) {
-            (convertToHalfByte(convertedData), index)
+            (convertToHalfByte(resultData), index)
           } else {
-            (convertedData, index)
+            (resultData, index)
           }
         }
     }
@@ -166,6 +173,32 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
       }
     }
     result
+  }
+
+  private def applyAgglomerate(data: Array[Byte], dataLayer: DataLayer): Array[Byte] = {
+    def getAllSegmentIds(convertedData: Array[Long]): mutable.HashSet[Long] = {
+      val segmentIds = mutable.HashSet[Long]()
+      segmentIds ++ convertedData
+    }
+
+    def convertData(input: Array[UInt]): Array[Byte] = {
+      val longs = input.map(_.toLong)
+      val segmentToAgglomerate = agglomerateService.loadAgglomerates(getAllSegmentIds(longs))
+      longs
+        .map(segmentToAgglomerate)
+        .foldLeft(ByteBuffer.allocate(4 * longs.length).order(ByteOrder.LITTLE_ENDIAN)) { (buffer, lon) =>
+          buffer putInt lon.toInt
+        }
+        .array
+    }
+
+    if (dataLayer.elementClass == ElementClass.uint32) {
+      agglomerateService.convertData(data, dataLayer.elementClass) match {
+        case convertedData: Array[UInt] => convertData(convertedData)
+        case _                          => data
+      }
+    } else data
+
   }
 
   def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]) = {

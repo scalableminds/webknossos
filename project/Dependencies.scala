@@ -16,6 +16,7 @@ object Dependencies {
   val gson = "com.google.code.gson" % "gson" % "1.7.1"
   val grpc = "io.grpc" % "grpc-netty-shaded" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  //val hdf5Interface = "org.hdfgroup" % "hdf-java" % "2.6.1"
   val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
   val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   val liftCommon = "net.liftweb" %% "lift-common" % "3.0.2"
@@ -70,6 +71,7 @@ object Dependencies {
     akkaLogging,
     ehcache,
     gson,
+    //hdf5Interface,
     webknossosWrap,
     playIterateesStreams,
     filters,

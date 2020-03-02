@@ -68,8 +68,8 @@ function NmlDropArea({ showClickHint, isAllowed }) {
       {isAllowed ? (
         <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
       ) : (
-        <h5 style={{ color: "rgb(247,80,61)" }}>
-          You cannot upload NML files into a read-only tracing.
+        <h5>
+          Drop NML files here to <b>create a new tracing</b>.
         </h5>
       )}
     </React.Fragment>
@@ -98,14 +98,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   };
 
   onDrop = (files: Array<File>) => {
-    if (this.props.isAllowed) {
-      this.setState({
-        files,
-        dropzoneActive: false,
-      });
-    } else {
-      this.setState({ dropzoneActive: false });
-    }
+    this.setState({
+      files,
+      dropzoneActive: false,
+    });
+
     trackAction("NML drag and drop");
     this.props.hideDropzoneModal();
   };
@@ -197,7 +194,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           <React.Fragment>
             {this.state.files.length > 1 ? createGroupsCheckbox : null}
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
-              Import
+              {this.props.isAllowed ? "Import" : "Create New Tracing"}
             </Button>
           </React.Fragment>
         }

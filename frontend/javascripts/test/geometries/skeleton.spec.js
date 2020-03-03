@@ -38,10 +38,9 @@ test.before(t => {
   Store.dispatch(initializeAnnotationAction(annotation));
   Store.dispatch(initializeSkeletonTracingAction(tracing));
 
-  // create 20 trees with 100 nodes each
+  // Create 20 trees with 100 nodes each
   for (let i = 0; i < 2000; i++) {
-    // The first tree is created automatically
-    if (i % 100 === 0 && i !== 0) {
+    if (i % 100 === 0) {
       Store.dispatch(createTreeAction());
     }
     Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));

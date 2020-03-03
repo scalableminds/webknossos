@@ -121,22 +121,12 @@ const createBranchPointAction = SkeletonTracingActions.createBranchPointAction(
   12345678,
 );
 
-test("SkeletonTracingSaga should create a tree if there is none (saga test)", t => {
-  const saga = saveTracingTypeAsync("skeleton");
-  expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
-  saga.next();
-  saga.next({ tracing: { trees: {} } });
-  saga.next(initialState.flycam);
-  t.is(saga.next(true).value.payload.action.type, "CREATE_TREE");
-});
-
 test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("skeleton");
   expectValueDeepEqual(t, saga.next(), take("INITIALIZE_SKELETONTRACING"));
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
-  saga.next(false);
   saga.next();
   saga.next(true);
   saga.next();
@@ -155,7 +145,6 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
-  saga.next(false);
   saga.next();
   saga.next(true);
   saga.next();

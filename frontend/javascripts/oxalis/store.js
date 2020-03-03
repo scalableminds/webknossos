@@ -307,6 +307,7 @@ export type TemporaryConfiguration = {
     // these gpu setup variables here.
     +smallestCommonBucketCapacity: number,
     +initializedGpuFactor: number,
+    +maximumLayerCountToRender: number,
   },
 };
 

@@ -31,6 +31,7 @@ import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
+  getTree,
   getActiveTree,
   getActiveGroup,
   findTreeByNodeId,
@@ -66,7 +67,8 @@ function getMaximumNodeId(trees: TreeMap): number {
 }
 
 function getMaximumTreeId(trees: TreeMap): number {
-  return _.max(_.map(trees, "treeId"));
+  const maxTreeId = _.max(_.map(trees, "treeId"));
+  return maxTreeId != null ? maxTreeId : Constants.MIN_TREE_ID - 1;
 }
 
 function getNearestTreeId(treeId: number, trees: TreeMap): number {
@@ -453,10 +455,8 @@ export function createTree(
     const { allowUpdate } = state.tracing.restrictions;
 
     if (allowUpdate) {
-      // create a new tree id and name
-      // tree id can become 0 after deleting all trees
-      const maxTreeId = getMaximumTreeId(skeletonTracing.trees);
-      const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
+      // Create a new tree id and name
+      const newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
 
       const name = generateTreeName(state, timestamp, newTreeId);
       let groupId = null;
@@ -484,6 +484,23 @@ export function createTree(
         groupId,
       };
       return Maybe.Just(tree);
+    }
+    return Maybe.Nothing();
+  });
+}
+
+export function getOrCreateTree(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracing,
+  treeId: ?number,
+  timestamp: number,
+): Maybe<Tree> {
+  return getTree(skeletonTracing, treeId).orElse(() => {
+    // Only create a new tree if there are no trees
+    // Specifically, this means that no new tree is created just because
+    // the activeTreeId is temporarily null
+    if (_.size(skeletonTracing.trees) === 0) {
+      return createTree(state, timestamp);
     }
     return Maybe.Nothing();
   });
@@ -579,27 +596,18 @@ export function addTreesAndGroups(
 export function deleteTree(
   state: OxalisState,
   tree: Tree,
-  timestamp: number,
   restrictions: RestrictionsAndSettings,
-): Maybe<[TreeMap, number, ?number, number]> {
+): Maybe<[TreeMap, ?number, ?number, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
       // Delete tree
-      let newTrees = _.omit(skeletonTracing.trees, tree.treeId.toString());
+      const newTrees = _.omit(skeletonTracing.trees, tree.treeId.toString());
 
-      // Because we always want an active tree, check if we need
-      // to create one.
-      let newActiveTreeId;
-      let newActiveNodeId;
-      if (_.size(newTrees) === 0) {
-        const newTree = createTree(state, timestamp).get();
-        newTrees = update(newTrees, { [newTree.treeId]: { $set: newTree } });
-
-        newActiveTreeId = newTree.treeId;
-        newActiveNodeId = null;
-      } else {
+      let newActiveTreeId = null;
+      let newActiveNodeId = null;
+      if (_.size(newTrees) > 0) {
         // Setting the tree active whose id is the next highest compared to the id of the deleted tree.
         newActiveTreeId = getNearestTreeId(tree.treeId, newTrees);
         // Object.keys returns strings and the newActiveNodeId should be an integer

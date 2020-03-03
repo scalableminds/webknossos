@@ -23,7 +23,7 @@ import {
   getByteCount,
   getElementClass,
   getBoundaries,
-  getColorLayers,
+  getEnabledColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -40,6 +40,8 @@ type ShaderMaterialOptions = {
   polygonOffsetFactor?: number,
   polygonOffsetUnits?: number,
 };
+
+const RECOMPILATION_THROTTLE_TIME = 500;
 
 export type Uniforms = {
   [key: string]: {
@@ -60,7 +62,7 @@ function sanitizeName(name: ?string): string {
   return `layer_${btoa(name).replace(/=+/g, "")}`;
 }
 
-function getColorLayerNames() {
+function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
@@ -82,11 +84,14 @@ class PlaneMaterialFactory {
   attributes: Object;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
+  leastRecentlyVisibleLayers: Array<string>;
+  oldShaderCode: ?string;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
+    this.leastRecentlyVisibleLayers = [];
   }
 
   setup() {
@@ -204,14 +209,13 @@ class PlaneMaterialFactory {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
       };
-
-      this.uniforms[`${layerName}_alpha`] = {
+      this.uniforms[`${name}_alpha`] = {
         type: "f",
         value: 1,
       };
     }
 
-    for (const name of getColorLayerNames()) {
+    for (const name of getSanitizedColorLayerNames()) {
       this.uniforms[`${name}_color`] = {
         type: "v3",
         value: DEFAULT_COLOR,
@@ -402,6 +406,7 @@ class PlaneMaterialFactory {
       ),
     );
 
+    const oldVisibilityPerLayer = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
@@ -411,6 +416,18 @@ class PlaneMaterialFactory {
             const { elementClass } = dataLayer.cube;
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
+              const isLayerEnabled = !settings.isDisabled;
+              if (
+                oldVisibilityPerLayer[dataLayer.name] != null &&
+                oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
+              ) {
+                if (settings.isDisabled) {
+                  this.onDisableLayer(dataLayer.name);
+                } else {
+                  this.onEnableLayer(dataLayer.name);
+                }
+              }
+              oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
               const isSegmentationLayer = segmentationLayerName === dataLayer.name;
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
@@ -538,35 +555,107 @@ class PlaneMaterialFactory {
     return this.material;
   }
 
+  recomputeFragmentShader = _.throttle(() => {
+    const newShaderCode = this.getFragmentShader();
+    // Comparing to this.material.fragmentShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldShaderCode != null && this.oldShaderCode === newShaderCode) {
+      return;
+    }
+    this.oldShaderCode = newShaderCode;
+
+    this.material.fragmentShader = newShaderCode;
+    this.material.needsUpdate = true;
+    window.needsRerender = true;
+  }, RECOMPILATION_THROTTLE_TIME);
+
+  getLayersToRender(maximumLayerCountToRender: number) {
+    // This function determines for which layers
+    // the shader code should be compiled. If the GPU supports
+    // all layers, we can simply return all layers here.
+    // Otherwise, we prioritize layers to render by taking
+    // into account (a) which layers are activated and (b) which
+    // layers were least-recently activated (but are now disabled).
+
+    if (maximumLayerCountToRender <= 0) {
+      return [];
+    }
+
+    const colorLayerNames = getSanitizedColorLayerNames();
+    if (maximumLayerCountToRender >= colorLayerNames.length) {
+      // We can simply render all available layers.
+      return colorLayerNames;
+    }
+
+    const state = Store.getState();
+    const enabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration).map(
+      layer => layer.name,
+    );
+    const disabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration, {
+      invert: true,
+    }).map(layer => layer.name);
+
+    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
+    // because they were already disabled on page load), append the disabled layers
+    // which are not already in that array.
+    // Note that the order of this array is important (earlier elements are more "recently used")
+    // which is why it is important how this operation is done.
+    this.leastRecentlyVisibleLayers = [
+      ...this.leastRecentlyVisibleLayers,
+      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleLayers),
+    ];
+
+    return enabledLayerNames
+      .concat(this.leastRecentlyVisibleLayers)
+      .slice(0, maximumLayerCountToRender)
+      .sort()
+      .map(sanitizeName);
+  }
+
+  onDisableLayer = layerName => {
+    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
+    this.leastRecentlyVisibleLayers = [layerName, ...this.leastRecentlyVisibleLayers];
+
+    this.recomputeFragmentShader();
+  };
+
+  onEnableLayer = layerName => {
+    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
+    this.recomputeFragmentShader();
+  };
+
   getFragmentShader(): string {
-    const colorLayerNames = getColorLayerNames();
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const {
+      initializedGpuFactor,
+      maximumLayerCountToRender,
+    } = Store.getState().temporaryConfiguration.gpuSetup;
+
     const segmentationLayer = Model.getSegmentationLayer();
+    const colorLayerNames = this.getLayersToRender(
+      maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
+    );
+    const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     // Don't compile code for segmentation in arbitrary mode
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    const lookupTextureWidth = getLookupBufferSize(
-      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
+    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
-    const code = getMainFragmentShader({
+    return getMainFragmentShader({
       colorLayerNames,
       packingDegreeLookup,
       hasSegmentation,
       segmentationName,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
+      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
     });
-
-    return code;
   }
 
   getVertexShader(): string {

@@ -28,7 +28,7 @@ export class OxalisModel {
   };
 
   isMappingSupported: boolean = true;
-  maximumDataTextureCountForLayer: number;
+  maximumTextureCountForLayer: number;
 
   async fetch(
     annotationType: AnnotationType,
@@ -48,12 +48,12 @@ export class OxalisModel {
         dataLayers,
         connectionInfo,
         isMappingSupported,
-        maximumDataTextureCountForLayer,
+        maximumTextureCountForLayer,
       } = initializationInformation;
       this.dataLayers = dataLayers;
       this.connectionInfo = connectionInfo;
       this.isMappingSupported = isMappingSupported;
-      this.maximumDataTextureCountForLayer = maximumDataTextureCountForLayer;
+      this.maximumTextureCountForLayer = maximumTextureCountForLayer;
     }
   }
 

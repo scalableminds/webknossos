@@ -13,11 +13,11 @@
 * [Managing Users and Access Rights](./users.md)
 * [Managing Tasks and Projects](./tasks.md)
 * [Sharing](./sharing.md)
+* [Installation on your own Server](./installation.md)
 
 ## Reference
 * [Supported Data Formats](./data_formats.md)
 * [Keyboard Shortcuts](./keyboard_shortcuts.md)
-* [FAQ](./faq.md)
 * [Backend REST API](./rest_api.md)
 * [Code Readme](../README.md)
 * [Changelog](../CHANGELOG.md)
@@ -26,5 +26,6 @@
 * [Tooling](./tooling.md) 
 
 ## Getting Help
-* [Community Support](https://support.webknossos.org)
+* [FAQ](./faq.md)
+* [Email Support](mailto:hello@scalableminds.com)
 * [Commercial Support](https://scalableminds.com)

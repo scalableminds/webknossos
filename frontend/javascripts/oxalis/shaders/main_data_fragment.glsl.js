@@ -45,6 +45,7 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 
 export default function getMainFragmentShader(params: Params) {
   const { hasSegmentation } = params;
+
   return _.template(
     `
 precision highp float;

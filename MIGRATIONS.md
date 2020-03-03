@@ -10,6 +10,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - [051-add-source-view-configuration.sql](conf/evolutions/051-add-source-view-configuration.sql)
 
+## [20.03.0](https://github.com/scalableminds/webknossos/releases/tag/20.03.0) - 2020-02-27
+No migrations necessary.
+
 ## [20.2.0](https://github.com/scalableminds/webknossos/releases/tag/20.2.0) - 2020-01-27
 ### Postgres Evolutions:
 - [050-add-annotation-visibility-enum.sql](conf/evolutions/050-add-annotation-visibility-enum.sql)

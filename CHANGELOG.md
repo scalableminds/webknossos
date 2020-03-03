@@ -35,6 +35,18 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 - Added a simpler method to install webKnossos on an own server. [#4446](https://github.com/scalableminds/webknossos/pull/4446)
 
+## [20.03.0](https://github.com/scalableminds/webknossos/releases/tag/20.03.0) - 2020-02-27
+[Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...20.03.0)
+
+### Highlights
+- Added support for datasets with more layers than the hardware can render simultaneously. The user can disable layers temporarily to control for which layers the GPU resources should be used. [#4424](https://github.com/scalableminds/webknossos/pull/4424)
+- Time tracking precision is improved. [#4445](https://github.com/scalableminds/webknossos/pull/4445)
+
+### Added
+- Added support for datasets with more layers than the hardware can render simultaneously. The user can disable layers temporarily to control for which layers the GPU resources should be used. [#4424](https://github.com/scalableminds/webknossos/pull/4424)
+- Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
+- Added a simpler method to install webKnossos on an own server. [#4446](https://github.com/scalableminds/webknossos/pull/4446)
+
 ### Changed
 - Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 - Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)

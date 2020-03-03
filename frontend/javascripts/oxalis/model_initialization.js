@@ -10,7 +10,6 @@ import type {
   ServerVolumeTracing,
 } from "admin/api_flow_types";
 import {
-  type DataTextureSizeAndCount,
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
@@ -84,7 +83,7 @@ export async function initialize(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
@@ -125,8 +124,14 @@ export async function initialize(
     const { gpuMemoryFactor } = initialUserSettings;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
-    const { smallestCommonBucketCapacity } = initializationInformation;
-    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
+    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
+    Store.dispatch(
+      initializeGpuSetupAction(
+        smallestCommonBucketCapacity,
+        gpuMemoryFactor,
+        maximumLayerCountToRender,
+      ),
+    );
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -163,24 +168,12 @@ async function fetchParallel(
   ]);
 }
 
-function validateSpecsForLayers(
-  layers: Array<APIDataLayer>,
-  requiredBucketCapacity: number,
-): {
-  textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
-  isMappingSupported: boolean,
-  smallestCommonBucketCapacity: number,
-} {
+function validateSpecsForLayers(layers: Array<APIDataLayer>, requiredBucketCapacity: number): * {
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
 
   const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
-  const {
-    isMappingSupported,
-    textureInformationPerLayer,
-    isBasicRenderingSupported,
-    smallestCommonBucketCapacity,
-  } = computeDataTexturesSetup(
+  const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
     layer => getBitDepth(layer) >> 3,
@@ -188,20 +181,14 @@ function validateSpecsForLayers(
     requiredBucketCapacity,
   );
 
-  if (!isBasicRenderingSupported) {
-    const message = `Not enough textures available for rendering ${layers.length} layers`;
-    Toast.error(message);
-    throw new Error(message);
-  }
-
-  if (!isMappingSupported) {
+  if (!setupDetails.isMappingSupported) {
     const message = messages["mapping.too_few_textures"];
     console.warn(message);
   }
 
   maybeWarnAboutUnsupportedLayers(layers);
 
-  return { isMappingSupported, textureInformationPerLayer, smallestCommonBucketCapacity };
+  return setupDetails;
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -368,8 +355,9 @@ function initializeDataLayerInstances(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
   smallestCommonBucketCapacity: number,
+  maximumLayerCountToRender: number,
 } {
   const { dataset } = Store.getState();
   const layers = dataset.dataSource.dataLayers;
@@ -382,10 +370,9 @@ function initializeDataLayerInstances(
     textureInformationPerLayer,
     isMappingSupported,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
+    maximumTextureCountForLayer,
   } = validateSpecsForLayers(layers, requiredBucketCapacity);
-  const maximumDataTextureCountForLayer = _.max(
-    Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
-  );
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
@@ -418,8 +405,9 @@ function initializeDataLayerInstances(
     dataLayers,
     connectionInfo,
     isMappingSupported,
-    maximumDataTextureCountForLayer,
+    maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   };
 }
 

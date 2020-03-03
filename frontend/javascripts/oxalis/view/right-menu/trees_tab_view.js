@@ -1,5 +1,5 @@
 // @flow
-import { Alert, Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import { Alert, Button, Dropdown, Empty, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -572,6 +572,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       .map(activeGroup => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
+    const noTreesAndGroups = _.size(trees) === 0 && _.size(treeGroups) === 0;
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
     // Avoid that the title switches to the other title during the fadeout of the Modal
@@ -638,6 +639,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <InputComponent
             onChange={this.handleChangeTreeName}
             value={activeTreeName || activeGroupName}
+            disabled={noTreesAndGroups}
             style={{ width: "60%" }}
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
@@ -649,10 +651,22 @@ class TreesTabView extends React.PureComponent<Props, State> {
             </ButtonComponent>
           </Dropdown>
         </InputGroup>
-        <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
-          <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
-          {this.getTreesComponents(orderAttribute)}
-        </ul>
+        {noTreesAndGroups ? (
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <span>
+                There are no trees in this tracing.
+                <br /> A new tree will be created automatically once a node is set.
+              </span>
+            }
+          />
+        ) : (
+          <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+            <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
+            {this.getTreesComponents(orderAttribute)}
+          </ul>
+        )}
         {groupToDelete !== null ? (
           <DeleteGroupModalView
             onCancel={this.hideDeleteGroupsModal}

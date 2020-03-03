@@ -107,8 +107,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.no_viewport_scaling_setting":
     "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
-  "tracing.cant_create_node_due_to_active_group":
-    "You cannot create nodes, since no tree is active.",
+  "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
     "A corruption in the current skeleton tracing was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "layouting.missing_custom_layout_info":
@@ -117,6 +116,9 @@ In order to restore the current window, a reload is necessary.`,
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
     "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+  "webgl.too_many_active_layers": _.template(
+    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
+  ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
@@ -132,6 +134,9 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.disable_saving": "Are you sure you want to disable saving?",
   "annotation.disable_saving.content":
     "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary tracings to save resources.",
+  "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
+  "annotation.undoFinish.content":
+    "If you reopen your old tracing, the current tracing will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue tracing.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

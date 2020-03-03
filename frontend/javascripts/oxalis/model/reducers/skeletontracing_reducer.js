@@ -28,6 +28,7 @@ import {
   addTreesAndGroups,
   createTreeMapFromTreeArray,
   removeMissingGroupsFromTrees,
+  getOrCreateTree,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   getSkeletonTracing,
@@ -109,7 +110,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "CREATE_NODE": {
           const { position, rotation, viewport, resolution, treeId, timestamp } = action;
 
-          return getTree(skeletonTracing, treeId)
+          return getOrCreateTree(state, skeletonTracing, treeId, timestamp)
             .chain(tree =>
               createNode(
                 state,
@@ -122,16 +123,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                 timestamp,
                 restrictions,
               ).map(([node, edges]) => {
-                const diffableNodeMap = skeletonTracing.trees[tree.treeId].nodes;
+                const diffableNodeMap = tree.nodes;
                 const newDiffableMap = diffableNodeMap.set(node.id, node);
+                const newTree = update(tree, {
+                  nodes: { $set: newDiffableMap },
+                  edges: { $set: edges },
+                });
                 return update(state, {
                   tracing: {
                     skeleton: {
                       trees: {
-                        [tree.treeId]: {
-                          nodes: { $set: newDiffableMap },
-                          edges: { $set: edges },
-                        },
+                        [tree.treeId]: { $set: newTree },
                       },
                       activeNodeId: { $set: node.id },
                       activeGroupId: { $set: null },
@@ -316,9 +318,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "DELETE_TREE": {
-          const { timestamp, treeId } = action;
+          const { treeId } = action;
           return getTree(skeletonTracing, treeId)
-            .chain(tree => deleteTree(state, tree, timestamp, restrictions))
+            .chain(tree => deleteTree(state, tree, restrictions))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
                 tracing: {

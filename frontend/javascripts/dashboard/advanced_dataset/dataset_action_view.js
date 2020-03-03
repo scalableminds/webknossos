@@ -81,8 +81,6 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       ? { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" }
       : null;
     const disabledWhenReloadingAction = e => (isReloading ? e.preventDefault() : null);
-    const waitUntilReloadingFinishedDescription =
-      "You have to wait until this dataset finished reloading.";
 
     const volumeTracingMenu = (
       <Dropdown
@@ -135,7 +133,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                  title={isReloading ? waitUntilReloadingFinishedDescription : "Edit Dataset"}
+                  title="Edit Dataset"
                   style={disabledWhenReloadingStyle}
                   onClick={disabledWhenReloadingAction}
                 >
@@ -146,7 +144,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   <a
                     href="#"
                     onClick={() => this.clearCache(dataset)}
-                    title={isReloading ? waitUntilReloadingFinishedDescription : "Reload Dataset"}
+                    title="Reload Dataset"
                     style={disabledWhenReloadingStyle}
                   >
                     {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
@@ -157,7 +155,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             ) : null}
             <Link
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-              title={isReloading ? waitUntilReloadingFinishedDescription : "View Dataset"}
+              title="View Dataset"
               style={disabledWhenReloadingStyle}
               onClick={disabledWhenReloadingAction}
             >
@@ -174,9 +172,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                       ? e.preventDefault()
                       : this.createTracing(dataset, "skeleton", false)
                   }
-                  title={
-                    isReloading ? waitUntilReloadingFinishedDescription : "Create Skeleton Tracing"
-                  }
+                  title="Create Skeleton Tracing"
                 >
                   <img
                     src="/assets/images/skeleton.svg"

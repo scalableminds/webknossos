@@ -7,20 +7,41 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...HEAD)
 
 ### Added
+- Added the possibility to reopen finished tasks as non-admin for a configurable time. [#4415](https://github.com/scalableminds/webknossos/pull/4415)
 - Added indication for reloading a dataset in the dataset actions in the dashboard. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
-- Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+
+### Fixed
+- Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+
+### Removed
+-
+
+
+## [20.03.0](https://github.com/scalableminds/webknossos/releases/tag/20.03.0) - 2020-02-27
+[Commits](https://github.com/scalableminds/webknossos/compare/20.02.0...20.03.0)
+
+### Highlights
+- Added support for datasets with more layers than the hardware can render simultaneously. The user can disable layers temporarily to control for which layers the GPU resources should be used. [#4424](https://github.com/scalableminds/webknossos/pull/4424)
+- Time tracking precision is improved. [#4445](https://github.com/scalableminds/webknossos/pull/4445)
+
+### Added
+- Added support for datasets with more layers than the hardware can render simultaneously. The user can disable layers temporarily to control for which layers the GPU resources should be used. [#4424](https://github.com/scalableminds/webknossos/pull/4424)
+- Added a notification when downloading nml including volume that informs that the fallback data is excluded in the download. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
+- Added a simpler method to install webKnossos on an own server. [#4446](https://github.com/scalableminds/webknossos/pull/4446)
+
+### Changed
 - Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 - Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)
 
 ### Fixed
-- Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
 - Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)
+- Time tracking precision is improved. [#4445](https://github.com/scalableminds/webknossos/pull/4445)
 
 ### Removed
 -

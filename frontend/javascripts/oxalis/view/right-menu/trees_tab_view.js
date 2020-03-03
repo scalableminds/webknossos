@@ -167,18 +167,19 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const ext = _.last(file.name.split("."));
-        let tryImportFunctions;
-        if (ext === "nml" || ext === "xml") {
-          tryImportFunctions = [tryParsingFileAsNml, tryParsingFileAsProtobuf];
-        } else {
-          tryImportFunctions = [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        const tryImportFunctions =
+          ext === "nml" || ext === "xml"
+            ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
+            : [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        /* eslint-disable no-await-in-loop */
+        for (const importFunction of tryImportFunctions) {
+          const maybeImportAction = await importFunction(file);
+          if (maybeImportAction) {
+            return maybeImportAction;
+          }
         }
-        let maybeImportAction = await tryImportFunctions[0](file);
-        maybeImportAction = maybeImportAction || (await tryImportFunctions[1](file));
-        if (!maybeImportAction) {
-          throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
-        }
-        return maybeImportAction;
+        /* eslint-enable no-await-in-loop */
+        throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
       }),
     );
 

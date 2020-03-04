@@ -98,6 +98,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       val shouldCreateGroupForEachFile: Boolean =
         request.body.dataParts("createGroupForEachFile").headOption.contains("true")
 
+      val datasetName: String =
+        request.body.dataParts("datasetName").headOption
+
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
         case (acc, next) =>
           val file = new File(next.ref.path.toString)
@@ -121,7 +124,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         for {
           _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
           _ <- bool2Fox(volumeTracingsWithDataLocations.isEmpty || volumeTracingsWithDataLocations.tail.isEmpty) ?~> "nml.file.multipleVolumes"
-          dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1)) ?~> "nml.file.differentDatasets"
+          dataSetName <- datasetName.getOrElse(assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1))) ?~> "nml.file.differentDatasets"
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)

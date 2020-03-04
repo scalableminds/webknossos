@@ -56,6 +56,7 @@ type StateProps = {|
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
+  datasetName: string,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -175,7 +176,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       createGroupForEachFile: boolean,
     ): Promise<void> => {
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
-        data: { nmlFile: files, createGroupForEachFile },
+        data: { nmlFile: files, createGroupForEachFile, datasetName: this.props.datasetName },
       });
       this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
     };
@@ -183,7 +184,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <NmlUploadZoneContainer
         onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
-        isAllowed={isUpdateTracingAllowed}
+        isUpdateAllowed={isUpdateTracingAllowed}
       >
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
@@ -333,6 +334,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
+    datasetName: state.dataset.name,
   };
 }
 

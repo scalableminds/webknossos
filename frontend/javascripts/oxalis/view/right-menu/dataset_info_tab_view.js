@@ -210,19 +210,15 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         </span>
       );
     } else {
-      if (this.props.tracing.description) {
-        descriptionEditField = (
-          <span style={{ verticalAlign: "top" }}>
-            Description:
-            <Markdown
-              source={tracingDescription}
-              options={{ html: false, breaks: true, linkify: true }}
-            />
-          </span>
-        );
-      } else {
-        descriptionEditField = <span>Description: {tracingDescription}</span>;
-      }
+      descriptionEditField = (
+        <span style={{ verticalAlign: "top" }}>
+          Description:
+          <Markdown
+            source={tracingDescription}
+            options={{ html: false, breaks: true, linkify: true }}
+          />
+        </span>
+      );
     }
 
     return (

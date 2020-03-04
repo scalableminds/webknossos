@@ -183,9 +183,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataSet._dataStore)
     } yield {
-      if (originalDataStore.isScratch && !dataStore.isScratch) {
+      if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataSet)) {
         logger.info(
-          s"Replacing dataset ${foundDataSet.name} from scratch datastore ${originalDataStore.name} by the one from ${dataStore.name}")
+          s"Replacing dataset ${foundDataSet.name} (status: ${foundDataSet.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}")
         dataSetDAO
           .updateDataSourceByNameAndOrganizationName(foundDataSet._id,
                                                      dataStore.name,

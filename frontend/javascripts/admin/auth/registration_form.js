@@ -136,9 +136,9 @@ class RegistrationForm extends React.PureComponent<Props, State> {
             )}
           </FormItem>
           <FormItem style={{ display: "none" }}>
-            {getFieldDecorator("organizationDisplayName", { initialValue: this.props.organizationName })(
-              <Input type="text" />,
-            )}
+            {getFieldDecorator("organizationDisplayName", {
+              initialValue: this.props.organizationName,
+            })(<Input type="text" />)}
           </FormItem>
         </>
       );
@@ -151,30 +151,30 @@ class RegistrationForm extends React.PureComponent<Props, State> {
 
     return (
       <>
-      <FormItem style={{ display: "none" }}>
-        {getFieldDecorator("organizationDisplayName", { initialValue: "" })(
-          <Input type="text" />,
-        )}
-      </FormItem>
-      <FormItem hasFeedback>
-        {getFieldDecorator("organization", {
-          rules: [
-            {
-              required: true,
-              message: messages["auth.registration_org_input"],
-            },
-          ],
-          initialValue: doesDefaultOrganizationExist ? defaultOrganization : undefined,
-        })(
-          <Select placeholder="Organization">
-            {this.state.organizations.map(organization => (
-              <Option value={organization.name} key={organization.name}>
-                {organization.displayName}
-              </Option>
-            ))}
-          </Select>,
-        )}
-      </FormItem>
+        <FormItem style={{ display: "none" }}>
+          {getFieldDecorator("organizationDisplayName", { initialValue: "" })(
+            <Input type="text" />,
+          )}
+        </FormItem>
+        <FormItem hasFeedback>
+          {getFieldDecorator("organization", {
+            rules: [
+              {
+                required: true,
+                message: messages["auth.registration_org_input"],
+              },
+            ],
+            initialValue: doesDefaultOrganizationExist ? defaultOrganization : undefined,
+          })(
+            <Select placeholder="Organization">
+              {this.state.organizations.map(organization => (
+                <Option value={organization.name} key={organization.name}>
+                  {organization.displayName}
+                </Option>
+              ))}
+            </Select>,
+          )}
+        </FormItem>
       </>
     );
   }

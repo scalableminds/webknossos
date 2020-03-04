@@ -43,7 +43,7 @@ function SpotlightRegistrationForm(props: Props) {
             password2: formValues.password.password1,
           },
           organization: organizationName.current,
-          organizationDisplayName: "TODO Display Name, Replace Me!"
+          organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
         },
       });
 

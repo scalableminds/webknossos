@@ -63,22 +63,47 @@ type Props = {
   isUserAdmin: boolean,
 };
 
-type State = {};
+type State = {
+  isReloading: boolean,
+};
 
 class DatasetActionView extends React.PureComponent<Props, State> {
+  state = {
+    isReloading: false,
+  };
+
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
+    this.setState({ isReloading: true });
     await clearCache(dataset);
-    Toast.success(messages["dataset.clear_cache_success"]);
+    Toast.success(
+      messages["dataset.clear_cache_success"]({
+        datasetName: dataset.name,
+      }),
+    );
+    this.setState({ isReloading: false });
   };
 
   render() {
     const { dataset } = this.props;
-    const centerBackgroundImageStyle = {
+    const { isReloading } = this.state;
+    const centerBackgroundImageStyle: { verticalAlign: string, filter?: string } = {
       verticalAlign: "middle",
     };
+    if (isReloading) {
+      // We need to explicitly grayscale the images when the dataset is being reloaded.
+      centerBackgroundImageStyle.filter = "grayscale(100%) opacity(25%)";
+    }
+    const disabledWhenReloadingStyle = isReloading
+      ? { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" }
+      : null;
+    const disabledWhenReloadingAction = e => (isReloading ? e.preventDefault() : null);
 
     const volumeTracingMenu = (
-      <Dropdown overlay={createTracingOverlayMenu(dataset, "volume")} trigger={["click"]}>
+      <Dropdown
+        overlay={createTracingOverlayMenu(dataset, "volume")}
+        trigger={["click"]}
+        disabled={isReloading}
+      >
         <a href="#" title="Create Volume Annotation">
           <img
             src="/assets/images/volume.svg"
@@ -91,7 +116,11 @@ class DatasetActionView extends React.PureComponent<Props, State> {
     );
 
     const hybridTracingMenu = (
-      <Dropdown overlay={createTracingOverlayMenu(dataset, "hybrid")} trigger={["click"]}>
+      <Dropdown
+        overlay={createTracingOverlayMenu(dataset, "hybrid")}
+        trigger={["click"]}
+        disabled={isReloading}
+      >
         <a href="#" title="Create Hybrid (Skeleton + Volume) Annotation">
           <Icon type="swap" />
           Start Hybrid Annotation
@@ -121,13 +150,20 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
                   title="Edit Dataset"
+                  style={disabledWhenReloadingStyle}
+                  onClick={disabledWhenReloadingAction}
                 >
                   <Icon type="edit" />
                   Edit
                 </Link>
                 {!dataset.isForeign ? (
-                  <a href="#" onClick={() => this.clearCache(dataset)} title="Reload Dataset">
-                    <Icon type="retweet" />
+                  <a
+                    href="#"
+                    onClick={() => this.clearCache(dataset)}
+                    title="Reload Dataset"
+                    style={disabledWhenReloadingStyle}
+                  >
+                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
                     Reload
                   </a>
                 ) : null}
@@ -136,6 +172,8 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             <Link
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
               title="View Dataset"
+              style={disabledWhenReloadingStyle}
+              onClick={disabledWhenReloadingAction}
             >
               <Icon type="eye-o" />
               View
@@ -146,7 +184,13 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   to={`/datasets/${dataset.owningOrganization}/${
                     dataset.name
                   }/createExplorative/skeleton/false`}
-                  title="Create Skeleton Tracing"
+                  style={disabledWhenReloadingStyle}
+                  onClick={e => {
+                    if (isReloading) {
+                      e.preventDefault();
+                    }
+                  }}
+                  title="Create Skeleton Annotation"
                 >
                   <img
                     src="/assets/images/skeleton.svg"
@@ -159,7 +203,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                 {hybridTracingMenu}
               </React.Fragment>
             ) : (
-              <p>
+              <p style={disabledWhenReloadingStyle}>
                 Start Annotation &nbsp;
                 <Tooltip title="Cannot create annotations for read-only datasets">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />

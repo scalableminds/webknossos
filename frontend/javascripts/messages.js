@@ -140,7 +140,9 @@ In order to restore the current window, a reload is necessary.`,
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_success": _.template(
+    "The dataset <%- datasetName %> was reloaded successfully.",
+  ),
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",

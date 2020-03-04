@@ -37,12 +37,18 @@ object AuthForms {
   val passwordMinLength = 8
 
   // Sign up
-  case class SignUpData(organization: String, email: String, firstName: String, lastName: String, password: String)
+  case class SignUpData(organization: String,
+                        organizationDisplayName: String,
+                        email: String,
+                        firstName: String,
+                        lastName: String,
+                        password: String)
 
   def signUpForm(implicit messages: Messages) =
     Form(
       mapping(
         "organization" -> text,
+        "organizationDisplayName" -> text,
         "email" -> email,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
@@ -50,9 +56,16 @@ object AuthForms {
         ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText
-      )((organization, email, password, firstName, lastName) =>
-        SignUpData(organization, email, firstName, lastName, password._1))(signUpData =>
-        Some((signUpData.organization, signUpData.email, ("", ""), signUpData.firstName, signUpData.lastName))))
+      )((organization, organizationDisplayName, email, password, firstName, lastName) =>
+        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1))(
+        signUpData =>
+          Some(
+            (signUpData.organization,
+             signUpData.organizationDisplayName,
+             signUpData.email,
+             ("", ""),
+             signUpData.firstName,
+             signUpData.lastName))))
 
   // Sign in
   case class SignInData(email: String, password: String)
@@ -445,7 +458,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
+                    organization <- createOrganization(
+                      Option(signUpData.organization).filter(_.trim.nonEmpty),
+                      signUpData.organizationDisplayName) ?~> "organization.create.failed"
                     user <- userService.insert(organization._id,
                                                email,
                                                firstName,
@@ -483,9 +498,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }
 
-  private def createOrganization(organizationDisplayName: String) =
+  private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
-      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+      normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+      organizationName = organizationNameOpt.flatMap(normalizeName).getOrElse(normalizedDisplayName)
       organization = Organization(ObjectId.generate,
                                   organizationName.replaceAll(" ", "_"),
                                   "",

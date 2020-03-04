@@ -18,7 +18,17 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   def listAllOrganizations = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
+      _ <- bool2Fox(allOrgs.length <= 1) ?~> "organization.list.moreThanOne"
       js <- Fox.serialCombined(allOrgs)(o => organizationService.publicWrites(o)(GlobalAccessContext))
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
+
+  def get(organizationName: String) = Action.async { implicit request =>
+    for {
+      org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+      js <- organizationService.publicWrites(org)(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(js))
     }

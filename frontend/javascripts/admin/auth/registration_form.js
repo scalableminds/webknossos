@@ -129,11 +129,18 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       // - the organization is specified via the URL
       // Thus, the organization field is hidden.
       return (
-        <FormItem style={{ display: "none" }}>
-          {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
-            <Input type="text" />,
-          )}
-        </FormItem>
+        <>
+          <FormItem style={{ display: "none" }}>
+            {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
+              <Input type="text" />,
+            )}
+          </FormItem>
+          <FormItem style={{ display: "none" }}>
+            {getFieldDecorator("organizationDisplayName", { initialValue: this.props.organizationName })(
+              <Input type="text" />,
+            )}
+          </FormItem>
+        </>
       );
     }
 
@@ -143,6 +150,12 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       null;
 
     return (
+      <>
+      <FormItem style={{ display: "none" }}>
+        {getFieldDecorator("organizationDisplayName", { initialValue: "" })(
+          <Input type="text" />,
+        )}
+      </FormItem>
       <FormItem hasFeedback>
         {getFieldDecorator("organization", {
           rules: [
@@ -162,6 +175,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
           </Select>,
         )}
       </FormItem>
+      </>
     );
   }
 

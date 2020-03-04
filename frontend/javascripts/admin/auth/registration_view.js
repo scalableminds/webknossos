@@ -1,65 +1,51 @@
 // @flow
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useHistory } from "react-router-dom";
-import { Row, Col, Card } from "antd";
+import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import { getOrganizations } from "admin/admin_rest_api";
+import { getOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationForm from "./registration_form";
 
 type Props = {
-  organizationName: ?string,
+  organizationName: string,
 };
 
-function RegistrationView({ organizationName }: Props) {
+function RegistrationView({ organizationName = "default" }: Props) {
   const history = useHistory();
-  const [allOrganizations, setAllOrganizations] = useState([]);
+  const [organization, setOrganization] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const organizations = await getOrganizations();
-      setAllOrganizations(organizations);
+      if (organizationName) {
+        try {
+          setIsLoading(true);
+          setOrganization(await getOrganization(organizationName));
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setOrganization(null);
+        setIsLoading(false);
+      }
     })();
-  }, []);
+  }, [organizationName]);
 
-  const organizationDisplayName = useMemo(() => {
-    if (organizationName == null) {
-      return null;
-    }
-    const organization = allOrganizations.find(o => o.name === organizationName);
-    return organization != null ? organization.displayName : organizationName;
-  }, [allOrganizations, organizationName]);
-
-  const greetingCard =
-    organizationDisplayName != null ? (
-      <Card style={{ marginBottom: 24 }}>
-        You are about to join the organization &ldquo;{organizationDisplayName}&rdquo;!
-      </Card>
-    ) : (
-      <Card style={{ marginBottom: 24 }}>
-        Not a member of the listed organizations?
-        <br />
-        {features().isDemoInstance ? (
-          <Link to="/onboarding">Create a new organization.</Link>
-        ) : (
-          <React.Fragment>
-            Contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
-            setting up webKnossos.
-          </React.Fragment>
-        )}
-      </Card>
-    );
-
-  return (
-    <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
-      <Col span={8}>
-        <h3>Registration</h3>
-        {greetingCard}
+  let content = null;
+  if (isLoading) {
+    content = <Card style={{ marginBottom: 24 }}>Loading...</Card>;
+  } else if (organization != null) {
+    content = (
+      <>
+        <Card style={{ marginBottom: 24 }}>
+          You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
+        </Card>
         <RegistrationForm
           // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
-          key={organizationName || "default registration form key"}
+          key={organizationName}
           organizationName={organizationName}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
@@ -74,9 +60,37 @@ function RegistrationView({ organizationName }: Props) {
             history.push("/auth/register");
           }}
         />
-        <Link to="/auth/login">Already have an account? Login instead.</Link>
-      </Col>
-    </Row>
+      </>
+    );
+  } else {
+    content = (
+      <Card style={{ marginBottom: 24 }}>
+        We could not find your organization.
+        <br /> Please check your link or{" "}
+        {features().isDemoInstance ? (
+          <>
+            <Link to="/onboarding">create a new organization</Link>.
+          </>
+        ) : (
+          <>
+            contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
+            setting up webKnossos.
+          </>
+        )}
+      </Card>
+    );
+  }
+
+  return (
+    <Spin spinning={isLoading}>
+      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+        <Col span={8}>
+          <h3>Registration</h3>
+          {content}
+          <Link to="/auth/login">Already have an account? Login instead.</Link>
+        </Col>
+      </Row>
+    </Spin>
   );
 }
 

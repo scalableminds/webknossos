@@ -6,7 +6,7 @@ import * as React from "react";
 
 import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { getOrganizations, getDatasets } from "admin/admin_rest_api";
+import { checkAnyOrganizationExists, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
@@ -54,7 +54,7 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col xs={{ span: 24 }} xl={{ span: 14 }}>
+          <Col xs={{ span: 24 }} xl={{ span: 13 }} lg={{ span: 16 }}>
             <p
               style={{
                 fontSize: 58,
@@ -109,7 +109,7 @@ const WelcomeHeader = ({ history }) => (
               </Link>
             </div>
           </Col>
-          <Col xs={{ span: 24 }} xl={{ span: 6 }}>
+          <Col xs={{ span: 24 }} lg={{ span: 7 }} xl={{ span: 6 }}>
             <div
               style={{
                 backgroundColor: "white",
@@ -215,8 +215,11 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const [datasets, organizations] = await Promise.all([getDatasets(), getOrganizations()]);
-      this.setState({ datasets, hasOrganizations: organizations.length > 0 });
+      const [datasets, hasOrganizations] = await Promise.all([
+        getDatasets(),
+        checkAnyOrganizationExists(),
+      ]);
+      this.setState({ datasets, hasOrganizations });
     } catch (error) {
       handleGenericError(error);
     } finally {

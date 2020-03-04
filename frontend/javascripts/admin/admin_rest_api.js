@@ -1114,9 +1114,17 @@ export function getOrganizations(): Promise<Array<APIOrganization>> {
   return Request.receiveJSON("/api/organizations");
 }
 
+export function getOrganization(organizationName: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/${organizationName}`);
+}
+
 export async function getOrganizationNames(): Promise<Array<string>> {
   const organizations = await getOrganizations();
   return organizations.map(org => org.name);
+}
+
+export async function checkAnyOrganizationExists(): Promise<boolean> {
+  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
 // ### BuildInfo webknossos

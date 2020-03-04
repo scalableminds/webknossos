@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Fixed a bug where users were wrongly allowed to edit the description of an annotation they were allowed to see but not update [#4466](https://github.com/scalableminds/webknossos/pull/4466)
 
 ### Removed
 -

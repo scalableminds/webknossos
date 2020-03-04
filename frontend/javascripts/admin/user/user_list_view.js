@@ -281,81 +281,86 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
       <div className="container test-UserListView">
         <h3>Users</h3>
 
-        {hasRowsSelected ? (
-          <span style={marginRight}>{this.state.selectedUserIds.length} selected user(s)</span>
-        ) : null}
-        <Button
-          onClick={() => this.setState({ isTeamRoleModalVisible: true })}
-          icon="team"
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Edit Teams
-        </Button>
-        <Button
-          onClick={() => {
-            this.setState({ isExperienceModalVisible: true });
-          }}
-          icon="trophy"
-          disabled={!hasRowsSelected}
-          style={marginRight}
-        >
-          Change Experience
-        </Button>
-        {this.props.activeUser.isAdmin ? (
-          <React.Fragment>
-            <Button
-              onClick={() =>
-                Modal.confirm({
-                  title: messages["users.grant_admin_rights_title"],
-                  content: messages["users.grant_admin_rights"]({
-                    numUsers: this.state.selectedUserIds.length,
-                  }),
-                  onOk: () => this.setAdminRightsTo(true),
-                })
-              }
-              icon="rocket"
-              disabled={!hasRowsSelected}
-              style={marginRight}
-            >
-              Grant Admin Rights
-            </Button>
-            <Button
-              onClick={() =>
-                Modal.confirm({
-                  title: messages["users.revoke_admin_rights_title"],
-                  content: messages["users.revoke_admin_rights"]({
-                    numUsers: this.state.selectedUserIds.length,
-                  }),
-                  onOk: () => this.setAdminRightsTo(false),
-                })
-              }
-              icon="rollback"
-              disabled={!hasRowsSelected}
-              style={marginRight}
-            >
-              Revoke Admin Rights
-            </Button>
-          </React.Fragment>
-        ) : null}
-        <InviteUsersPopover
-          organizationName={this.props.activeUser.organization}
-          visible={this.state.isInvitePopoverVisible}
-          handleVisibleChange={visible => {
-            this.setState({ isInvitePopoverVisible: visible });
-          }}
-        >
-          <Button icon="user-add" style={marginRight}>
-            Invite Users
+        <div style={{ marginBottom: 20 }}>
+          {hasRowsSelected ? (
+            <span style={marginRight}>{this.state.selectedUserIds.length} selected user(s)</span>
+          ) : null}
+          <Button
+            onClick={() => this.setState({ isTeamRoleModalVisible: true })}
+            icon="team"
+            disabled={!hasRowsSelected}
+            style={marginRight}
+          >
+            Edit Teams
           </Button>
-        </InviteUsersPopover>
-        {activationFilterWarning}
-        <Search
-          style={{ width: 200, float: "right" }}
-          onPressEnter={this.handleSearch}
-          onChange={this.handleSearch}
-          value={this.state.searchQuery}
-        />
+          <Button
+            onClick={() => {
+              this.setState({ isExperienceModalVisible: true });
+            }}
+            icon="trophy"
+            disabled={!hasRowsSelected}
+            style={marginRight}
+          >
+            Change Experience
+          </Button>
+          {this.props.activeUser.isAdmin ? (
+            <React.Fragment>
+              <Button
+                onClick={() =>
+                  Modal.confirm({
+                    title: messages["users.grant_admin_rights_title"],
+                    content: messages["users.grant_admin_rights"]({
+                      numUsers: this.state.selectedUserIds.length,
+                    }),
+                    onOk: () => this.setAdminRightsTo(true),
+                  })
+                }
+                icon="rocket"
+                disabled={!hasRowsSelected}
+                style={marginRight}
+              >
+                Grant Admin Rights
+              </Button>
+              <Button
+                onClick={() =>
+                  Modal.confirm({
+                    title: messages["users.revoke_admin_rights_title"],
+                    content: messages["users.revoke_admin_rights"]({
+                      numUsers: this.state.selectedUserIds.length,
+                    }),
+                    onOk: () => this.setAdminRightsTo(false),
+                  })
+                }
+                icon="rollback"
+                disabled={!hasRowsSelected}
+                style={marginRight}
+              >
+                Revoke Admin Rights
+              </Button>
+            </React.Fragment>
+          ) : null}
+          <InviteUsersPopover
+            organizationName={this.props.activeUser.organization}
+            visible={this.state.isInvitePopoverVisible}
+            handleVisibleChange={visible => {
+              this.setState({ isInvitePopoverVisible: visible });
+            }}
+          >
+            <Button icon="user-add" style={marginRight}>
+              Invite Users
+            </Button>
+          </InviteUsersPopover>
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          {activationFilterWarning}
+          <Search
+            style={{ width: 200, float: "right" }}
+            onPressEnter={this.handleSearch}
+            onChange={this.handleSearch}
+            value={this.state.searchQuery}
+          />
+          <div className="clearfix" />
+        </div>
 
         {noOtherUsers ? this.renderPlaceholder() : null}
         {this.renderNewUsersAlert()}
@@ -504,7 +509,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             <Column
               title="Actions"
               key="actions"
-              width={160}
+              width={175}
               fixed="right"
               render={(__, user: APIUser) => (
                 <span>

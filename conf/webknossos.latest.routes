@@ -171,6 +171,7 @@ GET           /statistics/users                                                 
 
 #Organizations
 GET           /organizations                                                    controllers.OrganizationController.listAllOrganizations
+GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)
 GET           /operatorData                                                     controllers.OrganizationController.getOperatorData
 

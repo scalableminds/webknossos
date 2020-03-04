@@ -25,6 +25,14 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
+  def organizationsIsEmpty = Action.async { implicit request =>
+    for {
+      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
+    } yield {
+      Ok(Json.toJson(allOrgs.isEmpty))
+    }
+  }
+
   def get(organizationName: String) = Action.async { implicit request =>
     for {
       org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)

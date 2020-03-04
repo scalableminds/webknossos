@@ -78,11 +78,17 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
       }
 
-    def assertAllOnSameDataSet(skeletons: List[SkeletonTracing], volume: Option[VolumeTracing]): Fox[String] =
-      for {
-        dataSetName <- volume.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
-        _ <- bool2Fox(skeletons.forall(_.dataSetName == dataSetName))
-      } yield dataSetName
+    def assertAllOnSameDataSet(skeletons: List[SkeletonTracing],
+                               volume: Option[VolumeTracing],
+                               overwritingDataSetName: Option[String]): Fox[String] =
+      if (overwritingDataSetName.isDefined) {
+        overwritingDataSetName.toFox
+      } else {
+        for {
+          dataSetName <- volume.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
+          _ <- bool2Fox(skeletons.forall(_.dataSetName == dataSetName))
+        } yield dataSetName
+      }
 
     def assertAllOnSameOrganization(organizationNames: List[String]) =
       if (organizationNames.isEmpty) Fox.successful(None)
@@ -98,7 +104,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       val shouldCreateGroupForEachFile: Boolean =
         request.body.dataParts("createGroupForEachFile").headOption.contains("true")
 
-      val datasetName: String =
+      val overwritingDataSetName: Option[String] =
         request.body.dataParts("datasetName").headOption
 
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
@@ -124,7 +130,9 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
         for {
           _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
           _ <- bool2Fox(volumeTracingsWithDataLocations.isEmpty || volumeTracingsWithDataLocations.tail.isEmpty) ?~> "nml.file.multipleVolumes"
-          dataSetName <- datasetName.getOrElse(assertAllOnSameDataSet(skeletonTracings, volumeTracingsWithDataLocations.headOption.map(_._1))) ?~> "nml.file.differentDatasets"
+          dataSetName <- assertAllOnSameDataSet(skeletonTracings,
+                                                volumeTracingsWithDataLocations.headOption.map(_._1),
+                                                overwritingDataSetName) ?~> "nml.file.differentDatasets"
           organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
           organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)

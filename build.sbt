@@ -51,7 +51,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
     unmanagedJars in Compile ++= {
-      val libs = baseDirectory.value / ".." / "lib"
+      val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
       val targets = ((subs / "target") ** "*") filter { f =>
         f.name.startsWith("scala-") && f.isDirectory

@@ -1,18 +1,13 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.io.File
-import java.nio.file.Paths
-
-import ch.systemsx.cisd.hdf5.{HDF5FactoryProvider, IHDF5Reader}
+import ch.systemsx.cisd.hdf5.IHDF5Reader
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
-import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest}
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage
 import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
 
 case class CachedAgglomerateFile(
     organization: String,
@@ -48,7 +43,7 @@ object CachedAgglomerate {
 class AgglomerateFileCache(val maxEntries: Int)
     extends LRUConcurrentCache[CachedAgglomerateFile, Fox[IHDF5Reader]]
     with FoxImplicits {
-  override def onElementRemoval(key: CachedAgglomerateFile, value: Fox[IHDF5Reader]): Unit = value.map(_.close())
+  // override def onElementRemoval(key: CachedAgglomerateFile, value: Fox[IHDF5Reader]): Unit = value.map(_.close())
 
   def withCache(dataRequest: DataServiceDataRequest)(
       loadFn: DataServiceDataRequest => Fox[IHDF5Reader]): Fox[IHDF5Reader] = {

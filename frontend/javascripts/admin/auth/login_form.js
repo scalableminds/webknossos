@@ -15,7 +15,7 @@ const { Password } = Input;
 type Props = {
   layout: "horizontal" | "vertical" | "inline",
   form: Object,
-  onLoggedIn?: () => void,
+  onLoggedIn?: () => void | Promise<void>,
   hideFooter?: boolean,
   style?: Object,
 };

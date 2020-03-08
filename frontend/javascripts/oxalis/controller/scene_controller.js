@@ -303,7 +303,7 @@ class SceneController {
       });
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
       const { viewMode } = Store.getState().temporaryConfiguration;
-      if (viewMode === "flight") {
+      if (this.taskBoundingBox && viewMode === "flight") {
         this.taskBoundingBox.setVisibility(false);
       }
     }

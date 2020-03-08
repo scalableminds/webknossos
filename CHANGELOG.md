@@ -12,6 +12,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Added
 - Added the possibility to reopen finished tasks as non-admin for a configurable time. [#4415](https://github.com/scalableminds/webknossos/pull/4415)
 - Added indication for reloading a dataset in the dataset actions in the dashboard. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Added refreshing of the tracing page when the user logs in to access the dataset as the newly logged in user. [#4467](https://github.com/scalableminds/webknossos/pull/4467)
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)

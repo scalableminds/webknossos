@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Fixed
 - Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Fixed that converting a volume tracing into a hybrid tracing opens the hybrid tracing in "volume" mode. [#4467](https://github.com/scalableminds/webknossos/pull/4467)
 
 ### Removed
 -

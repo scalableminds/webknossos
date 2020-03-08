@@ -295,17 +295,17 @@ class SceneController {
         this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
       }
 
+      const { viewMode } = Store.getState().temporaryConfiguration;
       this.taskBoundingBox = new Cube({
         min: taskBoundingBox.min,
         max: taskBoundingBox.max,
         color: 0x00ff00,
         showCrossSections: true,
       });
-      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
-      const { viewMode } = Store.getState().temporaryConfiguration;
-      if (this.taskBoundingBox && viewMode === "flight") {
+      if (viewMode === "flight") {
         this.taskBoundingBox.setVisibility(false);
       }
+      this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
     }
   }
 

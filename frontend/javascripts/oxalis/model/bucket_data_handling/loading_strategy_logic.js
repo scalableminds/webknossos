@@ -2,7 +2,7 @@
 
 import type { LoadingStrategy } from "oxalis/store";
 
-const MAX_ZOOM_STEP_DIFF_QUALITY_FIRST = 1;
+const MAX_ZOOM_STEP_DIFF_QUALITY_FIRST = 3;
 const MAX_ZOOM_STEP_DIFF_PROGRESSIVE_QUALITY = 3;
 
 const zoomStepMultiplier = 1000;
@@ -19,7 +19,7 @@ export function getPriorityWeightForZoomStepDiff(
   strategy: LoadingStrategy,
   zoomStepDiff: number,
 ): number {
-  // Low numbers equal high priority
+  // Low numbers designate high priority
   if (strategy === "BEST_QUALITY_FIRST") {
     return zoomStepDiff * zoomStepMultiplier;
   } else {

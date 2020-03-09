@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 - Added the possibility to reopen finished tasks as non-admin for a configurable time. [#4415](https://github.com/scalableminds/webknossos/pull/4415)
+- Added support for drag-and-drop import of NML files even if the current view is read-only (e.g., because a dataset was opened in "view" mode). In this case, a new tracing is directly created into which the NML file is imported. [#4459](https://github.com/scalableminds/webknossos/pull/4459)
 - Added indication for reloading a dataset in the dataset actions in the dashboard. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
 
 ### Changed

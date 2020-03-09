@@ -31,7 +31,7 @@ class NMLUnitTestSuite extends FlatSpec {
     val nmlEnumarator = new NmlWriter().toNmlStream(Some(skeletonTracing), None, None, None, None, "testOrganization", None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
     val array = Await.result(arrayFuture, Duration.Inf)
-    NmlParser.parse("", new ByteArrayInputStream(array))
+    NmlParser.parse("", new ByteArrayInputStream(array), None)
   }
 
   def isParseSuccessful(parsedTracing: Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])]): Boolean = {

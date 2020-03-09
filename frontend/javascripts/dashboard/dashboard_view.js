@@ -154,7 +154,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     ) : null;
 
     return (
-      <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
+      <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         <div className="container">
           {userHeader}
           <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>

@@ -98,10 +98,15 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       val shouldCreateGroupForEachFile: Boolean =
         request.body.dataParts("createGroupForEachFile").headOption.contains("true")
 
+      val overwritingDataSetName: Option[String] =
+        request.body.dataParts.get("datasetName").flatMap(_.headOption)
+
       val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
         case (acc, next) =>
           val file = new File(next.ref.path.toString)
-          acc.combineWith(nmlService.extractFromFile(file, next.filename, useZipName = true))
+          acc.combineWith(
+            nmlService
+              .extractFromFile(file, next.filename, useZipName = true, overwritingDataSetName = overwritingDataSetName))
       }
 
       val tracingsProcessed =

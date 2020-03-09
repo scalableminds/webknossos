@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Using the "Best Quality First" strategy in combination with having the "Render Black Data" setting disabled works better now. [#4470](https://github.com/scalableminds/webknossos/pull/4470)
 
 ### Fixed
 - Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)

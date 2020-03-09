@@ -251,12 +251,6 @@ class SceneController {
       showCrossSections: true,
     });
     this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
-    const { viewMode } = Store.getState().temporaryConfiguration;
-    if (viewMode === "flight") {
-      // We disable the bounding boxes in flight mode as it distracts the user.
-      this.userBoundingBox.setVisibility(false);
-      this.datasetBoundingBox.setVisibility(false);
-    }
 
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);

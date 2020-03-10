@@ -21,7 +21,7 @@ class Crosshair {
 
   constructor(scale: number) {
     this.WIDTH = 256;
-    this.COLOR = "#2895FF";
+    this.COLOR = "#1BFF76";
     this.SCALE_MIN = 0.01;
     this.SCALE_MAX = 1;
     this.scale = 0;

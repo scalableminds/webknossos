@@ -124,44 +124,62 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    const tryParsingFileAsNml = async file => {
+      try {
+        const nmlString = await readFileAsText(file);
+        const { trees, treeGroups, datasetName } = await parseNml(nmlString);
+
+        return {
+          importAction: wrappedAddTreesAndGroupsAction(trees, treeGroups, file.name),
+          datasetName,
+        };
+      } catch (error) {
+        console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
+        return undefined;
+      }
+    };
+
+    const tryParsingFileAsProtobuf = async file => {
+      try {
+        const nmlProtoBuffer = await readFileAsArrayBuffer(file);
+        const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
+
+        if (!parsedTracing.trees) {
+          // This check is only for flow to realize that we have a skeleton tracing
+          // on our hands.
+          throw new Error("Skeleton tracing doesn't contain trees");
+        }
+
+        return {
+          importAction: wrappedAddTreesAndGroupsAction(
+            createTreeMapFromTreeArray(parsedTracing.trees),
+            parsedTracing.treeGroups,
+            file.name,
+          ),
+          datasetName: parsedTracing.dataSetName,
+        };
+      } catch (error) {
+        console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
+        return undefined;
+      }
+    };
+
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const ext = _.last(file.name.split("."));
-        try {
-          if (ext === "nml") {
-            const nmlString = await readFileAsText(file);
-            const { trees, treeGroups, datasetName } = await parseNml(nmlString);
-
-            return {
-              importAction: wrappedAddTreesAndGroupsAction(trees, treeGroups, file.name),
-              datasetName,
-            };
-          } else {
-            const nmlProtoBuffer = await readFileAsArrayBuffer(file);
-            const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
-
-            if (!parsedTracing.trees) {
-              // This check is only for flow to realize that we have a skeleton tracing
-              // on our hands.
-              throw new Error("Skeleton tracing doesn't contain trees");
-            }
-
-            return {
-              importAction: wrappedAddTreesAndGroupsAction(
-                createTreeMapFromTreeArray(parsedTracing.trees),
-                parsedTracing.treeGroups,
-                file.name,
-              ),
-              datasetName: parsedTracing.dataSetName,
-            };
+        const tryImportFunctions =
+          ext === "nml" || ext === "xml"
+            ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
+            : [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        /* eslint-disable no-await-in-loop */
+        for (const importFunction of tryImportFunctions) {
+          const maybeImportAction = await importFunction(file);
+          if (maybeImportAction) {
+            return maybeImportAction;
           }
-        } catch (e) {
-          throw new Error(
-            `"${file.name}" could not be parsed as ${ext === "nml" ? "NML" : "protobuf"}. ${
-              e.message
-            }`,
-          );
         }
+        /* eslint-enable no-await-in-loop */
+        throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
       }),
     );
 

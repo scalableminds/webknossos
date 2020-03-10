@@ -40,7 +40,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String, nmlInputStream: InputStream)(implicit m: MessagesProvider)
+  def parse(name: String, nmlInputStream: InputStream, overwritingDataSetName: Option[String])(
+      implicit m: MessagesProvider)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
@@ -58,9 +59,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         _ <- TreeValidator.checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
         _ <- TreeValidator.checkAllNodesUsedInCommentsExist(trees, comments)
       } yield {
-        val dataSetName = parseDataSetName(parameters \ "experiment")
+        val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
-        val organizationName = parseOrganizationName(parameters \ "experiment")
+        val organizationName =
+          if (overwritingDataSetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val editPosition =
           parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)

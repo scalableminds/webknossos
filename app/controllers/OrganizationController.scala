@@ -32,7 +32,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def getDefault(organizationName: String) = Action.async { implicit request =>
+  def getDefault = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
       _ <- bool2Fox(allOrgs.length <= 1) ?~> "organization.list.moreThanOne"

@@ -1,7 +1,12 @@
 // @flow
 import * as React from "react";
 
-export default function BrainSpinner() {
+type Props = {
+  message: ?string,
+  isLoading: boolean,
+};
+
+export default function BrainSpinner({ message, isLoading = true }: Props) {
   return (
     <div className="cover-whole-screen">
       <div className="Aligner" style={{ height: "80%" }}>
@@ -18,10 +23,17 @@ export default function BrainSpinner() {
                 marginTop: "10%",
               }}
             />
-            <div
-              className="loader"
-              style={{ width: "80%", marginLeft: "auto", marginRight: "auto", marginTop: 30 }}
-            />
+            {isLoading ? (
+              <div
+                className="loader"
+                style={{ width: "80%", marginLeft: "auto", marginRight: "auto", marginTop: 30 }}
+              />
+            ) : null}
+            {message ? (
+              <div style={{ marginLeft: "auto", marginRight: "auto", marginTop: 30 }}>
+                {message}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

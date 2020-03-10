@@ -274,15 +274,28 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   render() {
     const { status } = this.state;
     const { user, viewMode } = this.props;
-    if (status === "loading" || (status === "failedLoading" && user != null)) {
+    if (status === "loading") {
       return <BrainSpinner />;
+    } else if (status === "failedLoading" && user != null) {
+      return (
+        <BrainSpinner
+          message="Either the dataset does not exist or you do not have the necessary access rights."
+          isLoading={false}
+        />
+      );
     } else if (status === "failedLoading") {
       return (
         <div className="cover-whole-screen">
           <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
             <Col span={8}>
               <h3>Try logging in to view the dataset.</h3>
-              <LoginForm layout="horizontal" onLoggedIn={() => this.tryFetchingModel()} />
+              <LoginForm
+                layout="horizontal"
+                onLoggedIn={() => {
+                  this.setState({ status: "loading" });
+                  this.tryFetchingModel();
+                }}
+              />
             </Col>
           </Row>
         </div>

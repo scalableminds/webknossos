@@ -15,8 +15,6 @@ import Request from "libs/request";
 import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 import features from "features";
-import Model from "oxalis/model";
-import { location } from "libs/window";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;

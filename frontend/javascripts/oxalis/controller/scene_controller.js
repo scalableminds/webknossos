@@ -296,10 +296,10 @@ class SceneController {
         color: 0x00ff00,
         showCrossSections: true,
       });
-      if (constants.MODES_ARBITRARY.includes(viewMode)) {
-        this.taskBoundingBox.setVisibility(false);
-      }
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+      if (constants.MODES_ARBITRARY.includes(viewMode)) {
+        Utils.__guard__(this.taskBoundingBox, bb => bb.setVisibility(false));
+      }
     }
   }
 

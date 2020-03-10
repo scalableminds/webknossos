@@ -7,8 +7,10 @@ import { Alert, Icon, Layout, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 
+import Request from "libs/request";
 import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
@@ -54,11 +56,13 @@ type StateProps = {|
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
+  datasetName: string,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type PropsWithRouter = {| ...OwnProps, ...StateProps, ...DispatchProps, history: RouterHistory |};
 
 type State = {
   isSettingsCollapsed: boolean,
@@ -76,7 +80,7 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
   overflow: "hidden",
 };
 
-class TracingLayoutView extends React.PureComponent<Props, State> {
+class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   currentLayoutConfig: Object;
   currentLayoutName: string;
 
@@ -86,7 +90,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     return { hasError: true };
   }
 
-  constructor(props: Props) {
+  constructor(props: PropsWithRouter) {
     super(props);
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     let lastActiveLayout;
@@ -167,8 +171,21 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
+    const createNewTracing = async (
+      files: Array<File>,
+      createGroupForEachFile: boolean,
+    ): Promise<void> => {
+      const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
+        data: { nmlFile: files, createGroupForEachFile, datasetName: this.props.datasetName },
+      });
+      this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+    };
+
     return (
-      <NmlUploadZoneContainer onImport={importTracingFiles} isAllowed={isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer
+        onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
+        isUpdateAllowed={isUpdateTracingAllowed}
+      >
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
@@ -317,6 +334,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
+    datasetName: state.dataset.name,
   };
 }
 

@@ -20,7 +20,7 @@ type State = {
 
 type OwnProps = {|
   children: React.Node,
-  isAllowed: boolean,
+  isUpdateAllowed: boolean,
   onImport: (files: Array<File>, createGroupForEachFile: boolean) => Promise<void>,
 |};
 type StateProps = {|
@@ -59,17 +59,17 @@ function OverlayDropZone({ children }) {
   );
 }
 
-function NmlDropArea({ showClickHint, isAllowed }) {
+function NmlDropArea({ showClickHint, isUpdateAllowed }) {
   return (
     <React.Fragment>
       <div>
         <Icon type="inbox" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
       </div>
-      {isAllowed ? (
+      {isUpdateAllowed ? (
         <h5>Drop NML files here{showClickHint ? " or click to select files" : null}...</h5>
       ) : (
-        <h5 style={{ color: "rgb(247,80,61)" }}>
-          You cannot upload NML files into a read-only tracing.
+        <h5>
+          Drop NML files here to <b>create a new tracing</b>.
         </h5>
       )}
     </React.Fragment>
@@ -98,14 +98,11 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   };
 
   onDrop = (files: Array<File>) => {
-    if (this.props.isAllowed) {
-      this.setState({
-        files,
-        dropzoneActive: false,
-      });
-    } else {
-      this.setState({ dropzoneActive: false });
-    }
+    this.setState({
+      files,
+      dropzoneActive: false,
+    });
+
     trackAction("NML drag and drop");
     this.props.hideDropzoneModal();
   };
@@ -154,7 +151,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   renderDropzoneModal() {
     return (
       <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
-        {this.props.isAllowed ? (
+        {this.props.isUpdateAllowed ? (
           <Alert
             message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
             style={{ marginBottom: 12 }}
@@ -172,7 +169,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           }}
           onDrop={this.onDrop}
         >
-          <NmlDropArea showClickHint isAllowed={this.props.isAllowed} />
+          <NmlDropArea showClickHint isUpdateAllowed={this.props.isUpdateAllowed} />
         </Dropzone>
       </Modal>
     );
@@ -197,7 +194,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           <React.Fragment>
             {this.state.files.length > 1 ? createGroupsCheckbox : null}
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
-              Import
+              {this.props.isUpdateAllowed ? "Import" : "Create New Tracing"}
             </Button>
           </React.Fragment>
         }
@@ -227,7 +224,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
         }
         {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
           <OverlayDropZone>
-            <NmlDropArea showClickHint={false} isAllowed={this.props.isAllowed} />
+            <NmlDropArea showClickHint={false} isUpdateAllowed={this.props.isUpdateAllowed} />
           </OverlayDropZone>
         ) : null}
         {

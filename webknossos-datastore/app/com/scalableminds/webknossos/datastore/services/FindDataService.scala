@@ -263,7 +263,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
             }
             val bucketSize = (max - min) / 255
-            floatData.foreach(el => counts(Math.roundDown((el - min) / bucketSize)) += 1)
+            val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
+            floatData.foreach(el => counts(Math.roundDown((el - min) / finalBucketSize)) += 1)
             extrema = (min, max)
         }
       }

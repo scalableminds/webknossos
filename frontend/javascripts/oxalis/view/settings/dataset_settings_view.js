@@ -23,7 +23,6 @@ import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
-  hasSegmentation,
   getElementClass,
   getLayerBoundaries,
   getDefaultIntensityRangeOfLayer,
@@ -71,7 +70,6 @@ type DatasetSettingsProps = {|
   viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
   controlMode: ControlMode,
-  hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -389,15 +387,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChange("renderMissingDataBlack", value);
   };
 
-  getSegmentationPanel() {
-    const { layers } = this.props.datasetConfiguration;
-    const segmentationLayerName = Model.getSegmentationLayerName();
-    if (!segmentationLayerName || !layers[segmentationLayerName]) {
-      return null;
-    }
-    return this.getLayerSettings(segmentationLayerName, layers[segmentationLayerName], false);
-  }
-
   renderPanelHeader = (hasInvisibleLayers: boolean) =>
     hasInvisibleLayers ? (
       <span>
@@ -412,10 +401,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const colorSettings = Object.entries(layers).map(entry => {
+    const segmentationLayerName = Model.getSegmentationLayerName();
+    const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
+      const isColorLayer = segmentationLayerName !== layerName;
       // $FlowFixMe Object.entries returns mixed for Flow
-      return this.getLayerSettings(layerName, layer, true);
+      return this.getLayerSettings(layerName, layer, isColorLayer);
     });
     const hasInvisibleLayers =
       Object.keys(layers).find(
@@ -424,8 +415,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {colorSettings}
-          {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
+          {layerSettings}
         </Panel>
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
@@ -507,7 +497,6 @@ const mapStateToProps = (state: OxalisState) => ({
   histogramData: state.temporaryConfiguration.histogramData,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
-  hasSegmentation: hasSegmentation(state.dataset),
   tracing: state.tracing,
 });
 

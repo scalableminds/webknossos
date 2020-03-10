@@ -270,17 +270,7 @@ function AnonymousAvatar() {
   return (
     <Popover
       placement="bottomRight"
-      content={
-        <LoginForm
-          layout="horizontal"
-          style={{ maxWidth: 500 }}
-          onLoggedIn={async () => {
-            // We reload the tracing upon successful login to access the dataset with the newly logged in user.
-            await Model.ensureSavedState();
-            location.reload();
-          }}
-        />
-      }
+      content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
       style={{ position: "fixed" }}
     >

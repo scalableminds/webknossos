@@ -3,17 +3,7 @@ import * as React from "react";
 
 export default function BrainSpinner() {
   return (
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        background: "rgb(252, 252, 252)",
-        zIndex: 300,
-      }}
-    >
+    <div className="cover-whole-screen">
       <div className="Aligner" style={{ height: "80%" }}>
         <div className="Aligner-item Aligner-item--fixed">
           <div style={{ width: 375 }}>

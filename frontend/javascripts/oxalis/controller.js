@@ -50,7 +50,7 @@ type OwnProps = {|
 |};
 type StateProps = {|
   viewMode: ViewMode,
-  user: APIUser,
+  user: ?APIUser,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};

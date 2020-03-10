@@ -2,8 +2,8 @@
 import * as React from "react";
 
 type Props = {
-  message: ?string,
-  isLoading: boolean,
+  message?: string,
+  isLoading?: boolean,
 };
 
 export default function BrainSpinner({ message, isLoading = true }: Props) {

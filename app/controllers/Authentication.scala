@@ -507,7 +507,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                   "",
                                   "",
                                   organizationDisplayName)
-      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- initialDataService.insertLocalDataStoreIfEnabled

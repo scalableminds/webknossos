@@ -1110,8 +1110,8 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export function getOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON("/api/organizations");
+export function getDefaultOrganization(): Promise<APIOrganization> {
+  return Request.receiveJSON("/api/organizations/default");
 }
 
 export function getOrganization(organizationName: string): Promise<APIOrganization> {

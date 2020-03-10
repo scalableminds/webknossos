@@ -213,6 +213,8 @@ class AnnotationController @Inject()(
   def editAnnotation(typ: String, id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+      _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       name = (request.body \ "name").asOpt[String]
       description = (request.body \ "description").asOpt[String]
       visibility = (request.body \ "visibility").asOpt[String]

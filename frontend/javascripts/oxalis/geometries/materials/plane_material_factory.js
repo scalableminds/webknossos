@@ -18,6 +18,7 @@ import {
   getPackingDegree,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
+  getColorLayers,
   getDataLayers,
   getResolutions,
   getByteCount,
@@ -209,7 +210,7 @@ class PlaneMaterialFactory {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
       };
-      this.uniforms[`${name}_alpha`] = {
+      this.uniforms[`${layerName}_alpha`] = {
         type: "f",
         value: 1,
       };

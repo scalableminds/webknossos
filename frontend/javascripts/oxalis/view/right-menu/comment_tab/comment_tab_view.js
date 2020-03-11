@@ -42,7 +42,7 @@ const InputGroup = Input.Group;
 const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
 
-const commentListId = "comment-list";
+const commentListId = "commentList";
 
 const SortByEnum = Enum.make({
   NAME: "NAME",

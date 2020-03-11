@@ -17,10 +17,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Default interval for detecting new/deleted datasets on disk has been reduced from 10 to 1 minute. [#4464](https://github.com/scalableminds/webknossos/pull/4464)
 
 ### Fixed
+- Fixed that a node was created when using right click while brushing mode is active in hybrid tracings. [#4433](https://github.com/scalableminds/webknossos/pull/4433)
 - Fixed opening view only dataset links with arbitrary modes being initially displayed in plane mode. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
 - Fixed that converting a volume tracing into a hybrid tracing opens the hybrid tracing in "volume" mode. [#4467](https://github.com/scalableminds/webknossos/pull/4467)
+- Fixed a bug where users were wrongly allowed to edit the description of an annotation they were allowed to see but not update [#4466](https://github.com/scalableminds/webknossos/pull/4466)
 - Fixed the creation of histograms for float datasets that only have one value besides 0. [#4468](https://github.com/scalableminds/webknossos/pull/4468)
 
 ### Removed

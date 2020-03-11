@@ -92,7 +92,6 @@ type PropsWithSkeleton = {| ...Props, skeletonTracing: SkeletonTracing |};
 type CommentTabState = {
   isSortedAscending: boolean,
   sortBy: SortByEnumType,
-  data: Array<Tree | CommentType>,
   collapsedTreeIds: { [number]: boolean },
   isMarkdownModalVisible: boolean,
 };
@@ -107,17 +106,21 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
 ];
 
 const memoizedDeriveData = memoizeOne(
-  (trees, state: CommentTabState): CommentTabState => {
+  (trees, state: CommentTabState): Array<Tree | CommentType> => {
     const sortedTrees = _.values(trees)
       .filter(tree => tree.comments.length > 0)
       .sort(getTreeSorter(state));
 
     const commentSorter = getCommentSorter(state);
-    const data = sortedTrees.reduce((result, tree) => {
-      result.push(tree);
+
+    const data = [];
+    for (const tree of sortedTrees) {
+      data.push(tree);
       const isCollapsed = state.collapsedTreeIds[tree.treeId];
-      return isCollapsed ? result : result.concat(tree.comments.slice().sort(commentSorter));
-    }, []);
+      if (!isCollapsed) {
+        data.push(...tree.comments.slice().sort(commentSorter));
+      }
+    }
 
     return data;
   },
@@ -158,7 +161,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     );
 
     const relevantUpdateActions = updateActions.filter(ua =>
-      RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.type),
+      RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name),
     );
     return relevantUpdateActions.length > 0;
   }
@@ -333,7 +336,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     );
   }
 
-  getData(): CommentTabState {
+  getData(): Array<Tree | CommentType> {
     return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
   }
 
@@ -374,13 +377,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       commentOrTree.treeId != null &&
       commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
 
-    // If the activeNode has a comment, scroll to it,
-    // otherwise scroll to the activeTree
-    const scrollIndex = _.findIndex(
-      this.getData(),
-      activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
-    );
-
     const commentTabId = "commentTabId";
     return (
       <div
@@ -393,6 +389,13 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
             if (!isVisibleInDom) {
               return null;
             }
+            // If the activeNode has a comment, scroll to it,
+            // otherwise scroll to the activeTree
+            const scrollIndex = _.findIndex(
+              this.getData(),
+              activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
+            );
+
             return (
               <React.Fragment>
                 {this.renderMarkdownModal()}

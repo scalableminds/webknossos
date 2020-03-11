@@ -144,28 +144,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     isMarkdownModalVisible: false,
   };
 
-  shouldComponentUpdate(nextProps, nextState) {
-    if (nextState != this.state) {
-      return true;
-    }
-
-    if (this.props.skeletonTracing.activeNodeId != nextProps.skeletonTracing.activeNodeId) {
-      return true;
-    }
-    if (this.props.skeletonTracing.activeTreeId != nextProps.skeletonTracing.activeTreeId) {
-      return true;
-    }
-
-    const updateActions = Array.from(
-      cachedDiffTrees(this.props.skeletonTracing, nextProps.skeletonTracing),
-    );
-
-    const relevantUpdateActions = updateActions.filter(ua =>
-      RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name),
-    );
-    return relevantUpdateActions.length > 0;
-  }
-
   componentDidMount() {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -177,6 +155,28 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
         },
       ),
     );
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (nextState !== this.state) {
+      return true;
+    }
+
+    if (this.props.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
+      return true;
+    }
+    if (this.props.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
+      return true;
+    }
+
+    const updateActions = Array.from(
+      cachedDiffTrees(this.props.skeletonTracing, nextProps.skeletonTracing),
+    );
+
+    const relevantUpdateActions = updateActions.filter(ua =>
+      RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name),
+    );
+    return relevantUpdateActions.length > 0;
   }
 
   componentDidUpdate(prevProps) {

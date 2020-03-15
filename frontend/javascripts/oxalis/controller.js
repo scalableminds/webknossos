@@ -3,12 +3,12 @@
  * @flow
  */
 
-import { type RouterHistory, withRouter } from "react-router-dom";
+import { type RouterHistory, withRouter, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
-import { Col, Row } from "antd";
+import { Button, Col, Row } from "antd";
 
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
@@ -104,6 +104,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   tryFetchingModel() {
+    this.setState({ status: "loading" });
     // Preview a working tracing version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
@@ -279,7 +280,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     } else if (status === "failedLoading" && user != null) {
       return (
         <BrainSpinner
-          message="Either the dataset does not exist or you do not have the necessary access rights."
+          message={
+            <div style={{ textAlign: "center" }}>
+              Either the dataset does not exist or you do not have the necessary access rights.
+              <br />
+              <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
+                <Button type="primary">Return to dashboard</Button>
+              </Link>
+            </div>
+          }
           isLoading={false}
         />
       );
@@ -289,13 +298,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
             <Col span={8}>
               <h3>Try logging in to view the dataset.</h3>
-              <LoginForm
-                layout="horizontal"
-                onLoggedIn={() => {
-                  this.setState({ status: "loading" });
-                  this.tryFetchingModel();
-                }}
-              />
+              <LoginForm layout="horizontal" onLoggedIn={() => this.tryFetchingModel()} />
             </Col>
           </Row>
         </div>

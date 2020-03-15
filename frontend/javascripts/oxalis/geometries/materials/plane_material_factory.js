@@ -24,7 +24,7 @@ import {
   getByteCount,
   getElementClass,
   getBoundaries,
-  getEnabledColorLayers,
+  getEnabledLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -589,11 +589,12 @@ class PlaneMaterialFactory {
     }
 
     const state = Store.getState();
-    const enabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration).map(
-      layer => layer.name,
-    );
-    const disabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration, {
+    const enabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+      onlyColorLayer: true,
+    }).map(layer => layer.name);
+    const disabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
       invert: true,
+      onlyColorLayer: true,
     }).map(layer => layer.name);
 
     // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers

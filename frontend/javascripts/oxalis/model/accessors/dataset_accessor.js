@@ -312,28 +312,23 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
 }
 
-export function getEnabledColorLayers(
+export function getEnabledLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,
-  options: { invert?: boolean } = {},
+  options: { invert?: boolean, onlyColorLayers: boolean } = { onlyColorLayers: false },
 ): Array<DataLayerType> {
-  const colorLayers = getColorLayers(dataset);
+  const dataLayers = options.onlyColorLayers
+    ? getColorLayers(dataset)
+    : dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
 
-  return colorLayers.filter(layer => {
+  return dataLayers.filter(layer => {
     const settings = layerSettings[layer.name];
     if (settings == null) {
       return false;
     }
     return settings.isDisabled === options.invert;
   });
-}
-
-export function isSegmentationLayerEnabled(
-  dataset: APIDataset,
-  datasetConfiguration: DatasetConfiguration,
-): boolean {
-  return !datasetConfiguration.isSegmentationDisabled;
 }
 
 export function getThumbnailURL(dataset: APIDataset): string {

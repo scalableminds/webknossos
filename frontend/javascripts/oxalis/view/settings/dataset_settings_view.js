@@ -141,7 +141,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     Object.keys(layers).forEach(otherLayerName =>
       this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
     );
-    this.props.onChange("isSegmentationDisabled", !isVisible);
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {
@@ -150,14 +149,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       const { isDisabled } = layers[otherLayerName];
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
-    const { isSegmentationDisabled } = this.props.datasetConfiguration;
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (layerName === segmentationLayerName) {
-      return isOnlyGivenLayerVisible && !isSegmentationDisabled;
-    } else {
-      return isOnlyGivenLayerVisible && isSegmentationDisabled;
-    }
+    return isOnlyGivenLayerVisible;
   };
 
   getEnableDisableLayerSwitch = (
@@ -208,11 +200,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
-      if (isColorLayer) {
-        this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
-      } else {
-        this.props.onChange("isSegmentationDisabled", !isVisible);
-      }
+      this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
     const onChange = (value, event) => {
       if (!event.ctrlKey) {
@@ -254,9 +242,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const isDisabled = isColorLayer
-      ? layerConfiguration.isDisabled
-      : this.props.datasetConfiguration.isSegmentationDisabled;
+    const { isDisabled } = layerConfiguration;
 
     return (
       <div key={layerName}>
@@ -411,7 +397,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const hasInvisibleLayers =
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null || this.props.datasetConfiguration.isSegmentationDisabled;
+      ) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">

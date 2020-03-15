@@ -2,7 +2,7 @@
 import * as React from "react";
 
 type Props = {
-  message?: string,
+  message?: React.Node,
   isLoading?: boolean,
 };
 
@@ -29,7 +29,7 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
                 style={{ width: "80%", marginLeft: "auto", marginRight: "auto", marginTop: 30 }}
               />
             ) : null}
-            {message ? (
+            {message != null ? (
               <div style={{ marginLeft: "auto", marginRight: "auto", marginTop: 30 }}>
                 {message}
               </div>

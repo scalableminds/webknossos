@@ -590,11 +590,11 @@ class PlaneMaterialFactory {
 
     const state = Store.getState();
     const enabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
-      onlyColorLayer: true,
+      onlyColorLayers: true,
     }).map(layer => layer.name);
     const disabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
       invert: true,
-      onlyColorLayer: true,
+      onlyColorLayers: true,
     }).map(layer => layer.name);
 
     // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers

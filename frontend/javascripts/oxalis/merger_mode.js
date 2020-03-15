@@ -13,7 +13,6 @@ type MergerModeState = {
   nodes: Array<NodeWithTreeId>,
   segmentationLayerName: string,
   nodeSegmentMap: Object,
-  isSegmentationVisible: number,
 };
 
 const unregisterKeyHandlers = [];
@@ -176,12 +175,16 @@ function deleteTreeOverwrite(store, call, action, mergerModeState: MergerModeSta
   call(action);
 }
 
+type WriteableDatasetLayerConfiguration = {
+  [name: string]: { isDisabled: boolean },
+};
+
 // Changes the opacity of the segmentation layer
 function changeOpacity(mergerModeState: MergerModeState) {
   const { segmentationLayerName } = mergerModeState;
   const layerSettings = api.data.getConfiguration("layers");
   // Invert the visibility of the segmentation layer.
-  const copyOfLayerSettings = _.cloneDeep(layerSettings);
+  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = (_.cloneDeep(layerSettings): any);
   const isSegmentationDisabled = copyOfLayerSettings[segmentationLayerName].isDisabled;
   copyOfLayerSettings[segmentationLayerName].isDisabled = !isSegmentationDisabled;
   api.data.setConfiguration("layers", copyOfLayerSettings);

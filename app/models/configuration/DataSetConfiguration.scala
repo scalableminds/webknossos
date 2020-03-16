@@ -17,10 +17,11 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
       dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
-      defaultConfig = constructInitialDefault(dataLayers.map(dl => (dl.name, dl.category)),
+      initialConfig = constructInitialDefault(dataLayers.map(dl => (dl.name, dl.category)),
                                               dataLayers.map(_.defaultViewConfiguration.map(_.toMap))).configuration
       sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
-    } yield DataSetConfiguration(defaultConfig ++ sourceDefaultConfig)
+      defaultConfig = dataSet.defaultConfiguration.map(_.configuration).getOrElse(Map.empty)
+    } yield DataSetConfiguration(initialConfig ++ sourceDefaultConfig ++ defaultConfig)
 
   def constructInitialDefault(layers: List[(String, Category.Value)],
                               layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {

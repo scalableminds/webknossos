@@ -45,6 +45,7 @@ type StateProps = {|
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
+  renderMissingDataBlack: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -152,7 +153,7 @@ class MappingInfoView extends React.Component<Props, State> {
     const resolutions = getResolutions(dataset);
     // While render missing data black is not active and there is no segmentation for the current zoom step,
     // the segmentation of a higher zoom step is shown.
-    // Here we determine the the next zoom step of the displayed segmentation data to get the correct segement ids.
+    // Here we determine the the next zoom step of the displayed segmentation data to get the correct segment ids.
     while (
       !renderMissingDataBlack &&
       usableZoomStep < resolutions.length - 1 &&
@@ -381,7 +382,7 @@ function mapStateToProps(state: OxalisState) {
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    renderMissingDataBlack: state.renderMissingDataBlack,
+    renderMissingDataBlack: state.datasetConfiguration.renderMissingDataBlack,
   };
 }
 

@@ -134,10 +134,15 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.disable_saving": "Are you sure you want to disable saving?",
   "annotation.disable_saving.content":
     "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary tracings to save resources.",
+  "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
+  "annotation.undoFinish.content":
+    "If you reopen your old tracing, the current tracing will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue tracing.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_success": _.template(
+    "The dataset <%- datasetName %> was reloaded successfully.",
+  ),
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",

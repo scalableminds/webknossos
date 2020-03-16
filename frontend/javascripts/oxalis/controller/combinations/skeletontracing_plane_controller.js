@@ -9,6 +9,7 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
+  VolumeToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -66,8 +67,13 @@ export function getPlaneMouseControls(planeView: PlaneView) {
   return {
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
-    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) =>
-      setWaypoint(calculateGlobalPos(pos), event.ctrlKey),
+    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      const { volume } = Store.getState().tracing;
+      if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
+        // We avoid creating nodes when in brushing mode.
+        setWaypoint(calculateGlobalPos(pos), event.ctrlKey);
+      }
+    },
   };
 }
 
@@ -88,7 +94,7 @@ export function getTDViewMouseControls(planeView: PlaneView): Object {
 
 function moveAlongDirection(reverse: boolean = false): void {
   const directionInverter = reverse ? -1 : 1;
-  const flycam = Store.getState().flycam;
+  const { flycam } = Store.getState();
   const newPosition = V3.add(getPosition(flycam), V3.scale(flycam.direction, directionInverter));
   api.tracing.centerPositionAnimated(newPosition, false);
 }

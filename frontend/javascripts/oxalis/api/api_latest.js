@@ -1046,7 +1046,7 @@ class DataApi {
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
   getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
-    const printDepricationWarning = () =>
+    const printDeprecationWarning = () =>
       console.warn(
         `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
       Instead, they are part of the segmentation layer configuration and can be accessed as follows: 
@@ -1056,14 +1056,14 @@ class DataApi {
       );
     switch (key) {
       case "segmentationOpacity": {
-        printDepricationWarning();
+        printDeprecationWarning();
         const segmentationLayerName = Model.getSegmentationLayerName();
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
           : undefined;
       }
       case "isSegmentationDisabled": {
-        printDepricationWarning();
+        printDeprecationWarning();
         const segmentationLayerName = Model.getSegmentationLayerName();
         return segmentationLayerName
           ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
@@ -1083,7 +1083,7 @@ class DataApi {
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
   setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
-    const printDepricationWarning = () =>
+    const printDeprecationWarning = () =>
       console.warn(
         `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
       Instead, they are part of the segmentation layer configuration and can be set as follows: 
@@ -1095,7 +1095,7 @@ class DataApi {
       );
     switch (key) {
       case "segmentationOpacity": {
-        printDepricationWarning();
+        printDeprecationWarning();
         const segmentationLayerName = Model.getSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
@@ -1103,7 +1103,7 @@ class DataApi {
         break;
       }
       case "isSegmentationDisabled": {
-        printDepricationWarning();
+        printDeprecationWarning();
         const segmentationLayerName = Model.getSegmentationLayerName();
         if (segmentationLayerName) {
           Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));

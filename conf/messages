@@ -7,6 +7,9 @@ notAllowed=You are not authorized to view or edit this resource
 
 binary.payload.invalid=Couldn’t parse payload
 
+histogram.layerMissing=Could not generate histogram data: missing layer {0}
+histogram.failed=Could not generate histogram data for layer {0}
+
 email=Email
 team=Team
 name=Name

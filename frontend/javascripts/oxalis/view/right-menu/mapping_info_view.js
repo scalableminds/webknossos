@@ -16,7 +16,7 @@ import type { OxalisState, Mapping } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getMappingsForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { getSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
@@ -126,24 +126,57 @@ class MappingInfoView extends React.Component<Props, State> {
   }
 
   renderIdTable() {
+    const {
+      mapping,
+      isMappingEnabled,
+      mappingColors,
+      activeViewport,
+      mousePosition,
+      zoomStep,
+      position,
+      dataset,
+      segmentationLayer,
+      renderMissingDataBlack,
+    } = this.props;
     const cube = this.getSegmentationCube();
-    const hasMapping = this.props.mapping != null;
-    const customColors = this.props.isMappingEnabled ? this.props.mappingColors : null;
+    const hasMapping = mapping != null;
+    const customColors = isMappingEnabled ? mappingColors : null;
 
     let globalMousePosition;
-    if (this.props.mousePosition && this.props.activeViewport !== OrthoViews.TDView) {
-      const [x, y] = this.props.mousePosition;
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
+      const [x, y] = mousePosition;
       globalMousePosition = calculateGlobalPos({ x, y });
     }
-
-    const getIdForPos = pos => pos && cube.getDataValue(pos, null, this.props.zoomStep);
+    let usableZoomStep = zoomStep;
+    const flycamPosition = position;
+    const resolutions = getResolutions(dataset);
+    // While render missing data black is not active and there is no segmentation for the current zoom step,
+    // the segmentation of a higher zoom step is shown.
+    // Here we determine the the next zoom step of the displayed segmentation data to get the correct segement ids.
+    while (
+      !renderMissingDataBlack &&
+      usableZoomStep < resolutions.length - 1 &&
+      !cube.hasDataAtPositionAndZoomStep(flycamPosition, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    let usedResolutionAsString = null;
+    if (segmentationLayer) {
+      const usedResolution = segmentationLayer.resolutions[usableZoomStep];
+      usedResolutionAsString = `(${usedResolution[0]}-${usedResolution[1]}-${usedResolution[2]})`;
+    }
+    const getIdForPos = pos => pos && cube.getDataValue(pos, null, usableZoomStep);
 
     const tableData = [
-      { name: "Active ID", key: "active", unmapped: this.props.activeCellId },
       {
-        name: "ID at current position",
+        name: "Active ID",
+        key: "active",
+        unmapped: this.props.activeCellId,
+      },
+      {
+        name: "ID at the center",
         key: "current",
-        unmapped: getIdForPos(this.props.position),
+        unmapped: getIdForPos(flycamPosition),
       },
       {
         name: (
@@ -170,16 +203,36 @@ class MappingInfoView extends React.Component<Props, State> {
       .map(idInfo => ({
         ...idInfo,
         unmapped: (
-          <span style={{ background: convertCellIdToCSS(idInfo.unmapped) }}>{idInfo.unmapped}</span>
+          <span
+            style={{
+              background: convertCellIdToCSS(idInfo.unmapped),
+            }}
+          >
+            {idInfo.unmapped}
+          </span>
         ),
         mapped: (
-          <span style={{ background: convertCellIdToCSS(idInfo.mapped, customColors) }}>
+          <span
+            style={{
+              background: convertCellIdToCSS(idInfo.mapped, customColors),
+            }}
+          >
             {idInfo.mapped}
           </span>
         ),
       }));
+    // Add entry to show currently used resolution.
+    tableData.push({
+      name: "Segmentation resolution",
+      key: "resolution",
+      unmapped: usedResolutionAsString,
+      mapped: usedResolutionAsString,
+    });
 
-    const columnHelper = (title, dataIndex) => ({ title, dataIndex });
+    const columnHelper = (title, dataIndex) => ({
+      title,
+      dataIndex,
+    });
     const idColumns =
       hasMapping && this.props.isMappingEnabled
         ? // Show an unmapped and mapped id column if there's a mapping
@@ -328,6 +381,7 @@ function mapStateToProps(state: OxalisState) {
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+    renderMissingDataBlack: state.renderMissingDataBlack,
   };
 }
 

@@ -264,7 +264,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
             }
             val bucketSize = (max - min) / 255
             val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
-            floatData.foreach(el => counts(Math.roundDown((el - min) / finalBucketSize)) += 1)
+            floatData.foreach(el => counts(((el - min) / finalBucketSize).floor.toInt) += 1)
             extrema = (min, max)
         }
       }
@@ -277,7 +277,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "getting data failed"
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "Could not get data at sampled positions"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)

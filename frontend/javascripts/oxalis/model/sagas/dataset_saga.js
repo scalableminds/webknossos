@@ -1,10 +1,7 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
 import { type Saga, _takeEvery, select } from "oxalis/model/sagas/effect-generators";
-import {
-  getEnabledColorLayers,
-  isSegmentationLayerEnabled,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getEnabledLayers } from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 
@@ -14,17 +11,9 @@ export function* watchMaximumRenderableLayers(): Saga<void> {
       state => state.temporaryConfiguration.gpuSetup.maximumLayerCountToRender,
     );
 
-    const enabledLayerCount = yield* select(state => {
-      const colorLayerCount = getEnabledColorLayers(state.dataset, state.datasetConfiguration)
-        .length;
-      const enabledSegmentationCount = isSegmentationLayerEnabled(
-        state.dataset,
-        state.datasetConfiguration,
-      )
-        ? 1
-        : 0;
-      return colorLayerCount + enabledSegmentationCount;
-    });
+    const enabledLayerCount = yield* select(
+      state => getEnabledLayers(state.dataset, state.datasetConfiguration).length,
+    );
 
     if (enabledLayerCount > maximumLayerCountToRender) {
       Toast.error(messages["webgl.too_many_active_layers"]({ maximumLayerCountToRender }), {

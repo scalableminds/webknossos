@@ -78,6 +78,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           organization._id,
           publication,
           Some(dataSource.hashCode()),
+          dataSource.defaultViewConfiguration,
           None,
           None,
           None,
@@ -122,7 +123,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
 
     val groupedByOrga = dataSources.groupBy(_.id.team).toList
-
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
         organizationDAO
@@ -167,13 +167,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     if (foundDataSet.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataSet._id)
     else
-      dataSetDAO
-        .updateDataSourceByNameAndOrganizationName(foundDataSet._id,
-                                                   dataStore.name,
-                                                   dataSource.hashCode,
-                                                   dataSource,
-                                                   dataSource.isUsable)(GlobalAccessContext)
-        .map(_ => foundDataSet._id)
+      for {
+        _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
+                                                                  dataStore.name,
+                                                                  dataSource.hashCode,
+                                                                  dataSource,
+                                                                  dataSource.isUsable)(GlobalAccessContext)
+        _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
+      } yield foundDataSet._id
 
   private def updateDataSourceDifferentDataStore(
       foundDataSet: DataSet,
@@ -186,13 +187,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       if (originalDataStore.isScratch && !dataStore.isScratch) {
         logger.info(
           s"Replacing dataset ${foundDataSet.name} from scratch datastore ${originalDataStore.name} by the one from ${dataStore.name}")
-        dataSetDAO
-          .updateDataSourceByNameAndOrganizationName(foundDataSet._id,
-                                                     dataStore.name,
-                                                     dataSource.hashCode,
-                                                     dataSource,
-                                                     dataSource.isUsable)(GlobalAccessContext)
-          .map(_ => Some(foundDataSet._id))
+        for {
+          _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
+                                                                    dataStore.name,
+                                                                    dataSource.hashCode,
+                                                                    dataSource,
+                                                                    dataSource.isUsable)(GlobalAccessContext)
+          _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
+        } yield Some(foundDataSet._id)
       } else {
         logger.info(
           s"Dataset ${foundDataSet.name}, as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")

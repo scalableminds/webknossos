@@ -111,7 +111,7 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       _ <- run(sqlu"""update webknossos.tracingStores set isDeleted = true where name = $name""")
     } yield ()
 
-  def updateOne(t: TracingStore) =
+  def updateOne(t: TracingStore): Fox[Unit] =
     for {
       _ <- run(
         sqlu""" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}""")

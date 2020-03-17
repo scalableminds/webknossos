@@ -8,7 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 - Default interval for detecting new/deleted datasets on disk (`braingames.binary.changeHandler.tickerInterval` in the config) has been reduced from 10 to 1 minute. If you relied on the value being 10 minutes, you have to set it explicitly now.
 
 ### Postgres Evolutions:
--
+- [051-add-source-view-configuration.sql](conf/evolutions/051-add-source-view-configuration.sql)
 
 ## [20.03.0](https://github.com/scalableminds/webknossos/releases/tag/20.03.0) - 2020-02-27
 No migrations necessary.

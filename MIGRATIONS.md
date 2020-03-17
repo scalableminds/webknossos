@@ -5,7 +5,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ## Unreleased
--
+- Default interval for detecting new/deleted datasets on disk (`braingames.binary.changeHandler.tickerInterval` in the config) has been reduced from 10 to 1 minute. If you relied on the value being 10 minutes, you have to set it explicitly now.
 
 ### Postgres Evolutions:
 -

@@ -50,7 +50,7 @@ class SceneController {
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
-  cube: Cube;
+  datasetBoundingBox: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
@@ -237,13 +237,13 @@ class SceneController {
 
     // Cubes
     const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
-    this.cube = new Cube({
+    this.datasetBoundingBox = new Cube({
       min: lowerBoundary,
       max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
     });
-    this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+    this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     this.userBoundingBox = new Cube({
       max: [0, 0, 0],
@@ -289,6 +289,7 @@ class SceneController {
         this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.remove(mesh));
       }
 
+      const { viewMode } = Store.getState().temporaryConfiguration;
       this.taskBoundingBox = new Cube({
         min: taskBoundingBox.min,
         max: taskBoundingBox.max,
@@ -296,6 +297,9 @@ class SceneController {
         showCrossSections: true,
       });
       this.taskBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+      if (constants.MODES_ARBITRARY.includes(viewMode)) {
+        Utils.__guard__(this.taskBoundingBox, bb => bb.setVisibility(false));
+      }
     }
   }
 
@@ -304,7 +308,7 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    this.cube.updateForCam(id);
+    this.datasetBoundingBox.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
@@ -430,7 +434,7 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
     }
-    this.cube.setVisibility(false);
+    this.datasetBoundingBox.setVisibility(false);
     this.userBoundingBox.setVisibility(false);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
     if (this.isosurfacesRootGroup != null) {
@@ -442,7 +446,7 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(true);
     }
-    this.cube.setVisibility(true);
+    this.datasetBoundingBox.setVisibility(true);
     this.userBoundingBox.setVisibility(true);
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
   }

@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/4357
+-- https://github.com/scalableminds/webknossos/pull/4484
 
 START TRANSACTION;
 

@@ -31,7 +31,6 @@ const recommendedConfigByCategory = {
   dataset: {
     fourBit: false,
     interpolation: true,
-    segmentationOpacity: 0,
     highlightHoveredCellId: false,
     zoom: 0.8,
     renderMissingDataBlack: false,

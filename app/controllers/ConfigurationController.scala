@@ -49,7 +49,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }.orElse(
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          config <- dataSet.defaultConfiguration
+          config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
         } yield config
       )
       .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
@@ -73,7 +73,9 @@ class ConfigurationController @Inject()(userService: UserService,
   def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
-        case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+        case Some(c) =>
+          Fox.successful(
+            Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
         case _ =>
           dataSetConfigurationDefaults
             .constructInitialDefault(dataSet)

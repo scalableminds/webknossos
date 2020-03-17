@@ -231,8 +231,6 @@ export type DatasetConfiguration = {|
     [name: string]: DatasetLayerConfiguration,
   },
   +quality: 0 | 1 | 2,
-  +segmentationOpacity: number,
-  +isSegmentationDisabled: boolean,
   +highlightHoveredCellId: boolean,
   +renderIsosurfaces: boolean,
   +position?: Vector3,

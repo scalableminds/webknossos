@@ -19,6 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Using the "Best Quality First" strategy in combination with having the "Render Black Data" setting disabled works better now. [#4470](https://github.com/scalableminds/webknossos/pull/4470)
 - Default interval for detecting new/deleted datasets on disk has been reduced from 10 to 1 minute. [#4464](https://github.com/scalableminds/webknossos/pull/4464)
 - The config values datastore.publicUri, tracingstore.publicUri and http.uri are now reapplied from the config at every startup if your instance has localhost-stores [#4482](https://github.com/scalableminds/webknossos/pull/4482)
 

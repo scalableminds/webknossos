@@ -50,25 +50,28 @@ class BinaryDataService(dataBaseDir: Path,
   }
 
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+    def convertIfNecessary[T](isNecessary: Boolean,
+                              inputArray: Array[Byte],
+                              conversionFunc: Array[Byte] => T,
+                              transformInput: Array[Byte] => T): T =
+      if (isNecessary) conversionFunc(inputArray) else transformInput(inputArray)
+
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
-        handleDataRequest(request).flatMap { data =>
-          val convertedData =
-            if (request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation)
-              convertToUInt32(data)
-            else data
-          val resultData =
-            if (request.settings.appliedAgglomerate.isDefined)
-              agglomerateService.applyAgglomerate(convertedData, request) //convertedData
-            else Fox.successful(convertedData)
-
-          if (request.settings.halfByte) {
-            resultData.map(array => (convertToHalfByte(array), index))
-          } else {
-            resultData.map((_, index))
-          }
-        }
+        for {
+          data <- handleDataRequest(request)
+          mappedData <- convertIfNecessary(request.settings.appliedAgglomerate.isDefined,
+                                           data,
+                                           agglomerateService.applyAgglomerate(request),
+                                           Fox.successful(_))
+          convertedData = convertIfNecessary(
+            request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
+            mappedData,
+            convertToUInt32,
+            identity)
+          resultData = convertIfNecessary(request.settings.halfByte, convertedData, convertToHalfByte, identity)
+        } yield (resultData, index)
     }
 
     Fox.sequenceOfFulls(requestData).map { l =>

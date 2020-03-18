@@ -3,11 +3,21 @@ package com.scalableminds.webknossos.datastore.storage
 import ch.systemsx.cisd.hdf5.IHDF5Reader
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.Cube
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+
+case class CachedReader(reader: IHDF5Reader) extends Cube {
+  override def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = Empty
+
+  override protected def onFinalize(): Unit = reader.close()
+}
 
 case class CachedAgglomerateFile(
     organization: String,
@@ -41,18 +51,19 @@ object CachedAgglomerate {
 }
 
 class AgglomerateFileCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedAgglomerateFile, Fox[IHDF5Reader]]
+    extends LRUConcurrentCache[CachedAgglomerateFile, Fox[CachedReader]]
     with FoxImplicits {
-  // override def onElementRemoval(key: CachedAgglomerateFile, value: Fox[IHDF5Reader]): Unit = value.map(_.close())
+  override def onElementRemoval(key: CachedAgglomerateFile, value: Fox[CachedReader]): Unit =
+    value.map(_.scheduleForRemoval())
 
   def withCache(dataRequest: DataServiceDataRequest)(
-      loadFn: DataServiceDataRequest => Fox[IHDF5Reader]): Fox[IHDF5Reader] = {
+      loadFn: DataServiceDataRequest => Fox[CachedReader]): Fox[CachedReader] = {
     val cachedAgglomerateFile = CachedAgglomerateFile.from(dataRequest)
 
     def handleUncachedAgglomerateFile() = {
-      val reader = loadFn(dataRequest).futureBox.map {
+      val readerFox = loadFn(dataRequest).futureBox.map {
         case Full(readerInstance) =>
-          Full(readerInstance)
+          if (readerInstance.tryAccess()) Full(readerInstance) else Empty
         case f: Failure =>
           remove(cachedAgglomerateFile)
           f
@@ -60,8 +71,12 @@ class AgglomerateFileCache(val maxEntries: Int)
           Empty
       }.toFox
 
-      put(cachedAgglomerateFile, reader)
-      reader
+      put(cachedAgglomerateFile, readerFox)
+      readerFox.map { reader =>
+        val result = reader.copy()
+        reader.finishAccess()
+        result
+      }
     }
 
     get(cachedAgglomerateFile) match {
@@ -72,16 +87,26 @@ class AgglomerateFileCache(val maxEntries: Int)
 }
 
 class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgglomerate, Fox[Long]] with FoxImplicits {
-  val datasetName = "/segment_to_agglomerate"
+  val name = "/segment_to_agglomerate"
 
   def withCache(dataRequest: DataServiceDataRequest, segmentId: Long, cachedFileHandles: AgglomerateFileCache)(
-      loadFn: DataServiceDataRequest => Fox[IHDF5Reader]): Fox[Long] = {
+      loadFn: DataServiceDataRequest => Fox[CachedReader]): Fox[Long] = {
     val cachedAgglomerate = CachedAgglomerate.from(dataRequest, segmentId)
 
     def handleUncachedAgglomerate(): Fox[Long] = {
-      val agglomerateId = cachedFileHandles.withCache(dataRequest)(loadFn).map { reader =>
-        reader.uint8().readArrayBlockWithOffset(datasetName, 1, cachedAgglomerate.segmentId).head.toLong
+      val reader = cachedFileHandles.withCache(dataRequest)(loadFn)
+      val agglomerateId = dataRequest.dataLayer.elementClass match {
+        case ElementClass.uint8 =>
+          reader.map(_.reader.uint8().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+        case ElementClass.uint16 =>
+          reader.map(_.reader.uint16().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+        case ElementClass.uint32 =>
+          reader.map(_.reader.uint32().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+        case ElementClass.uint64 =>
+          reader.map(_.reader.uint64().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head)
+        case _ => Fox.failure("Unsupported data type")
       }
+
       put(cachedAgglomerate, agglomerateId)
       agglomerateId
     }

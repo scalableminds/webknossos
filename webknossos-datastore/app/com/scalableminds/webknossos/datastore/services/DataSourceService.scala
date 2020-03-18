@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.dataformats.{AgglomerateProvider, MappingProvider}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
@@ -111,6 +111,10 @@ class DataSourceService @Inject()(
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
     MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+
+  def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+    AgglomerateProvider.exploreAgglomerates(
+      dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None

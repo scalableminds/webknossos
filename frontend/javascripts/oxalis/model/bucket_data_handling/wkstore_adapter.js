@@ -123,10 +123,17 @@ export async function requestFromStore(
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
+
+  const { activeMapping } = state.temporaryConfiguration;
+  const applyAgglomerates =
+    activeMapping != null && activeMapping.isMappingEnabled && activeMapping.mappingType === "HDF5"
+      ? activeMapping.mappingName
+      : null;
+
   const resolutions = getResolutions(state.dataset);
   const version =
     isSegmentation && state.tracing.volume != null ? state.tracing.volume.version : null;
-  const applyAgglomerates = isSegmentation ? "agglomerate_view_70" : null;
+
   const bucketInfo = batch.map(zoomedAddress =>
     createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
   );

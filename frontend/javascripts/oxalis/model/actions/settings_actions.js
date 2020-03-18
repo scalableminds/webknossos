@@ -7,6 +7,7 @@ import type {
   TemporaryConfiguration,
   Mapping,
   HistogramDataForAllLayers,
+  MappingType,
 } from "oxalis/store";
 
 export type UpdateUserSettingAction = {
@@ -60,6 +61,7 @@ type SetMappingAction = {
   mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
+  mappingType: MappingType,
 };
 export type SettingAction =
   | UpdateUserSettingAction
@@ -163,6 +165,7 @@ export const setMappingAction = (
   mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
+  mappingType: MappingType = "JSON",
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   mappingName,
@@ -170,6 +173,7 @@ export const setMappingAction = (
   mappingKeys,
   mappingColors,
   hideUnmappedIds,
+  mappingType,
 });
 
 export const initializeGpuSetupAction = (

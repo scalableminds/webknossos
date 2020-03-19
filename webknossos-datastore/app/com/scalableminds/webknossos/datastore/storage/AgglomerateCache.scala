@@ -12,6 +12,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 case class CachedReader(reader: IHDF5Reader) extends Cube {
   override def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = Empty
@@ -97,17 +98,23 @@ class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgg
       val reader = cachedFileHandles.withCache(dataRequest)(loadFn)
       val agglomerateId = dataRequest.dataLayer.elementClass match {
         case ElementClass.uint8 =>
-          reader.map(_.reader.uint8().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+          reader.flatMap(r => try2Fox(Try(r.reader.uint8().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
         case ElementClass.uint16 =>
-          reader.map(_.reader.uint16().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+          reader.flatMap(r => try2Fox(Try(r.reader.uint16().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
         case ElementClass.uint32 =>
-          reader.map(_.reader.uint32().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head.toLong)
+          reader.flatMap(r => try2Fox(Try(r.reader.uint32().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
         case ElementClass.uint64 =>
-          reader.map(_.reader.uint64().readArrayBlockWithOffset(name, 1, cachedAgglomerate.segmentId).head)
+          reader.flatMap(r => try2Fox(Try(r.reader.uint64().readArrayBlockWithOffset(name, 1, segmentId).head)))
         case _ => Fox.failure("Unsupported data type")
       }
 
-      put(cachedAgglomerate, agglomerateId)
+      val checkedAgglomerateId = agglomerateId.futureBox.map {
+        case Full(id)   => Full(id)
+        case f: Failure => remove(cachedAgglomerate); f
+        case _          => Empty
+      }
+
+      put(cachedAgglomerate, checkedAgglomerateId)
       agglomerateId
     }
 

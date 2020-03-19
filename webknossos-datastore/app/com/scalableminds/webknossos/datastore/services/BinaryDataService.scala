@@ -61,10 +61,12 @@ class BinaryDataService(dataBaseDir: Path,
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData <- convertIfNecessary(request.settings.appliedAgglomerate.isDefined,
-                                           data,
-                                           agglomerateService.applyAgglomerate(request),
-                                           Fox.successful(_))
+          mappedData <- convertIfNecessary(
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation,
+            data,
+            agglomerateService.applyAgglomerate(request),
+            Fox.successful(_)
+          )
           convertedData = convertIfNecessary(
             request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
             mappedData,

@@ -139,10 +139,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   importTracingFiles = async () => {
     this.setState({ isImporting: true });
     try {
-      await this.props.onImport(
-        this.state.files,
-        this.state.createGroupForEachFile,
-      );
+      await this.props.onImport(this.state.files, this.state.createGroupForEachFile);
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -176,7 +173,10 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 
   renderImportModal() {
-    const newGroupMsg = this.state.files.length > 1 ? "Create a new tree group for each file." : "Create a new tree group for this file.";
+    const newGroupMsg =
+      this.state.files.length > 1
+        ? "Create a new tree group for each file."
+        : "Create a new tree group for this file.";
     const pluralS = this.state.files.length > 1 ? "s" : "";
     return (
       <Modal

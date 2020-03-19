@@ -182,10 +182,6 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
-      r <- run(Annotations
-        .filter(r =>
-          notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString)
-        .result)
       accessQuery <- readAccessQuery
       r <- run(
         sql"""select #${columns} from #${existingCollectionName}

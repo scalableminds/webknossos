@@ -24,7 +24,7 @@ import {
   getByteCount,
   getElementClass,
   getBoundaries,
-  getEnabledColorLayers,
+  getEnabledLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -111,10 +111,6 @@ class PlaneMaterialFactory {
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
-      alpha: {
-        type: "f",
-        value: 0,
-      },
       highlightHoveredCellId: {
         type: "b",
         value: true,
@@ -208,19 +204,19 @@ class PlaneMaterialFactory {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
     };
-
     for (const dataLayer of Model.getAllLayers()) {
-      this.uniforms[`${sanitizeName(dataLayer.name)}_maxZoomStep`] = {
+      const layerName = sanitizeName(dataLayer.name);
+      this.uniforms[`${layerName}_maxZoomStep`] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
+      };
+      this.uniforms[`${layerName}_alpha`] = {
+        type: "f",
+        value: 1,
       };
     }
 
     for (const name of getSanitizedColorLayerNames()) {
-      this.uniforms[`${name}_alpha`] = {
-        type: "f",
-        value: 1,
-      };
       this.uniforms[`${name}_color`] = {
         type: "v3",
         value: DEFAULT_COLOR,
@@ -249,18 +245,18 @@ class PlaneMaterialFactory {
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
-
-      this.uniforms[`${sanitizeName(name)}_textures`] = {
+      const layerName = sanitizeName(name);
+      this.uniforms[`${layerName}_textures`] = {
         type: "tv",
         value: dataTextures,
       };
 
-      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
+      this.uniforms[`${layerName}_data_texture_width`] = {
         type: "f",
         value: dataLayer.layerRenderingManager.textureWidth,
       };
 
-      this.uniforms[`${sanitizeName(name)}_lookup_texture`] = {
+      this.uniforms[`${layerName}_lookup_texture`] = {
         type: "t",
         value: lookUpTexture,
       };
@@ -274,15 +270,16 @@ class PlaneMaterialFactory {
         mappingLookupTexture,
         mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_texture`] = {
+      const sanitizedSegmentationLayerName = sanitizeName(segmentationLayer.name);
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_texture`] = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_lookup_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_lookup_texture`] = {
         type: "t",
         value: mappingLookupTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_color_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_color_texture`] = {
         type: "t",
         value: mappingColorTexture,
       };
@@ -306,16 +303,6 @@ class PlaneMaterialFactory {
 
     this.material.setAnchorPoint = ([x, y, z]) => {
       this.uniforms.anchorPoint.value.set(x, y, z);
-    };
-
-    this.material.setSegmentationAlpha = alpha => {
-      this.uniforms.alpha.value = alpha / 100;
-    };
-
-    this.material.setSegmentationVisibility = isVisible => {
-      this.uniforms.alpha.value = isVisible
-        ? Store.getState().datasetConfiguration.segmentationOpacity / 100
-        : 0;
     };
 
     this.material.setUseBilinearFiltering = isEnabled => {
@@ -425,24 +412,26 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
         layerSettings => {
-          for (const colorLayer of getColorLayers(Store.getState().dataset)) {
-            const settings = layerSettings[colorLayer.name];
+          const segmentationLayerName = Model.getSegmentationLayerName();
+          for (const dataLayer of Model.getAllLayers()) {
+            const { elementClass } = dataLayer.cube;
+            const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const isLayerEnabled = !settings.isDisabled;
               if (
-                oldVisibilityPerLayer[colorLayer.name] != null &&
-                oldVisibilityPerLayer[colorLayer.name] !== isLayerEnabled
+                oldVisibilityPerLayer[dataLayer.name] != null &&
+                oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
-                  this.onDisableLayer(colorLayer.name);
+                  this.onDisableLayer(dataLayer.name);
                 } else {
-                  this.onEnableLayer(colorLayer.name);
+                  this.onEnableLayer(dataLayer.name);
                 }
               }
-              oldVisibilityPerLayer[colorLayer.name] = isLayerEnabled;
-
-              const name = sanitizeName(colorLayer.name);
-              this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
+              oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
+              const name = sanitizeName(dataLayer.name);
+              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
+              this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
           // TODO: Needed?
@@ -546,19 +535,21 @@ class PlaneMaterialFactory {
     settings: DatasetLayerConfiguration,
     name: string,
     elementClass: ElementClass,
+    isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted } = settings;
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
-    const divisor = elementClass === "float" ? 1 : 255;
-    this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-    this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
-    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
-    this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
-
-    if (settings.color != null) {
-      const color = this.convertColor(settings.color);
-      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    if (!isSegmentationLayer) {
+      const divisor = elementClass === "float" ? 1 : 255;
+      this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+      this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
+      if (settings.color != null) {
+        const color = this.convertColor(settings.color);
+        this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+      }
     }
+    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
   }
 
   getMaterial(): THREE.ShaderMaterial {
@@ -598,11 +589,12 @@ class PlaneMaterialFactory {
     }
 
     const state = Store.getState();
-    const enabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration).map(
-      layer => layer.name,
-    );
-    const disabledLayerNames = getEnabledColorLayers(state.dataset, state.datasetConfiguration, {
+    const enabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+      onlyColorLayers: true,
+    }).map(layer => layer.name);
+    const disabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
       invert: true,
+      onlyColorLayers: true,
     }).map(layer => layer.name);
 
     // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers

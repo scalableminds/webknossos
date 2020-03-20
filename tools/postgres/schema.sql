@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(50);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(52);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -93,6 +93,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   inboxSourceHash INT,
+  sourceDefaultConfiguration JSONB,
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -108,6 +109,7 @@ CREATE TABLE webknossos.dataSets(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
+  CONSTRAINT sourceDefaultConfigurationIsJsonObject CHECK(jsonb_typeof(sourceDefaultConfiguration) = 'object'),
   CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
   CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );
@@ -122,7 +124,9 @@ CREATE TABLE webknossos.dataSet_layers(
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
   largestSegmentId BIGINT,
   mappings VARCHAR(256)[],
-  PRIMARY KEY(_dataSet, name)
+  defaultViewConfiguration JSONB,
+  PRIMARY KEY(_dataSet, name),
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(

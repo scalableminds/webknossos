@@ -18,7 +18,7 @@ import {
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
+import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
@@ -79,10 +79,10 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
 
   responses.forEach((response: TaskCreationResponse, i: number) => {
     if (response.status === 200 && response.success) {
-      successfulTasks.push(response.success);
       if (!teamName) {
         teamName = response.success.team;
       }
+      successfulTasks.push(response.success);
     } else if (response.error) {
       failedTasks.push(`Line ${i}: ${response.error} \n`);
     }

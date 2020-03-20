@@ -38,6 +38,8 @@ import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 import Enum from "Enumjs";
+import { saveAs } from "file-saver";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -68,46 +70,88 @@ type State = {
 };
 
 export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
+  if (responses.length === 0) {
+    return;
+  }
   const successfulTasks = [];
   const failedTasks = [];
+  let teamName = null;
 
   responses.forEach((response: TaskCreationResponse, i: number) => {
     if (response.status === 200 && response.success) {
-      successfulTasks.push(
-        `${response.success.id},${response.success.creationInfo ||
-          "null"},(${response.success.editPosition.join(",")}) \n`,
-      );
+      successfulTasks.push(response.success);
+      if (!teamName) {
+        teamName = response.success.team;
+      }
     } else if (response.error) {
       failedTasks.push(`Line ${i}: ${response.error} \n`);
     }
   });
-
-  Modal.info({
-    title: `${successfulTasks.length} tasks were successfully created. ${
-      failedTasks.length
-    } tasks failed.`,
-    content: (
-      <div>
-        {successfulTasks.length > 0 ? (
-          <div>
-            Successful Tasks:
-            <pre>
-              taskId,filename,position
-              <br />
-              {successfulTasks}
-            </pre>
-          </div>
-        ) : null}
-        {failedTasks.length > 0 ? (
+  if (successfulTasks.length > 0) {
+    downloadTasksAsCSV(successfulTasks);
+  }
+  if (failedTasks.length > 0) {
+    Modal.info({
+      title: `Failed to create ${failedTasks.length} tasks.`,
+      content: (
+        <div>
           <div>
             Failed Tasks:
             <pre>{failedTasks}</pre>
           </div>
-        ) : null}
-      </div>
-    ),
-    width: 600,
-  });
+        </div>
+      ),
+      width: 600,
+    });
+  }
+}
+
+export function taskToText(task: APITask) {
+  const {
+    id,
+    created,
+    dataSet,
+    type,
+    neededExperience,
+    editPosition,
+    editRotation,
+    status,
+    team,
+    boundingBoxVec6,
+    projectName,
+    script,
+  } = task;
+  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(
+    position => `${position[0]},${position[1]},${position[2]}`,
+  );
+  const totalNumberOfInstances = status.open + status.active + status.finished;
+  const boundingBoxAsString = boundingBoxVec6
+    ? boundingBoxVec6.reduce((partialString, val) => `${partialString}${val},`)
+    : "_,_,_,_,_,_,";
+  const scriptId = script ? script.id : "_";
+
+  const taskAsString =
+    `${id},${created},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${editRotationAsString},${totalNumberOfInstances},${team},${boundingBoxAsString}${projectName},${scriptId}`;
+  return taskAsString;
+}
+
+export function downloadTasksAsCSV(tasks: Array<APITask>) {
+  if (tasks.length < 0) {
+    return;
+  }
+  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
+  const lastCreationTime = Math.max(...tasks.map(task => task.created));
+  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
+  const allTeamNames = _.uniq(tasks.map(task => task.team));
+  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
+  const allTasksAsStrings = tasks
+    .map(task => taskToText(task))
+    .reduce((partialString, taskAsString) => `${partialString}${taskAsString}\n`);
+  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
+  saveAs(blob, filename);
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {

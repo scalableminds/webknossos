@@ -14,6 +14,7 @@ import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import TaskAnnotationView from "admin/task/task_annotation_view";
+import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import TaskSearchForm, {
   type QueryObject,
   type TaskFormFieldValues,
@@ -105,6 +106,26 @@ class TaskListView extends React.PureComponent<Props, State> {
     });
   };
 
+  downloadSettingsFromAllTasks = () => {
+    const { searchQuery, tasks } = this.state;
+    console.log("here");
+    const filteredTasks = Utils.filterWithSearchQueryAND(
+      tasks,
+      [
+        "team",
+        "projectName",
+        "id",
+        "dataSet",
+        "created",
+        "type",
+        task => task.neededExperience.domain,
+      ],
+      searchQuery,
+    );
+    console.log("filteredTasks", filteredTasks);
+    downloadTasksAsCSV(filteredTasks);
+  };
+
   getAnonymousTaskLinkModal() {
     const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
     if (!this.state.isAnonymousTaskLinkModalVisible) {
@@ -156,6 +177,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             onChange={queryObject => this.fetchData(queryObject)}
             initialFieldValues={this.props.initialFieldValues}
             isLoading={isLoading}
+            onDownloadAllTasks={this.downloadSettingsFromAllTasks}
           />
         </Card>
 
@@ -281,7 +303,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             <Column
               title="Action"
               key="actions"
-              width={130}
+              width={170}
               fixed="right"
               render={(__, task: APITask) => (
                 <span>
@@ -313,6 +335,11 @@ class TaskListView extends React.PureComponent<Props, State> {
                       Download
                     </AsyncLink>
                   ) : null}
+                  <br />
+                  <a href="#" onClick={_.partial(downloadTasksAsCSV, [task])}>
+                    <Icon type="setting" />
+                    Download Settings
+                  </a>
                   <br />
                   <a href="#" onClick={_.partial(this.deleteTask, task)}>
                     <Icon type="delete" />

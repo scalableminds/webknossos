@@ -10,7 +10,7 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_ap
 import Persistence from "libs/persistence";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 export type QueryObject = {
   taskType?: string,
@@ -34,6 +34,7 @@ type Props = {
   initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
+  onDownloadAllTasks: () => void,
 };
 
 type State = {
@@ -141,6 +142,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   render() {
+    const { isLoading, onDownloadAllTasks } = this.props;
     const { getFieldDecorator } = this.props.form;
     const formItemLayout = {
       labelCol: { span: 5 },
@@ -232,8 +234,8 @@ class TaskSearchForm extends React.Component<Props, State> {
               <Button
                 type="primary"
                 htmlType="submit"
-                disabled={this.props.isLoading}
-                loading={this.props.isLoading}
+                disabled={isLoading}
+                loading={isLoading}
                 style={{ paddingRight: 3 }}
               >
                 Search <Icon type="down" />
@@ -241,6 +243,15 @@ class TaskSearchForm extends React.Component<Props, State> {
             </Dropdown>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
               Clear
+            </Button>
+            <Button
+              style={{ marginLeft: 8 }}
+              onClick={onDownloadAllTasks}
+              disabled={isLoading}
+              loading={isLoading}
+            >
+              Download settings of all tasks
+              <Icon type="download" />
             </Button>
           </Col>
         </Row>

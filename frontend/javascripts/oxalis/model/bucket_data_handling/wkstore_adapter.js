@@ -126,7 +126,10 @@ export async function requestFromStore(
 
   const { activeMapping } = state.temporaryConfiguration;
   const applyAgglomerates =
-    activeMapping != null && activeMapping.isMappingEnabled && activeMapping.mappingType === "HDF5"
+    isSegmentation &&
+    activeMapping != null &&
+    activeMapping.isMappingEnabled &&
+    activeMapping.mappingType === "HDF5"
       ? activeMapping.mappingName
       : null;
 

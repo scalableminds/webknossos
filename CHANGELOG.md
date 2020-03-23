@@ -10,7 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...HEAD)
 
  ### Added
--
+- Users can undo finishing a task when the task was finished via the API, e.g. by a user script. [#4495](https://github.com/scalableminds/webknossos/pull/4495)
 
  ### Changed
 - Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)

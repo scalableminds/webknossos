@@ -7,7 +7,29 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...HEAD)
+
+ ### Added
+-
+
+ ### Changed
+- Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)
+
+ ### Fixed
+- Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+
+ ### Removed
+-
+
+
+## [20.04.0](https://github.com/scalableminds/webknossos/releases/tag/20.04.0) - 2020-03-23
+[Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...20.04.0)
+
+### Highlights
+- Added the possibility to reopen finished tasks as non-admin for a configurable time. [#4415](https://github.com/scalableminds/webknossos/pull/4415)
+- Added support for drag-and-drop import of NML files even if the current view is read-only (e.g., because a dataset was opened in "view" mode). In this case, a new tracing is directly created into which the NML file is imported. [#4459](https://github.com/scalableminds/webknossos/pull/4459)
+- Added support for setting view configuration defaults in the `datasource-properties.json`. Use the `defaultViewConfiguration` field for Dataset settings and the `defaultViewConfiguration` field inside a layer for layer-specific settings. [#4357](https://github.com/scalableminds/webknossos/pull/4357)
+
 
 ### Added
 - Added support for setting view configuration defaults in the `datasource-properties.json`. Use the `defaultViewConfiguration` field for Dataset settings and the `defaultViewConfiguration` field inside a layer for layer-specific settings. [#4357](https://github.com/scalableminds/webknossos/pull/4357)
@@ -19,7 +41,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Changed
 - Changed NML import in tracings to try parsing files as NMLs and protobuf regardless of the file extension. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
-- Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)
 - Using the "Best Quality First" strategy in combination with having the "Render Black Data" setting disabled works better now. [#4470](https://github.com/scalableminds/webknossos/pull/4470)
 - Default interval for detecting new/deleted datasets on disk has been reduced from 10 to 1 minute. [#4464](https://github.com/scalableminds/webknossos/pull/4464)
 - The config values datastore.publicUri, tracingstore.publicUri and http.uri are now reapplied from the config at every startup if your instance has localhost-stores [#4482](https://github.com/scalableminds/webknossos/pull/4482)
@@ -31,7 +52,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a bug where users were wrongly allowed to edit the description of an annotation they were allowed to see but not update [#4466](https://github.com/scalableminds/webknossos/pull/4466)
 - Fixed the creation of histograms for float datasets that only have one value besides 0. [#4468](https://github.com/scalableminds/webknossos/pull/4468)
 - Fixed the creation of histograms for float datasets that have values close to the minimum. [#4475](https://github.com/scalableminds/webknossos/pull/4475)
-- Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
 
 ### Removed
 -

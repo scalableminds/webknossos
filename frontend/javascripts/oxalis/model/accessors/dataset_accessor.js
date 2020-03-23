@@ -12,12 +12,7 @@ import type {
 } from "admin/api_flow_types";
 import type { Settings, DataLayerType, DatasetConfiguration } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, {
-  ViewModeValues,
-  type Vector3,
-  Vector3Indicies,
-  type ViewMode,
-} from "oxalis/constants";
+import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
@@ -317,28 +312,23 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
 }
 
-export function getEnabledColorLayers(
+export function getEnabledLayers(
   dataset: APIDataset,
   datasetConfiguration: DatasetConfiguration,
-  options: { invert?: boolean } = {},
+  options: { invert?: boolean, onlyColorLayers: boolean } = { onlyColorLayers: false },
 ): Array<DataLayerType> {
-  const colorLayers = getColorLayers(dataset);
+  const dataLayers = options.onlyColorLayers
+    ? getColorLayers(dataset)
+    : dataset.dataSource.dataLayers;
   const layerSettings = datasetConfiguration.layers;
 
-  return colorLayers.filter(layer => {
+  return dataLayers.filter(layer => {
     const settings = layerSettings[layer.name];
     if (settings == null) {
       return false;
     }
     return settings.isDisabled === options.invert;
   });
-}
-
-export function isSegmentationLayerEnabled(
-  dataset: APIDataset,
-  datasetConfiguration: DatasetConfiguration,
-): boolean {
-  return !datasetConfiguration.isSegmentationDisabled;
 }
 
 export function getThumbnailURL(dataset: APIDataset): string {
@@ -379,16 +369,9 @@ export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-  viewMode: ViewMode,
 ): boolean {
-  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
-  if (isSegmentationLayer(dataset, layerName)) {
-    // Segmentation layers are only displayed in plane mode for now
-    return datasetConfiguration.segmentationOpacity > 0 && isPlaneMode;
-  } else {
-    const layerConfig = datasetConfiguration.layers[layerName];
-    return !layerConfig.isDisabled && layerConfig.alpha > 0;
-  }
+  const layerConfig = datasetConfiguration.layers[layerName];
+  return !layerConfig.isDisabled && layerConfig.alpha > 0;
 }
 
 export default {};

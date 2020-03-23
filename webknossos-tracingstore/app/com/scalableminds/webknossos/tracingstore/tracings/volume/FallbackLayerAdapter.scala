@@ -49,4 +49,6 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
   lazy val bucketProvider: BucketProvider = new FallbackBucketProvider(primary, fallback)
 
   override lazy val mappingProvider: MappingProvider = fallback.mappingProvider
+
+  val defaultViewConfiguration = primary.defaultViewConfiguration
 }

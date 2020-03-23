@@ -6,15 +6,15 @@ import java.nio.file.{AccessDeniedException, Path, Paths}
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.{AgglomerateProvider, MappingProvider}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
@@ -22,7 +22,6 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class DataSourceService @Inject()(
@@ -111,10 +110,6 @@ class DataSourceService @Inject()(
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
     MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
-
-  def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
-    AgglomerateProvider.exploreAgglomerates(
-      dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None

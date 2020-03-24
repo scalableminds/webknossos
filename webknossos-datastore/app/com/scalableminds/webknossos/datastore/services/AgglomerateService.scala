@@ -1,120 +1,94 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.File
-import java.nio.{Buffer, ByteBuffer, ByteOrder, FloatBuffer, IntBuffer, LongBuffer, ShortBuffer}
 import java.nio.file.Paths
+import java.nio._
 
+import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractDataLayerMapping,
-  DataLayer,
-  DataLayerMapping,
-  ElementClass
-}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  MappingReadInstruction
-}
-import com.scalableminds.webknossos.datastore.storage.{
-  AgglomerateCache,
-  AgglomerateFileCache,
-  CachedReader,
-  ParsedMappingCache
-}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateCache, AgglomerateFileCache, CachedReader}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import javax.swing.tree.DefaultMutableTreeNode
+import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
-import ch.systemsx.cisd.hdf5._
-import com.scalableminds.webknossos.datastore.dataformats.AgglomerateProvider
-
 import scala.util.Try
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with FoxImplicits with LazyLogging {
+  val agglomerateDir = "agglomerates"
+  val agglomerateFileExtension = "hdf5"
+  val datasetName = "/segment_to_agglomerate"
+  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+
   lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.mappingCacheMaxSize)
   lazy val cache = new AgglomerateCache(config.Braingames.Binary.cacheMaxSize)
 
+  def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
+    PathUtils
+      .listFiles(layerDir.resolve(agglomerateDir), PathUtils.fileExtensionFilter(agglomerateFileExtension))
+      .map { paths =>
+        paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
+      }
+      .toOption
+      .getOrElse(Nil)
+      .toSet
+  }
+
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Fox[Array[Byte]] = {
     def segmentToAgglomerate(segmentId: Long) =
-      cache.withCache(request, segmentId, cachedFileHandles)(initHDFReader)
+      cache.withCache(request, segmentId, cachedFileHandles)(readFromFile = readHDFBlock)(loadReader = initHDFReader)
 
     def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
     def shortFunc(buf: ByteBuffer, lon: Long) = buf putShort lon.toShort
     def intFunc(buf: ByteBuffer, lon: Long) = buf putInt lon.toInt
     def longFunc(buf: ByteBuffer, lon: Long) = buf putLong lon
 
-    def mapData(input: Array[Long], numBytes: Int, bufferFunc: (ByteBuffer, Long) => ByteBuffer): Fox[Array[Byte]] = {
+    def convertToAgglomerate(input: Array[Long],
+                             numBytes: Int,
+                             bufferFunc: (ByteBuffer, Long) => ByteBuffer): Fox[Array[Byte]] = {
       val agglomerateIds = Fox.combined(input.map(segmentToAgglomerate))
       agglomerateIds.map(
         _.foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc).array)
     }
 
     convertData(data, request.dataLayer.elementClass) match {
-      case data: Array[UByte]  => mapData(data.map(_.toLong), 1, byteFunc)
-      case data: Array[UShort] => mapData(data.map(_.toLong), 2, shortFunc)
-      case data: Array[UInt]   => mapData(data.map(_.toLong), 4, intFunc)
-      case data: Array[ULong]  => mapData(data.map(_.toLong), 8, longFunc)
-      case _                   => Fox.successful(data)
+      case data: Array[UByte]  => convertToAgglomerate(data.map(_.toLong), 1, byteFunc)
+      case data: Array[UShort] => convertToAgglomerate(data.map(_.toLong), 2, shortFunc)
+      case data: Array[UInt]   => convertToAgglomerate(data.map(_.toLong), 4, intFunc)
+      case data: Array[ULong]  => convertToAgglomerate(data.map(_.toLong), 8, longFunc)
+      // we can safely map the ULong to Long because we only do operations that are compatible with the two's complement
+      case _ => Fox.successful(data)
     }
   }
+
+  private def readHDFBlock(reader: IHDF5Reader, request: DataServiceDataRequest, segmentId: Long): Fox[Long] =
+    request.dataLayer.elementClass match {
+      case ElementClass.uint8 =>
+        try2Fox(Try(reader.uint8().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
+      case ElementClass.uint16 =>
+        try2Fox(Try(reader.uint16().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
+      case ElementClass.uint32 =>
+        try2Fox(Try(reader.uint32().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
+      case ElementClass.uint64 =>
+        try2Fox(Try(reader.uint64().readArrayBlockWithOffset(datasetName, 1, segmentId).head))
+      case _ => Fox.failure("Unsupported data type")
+    }
 
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile = Try(
-      Paths
-        .get(config.Braingames.Binary.baseFolder)
+      dataBaseDir
         .resolve(request.dataSource.id.team)
         .resolve(request.dataSource.id.name)
         .resolve(request.dataLayer.name)
-        .resolve(AgglomerateProvider.agglomerateDir)
-        .resolve(s"${request.settings.appliedAgglomerate.get}.${AgglomerateProvider.agglomerateFileExtension}")
+        .resolve(agglomerateDir)
+        .resolve(s"${request.settings.appliedAgglomerate.get}.${agglomerateFileExtension}")
         .toFile)
     try2Fox(hdfFile.map(f => CachedReader(HDF5FactoryProvider.get.openForReading(f))))
-  }
-
-  private def convertData(
-      data: Array[Byte],
-      elementClass: ElementClass.Value,
-      filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
-    elementClass match {
-      case ElementClass.uint8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-          .map(UShort(_))
-          .filter(!filterZeroes || _ != UShort(0))
-      case ElementClass.uint24 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-          .map(UInt(_))
-          .filter(!filterZeroes || _ != UInt(0))
-      case ElementClass.uint64 =>
-        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-          .map(ULong(_))
-          .filter(!filterZeroes || _ != ULong(0))
-      case ElementClass.float =>
-        convertDataImpl[Float, FloatBuffer](
-          data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
-    }
-
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
-    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-    srcBuffer.rewind()
-    val dstArray = Array.ofDim[T](srcBuffer.remaining())
-    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
-    dstArray
   }
 }

@@ -25,7 +25,7 @@ import scala.concurrent.duration._
 class BinaryDataService(dataBaseDir: Path,
                         loadTimeout: FiniteDuration,
                         maxCacheSize: Int,
-                        agglomerateService: AgglomerateService)
+                        val agglomerateService: AgglomerateService)
     extends FoxImplicits
     with LazyLogging {
 

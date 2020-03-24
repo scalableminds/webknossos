@@ -169,7 +169,9 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
-        Ok(Json.toJson(dataSourceService.exploreAgglomerates(organizationName, dataSetName, dataLayerName)))
+        Ok(
+          Json.toJson(binaryDataServiceHolder.binaryDataService.agglomerateService
+            .exploreAgglomerates(organizationName, dataSetName, dataLayerName)))
       }
     }
   }

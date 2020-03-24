@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import ch.systemsx.cisd.hdf5.IHDF5Reader
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.Cube
+import com.scalableminds.webknossos.datastore.dataformats.{Cube, SafeCachable}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -14,9 +14,7 @@ import spire.math.{UByte, UInt, ULong, UShort}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
-case class CachedReader(reader: IHDF5Reader) extends Cube {
-  override def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = Empty
-
+case class CachedReader(reader: IHDF5Reader) extends SafeCachable {
   override protected def onFinalize(): Unit = reader.close()
 }
 
@@ -36,19 +34,19 @@ object CachedAgglomerateFile {
                                   dataRequest.settings.appliedAgglomerate.get)
 }
 
-case class CachedAgglomerate(organization: String,
-                             dataSourceName: String,
-                             dataLayerName: String,
-                             agglomerateName: String,
-                             segmentId: Long)
+case class CachedAgglomerateKey(organization: String,
+                                dataSourceName: String,
+                                dataLayerName: String,
+                                agglomerateName: String,
+                                segmentId: Long)
 
-object CachedAgglomerate {
+object CachedAgglomerateKey {
   def from(dataRequest: DataServiceDataRequest, segmentId: Long) =
-    storage.CachedAgglomerate(dataRequest.dataSource.id.team,
-                              dataRequest.dataSource.id.name,
-                              dataRequest.dataLayer.name,
-                              dataRequest.settings.appliedAgglomerate.get,
-                              segmentId)
+    storage.CachedAgglomerateKey(dataRequest.dataSource.id.team,
+                                 dataRequest.dataSource.id.name,
+                                 dataRequest.dataLayer.name,
+                                 dataRequest.settings.appliedAgglomerate.get,
+                                 segmentId)
 }
 
 class AgglomerateFileCache(val maxEntries: Int)
@@ -87,38 +85,30 @@ class AgglomerateFileCache(val maxEntries: Int)
   }
 }
 
-class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgglomerate, Fox[Long]] with FoxImplicits {
-  val name = "/segment_to_agglomerate"
+class AgglomerateCache(val maxEntries: Int)
+    extends LRUConcurrentCache[CachedAgglomerateKey, Fox[Long]]
+    with FoxImplicits {
 
   def withCache(dataRequest: DataServiceDataRequest, segmentId: Long, cachedFileHandles: AgglomerateFileCache)(
-      loadFn: DataServiceDataRequest => Fox[CachedReader]): Fox[Long] = {
-    val cachedAgglomerate = CachedAgglomerate.from(dataRequest, segmentId)
+      readFromFile: (IHDF5Reader, DataServiceDataRequest, Long) => Fox[Long])(
+      loadReader: DataServiceDataRequest => Fox[CachedReader]): Fox[Long] = {
+    val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId)
 
     def handleUncachedAgglomerate(): Fox[Long] = {
-      val reader = cachedFileHandles.withCache(dataRequest)(loadFn)
-      val agglomerateId = dataRequest.dataLayer.elementClass match {
-        case ElementClass.uint8 =>
-          reader.flatMap(r => try2Fox(Try(r.reader.uint8().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
-        case ElementClass.uint16 =>
-          reader.flatMap(r => try2Fox(Try(r.reader.uint16().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
-        case ElementClass.uint32 =>
-          reader.flatMap(r => try2Fox(Try(r.reader.uint32().readArrayBlockWithOffset(name, 1, segmentId).head.toLong)))
-        case ElementClass.uint64 =>
-          reader.flatMap(r => try2Fox(Try(r.reader.uint64().readArrayBlockWithOffset(name, 1, segmentId).head)))
-        case _ => Fox.failure("Unsupported data type")
-      }
+      val reader = cachedFileHandles.withCache(dataRequest)(loadReader)
+      val agglomerateId = reader.flatMap(r => readFromFile(r.reader, dataRequest, segmentId))
 
       val checkedAgglomerateId = agglomerateId.futureBox.map {
         case Full(id)   => Full(id)
-        case f: Failure => remove(cachedAgglomerate); f
+        case f: Failure => remove(cachedAgglomerateKey); f
         case _          => Empty
       }
 
-      put(cachedAgglomerate, checkedAgglomerateId)
+      put(cachedAgglomerateKey, checkedAgglomerateId)
       agglomerateId
     }
 
-    get(cachedAgglomerate) match {
+    get(cachedAgglomerateKey) match {
       case Some(agglomerateId) => agglomerateId
       case None                => handleUncachedAgglomerate()
     }

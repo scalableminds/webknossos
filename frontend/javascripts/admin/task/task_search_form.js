@@ -96,43 +96,6 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes });
   }
 
-  updateFieldsAndGetQueryObject = (
-    err,
-    formValues: TaskFormFieldValues,
-    isRandom: boolean = false,
-  ): QueryObject => {
-    const queryObject: QueryObject = {};
-
-    if (formValues.taskId) {
-      const taskIds = formValues.taskId
-        .trim()
-        .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
-        .split(",")
-        .filter((taskId: string) => taskId.length > 0);
-
-      queryObject.ids = taskIds;
-    }
-
-    if (formValues.taskTypeId) {
-      queryObject.taskType = formValues.taskTypeId;
-    }
-
-    if (formValues.userId) {
-      queryObject.user = formValues.userId;
-    }
-
-    if (formValues.projectName) {
-      queryObject.project = formValues.projectName;
-    }
-
-    if (isRandom) {
-      queryObject.random = isRandom;
-    }
-
-    this.setState({ fieldValues: formValues });
-    return queryObject;
-  };
-
   handleFormSubmitWithSubsequentCall = (
     isRandom: boolean,
     subsequentMethod: QueryObject => Promise<void>,
@@ -143,7 +106,35 @@ class TaskSearchForm extends React.Component<Props, State> {
     }
 
     this.props.form.validateFields((err, formValues: TaskFormFieldValues) => {
-      const queryObject = this.updateFieldsAndGetQueryObject(err, formValues, isRandom);
+      const queryObject: QueryObject = {};
+
+      if (formValues.taskId) {
+        const taskIds = formValues.taskId
+          .trim()
+          .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
+          .split(",")
+          .filter((taskId: string) => taskId.length > 0);
+
+        queryObject.ids = taskIds;
+      }
+
+      if (formValues.taskTypeId) {
+        queryObject.taskType = formValues.taskTypeId;
+      }
+
+      if (formValues.userId) {
+        queryObject.user = formValues.userId;
+      }
+
+      if (formValues.projectName) {
+        queryObject.project = formValues.projectName;
+      }
+
+      if (isRandom) {
+        queryObject.random = isRandom;
+      }
+
+      this.setState({ fieldValues: formValues });
       subsequentMethod(queryObject);
     });
   };

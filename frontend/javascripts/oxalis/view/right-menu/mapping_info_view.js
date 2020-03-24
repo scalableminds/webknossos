@@ -148,36 +148,53 @@ class MappingInfoView extends React.Component<Props, State> {
       const [x, y] = mousePosition;
       globalMousePosition = calculateGlobalPos({ x, y });
     }
-    let usableZoomStep = zoomStep;
+
     const flycamPosition = position;
     const resolutions = getResolutions(dataset);
     // While render missing data black is not active and there is no segmentation for the current zoom step,
-    // the segmentation of a higher zoom step is shown.
-    // Here we determine the the next zoom step of the displayed segmentation data to get the correct segment ids.
-    while (
-      !renderMissingDataBlack &&
-      usableZoomStep < resolutions.length - 1 &&
-      !cube.hasDataAtPositionAndZoomStep(flycamPosition, usableZoomStep)
-    ) {
-      usableZoomStep++;
-    }
-    let usedResolutionAsString = null;
-    if (segmentationLayer) {
-      const usedResolution = segmentationLayer.resolutions[usableZoomStep];
-      usedResolutionAsString = `(${usedResolution[0]}-${usedResolution[1]}-${usedResolution[2]})`;
-    }
-    const getIdForPos = pos => pos && cube.getDataValue(pos, null, usableZoomStep);
+    // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
+    // displayed segmentation data to get the correct segment ids for the camera and the mouse position.
+    const getNextUsableZoomStepForPosition = pos => {
+      let usableZoomStep = zoomStep;
+      while (
+        pos &&
+        usableZoomStep < resolutions.length - 1 &&
+        !cube.hasDataAtPositionAndZoomStep(pos, usableZoomStep)
+      ) {
+        usableZoomStep++;
+      }
+      return usableZoomStep;
+    };
+
+    const usableZoomStepForCameraPosition = renderMissingDataBlack
+      ? zoomStep
+      : getNextUsableZoomStepForPosition(flycamPosition);
+    const usableZoomStepForMousePosition =
+      renderMissingDataBlack || globalMousePosition == null
+        ? zoomStep
+        : getNextUsableZoomStepForPosition(globalMousePosition);
+
+    const getResolutionOfZoomStepAsString = usedZoomStep => {
+      const usedResolution = segmentationLayer ? segmentationLayer.resolutions[usedZoomStep] : null;
+      return usedResolution
+        ? `${usedResolution[0]}-${usedResolution[1]}-${usedResolution[2]}`
+        : "Not available";
+    };
+    const getIdForPos = (pos, usableZoomStep) =>
+      pos && cube.getDataValue(pos, null, usableZoomStep);
 
     const tableData = [
       {
         name: "Active ID",
         key: "active",
         unmapped: this.props.activeCellId,
+        resolution: "",
       },
       {
         name: "ID at the center",
         key: "current",
-        unmapped: getIdForPos(flycamPosition),
+        unmapped: getIdForPos(flycamPosition, usableZoomStepForCameraPosition),
+        resolution: getResolutionOfZoomStepAsString(usableZoomStepForCameraPosition),
       },
       {
         name: (
@@ -194,7 +211,10 @@ class MappingInfoView extends React.Component<Props, State> {
           </span>
         ),
         key: "mouse",
-        unmapped: getIdForPos(globalMousePosition),
+        unmapped: getIdForPos(globalMousePosition, usableZoomStepForMousePosition),
+        resolution: globalMousePosition
+          ? getResolutionOfZoomStepAsString(usableZoomStepForMousePosition)
+          : "Not available",
       },
     ]
       .map(idInfo => ({
@@ -222,13 +242,6 @@ class MappingInfoView extends React.Component<Props, State> {
           </span>
         ),
       }));
-    // Add entry to show currently used resolution.
-    tableData.push({
-      name: "Segmentation resolution",
-      key: "resolution",
-      unmapped: usedResolutionAsString,
-      mapped: usedResolutionAsString,
-    });
 
     const columnHelper = (title, dataIndex) => ({
       title,
@@ -240,7 +253,11 @@ class MappingInfoView extends React.Component<Props, State> {
           [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
         : // Otherwise, only show an ID column
           [columnHelper("ID", "unmapped")];
-    const columns = [columnHelper("", "name"), ...idColumns];
+    const columns = [
+      columnHelper("", "name"),
+      ...idColumns,
+      columnHelper("resolution", "resolution"),
+    ];
     return (
       <Table
         size="small"

@@ -10,15 +10,17 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...HEAD)
 
  ### Added
--
+- Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab [#4480](https://github.com/scalableminds/webknossos/pull/4480)  
 
  ### Changed
 - Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)
 
  ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+- Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 
  ### Removed
+
 -
 
 

@@ -256,7 +256,7 @@ class MappingInfoView extends React.Component<Props, State> {
     const columns = [
       columnHelper("", "name"),
       ...idColumns,
-      columnHelper("resolution", "resolution"),
+      columnHelper("Magnification", "resolution"),
     ];
     return (
       <Table

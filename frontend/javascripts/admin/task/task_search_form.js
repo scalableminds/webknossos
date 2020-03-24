@@ -135,7 +135,7 @@ class TaskSearchForm extends React.Component<Props, State> {
 
   handleFormSubmitWithSubsequentCall = (
     isRandom: boolean,
-    subsequentMethod: QueryObject => void,
+    subsequentMethod: QueryObject => Promise<void>,
     event: ?SyntheticInputEvent<*>,
   ) => {
     if (event) {

@@ -123,12 +123,14 @@ class TaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  downloadSettingsFromAllTasks = () => {
+  downloadSettingsFromAllTasks = async (queryObject: QueryObject) => {
+    await this.fetchData(queryObject);
     const filteredTasks = this.getFilteredTasks();
     if (filteredTasks.length > 0) {
       downloadTasksAsCSV(filteredTasks);
+    } else {
+      Toast.warning(messages["task.no_tasks_to_download"]);
     }
-    // TODO: Add toast telling the user that there are not tasks for the selected filter options.
   };
 
   getAnonymousTaskLinkModal() {

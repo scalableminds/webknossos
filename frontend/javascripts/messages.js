@@ -143,6 +143,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
   ),
+  "task.no_tasks_to_download": "There are not tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",

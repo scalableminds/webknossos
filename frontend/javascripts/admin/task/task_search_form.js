@@ -30,11 +30,11 @@ export type TaskFormFieldValues = {
 
 type Props = {
   form: Object,
-  onChange: Function,
+  onChange: QueryObject => Promise<void>,
   initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
-  onDownloadAllTasks: () => void,
+  onDownloadAllTasks: QueryObject => Promise<void>,
 };
 
 type State = {
@@ -96,43 +96,64 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes });
   }
 
-  handleFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
+  updateFieldsAndGetQueryObject = (
+    err,
+    formValues: TaskFormFieldValues,
+    isRandom: boolean = false,
+  ): QueryObject => {
+    const queryObject: QueryObject = {};
+
+    if (formValues.taskId) {
+      const taskIds = formValues.taskId
+        .trim()
+        .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
+        .split(",")
+        .filter((taskId: string) => taskId.length > 0);
+
+      queryObject.ids = taskIds;
+    }
+
+    if (formValues.taskTypeId) {
+      queryObject.taskType = formValues.taskTypeId;
+    }
+
+    if (formValues.userId) {
+      queryObject.user = formValues.userId;
+    }
+
+    if (formValues.projectName) {
+      queryObject.project = formValues.projectName;
+    }
+
+    if (isRandom) {
+      queryObject.random = isRandom;
+    }
+
+    this.setState({ fieldValues: formValues });
+    return queryObject;
+  };
+
+  handleFormSubmitWithSubsequentCall = (
+    isRandom: boolean,
+    subsequentMethod: QueryObject => void,
+    event: ?SyntheticInputEvent<*>,
+  ) => {
     if (event) {
       event.preventDefault();
     }
 
     this.props.form.validateFields((err, formValues: TaskFormFieldValues) => {
-      const queryObject: QueryObject = {};
-
-      if (formValues.taskId) {
-        const taskIds = formValues.taskId
-          .trim()
-          .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
-          .split(",")
-          .filter((taskId: string) => taskId.length > 0);
-
-        queryObject.ids = taskIds;
-      }
-
-      if (formValues.taskTypeId) {
-        queryObject.taskType = formValues.taskTypeId;
-      }
-
-      if (formValues.userId) {
-        queryObject.user = formValues.userId;
-      }
-
-      if (formValues.projectName) {
-        queryObject.project = formValues.projectName;
-      }
-
-      if (isRandom) {
-        queryObject.random = isRandom;
-      }
-
-      this.setState({ fieldValues: formValues });
-      this.props.onChange(queryObject);
+      const queryObject = this.updateFieldsAndGetQueryObject(err, formValues, isRandom);
+      subsequentMethod(queryObject);
     });
+  };
+
+  handleFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
+    this.handleFormSubmitWithSubsequentCall(isRandom, this.props.onChange, event);
+  };
+
+  handleDownloadAllTasks = () => {
+    this.handleFormSubmitWithSubsequentCall(false, this.props.onDownloadAllTasks);
   };
 
   handleReset = () => {
@@ -142,7 +163,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   render() {
-    const { isLoading, onDownloadAllTasks } = this.props;
+    const { isLoading } = this.props;
     const { getFieldDecorator } = this.props.form;
     const formItemLayout = {
       labelCol: { span: 5 },
@@ -246,7 +267,7 @@ class TaskSearchForm extends React.Component<Props, State> {
             </Button>
             <Button
               style={{ marginLeft: 8 }}
-              onClick={onDownloadAllTasks}
+              onClick={this.handleDownloadAllTasks}
               disabled={isLoading}
               loading={isLoading}
             >

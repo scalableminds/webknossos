@@ -1,13 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Paths
 import java.nio._
+import java.nio.file.Paths
 
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateCache, AgglomerateFileCache, CachedReader}
 import com.typesafe.scalalogging.LazyLogging
@@ -16,7 +15,6 @@ import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.ClassTag
 import scala.util.Try
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with FoxImplicits with LazyLogging {
@@ -25,8 +23,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val datasetName = "/segment_to_agglomerate"
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
-  lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.mappingCacheMaxSize)
-  lazy val cache = new AgglomerateCache(config.Braingames.Binary.cacheMaxSize)
+  lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
+  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -42,7 +40,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Fox[Array[Byte]] = {
     def segmentToAgglomerate(segmentId: Long) =
-      cache.withCache(request, segmentId, cachedFileHandles)(readFromFile = readHDFBlock)(loadReader = initHDFReader)
+      cache.withCache(request, segmentId, cachedFileHandles)(readFromFile = readHDF)(loadReader = initHDFReader)
 
     def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
     def shortFunc(buf: ByteBuffer, lon: Long) = buf putShort lon.toShort
@@ -67,18 +65,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
-  private def readHDFBlock(reader: IHDF5Reader, request: DataServiceDataRequest, segmentId: Long): Fox[Long] =
-    request.dataLayer.elementClass match {
-      case ElementClass.uint8 =>
-        try2Fox(Try(reader.uint8().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
-      case ElementClass.uint16 =>
-        try2Fox(Try(reader.uint16().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
-      case ElementClass.uint32 =>
-        try2Fox(Try(reader.uint32().readArrayBlockWithOffset(datasetName, 1, segmentId).head.toLong))
-      case ElementClass.uint64 =>
-        try2Fox(Try(reader.uint64().readArrayBlockWithOffset(datasetName, 1, segmentId).head))
-      case _ => Fox.failure("Unsupported data type")
-    }
+  private def readHDF(reader: IHDF5Reader, segmentId: Long): Fox[Long] =
+    // We don't need to differentiate between the datatypes because the underlying library does the conversion for us
+    try2Fox(Try(reader.uint64().readArrayBlockWithOffset(datasetName, 1, segmentId).head))
 
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile = Try(

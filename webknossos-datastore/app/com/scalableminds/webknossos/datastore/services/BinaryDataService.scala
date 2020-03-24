@@ -12,7 +12,12 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   MappingReadInstruction
 }
-import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
+import com.scalableminds.webknossos.datastore.storage.{
+  CachedAgglomerateFile,
+  CachedAgglomerateKey,
+  CachedCube,
+  DataCubeCache
+}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -189,6 +194,11 @@ class BinaryDataService(dataBaseDir: Path,
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
+    def matchingAgglomerate(cachedAgglomerate: CachedAgglomerateKey) =
+      cachedAgglomerate.dataSourceName == dataSetName && cachedAgglomerate.organization == organizationName && layerName
+        .forall(_ == cachedAgglomerate.dataLayerName)
+
+    agglomerateService.cache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
   }
 }

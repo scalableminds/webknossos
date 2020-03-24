@@ -106,10 +106,9 @@ class TaskListView extends React.PureComponent<Props, State> {
     });
   };
 
-  downloadSettingsFromAllTasks = () => {
+  getFilteredTasks = () => {
     const { searchQuery, tasks } = this.state;
-    console.log("here");
-    const filteredTasks = Utils.filterWithSearchQueryAND(
+    return Utils.filterWithSearchQueryAND(
       tasks,
       [
         "team",
@@ -122,8 +121,14 @@ class TaskListView extends React.PureComponent<Props, State> {
       ],
       searchQuery,
     );
-    console.log("filteredTasks", filteredTasks);
-    downloadTasksAsCSV(filteredTasks);
+  };
+
+  downloadSettingsFromAllTasks = () => {
+    const filteredTasks = this.getFilteredTasks();
+    if (filteredTasks.length > 0) {
+      downloadTasksAsCSV(filteredTasks);
+    }
+    // TODO: Add toast telling the user that there are not tasks for the selected filter options.
   };
 
   getAnonymousTaskLinkModal() {
@@ -152,7 +157,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const { searchQuery, isLoading, tasks } = this.state;
+    const { searchQuery, isLoading } = this.state;
 
     return (
       <div className="container">
@@ -183,19 +188,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
         <Spin spinning={isLoading} size="large">
           <FixedExpandableTable
-            dataSource={Utils.filterWithSearchQueryAND(
-              tasks,
-              [
-                "team",
-                "projectName",
-                "id",
-                "dataSet",
-                "created",
-                "type",
-                task => task.neededExperience.domain,
-              ],
-              searchQuery,
-            )}
+            dataSource={this.getFilteredTasks()}
             rowKey="id"
             pagination={{
               defaultPageSize: 50,
@@ -335,11 +328,6 @@ class TaskListView extends React.PureComponent<Props, State> {
                       Download
                     </AsyncLink>
                   ) : null}
-                  <br />
-                  <a href="#" onClick={_.partial(downloadTasksAsCSV, [task])}>
-                    <Icon type="setting" />
-                    Download Settings
-                  </a>
                   <br />
                   <a href="#" onClick={_.partial(this.deleteTask, task)}>
                     <Icon type="delete" />

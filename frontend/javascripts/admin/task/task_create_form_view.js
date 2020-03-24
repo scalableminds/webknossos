@@ -46,6 +46,7 @@ const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 const fullWidth = { width: "100%" };
+const maxDisplayedTasksCount = 50;
 
 type Props = {
   form: Object,
@@ -69,10 +70,27 @@ type State = {
   isUploading: boolean,
 };
 
-export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
-  if (responses.length === 0) {
+export function taskToText(task: APITask) {
+  const { id, creationInfo, editPosition } = task;
+  return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
+}
+
+export function downloadTasksAsCSV(tasks: Array<APITask>) {
+  if (tasks.length < 0) {
     return;
   }
+  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
+  const lastCreationTime = Math.max(...tasks.map(task => task.created));
+  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
+  const allTeamNames = _.uniq(tasks.map(task => task.team));
+  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
+  const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
+  saveAs(blob, filename);
+}
+
+export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
   const successfulTasks = [];
   const failedTasks = [];
   let teamName = null;
@@ -87,71 +105,59 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
       failedTasks.push(`Line ${i}: ${response.error} \n`);
     }
   });
-  if (successfulTasks.length > 0) {
-    downloadTasksAsCSV(successfulTasks);
-  }
-  if (failedTasks.length > 0) {
-    Modal.info({
-      title: `Failed to create ${failedTasks.length} tasks.`,
-      content: (
-        <div>
+  const failedTasksAsString = failedTasks.join("");
+  const successfulTasksContent =
+    successfulTasks.length <= maxDisplayedTasksCount ? (
+      <pre>
+        taskId,filename,position
+        <br />
+        {successfulTasks.map(task => taskToText(task)).join("\n")}
+      </pre>
+    ) : (
+      `The number of successful tasks is too large. We suggest to download them as a CSV
+            using the button below.`
+    );
+  const failedTasksContent =
+    failedTasks.length <= maxDisplayedTasksCount ? (
+      <pre>{failedTasksAsString}</pre>
+    ) : (
+      `The number of failed tasks is too large. We suggest to download them as a CSV
+            using the button below.`
+    );
+  Modal.info({
+    title: `Failed to create ${failedTasks.length} tasks.`,
+    content: (
+      <div>
+        {successfulTasks.length > 0 ? (
           <div>
-            Failed Tasks:
-            <pre>{failedTasks}</pre>
+            Successful Tasks:
+            {successfulTasksContent}
           </div>
-        </div>
-      ),
-      width: 600,
-    });
-  }
-}
-
-export function taskToText(task: APITask) {
-  const {
-    id,
-    created,
-    dataSet,
-    type,
-    neededExperience,
-    editPosition,
-    editRotation,
-    status,
-    team,
-    boundingBoxVec6,
-    projectName,
-    script,
-  } = task;
-  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
-  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(
-    position => `${position[0]},${position[1]},${position[2]}`,
-  );
-  const totalNumberOfInstances = status.open + status.active + status.finished;
-  const boundingBoxAsString = boundingBoxVec6
-    ? boundingBoxVec6.reduce((partialString, val) => `${partialString}${val},`)
-    : "_,_,_,_,_,_,";
-  const scriptId = script ? script.id : "_";
-
-  const taskAsString =
-    `${id},${created},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
-    `${editRotationAsString},${totalNumberOfInstances},${team},${boundingBoxAsString}${projectName},${scriptId}`;
-  return taskAsString;
-}
-
-export function downloadTasksAsCSV(tasks: Array<APITask>) {
-  if (tasks.length < 0) {
-    return;
-  }
-  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
-  const lastCreationTime = Math.max(...tasks.map(task => task.created));
-  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
-  const allTeamNames = _.uniq(tasks.map(task => task.team));
-  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
-  const allTasksAsStrings = tasks
-    .map(task => taskToText(task))
-    .reduce((partialString, taskAsString) => `${partialString}${taskAsString}\n`);
-  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
-  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
-  saveAs(blob, filename);
+        ) : null}
+        {successfulTasks.length > 0 ? (
+          <Button onClick={() => downloadTasksAsCSV(successfulTasks)}>Download tasks as CSV</Button>
+        ) : null}
+        {failedTasks.length > 0 ? (
+          <div>
+            <br />
+            Failed Tasks:
+            {failedTasksContent}
+            <Button
+              onClick={() => {
+                const blob = new Blob([failedTasksAsString], {
+                  type: "text/plain;charset=utf-8",
+                });
+                saveAs(blob, "failed-tasks.csv");
+              }}
+            >
+              Download failed tasks as CSV
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    ),
+    width: 600,
+  });
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {

@@ -220,7 +220,6 @@ class MappingInfoView extends React.Component<Props, State> {
       successMessageDelay: 2000,
     });
     Model.getSegmentationLayer().setActiveMapping(mappingName, mappingType, progressCallback);
-    this.handleSetMappingEnabled(true);
   };
 
   async refreshLayerMappings() {

@@ -118,6 +118,7 @@ class Mappings {
 
     if (mappingType === "HDF5") {
       Store.dispatch(setMappingAction(mappingName, null, null, null, false, mappingType));
+      Store.dispatch(setMappingEnabledAction(true));
       return;
     }
 

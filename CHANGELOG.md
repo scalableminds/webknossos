@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
  ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+- Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 
  ### Removed
 -

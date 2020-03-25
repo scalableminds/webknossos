@@ -363,10 +363,6 @@ function _parseEntities(obj: Object, key: string): string {
   return Saxophone.parseEntities(obj[key]);
 }
 
-function findTreeByNodeId(trees: TreeMap, nodeId: number): ?Tree {
-  return _.values(trees).find(tree => tree.nodes.has(nodeId));
-}
-
 function isTreeConnected(tree: Tree): boolean {
   const seenNodes = new Map();
 

@@ -406,7 +406,6 @@ export function wrapInNewGroup(
   _originalTreeGroups: ?Array<TreeGroup>,
   wrappingGroupName: string,
 ): [TreeMap, Array<TreeGroup>] {
-  console.log("wrapInNewGroup called!");
   const originalTreeGroups = _originalTreeGroups || [];
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash

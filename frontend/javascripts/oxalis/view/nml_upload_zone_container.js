@@ -16,6 +16,7 @@ type State = {
   dropzoneActive: boolean,
   isImporting: boolean,
   createGroupForEachFile: boolean,
+  createGroupForSingleFile: boolean,
 };
 
 type OwnProps = {|
@@ -82,6 +83,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     dropzoneActive: false,
     isImporting: false,
     createGroupForEachFile: true,
+    createGroupForSingleFile: false,
   };
 
   onDragEnter = (evt: SyntheticDragEvent<>) => {
@@ -139,7 +141,12 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   importTracingFiles = async () => {
     this.setState({ isImporting: true });
     try {
-      await this.props.onImport(this.state.files, this.state.createGroupForEachFile);
+      await this.props.onImport(
+        this.state.files,
+        this.state.files.length > 1
+          ? this.state.createGroupForEachFile
+          : this.state.createGroupForSingleFile,
+      );
     } finally {
       this.setState({ isImporting: false, files: [] });
     }
@@ -187,8 +194,16 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
           <React.Fragment>
             <Checkbox
               style={{ float: "left" }}
-              onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
-              checked={this.state.createGroupForEachFile}
+              onChange={e =>
+                this.state.files.length > 1
+                  ? this.setState({ createGroupForEachFile: e.target.checked })
+                  : this.setState({ createGroupForSingleFile: e.target.checked })
+              }
+              checked={
+                this.state.files.length > 1
+                  ? this.state.createGroupForEachFile
+                  : this.state.createGroupForSingleFile
+              }
             >
               {newGroupMsg}
             </Checkbox>

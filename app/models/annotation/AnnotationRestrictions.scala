@@ -17,6 +17,8 @@ class AnnotationRestrictions {
 
   def allowFinish(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
+  def allowFinishSoft(user: Option[User]): Fox[Boolean] = allowFinish(user)
+
   def allowDownload(user: Option[User]): Fox[Boolean] = allowAccess(user)
 
   def allowAccess(user: User): Fox[Boolean] = allowAccess(Some(user))
@@ -24,6 +26,8 @@ class AnnotationRestrictions {
   def allowUpdate(user: User): Fox[Boolean] = allowUpdate(Some(user))
 
   def allowFinish(user: User): Fox[Boolean] = allowFinish(Some(user))
+
+  def allowFinishSoft(user: User): Fox[Boolean] = allowFinish(Some(user))
 
   def allowDownload(user: User): Fox[Boolean] = allowDownload(Some(user))
 }
@@ -75,17 +79,15 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService) extends 
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished)
         }).orElse(Fox.successful(false))
+
+      /* used in backend only to allow repeatable finish calls */
+      override def allowFinishSoft(userOption: Option[User]) =
+        (for {
+          user <- option2Fox(userOption)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+        } yield {
+          annotation._user == user._id || isTeamManagerOrAdminOfTeam
+        }).orElse(Fox.successful(false))
     }
 
-  def readonlyAnnotation() =
-    new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = Fox.successful(true)
-    }
-
-  def updateableAnnotation() =
-    new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = Fox.successful(true)
-      override def allowUpdate(user: Option[User]) = Fox.successful(true)
-      override def allowFinish(user: Option[User]) = Fox.successful(true)
-    }
 }

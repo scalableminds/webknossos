@@ -516,6 +516,15 @@ export function addTreesAndGroups(
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
+      const needsReassignedIds = Object.keys(skeletonTracing.trees) > 0;
+
+      if (!needsReassignedIds) {
+        // Without reassigning ids, the code is considerably faster.
+        const newTrees = trees;
+        const newMaxNodeId = getMaximumNodeId(trees);
+        return Maybe.Just([trees, treeGroups, newMaxNodeId]);
+      }
+
       // Check whether any group ids collide and assign new ids
       const groupIdMap = {};
       let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;

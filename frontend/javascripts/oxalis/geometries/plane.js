@@ -178,10 +178,6 @@ class Plane {
   setLinearInterpolationEnabled = (enabled: boolean) => {
     this.plane.material.setUseBilinearFiltering(enabled);
   };
-
-  setIsMappingEnabled = (isMappingEnabled: boolean) => {
-    this.plane.material.setIsMappingEnabled(isMappingEnabled);
-  };
 }
 
 export default Plane;

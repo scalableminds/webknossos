@@ -411,13 +411,6 @@ class SceneController {
     this.userBoundingBox.setCorners(bb.min, bb.max);
   }
 
-  setIsMappingEnabled(isMappingEnabled: boolean): void {
-    for (const plane of _.values(this.planes)) {
-      plane.setIsMappingEnabled(isMappingEnabled);
-    }
-    app.vent.trigger("rerender");
-  }
-
   stopPlaneMode(): void {
     for (const plane of _.values(this.planes)) {
       plane.setVisible(false);
@@ -463,11 +456,6 @@ class SceneController {
     listenToStoreProperty(
       storeState => getSomeTracing(storeState.tracing).boundingBox,
       bb => this.buildTaskingBoundingBox(bb),
-    );
-
-    listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
-      isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
     );
   }
 }

@@ -55,6 +55,7 @@ export type APISegmentationLayer = {|
   +category: "segmentation",
   +largestSegmentId: number,
   +mappings?: Array<string>,
+  +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
 |};
 

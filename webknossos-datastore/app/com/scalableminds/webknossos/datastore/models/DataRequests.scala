@@ -28,6 +28,7 @@ case class WebKnossosDataRequest(
     zoomStep: Int,
     cubeSize: Int,
     fourBit: Option[Boolean],
+    applyAgglomerate: Option[String],
     version: Option[Long]
 ) extends AbstractDataRequest {
 
@@ -37,7 +38,7 @@ case class WebKnossosDataRequest(
            cubeSize,
            cubeSize)
 
-  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), version)
+  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
 }
 
 object WebKnossosDataRequest {

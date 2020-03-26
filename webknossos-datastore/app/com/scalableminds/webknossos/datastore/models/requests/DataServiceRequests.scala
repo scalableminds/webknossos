@@ -6,7 +6,9 @@ import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
-case class DataServiceRequestSettings(halfByte: Boolean, version: Option[Long] = None)
+case class DataServiceRequestSettings(halfByte: Boolean,
+                                      appliedAgglomerate: Option[String] = None,
+                                      version: Option[Long] = None)
 
 object DataServiceRequestSettings {
   val default = DataServiceRequestSettings(halfByte = false)

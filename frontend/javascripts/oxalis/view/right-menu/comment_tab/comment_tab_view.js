@@ -10,7 +10,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 
-import { Comment } from "oxalis/view/right-menu/comment_tab/comment";
+import { Comment, commentListId } from "oxalis/view/right-menu/comment_tab/comment";
 import { type Comparator, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
@@ -42,7 +42,7 @@ const InputGroup = Input.Group;
 const treeTypeHint = ([]: Array<Tree>);
 const commentTypeHint = ([]: Array<CommentType>);
 
-const commentListId = "commentList";
+const commentTabId = "commentTabId";
 
 const SortByEnum = Enum.make({
   NAME: "NAME",
@@ -377,7 +377,6 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       commentOrTree.treeId != null &&
       commentOrTree.treeId === this.props.skeletonTracing.activeTreeId;
 
-    const commentTabId = "commentTabId";
     return (
       <div
         id={commentTabId}
@@ -386,7 +385,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       >
         <DomVisibilityObserver targetId={commentTabId}>
           {isVisibleInDom => {
-            if (!isVisibleInDom) {
+            if (!isVisibleInDom && !isMarkdownModalVisible) {
               return null;
             }
             // If the activeNode has a comment, scroll to it,

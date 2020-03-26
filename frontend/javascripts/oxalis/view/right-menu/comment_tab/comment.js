@@ -25,6 +25,8 @@ type CommentProps = {
   style: Object,
 };
 
+export const commentListId = "commentList";
+
 function ActiveCommentPopover({
   comment,
   children,
@@ -41,7 +43,7 @@ function ActiveCommentPopover({
       visible
       autoAdjustOverflow={false}
       placement="rightTop"
-      getPopupContainer={() => document.getElementById("comment-list")}
+      getPopupContainer={() => document.getElementById(commentListId)}
       style={{ maxHeight: 200, overflowY: "auto" }}
     >
       {children}

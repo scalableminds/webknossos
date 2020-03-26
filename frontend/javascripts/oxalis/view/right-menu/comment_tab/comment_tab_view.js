@@ -385,7 +385,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       >
         <DomVisibilityObserver targetId={commentTabId}>
           {isVisibleInDom => {
-            if (!isVisibleInDom && !isMarkdownModalVisible) {
+            if (!isVisibleInDom && !this.state.isMarkdownModalVisible) {
               return null;
             }
             // If the activeNode has a comment, scroll to it,

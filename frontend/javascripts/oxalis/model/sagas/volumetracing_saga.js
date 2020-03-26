@@ -55,9 +55,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
   if (yield* select(state => state.tracing.volume == null)) {
     return;
   }
-
+  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
+  if (!segmentationLayerName) {
+    return;
+  }
   const isOpacityTooLow = yield* select(
-    state => state.datasetConfiguration.segmentationOpacity < 10,
+    state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
   );
   if (isOpacityTooLow) {
     Toast.warning(

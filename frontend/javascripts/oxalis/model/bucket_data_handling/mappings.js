@@ -17,7 +17,7 @@ import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/
 import type DataLayer from "oxalis/model/data_layer";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
-import Store, { type Mapping } from "oxalis/store";
+import Store, { type Mapping, type MappingType } from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -49,7 +49,7 @@ export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
       console.warn(
         "Using mappings.activate() is deprecated. Please use the official front-end API function activateMapping() instead.",
       );
-      return segmentationLayer.setActiveMapping(mapping);
+      return segmentationLayer.setActiveMapping(mapping, "JSON");
     },
   };
 }
@@ -74,36 +74,79 @@ class Mappings {
     this.layerName = layerName;
     this.baseUrl = `${dataStoreUrl}/data/datasets/${organizationName}/${datasetName}/layers/${mappingLayerName}/mappings/`;
     this.progressCallback = noopProgressCallback;
+    setTimeout(() => this.registerReloadHandler(), 5000);
+  }
+
+  registerReloadHandler() {
+    let oldMapping = null;
+    const isAgglomerate = mapping => {
+      if (!mapping) {
+        return false;
+      }
+      return mapping.mappingType === "HDF5";
+    };
+
+    listenToStoreProperty(
+      state => state.temporaryConfiguration.activeMapping,
+      mapping => {
+        const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
+        oldMapping = mapping;
+        if (shouldReload) {
+          window.webknossos.apiReady().then(api => {
+            api.data.reloadBuckets(this.layerName);
+          });
+        }
+      },
+    );
   }
 
   getMappingNames(): Array<string> {
     return getMappings(Store.getState().dataset, this.layerName);
   }
 
-  async activateMapping(mappingName: ?string, _progressCallback?: ProgressCallback) {
+  async activateMapping(
+    mappingName: ?string,
+    mappingType: MappingType,
+    _progressCallback?: ProgressCallback,
+  ) {
     this.progressCallback = _progressCallback || noopProgressCallback;
     const progressCallback = this.progressCallback;
     if (mappingName == null) {
       Store.dispatch(setMappingAction(null));
-    } else {
-      const fetchedMappings = {};
-      await progressCallback(false, "Downloading mapping...");
-      await this.fetchMappings(mappingName, fetchedMappings);
-      const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
-      // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
-      // class will get the first color, and so on
-      const assignNewIds = mappingColors != null && mappingColors.length > 0;
-      await progressCallback(false, "Building mapping structure...");
-      const [mappingObject, mappingKeys] = this.buildMappingObject(
-        mappingName,
-        fetchedMappings,
-        assignNewIds,
-      );
-      await progressCallback(false, "Applying mapping...");
-      Store.dispatch(
-        setMappingAction(mappingName, mappingObject, mappingKeys, mappingColors, hideUnmappedIds),
-      );
+      return;
     }
+
+    if (mappingType === "HDF5") {
+      Store.dispatch(setMappingAction(mappingName, null, null, null, false, mappingType));
+      Store.dispatch(setMappingEnabledAction(true));
+      return;
+    }
+
+    // Handle JSON mapping
+    const fetchedMappings = {};
+    await progressCallback(false, "Downloading mapping...");
+    await this.fetchMappings(mappingName, fetchedMappings);
+    const { hideUnmappedIds, colors: mappingColors } = fetchedMappings[mappingName];
+    // If custom colors are specified for a mapping, assign the mapped ids specifically, so that the first equivalence
+    // class will get the first color, and so on
+    const assignNewIds = mappingColors != null && mappingColors.length > 0;
+    await progressCallback(false, "Building mapping structure...");
+    const [mappingObject, mappingKeys] = this.buildMappingObject(
+      mappingName,
+      fetchedMappings,
+      assignNewIds,
+    );
+    await progressCallback(false, "Applying mapping...");
+    Store.dispatch(
+      setMappingAction(
+        mappingName,
+        mappingObject,
+        mappingKeys,
+        mappingColors,
+        hideUnmappedIds,
+        mappingType,
+      ),
+    );
   }
 
   async fetchMappings(mappingName: string, fetchedMappings: APIMappings): Promise<void> {

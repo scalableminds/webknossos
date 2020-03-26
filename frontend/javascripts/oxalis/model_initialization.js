@@ -255,7 +255,13 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
-    const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
+    const isHybridTracing = tracing.skeleton != null && tracing.volume != null;
+    let maybeUrlViewMode = UrlManager.initialState.mode;
+    if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
+      // Here we avoid going into volume mode in hybrid tracings.
+      maybeUrlViewMode = constants.MODE_PLANE_TRACING;
+    }
+    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
 }

@@ -13,10 +13,10 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
       };
     }
     case "SET_LAYER_MAPPINGS": {
-      const { layerName, mappingNames } = action;
+      const { layerName, mappingNames, agglomerateNames } = action;
       const newLayers = state.dataset.dataSource.dataLayers.map(layer => {
         if (layer.category === "segmentation" && layer.name === layerName) {
-          return { ...layer, mappings: mappingNames };
+          return { ...layer, mappings: mappingNames, agglomerates: agglomerateNames };
         } else {
           return layer;
         }

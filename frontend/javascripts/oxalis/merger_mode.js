@@ -2,6 +2,7 @@
 import { Modal } from "antd";
 import type { Node, TreeMap } from "oxalis/store";
 import api from "oxalis/api/internal_api";
+import _ from "lodash";
 
 type NodeWithTreeId = Node & { treeId: number };
 
@@ -12,8 +13,6 @@ type MergerModeState = {
   nodes: Array<NodeWithTreeId>,
   segmentationLayerName: string,
   nodeSegmentMap: Object,
-  segmentationOpacity: number,
-  segmentationOn: boolean,
 };
 
 const unregisterKeyHandlers = [];
@@ -176,15 +175,19 @@ function deleteTreeOverwrite(store, call, action, mergerModeState: MergerModeSta
   call(action);
 }
 
+type WriteableDatasetLayerConfiguration = {
+  [name: string]: { isDisabled: boolean },
+};
+
 // Changes the opacity of the segmentation layer
 function changeOpacity(mergerModeState: MergerModeState) {
-  if (mergerModeState.segmentationOn) {
-    api.data.setConfiguration("segmentationOpacity", 0);
-    mergerModeState.segmentationOn = false;
-  } else {
-    api.data.setConfiguration("segmentationOpacity", mergerModeState.segmentationOpacity);
-    mergerModeState.segmentationOn = true;
-  }
+  const { segmentationLayerName } = mergerModeState;
+  const layerSettings = api.data.getConfiguration("layers");
+  // Invert the visibility of the segmentation layer.
+  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = (_.cloneDeep(layerSettings): any);
+  const isSegmentationDisabled = copyOfLayerSettings[segmentationLayerName].isDisabled;
+  copyOfLayerSettings[segmentationLayerName].isDisabled = !isSegmentationDisabled;
+  api.data.setConfiguration("layers", copyOfLayerSettings);
 }
 
 function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
@@ -272,16 +275,15 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
     return;
   }
   isCodeActive = true;
+  const segmentationLayerName = api.data.getVolumeTracingLayerName();
   // Create an object that store the state of the merger mode.
   const mergerModeState: MergerModeState = {
     treeColors: {},
     colorMapping: {},
     nodesPerSegment: {},
     nodes: getAllNodesWithTreeId(),
-    segmentationLayerName: api.data.getVolumeTracingLayerName(),
+    segmentationLayerName,
     nodeSegmentMap: {},
-    segmentationOpacity: ((api.data.getConfiguration("segmentationOpacity"): any): number),
-    segmentationOn: true,
   };
   // Register the overwrites
   unregisterOverwrites.push(

@@ -14,4 +14,4 @@ rm -rf webknossos-tracingstore/project/project/target
 rm -rf node_modules
 mkdir target
 
-echo "[info] Done."
+echo "[info] Done. Don’t forget to run yarn install before the next yarn start."

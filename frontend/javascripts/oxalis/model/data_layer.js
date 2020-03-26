@@ -10,7 +10,7 @@ import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rende
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import Store, { type DataLayerType } from "oxalis/store";
+import Store, { type DataLayerType, type MappingType } from "oxalis/store";
 
 // TODO: Non-reactive
 class DataLayer {
@@ -67,9 +67,13 @@ class DataLayer {
     );
   }
 
-  setActiveMapping(mappingName: ?string, progressCallback?: ProgressCallback): void {
+  setActiveMapping(
+    mappingName: ?string,
+    mappingType: MappingType,
+    progressCallback?: ProgressCallback,
+  ): void {
     this.activeMapping = mappingName;
-    this.mappings.activateMapping(mappingName, progressCallback);
+    this.mappings.activateMapping(mappingName, mappingType, progressCallback);
   }
 }
 

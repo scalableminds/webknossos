@@ -520,7 +520,6 @@ export function addTreesAndGroups(
 
       if (!needsReassignedIds) {
         // Without reassigning ids, the code is considerably faster.
-        const newTrees = trees;
         const newMaxNodeId = getMaximumNodeId(trees);
         return Maybe.Just([trees, treeGroups, newMaxNodeId]);
       }

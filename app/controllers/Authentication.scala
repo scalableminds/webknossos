@@ -438,22 +438,23 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
+                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.notPossible"
                     organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
-                    user <- userService.insert(organization._id,
-                                               email,
-                                               firstName,
-                                               lastName,
-                                               isActive = true,
-                                               isOrgTeamManager = true,
-                                               loginInfo,
-                                               passwordHasher.hash(signUpData.password),
-                                               isAdmin = true) ?~> "user.creation.failed"
-                    _ <- createOrganizationFolder(organization.name, loginInfo)
+                    _ <- userService.insert(organization._id,
+                                            email,
+                                            firstName,
+                                            lastName,
+                                            isActive = true,
+                                            isOrgTeamManager = true,
+                                            loginInfo,
+                                            passwordHasher.hash(signUpData.password),
+                                            isAdmin = true) ?~> "user.creation.failed"
+                    _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
-                                                       request.headers.get("Host").headOption.getOrElse("")))
+                                                       request.headers.get("Host").getOrElse("")))
                     Ok
                   }
                 }
@@ -475,7 +476,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   private def createOrganization(organizationDisplayName: String) =
     for {
-      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
       organization = Organization(ObjectId.generate,
                                   organizationName.replaceAll(" ", "_"),
                                   "",
@@ -500,9 +501,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
-    } yield Full(())
-
+    } yield ()
   }
+
+  private def checkOrganizationFolder(implicit request: RequestHeader) =
+    for {
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      _ <- Fox.serialCombined(datastores)(d => rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get)
+    } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

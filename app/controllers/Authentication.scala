@@ -438,7 +438,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.notPossible"
+                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
                     organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
                     _ <- userService.insert(organization._id,
                                             email,

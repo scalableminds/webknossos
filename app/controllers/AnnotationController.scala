@@ -131,6 +131,8 @@ class AnnotationController @Inject()(
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- isReopenAllowed(request.identity, annotation) ?~> "annotation.reopen.failed"
+      _ = logger.info(
+        s"Reopening annotation ${id.toString}, new state will be ${AnnotationState.Active.toString}, access context: ${request.identity.toStringAnonymous}")
       _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> "annotation.invalid"
       updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
@@ -248,6 +250,8 @@ class AnnotationController @Inject()(
     def tryToCancel(annotation: Annotation) =
       annotation match {
         case t if t.typ == AnnotationType.Task =>
+          logger.info(
+            s"Canceling annotation ${id.toString}, new state will be ${AnnotationState.Cancelled.toString}, access context: ${request.identity.toStringAnonymous}")
           annotationDAO.updateState(annotation._id, Cancelled).map { _ =>
             JsonOk(Messages("task.finished"))
           }

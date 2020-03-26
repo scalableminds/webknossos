@@ -7,6 +7,8 @@ import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
+import models.user.User
+import oxalis.security.UserSharingTokenContainer
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
@@ -280,6 +282,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
                isDeleted = ${a.isDeleted}
              where _id = ${a._id.id}
           """)
+      _ = logger.info(s"Initialized task annotation ${a._id}, state is now ${a.state.toString}")
     } yield ()
 
   def abortInitializingAnnotation(id: ObjectId): Fox[Unit] =
@@ -290,6 +293,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)
       )
+      _ = logger.info(s"Aborted initializing task annotation ${id.toString}")
     } yield ()
 
   def deleteOldInitializingAnnotations: Fox[Unit] =
@@ -314,6 +318,8 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)
       ) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+      _ = logger.info(
+        s"Updated state of Annotation ${id.toString} to ${state.toString}, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =

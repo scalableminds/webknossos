@@ -28,7 +28,6 @@ export const userSettings = {
   fourBit: { type: "boolean" },
   interpolation: { type: "boolean" },
   loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
-  segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
   highlightHoveredCellId: { type: "boolean" },
   zoom: { type: "number", minimum: 0.005 },
   renderMissingDataBlack: { type: "boolean" },

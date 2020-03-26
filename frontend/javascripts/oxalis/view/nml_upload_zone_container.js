@@ -16,6 +16,7 @@ type State = {
   dropzoneActive: boolean,
   isImporting: boolean,
   createGroupForEachFile: boolean,
+  createGroupForSingleFile: boolean,
 };
 
 type OwnProps = {|
@@ -82,6 +83,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     dropzoneActive: false,
     isImporting: false,
     createGroupForEachFile: true,
+    createGroupForSingleFile: false,
   };
 
   onDragEnter = (evt: SyntheticDragEvent<>) => {
@@ -126,7 +128,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
               }
               description={
                 <span>
-                  Last modification date: <FormattedDate timestamp={file.lastModifiedDate} />
+                  Last modified: <FormattedDate timestamp={file.lastModifiedDate} />
                 </span>
               }
             />
@@ -141,7 +143,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     try {
       await this.props.onImport(
         this.state.files,
-        this.state.files.length > 1 ? this.state.createGroupForEachFile : false,
+        this.state.files.length > 1
+          ? this.state.createGroupForEachFile
+          : this.state.createGroupForSingleFile,
       );
     } finally {
       this.setState({ isImporting: false, files: [] });
@@ -176,23 +180,33 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   }
 
   renderImportModal() {
-    const createGroupsCheckbox = (
-      <Checkbox
-        style={{ float: "left" }}
-        onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
-        checked={this.state.createGroupForEachFile}
-      >
-        Create a new tree group for each file.
-      </Checkbox>
-    );
+    const newGroupMsg =
+      this.state.files.length > 1
+        ? "Create a new tree group for each file."
+        : "Create a new tree group for this file.";
+    const pluralS = this.state.files.length > 1 ? "s" : "";
     return (
       <Modal
-        title={`Import ${this.state.files.length} NML file(s)`}
+        title={`Import ${this.state.files.length} NML file${pluralS}`}
         visible={this.state.files.length > 0}
         onCancel={() => this.setState({ files: [] })}
         footer={
           <React.Fragment>
-            {this.state.files.length > 1 ? createGroupsCheckbox : null}
+            <Checkbox
+              style={{ float: "left" }}
+              onChange={e =>
+                this.state.files.length > 1
+                  ? this.setState({ createGroupForEachFile: e.target.checked })
+                  : this.setState({ createGroupForSingleFile: e.target.checked })
+              }
+              checked={
+                this.state.files.length > 1
+                  ? this.state.createGroupForEachFile
+                  : this.state.createGroupForSingleFile
+              }
+            >
+              {newGroupMsg}
+            </Checkbox>
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
               {this.props.isUpdateAllowed ? "Import" : "Create New Tracing"}
             </Button>

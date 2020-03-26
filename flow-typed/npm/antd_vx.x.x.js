@@ -98,8 +98,10 @@ declare module "antd" {
   }
   declare export class Row<P> extends React$Component<P> {}
   declare class SelectOption<P> extends React$Component<P> {}
+  declare class SelectOptGroup<P> extends React$Component<P> {}
   declare export class Select<P> extends React$Component<P> {
     static Option: typeof SelectOption;
+    static OptGroup: typeof SelectOptGroup;
   }
   declare export class Slider<P> extends React$Component<P> {}
   declare export class Spin<P> extends React$Component<P> {}

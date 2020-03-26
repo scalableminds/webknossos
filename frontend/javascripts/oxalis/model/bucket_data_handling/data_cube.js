@@ -368,6 +368,10 @@ class DataCube {
     }
   }
 
+  hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {
+    return this.getBucket(this.positionToZoomedAddress(voxel, zoomStep)).hasData();
+  }
+
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);

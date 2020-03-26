@@ -88,6 +88,7 @@ const defaultState: OxalisState = {
       hideUnmappedIds: false,
       isMappingEnabled: false,
       mappingSize: 0,
+      mappingType: "JSON",
     },
     isMergerModeEnabled: false,
     isAutoBrushEnabled: false,

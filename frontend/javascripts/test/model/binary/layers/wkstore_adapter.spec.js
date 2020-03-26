@@ -36,6 +36,9 @@ const StoreMock = {
       tracingStore: { name: "localhost", url: "http://localhost:9000" },
     },
     datasetConfiguration: { fourBit: _fourBit },
+    temporaryConfiguration: {
+      activeMapping: {},
+    },
   }),
   dispatch: sinon.stub(),
 };

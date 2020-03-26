@@ -280,6 +280,7 @@ export type HistogramDataForAllLayers = {
   [name: string]: APIHistogramData,
 };
 
+export type MappingType = "JSON" | "HDF5";
 export type TemporaryConfiguration = {
   +histogramData: HistogramDataForAllLayers,
   +viewMode: ViewMode,
@@ -295,6 +296,7 @@ export type TemporaryConfiguration = {
     +hideUnmappedIds: boolean,
     +isMappingEnabled: boolean,
     +mappingSize: number,
+    +mappingType: MappingType,
   },
   +isMergerModeEnabled: boolean,
   +isAutoBrushEnabled: boolean,

@@ -7,6 +7,8 @@ RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
+COPY webknossos-datastore/lib/native target/universal/stage/lib/native
+
 
 RUN addgroup --system --gid 999 webknossos \
   && adduser --system --uid 999 --ingroup webknossos webknossos \

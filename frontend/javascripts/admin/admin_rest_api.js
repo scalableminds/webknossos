@@ -991,6 +991,20 @@ export async function getMappingsForDatasetLayer(
   );
 }
 
+export async function getAgglomeratesForDatasetLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates?token=${token}`,
+    ),
+  );
+}
+
 export function getSampleDatasets(
   datastoreUrl: string,
   organizationName: string,

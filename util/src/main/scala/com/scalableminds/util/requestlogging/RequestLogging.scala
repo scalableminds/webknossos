@@ -8,12 +8,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AbstractRequestLogging extends LazyLogging {
 
-  def logRequestFormatted(request: Request[_], result: Result, userMail: Option[String] = None) = {
-    val emailMsg = userMail.map(m => s" for $m").getOrElse("")
+  def logRequestFormatted(request: Request[_], result: Result, userId: Option[String] = None): Unit = {
+    val userIdMsg = userId.map(id => s" for user $id").getOrElse("")
     result.body match {
       case HttpEntity.Strict(byteString, contentType) if result.header.status != 200 =>
         logger.warn(
-          s"Answering ${result.header.status} at ${request.uri}$emailMsg – ${byteString.take(20000).decodeString("utf-8")}")
+          s"Answering ${result.header.status} at ${request.uri}$userIdMsg – ${byteString.take(20000).decodeString("utf-8")}")
       case _ => ()
     }
   }
@@ -21,7 +21,7 @@ trait AbstractRequestLogging extends LazyLogging {
 }
 
 trait RequestLogging extends AbstractRequestLogging {
-  // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester email
+  // Hint: within webKnossos itself, UserAwareRequestLogging is available, which additionally logs the requester user id
 
   def log(block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] =
     for {
@@ -31,7 +31,7 @@ trait RequestLogging extends AbstractRequestLogging {
 
   def logTime(notifier: String => Unit)(block: => Future[Result])(implicit request: Request[_],
                                                                   ec: ExecutionContext): Future[Result] = {
-    def logTimeFormatted(executionTime: Long, request: Request[_], result: Result) = {
+    def logTimeFormatted(executionTime: Long, request: Request[_], result: Result): Unit = {
       val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime / 1e9)
         .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
       else " "}successfull"

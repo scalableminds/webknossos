@@ -79,7 +79,7 @@ class TaskSearchForm extends React.Component<Props, State> {
         : this.state.fieldValues;
     if (_.size(fieldValues) > 0) {
       this.props.form.setFieldsValue(fieldValues);
-      this.handleFormSubmit(false);
+      this.handleSearchFormSubmit(false);
     }
   }
 
@@ -96,9 +96,9 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes });
   }
 
-  handleFormSubmitWithSubsequentCall = (
+  handleFormSubmit = (
     isRandom: boolean,
-    subsequentMethod: QueryObject => Promise<void>,
+    onFinishCallback: QueryObject => Promise<void>,
     event: ?SyntheticInputEvent<*>,
   ) => {
     if (event) {
@@ -135,16 +135,16 @@ class TaskSearchForm extends React.Component<Props, State> {
       }
 
       this.setState({ fieldValues: formValues });
-      subsequentMethod(queryObject);
+      onFinishCallback(queryObject);
     });
   };
 
-  handleFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
-    this.handleFormSubmitWithSubsequentCall(isRandom, this.props.onChange, event);
+  handleSearchFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
+    this.handleFormSubmit(isRandom, this.props.onChange, event);
   };
 
   handleDownloadAllTasks = () => {
-    this.handleFormSubmitWithSubsequentCall(false, this.props.onDownloadAllTasks);
+    this.handleFormSubmit(false, this.props.onDownloadAllTasks);
   };
 
   handleReset = () => {
@@ -162,7 +162,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     };
 
     return (
-      <Form onSubmit={evt => this.handleFormSubmit(false, evt)}>
+      <Form onSubmit={evt => this.handleSearchFormSubmit(false, evt)}>
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Task Id">
@@ -235,7 +235,7 @@ class TaskSearchForm extends React.Component<Props, State> {
           <Col span={24} style={{ textAlign: "right" }}>
             <Dropdown
               overlay={
-                <Menu onClick={() => this.handleFormSubmit(true)}>
+                <Menu onClick={() => this.handleSearchFormSubmit(true)}>
                   <Menu.Item key="1">
                     <Icon type="retweet" />
                     Show random subset
@@ -262,7 +262,7 @@ class TaskSearchForm extends React.Component<Props, State> {
               disabled={isLoading}
               loading={isLoading}
             >
-              Download settings of all tasks
+              Download tasks as CSV
               <Icon type="download" />
             </Button>
           </Col>

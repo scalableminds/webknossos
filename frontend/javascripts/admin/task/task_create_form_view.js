@@ -115,15 +115,15 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
         {successfulTasks.map(task => taskToText(task)).join("\n")}
       </pre>
     ) : (
-      `The number of successful tasks is too large. We suggest to download them as a CSV
-            using the button below.`
+      `The number of successful tasks is too large to show them in the browser. 
+      Please download them as a CSV file if you need to view the output.`
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
       <pre>{failedTasksAsString}</pre>
     ) : (
-      `The number of failed tasks is too large. We suggest to download them as a CSV
-            using the button below.`
+      `The number of failed tasks is too large to show them in the browser. 
+      Please download them as a CSV file if you need to view the output.`
     );
   const subHeadingStyle = { fontWeight: "bold" };
   const displayResultsStyle = { maxHeight: 300, overflow: "auto" };

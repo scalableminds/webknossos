@@ -3,6 +3,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import {
   Row,
   Col,
+  Divider,
   Form,
   Select,
   Button,
@@ -124,35 +125,50 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
       `The number of failed tasks is too large. We suggest to download them as a CSV
             using the button below.`
     );
+  const subHeadingStyle = { fontWeight: "bold" };
+  const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
+  const downloadButtonStyle = { float: "right" };
   Modal.info({
     title: `Failed to create ${failedTasks.length} tasks.`,
     content: (
       <div>
         {successfulTasks.length > 0 ? (
           <div>
-            Successful Tasks:
-            {successfulTasksContent}
+            <div style={subHeadingStyle}> Successful Tasks: </div>
+            <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
         ) : null}
         {successfulTasks.length > 0 ? (
-          <Button onClick={() => downloadTasksAsCSV(successfulTasks)}>Download tasks as CSV</Button>
+          <React.Fragment>
+            <br />
+            <Button style={downloadButtonStyle} onClick={() => downloadTasksAsCSV(successfulTasks)}>
+              Download tasks as CSV
+            </Button>
+            <br />
+          </React.Fragment>
         ) : null}
         {failedTasks.length > 0 ? (
-          <div>
-            <br />
-            Failed Tasks:
-            {failedTasksContent}
-            <Button
-              onClick={() => {
-                const blob = new Blob([failedTasksAsString], {
-                  type: "text/plain;charset=utf-8",
-                });
-                saveAs(blob, "failed-tasks.csv");
-              }}
-            >
-              Download failed tasks as CSV
-            </Button>
-          </div>
+          <React.Fragment>
+            <Divider />
+            <div>
+              <br />
+              <div style={subHeadingStyle}> Failed Tasks:</div>
+              <div style={displayResultsStyle}> {failedTasksContent}</div>
+              <br />
+              <Button
+                style={downloadButtonStyle}
+                onClick={() => {
+                  const blob = new Blob([failedTasksAsString], {
+                    type: "text/plain;charset=utf-8",
+                  });
+                  saveAs(blob, "failed-tasks.csv");
+                }}
+              >
+                Download failed tasks as CSV
+              </Button>
+              <br />
+            </div>
+          </React.Fragment>
         ) : null}
       </div>
     ),

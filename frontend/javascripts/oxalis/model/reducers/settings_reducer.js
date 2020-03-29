@@ -154,12 +154,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
     case "SET_MAPPING": {
+      const { mappingName, mapping, mappingKeys, mappingColors, mappingType } = action;
       return updateActiveMapping(state, {
-        mappingName: action.mappingName,
+        mappingName,
+        mapping,
+        mappingKeys,
+        mappingColors,
+        mappingType,
         mappingSize: action.mappingKeys != null ? action.mappingKeys.length : 0,
-        mapping: action.mapping,
-        mappingKeys: action.mappingKeys,
-        mappingColors: action.mappingColors,
         hideUnmappedIds: action.hideUnmappedIds || false,
       });
     }

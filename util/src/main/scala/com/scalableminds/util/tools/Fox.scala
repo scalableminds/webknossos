@@ -32,8 +32,8 @@ trait FoxImplicits {
   }
 
   implicit def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
-    case Success(result) => Fox.successful(result)
-    case _               => Fox.failure("")
+    case Success(result)       => Fox.successful(result)
+    case scala.util.Failure(e) => Fox.failure(e.getMessage)
   }
 
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =

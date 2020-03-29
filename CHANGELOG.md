@@ -10,13 +10,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...HEAD)
 
  ### Added
-- Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab [#4480](https://github.com/scalableminds/webknossos/pull/4480)  
+- Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
+- Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
 
  ### Changed
 - Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)
 
  ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+- Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 - Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 
  ### Removed
@@ -40,6 +42,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added support for drag-and-drop import of NML files even if the current view is read-only (e.g., because a dataset was opened in "view" mode). In this case, a new tracing is directly created into which the NML file is imported. [#4459](https://github.com/scalableminds/webknossos/pull/4459)
 - Added download of task configurations as CSV after task creation and in the task list view. [#4491](https://github.com/scalableminds/webknossos/pull/4491)
 - Added indication for reloading a dataset in the dataset actions in the dashboard. [#4421](https://github.com/scalableminds/webknossos/pull/4421)
+- Added support for creating a tree group when importing a single NML into an existing annotation. [#4489](https://github.com/scalableminds/webknossos/pull/4489)
 - Added login prompt to the tracing page when fetching the dataset fails. Upon successful login, the dataset gets fetched with the rights of the newly logged-in user. [#4467](https://github.com/scalableminds/webknossos/pull/4467)
 
 ### Changed

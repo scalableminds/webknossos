@@ -148,13 +148,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           }),
         ),
       };
-      const { layers } = datasetDefaultConfiguration;
+      const layers = datasetDefaultConfiguration.layers || {};
       // Remove unused brightness and contrast config and replace it with intensityRange if needed.
       dataSource.dataLayers.forEach(layer => {
         if (layer.category !== "color") {
           return;
         }
         const currentColorLayerConfig = layers[layer.name];
+        if (currentColorLayerConfig == null) {
+          return;
+        }
 
         delete currentColorLayerConfig.brightness;
         delete currentColorLayerConfig.contrast;

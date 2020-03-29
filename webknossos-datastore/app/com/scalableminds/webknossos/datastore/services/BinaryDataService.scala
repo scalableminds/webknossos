@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Path, Paths}
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
@@ -11,15 +12,25 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   MappingReadInstruction
 }
-import com.scalableminds.webknossos.datastore.storage.{CachedCube, DataCubeCache}
+import com.scalableminds.webknossos.datastore.storage.{
+  CachedAgglomerateFile,
+  CachedAgglomerateKey,
+  CachedCube,
+  DataCubeCache
+}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import spire.math.UInt
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCacheSize: Int)
+class BinaryDataService(dataBaseDir: Path,
+                        loadTimeout: FiniteDuration,
+                        maxCacheSize: Int,
+                        val agglomerateService: AgglomerateService)
     extends FoxImplicits
     with LazyLogging {
 
@@ -44,20 +55,30 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
   }
 
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
+    def convertIfNecessary[T](isNecessary: Boolean,
+                              inputArray: Array[Byte],
+                              conversionFunc: Array[Byte] => T,
+                              transformInput: Array[Byte] => T): T =
+      if (isNecessary) conversionFunc(inputArray) else transformInput(inputArray)
+
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
-        handleDataRequest(request).map { data =>
-          val convertedData =
-            if (request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation)
-              convertToUInt32(data)
-            else data
-          if (request.settings.halfByte) {
-            (convertToHalfByte(convertedData), index)
-          } else {
-            (convertedData, index)
-          }
-        }
+        for {
+          data <- handleDataRequest(request)
+          mappedData <- convertIfNecessary(
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation,
+            data,
+            agglomerateService.applyAgglomerate(request),
+            Fox.successful(_)
+          )
+          convertedData = convertIfNecessary(
+            request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
+            mappedData,
+            convertToUInt32,
+            identity)
+          resultData = convertIfNecessary(request.settings.halfByte, convertedData, convertToHalfByte, identity)
+        } yield (resultData, index)
     }
 
     Fox.sequenceOfFulls(requestData).map { l =>
@@ -173,6 +194,11 @@ class BinaryDataService(dataBaseDir: Path, loadTimeout: FiniteDuration, maxCache
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
+    def matchingAgglomerate(cachedAgglomerate: CachedAgglomerateKey) =
+      cachedAgglomerate.dataSourceName == dataSetName && cachedAgglomerate.organization == organizationName && layerName
+        .forall(_ == cachedAgglomerate.dataLayerName)
+
+    agglomerateService.cache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
   }
 }

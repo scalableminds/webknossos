@@ -12,9 +12,9 @@ import debounceRender from "react-debounce-render";
 import createProgressCallback from "libs/progress_callback";
 import type { APIDataset, APISegmentationLayer } from "admin/api_flow_types";
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
-import type { OxalisState, Mapping } from "oxalis/store";
+import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { getMappingsForDatasetLayer } from "admin/admin_rest_api";
+import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -25,7 +25,7 @@ import Model from "oxalis/model";
 import message from "messages";
 import * as Utils from "libs/utils";
 
-const { Option } = Select;
+const { Option, OptGroup } = Select;
 
 type OwnProps = {|
   portalKey: string,
@@ -39,9 +39,10 @@ type StateProps = {|
   isMappingEnabled: boolean,
   mapping: ?Mapping,
   mappingName: ?string,
+  mappingType: MappingType,
   mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
-  setAvailableMappingsForLayer: (string, Array<string>) => void,
+  setAvailableMappingsForLayer: (string, Array<string>, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
@@ -80,6 +81,15 @@ const convertCellIdToCSS = (id, customColors) =>
   convertHSLAToCSSString(convertCellIdToHSLA(id, customColors));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
+
+const needle = "##";
+const packMappingNameAndCategory = (mappingName, category) => `${category}${needle}${mappingName}`;
+const unpackMappingNameAndCategory = packedString => {
+  const needlePos = packedString.indexOf(needle);
+  const categoryName = packedString.slice(0, needlePos);
+  const mappingName = packedString.slice(needlePos + needle.length);
+  return [mappingName, categoryName];
+};
 
 class MappingInfoView extends React.Component<Props, State> {
   isMounted: boolean = false;
@@ -269,10 +279,18 @@ class MappingInfoView extends React.Component<Props, State> {
     );
   }
 
-  handleChangeMapping = (mappingName: string): void => {
-    const progressCallback = createProgressCallback({ pauseDelay: 500, successMessageDelay: 2000 });
-    Model.getSegmentationLayer().setActiveMapping(mappingName, progressCallback);
-    this.handleSetMappingEnabled(true);
+  handleChangeMapping = (packedMappingNameWithCategory: string): void => {
+    const [mappingName, mappingType] = unpackMappingNameAndCategory(packedMappingNameWithCategory);
+
+    if (mappingType !== "JSON" && mappingType !== "HDF5") {
+      throw new Error("Invalid mapping type");
+    }
+
+    const progressCallback = createProgressCallback({
+      pauseDelay: 500,
+      successMessageDelay: 2000,
+    });
+    Model.getSegmentationLayer().setActiveMapping(mappingName, mappingType, progressCallback);
   };
 
   async refreshLayerMappings() {
@@ -284,16 +302,21 @@ class MappingInfoView extends React.Component<Props, State> {
       return;
     }
     this.setState({ isRefreshingMappingList: true });
-    const mappings = await getMappingsForDatasetLayer(
+
+    const params = [
       this.props.dataset.dataStore.url,
       this.props.dataset,
       // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
       segmentationLayer.fallbackLayer != null
         ? segmentationLayer.fallbackLayer
         : segmentationLayer.name,
-    );
+    ];
+    const [mappings, agglomerates] = await Promise.all([
+      getMappingsForDatasetLayer(...params),
+      getAgglomeratesForDatasetLayer(...params),
+    ]);
 
-    this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings);
+    this.props.setAvailableMappingsForLayer(segmentationLayer.name, mappings, agglomerates);
     this.setState({ isRefreshingMappingList: false, didRefreshMappingList: true });
   }
 
@@ -315,6 +338,10 @@ class MappingInfoView extends React.Component<Props, State> {
       this.props.segmentationLayer != null && this.props.segmentationLayer.mappings != null
         ? this.props.segmentationLayer.mappings
         : [];
+    const availableAgglomerates =
+      this.props.segmentationLayer != null && this.props.segmentationLayer.agglomerates != null
+        ? this.props.segmentationLayer.agglomerates
+        : [];
 
     // Antd does not render the placeholder when a value is defined (even when it's null).
     // That's why, we only pass the value when it's actually defined.
@@ -324,6 +351,23 @@ class MappingInfoView extends React.Component<Props, State> {
             value: this.props.mappingName,
           }
         : {};
+
+    const renderCategoryOptions = (optionStrings, category) => {
+      const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
+      const elements = optionStrings
+        .slice()
+        .sort(Utils.localeCompareBy(([]: Array<string>), optionString => optionString))
+        .map(optionString => (
+          <Option
+            key={packMappingNameAndCategory(optionString, category)}
+            value={packMappingNameAndCategory(optionString, category)}
+          >
+            {optionString}
+          </Option>
+        ));
+
+      return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
+    };
 
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
@@ -357,14 +401,8 @@ class MappingInfoView extends React.Component<Props, State> {
                 onChange={this.handleChangeMapping}
                 notFoundContent="No mappings found."
               >
-                {availableMappings
-                  .slice()
-                  .sort(Utils.localeCompareBy(([]: Array<string>), mapping => mapping))
-                  .map(mapping => (
-                    <Option key={mapping} value={mapping}>
-                      {mapping}
-                    </Option>
-                  ))}
+                {renderCategoryOptions(availableMappings, "JSON")}
+                {renderCategoryOptions(availableAgglomerates, "HDF5")}
               </Select>
             ) : null}
           </div>
@@ -378,8 +416,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setMappingEnabled(isEnabled) {
     dispatch(setMappingEnabledAction(isEnabled));
   },
-  setAvailableMappingsForLayer(layerName: string, mappingNames: Array<string>): void {
-    dispatch(setLayerMappingsAction(layerName, mappingNames));
+  setAvailableMappingsForLayer(
+    layerName: string,
+    mappingNames: Array<string>,
+    agglomerateNames: Array<string>,
+  ): void {
+    dispatch(setLayerMappingsAction(layerName, mappingNames, agglomerateNames));
   },
 });
 
@@ -391,6 +433,7 @@ function mapStateToProps(state: OxalisState) {
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
     mappingName: state.temporaryConfiguration.activeMapping.mappingName,
+    mappingType: state.temporaryConfiguration.activeMapping.mappingType,
     mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,

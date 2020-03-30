@@ -23,7 +23,7 @@ class Vector2D(val x: Double, val y: Double) {
   }
 
   override def equals(v: Any): Boolean = v match {
-    case v: Vector2D => x == x && v.y == y
+    case v: Vector2D => v.x == x && v.y == y
     case _           => false
   }
 

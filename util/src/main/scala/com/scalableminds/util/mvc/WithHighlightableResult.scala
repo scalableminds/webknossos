@@ -7,7 +7,7 @@ trait WithHighlightableResult {
 
   implicit class HighlightableResult(r: Result) {
     def highlighting(elementId: String) = {
-      val location = r.header.headers.get(LOCATION) getOrElse ""
+      val location = r.header.headers.getOrElse(LOCATION, "")
       r.withHeaders(LOCATION -> s"$location#$elementId")
     }
   }

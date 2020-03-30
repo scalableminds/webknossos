@@ -173,8 +173,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       cachedDiffTrees(this.props.skeletonTracing, nextProps.skeletonTracing),
     );
 
-    const relevantUpdateActions = updateActions.filter(ua =>
-      RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name),
+    const relevantUpdateActions = updateActions.filter(
+      ua =>
+        RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
+        (ua.name === "createTree" && ua.value.comments.length > 0),
     );
     return relevantUpdateActions.length > 0;
   }

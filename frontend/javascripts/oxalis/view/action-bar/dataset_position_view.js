@@ -80,6 +80,7 @@ class DatasetPositionView extends PureComponent<Props> {
                 value={rotation}
                 onChange={this.handleChangeRotation}
                 style={{ textAlign: "center", width: 120 }}
+                allowDecimals
               />
             </Input.Group>
           </Tooltip>

@@ -8,26 +8,27 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait UserAwareRequestLogging extends AbstractRequestLogging {
 
-  case class RequesterEmailOpt(email: Option[String]) //forcing implicit conversion
+  case class RequesterIdOpt(id: Option[String]) //forcing implicit conversion
 
-  def log(block: => Result)(implicit request: Request[_], emailOpt: RequesterEmailOpt, ec: ExecutionContext): Result = {
+  def log(
+      block: => Result)(implicit request: Request[_], requesterIdOpt: RequesterIdOpt, ec: ExecutionContext): Result = {
     val result: Result = block
-    logRequestFormatted(request, result, emailOpt.email)
+    logRequestFormatted(request, result, requesterIdOpt.id)
     result
   }
 
   def log(block: => Future[Result])(implicit request: Request[_],
-                                    emailOpt: RequesterEmailOpt,
+                                    emailOpt: RequesterIdOpt,
                                     ec: ExecutionContext): Future[Result] =
     for {
       result: Result <- block
-      _ = logRequestFormatted(request, result, emailOpt.email)
+      _ = logRequestFormatted(request, result, emailOpt.id)
     } yield result
 
-  implicit def userAwareRequestToRequesterEmailOpt(implicit request: UserAwareRequest[WkEnv, _]): RequesterEmailOpt =
-    RequesterEmailOpt(request.identity.map(_.email))
+  implicit def userAwareRequestToRequesterIdOpt(implicit request: UserAwareRequest[WkEnv, _]): RequesterIdOpt =
+    RequesterIdOpt(request.identity.map(_._id.toString))
 
-  implicit def securedRequestToRequesterEmailOpt(implicit request: SecuredRequest[WkEnv, _]): RequesterEmailOpt =
-    RequesterEmailOpt(Some(request.identity.email))
+  implicit def securedRequestToRequesterEmailOpt(implicit request: SecuredRequest[WkEnv, _]): RequesterIdOpt =
+    RequesterIdOpt(Some(request.identity._id.toString))
 
 }

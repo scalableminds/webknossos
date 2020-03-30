@@ -150,11 +150,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     if (result.header.status == 200) {
       val bodyJsonValue = result.body match {
         case HttpEntity.Strict(data, _) => Json.parse(data.decodeString("utf-8"))
+        case _                          => return BadRequest
       }
 
       val newJson = bodyJsonValue match {
         case JsArray(value)  => Json.toJson(value.map(el => replaceVisibilityInJsObject(el.as[JsObject])))
         case jsObj: JsObject => Json.toJson(replaceVisibilityInJsObject(jsObj))
+        case _               => return BadRequest
       }
 
       Ok(Json.toJson(newJson)).copy(header = result.header)

@@ -322,7 +322,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   showDeleteGroupModal = (id: number) => {
-    this.setState({ groupToDelete: id });
+    if (!this.props.skeletonTracing) return;
+
+    const { trees, treeGroups } = this.props.skeletonTracing;
+    const treeGroupToDelete = treeGroups.find(el => el.groupId === id);
+    const groupToTreesMap = createGroupToTreesMap(trees);
+
+    if (
+      treeGroupToDelete &&
+      treeGroupToDelete.children.length === 0 &&
+      !groupToTreesMap[id]
+    )
+      this.deleteGroup(id);
+    else this.setState({ groupToDelete: id });
   };
 
   handleDelete = () => {

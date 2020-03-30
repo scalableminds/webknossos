@@ -219,14 +219,25 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       }
 
     (for {
-      allowed <- restrictions.allowFinish(user)
+      allowed <- restrictions.allowFinishSoft(user)
     } yield {
       if (allowed) {
-        if (annotation.state == Active)
+        if (annotation.state == Active) {
+          logger.info(
+            s"Finishing annotation ${annotation._id.toString}, new state will be ${AnnotationState.Finished.toString}, access context: ${ctx.toStringAnonymous}")
           executeFinish
-        else
+        } else if (annotation.state == Finished) {
+          logger.info(
+            s"Silently not finishing annotation ${annotation._id.toString} for it is aready finished. Access context: ${ctx.toStringAnonymous}")
+          Fox.successful("annotation.finished")
+        } else {
+          logger.info(
+            s"Not finishing annotation ${annotation._id.toString} for its state is ${annotation.state.toString}. Access context: ${ctx.toStringAnonymous}")
           Fox.failure("annotation.notActive")
+        }
       } else {
+        logger.info(
+          s"Not finishing annotation ${annotation._id.toString} due to missing permissions. Access context: ${ctx.toStringAnonymous}")
         Fox.failure("annotation.notPossible")
       }
     }).flatten

@@ -282,10 +282,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleFinishAndGetNextTask = async () => {
-    UserLocalStorage.setItem(
-      "lastFinishedTask",
-      JSON.stringify({ annotationId: this.props.annotationId, finishedTime: Date.now() }),
-    );
     api.tracing.finishAndGetNextTask();
   };
 

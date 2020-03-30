@@ -516,7 +516,7 @@ export function addTreesAndGroups(
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
-      const needsReassignedIds = Object.keys(skeletonTracing.trees) > 0;
+      const needsReassignedIds = Object.keys(skeletonTracing.trees).length > 0;
 
       if (!needsReassignedIds) {
         // Without reassigning ids, the code is considerably faster.

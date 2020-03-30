@@ -328,11 +328,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const treeGroupToDelete = treeGroups.find(el => el.groupId === id);
     const groupToTreesMap = createGroupToTreesMap(trees);
 
-    if (
-      treeGroupToDelete &&
-      treeGroupToDelete.children.length === 0 &&
-      !groupToTreesMap[id]
-    )
+    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
       this.deleteGroup(id);
     else this.setState({ groupToDelete: id });
   };

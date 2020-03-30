@@ -101,7 +101,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
 
-  @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
+  @SuppressWarnings(Array("UnsafeTraversableMethods")) // Only functions call this which put at least one timestamp in the seq
   private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: Annotation)(
       implicit ctx: DBAccessContext) = {
     // Only if the annotation belongs to the user, we are going to log the time on the annotation

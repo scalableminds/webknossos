@@ -133,13 +133,9 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
   def readAccessQuery(implicit ctx: DBAccessContext): Fox[String] =
     if (ctx.globalAccess) Fox.successful("true")
     else {
-      for {
-        userIdBox <- userIdFromCtx.futureBox
-      } yield {
-        userIdBox match {
-          case Full(userId) => "(" + readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx) + ")"
-          case _            => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
-        }
+      userIdFromCtx.futureBox.map {
+        case Full(userId) => "(" + readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx) + ")"
+        case _            => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
       }
     }
 

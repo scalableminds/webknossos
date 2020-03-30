@@ -79,6 +79,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
   }
 
   def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+    @SuppressWarnings(Array("UnsafeTraversableMethods")) // The function checks if the collection is empty
     def getMaximumGroupId(treeGroups: Seq[TreeGroup]) = if (treeGroups.isEmpty) 0 else treeGroups.map(_.groupId).max
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {

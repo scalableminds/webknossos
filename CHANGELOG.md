@@ -17,6 +17,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
  ### Changed
 - Reported datasets can now overwrite existing ones that are reported as missing, this ignores the isScratch precedence. [#4465](https://github.com/scalableminds/webknossos/pull/4465)
 - Improved the performance for large skeleton tracings with lots of comments. [#4473](https://github.com/scalableminds/webknossos/pull/4473)
+- Users can now input floating point numbers into the rotation field in flight and oblique mode. These values will get rounded internally. [#4507](https://github.com/scalableminds/webknossos/pull/4507)
+- Deleting an empty tree group in the `Trees` tab no longer prompts for user confirmation. [#4506](https://github.com/scalableminds/webknossos/pull/4506)
 
  ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)

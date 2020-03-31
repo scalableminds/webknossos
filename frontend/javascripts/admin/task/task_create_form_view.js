@@ -3,6 +3,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import {
   Row,
   Col,
+  Divider,
   Form,
   Select,
   Button,
@@ -18,7 +19,7 @@ import {
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
+import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
@@ -38,12 +39,15 @@ import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 import Enum from "Enumjs";
+import { saveAs } from "file-saver";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 const FormItem = Form.Item;
 const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 const fullWidth = { width: "100%" };
+const maxDisplayedTasksCount = 50;
 
 type Props = {
   form: Object,
@@ -67,42 +71,104 @@ type State = {
   isUploading: boolean,
 };
 
+export function taskToText(task: APITask) {
+  const { id, creationInfo, editPosition } = task;
+  return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
+}
+
+export function downloadTasksAsCSV(tasks: Array<APITask>) {
+  if (tasks.length < 0) {
+    return;
+  }
+  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
+  const lastCreationTime = Math.max(...tasks.map(task => task.created));
+  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
+  const allTeamNames = _.uniq(tasks.map(task => task.team));
+  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
+  const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
+  saveAs(blob, filename);
+}
+
 export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
   const successfulTasks = [];
   const failedTasks = [];
+  let teamName = null;
 
   responses.forEach((response: TaskCreationResponse, i: number) => {
     if (response.status === 200 && response.success) {
-      successfulTasks.push(
-        `${response.success.id},${response.success.creationInfo ||
-          "null"},(${response.success.editPosition.join(",")}) \n`,
-      );
+      if (!teamName) {
+        teamName = response.success.team;
+      }
+      successfulTasks.push(response.success);
     } else if (response.error) {
       failedTasks.push(`Line ${i}: ${response.error} \n`);
     }
   });
-
+  const failedTasksAsString = failedTasks.join("");
+  const successfulTasksContent =
+    successfulTasks.length <= maxDisplayedTasksCount ? (
+      <pre>
+        taskId,filename,position
+        <br />
+        {successfulTasks.map(task => taskToText(task)).join("\n")}
+      </pre>
+    ) : (
+      `The number of successful tasks is too large to show them in the browser. 
+      Please download them as a CSV file if you need to view the output.`
+    );
+  const failedTasksContent =
+    failedTasks.length <= maxDisplayedTasksCount ? (
+      <pre>{failedTasksAsString}</pre>
+    ) : (
+      `The number of failed tasks is too large to show them in the browser. 
+      Please download them as a CSV file if you need to view the output.`
+    );
+  const subHeadingStyle = { fontWeight: "bold" };
+  const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
+  const downloadButtonStyle = { float: "right" };
   Modal.info({
-    title: `${successfulTasks.length} tasks were successfully created. ${
-      failedTasks.length
-    } tasks failed.`,
+    title: `Failed to create ${failedTasks.length} tasks.`,
     content: (
       <div>
         {successfulTasks.length > 0 ? (
           <div>
-            Successful Tasks:
-            <pre>
-              taskId,filename,position
-              <br />
-              {successfulTasks}
-            </pre>
+            <div style={subHeadingStyle}> Successful Tasks: </div>
+            <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
         ) : null}
+        {successfulTasks.length > 0 ? (
+          <React.Fragment>
+            <br />
+            <Button style={downloadButtonStyle} onClick={() => downloadTasksAsCSV(successfulTasks)}>
+              Download tasks as CSV
+            </Button>
+            <br />
+          </React.Fragment>
+        ) : null}
         {failedTasks.length > 0 ? (
-          <div>
-            Failed Tasks:
-            <pre>{failedTasks}</pre>
-          </div>
+          <React.Fragment>
+            <Divider />
+            <div>
+              <br />
+              <div style={subHeadingStyle}> Failed Tasks:</div>
+              <div style={displayResultsStyle}> {failedTasksContent}</div>
+              <br />
+              <Button
+                style={downloadButtonStyle}
+                onClick={() => {
+                  const blob = new Blob([failedTasksAsString], {
+                    type: "text/plain;charset=utf-8",
+                  });
+                  saveAs(blob, "failed-tasks.csv");
+                }}
+              >
+                Download failed tasks as CSV
+              </Button>
+              <br />
+            </div>
+          </React.Fragment>
         ) : null}
       </div>
     ),

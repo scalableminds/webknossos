@@ -15,7 +15,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import Store from "oxalis/store";
+import Store from "oxalis/throttled_store";
 import app from "app";
 import dimensions from "oxalis/model/dimensions";
 

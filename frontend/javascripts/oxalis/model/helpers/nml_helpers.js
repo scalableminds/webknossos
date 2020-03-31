@@ -363,10 +363,6 @@ function _parseEntities(obj: Object, key: string): string {
   return Saxophone.parseEntities(obj[key]);
 }
 
-function findTreeByNodeId(trees: TreeMap, nodeId: number): ?Tree {
-  return _.values(trees).find(tree => tree.nodes.has(nodeId));
-}
-
 function isTreeConnected(tree: Tree): boolean {
   const seenNodes = new Map();
 
@@ -442,6 +438,7 @@ export function parseNml(
     let currentTree: ?Tree = null;
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
+    const nodeIdToTreeId = {};
     let datasetName = null;
     parser
       .on("tagopen", node => {
@@ -475,8 +472,9 @@ export function parseNml(
             break;
           }
           case "node": {
+            const nodeId = _parseInt(attr, "id");
             const currentNode = {
-              id: _parseInt(attr, "id"),
+              id: nodeId,
               position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
@@ -494,6 +492,7 @@ export function parseNml(
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
             if (existingNodeIds.has(currentNode.id))
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
+            nodeIdToTreeId[nodeId] = currentTree.treeId;
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
             break;
@@ -534,7 +533,7 @@ export function parseNml(
               nodeId: _parseInt(attr, "node"),
               content: _parseEntities(attr, "content"),
             };
-            const tree = findTreeByNodeId(trees, currentComment.nodeId);
+            const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
@@ -547,7 +546,7 @@ export function parseNml(
               nodeId: _parseInt(attr, "id"),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
-            const tree = findTreeByNodeId(trees, currentBranchpoint.nodeId);
+            const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,

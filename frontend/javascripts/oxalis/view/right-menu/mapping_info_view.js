@@ -378,23 +378,15 @@ class MappingInfoView extends React.Component<Props, State> {
       return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
     };
 
+    const renderHideUnmappedSegmentsSwitch =
+      (this.state.shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
+      this.props.mapping &&
+      this.props.hideUnmappedIds != null;
+
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
         <div style={{ marginTop: 24, width: "55%", marginLeft: 16 }}>
-          {this.props.mapping && this.props.hideUnmappedIds != null ? (
-            <div style={{ marginBottom: 12 }}>
-              <label className="setting-label">
-                Hide unmapped segments
-                <Switch
-                  onChange={this.handleChangeHideUnmappedSegments}
-                  checked={this.props.hideUnmappedIds}
-                  style={{ float: "right" }}
-                  loading={this.state.isRefreshingMappingList}
-                />
-              </label>
-            </div>
-          ) : null}
           {/* Only display the mapping selection when merger mode is not active
             to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
@@ -419,7 +411,7 @@ class MappingInfoView extends React.Component<Props, State> {
                 <Select
                   placeholder="Select mapping"
                   defaultActiveFirstOption={false}
-                  style={{ width: "100%" }}
+                  style={{ width: "100%", marginBottom: 14 }}
                   {...selectValueProp}
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
@@ -429,6 +421,17 @@ class MappingInfoView extends React.Component<Props, State> {
                 </Select>
               ) : null}
             </React.Fragment>
+          ) : null}
+          {renderHideUnmappedSegmentsSwitch ? (
+            <label className="setting-label">
+              Hide unmapped segments
+              <Switch
+                onChange={this.handleChangeHideUnmappedSegments}
+                checked={this.props.hideUnmappedIds}
+                style={{ float: "right" }}
+                loading={this.state.isRefreshingMappingList}
+              />
+            </label>
           ) : null}
         </div>
       </div>

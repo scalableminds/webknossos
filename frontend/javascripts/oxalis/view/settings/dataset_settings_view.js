@@ -363,7 +363,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     Toast.success(`Successfully deleted cached data of layer ${layerName}.`);
   };
 
-  onChangeRenderMissingDataBlack = async (value: boolean): void => {
+  onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
     Toast.info(
       value
         ? messages["data.enabled_render_missing_data_black"]

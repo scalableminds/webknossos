@@ -13,7 +13,7 @@ export default function BrainSpinner({ message, isLoading = true }: Props) {
         <div className="Aligner-item Aligner-item--fixed">
           <div style={{ width: 375 }}>
             <img
-              src="/assets/images/brain.png"
+              src="/assets/images/brain.svg"
               alt=""
               style={{
                 width: 375,

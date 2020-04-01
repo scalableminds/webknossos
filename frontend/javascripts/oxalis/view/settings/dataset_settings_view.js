@@ -363,14 +363,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     Toast.success(`Successfully deleted cached data of layer ${layerName}.`);
   };
 
-  onChangeRenderMissingDataBlack = (value: boolean): void => {
-    Toast.warning(
+  onChangeRenderMissingDataBlack = async (value: boolean): void => {
+    Toast.info(
       value
         ? messages["data.enabled_render_missing_data_black"]
         : messages["data.disabled_render_missing_data_black"],
       { timeout: 8000 },
     );
     this.props.onChange("renderMissingDataBlack", value);
+    const { layers } = this.props.datasetConfiguration;
+    const reloadAllLayersPromisses = Object.keys(layers).map(async layerName => {
+      await clearCache(this.props.dataset, layerName);
+      api.data.reloadBuckets(layerName);
+      return true;
+    });
+    await Promise.all(reloadAllLayersPromisses);
+    window.needsRerender = true;
+    Toast.success("Successfully reloaded data of all layers.");
   };
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>

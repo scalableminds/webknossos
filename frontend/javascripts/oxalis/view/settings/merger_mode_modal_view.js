@@ -43,7 +43,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
           <tr>
             <td style={{ paddingRight: 24 }}>8</td>
             <td>
-              Replace the color of the current active tree and its mapped segments with a new one
+              Replace the color of the current active tree and its mapped segments with a new one.
             </td>
           </tr>
           <tr>

@@ -63,6 +63,12 @@ type SetMappingAction = {
   hideUnmappedIds: ?boolean,
   mappingType: MappingType,
 };
+
+type SetHideUnmappedIdsAction = {
+  type: "SET_HIDE_UNMAPPED_IDS",
+  hideUnmappedIds: boolean,
+};
+
 export type SettingAction =
   | UpdateUserSettingAction
   | UpdateDatasetSettingAction
@@ -75,6 +81,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | SetMappingAction
+  | SetHideUnmappedIdsAction
   | SetHistogramDataAction
   | InitializeGpuSetupAction;
 
@@ -174,6 +181,11 @@ export const setMappingAction = (
   mappingColors,
   hideUnmappedIds,
   mappingType,
+});
+
+export const setHideUnmappedIdsAction = (hideUnmappedIds: boolean): SetHideUnmappedIdsAction => ({
+  type: "SET_HIDE_UNMAPPED_IDS",
+  hideUnmappedIds,
 });
 
 export const initializeGpuSetupAction = (

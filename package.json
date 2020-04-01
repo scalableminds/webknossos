@@ -174,7 +174,7 @@
     "react-redux": "^5.0.6",
     "react-remarkable": "^1.1.3",
     "react-router-dom": "^4.2.2",
-    "react-sortable-tree": "^2.1.1",
+    "react-sortable-tree": "^2.7.1",
     "react-virtualized": "^9.20.1",
     "redux": "^3.6.0",
     "redux-batched-actions": "^0.4.1",

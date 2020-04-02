@@ -65,6 +65,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed a bug where users were wrongly allowed to edit the description of an annotation they were allowed to see but not update [#4466](https://github.com/scalableminds/webknossos/pull/4466)
 - Fixed the creation of histograms for float datasets that only have one value besides 0. [#4468](https://github.com/scalableminds/webknossos/pull/4468)
 - Fixed the creation of histograms for float datasets that have values close to the minimum. [#4475](https://github.com/scalableminds/webknossos/pull/4475)
+- Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 
 ### Removed
 -

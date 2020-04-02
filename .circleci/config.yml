@@ -173,8 +173,11 @@ jobs:
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            sleep 10
-            curl --fail --retry 3 --max-time 15 -v http://localhost:9090/data/health
+            for i in {1..10}; do # retry
+              sleep 10
+              curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
+            done
+            (exit $s)
       - run:
           name: Stop webknossos-datastore
           command: docker-compose down --volumes --remove-orphans
@@ -186,8 +189,11 @@ jobs:
       - run:
           name: Run webknossos-tracingstore smoke test
           command: |
-            sleep 30
-            curl --fail --retry 3 --max-time 15 -v http://localhost:9050/tracings/health
+            for i in {1..10}; do # retry
+              sleep 10
+              curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
+            done
+            (exit $s)
       - run:
           name: Stop webknossos-tracingstore
           command: docker-compose down --volumes --remove-orphans

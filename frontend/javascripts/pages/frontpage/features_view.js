@@ -191,7 +191,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           style={{ display: "flex", alignItems: "center" }}
         >
           <img
-            src="/assets/images/brain_hd.svg"
+            src="/assets/images/brain_white.svg"
             alt="Brain illustration"
             style={{ objectFit: "contain", maxWidth: "100%" }}
           />

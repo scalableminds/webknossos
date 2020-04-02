@@ -309,10 +309,6 @@ class PlaneMaterialFactory {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
-    this.material.setIsMappingEnabled = isMappingEnabled => {
-      this.uniforms.isMappingEnabled.value = isMappingEnabled;
-    };
-
     this.material.side = THREE.DoubleSide;
 
     this.storePropertyUnsubscribers.push(
@@ -498,6 +494,18 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
           () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState =>
+            storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
+            // The shader should only know about the mapping when a JSON mapping exists
+            storeState.temporaryConfiguration.activeMapping.mappingType === "JSON",
+          isEnabled => {
+            this.uniforms.isMappingEnabled.value = isEnabled;
+          },
         ),
       );
 

@@ -80,6 +80,7 @@ import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
 import Store, {
   type AnnotationType,
+  type MappingType,
   type DatasetConfiguration,
   type Mapping,
   type Node,
@@ -98,6 +99,7 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
+import UserLocalStorage from "libs/user_local_storage";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -435,6 +437,10 @@ class TracingApi {
 
     await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
+    UserLocalStorage.setItem(
+      "lastFinishedTask",
+      JSON.stringify({ annotationId, finishedTime: Date.now() }),
+    );
     try {
       const annotation = await requestTask();
 
@@ -787,8 +793,8 @@ class DataApi {
    * Sets the active mapping for the segmentation layer.
    *
    */
-  activateMapping(mappingName?: string): void {
-    return this.model.getSegmentationLayer().setActiveMapping(mappingName);
+  activateMapping(mappingName?: string, mappingType: MappingType = "JSON"): void {
+    return this.model.getSegmentationLayer().setActiveMapping(mappingName, mappingType);
   }
 
   /**
@@ -1048,8 +1054,8 @@ class DataApi {
   getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
     const printDeprecationWarning = () =>
       console.warn(
-        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
-      Instead, they are part of the segmentation layer configuration and can be accessed as follows: 
+        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
+      Instead, they are part of the segmentation layer configuration and can be accessed as follows:
       "const layerSettings = api.data.getConfiguration('layers');
       const segmentationOpacity = layerSettings[<segmentationLayerName>].alpha;
       const isSegmentationDisabled = layerSettings[<segmentationLayerName>].isDisabled;"`,
@@ -1085,12 +1091,12 @@ class DataApi {
   setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
     const printDeprecationWarning = () =>
       console.warn(
-        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration. 
-      Instead, they are part of the segmentation layer configuration and can be set as follows: 
+        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
+      Instead, they are part of the segmentation layer configuration and can be set as follows:
       "const layerSettings = api.data.getConfiguration('layers');
       const copyOfLayerSettings = _.cloneDeep(layerSettings);
       copyOfLayerSettings[<segmentationLayerName>].alpha = 40;
-      copyOfLayerSettings[<segmentationLayerName>].isDisabled = false; 
+      copyOfLayerSettings[<segmentationLayerName>].isDisabled = false;
       api.data.setConfiguration('layers', copyOfLayerSettings);"`,
       );
     switch (key) {

@@ -10,7 +10,7 @@ import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_ap
 import Persistence from "libs/persistence";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 export type QueryObject = {
   taskType?: string,
@@ -30,10 +30,11 @@ export type TaskFormFieldValues = {
 
 type Props = {
   form: Object,
-  onChange: Function,
+  onChange: QueryObject => Promise<void>,
   initialFieldValues: ?TaskFormFieldValues,
   isLoading: boolean,
   history: RouterHistory,
+  onDownloadAllTasks: QueryObject => Promise<void>,
 };
 
 type State = {
@@ -78,7 +79,7 @@ class TaskSearchForm extends React.Component<Props, State> {
         : this.state.fieldValues;
     if (_.size(fieldValues) > 0) {
       this.props.form.setFieldsValue(fieldValues);
-      this.handleFormSubmit(false);
+      this.handleSearchFormSubmit(false);
     }
   }
 
@@ -95,7 +96,11 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes });
   }
 
-  handleFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
+  handleFormSubmit = (
+    isRandom: boolean,
+    onFinishCallback: QueryObject => Promise<void>,
+    event: ?SyntheticInputEvent<*>,
+  ) => {
     if (event) {
       event.preventDefault();
     }
@@ -130,8 +135,16 @@ class TaskSearchForm extends React.Component<Props, State> {
       }
 
       this.setState({ fieldValues: formValues });
-      this.props.onChange(queryObject);
+      onFinishCallback(queryObject);
     });
+  };
+
+  handleSearchFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
+    this.handleFormSubmit(isRandom, this.props.onChange, event);
+  };
+
+  handleDownloadAllTasks = () => {
+    this.handleFormSubmit(false, this.props.onDownloadAllTasks);
   };
 
   handleReset = () => {
@@ -141,6 +154,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   render() {
+    const { isLoading } = this.props;
     const { getFieldDecorator } = this.props.form;
     const formItemLayout = {
       labelCol: { span: 5 },
@@ -148,7 +162,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     };
 
     return (
-      <Form onSubmit={evt => this.handleFormSubmit(false, evt)}>
+      <Form onSubmit={evt => this.handleSearchFormSubmit(false, evt)}>
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Task Id">
@@ -221,7 +235,7 @@ class TaskSearchForm extends React.Component<Props, State> {
           <Col span={24} style={{ textAlign: "right" }}>
             <Dropdown
               overlay={
-                <Menu onClick={() => this.handleFormSubmit(true)}>
+                <Menu onClick={() => this.handleSearchFormSubmit(true)}>
                   <Menu.Item key="1">
                     <Icon type="retweet" />
                     Show random subset
@@ -232,8 +246,8 @@ class TaskSearchForm extends React.Component<Props, State> {
               <Button
                 type="primary"
                 htmlType="submit"
-                disabled={this.props.isLoading}
-                loading={this.props.isLoading}
+                disabled={isLoading}
+                loading={isLoading}
                 style={{ paddingRight: 3 }}
               >
                 Search <Icon type="down" />
@@ -241,6 +255,15 @@ class TaskSearchForm extends React.Component<Props, State> {
             </Dropdown>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
               Clear
+            </Button>
+            <Button
+              style={{ marginLeft: 8 }}
+              onClick={this.handleDownloadAllTasks}
+              disabled={isLoading}
+              loading={isLoading}
+            >
+              Download tasks as CSV
+              <Icon type="download" />
             </Button>
           </Col>
         </Row>

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
-import java.nio.file.Paths
+import java.nio.file.{Files, Paths}
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -161,6 +161,21 @@ class DataSourceController @Inject()(
     }
   }
 
+  def listAgglomerates(
+      organizationName: String,
+      dataSetName: String,
+      dataLayerName: String
+  ) = Action.async { implicit request =>
+    accessTokenService.validateAccessForSyncBlock(
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        Ok(
+          Json.toJson(binaryDataServiceHolder.binaryDataService.agglomerateService
+            .exploreAgglomerates(organizationName, dataSetName, dataLayerName)))
+      }
+    }
+  }
+
   def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {
     implicit request =>
       accessTokenService
@@ -188,6 +203,15 @@ class DataSourceController @Inject()(
         else
           BadRequest
       }
+    }
+  }
+
+  def checkNewOrganizationDirectory = Action { implicit request =>
+    AllowRemoteOrigin {
+      if (Files.isWritable(dataSourceService.dataBaseDir))
+        Ok
+      else
+        BadRequest
     }
   }
 

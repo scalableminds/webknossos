@@ -372,12 +372,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
     this.props.onChange("renderMissingDataBlack", value);
     const { layers } = this.props.datasetConfiguration;
-    const reloadAllLayersPromisses = Object.keys(layers).map(async layerName => {
+    const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
       await clearCache(this.props.dataset, layerName);
       api.data.reloadBuckets(layerName);
-      return true;
     });
-    await Promise.all(reloadAllLayersPromisses);
+    await Promise.all(reloadAllLayersPromises);
     window.needsRerender = true;
     Toast.success("Successfully reloaded data of all layers.");
   };

@@ -19,7 +19,10 @@ import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flyca
 import { getSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import {
+  setMappingEnabledAction,
+  setHideUnmappedIdsAction,
+} from "oxalis/model/actions/settings_actions";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
@@ -39,9 +42,11 @@ type StateProps = {|
   isMappingEnabled: boolean,
   mapping: ?Mapping,
   mappingName: ?string,
+  hideUnmappedIds: ?boolean,
   mappingType: MappingType,
   mappingColors: ?Array<number>,
   setMappingEnabled: boolean => void,
+  setHideUnmappedIds: boolean => void,
   setAvailableMappingsForLayer: (string, Array<string>, Array<string>) => void,
   activeViewport: OrthoView,
   activeCellId: number,
@@ -279,6 +284,10 @@ class MappingInfoView extends React.Component<Props, State> {
     );
   }
 
+  handleChangeHideUnmappedSegments = (hideUnmappedIds: boolean) => {
+    this.props.setHideUnmappedIds(hideUnmappedIds);
+  };
+
   handleChangeMapping = (packedMappingNameWithCategory: string): void => {
     const [mappingName, mappingType] = unpackMappingNameAndCategory(packedMappingNameWithCategory);
 
@@ -369,44 +378,62 @@ class MappingInfoView extends React.Component<Props, State> {
       return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
     };
 
+    const renderHideUnmappedSegmentsSwitch =
+      (this.state.shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
+      this.props.mapping &&
+      this.props.hideUnmappedIds != null;
+
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
-        {/* Only display the mapping selection when merger mode is not active
+        <div style={{ marginTop: 24, width: "55%", marginLeft: 16 }}>
+          {/* Only display the mapping selection when merger mode is not active
             to avoid conflicts in the logic of the UI. */
-        !this.props.isMergerModeEnabled ? (
-          <div style={{ marginTop: 24, width: "50%", marginLeft: 16 }}>
-            <div style={{ marginBottom: 6 }}>
-              <label className="setting-label">
-                ID Mapping
-                <Switch
-                  onChange={this.handleSetMappingEnabled}
-                  checked={this.state.shouldMappingBeEnabled}
-                  style={{ float: "right" }}
-                  loading={this.state.isRefreshingMappingList}
-                />
-              </label>
-            </div>
+          !this.props.isMergerModeEnabled ? (
+            <React.Fragment>
+              <div style={{ marginBottom: 6 }}>
+                <label className="setting-label">
+                  ID Mapping
+                  <Switch
+                    onChange={this.handleSetMappingEnabled}
+                    checked={this.state.shouldMappingBeEnabled}
+                    style={{ float: "right" }}
+                    loading={this.state.isRefreshingMappingList}
+                  />
+                </label>
+              </div>
 
-            {/*
+              {/*
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-            {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
-              <Select
-                placeholder="Select mapping"
-                defaultActiveFirstOption={false}
-                style={{ width: "100%" }}
-                {...selectValueProp}
-                onChange={this.handleChangeMapping}
-                notFoundContent="No mappings found."
-              >
-                {renderCategoryOptions(availableMappings, "JSON")}
-                {renderCategoryOptions(availableAgglomerates, "HDF5")}
-              </Select>
-            ) : null}
-          </div>
-        ) : null}
+              {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
+                <Select
+                  placeholder="Select mapping"
+                  defaultActiveFirstOption={false}
+                  style={{ width: "100%", marginBottom: 14 }}
+                  {...selectValueProp}
+                  onChange={this.handleChangeMapping}
+                  notFoundContent="No mappings found."
+                >
+                  {renderCategoryOptions(availableMappings, "JSON")}
+                  {renderCategoryOptions(availableAgglomerates, "HDF5")}
+                </Select>
+              ) : null}
+            </React.Fragment>
+          ) : null}
+          {renderHideUnmappedSegmentsSwitch ? (
+            <label className="setting-label">
+              Hide unmapped segments
+              <Switch
+                onChange={this.handleChangeHideUnmappedSegments}
+                checked={this.props.hideUnmappedIds}
+                style={{ float: "right" }}
+                loading={this.state.isRefreshingMappingList}
+              />
+            </label>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -423,6 +450,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   ): void {
     dispatch(setLayerMappingsAction(layerName, mappingNames, agglomerateNames));
   },
+  setHideUnmappedIds(hideUnmappedIds: boolean): void {
+    dispatch(setHideUnmappedIdsAction(hideUnmappedIds));
+  },
 });
 
 function mapStateToProps(state: OxalisState) {
@@ -430,6 +460,7 @@ function mapStateToProps(state: OxalisState) {
     dataset: state.dataset,
     position: getPosition(state.flycam),
     zoomStep: getRequestLogZoomStep(state),
+    hideUnmappedIds: state.temporaryConfiguration.activeMapping.hideUnmappedIds,
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
     mappingName: state.temporaryConfiguration.activeMapping.mappingName,

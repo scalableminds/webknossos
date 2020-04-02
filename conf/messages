@@ -43,6 +43,8 @@ organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
+organization.name.invalid=The chosen organization name is invalid.
+organization.folderCreation.failed=Failed to create organization directory, please make sure webKnossos has write permissions in the “binaryData” directory.
 
 user.activated={0} has been activated
 user.notFound=User not found

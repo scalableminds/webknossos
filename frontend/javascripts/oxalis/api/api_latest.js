@@ -99,6 +99,7 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
+import UserLocalStorage from "libs/user_local_storage";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
@@ -436,6 +437,10 @@ class TracingApi {
 
     await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
+    UserLocalStorage.setItem(
+      "lastFinishedTask",
+      JSON.stringify({ annotationId, finishedTime: Date.now() }),
+    );
     try {
       const annotation = await requestTask();
 

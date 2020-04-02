@@ -16,11 +16,16 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 -
 
  ### Fixed
-- Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
+-
 
  ### Removed
 -
 
+## [20.04.1](https://github.com/scalableminds/webknossos/releases/tag/20.04.1) - 2020-04-02
+[Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...20.04.1)
+
+ ### Fixed
+- Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 
 ## [20.04.0](https://github.com/scalableminds/webknossos/releases/tag/20.04.0) - 2020-03-23
 [Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...20.04.0)

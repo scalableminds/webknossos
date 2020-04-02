@@ -8,6 +8,9 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 
 ### Postgres Evolutions:
 
+## [20.04.1](https://github.com/scalableminds/webknossos/releases/tag/20.04.1) - 2020-04-02
+No migrations necessary.
+
 ## [20.04.0](https://github.com/scalableminds/webknossos/releases/tag/20.04.0) - 2020-03-23
 - Default interval for detecting new/deleted datasets on disk (`braingames.binary.changeHandler.tickerInterval` in the config) has been reduced from 10 to 1 minute. If you relied on the value being 10 minutes, you have to set it explicitly now.
 

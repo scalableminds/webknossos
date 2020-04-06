@@ -32,7 +32,9 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
       if (!err) {
         const user = await loginUser(formValues);
         Store.dispatch(setActiveUserAction(user));
-        if (onLoggedIn) onLoggedIn();
+        if (onLoggedIn) {
+          onLoggedIn();
+        }
       }
     });
   };

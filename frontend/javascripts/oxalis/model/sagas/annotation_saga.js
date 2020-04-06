@@ -31,15 +31,16 @@ export function* pushAnnotationUpdateAsync(): Saga<void> {
 }
 
 function shouldDisplaySegmentationData(): boolean {
-  const { segmentationOpacity } = Store.getState().datasetConfiguration;
-  if (segmentationOpacity === 0) {
+  const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+  const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
+  const segmentationLayerName = Model.getSegmentationLayerName();
+  if (!segmentationLayerName || !canModeDisplaySegmentationData) {
     return false;
   }
-  const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-
-  // Currently segmentation data can only be displayed in orthogonal and volume mode
-  const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-  return Model.getSegmentationLayer() != null && canModeDisplaySegmentationData;
+  const isSegmentationLayerDisabled = !Store.getState().datasetConfiguration.layers[
+    segmentationLayerName
+  ].isDisabled;
+  return !isSegmentationLayerDisabled;
 }
 
 export function* warnAboutSegmentationOpacity(): Saga<void> {
@@ -66,6 +67,7 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
+    const segmentationLayerName = Model.getSegmentationLayerName();
     yield* take([
       "ZOOM_IN",
       "ZOOM_OUT",
@@ -73,7 +75,9 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
       "SET_ZOOM_STEP",
       "SET_STORED_LAYOUTS",
       action =>
-        action.type === "UPDATE_DATASET_SETTING" && action.propertyName === "segmentationOpacity",
+        action.type === "UPDATE_LAYER_SETTING" &&
+        action.layerName === segmentationLayerName &&
+        action.propertyName === "alpha",
     ]);
     yield* warnMaybe();
   }

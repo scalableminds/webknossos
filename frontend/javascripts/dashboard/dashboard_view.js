@@ -177,7 +177,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     ) : null;
 
     return (
-      <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
+      <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
         <div className="container" style={{ paddingBottom: 50 }}>
           {whatsNextBanner}
           {userHeader}

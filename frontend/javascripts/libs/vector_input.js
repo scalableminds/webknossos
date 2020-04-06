@@ -109,11 +109,9 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === this.defaultValue.length;
 
-    if (isValidFormat && isValidInput) {
-      if (!this.props.changeOnlyOnBlur) {
-        const vector = ((value: any): T);
-        this.props.onChange(vector);
-      }
+    if (isValidFormat && isValidInput && !this.props.changeOnlyOnBlur) {
+      const vector = ((value: any): T);
+      this.props.onChange(vector);
     }
 
     this.setState({

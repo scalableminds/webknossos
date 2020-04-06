@@ -458,6 +458,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
+<<<<<<< HEAD
                     organization <- createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
@@ -471,14 +472,46 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo)
+||||||| merged common ancestors
+                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
+                    user <- userService.insert(organization._id,
+                                               email,
+                                               firstName,
+                                               lastName,
+                                               isActive = true,
+                                               isOrgTeamManager = true,
+                                               loginInfo,
+                                               passwordHasher.hash(signUpData.password),
+                                               isAdmin = true) ?~> "user.creation.failed"
+                    _ <- createOrganizationFolder(organization.name, loginInfo)
+=======
+                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
+                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
+                    _ <- userService.insert(organization._id,
+                                            email,
+                                            firstName,
+                                            lastName,
+                                            isActive = true,
+                                            isOrgTeamManager = true,
+                                            loginInfo,
+                                            passwordHasher.hash(signUpData.password),
+                                            isAdmin = true) ?~> "user.creation.failed"
+                    _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"
+>>>>>>> d5b6c86e3f8885d92974ae8b19e5733235ecaa07
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
+<<<<<<< HEAD
                                                        request.headers.get("Host").headOption.getOrElse("")))
                     if (conf.Features.isDemoInstance) {
                       Mailer ! Send(defaultMails.registerMailDemo(user.firstName, user.email))
                     }
+||||||| merged common ancestors
+                                                       request.headers.get("Host").headOption.getOrElse("")))
+=======
+                                                       request.headers.get("Host").getOrElse("")))
+>>>>>>> d5b6c86e3f8885d92974ae8b19e5733235ecaa07
                     Ok
                   }
                 }
@@ -500,8 +533,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
+<<<<<<< HEAD
       normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
       organizationName = organizationNameOpt.flatMap(normalizeName).getOrElse(normalizedDisplayName)
+||||||| merged common ancestors
+      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+=======
+      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
+>>>>>>> d5b6c86e3f8885d92974ae8b19e5733235ecaa07
       organization = Organization(ObjectId.generate,
                                   organizationName.replaceAll(" ", "_"),
                                   "",
@@ -526,9 +565,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
-    } yield Full(())
-
+    } yield ()
   }
+
+  private def checkOrganizationFolder(implicit request: RequestHeader) =
+    for {
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      _ <- Fox.serialCombined(datastores)(d => rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get)
+    } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

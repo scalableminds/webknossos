@@ -20,61 +20,9 @@ case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Dou
 object Histogram { implicit val jsonFormat = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends DataConverter
+    with FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
-
-  private def convertData(
-      data: Array[Byte],
-      elementClass: ElementClass.Value,
-      filterZeroes: Boolean = false): Array[_ >: UByte with UShort with UInt with ULong with Float] =
-    elementClass match {
-      case ElementClass.uint8 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
-          .map(UShort(_))
-          .filter(!filterZeroes || _ != UShort(0))
-      case ElementClass.uint24 =>
-        convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
-          .map(UByte(_))
-          .filter(!filterZeroes || _ != UByte(0))
-      case ElementClass.uint32 =>
-        convertDataImpl[Int, IntBuffer](data, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_), _.toInt))
-          .map(UInt(_))
-          .filter(!filterZeroes || _ != UInt(0))
-      case ElementClass.uint64 =>
-        convertDataImpl[Long, LongBuffer](data, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_), identity))
-          .map(ULong(_))
-          .filter(!filterZeroes || _ != ULong(0))
-      case ElementClass.float =>
-        convertDataImpl[Float, FloatBuffer](
-          data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
-    }
-
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
-    val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
-    srcBuffer.rewind()
-    val dstArray = Array.ofDim[T](srcBuffer.remaining())
-    dataTypeFunctor.copyDataFn(srcBuffer, dstArray)
-    dstArray
-  }
-
-  private def combineBytes(data: Array[Byte], numBytes: Int = 3) = {
-    val result = Array.ofDim[Byte](data.length / numBytes)
-    for (i <- data.indices by numBytes) {
-      var sum = 0
-      for (j <- 0 until numBytes) {
-        sum += data(i + j)
-      }
-      result(i / numBytes) = (sum / numBytes).toByte
-    }
-    result
-  }
 
   private def getDataFor(dataSource: DataSource,
                          dataLayer: DataLayer,
@@ -263,7 +211,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
               case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
             }
             val bucketSize = (max - min) / 255
-            floatData.foreach(el => counts(Math.roundDown((el - min) / bucketSize)) += 1)
+            val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
+            floatData.foreach(el => counts(((el - min) / finalBucketSize).floor.toInt) += 1)
             extrema = (min, max)
         }
       }
@@ -276,7 +225,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "getting data failed"
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "Could not get data at sampled positions"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)

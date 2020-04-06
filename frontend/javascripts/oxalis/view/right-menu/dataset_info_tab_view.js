@@ -259,21 +259,36 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
     const tracingDescription = this.props.tracing.description || "<no description>";
 
+    let descriptionEditField;
+    if (this.props.tracing.restrictions.allowUpdate) {
+      descriptionEditField = (
+        <span style={{ verticalAlign: "top" }}>
+          Description:
+          <EditableTextLabel
+            value={tracingDescription}
+            onChange={this.setAnnotationDescription}
+            rows={4}
+            markdown
+            label="Annotation Description"
+          />
+        </span>
+      );
+    } else {
+      descriptionEditField = (
+        <span style={{ verticalAlign: "top" }}>
+          Description:
+          <Markdown
+            source={tracingDescription}
+            options={{ html: false, breaks: true, linkify: true }}
+          />
+        </span>
+      );
+    }
+
     return (
       <div className="flex-overflow">
         <p>{annotationTypeLabel}</p>
-        <p>
-          <span style={{ verticalAlign: "top" }}>
-            Description:
-            <EditableTextLabel
-              value={tracingDescription}
-              onChange={this.setAnnotationDescription}
-              rows={4}
-              markdown
-              label="Annotation Description"
-            />
-          </span>
-        </p>
+        <p>{descriptionEditField}</p>
       </div>
     );
   }

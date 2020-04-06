@@ -83,14 +83,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
-      // Only color layers need layer settings
-      const colorLayers = _.filter(
-        state.dataset.dataSource.dataLayers,
-        layer => layer.category === "color",
-      );
       const initialLayerSettings = action.initialDatasetSettings.layers || {};
       const layerSettingsDefaults = _.transform(
-        colorLayers,
+        state.dataset.dataSource.dataLayers,
         (result, layer) => {
           const intensityRange = getDefaultIntensityRangeOfLayer(state.dataset, layer.name);
           result[layer.name] = Object.assign(
@@ -99,7 +94,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
-              alpha: 100,
+              alpha: layer.category === "color" ? 100 : 20,
               intensityRange,
               isDisabled: false,
               isInverted: false,
@@ -158,14 +153,29 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         isMappingEnabled,
       });
     }
-    case "SET_MAPPING": {
+    case "SET_HIDE_UNMAPPED_IDS": {
+      const { hideUnmappedIds } = action;
       return updateActiveMapping(state, {
-        mappingName: action.mappingName,
-        mappingSize: action.mappingKeys != null ? action.mappingKeys.length : 0,
-        mapping: action.mapping,
-        mappingKeys: action.mappingKeys,
-        mappingColors: action.mappingColors,
-        hideUnmappedIds: action.hideUnmappedIds || false,
+        hideUnmappedIds,
+      });
+    }
+    case "SET_MAPPING": {
+      const {
+        mappingName,
+        mapping,
+        mappingKeys,
+        mappingColors,
+        mappingType,
+        hideUnmappedIds,
+      } = action;
+      return updateActiveMapping(state, {
+        mappingName,
+        mapping,
+        mappingKeys,
+        mappingColors,
+        mappingType,
+        mappingSize: mappingKeys != null ? mappingKeys.length : 0,
+        hideUnmappedIds: hideUnmappedIds || false,
       });
     }
     default:

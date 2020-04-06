@@ -55,6 +55,7 @@ export type APISegmentationLayer = {|
   +category: "segmentation",
   +largestSegmentId: number,
   +mappings?: Array<string>,
+  +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
 |};
 
@@ -77,7 +78,7 @@ type APIDataSourceBase = {
 
 export type APIMaybeUnimportedDataSource = APIDataSourceBase & {
   +dataLayers?: Array<APIDataLayer>,
-  +scale: ?Vector3,
+  +scale?: ?Vector3,
 };
 
 export type APIDataSource = APIDataSourceBase & {

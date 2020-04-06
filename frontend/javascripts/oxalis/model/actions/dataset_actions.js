@@ -6,6 +6,7 @@ type SetLayerMappingsAction = {
   type: "SET_LAYER_MAPPINGS",
   layerName: string,
   mappingNames: Array<string>,
+  agglomerateNames: Array<string>,
 };
 
 export type DatasetAction = SetDatasetAction | SetLayerMappingsAction;
@@ -18,8 +19,10 @@ export const setDatasetAction = (dataset: APIDataset): SetDatasetAction => ({
 export const setLayerMappingsAction = (
   layerName: string,
   mappingNames: Array<string>,
+  agglomerateNames: Array<string>,
 ): SetLayerMappingsAction => ({
   type: "SET_LAYER_MAPPINGS",
   layerName,
   mappingNames,
+  agglomerateNames,
 });

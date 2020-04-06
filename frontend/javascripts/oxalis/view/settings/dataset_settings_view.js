@@ -23,7 +23,6 @@ import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
-  hasSegmentation,
   getElementClass,
   getLayerBoundaries,
   getDefaultIntensityRangeOfLayer,
@@ -71,7 +70,6 @@ type DatasetSettingsProps = {|
   viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
   controlMode: ControlMode,
-  hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -143,7 +141,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     Object.keys(layers).forEach(otherLayerName =>
       this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
     );
-    this.props.onChange("isSegmentationDisabled", !isVisible);
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {
@@ -152,14 +149,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       const { isDisabled } = layers[otherLayerName];
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
-    const { isSegmentationDisabled } = this.props.datasetConfiguration;
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (layerName === segmentationLayerName) {
-      return isOnlyGivenLayerVisible && !isSegmentationDisabled;
-    } else {
-      return isOnlyGivenLayerVisible && isSegmentationDisabled;
-    }
+    return isOnlyGivenLayerVisible;
   };
 
   getEnableDisableLayerSwitch = (
@@ -210,11 +200,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
-      if (isColorLayer) {
-        this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
-      } else {
-        this.props.onChange("isSegmentationDisabled", !isVisible);
-      }
+      this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
     const onChange = (value, event) => {
       if (!event.ctrlKey) {
@@ -248,50 +234,39 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   getLayerSettings = (
     layerName: string,
-    layer: ?DatasetLayerConfiguration,
+    layerConfiguration: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that a color layer needs a layer.
-    if (isColorLayer && !layer) {
+    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const isDisabled =
-      isColorLayer && layer != null
-        ? layer.isDisabled
-        : this.props.datasetConfiguration.isSegmentationDisabled;
+    const { isDisabled } = layerConfiguration;
 
     return (
       <div key={layerName}>
         {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
         {isDisabled ? null : (
           <React.Fragment>
-            {isHistogramSupported(elementClass) && layerName != null && layer != null
-              ? this.getHistogram(layerName, layer)
+            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
+              ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting
               label="Opacity"
               min={0}
               max={100}
-              value={
-                isColorLayer && layer != null
-                  ? layer.alpha
-                  : this.props.datasetConfiguration.segmentationOpacity
-              }
-              onChange={
-                isColorLayer
-                  ? _.partial(this.props.onChangeLayer, layerName, "alpha")
-                  : _.partial(this.props.onChange, "segmentationOpacity")
-              }
+              value={layerConfiguration.alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
-            {isColorLayer && layer != null ? (
+            {isColorLayer ? (
               <Row className="margin-bottom" style={{ marginTop: 4 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
                 </Col>
                 <Col span={10}>
                   <ColorSetting
-                    value={Utils.rgbToHex(layer.color)}
+                    value={Utils.rgbToHex(layerConfiguration.color)}
                     onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
                     className="ant-btn"
                     style={{ marginLeft: 6 }}
@@ -304,7 +279,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                         this.props.onChangeLayer(
                           layerName,
                           "isInverted",
-                          layer ? !layer.isInverted : false,
+                          layerConfiguration ? !layerConfiguration.isInverted : false,
                         )
                       }
                       style={{
@@ -315,11 +290,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                       }}
                     >
                       <i
-                        className={`fa fa-adjust ${layer.isInverted ? "flip-horizontally" : ""}`}
+                        className={`fa fa-adjust ${
+                          layerConfiguration.isInverted ? "flip-horizontally" : ""
+                        }`}
                         style={{
                           margin: 0,
                           transition: "transform 0.5s ease 0s",
-                          color: layer.isInverted
+                          color: layerConfiguration.isInverted
                             ? "rgba(24, 144, 255, 1.0)"
                             : "rgba(0, 0, 0, 0.65)",
                         }}
@@ -383,27 +360,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     await clearCache(this.props.dataset, layerName);
     api.data.reloadBuckets(layerName);
     window.needsRerender = true;
-    Toast.success(`Successfully deleted cached data of layer ${layerName}.`);
+    Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 
-  onChangeRenderMissingDataBlack = (value: boolean): void => {
-    Toast.warning(
+  onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
+    Toast.info(
       value
         ? messages["data.enabled_render_missing_data_black"]
         : messages["data.disabled_render_missing_data_black"],
       { timeout: 8000 },
     );
     this.props.onChange("renderMissingDataBlack", value);
+    const { layers } = this.props.datasetConfiguration;
+    const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
+      await clearCache(this.props.dataset, layerName);
+      api.data.reloadBuckets(layerName);
+    });
+    await Promise.all(reloadAllLayersPromises);
+    window.needsRerender = true;
+    Toast.success("Successfully reloaded data of all layers.");
   };
-
-  getSegmentationPanel() {
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (!segmentationLayerName) {
-      return null;
-    }
-    return this.getLayerSettings(segmentationLayerName, null, false);
-  }
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>
     hasInvisibleLayers ? (
@@ -419,20 +395,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const colorSettings = Object.entries(layers).map(entry => {
+    const segmentationLayerName = Model.getSegmentationLayerName();
+    const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
+      const isColorLayer = segmentationLayerName !== layerName;
       // $FlowFixMe Object.entries returns mixed for Flow
-      return this.getLayerSettings(layerName, layer, true);
+      return this.getLayerSettings(layerName, layer, isColorLayer);
     });
     const hasInvisibleLayers =
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null || this.props.datasetConfiguration.isSegmentationDisabled;
+      ) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {colorSettings}
-          {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
+          {layerSettings}
         </Panel>
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
@@ -514,7 +491,6 @@ const mapStateToProps = (state: OxalisState) => ({
   histogramData: state.temporaryConfiguration.histogramData,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
-  hasSegmentation: hasSegmentation(state.dataset),
   tracing: state.tracing,
 });
 

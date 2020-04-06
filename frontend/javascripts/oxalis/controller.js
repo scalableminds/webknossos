@@ -3,11 +3,12 @@
  * @flow
  */
 
-import { type RouterHistory, withRouter } from "react-router-dom";
+import { type RouterHistory, withRouter, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
+import { Button, Col, Row } from "antd";
 
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
@@ -18,9 +19,10 @@ import { setIsInAnnotationViewAction } from "oxalis/model/actions/ui_actions";
 import {
   setViewModeAction,
   updateUserSettingAction,
-  updateDatasetSettingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction } from "oxalis/model/actions/actions";
+import LoginForm from "admin/auth/login_form";
 import ApiLoader from "oxalis/api/api_loader";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import BrainSpinner from "components/brain_spinner";
@@ -34,24 +36,27 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
+import type { APIUser } from "admin/api_flow_types";
 
 import app from "app";
 import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
+type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {|
   initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
 |};
 type StateProps = {|
   viewMode: ViewMode,
+  user: ?APIUser,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
-  ready: boolean,
+  status: ControllerStatus,
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
@@ -60,7 +65,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   isMounted: boolean;
 
   state = {
-    ready: false,
+    status: "loading",
   };
 
   // Main controller, responsible for setting modes and everything
@@ -90,22 +95,28 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       Toast.error(messages["webgl.disabled"]);
     }
 
+    this.tryFetchingModel();
+  }
+
+  componentWillUnmount() {
+    this.isMounted = false;
+    Store.dispatch(setIsInAnnotationViewAction(false));
+  }
+
+  tryFetchingModel() {
+    this.setState({ status: "loading" });
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
+        this.setState({ status: "failedLoading" });
         // Don't throw errors for errors already handled by the model.
         if (error !== HANDLED_ERROR) {
           throw error;
         }
       });
-  }
-
-  componentWillUnmount() {
-    this.isMounted = false;
-    Store.dispatch(setIsInAnnotationViewAction(false));
   }
 
   modelFetchDone() {
@@ -148,7 +159,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       // Give wk (sagas and bucket loading) a bit time to catch air before
       // showing the UI as "ready". The goal here is to avoid that the
       // UI is still freezing after the loading indicator is gone.
-      this.setState({ ready: true });
+      this.setState({ status: "loaded" });
     }, 200);
   }
 
@@ -244,11 +255,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     _.extend(keyboardControls, {
       // In the long run this should probably live in a user script
       "3": function toggleSegmentationOpacity() {
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (!segmentationLayerName) {
+          return;
+        }
+        const isSegmentationDisabled = Store.getState().datasetConfiguration.layers[
+          segmentationLayerName
+        ].isDisabled;
         Store.dispatch(
-          updateDatasetSettingAction(
-            "isSegmentationDisabled",
-            !Store.getState().datasetConfiguration.isSegmentationDisabled,
-          ),
+          updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
         );
       },
     });
@@ -262,24 +277,51 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   render() {
-    if (!this.state.ready) {
+    const { status } = this.state;
+    const { user, viewMode } = this.props;
+    if (status === "loading") {
       return <BrainSpinner />;
+    } else if (status === "failedLoading" && user != null) {
+      return (
+        <BrainSpinner
+          message={
+            <div style={{ textAlign: "center" }}>
+              Either the dataset does not exist or you do not have the necessary access rights.
+              <br />
+              <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
+                <Button type="primary">Return to dashboard</Button>
+              </Link>
+            </div>
+          }
+          isLoading={false}
+        />
+      );
+    } else if (status === "failedLoading") {
+      return (
+        <div className="cover-whole-screen">
+          <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+            <Col span={8}>
+              <h3>Try logging in to view the dataset.</h3>
+              <LoginForm layout="horizontal" onLoggedIn={() => this.tryFetchingModel()} />
+            </Col>
+          </Row>
+        </div>
+      );
     }
     const { allowedModes } = Store.getState().tracing.restrictions;
-    const mode = this.props.viewMode;
 
-    if (!allowedModes.includes(mode)) {
+    if (!allowedModes.includes(viewMode)) {
       // Since this mode is not allowed, render nothing. A warning about this will be
       // triggered in the model. Don't throw an error since the store might change so that
       // the render function can succeed.
       return null;
     }
 
-    const isArbitrary = constants.MODES_ARBITRARY.includes(mode);
-    const isPlane = constants.MODES_PLANE.includes(mode);
+    const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
+    const isPlane = constants.MODES_PLANE.includes(viewMode);
 
     if (isArbitrary) {
-      return <ArbitraryController viewMode={mode} />;
+      return <ArbitraryController viewMode={viewMode} />;
     } else if (isPlane) {
       return <PlaneController />;
     } else {
@@ -293,6 +335,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
+    user: state.activeUser,
   };
 }
 

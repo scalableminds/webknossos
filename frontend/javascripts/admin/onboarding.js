@@ -21,7 +21,7 @@ import React, { type Node, useState, useEffect } from "react";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
-import { getOrganizationNames, getDatastores } from "admin/admin_rest_api";
+import { getDefaultOrganization, getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -233,7 +233,7 @@ export class InviteUsersPopover extends React.Component<{
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
   const [organizations, setOrganizations] = useState([]);
-  const fetchOrganizations = async () => setOrganizations(await getOrganizationNames());
+  const fetchOrganizations = async () => setOrganizations([(await getDefaultOrganization()).name]);
   useEffect(() => {
     fetchOrganizations();
   }, []);

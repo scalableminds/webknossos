@@ -59,6 +59,7 @@ class IsosurfaceService @Inject()(
     extends FoxImplicits {
 
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
+  val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
 
   implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
 
@@ -94,10 +95,24 @@ class IsosurfaceService @Inject()(
 
     def applyMapping(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
-        case Some(mappingName) =>
+        /*case Some(mappingName) =>
           mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
                                       data,
-                                      dataTypeFunctors.fromLong)
+                                      dataTypeFunctors.fromLong)*/
+        case _ =>
+          Fox.successful(data)
+      }
+
+    def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
+      request.mapping match {
+        case Some(mappingName) =>
+          val dataRequest = DataServiceDataRequest(request.dataSource,
+                                                   request.dataLayer,
+                                                   request.mapping,
+                                                   request.cuboid,
+                                                   DataServiceRequestSettings(halfByte = false, request.mapping, None),
+                                                   Vector3I(1, 1, 1))
+          agglomerateService.applyAgglomerate(dataRequest)(data)
         case _ =>
           Fox.successful(data)
       }
@@ -168,7 +183,8 @@ class IsosurfaceService @Inject()(
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      typedData = convertData(data)
+      agglomerateMappedData <- applyAgglomerate(data)
+      typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
       neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)

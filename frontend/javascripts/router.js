@@ -416,6 +416,10 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/spotlight" component={SpotlightView} />
               <Route
+                path="/datasets/:organizationName/:datasetName"
+                render={this.tracingViewMode}
+              />
+              <Route
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}
               />

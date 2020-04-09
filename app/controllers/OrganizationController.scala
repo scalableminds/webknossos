@@ -2,9 +2,9 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.FoxImplicits
 import models.team._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNull, Json}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
@@ -35,11 +35,13 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   def getDefault = Action.async { implicit request =>
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
-      _ <- bool2Fox(allOrgs.length <= 1) ?~> "organization.list.moreThanOne"
       org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
       js <- organizationService.publicWrites(org)(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(js))
+      if (allOrgs.length > 1) // Cannot list organizations if there are multiple ones due to privacy reasons
+        Ok(JsNull)
+      else
+        Ok(Json.toJson(js))
     }
   }
 

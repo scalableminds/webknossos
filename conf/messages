@@ -7,7 +7,7 @@ notAllowed=You are not authorized to view or edit this resource
 
 binary.payload.invalid=Couldn’t parse payload
 
-histogram.layerMissing=Could not generate histogram data: missing layer {0}
+organization.list.moreThanOnehistogram.layerMissing=Could not generate histogram data: missing layer {0}
 histogram.failed=Could not generate histogram data for layer {0}
 
 email=Email
@@ -43,7 +43,6 @@ organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
-organization.list.moreThanOne=Cannot list organizations if there are multiple ones due to privacy reasons.
 organization.name.invalid=The chosen organization name is invalid.
 organization.folderCreation.failed=Failed to create organization directory, please make sure webKnossos has write permissions in the “binaryData” directory.
 

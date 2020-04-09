@@ -69,6 +69,7 @@ message SkeletonTracing {
     required int64 version = 9;
     optional BoundingBox userBoundingBox = 10;
     repeated TreeGroup treeGroups = 11;
+    repeated NamedBoundingBox userBoundingBoxes = 12;
 }
 
 message SkeletonTracingOpt {

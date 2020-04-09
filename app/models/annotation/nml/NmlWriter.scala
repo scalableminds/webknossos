@@ -88,8 +88,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                volumeTracingOpt: Option[VolumeTracing],
                                annotation: Option[Annotation],
                                organizationName: String,
-                               scale: Option[Scale]): Option[NmlParameters] =
-    // in hybrid case, use data from skeletonTracing (should be identical)
+                               scale: Option[Scale]): Option[NmlParameters] = {
+    val userBoundingBoxes =
+      List(
+        skeletonTracingOpt.map(_.userBoundingBox),
+        volumeTracingOpt.map(_.userBoundingBox)
+      )
+      // in hybrid case, use data from skeletonTracing (should be identical)
     skeletonTracingOpt.map { s =>
       NmlParameters(
         s.dataSetName,
@@ -121,6 +126,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         )
       }
     }
+  }
 
   def writeParameters(parameters: NmlParameters)(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("parameters") {

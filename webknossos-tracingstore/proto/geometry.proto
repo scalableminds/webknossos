@@ -21,3 +21,8 @@ message BoundingBox {
     required int32 height = 3;
     required int32 depth = 4;
 }
+
+message NamedBoundingBox {
+  optional string name = 1;
+  required BoundingBox boundingBox = 2;
+}

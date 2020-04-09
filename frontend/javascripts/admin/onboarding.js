@@ -17,11 +17,11 @@ import {
 import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import React, { type Node, useState, useEffect } from "react";
+import React, { type Node } from "react";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
-import { getDefaultOrganization, getDatastores } from "admin/admin_rest_api";
+import { getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";

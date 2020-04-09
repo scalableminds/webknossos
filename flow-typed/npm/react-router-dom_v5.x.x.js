@@ -155,4 +155,6 @@ declare module "react-router-dom" {
     pathname: string,
     options?: MatchPathOptions | string
   ): null | Match;
+
+  declare export function useHistory(): RouterHistory;
 }

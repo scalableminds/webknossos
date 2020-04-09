@@ -1,17 +1,17 @@
 // @flow
-import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Layout, Button, Row, Col, Card, Input } from "antd";
+import { Link, withRouter, type RouterHistory } from "react-router-dom";
+import { Spin, Layout, Row, Col, Card, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
 import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { getOrganizations, getDatasets } from "admin/admin_rest_api";
+import { checkAnyOrganizationExists, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
-import { trackAction } from "oxalis/model/helpers/analytics";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
+import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
 
 const { Content } = Layout;
 const { Search } = Input;
@@ -54,7 +54,7 @@ const WelcomeHeader = ({ history }) => (
               style={{ filter: "invert(1)", width: "100%" }}
             />
           </Col>
-          <Col xs={{ span: 24 }} xl={{ span: 20 }}>
+          <Col xs={{ span: 24 }} xl={{ span: 13 }} lg={{ span: 16 }}>
             <p
               style={{
                 fontSize: 58,
@@ -94,24 +94,37 @@ const WelcomeHeader = ({ history }) => (
               </ul>
             </div>
 
-            <div style={{ marginTop: 20, paddingLeft: 60 }}>
-              <Button
-                type="primary"
-                size="large"
-                style={{ marginRight: 50 }}
-                onClick={() => {
-                  history.push("/onboarding");
-                  trackAction("[Spotlight] CreateFreeAccount");
-                }}
+            <div style={{ marginBottom: 20, paddingLeft: 60 }}>
+              <Link
+                to="/features"
+                className="spotlight-hero-button ant-btn ant-btn-lg ant-btn-background-ghost"
               >
-                Create a Free Account
-              </Button>
-              <Link to="/features" className="spotlight-hero-button">
                 Learn More About the Features
               </Link>
-              <Link to="/pricing" className="spotlight-hero-button">
+              <Link
+                to="/pricing"
+                className="spotlight-hero-button ant-btn ant-btn-lg ant-btn-background-ghost"
+              >
                 Get Your Own webKnossos
               </Link>
+            </div>
+          </Col>
+          <Col xs={{ span: 24 }} lg={{ span: 7 }} xl={{ span: 6 }}>
+            <div
+              style={{
+                backgroundColor: "white",
+                padding: 20,
+                boxShadow: "0 0 10px rgba(0, 0, 0, 0.38)",
+              }}
+            >
+              <SpotlightRegistrationForm
+                onRegistered={() => {
+                  history.push("/dashboard?showWhatsNextBanner");
+                }}
+              />
+              <p style={{ textAlign: "center" }}>
+                <Link to="/auth/login">Log in to existing account</Link>
+              </p>
             </div>
           </Col>
         </Row>
@@ -202,8 +215,11 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const [datasets, organizations] = await Promise.all([getDatasets(), getOrganizations()]);
-      this.setState({ datasets, hasOrganizations: organizations.length > 0 });
+      const [datasets, hasOrganizations] = await Promise.all([
+        getDatasets(),
+        checkAnyOrganizationExists(),
+      ]);
+      this.setState({ datasets, hasOrganizations });
     } catch (error) {
       handleGenericError(error);
     } finally {

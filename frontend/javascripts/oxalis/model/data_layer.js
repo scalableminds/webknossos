@@ -21,6 +21,7 @@ class DataLayer {
   pushQueue: PushQueue;
   mappings: Mappings;
   activeMapping: ?string;
+  activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
@@ -73,6 +74,7 @@ class DataLayer {
     progressCallback?: ProgressCallback,
   ): void {
     this.activeMapping = mappingName;
+    this.activeMappingType = mappingType;
     this.mappings.activateMapping(mappingName, mappingType, progressCallback);
   }
 }

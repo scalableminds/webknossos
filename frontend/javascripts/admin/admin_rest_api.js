@@ -1124,8 +1124,9 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export function getDefaultOrganization(): Promise<APIOrganization> {
-  return Request.receiveJSON("/api/organizations/default");
+export async function getDefaultOrganization(): Promise<?APIOrganization> {
+  // Only returns an organization if the webKnossos instance only has one organization
+  await Request.receiveJSON("/api/organizations/default");
 }
 
 export function getOrganization(organizationName: string): Promise<APIOrganization> {

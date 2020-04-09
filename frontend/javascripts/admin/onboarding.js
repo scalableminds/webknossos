@@ -232,14 +232,6 @@ export class InviteUsersPopover extends React.Component<{
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
-  const [organizations, setOrganizations] = useState([]);
-  const fetchOrganizations = async () => setOrganizations([(await getDefaultOrganization()).name]);
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
-  const joinExistingOrganization = organizations.includes(form.getFieldValue("organizationName"));
-
   const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
   const handleSubmit = e => {
     e.preventDefault();
@@ -269,7 +261,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             })(
               <AutoComplete
                 size="large"
-                dataSource={organizations}
+                dataSource={[]}
                 defaultActiveFirstOption={false}
                 placeholder="Your organization name"
               />,
@@ -278,15 +270,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
         </Col>
         <Col span={6}>
           <FormItem>
-            {joinExistingOrganization ? (
-              <Link
-                to={`/auth/register?organizationName=${form.getFieldValue("organizationName")}`}
-              >
-                <Button size="large" type="primary" style={{ width: "100%" }}>
-                  Join
-                </Button>
-              </Link>
-            ) : (
+            {
               <Button
                 size="large"
                 type="primary"
@@ -297,7 +281,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
               >
                 Create
               </Button>
-            )}
+            }
           </FormItem>
         </Col>
       </Row>

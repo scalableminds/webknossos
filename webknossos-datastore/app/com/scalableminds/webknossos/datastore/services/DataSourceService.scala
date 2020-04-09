@@ -109,7 +109,9 @@ class DataSourceService @Inject()(
   }
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
-    MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+    MappingProvider
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None

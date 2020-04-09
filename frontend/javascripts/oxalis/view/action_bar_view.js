@@ -30,7 +30,7 @@ import TracingActionsView, {
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import AuthenticationModal from "admin/auth/authentication_modal";
-import { createTracingOverlayMenu } from "dashboard/advanced_dataset/dataset_action_view";
+import { createTracingOverlayMenuWithCallback } from "dashboard/advanced_dataset/dataset_action_view";
 
 const VersionRestoreWarning = (
   <Alert
@@ -103,6 +103,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
   renderStartTracingButton(): React.Node {
     const { activeUser, dataset } = this.props;
     const needsAuthentication = activeUser == null;
+    const hasSegmentationLayer = dataset.dataSource.dataLayers.some(
+      layer => layer.category === "segmentation",
+    );
 
     const handleCreateTracing = async (
       _dataset: APIMaybeUnimportedDataset,
@@ -116,16 +119,28 @@ class ActionBarView extends React.PureComponent<Props, State> {
       }
     };
 
-    return (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid", handleCreateTracing)}
-        trigger={["click"]}
-      >
-        <ButtonComponent style={{ marginLeft: 12 }} type="primary">
-          Create Tracing
+    if (hasSegmentationLayer) {
+      return (
+        <Dropdown
+          overlay={createTracingOverlayMenuWithCallback(dataset, "hybrid", handleCreateTracing)}
+          trigger={["click"]}
+        >
+          <ButtonComponent style={{ marginLeft: 12 }} type="primary">
+            Create Annotation
+          </ButtonComponent>
+        </Dropdown>
+      );
+    } else {
+      return (
+        <ButtonComponent
+          style={{ marginLeft: 12 }}
+          type="primary"
+          onClick={() => handleCreateTracing(dataset, "hybrid", false)}
+        >
+          Create Annotation
         </ButtonComponent>
-      </Dropdown>
-    );
+      );
+    }
   }
 
   render() {

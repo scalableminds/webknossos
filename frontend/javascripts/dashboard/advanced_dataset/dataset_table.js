@@ -8,13 +8,13 @@ import dice from "dice-coefficient";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
+import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
-import type { DatasetFilteringMode } from "../dataset_view";
 
 const { Column } = Table;
 
@@ -93,11 +93,21 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
   renderEmptyText() {
     const maybeWarning =
-      this.props.datasetFilteringMode !== "showAllDatasets"
-        ? "Note that datasets are currently filtered according to whether they are available on the datastore. You can change the filtering via the menu next to the search input."
-        : null;
+      this.props.datasetFilteringMode !== "showAllDatasets" ? (
+        <p>
+          Note that datasets are currently filtered according to whether they are available on the
+          datastore.
+          <br />
+          You can change the filtering via the menu next to the search input.
+        </p>
+      ) : null;
 
-    return <span>No Datasets found. {maybeWarning}</span>;
+    return (
+      <>
+        <p>No Datasets found.</p>
+        {maybeWarning}
+      </>
+    );
   }
 
   render() {
@@ -170,7 +180,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
-          title="Scale & Extent"
+          title="Voxel Size & Extent"
           dataIndex="scale"
           key="scale"
           width={230}

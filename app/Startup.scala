@@ -100,7 +100,6 @@ class Startup @Inject()(actorSystem: ActorSystem,
       conf.Mail.Smtp.tls,
       conf.Mail.Smtp.user,
       conf.Mail.Smtp.pass,
-      conf.Mail.Subject.prefix
     )
     actorSystem.actorOf(Props(new Mailer(mailerConf)), name = "mailActor")
   }

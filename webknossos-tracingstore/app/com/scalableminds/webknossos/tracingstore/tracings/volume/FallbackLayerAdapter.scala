@@ -44,7 +44,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   val largestSegmentId: Long = math.max(primary.largestSegmentId, fallback.largestSegmentId)
 
-  val mappings: Set[String] = primary.mappings
+  val mappings: Option[Set[String]] = primary.mappings
 
   lazy val bucketProvider: BucketProvider = new FallbackBucketProvider(primary, fallback)
 

@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Users can now input floating point numbers into the rotation field in flight and oblique mode. These values will get rounded internally. [#4507](https://github.com/scalableminds/webknossos/pull/4507)
 - Deleting an empty tree group in the `Trees` tab no longer prompts for user confirmation. [#4506](https://github.com/scalableminds/webknossos/pull/4506)
 - Toggling the "Render missing data black" option now automatically reloads all layers making it unnecessary to reload the whole page. [#4516](https://github.com/scalableminds/webknossos/pull/4516)
+- The "mappings" attribute of segmentation layers in datasource jsons can now be omitted. [#4532](https://github.com/scalableminds/webknossos/pull/4532)
 
  ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
@@ -85,6 +86,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 ### Changed
 - Made the navbar scrollable on small screens. [#4413](https://github.com/scalableminds/webknossos/pull/4413)
 - Opening the settings sidebar when viewing a dataset or tracing defaults to the dataset settings now. [#4425](https://github.com/scalableminds/webknossos/pull/4425)
+- Better onboarding experience for new users on webknossos.org. [#4439](https://github.com/scalableminds/webknossos/pull/4439)
 
 ### Fixed
 - Fixed that for uint16 data layer the default value range of [0, 255] was used, causing most of the data to look white without manual adjustments. Now the correct range of [0, 65535] is used as default. [#4381](https://github.com/scalableminds/webknossos/pull/4381)

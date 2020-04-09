@@ -266,7 +266,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                   <span>
                     <Link
                       to={`/annotations/CompoundProject/${project.id}`}
-                      title="View all Finished Tracings"
+                      title="View all Finished Annotations"
                     >
                       <Icon type="eye-o" />
                       View
@@ -326,7 +326,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                           });
                         }
                       }}
-                      title="Download all Finished Tracings"
+                      title="Download all Finished Annotations"
                     >
                       <Icon type="download" />
                       Download

@@ -369,9 +369,33 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   }
 
   renderPlaceholder() {
-    return this.state.isLoading
-      ? null
-      : 'You have no assigned tasks. Request a new task by clicking on the "Get a New Task" button.';
+    return this.state.isLoading ? null : (
+      <>
+        <p>
+          You have no assigned tasks. Request a new task by clicking on the{" "}
+          <strong>Get a New Task</strong> button.
+        </p>
+        {this.props.activeUser.isAdmin && (
+          <>
+            <p>
+              Tasks are a powerful way to distribute annotation jobs among groups of users.{" "}
+              <Link to="/tasks">Create new tasks from the admin menu</Link>.
+            </p>
+            <p>
+              To learn more about the task system in webKnossos,{" "}
+              <a
+                href="https://docs.webknossos.org/guides/tasks"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                checkout the documentation
+              </a>
+              .
+            </p>
+          </>
+        )}
+      </>
+    );
   }
 
   renderTaskList() {
@@ -468,7 +492,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          {this.state.showFinishedTasks ? "Finished" : null} Tasks
+          My {this.state.showFinishedTasks ? "Finished" : null} Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}

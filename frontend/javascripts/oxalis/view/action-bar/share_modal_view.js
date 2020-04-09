@@ -143,10 +143,10 @@ class ShareModalView extends PureComponent<Props, State> {
   maybeShowWarning() {
     let message;
     if (!this.props.restrictions.allowUpdate) {
-      message = "You don't have the permission to edit the visibility of this tracing.";
+      message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!this.props.dataset.isPublic && this.state.visibility === "Public") {
       message =
-        "The dataset of this tracing is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
+        "The dataset of this annotation is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
     } else if (this.state.visibility === "Private") {
       message =
         "The annotation is currently private, so Team Sharing is disabled and only admins and team managers can use the Sharing Link.";
@@ -172,7 +172,7 @@ class ShareModalView extends PureComponent<Props, State> {
 
     return (
       <Modal
-        title="Share this Tracing"
+        title="Share this Annotation"
         visible={this.props.isVisible}
         width={800}
         okText={this.props.restrictions.allowUpdate ? "Save" : "Ok"}
@@ -203,7 +203,7 @@ class ShareModalView extends PureComponent<Props, State> {
         {this.maybeShowWarning()}
         <Row>
           <Col span={6} style={{ lineHeight: "28px" }}>
-            Who can view this tracing?
+            Who can view this annotation?
           </Col>
           <Col span={18}>
             <RadioGroup onChange={this.handleCheckboxChange} value={this.state.visibility}>
@@ -215,7 +215,7 @@ class ShareModalView extends PureComponent<Props, State> {
                 Private
               </Radio>
               <Hint style={{ marginLeft: 24 }}>
-                Only you and your team manager can view this tracing.
+                Only you and your team manager can view this annotation.
               </Hint>
 
               <Radio
@@ -228,7 +228,7 @@ class ShareModalView extends PureComponent<Props, State> {
               <Hint style={{ marginLeft: 24 }}>
                 All users in your organization{" "}
                 {this.props.dataset.isPublic ? "" : "who have access to this dataset"} can view this
-                tracing and copy it to their accounts to edit it.
+                annotation and copy it to their accounts to edit it.
               </Hint>
 
               <Radio
@@ -239,7 +239,7 @@ class ShareModalView extends PureComponent<Props, State> {
                 Public
               </Radio>
               <Hint style={{ marginLeft: 24 }}>
-                Anyone with the link can see this tracing without having to log in.
+                Anyone with the link can see this annotation without having to log in.
               </Hint>
             </RadioGroup>
           </Col>
@@ -250,7 +250,7 @@ class ShareModalView extends PureComponent<Props, State> {
         </Divider>
         <Row>
           <Col span={6} style={{ lineHeight: "22px" }}>
-            Should this tracing appear in the sharing tab?
+            Should this annotation appear in the sharing tab?
           </Col>
           <Col span={18}>
             <TeamSelectionComponent
@@ -261,8 +261,8 @@ class ShareModalView extends PureComponent<Props, State> {
               disabled={!this.props.restrictions.allowUpdate || this.state.visibility === "Private"}
             />
             <Hint style={{ margin: "6px 12px" }}>
-              Choose the teams to share your tracing with. Members of these teams can see this
-              tracing in their shared annotations tab.
+              Choose the teams to share your annotation with. Members of these teams can see this
+              annotation in their shared annotations tab.
             </Hint>
           </Col>
         </Row>

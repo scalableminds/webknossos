@@ -29,8 +29,8 @@ object MappingProvider {
 
   val mappingFileExtension = "json"
 
-  def exploreMappings(layerDir: Path): Set[String] =
-    PathUtils
+  def exploreMappings(layerDir: Path): Option[Set[String]] = {
+    val mappingSet = PathUtils
       .listFiles(layerDir.resolve(MappingProvider.mappingsDir),
                  PathUtils.fileExtensionFilter(MappingProvider.mappingFileExtension))
       .map { paths =>
@@ -38,4 +38,6 @@ object MappingProvider {
       }
       .getOrElse(Nil)
       .toSet
+    if (mappingSet.isEmpty) None else Some(mappingSet)
+  }
 }

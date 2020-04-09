@@ -1245,6 +1245,7 @@ export function computeIsosurface(
           segmentId,
           // Name of mapping to apply before building isosurface (optional)
           mapping: layer.activeMapping,
+          mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
         },

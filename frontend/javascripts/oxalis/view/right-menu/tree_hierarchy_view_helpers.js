@@ -89,12 +89,11 @@ export function insertTreesAndTransform(
       expanded: expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : true,
       children: insertTreesAndTransform(group.children, groupToTreesMap, expandedGroupIds, sortBy),
     });
-    if (groupToTreesMap[groupId] != null) {
-      // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-      treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(
-        _.orderBy(groupToTreesMap[groupId], [sortBy], ["asc"]).map(makeTreeNodeFromTree),
-      );
-    }
+    // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
+    const trees = _.orderBy(groupToTreesMap[groupId] || [], [sortBy], ["asc"]).map(
+      makeTreeNodeFromTree,
+    );
+    treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
     treeNode.isChecked = _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
     return treeNode;
   });

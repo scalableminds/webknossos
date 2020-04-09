@@ -465,6 +465,10 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
+              {
+                // Note that this route has to be beneath all others sharing the same prefix,
+                // to avoid url mismatching
+              }
               <Route
                 path="/datasets/:organizationName/:datasetName"
                 render={this.tracingViewMode}

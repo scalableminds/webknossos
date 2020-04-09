@@ -17,13 +17,16 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   val defaultFrom = "no-reply@webknossos.org"
 
+  val demoSender = conf.Mail.demoSender
+
   val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
 
   def registerAdminNotifyerMail(user: User, email: String, brainDBResult: Option[String], organization: Organization) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),
-      subject = s"A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
+      subject =
+        s"webKnossos | A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )
@@ -31,7 +34,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, organization: Organization) =
     Mail(
       from = defaultFrom,
-      subject = s"Time limit reached. ${user.abreviatedName} in $projectName",
+      subject = s"webKnossos | Time limit reached. ${user.abreviatedName} in $projectName",
       bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList)
     )
@@ -40,33 +43,43 @@ class DefaultMails @Inject()(conf: WkConf) {
       implicit messages: Messages) =
     Mail(
       from = defaultFrom,
-      subject = "Thanks for your registration on " + uri,
+      subject = "webKnossos | Thanks for your registration on " + uri,
       bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      recipients = List(receiver)
+    )
+
+  def registerMailDemo(name: String, receiver: String)(implicit messages: Messages) =
+    Mail(
+      from = demoSender,
+      subject = "Welcome to webKnossos",
+      bodyHtml = html.mail.registerDemo(name).body,
       recipients = List(receiver)
     )
 
   def activatedMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
-         subject = s"Your account on $uri was activated",
+         subject = s"webKnossos | Your account on $uri was activated",
          bodyText = html.mail.validated(name, uri).body,
          recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
-         subject = "Your webKnossos password was changed",
+         subject = "webKnossos | Your webKnossos password was changed",
          bodyText = html.mail.passwordChanged(name).body,
          recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String) =
-    Mail(from = defaultFrom,
-         subject = "Confirm resetting your webKnossos password",
-         bodyText = html.mail.resetPassword(name, uri, token).body,
-         recipients = List(receiver))
+    Mail(
+      from = defaultFrom,
+      subject = "webKnossos | Confirm resetting your webKnossos password",
+      bodyText = html.mail.resetPassword(name, uri, token).body,
+      recipients = List(receiver)
+    )
 
   def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) =
     Mail(
       from = defaultFrom,
-      subject = "New webKnossos Organization created on " + domain,
+      subject = "webKnossos | New webKnossos Organization created on " + domain,
       bodyHtml = html.mail.newOrganization(organizationName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )

@@ -50,7 +50,7 @@ const descriptionFns = {
     type: "picture",
   }),
   createTracing: (): Description => ({
-    description: "Created the tracing.",
+    description: "Created the annotation.",
     type: "rocket",
   }),
 };
@@ -146,7 +146,7 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
 
   // Catch-all for other update actions, currently updateNode and updateTracing.
   return {
-    description: "Modified the tracing.",
+    description: "Modified the annotation.",
     type: "edit",
   };
 }

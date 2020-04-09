@@ -12,15 +12,16 @@ import {
   Icon,
   Card,
   AutoComplete,
+  Alert,
 } from "antd";
 import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
-import React, { type Node, useState, useEffect } from "react";
+import React, { type Node } from "react";
 
 import type { APIUser, APIDataStore } from "admin/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
-import { getOrganizationNames, getDatastores } from "admin/admin_rest_api";
+import { getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -46,6 +47,66 @@ type State = {
   datasetNameToImport: ?string,
   showDatasetUploadModal: boolean,
 };
+
+export function WhatsNextBanner() {
+  const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
+
+  const welcomeHeader = (
+    <Row type="flex" gutter={50}>
+      <Col span={4}>
+        <Icon type="rocket" className="icon-big" />
+      </Col>
+      <Col span={20}>
+        <h2>Welcome to your webKnossos account!</h2>
+        <p>
+          <strong>You are now logged in and ready to go!</strong>
+        </p>
+
+        <Row type="flex" gutter={50}>
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <Link to="/dashboard/publications?showWhatsNextBanner">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="play-circle-o" />
+                </div>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start To Explore Datasets</p>
+              </Card>
+            </Link>
+          </Col>
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <Link to="/datasets/upload">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="cloud-upload-o" />
+                </div>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Upload your Data</p>
+              </Card>
+            </Link>
+          </Col>
+          <Col {...columnSpan} style={{ padding: 12 }}>
+            <Link to="/users">
+              <Card style={{ textAlign: "center", height: "100%" }}>
+                <div style={{ fontSize: 30 }}>
+                  <Icon type="team" />
+                </div>
+                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start Collaborating</p>
+              </Card>
+            </Link>
+          </Col>
+        </Row>
+      </Col>
+    </Row>
+  );
+
+  return (
+    <Alert
+      description={welcomeHeader}
+      type="info"
+      closable
+      style={{ marginTop: 20, marginBottom: 20, padding: 40, paddingLeft: 60 }}
+    />
+  );
+}
 
 function StepHeader({
   header,
@@ -171,14 +232,6 @@ export class InviteUsersPopover extends React.Component<{
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
-  const [organizations, setOrganizations] = useState([]);
-  const fetchOrganizations = async () => setOrganizations(await getOrganizationNames());
-  useEffect(() => {
-    fetchOrganizations();
-  }, []);
-
-  const joinExistingOrganization = organizations.includes(form.getFieldValue("organizationName"));
-
   const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
   const handleSubmit = e => {
     e.preventDefault();
@@ -208,7 +261,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
             })(
               <AutoComplete
                 size="large"
-                dataSource={organizations}
+                dataSource={[]}
                 defaultActiveFirstOption={false}
                 placeholder="Your organization name"
               />,
@@ -217,15 +270,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
         </Col>
         <Col span={6}>
           <FormItem>
-            {joinExistingOrganization ? (
-              <Link
-                to={`/auth/register?organizationName=${form.getFieldValue("organizationName")}`}
-              >
-                <Button size="large" type="primary" style={{ width: "100%" }}>
-                  Join
-                </Button>
-              </Link>
-            ) : (
+            {
               <Button
                 size="large"
                 type="primary"
@@ -236,7 +281,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
               >
                 Create
               </Button>
-            )}
+            }
           </FormItem>
         </Col>
       </Row>

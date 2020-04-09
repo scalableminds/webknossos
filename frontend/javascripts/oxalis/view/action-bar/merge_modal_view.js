@@ -178,8 +178,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   render() {
     const mergeIntoActiveTracingCheckbox = (
       <React.Fragment>
-        Merge into active tracing{" "}
-        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account.">
+        Merge into active annotation{" "}
+        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
           <Icon type="info-circle-o" style={{ color: "gray" }} />
         </Tooltip>
       </React.Fragment>
@@ -198,7 +198,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           <Alert
             type="info"
             style={{ marginBottom: 12 }}
-            message="If you would like to import NML files, please drag and drop them into the tracing view."
+            message="If you would like to import NML files, please drag and drop them into the annotation view."
           />
 
           <Form layout="inline">

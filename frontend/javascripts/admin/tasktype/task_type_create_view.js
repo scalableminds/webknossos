@@ -218,7 +218,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               })(<TextArea rows={10} />)}
             </FormItem>
 
-            <FormItem label="Tracing Type">
+            <FormItem label="Annotation Type">
               {getFieldDecorator("tracingType", {
                 initialValue: "skeleton",
               })(

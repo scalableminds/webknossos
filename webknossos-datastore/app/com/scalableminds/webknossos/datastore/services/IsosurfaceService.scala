@@ -31,7 +31,8 @@ case class IsosurfaceRequest(
     cuboid: Cuboid,
     segmentId: Long,
     voxelDimensions: Vector3I,
-    mapping: Option[String] = None
+    mapping: Option[String] = None,
+    mappingType: Option[String] = None
 )
 
 case class DataTypeFunctors[T, B](
@@ -95,10 +96,14 @@ class IsosurfaceService @Inject()(
 
     def applyMapping(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
-        /*case Some(mappingName) =>
-          mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
-                                      data,
-                                      dataTypeFunctors.fromLong)*/
+        case Some(mappingName) =>
+          request.mappingType match {
+            case Some("JSON") =>
+              mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
+                                          data,
+                                          dataTypeFunctors.fromLong)
+            case _ => Fox.successful(data)
+          }
         case _ =>
           Fox.successful(data)
       }
@@ -106,13 +111,19 @@ class IsosurfaceService @Inject()(
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
       request.mapping match {
         case Some(mappingName) =>
-          val dataRequest = DataServiceDataRequest(request.dataSource,
-                                                   request.dataLayer,
-                                                   request.mapping,
-                                                   request.cuboid,
-                                                   DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                                                   Vector3I(1, 1, 1))
-          agglomerateService.applyAgglomerate(dataRequest)(data)
+          request.mappingType match {
+            case Some("HDF5") =>
+              val dataRequest = DataServiceDataRequest(
+                request.dataSource,
+                request.dataLayer,
+                request.mapping,
+                request.cuboid,
+                DataServiceRequestSettings(halfByte = false, request.mapping, None),
+                Vector3I(1, 1, 1))
+              agglomerateService.applyAgglomerate(dataRequest)(data)
+            case _ =>
+              Fox.successful(data)
+          }
         case _ =>
           Fox.successful(data)
       }

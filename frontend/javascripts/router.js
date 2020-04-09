@@ -416,10 +416,6 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/spotlight" component={SpotlightView} />
               <Route
-                path="/datasets/:organizationName/:datasetName"
-                render={this.tracingViewMode}
-              />
-              <Route
                 path="/datasets/:organizationName/:datasetName/view"
                 render={this.tracingViewMode}
               />
@@ -468,6 +464,14 @@ class ReactRouter extends React.Component<Props> {
                     }}
                   />
                 )}
+              />
+              {
+                // Note that this route has to be beneath all others sharing the same prefix,
+                // to avoid url mismatching
+              }
+              <Route
+                path="/datasets/:organizationName/:datasetName"
+                render={this.tracingViewMode}
               />
               <Route
                 path="/publication/:id"

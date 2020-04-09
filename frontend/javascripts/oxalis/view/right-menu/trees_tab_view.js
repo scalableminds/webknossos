@@ -28,7 +28,7 @@ import {
   wrapInNewGroup,
 } from "oxalis/model/helpers/nml_helpers";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -152,7 +152,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
         return {
           importAction: wrappedAddTreesAndGroupsAction(
-            createTreeMapFromTreeArray(parsedTracing.trees),
+            createMutableTreeMapFromTreeArray(parsedTracing.trees),
             parsedTracing.treeGroups,
             file.name,
           ),

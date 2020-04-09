@@ -60,7 +60,7 @@ const tracing = {
           [2, createDummyNode(2)],
           [7, createDummyNode(7)],
         ]),
-        timestamp: TIMESTAMP,
+        timestamp: 0,
         branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
         edges: EdgeCollection.loadFromArray([
           { source: 0, target: 1 },
@@ -80,7 +80,7 @@ const tracing = {
           [5, createDummyNode(5)],
           [6, createDummyNode(6)],
         ]),
-        timestamp: TIMESTAMP,
+        timestamp: 4,
         branchPoints: [],
         edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
         comments: [],
@@ -419,7 +419,7 @@ test("NML Parser should throw errors for invalid nmls", async t => {
 
 test("addTreesAndGroups reducer should assign new node and tree ids", t => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    initialState.tracing.skeleton.trees,
+    _.cloneDeep(initialState.tracing.skeleton.trees),
     [],
   );
   const newState = SkeletonTracingReducer(initialState, action);
@@ -462,7 +462,7 @@ test("addTreesAndGroups reducer should assign new node and tree ids", t => {
 
 test("addTreesAndGroups reducer should assign new group ids", t => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    initialState.tracing.skeleton.trees,
+    _.cloneDeep(initialState.tracing.skeleton.trees),
     _.cloneDeep(initialState.tracing.skeleton.treeGroups),
   );
   const newState = SkeletonTracingReducer(initialState, action);

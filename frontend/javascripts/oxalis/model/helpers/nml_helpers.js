@@ -15,11 +15,11 @@ import {
   type NodeMap,
   type OxalisState,
   type SkeletonTracing,
-  type TemporaryMutableTreeMap,
+  type MutableTreeMap,
   type Tracing,
   type Tree,
+  type MutableTree,
   type TreeGroup,
-  type TreeMap,
 } from "oxalis/store";
 import messages from "messages";
 
@@ -32,6 +32,7 @@ const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
+const DEFAULT_RADIUS = 30;
 
 // SERIALIZE NML
 
@@ -356,14 +357,18 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   return obj[key] === "true";
 }
 
-function _parseEntities(obj: Object, key: string): string {
+function _parseEntities(obj: Object, key: string, defaultValue?: string): string {
   if (obj[key] == null) {
-    throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
   }
   return Saxophone.parseEntities(obj[key]);
 }
 
-function isTreeConnected(tree: Tree): boolean {
+function isTreeConnected(tree: MutableTree): boolean {
   const seenNodes = new Map();
 
   if (tree.nodes.size() > 0) {
@@ -398,10 +403,10 @@ function getEdgeHash(source: number, target: number) {
 }
 
 export function wrapInNewGroup(
-  originalTrees: TreeMap,
+  originalTrees: MutableTreeMap,
   _originalTreeGroups: ?Array<TreeGroup>,
   wrappingGroupName: string,
-): [TreeMap, Array<TreeGroup>] {
+): [MutableTreeMap, Array<TreeGroup>] {
   const originalTreeGroups = _originalTreeGroups || [];
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash
@@ -426,16 +431,16 @@ export function wrapInNewGroup(
 
 export function parseNml(
   nmlString: string,
-): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
+): Promise<{ trees: MutableTreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
-    const trees: TemporaryMutableTreeMap = {};
+    const trees: MutableTreeMap = {};
     const treeGroups: Array<TreeGroup> = [];
     const existingNodeIds = new Set();
     const existingGroupIds = new Set();
     const existingEdges = new Set();
-    let currentTree: ?Tree = null;
+    let currentTree: ?MutableTree = null;
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
     const nodeIdToTreeId = {};
@@ -457,7 +462,7 @@ export function parseNml(
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
                 _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
-              name: _parseEntities(attr, "name"),
+              name: _parseEntities(attr, "name", ""),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -485,7 +490,7 @@ export function parseNml(
               bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
               resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius"),
+              radius: _parseFloat(attr, "radius", DEFAULT_RADIUS),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)
@@ -586,6 +591,12 @@ export function parseNml(
               throw new NmlParseError(
                 `${messages["nml.tree_not_connected"]} ${currentTree.treeId}`,
               );
+            if (currentTree != null) {
+              if (currentTree.nodes.size() > 0) {
+                const timestamp = _.min(currentTree.nodes.map(n => n.timestamp));
+                trees[currentTree.treeId].timestamp = timestamp;
+              }
+            }
             currentTree = null;
             break;
           }

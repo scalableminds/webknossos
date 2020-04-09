@@ -60,33 +60,86 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 
-export type CommentType = {|
-  +content: string,
-  +nodeId: number,
+// eslint-disable no-use-before-define, no-redeclare
+// declare type RecursiveReadOnly<O: Object> = $ReadOnly<$ObjMap<O, typeof makeRecursive>>;
+// declare type RecursiveReadOnlyDiffableMap<K, V, D: DiffableMap<K, V>> = DiffableMap<
+//   K,
+//   RecursiveReadOnly<V>,
+// >;
+// declare type RecursiveReadOnlyArray<O: Object> = $ReadOnlyArray<
+//   $ReadOnly<$ObjMap<O, typeof makeRecursive>>,
+// >;
+// type Recursive<O: Object> = $ObjMap<O, typeof makeRecursive>;
+
+// declare function makeRecursive<F: Function>(F): F;
+// declare function makeRecursive<A: Object[]>(
+//   A,
+// ): $ReadOnlyArray<$ReadOnly<Recursive<$ElementType<A, number>>>>;
+// declare function makeRecursive<O: Object>(O): RecursiveReadOnly<O>;
+// declare function makeRecursive<I: string[] | boolean[] | number[]>(
+//   I,
+// ): $ReadOnlyArray<$ElementType<I, number>>;
+// declare function makeRecursive<I: string | boolean | number | void | null>(I): I;
+// declare function makeRecursive<K, V, D: DiffableMap<K, V>>(
+//   D,
+// ): RecursiveReadOnlyDiffableMap<K, V, D>;
+
+// Note
+// We are using $ReadOnlyArray to refine Array generics to allow them to be used
+// also with tuples
+
+// type ArrayValue<T: $ReadOnlyArray<any>> = $ElementType<T, number>;
+// type ReadOnlyArrayFrom<T: $ReadOnlyArray<any>> = $ReadOnlyArray<ArrayValue<T>>;
+
+// // prettier-ignore
+// type ToReadOnly =
+//   & (<T: { [key: string]: any }>(T) => DeepReadOnlyObject<T>)
+//   & (<T: $ReadOnlyArray<any>>(T) => DeepReadOnlyArrayFrom<T>)
+//   // & (<K, V, T: DiffableMap<K, V>>(T) => DeepReadOnlyDiffableMap<K, V, T>)
+//   & (<T>(T) => T);
+
+// type DeepReadOnlyArrayFrom<T: $ReadOnlyArray<any>> = ReadOnlyArrayFrom<$TupleMap<T, ToReadOnly>>;
+// type DeepReadOnlyObject<T: { [key: string]: any }> = $ReadOnly<$ObjMap<T, ToReadOnly>>;
+// // type DeepReadOnlyDiffableMap<K, V, D: DiffableMap<K, V>> = D<K, DeepReadOnly<V>>;
+
+// // We need to do it this way and not use $Call<ToReadOnly, T> as in flow < 0.72
+// // overloaded functions were only correctly choosen when passing them to map utility
+// // types ($TupleMap or $ObjMap)
+// type DeepReadOnly<T> = ArrayValue<$TupleMap<[T], ToReadOnly>>;
+// eslint-enable no-use-before-define, no-redeclare
+
+export type MutableCommentType = {|
+  content: string,
+  nodeId: number,
 |};
+export type CommentType = $ReadOnly<MutableCommentType>;
 
-export type Edge = {
-  +source: number,
-  +target: number,
+export type MutableEdge = {
+  source: number,
+  target: number,
 };
+export type Edge = $ReadOnly<MutableEdge>;
 
-export type Node = {
-  +id: number,
-  +position: Vector3,
-  +rotation: Vector3,
-  +bitDepth: number,
-  +viewport: number,
-  +resolution: number,
-  +radius: number,
-  +timestamp: number,
-  +interpolation: boolean,
+export type MutableNode = {
+  id: number,
+  position: Vector3,
+  rotation: Vector3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  timestamp: number,
+  interpolation: boolean,
 };
+export type Node = $ReadOnly<MutableNode>;
 
-export type BranchPoint = {
-  +timestamp: number,
-  +nodeId: number,
+export type MutableBranchPoint = {
+  timestamp: number,
+  nodeId: number,
 };
+export type BranchPoint = $ReadOnly<MutableBranchPoint>;
 
+export type MutableNodeMap = DiffableMap<number, MutableNode>;
 export type NodeMap = DiffableMap<number, Node>;
 
 export type BoundingBoxObject = {
@@ -96,6 +149,18 @@ export type BoundingBoxObject = {
   +depth: number,
 };
 
+export type MutableTree = {|
+  treeId: number,
+  groupId: ?number,
+  color: Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<MutableCommentType>,
+  branchPoints: Array<MutableBranchPoint>,
+  edges: EdgeCollection,
+  isVisible: boolean,
+  nodes: MutableNodeMap,
+|};
 export type Tree = {|
   +treeId: number,
   +groupId: ?number,
@@ -135,8 +200,8 @@ export type Settings = APISettings;
 
 export type DataStoreInfo = APIDataStore;
 
-export type TreeMap = { +[number]: Tree };
-export type TemporaryMutableTreeMap = { [number]: Tree };
+export type MutableTreeMap = { [number]: MutableTree };
+export type TreeMap = { [number]: Tree };
 
 export type AnnotationType = APIAnnotationType;
 export type AnnotationVisibility = APIAnnotationVisibility;

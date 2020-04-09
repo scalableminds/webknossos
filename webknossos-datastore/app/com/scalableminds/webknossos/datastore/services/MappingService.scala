@@ -42,6 +42,4 @@ class MappingService @Inject()(config: DataStoreConfig) extends FoxImplicits wit
       data.map(mapping.asInstanceOf[DataLayerMapping[T]].mapping.withDefault(identity).apply)
     }
   }
-
-  def mappingExists(request: DataServiceMappingRequest) = {}
 }

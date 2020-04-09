@@ -369,6 +369,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
+          val mappingsAsSet = parseArrayTuple(mappings).toSet
           Fox.successful(
             AbstractSegmentationLayer(
               row.name,
@@ -377,7 +378,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               resolutions.sortBy(_.maxDim),
               elementClass,
               segmentId,
-              parseArrayTuple(mappings).toSet,
+              if (mappingsAsSet.isEmpty) None else Some(mappingsAsSet),
               defaultViewConfigurationOpt.map(SegmentationLayerViewConfiguration.from)
             ))
         case (None, None) =>
@@ -419,10 +420,11 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
   def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer) =
     layer match {
       case s: AbstractSegmentationLayer => {
+        val mappings = s.mappings.getOrElse(Set())
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration)
                     values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
-          s.mappings.map(sanitize(_)).toList)}', #${optionLiteral(
+          mappings.map(sanitize(_)).toList)}', #${optionLiteral(
           s.defaultViewConfiguration.map(d => Json.toJson(d).toString))})"""
       }
       case d: AbstractDataLayer => {

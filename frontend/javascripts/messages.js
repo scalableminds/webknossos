@@ -53,9 +53,9 @@ export default {
   "datastore.version.too_old": _.template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
-  "save.failed_simultaneous_tracing": `The tracing couldn't be processed correctly.
+  "save.failed_simultaneous_tracing": `The annotation couldn't be processed correctly.
 
-This might be caused by editing the tracing simultaneously in different windows.
+This might be caused by editing the annotation simultaneously in different windows.
 Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
@@ -63,9 +63,9 @@ In order to restore the current window, a reload is necessary.`,
     "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
-  "save.failed": "Failed to save tracing. Retrying.",
+  "save.failed": "Failed to save annotation. Retrying.",
   "undo.no_undo":
-    "There is no action that could be undone. However, if you want to restore an earlier version of this tracing, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
@@ -85,9 +85,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
-    "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-  "tracing.no_access": "You are not allowed to access this tracing.",
-  "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
+    "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
+  "tracing.no_access": "You are not allowed to access this annotation.",
+  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
@@ -108,9 +108,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
-    "A corruption in the current skeleton tracing was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "layouting.missing_custom_layout_info":
-    "The tracing views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the tracing in the correct view mode or just add it here manually.",
+    "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
@@ -119,8 +119,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
   ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
-  "task.new_description": "You are now tracing a new task with the following description",
-  "task.no_description": "You are now tracing a new task with no description.",
+  "task.new_description": "You are now annotating a new task with the following description",
+  "task.no_description": "You are now annotating a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "task.request_new": "Do you really want another task?",
   "task.peek_next": _.template(
@@ -132,10 +132,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.reset_success": "Annotation was successfully reset.",
   "annotation.disable_saving": "Are you sure you want to disable saving?",
   "annotation.disable_saving.content":
-    "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary tracings to save resources.",
+    "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary annotations to save resources.",
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
-    "If you reopen your old tracing, the current tracing will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue tracing.",
+    "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -173,7 +173,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
     "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
-  "annotation.finish": "Are you sure you want to permanently finish this tracing?",
+  "annotation.finish": "Are you sure you want to permanently finish this annotation?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.no_fallback_data_included":
     "This download does only include the volume data annotated in this annotation. The fallback volume data is excluded.",
@@ -247,7 +247,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
-  "merge.volume_unsupported": "Merging is not supported for volume tracings.",
+  "merge.volume_unsupported": "Merging is not supported for volume annotations.",
   "users.is_admin":
     "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
   "users.grant_admin_rights_title": "Do you really want to grant admin rights?",

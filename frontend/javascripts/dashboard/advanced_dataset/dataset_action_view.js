@@ -1,15 +1,42 @@
 // @flow
 import { Dropdown, Menu, Icon, Tooltip } from "antd";
-import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
 import type { APIMaybeUnimportedDataset, TracingType } from "admin/api_flow_types";
-import { createExplorational, clearCache } from "admin/admin_rest_api";
+import { clearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { trackAction } from "oxalis/model/helpers/analytics";
 
-export const createTracingOverlayMenu = (
+const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
+  const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+  return (
+    <Menu>
+      <Menu.Item key="existing">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/true`}
+          title={`Create ${typeCapitalized} Annotation`}
+        >
+          Use Existing Segmentation Layer
+        </Link>
+      </Menu.Item>
+      <Menu.Item key="new">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${
+            dataset.name
+          }/createExplorative/${type}/false`}
+          title={`Create ${typeCapitalized} Annotation`}
+        >
+          Use a New Segmentation Layer
+        </Link>
+      </Menu.Item>
+    </Menu>
+  );
+};
+
+export const createTracingOverlayMenuWithCallback = (
   dataset: APIMaybeUnimportedDataset,
   type: TracingType,
   onClick: (APIMaybeUnimportedDataset, TracingType, boolean) => Promise<void>,
@@ -18,12 +45,12 @@ export const createTracingOverlayMenu = (
   return (
     <Menu>
       <Menu.Item key="existing" onClick={() => onClick(dataset, type, true)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
           Use Existing Segmentation Layer
         </a>
       </Menu.Item>
       <Menu.Item key="new" onClick={() => onClick(dataset, type, false)}>
-        <a href="#" title={`Create ${typeCapitalized} Tracing`}>
+        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
           Use a New Segmentation Layer
         </a>
       </Menu.Item>
@@ -34,7 +61,6 @@ export const createTracingOverlayMenu = (
 type Props = {
   dataset: APIMaybeUnimportedDataset,
   isUserAdmin: boolean,
-  history: RouterHistory,
 };
 
 type State = {
@@ -44,16 +70,6 @@ type State = {
 class DatasetActionView extends React.PureComponent<Props, State> {
   state = {
     isReloading: false,
-  };
-
-  createTracing = async (
-    dataset: APIMaybeUnimportedDataset,
-    type: TracingType,
-    withFallback: boolean,
-  ) => {
-    const annotation = await createExplorational(dataset, type, withFallback);
-    trackAction(`Create ${type} tracing`);
-    this.props.history.push(`/annotations/${annotation.typ}/${annotation.id}`);
   };
 
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
@@ -84,30 +100,30 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const volumeTracingMenu = (
       <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "volume", this.createTracing)}
+        overlay={createTracingOverlayMenu(dataset, "volume")}
         trigger={["click"]}
         disabled={isReloading}
       >
-        <a href="#" title="Create Volume Tracing">
+        <a href="#" title="Create Volume Annotation">
           <img
             src="/assets/images/volume.svg"
             alt="volume icon"
             style={centerBackgroundImageStyle}
           />{" "}
-          Start Volume Tracing
+          Start Volume Annotation
         </a>
       </Dropdown>
     );
 
     const hybridTracingMenu = (
       <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid", this.createTracing)}
+        overlay={createTracingOverlayMenu(dataset, "hybrid")}
         trigger={["click"]}
         disabled={isReloading}
       >
-        <a href="#" title="Create Hybrid (Skeleton + Volume) Tracing">
+        <a href="#" title="Create Hybrid (Skeleton + Volume) Annotation">
           <Icon type="swap" />
-          Start Hybrid Tracing
+          Start Hybrid Annotation
         </a>
       </Dropdown>
     );
@@ -164,30 +180,32 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             </Link>
             {!dataset.isForeign ? (
               <React.Fragment>
-                <a
-                  href="#"
+                <Link
+                  to={`/datasets/${dataset.owningOrganization}/${
+                    dataset.name
+                  }/createExplorative/skeleton/false`}
                   style={disabledWhenReloadingStyle}
-                  onClick={e =>
-                    isReloading
-                      ? e.preventDefault()
-                      : this.createTracing(dataset, "skeleton", false)
-                  }
-                  title="Create Skeleton Tracing"
+                  onClick={e => {
+                    if (isReloading) {
+                      e.preventDefault();
+                    }
+                  }}
+                  title="Create Skeleton Annotation"
                 >
                   <img
                     src="/assets/images/skeleton.svg"
                     alt="skeleton icon"
                     style={centerBackgroundImageStyle}
                   />{" "}
-                  Start Skeleton Tracing
-                </a>
+                  Start Skeleton Annotation
+                </Link>
                 {volumeTracingMenu}
                 {hybridTracingMenu}
               </React.Fragment>
             ) : (
               <p style={disabledWhenReloadingStyle}>
-                Start Tracing &nbsp;
-                <Tooltip title="Cannot create tracings for read-only datasets">
+                Start Annotation &nbsp;
+                <Tooltip title="Cannot create annotations for read-only datasets">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />
                 </Tooltip>
               </p>

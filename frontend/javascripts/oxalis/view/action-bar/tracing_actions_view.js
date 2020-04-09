@@ -355,7 +355,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
           ) : (
             <Tooltip
               placement="bottom"
-              title="This tracing was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
+              title="This annotation was opened in sandbox mode. You can edit it, but changes cannot be saved. Ensure that you are logged in and refresh the page to exit this mode."
               key="sandbox-tooltip"
             >
               <Button disabled type="primary" icon="code-sandbox">
@@ -453,7 +453,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
           <Icon type="folder-open" />
-          Merge Tracing
+          Merge Annotation
         </Menu.Item>,
       );
       modals.push(

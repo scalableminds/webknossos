@@ -26,11 +26,6 @@ test("getEditableTeams()", async t => {
   t.snapshot(editableTeams, { id: "teams-getEditableTeams()" });
 });
 
-test("getOrganizationNames()", async t => {
-  const organizations = await api.getOrganizationNames();
-  t.snapshot(organizations, { id: "teams-getOrganizationNames()" });
-});
-
 test("createTeam and deleteTeam", async t => {
   const newTeam = {
     name: "test-team-name",

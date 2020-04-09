@@ -24,7 +24,6 @@ case class MailerConfig(
     smtpTls: Boolean,
     smtpUser: String,
     smtpPass: String,
-    subjectPrefix: String
 )
 
 class Mailer(conf: MailerConfig) extends Actor {
@@ -50,7 +49,7 @@ class Mailer(conf: MailerConfig) extends Actor {
       mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc _))
       mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc _))
 
-      multiPartMail.setSubject(conf.subjectPrefix + mail.subject)
+      multiPartMail.setSubject(mail.subject)
       mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
 
       // do the work to prepare sending on SMTP

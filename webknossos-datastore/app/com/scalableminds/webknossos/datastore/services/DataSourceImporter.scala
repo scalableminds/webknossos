@@ -86,6 +86,6 @@ trait DataSourceImporter {
       case Right(point) => point.maxDim
     }
 
-  protected def exploreMappings(baseDir: Path): Set[String] = MappingProvider.exploreMappings(baseDir)
+  protected def exploreMappings(baseDir: Path): Option[Set[String]] = MappingProvider.exploreMappings(baseDir)
 
 }

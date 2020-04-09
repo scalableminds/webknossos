@@ -13,7 +13,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 
 import { document } from "libs/window";
-import { getActiveUser, getOrganizations } from "admin/admin_rest_api";
+import { getActiveUser, checkAnyOrganizationExists } from "admin/admin_rest_api";
 import { googleAnalyticsLogClicks } from "oxalis/model/helpers/analytics";
 import { load as loadFeatureToggles } from "features";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -36,8 +36,8 @@ async function loadActiveUser() {
 async function loadHasOrganizations() {
   // Check whether any organizations exist
   try {
-    const organizations = await getOrganizations();
-    Store.dispatch(setHasOrganizationsAction(organizations.length > 0));
+    const hasOrganizations = await checkAnyOrganizationExists();
+    Store.dispatch(setHasOrganizationsAction(hasOrganizations));
   } catch (e) {
     // pass
   }

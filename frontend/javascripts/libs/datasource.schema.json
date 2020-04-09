@@ -109,7 +109,7 @@
                 "largestSegmentId": { "type": "number", "minimum": 1 },
                 "mappings": { "type": "array", "items": { "type": "string" } }
               },
-              "required": ["category", "largestSegmentId", "mappings"]
+              "required": ["category", "largestSegmentId"]
             }
           ]
         },

@@ -23,21 +23,6 @@ type State = {
   sharingToken: string,
 };
 
-function Hint({ children, style }) {
-  return (
-    <div
-      style={{
-        ...style,
-        marginBottom: 12,
-        fontSize: 12,
-        color: "rgb(118, 118, 118)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 class ShareViewDatasetModalView extends PureComponent<Props, State> {
   state = {
     sharingToken: "",
@@ -108,16 +93,24 @@ class ShareViewDatasetModalView extends PureComponent<Props, State> {
                 Copy
               </Button>
             </Input.Group>
-            <Hint style={{ margin: "6px 12px" }}>
+            <div
+              style={{
+                marginBottom: 12,
+                margin: "6px 12px",
+              }}
+            >
               This link includes the current position and zoom value. Consider fine-tuning your
               current view before copying the URL.
-            </Hint>
+            </div>
           </Col>
         </Row>
         <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
           {<i className={`fa fa-${dataset.isPublic ? "globe" : "lock"}`} />}
-          Visibility
+          {dataset.isPublic ? "Public" : "Private"}
         </Divider>
+        {dataset.isPublic
+          ? "This dataset is public by default. The URL will not include any access token."
+          : "This dataset is private by default. For others to acces it an access token is included in the URL."}
       </Modal>
     );
   }

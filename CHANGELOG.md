@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Users can undo finishing a task when the task was finished via the API, e.g. by a user script. [#4495](https://github.com/scalableminds/webknossos/pull/4495)
 - Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
+- Added modal for sharing view only tracings to the dropdown menu of the tracing view. [#4543](https://github.com/scalableminds/webknossos/pull/4543)  
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
 - When wK changes datasource-properties.json files of datasets, now it creates a backup log of previous versions. [#4534](https://github.com/scalableminds/webknossos/pull/4534)
 - Isosurface generation now also supports hdf5-style mappings. [#4531](https://github.com/scalableminds/webknossos/pull/4531)

@@ -38,7 +38,7 @@ function Hint({ children, style }) {
   );
 }
 
-class ShareDatasetModalView extends PureComponent<Props, State> {
+class ShareViewDatasetModalView extends PureComponent<Props, State> {
   state = {
     sharingToken: "",
   };
@@ -127,4 +127,4 @@ const mapStateToProps = (state: OxalisState) => ({
   dataset: state.dataset,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ShareDatasetModalView);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ShareViewDatasetModalView);

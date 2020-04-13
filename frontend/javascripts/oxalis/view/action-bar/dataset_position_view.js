@@ -50,7 +50,7 @@ class DatasetPositionView extends PureComponent<Props> {
     const { dataset, task } = this.props;
     const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
     const boundingBoxes = [{ min: datasetMin, max: datasetMax }];
-    const isPositionInBounds = (min: Vector3, max: Vector3) =>
+    const isPositionOutOfBounds = (min: Vector3, max: Vector3) =>
       position[0] < min[0] ||
       position[1] < min[1] ||
       position[2] < min[2] ||
@@ -67,7 +67,7 @@ class DatasetPositionView extends PureComponent<Props> {
       ];
       boundingBoxes.push({ min: bbox.topLeft, max: bboxMax });
     }
-    const isOutOfBounds = boundingBoxes.some(({ min, max }) => isPositionInBounds(min, max));
+    const isOutOfBounds = boundingBoxes.some(({ min, max }) => isPositionOutOfBounds(min, max));
     const maybeErrorColor = isOutOfBounds ? { backgroundColor: "rgb(241, 122, 39)" } : {};
     const rotation = V3.round(getRotation(this.props.flycam));
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);

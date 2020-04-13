@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
+- Added a warning to the position input in tracings if the current position is out of bounds. The warning colors the position and rotation input orange. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - When wK changes datasource-properties.json files of datasets, now it creates a backup log of previous versions. [#4534](https://github.com/scalableminds/webknossos/pull/4534)
 - Isosurface generation now also supports hdf5-style mappings. [#4531](https://github.com/scalableminds/webknossos/pull/4531)
 

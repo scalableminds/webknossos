@@ -10,7 +10,7 @@ import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Store, { type OxalisState, type Flycam } from "oxalis/store";
+import Store, { type OxalisState, type Flycam, type Task } from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 import message from "messages";
@@ -19,6 +19,7 @@ type Props = {|
   flycam: Flycam,
   viewMode: ViewMode,
   dataset: APIDataset,
+  task: ?Task,
 |};
 
 const positionIconStyle = { transform: "rotate(-45deg)" };
@@ -46,15 +47,27 @@ class DatasetPositionView extends PureComponent<Props> {
 
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
-    const { dataset } = this.props;
-    const { min, max } = getDatasetExtentInVoxel(dataset);
-    const isOutOfBounds =
+    const { dataset, task } = this.props;
+    const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
+    const boundingBoxes = [{ min: datasetMin, max: datasetMax }];
+    const isPositionInBounds = (min: Vector3, max: Vector3) =>
       position[0] < min[0] ||
       position[1] < min[1] ||
       position[2] < min[2] ||
       position[0] > max[0] ||
       position[1] > max[1] ||
       position[2] > max[2];
+
+    if (task && task.boundingBox) {
+      const bbox = task.boundingBox;
+      const bboxMax = [
+        bbox.topLeft[0] + bbox.width,
+        bbox.topLeft[1] + bbox.height,
+        bbox.topLeft[2] + bbox.depth,
+      ];
+      boundingBoxes.push({ min: bbox.topLeft, max: bboxMax });
+    }
+    const isOutOfBounds = boundingBoxes.some(({ min, max }) => isPositionInBounds(min, max));
     const maybeErrorColor = isOutOfBounds ? { backgroundColor: "rgb(241, 122, 39)" } : {};
     const rotation = V3.round(getRotation(this.props.flycam));
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
@@ -99,7 +112,6 @@ class DatasetPositionView extends PureComponent<Props> {
         ) : null}
       </div>
     );
-    console.log(message["tracing.out_of_bounds"]);
     return isOutOfBounds ? (
       <Tooltip title={message["tracing.out_of_bounds"]}>{positionView}</Tooltip>
     ) : (
@@ -113,6 +125,7 @@ function mapStateToProps(state: OxalisState): Props {
     flycam: state.flycam,
     viewMode: state.temporaryConfiguration.viewMode,
     dataset: state.dataset,
+    task: state.task,
   };
 }
 

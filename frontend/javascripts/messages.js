@@ -75,6 +75,7 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "tracing.out_of_bounds": "Your are outside of the valid dataset range.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",

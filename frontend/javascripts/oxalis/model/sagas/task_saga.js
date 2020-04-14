@@ -38,7 +38,6 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
-  debugger;
   if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
 
   const userConfiguration = yield* select(state => state.userConfiguration);
@@ -94,6 +93,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
+          // $FlowIgnore
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }

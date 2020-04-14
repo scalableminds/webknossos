@@ -79,12 +79,10 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
         yield* put(setZoomStepAction(recommendedConfiguration[key]));
-      } else if (key === "segmentationOpacity") {
-        if (segmentationLayerName != null) {
-          yield* put(
-            updateLayerSettingAction(segmentationLayerName, "alpha", recommendedConfiguration[key]),
-          );
-        }
+      } else if (key === "segmentationOpacity" && segmentationLayerName != null) {
+        yield* put(
+          updateLayerSettingAction(segmentationLayerName, "alpha", recommendedConfiguration[key]),
+        );
       } else if (key in userConfiguration) {
         // $FlowFixMe Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));

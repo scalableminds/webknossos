@@ -8,6 +8,7 @@ import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -17,6 +18,7 @@ import RecommendedConfigurationModal from "oxalis/view/recommended_configuration
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import Model from "oxalis/model";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -36,15 +38,21 @@ function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
 
 function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const { recommendedConfiguration } = taskType;
+  debugger;
   if (recommendedConfiguration == null || _.size(recommendedConfiguration) === 0) return;
 
   const userConfiguration = yield* select(state => state.userConfiguration);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
   const zoomStep = yield* select(state => state.flycam.zoomStep);
+  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
+  const segmentationOpacity =
+    segmentationLayerName != null ? datasetConfiguration.layers[segmentationLayerName].alpha : 0;
 
   // $FlowFixMe Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
   const configurationDifference = _.find(recommendedConfiguration, (value, key: string) => {
     if (key === "zoom" && zoomStep !== value) {
+      return true;
+    } else if (key === "segmentationOpacity" && segmentationOpacity !== value) {
       return true;
     } else if (key in userConfiguration && userConfiguration[key] !== value) {
       return true;
@@ -72,12 +80,22 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
         yield* put(setZoomStepAction(recommendedConfiguration[key]));
+      } else if (key === "segmentationOpacity") {
+        if (segmentationLayerName != null) {
+          yield* put(
+            updateLayerSettingAction(segmentationLayerName, "alpha", recommendedConfiguration[key]),
+          );
+        }
       } else if (key in userConfiguration) {
         // $FlowFixMe Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
       } else if (key in datasetConfiguration) {
         // $FlowFixMe Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
+      } else {
+        console.warn(
+          `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
+        );
       }
     }
     Toast.success("You are using the recommended settings now.");

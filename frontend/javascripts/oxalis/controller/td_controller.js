@@ -24,6 +24,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
@@ -49,6 +50,8 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
   };
 }
 
+const INVALID_ACTIVE_NODE_ID = -1;
+
 type OwnProps = {|
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
   planeView?: PlaneView,
@@ -60,11 +63,41 @@ type StateProps = {|
 |};
 type Props = { ...OwnProps, ...StateProps };
 
-class TDController extends React.PureComponent<Props> {
+type State = {
+  lastActiveNodeId: number,
+};
+
+function maybeGetActiveNodeFromProps(props: Props) {
+  return props.tracing && props.tracing.skeleton && props.tracing.skeleton.activeNodeId != null
+    ? props.tracing.skeleton.activeNodeId
+    : INVALID_ACTIVE_NODE_ID;
+}
+
+class TDController extends React.PureComponent<Props, State> {
   controls: TrackballControls;
   mouseController: InputMouse;
   oldNmPos: Vector3;
   isStarted: boolean;
+
+  constructor(props: Props) {
+    super(props);
+    const initalActiveNodeId = maybeGetActiveNodeFromProps(props);
+    this.state = {
+      lastActiveNodeId: initalActiveNodeId,
+    };
+  }
+
+  static getDerivedStateFromProps(nextProps: Props, prevState: State) {
+    const maybeNewActiveNode = maybeGetActiveNodeFromProps(nextProps);
+    if (
+      maybeNewActiveNode !== prevState.lastActiveNodeId &&
+      maybeNewActiveNode !== INVALID_ACTIVE_NODE_ID
+    ) {
+      return { lastActiveNodeId: maybeNewActiveNode };
+    } else {
+      return null;
+    }
+  }
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
@@ -72,6 +105,19 @@ class TDController extends React.PureComponent<Props> {
     this.isStarted = true;
 
     this.initMouse();
+  }
+
+  componentDidUpdate(prevProps: Props, prevState: State) {
+    if (
+      prevState.lastActiveNodeId !== this.state.lastActiveNodeId &&
+      this.state.lastActiveNodeId !== INVALID_ACTIVE_NODE_ID &&
+      this.props.tracing &&
+      this.props.tracing.skeleton
+    ) {
+      getActiveNode(this.props.tracing.skeleton).map(activeNode =>
+        this.setTargetAndFixPosition(activeNode.position),
+      );
+    }
   }
 
   componentWillUnmount() {
@@ -165,8 +211,8 @@ class TDController extends React.PureComponent<Props> {
     };
   }
 
-  setTargetAndFixPosition(): void {
-    const position = getPosition(this.props.flycam);
+  setTargetAndFixPosition(position: ?Vector3 = null): void {
+    position = position || getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 
     this.controls.target.set(...nmPosition);

@@ -49,7 +49,6 @@ class DatasetPositionView extends PureComponent<Props> {
     const position = V3.floor(getPosition(this.props.flycam));
     const { dataset, task } = this.props;
     const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
-    const boundingBoxes = [{ min: datasetMin, max: datasetMax }];
     const isPositionOutOfBounds = (min: Vector3, max: Vector3) =>
       position[0] < min[0] ||
       position[1] < min[1] ||
@@ -57,7 +56,8 @@ class DatasetPositionView extends PureComponent<Props> {
       position[0] > max[0] ||
       position[1] > max[1] ||
       position[2] > max[2];
-
+    const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
+    let isOutOfTaskBounds = false;
     if (task && task.boundingBox) {
       const bbox = task.boundingBox;
       const bboxMax = [
@@ -65,10 +65,18 @@ class DatasetPositionView extends PureComponent<Props> {
         bbox.topLeft[1] + bbox.height,
         bbox.topLeft[2] + bbox.depth,
       ];
-      boundingBoxes.push({ min: bbox.topLeft, max: bboxMax });
+      isOutOfTaskBounds = isPositionOutOfBounds(bbox.topLeft, bboxMax);
     }
-    const isOutOfBounds = boundingBoxes.some(({ min, max }) => isPositionOutOfBounds(min, max));
-    const maybeErrorColor = isOutOfBounds ? { backgroundColor: "rgb(241, 122, 39)" } : {};
+    const maybeErrorColor =
+      isOutOfDatasetBounds || isOutOfTaskBounds
+        ? { color: "rgb(255, 155, 85)", borderColor: "rgb(241, 122, 39)" }
+        : {};
+    let maybeErrorMessage = null;
+    if (isOutOfDatasetBounds) {
+      maybeErrorMessage = message["tracing.out_of_dataset_bounds"];
+    } else if (!maybeErrorMessage && isOutOfTaskBounds) {
+      maybeErrorMessage = message["tracing.out_of_task_bounds"];
+    }
     const rotation = V3.round(getRotation(this.props.flycam));
     const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
 
@@ -112,8 +120,8 @@ class DatasetPositionView extends PureComponent<Props> {
         ) : null}
       </div>
     );
-    return isOutOfBounds ? (
-      <Tooltip title={message["tracing.out_of_bounds"]}>{positionView}</Tooltip>
+    return maybeErrorMessage ? (
+      <Tooltip title={maybeErrorMessage}>{positionView}</Tooltip>
     ) : (
       positionView
     );

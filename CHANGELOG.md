@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - The datastore checks if a organization folder can be created before creating a new organization. [#4501](https://github.com/scalableminds/webknossos/pull/4501)
 - Fixed a bug where under certain circumstances groups in the tree tab were not sorted by name. [#4542](https://github.com/scalableminds/webknossos/pull/4542)
+- Fixed that `segmentationOpacity` could not be set anymore as part of the recommended settings for a task type. [#4545](https://github.com/scalableminds/webknossos/pull/4545)
 
 ### Removed
 

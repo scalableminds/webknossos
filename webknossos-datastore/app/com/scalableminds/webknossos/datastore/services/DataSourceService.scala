@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.File
-import java.nio.file.{AccessDeniedException, Path, Paths}
+import java.io.{File, FileWriter}
+import java.nio.file.{AccessDeniedException, Files, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
@@ -18,11 +18,14 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
+import org.joda.time.DateTime
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
+import org.joda.time.format.ISODateTimeFormat
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -40,6 +43,7 @@ class DataSourceService @Inject()(
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
+  private val logFileName = Paths.get("datasource-properties-backups.log")
 
   def tick: Unit = checkInbox()
 
@@ -109,7 +113,9 @@ class DataSourceService @Inject()(
   }
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
-    MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+    MappingProvider
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
@@ -146,10 +152,37 @@ class DataSourceService @Inject()(
   def updateDataSource(dataSource: DataSource): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
-      propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
+      propertiesFile = dataSourcePath.resolve(propertiesFileName)
+      _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+
+  def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
+    val propertiesFile = dataSourcePath.resolve(propertiesFileName)
+    val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
+      val previousContentSource = Source.fromFile(propertiesFile.toString)
+      val previousContent = previousContentSource.getLines.mkString("\n")
+      previousContentSource.close()
+      previousContent
+    } else {
+      "<empty>"
+    }
+    val timestamp = ISODateTimeFormat.dateTime.print(new DateTime())
+    val outputForLogfile =
+      f"Contents of $propertiesFileName were changed by webKnossos at $timestamp. Old content: \n\n$previousContentOrEmpty\n\n"
+    val logfilePath = dataSourcePath.resolve(logFileName)
+    try {
+      val fileWriter = new FileWriter(logfilePath.toString, true)
+      try {
+        fileWriter.write(outputForLogfile)
+        Full(())
+      } finally fileWriter.close()
+    } catch {
+      case e: Exception => Failure(s"Could not back up old contents: ${e.toString}")
+    }
+  }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString

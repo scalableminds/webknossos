@@ -255,7 +255,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                         const includesVolumeData = taskType.tracingType !== "skeleton";
                         return downloadNml(taskType.id, "CompoundTaskType", includesVolumeData);
                       }}
-                      title="Download all Finished Tracings"
+                      title="Download all Finished Annotations"
                     >
                       <Icon type="download" />
                       Download

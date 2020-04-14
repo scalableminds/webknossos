@@ -389,6 +389,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         }}
         className="large-table"
         scroll={{ x: "max-content" }}
+        locale={{
+          emptyText: (
+            <p>
+              Create annotations by opening a dataset from{" "}
+              <Link to="/dashboard/datasets">the datasets page</Link>.
+            </p>
+          ),
+        }}
       >
         <Column
           title="ID"
@@ -530,7 +538,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             {search}
           </div>
         )}
-        <h3>Explorative Annotations</h3>
+        <h3>My Annotations</h3>
         {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         <Spin spinning={this.state.isLoading} size="large">

@@ -3,7 +3,7 @@
 The Dashboard is the entry point to webKnossos.
 You can manage your datasets, create annotations, resume existing annotations and manage active tasks.
 
-## Datasets
+## My Datasets
 This screen shows all the available and accessible datasets for a user.
 The presentation differs corresponding to the user role.
 Normal users can start or continue annotations and work on tasks.
@@ -18,7 +18,7 @@ Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
 {% embed url="https://www.youtube.com/watch?v=naPL1jfCdOc" %}
 
-## Tasks
+## My Tasks
 
 With Tasks, you can coordinate large annotation projects with your users.
 Tasks are small assignments that are automatically distributed to users.
@@ -29,7 +29,7 @@ Read more about the tasks feature in the [Tasks and Projects guide](./tasks.md).
 
 ![Work with Tasks](./images/dashboard_tasks.png)
 
-## Explorative Annotations
+## My Annotations (Explorative)
 Explorative Annotations are all skeleton or volume annotations that do not belong to a task.
 They are created by starting new annotations from the datasets screen or by uploading [NML files](./data_formats.md#nml).
 
@@ -48,7 +48,7 @@ Read more about sharing your own annotations in the [Sharing guide](./sharing.md
 
 ![View Shared Annotations](./images/shared_annotations_tab.png)
 
-## Dataset Gallery
+## Featured Publications
 
 This screen is the same gallery that is used on the public webKnossos screen.
 Here, it also includes non-public datasets.

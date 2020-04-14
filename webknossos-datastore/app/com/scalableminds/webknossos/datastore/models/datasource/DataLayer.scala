@@ -160,7 +160,7 @@ trait SegmentationLayerLike extends DataLayerLike {
 
   def largestSegmentId: Long
 
-  def mappings: Set[String]
+  def mappings: Option[Set[String]]
 
   def defaultViewConfiguration: Option[SegmentationLayerViewConfiguration]
 }
@@ -261,7 +261,7 @@ case class AbstractSegmentationLayer(
     resolutions: List[Point3D],
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
-    mappings: Set[String],
+    mappings: Option[Set[String]],
     defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 ) extends SegmentationLayerLike
 

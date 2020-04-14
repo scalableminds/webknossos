@@ -48,7 +48,7 @@ case class VolumeTracingLayer(
 
   val bucketProvider: BucketProvider = volumeBucketProvider
 
-  val mappings: Set[String] = Set.empty
+  val mappings: Option[Set[String]] = None
 
   val resolutions: List[Point3D] = List(Point3D(1, 1, 1))
 }

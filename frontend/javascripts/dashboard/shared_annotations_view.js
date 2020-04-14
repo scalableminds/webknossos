@@ -1,6 +1,6 @@
 // @flow
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Table, Tag, Icon, Tooltip, Row, Col } from "antd";
+import { Spin, Table, Tag, Icon, Tooltip } from "antd";
 import * as React from "react";
 import type { APIAnnotationCompact } from "admin/api_flow_types";
 import FormattedDate from "components/formatted_date";
@@ -61,18 +61,24 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderPlaceholder = () =>
-    this.state.isLoading ? null : (
-      <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
-        <Col span={18}>
-          <div style={{ paddingBottom: 32, textAlign: "center" }}>
-            There are no shared annotations available yet. You can share your annotations with other
-            teams in the sharing modal in the tracing view. These annotations appear in the shared
-            tab of all members of the selected teams.
-          </div>
-        </Col>
-      </Row>
-    );
+  renderPlaceholder = () => (
+    <>
+      <p>There are no shared annotations available yet.</p>
+      <p>
+        You can share your annotations with your team from the sharing modal in the annotation view.
+        The annotations will then appear in the shared tab of all members of the selected teams.
+      </p>
+      <p>
+        <a
+          href="https://docs.webknossos.org/guides/sharing"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Read more about sharing in the documentation.
+        </a>
+      </p>
+    </>
+  );
 
   renderTable = () => {
     const sortedAnnotations = this.state.annotations.sort(
@@ -86,6 +92,7 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        locale={{ emptyText: this.renderPlaceholder() }}
         className="large-table"
         scroll={{ x: "max-content" }}
       >
@@ -160,12 +167,12 @@ class SharedAnnotationsView extends React.PureComponent<Props, State> {
   render = () => (
     <div className="TestExplorativeAnnotationsView">
       <h3 style={{ display: "inline-block", marginRight: "5px" }}>Shared Annotations</h3>
-      <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the tracing view.">
+      <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
         <Icon type="info-circle-o" style={{ color: "gray" }} />
       </Tooltip>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       <Spin spinning={this.state.isLoading} size="large">
-        {this.state.annotations.length === 0 ? this.renderPlaceholder() : this.renderTable()}
+        {this.renderTable()}
       </Spin>
     </div>
   );

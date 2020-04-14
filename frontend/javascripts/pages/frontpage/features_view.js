@@ -201,7 +201,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
     <div className="container">
       <FeatureHighlight
-        title="High Speed Skeleton Tracing"
+        title="High Speed Skeleton Annotation"
         imageUrl="/assets/images/feature-skeleton.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >

@@ -37,12 +37,18 @@ object AuthForms {
   val passwordMinLength = 8
 
   // Sign up
-  case class SignUpData(organization: String, email: String, firstName: String, lastName: String, password: String)
+  case class SignUpData(organization: String,
+                        organizationDisplayName: String,
+                        email: String,
+                        firstName: String,
+                        lastName: String,
+                        password: String)
 
   def signUpForm(implicit messages: Messages) =
     Form(
       mapping(
         "organization" -> text,
+        "organizationDisplayName" -> text,
         "email" -> email,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
@@ -50,9 +56,16 @@ object AuthForms {
         ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText
-      )((organization, email, password, firstName, lastName) =>
-        SignUpData(organization, email, firstName, lastName, password._1))(signUpData =>
-        Some((signUpData.organization, signUpData.email, ("", ""), signUpData.firstName, signUpData.lastName))))
+      )((organization, organizationDisplayName, email, password, firstName, lastName) =>
+        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1))(
+        signUpData =>
+          Some(
+            (signUpData.organization,
+             signUpData.organizationDisplayName,
+             signUpData.email,
+             ("", ""),
+             signUpData.firstName,
+             signUpData.lastName))))
 
   // Sign in
   case class SignInData(email: String, password: String)
@@ -166,6 +179,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       None
     else
       Some(finalName)
+  }
+
+  def callMeMaybe = Action { implicit request =>
+    {
+      Mailer ! Send(defaultMails.registerMailDemo("Neuer Nutzer", "n@scm.io"))
+      Ok
+    }
   }
 
   def handleRegistration = Action.async { implicit request =>
@@ -439,22 +459,27 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                 } else {
                   for {
                     _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
-                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
-                    _ <- userService.insert(organization._id,
-                                            email,
-                                            firstName,
-                                            lastName,
-                                            isActive = true,
-                                            isOrgTeamManager = true,
-                                            loginInfo,
-                                            passwordHasher.hash(signUpData.password),
-                                            isAdmin = true) ?~> "user.creation.failed"
+                    organization <- createOrganization(
+                      Option(signUpData.organization).filter(_.trim.nonEmpty),
+                      signUpData.organizationDisplayName) ?~> "organization.create.failed"
+                    user <- userService.insert(organization._id,
+                                               email,
+                                               firstName,
+                                               lastName,
+                                               isActive = true,
+                                               isOrgTeamManager = true,
+                                               loginInfo,
+                                               passwordHasher.hash(signUpData.password),
+                                               isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
+                    if (conf.Features.isDemoInstance) {
+                      Mailer ! Send(defaultMails.registerMailDemo(user.firstName, user.email))
+                    }
                     Ok
                   }
                 }
@@ -474,15 +499,16 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }
 
-  private def createOrganization(organizationDisplayName: String) =
+  private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
-      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
+      normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
+      organizationName = organizationNameOpt.flatMap(normalizeName).getOrElse(normalizedDisplayName)
       organization = Organization(ObjectId.generate,
                                   organizationName.replaceAll(" ", "_"),
                                   "",
                                   "",
                                   organizationDisplayName)
-      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- initialDataService.insertLocalDataStoreIfEnabled

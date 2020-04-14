@@ -1124,13 +1124,17 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export function getOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON("/api/organizations");
+export async function getDefaultOrganization(): Promise<?APIOrganization> {
+  // Only returns an organization if the webKnossos instance only has one organization
+  await Request.receiveJSON("/api/organizations/default");
 }
 
-export async function getOrganizationNames(): Promise<Array<string>> {
-  const organizations = await getOrganizations();
-  return organizations.map(org => org.name);
+export function getOrganization(organizationName: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/${organizationName}`);
+}
+
+export async function checkAnyOrganizationExists(): Promise<boolean> {
+  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
 // ### BuildInfo webknossos
@@ -1241,6 +1245,7 @@ export function computeIsosurface(
           segmentId,
           // Name of mapping to apply before building isosurface (optional)
           mapping: layer.activeMapping,
+          mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
         },

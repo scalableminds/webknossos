@@ -10,23 +10,20 @@ Feel free to [drop us a line](mailto:hello@scalableminds.com) or [create a Pull 
 
 ## Create a webknossos.org Account
 Signing up to [webknossos.org](https://webknossos.org) is the easiest way to get started with webKnossos.
-Go to [webknossos.org](https://webknossos.org) and create an account in the "Demo_Lab" organization.
+Go to [webknossos.org](https://webknossos.org) and create a new account.
 Please make sure to enter a correct email address.
-After you have entered your details, the account will be automatically activated.
-
-You can also choose to create a new organization which will allow you to upload private datasets at a later point in time and manage other users.
-For testing purposes, the "Demo_Lab" organization is preferred.
+After you have entered your details, the account will be automatically activated and logged in.
 
 Accounts on [webknossos.org](https://webknossos.org) are free to use with published datasets.
-If you wish to use private datasets, there is a fee that covers storage costs and also provides support services such as dataset conversions.
-Check out the [pricing page for more details](https://webknossos.org/pricing).
-You can also rent a fully-managed dedicated webKnossos server from scalable minds or install webKnossos on your own server.
+If you wish to use private datasets, there is an upload limit of 10GB.
+For more data storage, checkout the [pricing page for paid plans](https://webknossos.org/pricing) that covers storage costs and provide support services such as dataset conversions.
+You can also rent a [fully-managed dedicated webKnossos server](https://webknossos.org/pricing) from scalable minds or install webKnossos [on your own server](./installation.md).
 
 
 ## Explore Published Datasets
 On [webknossos.org](https://webknossos.org) there are already a bunch of published community datasets available for you to explore.
-To get started, navigate to the `Datasets` tab on your [dashboard](./dashboard.md).
-There, you find a list of all available datasets.
+To get started, navigate to the `Featured Publications` tab on your [dashboard](./dashboard.md).
+There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
 ![The list of available datasets](./images/getting_started-datasets.png)
@@ -53,7 +50,6 @@ You can also change the size of the viewports to see more details in your data a
 
 ## Your First Annotation
 Click the `Create Tracing` button from the view mode of a dataset to create your first annotation.
-Alternatively, navigate to the `Datasets` tab on your [dashboard](./dashboard.md), identify a dataset that your interested in and click on `Start Skeleton Tracing` to create a new skeleton annotation.
 webKnossos will launch the main annotation screen allowing you to navigate your dataset and place markers to reconstruct skeletons.
 
 Drag the mouse while pressing the left mouse button to navigate the dataset.

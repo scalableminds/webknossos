@@ -17,7 +17,7 @@ export function getSomeTracing(
   } else if (tracing.readOnly != null) {
     return tracing.readOnly;
   }
-  throw new Error("The active tracing does not contain skeletons nor volume data");
+  throw new Error("The active annotation does not contain skeletons nor volume data");
 }
 
 export function getSomeServerTracing(
@@ -28,7 +28,7 @@ export function getSomeServerTracing(
   } else if (tracing.volume != null) {
     return tracing.volume;
   }
-  throw new Error("The active tracing does not contain skeletons nor volume data");
+  throw new Error("The active annotation does not contain skeletons nor volume data");
 }
 
 export default {};

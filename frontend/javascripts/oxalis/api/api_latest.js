@@ -111,14 +111,14 @@ function assertExists(value: any, message: string) {
 
 function assertSkeleton(tracing: Tracing): SkeletonTracing {
   if (tracing.skeleton == null) {
-    throw new Error("This api function should only be called in a skeleton tracing.");
+    throw new Error("This api function should only be called in a skeleton annotation.");
   }
   return tracing.skeleton;
 }
 
 function assertVolume(tracing: Tracing): VolumeTracing {
   if (tracing.volume == null) {
-    throw new Error("This api function should only be called in a volume tracing.");
+    throw new Error("This api function should only be called in a volume annotation.");
   }
   return tracing.volume;
 }

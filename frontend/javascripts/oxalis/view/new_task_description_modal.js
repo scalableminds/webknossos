@@ -23,9 +23,12 @@ export default class NewTaskDescriptionModal extends React.Component<Props, Stat
   };
 
   componentDidMount() {
-    this.timeoutId = setTimeout(() => {
-      this.allowClose();
-    }, 10000);
+    this.timeoutId = setTimeout(
+      () => {
+        this.allowClose();
+      },
+      process.env.NODE_ENV === "production" ? 10000 : 2000,
+    );
   }
 
   componentWillUnmount() {

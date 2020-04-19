@@ -1,5 +1,5 @@
 // @flow
-import { Divider, Modal, Input, Button, Row, Col } from "antd";
+import { Modal, Input, Button, Row, Col } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
@@ -100,17 +100,13 @@ class ShareViewDatasetModalView extends PureComponent<Props, State> {
               }}
             >
               This link includes the current position and zoom value. Consider fine-tuning your
-              current view before copying the URL.
+              current view before copying the URL.{" "}
+              {!dataset.isPublic
+                ? "Additionally, a private token is included in the link, since the dataset is not public."
+                : null}
             </div>
           </Col>
         </Row>
-        <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-          {<i className={`fa fa-${dataset.isPublic ? "globe" : "lock"}`} />}
-          {dataset.isPublic ? "Public" : "Private"}
-        </Divider>
-        {dataset.isPublic
-          ? "This dataset is public by default. The URL will not include any access token."
-          : "This dataset is private by default. For others to acces it an access token is included in the URL."}
       </Modal>
     );
   }

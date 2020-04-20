@@ -322,10 +322,7 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
 // PARSE NML
 
 export class NmlParseError extends Error {
-  constructor(...args: any) {
-    super(...args);
-    this.name = "NmlParseError";
-  }
+  name = "NmlParseError";
 }
 
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {

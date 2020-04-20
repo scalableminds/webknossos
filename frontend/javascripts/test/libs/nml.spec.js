@@ -543,6 +543,8 @@ test("NML Parser should split up disconnected trees", async t => {
   // Check that the split up trees were wrapped in a group
   // which was inserted into the original tree's group
   const parentGroup = findGroup(parsedTreeGroups, 3);
+  if (parentGroup == null)
+    throw Error("Assertion Error: Serialized group is missing after parsing.");
   t.is(_.size(parentGroup.children), 1);
   t.is(parentGroup.children[0].name, "TestTree-0");
 });

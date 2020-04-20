@@ -60,54 +60,6 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 
-// eslint-disable no-use-before-define, no-redeclare
-// declare type RecursiveReadOnly<O: Object> = $ReadOnly<$ObjMap<O, typeof makeRecursive>>;
-// declare type RecursiveReadOnlyDiffableMap<K, V, D: DiffableMap<K, V>> = DiffableMap<
-//   K,
-//   RecursiveReadOnly<V>,
-// >;
-// declare type RecursiveReadOnlyArray<O: Object> = $ReadOnlyArray<
-//   $ReadOnly<$ObjMap<O, typeof makeRecursive>>,
-// >;
-// type Recursive<O: Object> = $ObjMap<O, typeof makeRecursive>;
-
-// declare function makeRecursive<F: Function>(F): F;
-// declare function makeRecursive<A: Object[]>(
-//   A,
-// ): $ReadOnlyArray<$ReadOnly<Recursive<$ElementType<A, number>>>>;
-// declare function makeRecursive<O: Object>(O): RecursiveReadOnly<O>;
-// declare function makeRecursive<I: string[] | boolean[] | number[]>(
-//   I,
-// ): $ReadOnlyArray<$ElementType<I, number>>;
-// declare function makeRecursive<I: string | boolean | number | void | null>(I): I;
-// declare function makeRecursive<K, V, D: DiffableMap<K, V>>(
-//   D,
-// ): RecursiveReadOnlyDiffableMap<K, V, D>;
-
-// Note
-// We are using $ReadOnlyArray to refine Array generics to allow them to be used
-// also with tuples
-
-// type ArrayValue<T: $ReadOnlyArray<any>> = $ElementType<T, number>;
-// type ReadOnlyArrayFrom<T: $ReadOnlyArray<any>> = $ReadOnlyArray<ArrayValue<T>>;
-
-// // prettier-ignore
-// type ToReadOnly =
-//   & (<T: { [key: string]: any }>(T) => DeepReadOnlyObject<T>)
-//   & (<T: $ReadOnlyArray<any>>(T) => DeepReadOnlyArrayFrom<T>)
-//   // & (<K, V, T: DiffableMap<K, V>>(T) => DeepReadOnlyDiffableMap<K, V, T>)
-//   & (<T>(T) => T);
-
-// type DeepReadOnlyArrayFrom<T: $ReadOnlyArray<any>> = ReadOnlyArrayFrom<$TupleMap<T, ToReadOnly>>;
-// type DeepReadOnlyObject<T: { [key: string]: any }> = $ReadOnly<$ObjMap<T, ToReadOnly>>;
-// // type DeepReadOnlyDiffableMap<K, V, D: DiffableMap<K, V>> = D<K, DeepReadOnly<V>>;
-
-// // We need to do it this way and not use $Call<ToReadOnly, T> as in flow < 0.72
-// // overloaded functions were only correctly choosen when passing them to map utility
-// // types ($TupleMap or $ObjMap)
-// type DeepReadOnly<T> = ArrayValue<$TupleMap<[T], ToReadOnly>>;
-// eslint-enable no-use-before-define, no-redeclare
-
 export type MutableCommentType = {|
   content: string,
   nodeId: number,

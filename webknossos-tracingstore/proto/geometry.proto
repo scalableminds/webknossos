@@ -23,6 +23,8 @@ message BoundingBox {
 }
 
 message NamedBoundingBox {
-  optional string name = 1;
-  required BoundingBox boundingBox = 2;
+  required int32 id = 1; // Zero shouldn't be used as an id because it's reserved for the original user bounding box
+  optional string name = 2;
+  optional bool isVisible = 3;
+  required BoundingBox boundingBox = 4;
 }

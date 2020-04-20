@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
@@ -69,7 +70,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val editRotation =
           parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        val userBoundingBox = parseBoundingBox(parameters \ "userBoundingBox")
+        val userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
         val taskBoundingBox: Option[BoundingBox] = parseBoundingBox(parameters \ "taskBoundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
@@ -90,7 +91,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
                  0,
                  0,
                  zoomLevel,
-                 userBoundingBox
+                 None,
+                 userBoundingBoxes
                ),
                volumes.head.location)
             )
@@ -108,8 +110,9 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
                               editRotation,
                               zoomLevel,
                               version = 0,
-                              userBoundingBox,
-                              treeGroups)
+                              None,
+                              treeGroups,
+                              userBoundingBoxes)
             )
 
         (skeletonTracing, volumeTracingWithDataLocation, description, organizationName)
@@ -157,15 +160,25 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       .toList
       .toSingleBox(Messages("nml.element.invalid", "trees"))
 
+  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider) =
+    boundingBoxNodes.flatMap(node =>
+      for {
+        id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", (node \ "@id").text)
+        name = (node \ "@name").text
+        isVisible = (node \ "@isVisible").text.toBooleanOpt
+        boundingBox <- parseBoundingBox(node \ "@boundingBox")
+        nameOpt = if (name.isEmpty) None else Some(name)
+      } yield NamedBoundingBox(id, nameOpt, isVisible, boundingBox))
+
   private def parseBoundingBox(node: NodeSeq) =
     node.headOption.flatMap(bb =>
       for {
-        topLeftX <- (node \ "@topLeftX").text.toIntOpt
-        topLeftY <- (node \ "@topLeftY").text.toIntOpt
-        topLeftZ <- (node \ "@topLeftZ").text.toIntOpt
-        width <- (node \ "@width").text.toIntOpt
-        height <- (node \ "@height").text.toIntOpt
-        depth <- (node \ "@depth").text.toIntOpt
+        topLeftX <- (bb \ "@topLeftX").text.toIntOpt
+        topLeftY <- (bb \ "@topLeftY").text.toIntOpt
+        topLeftZ <- (bb \ "@topLeftZ").text.toIntOpt
+        width <- (bb \ "@width").text.toIntOpt
+        height <- (bb \ "@height").text.toIntOpt
+        depth <- (bb \ "@depth").text.toIntOpt
       } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth))
 
   private def parseDataSetName(node: NodeSeq) =

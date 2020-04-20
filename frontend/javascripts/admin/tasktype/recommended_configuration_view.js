@@ -31,6 +31,7 @@ const recommendedConfigByCategory = {
   dataset: {
     fourBit: false,
     interpolation: true,
+    segmentationOpacity: 0,
     highlightHoveredCellId: false,
     zoom: 0.8,
     renderMissingDataBlack: false,
@@ -51,6 +52,7 @@ const recommendedConfigByCategory = {
 export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
   ...UserConfiguration,
   ...DatasetConfiguration,
+  segmentationOpacity: number,
 |}> = {
   ...recommendedConfigByCategory.orthogonal,
   ...recommendedConfigByCategory.all,

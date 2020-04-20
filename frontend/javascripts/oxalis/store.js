@@ -337,6 +337,7 @@ export type RecommendedConfiguration = $Shape<{
   ...UserConfiguration,
   ...DatasetConfiguration,
   zoom: number,
+  segmentationOpacity: number,
 }>;
 
 export type Mapping = { [key: number]: number };

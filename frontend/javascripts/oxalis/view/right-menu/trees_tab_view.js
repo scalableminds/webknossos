@@ -26,6 +26,7 @@ import {
   getNmlName,
   parseNml,
   wrapInNewGroup,
+  NmlParseError,
 } from "oxalis/model/helpers/nml_helpers";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -134,6 +135,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           datasetName,
         };
       } catch (error) {
+        if (error instanceof NmlParseError) {
+          // NmlParseError means the file we're dealing with is an NML-like file, but there was
+          // an error during the validation.
+          // In that case we want to show the validation error instead of the generic one.
+          throw error;
+        }
         console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
         return undefined;
       }

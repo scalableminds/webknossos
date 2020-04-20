@@ -6,11 +6,15 @@ import _ from "lodash";
 import type { APIBuildInfo } from "admin/api_flow_types";
 import type { BoundingBoxType } from "oxalis/constants";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  getMaximumGroupId,
+  getMaximumTreeId,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import {
   type NodeMap,
   type OxalisState,
@@ -317,8 +321,8 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
 
 // PARSE NML
 
-class NmlParseError extends Error {
-  constructor(...args) {
+export class NmlParseError extends Error {
+  constructor(...args: any) {
     super(...args);
     this.name = "NmlParseError";
   }
@@ -346,6 +350,19 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
   return Number.parseFloat(obj[key]);
 }
 
+function _parseTimestamp(obj: Object, key: string, defaultValue?: number): number {
+  const timestamp = _parseInt(obj, key, defaultValue);
+  const isValid = new Date(timestamp).getTime() > 0;
+  if (!isValid) {
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.invalid_timestamp"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
+  }
+  return timestamp;
+}
+
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
@@ -368,34 +385,99 @@ function _parseEntities(obj: Object, key: string, defaultValue?: string): string
   return Saxophone.parseEntities(obj[key]);
 }
 
-function isTreeConnected(tree: MutableTree): boolean {
-  const seenNodes = new Map();
+function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
+  // Breadth-First Search that finds the connected component of the node with id startNodeId
+  // and marks all visited nodes as true in the visited map
+  const bfs = (startNodeId: number, edges: EdgeCollection, visited: Map<number, boolean>) => {
+    const queue = [startNodeId];
+    const component = [];
+    visited.set(startNodeId, true);
+    while (queue.length > 0) {
+      const nodeId = queue.shift();
+      component.push(nodeId);
+      const curEdges = edges.getEdgesForNode(nodeId);
 
-  if (tree.nodes.size() > 0) {
-    // Get the first element from the nodes map
-    const nodeQueue = [Number(tree.nodes.keys().next().value)];
-    // Breadth-First search that marks all reachable nodes as visited
-    while (nodeQueue.length !== 0) {
-      const nodeId = nodeQueue.shift();
-      seenNodes.set(nodeId, true);
-      const edges = tree.edges.getEdgesForNode(nodeId);
-      // If there are no edges for a node, the tree is not connected
-      if (edges == null) break;
-
-      for (const edge of edges) {
-        if (nodeId === edge.target && !seenNodes.get(edge.source)) {
-          nodeQueue.push(edge.source);
-          seenNodes.set(edge.source, true);
-        } else if (!seenNodes.get(edge.target)) {
-          nodeQueue.push(edge.target);
-          seenNodes.set(edge.target, true);
+      for (const edge of curEdges) {
+        if (nodeId === edge.target && !visited.get(edge.source)) {
+          queue.push(edge.source);
+          visited.set(edge.source, true);
+        } else if (!visited.get(edge.target)) {
+          queue.push(edge.target);
+          visited.set(edge.target, true);
         }
       }
     }
+    return component;
+  };
+
+  const components = [];
+  const visited = new Map();
+
+  for (const node of tree.nodes.values()) {
+    if (!visited.get(node.id)) {
+      components.push(bfs(node.id, tree.edges, visited));
+    }
   }
 
-  // If the size of the seenNodes map is the same as the number of nodes, the tree is connected
-  return _.size(seenNodes) === tree.nodes.size();
+  return components;
+}
+
+function splitTreeIntoComponents(
+  tree: MutableTree,
+  treeGroups: Array<TreeGroup>,
+  maxTreeId: number,
+): Array<MutableTree> {
+  const components = connectedComponentsOfTree(tree);
+
+  if (components.length <= 1) return [tree];
+
+  // If there is more than one component, split the tree into its components
+  // and wrap the split trees in a new group
+  const newGroupId = getMaximumGroupId(treeGroups) + 1;
+  const newGroup = {
+    name: tree.name,
+    groupId: newGroupId,
+    children: [],
+  };
+
+  const newTrees = [];
+  for (let i = 0; i < components.length; i++) {
+    const nodeIds = components[i];
+
+    const edges = nodeIds.reduce(
+      // Only consider outgoing edges as otherwise each edge would be collected twice
+      (agg, nodeId) => agg.concat(tree.edges.getOutgoingEdgesForNode(nodeId)),
+      [],
+    );
+
+    const newTree = {
+      treeId: maxTreeId + 1 + i,
+      color: tree.color,
+      name: `${tree.name}_${i}`,
+      comments: tree.comments.filter(comment => nodeIds.includes(comment.nodeId)),
+      nodes: new DiffableMap(nodeIds.map(nodeId => [nodeId, tree.nodes.get(nodeId)])),
+      branchPoints: tree.branchPoints.filter(bp => nodeIds.includes(bp.nodeId)),
+      timestamp: tree.timestamp,
+      edges: EdgeCollection.loadFromArray(edges),
+      isVisible: tree.isVisible,
+      groupId: newGroupId,
+    };
+
+    newTrees.push(newTree);
+  }
+
+  // If the tree is part of a group, insert the new group into the tree's group,
+  // otherwise insert the new group into the root group
+  if (tree.groupId != null) {
+    const parentGroup = findGroup(treeGroups, tree.groupId);
+    if (parentGroup == null)
+      throw Error("Assertion Error: Tree's group is not part of the group tree.");
+    parentGroup.children.push(newGroup);
+  } else {
+    treeGroups.push(newGroup);
+  }
+
+  return newTrees;
 }
 
 function getEdgeHash(source: number, target: number) {
@@ -462,7 +544,8 @@ export function parseNml(
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
                 _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
-              name: _parseEntities(attr, "name", ""),
+              // In Knossos NMLs, there is usually a tree comment instead of a name
+              name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -491,7 +574,7 @@ export function parseNml(
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
               resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
               radius: _parseFloat(attr, "radius", DEFAULT_RADIUS),
-              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
+              timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
@@ -587,10 +670,6 @@ export function parseNml(
       .on("tagclose", node => {
         switch (node.name) {
           case "thing": {
-            if (currentTree != null && !isTreeConnected(currentTree))
-              throw new NmlParseError(
-                `${messages["nml.tree_not_connected"]} ${currentTree.treeId}`,
-              );
             if (currentTree != null) {
               if (currentTree.nodes.size() > 0) {
                 const timestamp = _.min(currentTree.nodes.map(n => n.timestamp));
@@ -621,6 +700,17 @@ export function parseNml(
         }
       })
       .on("end", () => {
+        // Split potentially unconnected trees
+        const originalTreeIds = Object.keys(trees);
+        for (const treeId of originalTreeIds) {
+          const tree = trees[Number(treeId)];
+          const maxTreeId = getMaximumTreeId(trees);
+          const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
+          delete trees[tree.treeId];
+          for (const newTree of newTrees) {
+            trees[newTree.treeId] = newTree;
+          }
+        }
         resolve({ trees, treeGroups, datasetName });
       })
       .on("error", reject);

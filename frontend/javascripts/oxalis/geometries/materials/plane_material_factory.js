@@ -624,7 +624,7 @@ class PlaneMaterialFactory {
     return names.map(sanitizeName);
   }
 
-  onDisableColorLayer = (layerName, isSegmentationLayer) => {
+  onDisableColorLayer = layerName => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,
@@ -634,7 +634,7 @@ class PlaneMaterialFactory {
     this.recomputeFragmentShader();
   };
 
-  onEnableColorLayer = (layerName, isSegmentationLayer) => {
+  onEnableColorLayer = layerName => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,

@@ -139,8 +139,6 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       );
     }
 
-    const doesDefaultOrganizationExist = this.state.organization != null;
-
     return (
       <>
         <FormItem style={{ display: "none" }}>

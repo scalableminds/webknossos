@@ -79,10 +79,11 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .getWithJsonResponse[String]
   }
 
-  def duplicateVolumeTracing(volumeTracingId: String): Fox[String] = {
+  def duplicateVolumeTracing(volumeTracingId: String, isTask: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+      .addQueryString("isTask" -> isTask.toString)
       .getWithJsonResponse[String]
   }
 

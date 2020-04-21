@@ -329,8 +329,10 @@ class AnnotationController @Inject()(
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id =>
         tracingStoreClient.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
-      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id =>
-        tracingStoreClient.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(
+        id =>
+          tracingStoreClient
+            .duplicateVolumeTracing(id, annotation._task.isDefined)) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataSet,
                                                        newSkeletonTracingReference,

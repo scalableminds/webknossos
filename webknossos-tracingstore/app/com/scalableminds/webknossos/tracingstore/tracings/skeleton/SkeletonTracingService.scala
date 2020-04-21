@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, Json, Writes}
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
 import scala.concurrent.ExecutionContext
 
@@ -126,7 +127,12 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   }
 
   def duplicate(tracing: SkeletonTracing): Fox[String] = {
-    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    val taskBoundingBox = tracing.boundingBox.map { bb =>
+      val newId = tracing.userBoundingBoxes.map(_.id).max + 1
+      NamedBoundingBox(newId, Some("task bounding box"), Some(true), bb)
+    }
+    val newTracing =
+      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
     save(newTracing, None, newTracing.version)
   }
 

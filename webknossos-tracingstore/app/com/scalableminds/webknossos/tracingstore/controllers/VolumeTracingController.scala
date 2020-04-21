@@ -116,14 +116,14 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+  def duplicate(tracingId: String, isTask: Option[Boolean]) = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              newId <- tracingService.duplicate(tracingId, tracing)
+              newId <- tracingService.duplicate(tracingId, tracing, isTask)
             } yield {
               Ok(Json.toJson(newId))
             }

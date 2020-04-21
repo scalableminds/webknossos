@@ -33,6 +33,7 @@ import play.api.libs.json.{JsObject, Json}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -206,8 +207,14 @@ class VolumeTracingService @Inject()(
     binaryDataService.handleDataRequests(requests)
   }
 
-  def duplicate(tracingId: String, tracing: VolumeTracing): Fox[String] = {
-    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+  def duplicate(tracingId: String, tracing: VolumeTracing, isTask: Option[Boolean]): Fox[String] = {
+    val taskBoundingBox = if (isTask.contains(true)) {
+      val newId = tracing.userBoundingBoxes.map(_.id).max + 1
+      Some(NamedBoundingBox(newId, Some("task bounding box"), Some(true), tracing.boundingBox))
+    } else None
+
+    val newTracing =
+      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
     for {
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, tracing, newId, newTracing)

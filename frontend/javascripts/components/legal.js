@@ -4,19 +4,19 @@ import Markdown from "react-remarkable";
 import React from "react";
 
 import type { APIOrganization } from "admin/api_flow_types";
-import { getOperatorData, getOrganizations } from "admin/admin_rest_api";
+import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
 
 type Props = {};
 
 type State = {
   operatorData: string,
-  organizationData: Array<APIOrganization>,
+  defaultOrganization: ?APIOrganization,
 };
 
 class LegalBase extends React.PureComponent<Props, State> {
   state = {
     operatorData: "",
-    organizationData: [],
+    defaultOrganization: null,
   };
 
   componentDidMount() {
@@ -25,14 +25,17 @@ class LegalBase extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const operatorData = await getOperatorData();
-    const organizationData = await getOrganizations();
+    const defaultOrganization = await getDefaultOrganization();
 
-    this.setState({ operatorData, organizationData });
+    this.setState({ operatorData, defaultOrganization });
   }
 
   render() {
     // Dummy render
-    return this.state.operatorData + this.state.organizationData.join("\n");
+    return (
+      this.state.operatorData +
+      (this.state.defaultOrganization != null ? this.state.defaultOrganization.name : "")
+    );
   }
 }
 
@@ -50,20 +53,15 @@ export class Imprint extends LegalBase {
               />
             </Card>
             <p />
-            {this.state.organizationData.map(
-              org =>
-                org.additionalInformation !== "" && (
-                  <React.Fragment key={org.name}>
-                    <Card>
-                      <Markdown
-                        source={org.additionalInformation}
-                        options={{ html: false, breaks: true, linkify: true }}
-                      />
-                    </Card>
-                    <p />
-                  </React.Fragment>
-                ),
-            )}
+            {this.state.defaultOrganization != null &&
+            this.state.defaultOrganization.additionalInformation ? (
+              <Card>
+                <Markdown
+                  source={this.state.defaultOrganization.additionalInformation}
+                  options={{ html: false, breaks: true, linkify: true }}
+                />
+              </Card>
+            ) : null}
           </Col>
         </Row>
       </div>
@@ -144,14 +142,14 @@ export class Privacy extends LegalBase {
             </ul>
 
             <h3>Data controller</h3>
-            {this.state.organizationData.map(org => (
-              <div key={org.name}>
+            {this.state.defaultOrganization != null ? (
+              <div key={this.state.defaultOrganization.name}>
                 <Markdown
-                  source={org.additionalInformation}
+                  source={this.state.defaultOrganization.additionalInformation}
                   options={{ html: false, breaks: true, linkify: true }}
                 />
               </div>
-            ))}
+            ) : null}
 
             <h3>Data processor</h3>
             <Markdown

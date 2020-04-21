@@ -455,6 +455,12 @@ const PricingView = () => (
             <a href="https://dx.doi.org/10.1038/nmeth.4331">Nature Methods (2017) 14, 691-694</a>.
           </p>
           <p>
+            Check out{" "}
+            <a href="https://github.com/scalableminds/webknossos">the instructions on Github</a> to
+            deploy your own instance of webKnossos. If that is too much trouble, you can find all
+            features here on <a href="https://webknossos.org">webknossos.org</a> as well.
+          </p>
+          <p>
             All hosting plans on this website are executed and handled exclusively by scalable
             minds.
           </p>

@@ -139,6 +139,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +owningOrganization: string,
   +publication: ?APIPublication,
 };
 
@@ -248,7 +249,13 @@ export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
 
-export type TracingType = "skeleton" | "volume" | "hybrid";
+export const TracingTypeEnum = Enum.make({
+  skeleton: "skeleton",
+  volume: "volume",
+  hybrid: "hybrid",
+});
+
+export type TracingType = $Keys<typeof TracingTypeEnum>;
 
 export type APITaskType = {
   +id: string,

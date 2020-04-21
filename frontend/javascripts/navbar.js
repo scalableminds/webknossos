@@ -219,13 +219,13 @@ function DashboardSubMenu({ collapse, ...other }) {
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
-        <Link to="/dashboard/datasets">Datasets</Link>
+        <Link to="/dashboard/datasets">My Datasets</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/tasks">
         <Link to="/dashboard/tasks">My Tasks</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/annotations">
-        <Link to="/dashboard/annotations">My Explorative Annotations</Link>
+        <Link to="/dashboard/annotations">My Annotations</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/shared">
         <Link to="/dashboard/shared">Shared Annotations</Link>

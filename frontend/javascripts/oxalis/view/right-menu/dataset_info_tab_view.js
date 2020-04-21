@@ -208,7 +208,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isDatasetViewMode) {
       return (
         <div>
-          <p>
+          <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
           </p>
           {datasetDescription ? (

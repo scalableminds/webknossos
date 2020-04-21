@@ -75,6 +75,8 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
   return layer;
 }
 
+// export const getLayerByName = _.memoize(_getLayerByName);
+
 export function getMappings(dataset: APIDataset, layerName: string): string[] {
   return getLayerByName(dataset, layerName).mappings || [];
 }

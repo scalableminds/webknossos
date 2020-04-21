@@ -1,5 +1,6 @@
 // @flow
 
+import _ from "lodash";
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
@@ -56,7 +57,24 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-    context.fetchDatasets();
+    context.fetchDatasets({
+      applyUpdatePredicate: newDatasets => {
+        // Only update the datasets when there are non currently
+        const updateDatasets = context.datasets.length === 0;
+        if (!updateDatasets) {
+          console.log("Don't propagating update");
+        }
+        return updateDatasets;
+
+        // if everything is equal (ignore LRU), dont show any update
+        // otherwise: show an indicator that something changed
+
+        // if a dataset was removed -> ignore (worst case: opening the ds will fail, which can also happen if the dashboard was left open for some time)
+        // if a dataset was added -> ignore or notify?
+        // if a dataset changed -> ignore or update it
+        // if a dataset LRU changed -> DONT update it
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -151,7 +169,7 @@ function DatasetView(props: Props) {
     <Radio
       onChange={() => {
         setDatasetFilteringMode(key);
-        context.fetchDatasets(key);
+        context.fetchDatasets({ datasetFilteringMode: key });
       }}
       checked={datasetFilteringMode === key}
     >

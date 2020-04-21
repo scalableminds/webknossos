@@ -62,9 +62,6 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
                                    actionTimestamp: Option[Long] = None,
                                    info: Option[String] = None)
     extends VolumeUpdateAction {
-  override def applyOn(tracing: VolumeTracing) =
-    tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
-
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
@@ -81,18 +78,6 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
                                            actionTimestamp: Option[Long] = None,
                                            info: Option[String] = None)
     extends VolumeUpdateAction {
-  override def applyOn(tracing: VolumeTracing) = {
-    def updateUserBoundingBoxes() =
-      tracing.userBoundingBoxes.map { boundingBox =>
-        if (boundingBoxId.forall(_ == boundingBox.id))
-          boundingBox.copy(isVisible = Some(isVisible))
-        else
-          boundingBox
-      }
-
-    tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
-
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 
   override def transformToCompact =

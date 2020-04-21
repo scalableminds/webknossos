@@ -87,12 +87,13 @@ class VolumeTracingService @Inject()(
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
                     largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel,
-                    userBoundingBox = a.userBoundingBox
+                    zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case _ => Fox.failure("Unknown action.")
+              case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
+              case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
+              case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -125,6 +126,18 @@ class VolumeTracingService @Inject()(
           }
     }
     sourceTracing
+  }
+
+  private def updateBoundingBoxVisibility(tracing: VolumeTracing, boundingBoxId: Option[Int], isVisible: Boolean) = {
+    def updateUserBoundingBoxes() =
+      tracing.userBoundingBoxes.map { boundingBox =>
+        if (boundingBoxId.forall(_ == boundingBox.id))
+          boundingBox.copy(isVisible = Some(isVisible))
+        else
+          boundingBox
+      }
+
+    Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {

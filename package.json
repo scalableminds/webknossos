@@ -85,7 +85,7 @@
     "webpack-dev-server": "^3.2.1"
   },
   "optionalDependencies": {
-    "gl": "scalableminds/headless-gl#4.0.5"
+    "gl": "stackgl/headless-gl#4.5.0"
   },
   "scripts": {
     "start": "node tools/proxy/proxy.js",

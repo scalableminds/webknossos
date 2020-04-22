@@ -10,6 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.util.Helpers.tryo
 import play.api.i18n.MessagesProvider
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
@@ -44,7 +45,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
-    ZipIO.withUnziped(file, includeHiddenFiles = false) { (filename, file) =>
+
+    ZipIO.withUnziped(file) { (filename, file) =>
       if (filename.toString.endsWith(".nml")) {
         val result = extractFromNml(file, filename.toString, overwritingDataSetName)
         parseResults ::= (if (useZipName) result.withName(name) else result)
@@ -103,9 +105,24 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)], useZipName: Boolean)(implicit m: MessagesProvider): ZipParseResult =
+  def extractFromFiles(files: Seq[(File, String)], useZipName: Boolean, overwritingDataSetName: Option[String] = None)(
+      implicit m: MessagesProvider): ZipParseResult =
     files.foldLeft(NmlResults.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(extractFromFile(next._1, next._2, useZipName, None))
+      case (acc, (file, name)) =>
+        if (name.endsWith(".zip"))
+          tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
+            case Full(allZips) =>
+              if (allZips)
+                acc.combineWith(
+                  extractFromFiles(
+                    extractFromZip(file, Some(name), useZipName, overwritingDataSetName).otherFiles.toSeq.map(tuple =>
+                      (tuple._2.path.toFile, tuple._1)),
+                    useZipName,
+                    overwritingDataSetName
+                  ))
+              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName))
+            case _ => acc
+          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName))
     }
 
   def extractFromFile(file: File, fileName: String, useZipName: Boolean, overwritingDataSetName: Option[String])(

@@ -253,16 +253,22 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-      _ <- bool2Fox(taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) ?~> "task.create.fromFileVolume"
+      // _ <- bool2Fox(taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) ?~> "task.create.fromFileVolume"
       project <- projectDAO
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
-      parseResults: List[NmlParseResult] = nmlService
-        .extractFromFiles(inputFiles.map(f => (new File(f.ref.path.toString), f.filename)), useZipName = false)
-        .parseResults
-      skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> "task.create.failed"
-      fullParams = skeletonSuccesses.map(s => buildFullParams(params, s.skeletonTracing.get, s.fileName, s.description))
-      skeletonBaseOpts = skeletonSuccesses.map(_.skeletonTracing)
+      extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
+                                                   useZipName = false)
+      successes <- Fox.serialCombined(extractedFiles.parseResults)(_.toSuccessFox) ?~> "task.create.failed"
+      _ <- bool2Fox(successes.forall(s => s.skeletonTracing.isDefined || s.volumeTracingWithDataLocation.isDefined)) ?~> "task.create.needsEitherSkeletonOrVolume"
+      fullParams = successes.map(
+        s =>
+          buildFullParams(params,
+                          s.skeletonTracing,
+                          s.volumeTracingWithDataLocation.map(_._1),
+                          s.fileName,
+                          s.description))
+      skeletonBaseOpts = successes.map(_.skeletonTracing)
       volumeBaseOpts <- createTaskVolumeTracingBases(fullParams, request.identity._organization)
       result <- createTasks((fullParams, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
     } yield {
@@ -271,10 +277,18 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
   }
 
   private def buildFullParams(nmlFormParams: NmlTaskParameters,
-                              tracing: SkeletonTracing,
+                              skeletonTracing: Option[SkeletonTracing],
+                              volumeTracing: Option[VolumeTracing],
                               fileName: String,
                               description: Option[String]) = {
-    val parsedNmlTracingBoundingBox = tracing.boundingBox.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
+    val params = skeletonTracing match {
+      case Some(tracing) => (tracing.boundingBox, tracing.dataSetName, tracing.editPosition, tracing.editRotation)
+      case _ =>
+        val tracing = volumeTracing.get
+        (Some(tracing.boundingBox), tracing.dataSetName, tracing.editPosition, tracing.editRotation)
+    }
+
+    val parsedNmlTracingBoundingBox = params._1.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
     val bbox = if (nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
     TaskParameters(
       nmlFormParams.taskTypeId,
@@ -283,9 +297,9 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       nmlFormParams.projectName,
       nmlFormParams.scriptId,
       bbox,
-      tracing.dataSetName,
-      tracing.editPosition,
-      tracing.editRotation,
+      params._2,
+      params._3,
+      params._4,
       Some(fileName),
       description,
       None

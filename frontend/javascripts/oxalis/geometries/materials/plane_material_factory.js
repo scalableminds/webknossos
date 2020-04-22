@@ -624,39 +624,21 @@ class PlaneMaterialFactory {
     return names.map(sanitizeName);
   }
 
-<<<<<<< HEAD
-  onDisableLayer = (layerName: string) => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
-    this.leastRecentlyVisibleLayers = [layerName, ...this.leastRecentlyVisibleLayers];
-||||||| merged common ancestors
-  onDisableLayer = layerName => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
-    this.leastRecentlyVisibleLayers = [layerName, ...this.leastRecentlyVisibleLayers];
-=======
-  onDisableColorLayer = layerName => {
+  onDisableColorLayer = (layerName: string) => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,
     );
     this.leastRecentlyVisibleColorLayers = [layerName, ...this.leastRecentlyVisibleColorLayers];
->>>>>>> a7a3ed18f9b7be027aa87761c7a1cb608163743c
 
     this.recomputeFragmentShader();
   };
 
-<<<<<<< HEAD
-  onEnableLayer = (layerName: string) => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
-||||||| merged common ancestors
-  onEnableLayer = layerName => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
-=======
-  onEnableColorLayer = layerName => {
+  onEnableColorLayer = (layerName: string) => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,
     );
->>>>>>> a7a3ed18f9b7be027aa87761c7a1cb608163743c
     this.recomputeFragmentShader();
   };
 

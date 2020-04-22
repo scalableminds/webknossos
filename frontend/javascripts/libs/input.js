@@ -29,7 +29,12 @@ const MOUSE_MOVE_DELTA_THRESHOLD = 30;
 export type ModifierKeys = "alt" | "shift" | "ctrl";
 type KeyboardKey = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
-type KeyboardLoopHandler = (number, isOriginalEvent: boolean) => void;
+// Callable Object, see https://flow.org/en/docs/types/functions/#toc-callable-objects
+type KeyboardLoopHandler = {
+  (number, isOriginalEvent: boolean): void,
+  delayed: boolean,
+  lastTime: ?number,
+};
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };

@@ -20,7 +20,12 @@ if (typeof OffscreenCanvas !== "undefined") {
 
 const tf = require("@tensorflow/tfjs");
 
-function predictWrapper(useGPU, buffer: ArrayBuffer, inputExtent: number, isXYflipped: boolean) {
+function predictWrapper(
+  useGPU: boolean,
+  buffer: ArrayBuffer,
+  inputExtent: number,
+  isXYflipped: boolean,
+) {
   return predict(useGPU, tf, buffer, inputExtent, isXYflipped);
 }
 

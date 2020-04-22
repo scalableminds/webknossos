@@ -10,7 +10,7 @@ const registerWebGlCrashHandler = canvas => {
   }
   canvas.addEventListener(
     "webglcontextlost",
-    e => {
+    (e: MessageEvent) => {
       Toast.error(messages["webgl.context_loss"], { sticky: true });
       console.error("Webgl context lost", e);
     },

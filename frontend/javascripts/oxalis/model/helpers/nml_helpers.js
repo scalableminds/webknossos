@@ -440,20 +440,18 @@ function splitTreeIntoComponents(
   const newTrees = [];
   for (let i = 0; i < components.length; i++) {
     const nodeIds = components[i];
+    const nodeIdsSet = new Set(nodeIds);
 
-    const edges = nodeIds.reduce(
-      // Only consider outgoing edges as otherwise each edge would be collected twice
-      (agg, nodeId) => agg.concat(tree.edges.getOutgoingEdgesForNode(nodeId)),
-      [],
-    );
+    // Only consider outgoing edges as otherwise each edge would be collected twice
+    const edges = nodeIds.flatMap(nodeId => tree.edges.getOutgoingEdgesForNode(nodeId));
 
     const newTree = {
       treeId: maxTreeId + 1 + i,
       color: tree.color,
       name: `${tree.name}_${i}`,
-      comments: tree.comments.filter(comment => nodeIds.includes(comment.nodeId)),
+      comments: tree.comments.filter(comment => nodeIdsSet.has(comment.nodeId)),
       nodes: new DiffableMap(nodeIds.map(nodeId => [nodeId, tree.nodes.get(nodeId)])),
-      branchPoints: tree.branchPoints.filter(bp => nodeIds.includes(bp.nodeId)),
+      branchPoints: tree.branchPoints.filter(bp => nodeIdsSet.has(bp.nodeId)),
       timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),
       isVisible: tree.isVisible,
@@ -703,9 +701,11 @@ export function parseNml(
           const tree = trees[Number(treeId)];
           const maxTreeId = getMaximumTreeId(trees);
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
-          delete trees[tree.treeId];
-          for (const newTree of newTrees) {
-            trees[newTree.treeId] = newTree;
+          if (_.size(newTrees) > 1) {
+            delete trees[tree.treeId];
+            for (const newTree of newTrees) {
+              trees[newTree.treeId] = newTree;
+            }
           }
         }
         resolve({ trees, treeGroups, datasetName });

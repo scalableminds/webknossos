@@ -12,7 +12,6 @@ POST          /maintenance                                                      
 DELETE        /maintenance                                                      controllers.MaintenanceController.closeMaintenance
 
 # Authentication
-GET           /auth/callMeMaybe                                                 controllers.Authentication.callMeMaybe
 GET           /auth/autoLogin                                                   controllers.Authentication.autoLogin
 POST          /auth/register                                                    controllers.Authentication.handleRegistration
 POST          /auth/login                                                       controllers.Authentication.authenticate

@@ -45,8 +45,7 @@ class DatasetPositionView extends PureComponent<Props> {
     Store.dispatch(setRotationAction(rotation));
   };
 
-  render() {
-    const position = V3.floor(getPosition(this.props.flycam));
+  isPositionOutOfBounds = (position: Vector3) => {
     const { dataset, task } = this.props;
     const { min: datasetMin, max: datasetMax } = getDatasetExtentInVoxel(dataset);
     const isPositionOutOfBounds = (min: Vector3, max: Vector3) =>
@@ -67,6 +66,12 @@ class DatasetPositionView extends PureComponent<Props> {
       ];
       isOutOfTaskBounds = isPositionOutOfBounds(bbox.topLeft, bboxMax);
     }
+    return { isOutOfDatasetBounds, isOutOfTaskBounds };
+  };
+
+  render() {
+    const position = V3.floor(getPosition(this.props.flycam));
+    const { isOutOfDatasetBounds, isOutOfTaskBounds } = this.isPositionOutOfBounds(position);
     const maybeErrorColor =
       isOutOfDatasetBounds || isOutOfTaskBounds
         ? { color: "rgb(255, 155, 85)", borderColor: "rgb(241, 122, 39)" }
@@ -104,7 +109,7 @@ class DatasetPositionView extends PureComponent<Props> {
             <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
               <ButtonComponent
                 onClick={this.copyRotationToClipboard}
-                style={{ padding: "0 10px", ...maybeErrorColor }}
+                style={{ padding: "0 10px" }}
                 className="hide-on-small-screen"
               >
                 <Icon type="reload" />
@@ -113,7 +118,7 @@ class DatasetPositionView extends PureComponent<Props> {
             <Vector3Input
               value={rotation}
               onChange={this.handleChangeRotation}
-              style={{ textAlign: "center", width: 120, ...maybeErrorColor }}
+              style={{ textAlign: "center", width: 120 }}
               allowDecimals
             />
           </Input.Group>

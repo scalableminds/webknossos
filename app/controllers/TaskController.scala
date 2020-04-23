@@ -241,8 +241,6 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       } yield volumeTracingOpt
     }
 
-  //Note that from-files tasks do not support volume tracings yet
-  @SuppressWarnings(Array("OptionGet")) //We surpress this warning because we know each skeleton exists due to `toSkeletonSuccessFox`
   def createFromFiles = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
@@ -253,8 +251,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
-      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-      // _ <- bool2Fox(taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) ?~> "task.create.fromFileVolume"
+      _ <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       project <- projectDAO
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -278,6 +275,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
     }
   }
 
+  @SuppressWarnings(Array("OptionGet")) //We surpress this warning because we know either the skeletonTracing or the volumeTracing is defined
   private def buildFullParams(nmlFormParams: NmlTaskParameters,
                               skeletonTracing: Option[SkeletonTracing],
                               volumeTracing: Option[VolumeTracing],

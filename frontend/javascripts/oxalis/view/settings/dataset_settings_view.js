@@ -224,7 +224,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           <span style={{ fontWeight: 700 }}>
             {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
           </span>
-          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
+          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
         </Col>

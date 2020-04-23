@@ -60,33 +60,38 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
 
-export type CommentType = {|
-  +content: string,
-  +nodeId: number,
+export type MutableCommentType = {|
+  content: string,
+  nodeId: number,
 |};
+export type CommentType = $ReadOnly<MutableCommentType>;
 
-export type Edge = {
-  +source: number,
-  +target: number,
+export type MutableEdge = {
+  source: number,
+  target: number,
 };
+export type Edge = $ReadOnly<MutableEdge>;
 
-export type Node = {
-  +id: number,
-  +position: Vector3,
-  +rotation: Vector3,
-  +bitDepth: number,
-  +viewport: number,
-  +resolution: number,
-  +radius: number,
-  +timestamp: number,
-  +interpolation: boolean,
+export type MutableNode = {
+  id: number,
+  position: Vector3,
+  rotation: Vector3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  timestamp: number,
+  interpolation: boolean,
 };
+export type Node = $ReadOnly<MutableNode>;
 
-export type BranchPoint = {
-  +timestamp: number,
-  +nodeId: number,
+export type MutableBranchPoint = {
+  timestamp: number,
+  nodeId: number,
 };
+export type BranchPoint = $ReadOnly<MutableBranchPoint>;
 
+export type MutableNodeMap = DiffableMap<number, MutableNode>;
 export type NodeMap = DiffableMap<number, Node>;
 
 export type BoundingBoxObject = {
@@ -96,6 +101,18 @@ export type BoundingBoxObject = {
   +depth: number,
 };
 
+export type MutableTree = {|
+  treeId: number,
+  groupId: ?number,
+  color: Vector3,
+  name: string,
+  timestamp: number,
+  comments: Array<MutableCommentType>,
+  branchPoints: Array<MutableBranchPoint>,
+  edges: EdgeCollection,
+  isVisible: boolean,
+  nodes: MutableNodeMap,
+|};
 export type Tree = {|
   +treeId: number,
   +groupId: ?number,
@@ -135,8 +152,8 @@ export type Settings = APISettings;
 
 export type DataStoreInfo = APIDataStore;
 
-export type TreeMap = { +[number]: Tree };
-export type TemporaryMutableTreeMap = { [number]: Tree };
+export type MutableTreeMap = { [number]: MutableTree };
+export type TreeMap = { [number]: Tree };
 
 export type AnnotationType = APIAnnotationType;
 export type AnnotationVisibility = APIAnnotationVisibility;
@@ -272,6 +289,7 @@ export type RecommendedConfiguration = $Shape<{
   ...UserConfiguration,
   ...DatasetConfiguration,
   zoom: number,
+  segmentationOpacity: number,
 }>;
 
 export type Mapping = { [key: number]: number };

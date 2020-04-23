@@ -329,7 +329,7 @@ export function getEnabledLayers(
     if (settings == null) {
       return false;
     }
-    return settings.isDisabled === options.invert;
+    return settings.isDisabled === Boolean(options.invert);
   });
 }
 

@@ -545,7 +545,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   </Radio>
                   <Radio
                     value={SpecificationEnum.Nml}
-                    disabled={isEditingMode || this.isVolumeTaskType()}
+                    disabled={isEditingMode}
                   >
                     Upload NML File
                   </Radio>

@@ -104,8 +104,9 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       _ <- bool2Fox(if (isVolumeOrHybrid) request.body.length <= 100 else request.body.length <= 1000) ?~> "task.create.limitExceeded"
       taskParameters <- duplicateAllBaseTracings(request.body, request.identity._organization)
       skeletonBaseOpts: List[Option[SkeletonTracing]] <- createTaskSkeletonTracingBases(taskParameters)
-      volumeBaseOpts: List[Option[VolumeTracing]] <- createTaskVolumeTracingBases(taskParameters,
-                                                                                  request.identity._organization)
+      volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- createTaskVolumeTracingBases(
+        taskParameters,
+        request.identity._organization)
       result <- createTasks((taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
     } yield result
   }
@@ -220,7 +221,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
   def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[Option[VolumeTracing]]] =
+      m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
@@ -235,7 +236,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
               params.editRotation,
               false
             )
-            .map(Some(_))
+            .map(v => Some((v, None)))
         } else Fox.successful(None)
       } yield volumeTracingOpt
     }
@@ -269,7 +270,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                           s.fileName,
                           s.description))
       skeletonBaseOpts = successes.map(_.skeletonTracing)
-      volumeBaseOpts <- createTaskVolumeTracingBases(fullParams, request.identity._organization)
+      volumeBaseOpts = successes.map(
+        _.volumeTracingWithDataLocation.map(v => (v._1, extractedFiles.otherFiles.get(v._2).map(_.path.toFile))))
       result <- createTasks((fullParams, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
     } yield {
       result
@@ -311,7 +313,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       tuple._1.baseAnnotation.map(bA => Full(if (isSkeletonId) bA.skeletonId else bA.volumeId)).getOrElse(tuple._2)
     }
 
-  def createTasks(requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])])(
+  def createTasks(
+      requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])(
       implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
 
     def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] =
@@ -321,7 +324,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
     def assertAllOnSameDataset(firstDatasetName: String): Fox[String] = {
       def allOnSameDatasetIter(
-          requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[VolumeTracing])],
+          requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
           dataSetName: String): Boolean =
         requestedTasksRest match {
           case List()       => true
@@ -354,8 +357,10 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))
-      volumeTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveVolumeTracings(
-        VolumeTracings(requestedTasks.map(taskTuple => VolumeTracingOpt(taskTuple._3))))
+      volumeTracingIds: List[Box[Option[String]]] <- Fox.sequence(requestedTasks.map(_._3).map {
+        case Some((tracing, initialFile)) => tracingStoreClient.saveVolumeTracing(tracing, initialFile).map(Some(_))
+        case None                         => Fox.successful(None)
+      })
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_._1), skeletonTracingIds).zipped.toList, true)
       volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_._1), volumeTracingIds).zipped.toList, false)
       requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList

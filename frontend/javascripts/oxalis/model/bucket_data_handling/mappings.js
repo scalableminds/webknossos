@@ -295,7 +295,6 @@ class Mappings {
     const values = new Uint32Array(paddedLength);
 
     keys.set(mappingKeys);
-    // $FlowFixMe Flow doesn't recognize that mapping cannot be null or undefined :/
     values.set(mappingKeys.map(key => mapping[key]));
 
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted

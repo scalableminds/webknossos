@@ -1,6 +1,6 @@
 // @flow
 import { Avatar, Icon, Layout, Menu, Popover } from "antd";
-import { Link, withRouter } from "react-router-dom";
+import { Link, withRouter, type RouterHistory } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -28,6 +28,10 @@ type StateProps = {|
   hasOrganizations: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
+  ...Props,
+  history: RouterHistory,
+|};
 
 export const navbarHeight = 48;
 
@@ -268,6 +272,8 @@ function AnonymousAvatar() {
   return (
     <Popover
       placement="bottomRight"
+      // For some reason flow doesn't get that the style prop is optional ...
+      // $FlowFixMe ... without this FixMe flow throws errors for other instantiations of the LoginForm without a style.
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
       style={{ position: "fixed" }}
@@ -284,7 +290,13 @@ async function getAndTrackVersion() {
   return version;
 }
 
-function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasOrganizations }) {
+function Navbar({
+  activeUser,
+  isAuthenticated,
+  history,
+  isInAnnotationView,
+  hasOrganizations,
+}: PropsWithRouter) {
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -316,6 +328,8 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
+    // $FlowFixMe Flow doesn't check that the activeUser cannot be empty here
+    const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
     if (isAdmin) {
@@ -327,7 +341,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     }
 
     trailingNavItems.push(
-      <LoggedInAvatar key="logged-in-avatar" activeUser={activeUser} handleLogout={handleLogout} />,
+      <LoggedInAvatar
+        key="logged-in-avatar"
+        activeUser={loggedInUser}
+        handleLogout={handleLogout}
+      />,
     );
   }
 
@@ -414,4 +432,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
-export default withRouter(connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));

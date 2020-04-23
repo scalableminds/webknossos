@@ -63,41 +63,17 @@ type StateProps = {|
 |};
 type Props = { ...OwnProps, ...StateProps };
 
-type State = {
-  lastActiveNodeId: number,
-};
-
 function maybeGetActiveNodeFromProps(props: Props) {
   return props.tracing && props.tracing.skeleton && props.tracing.skeleton.activeNodeId != null
     ? props.tracing.skeleton.activeNodeId
     : INVALID_ACTIVE_NODE_ID;
 }
 
-class TDController extends React.PureComponent<Props, State> {
+class TDController extends React.PureComponent<Props> {
   controls: TrackballControls;
   mouseController: InputMouse;
   oldNmPos: Vector3;
   isStarted: boolean;
-
-  constructor(props: Props) {
-    super(props);
-    const initalActiveNodeId = maybeGetActiveNodeFromProps(props);
-    this.state = {
-      lastActiveNodeId: initalActiveNodeId,
-    };
-  }
-
-  static getDerivedStateFromProps(nextProps: Props, prevState: State) {
-    const maybeNewActiveNode = maybeGetActiveNodeFromProps(nextProps);
-    if (
-      maybeNewActiveNode !== prevState.lastActiveNodeId &&
-      maybeNewActiveNode !== INVALID_ACTIVE_NODE_ID
-    ) {
-      return { lastActiveNodeId: maybeNewActiveNode };
-    } else {
-      return null;
-    }
-  }
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
@@ -107,10 +83,10 @@ class TDController extends React.PureComponent<Props, State> {
     this.initMouse();
   }
 
-  componentDidUpdate(prevProps: Props, prevState: State) {
+  componentDidUpdate(prevProps: Props) {
     if (
-      prevState.lastActiveNodeId !== this.state.lastActiveNodeId &&
-      this.state.lastActiveNodeId !== INVALID_ACTIVE_NODE_ID &&
+      maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
+      maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
       this.props.tracing &&
       this.props.tracing.skeleton
     ) {

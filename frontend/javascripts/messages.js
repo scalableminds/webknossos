@@ -231,6 +231,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
+  "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
@@ -245,7 +246,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
-  "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",

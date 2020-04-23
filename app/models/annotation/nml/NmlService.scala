@@ -88,18 +88,14 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
-    if (parseResults.length > 1) {
-      parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
-          NmlParseSuccess(name,
-                          Some(wrapTreesInGroup(name, skeletonTracing)),
-                          volumeTracingOpt,
-                          description,
-                          organizationNameOpt)
-        case r => r
-      }
-    } else {
-      parseResults
+    parseResults.map {
+      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
+        NmlParseSuccess(name,
+                        Some(wrapTreesInGroup(name, skeletonTracing)),
+                        volumeTracingOpt,
+                        description,
+                        organizationNameOpt)
+      case r => r
     }
   }
 

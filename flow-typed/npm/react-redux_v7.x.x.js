@@ -1,4 +1,3 @@
-// @flow
 /**
 The order of type arguments for connect() is as follows:
 

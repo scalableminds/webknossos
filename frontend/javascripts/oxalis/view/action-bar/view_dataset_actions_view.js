@@ -16,7 +16,6 @@ export default function ViewDatasetActionsView(props: Props) {
       onOk={() => setShareDatasetModalVisibility(false)}
     />
   );
-
   const overlayMenu = (
     <Menu>
       {props.layoutMenu}
@@ -26,6 +25,7 @@ export default function ViewDatasetActionsView(props: Props) {
       </Menu.Item>
     </Menu>
   );
+
   return (
     <div style={{ marginLeft: 10 }}>
       {modal}

@@ -8,7 +8,6 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
-import features from "features";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
@@ -140,9 +139,6 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       );
     }
 
-    const { defaultOrganization } = features();
-    const doesDefaultOrganizationExist = this.state.organization != null;
-
     return (
       <>
         <FormItem style={{ display: "none" }}>
@@ -158,7 +154,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
                 message: messages["auth.registration_org_input"],
               },
             ],
-            initialValue: doesDefaultOrganizationExist ? defaultOrganization : undefined,
+            initialValue: this.props.organizationName,
           })(<Input type="text" disabled />)}
         </FormItem>
       </>

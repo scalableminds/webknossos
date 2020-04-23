@@ -517,7 +517,6 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +isDemoInstance: boolean,

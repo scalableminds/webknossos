@@ -4,30 +4,30 @@ import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import { getOrganization } from "admin/admin_rest_api";
+import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationForm from "./registration_form";
 
 type Props = {
-  organizationName: string,
+  organizationName?: string,
 };
 
-function RegistrationView({ organizationName = "default" }: Props) {
+function RegistrationView({ organizationName }: Props) {
   const history = useHistory();
   const [organization, setOrganization] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      if (organizationName) {
-        try {
-          setIsLoading(true);
+      setIsLoading(true);
+      try {
+        if (organizationName != null) {
           setOrganization(await getOrganization(organizationName));
-        } finally {
-          setIsLoading(false);
+        } else {
+          const defaultOrg = await getDefaultOrganization();
+          setOrganization(defaultOrg);
         }
-      } else {
-        setOrganization(null);
+      } finally {
         setIsLoading(false);
       }
     })();
@@ -45,8 +45,8 @@ function RegistrationView({ organizationName = "default" }: Props) {
         <RegistrationForm
           // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
-          key={organizationName}
-          organizationName={organizationName}
+          key={organization.name}
+          organizationName={organization.name}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
               history.goBack();
@@ -65,11 +65,13 @@ function RegistrationView({ organizationName = "default" }: Props) {
   } else {
     content = (
       <Card style={{ marginBottom: 24 }}>
-        We could not find your organization.
+        {organizationName != null
+          ? "We could not find your organization."
+          : "We could not find a default organization to sign up for."}
         <br /> Please check your link or{" "}
         {features().isDemoInstance ? (
           <>
-            <Link to="/onboarding">create a new organization</Link>.
+            <Link to="/">create a new organization</Link>.
           </>
         ) : (
           <>

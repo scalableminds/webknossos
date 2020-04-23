@@ -1,46 +1,13 @@
 // @flow
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
-import Clipboard from "clipboard-js";
-import React, { useState, useEffect } from "react";
-import type { APIDataset } from "admin/api_flow_types";
-import { getDatasetSharingToken } from "admin/admin_rest_api";
-import Toast from "libs/toast";
-import { location } from "libs/window";
+import React from "react";
+import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
 
 type Props = {|
   isVisible: boolean,
   onOk: () => void,
 |};
-
-export function useDatasetSharingToken(dataset: APIDataset) {
-  const [datasetToken, setDatasetToken] = useState("");
-  const fetchAndSetToken = async () => {
-    const datasetId = { name: dataset.name, owningOrganization: dataset.owningOrganization };
-    try {
-      const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
-      setDatasetToken(sharingToken);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-  useEffect(() => {
-    fetchAndSetToken();
-  }, [dataset]);
-  return datasetToken;
-}
-
-function getUrl(sharingToken: string, includeToken: boolean) {
-  const { pathname, origin, hash } = location;
-  const query = includeToken ? `?token=${sharingToken}` : "";
-  const url = `${origin}${pathname}${query}${hash}`;
-  return url;
-}
-
-async function copyUrlToClipboard(url: string) {
-  await Clipboard.copy(url);
-  Toast.success("URL copied to clipboard.");
-}
 
 export default function ShareViewDatasetModalView(props: Props) {
   const { isVisible, onOk } = props;

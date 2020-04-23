@@ -1,3 +1,4 @@
+// @flow
 /**
 The order of type arguments for connect() is as follows:
 
@@ -24,6 +25,7 @@ Decrypting the abbreviations:
   RMP = Returned merge props
   CP = Props for returned component
   Com = React Component
+  SS = Selected state
   ST = Static properties of Com
   EFO = Extra factory options (used only in connectAdvanced)
 */
@@ -35,7 +37,7 @@ declare module "react-redux" {
 
   declare export type Options<S, OP, SP, MP> = {|
     pure?: boolean,
-    withRef?: boolean,
+    forwardRef?: boolean,
     areStatesEqual?: (next: S, prev: S) => boolean,
     areOwnPropsEqual?: (next: OP, prev: OP) => boolean,
     areStatePropsEqual?: (next: SP, prev: SP) => boolean,
@@ -79,7 +81,9 @@ declare module "react-redux" {
   // Got error like inexact OwnProps is incompatible with exact object type?
   // Just make the OP parameter for `connect()` an exact object.
   declare type MergeOP<OP, D> = {| ...$Exact<OP>, dispatch: D |};
-  declare type MergeOPSP<OP, SP> = {| ...$Exact<OP>, ...SP |};
+  // Important: The following definition got edited when upgrading redux as it created some weird type errors.
+  // Previously, this definition also included the property "dispatch: D".
+  declare type MergeOPSP<OP, SP, D> = {| ...$Exact<OP>, ...SP |};
   declare type MergeOPDP<OP, DP> = {| ...$Exact<OP>, ...DP |};
   declare type MergeOPSPDP<OP, SP, DP> = {| ...$Exact<OP>, ...SP, ...DP |};
 
@@ -95,8 +99,8 @@ declare module "react-redux" {
     mapStateToProps: MapStateToProps<S, OP, SP>,
     mapDispatchToProps?: null | void,
     mergeProps?: null | void,
-    options?: ?Options<S, OP, SP, MergeOPSP<OP, SP>>,
-  ): Connector<P, OP, MergeOPSP<OP, SP>>;
+    options?: ?Options<S, OP, SP, MergeOPSP<OP, SP, D>>,
+  ): Connector<P, OP, MergeOPSP<OP, SP, D>>;
 
   // In this case DP is an object of functions which has been bound to dispatch
   // by the given mapDispatchToProps function.
@@ -196,6 +200,19 @@ declare module "react-redux" {
   ): Connector<P, OP, P>;
 
   // ------------------------------------------------------------
+  // Typings for Hooks
+  // ------------------------------------------------------------
+
+  declare export function useDispatch<D>(): D;
+
+  declare export function useSelector<S, SS>(
+    selector: (state: S) => SS,
+    equalityFn?: (a: SS, b: SS) => boolean,
+  ): SS;
+
+  declare export function useStore<Store>(): Store;
+
+  // ------------------------------------------------------------
   // Typings for Provider
   // ------------------------------------------------------------
 
@@ -216,7 +233,7 @@ declare module "react-redux" {
     renderCountProp?: string,
     shouldHandleStateChanges?: boolean,
     storeKey?: string,
-    withRef?: boolean,
+    forwardRef?: boolean,
   };
 
   declare type SelectorFactoryOptions<Com> = {
@@ -225,7 +242,7 @@ declare module "react-redux" {
     renderCountProp: ?string,
     shouldHandleStateChanges: boolean,
     storeKey: string,
-    withRef: boolean,
+    forwardRef: boolean,
     displayName: string,
     wrappedComponentName: string,
     WrappedComponent: Com,
@@ -263,5 +280,8 @@ declare module "react-redux" {
     createProvider: typeof createProvider,
     connect: typeof connect,
     connectAdvanced: typeof connectAdvanced,
+    useDispatch: typeof useDispatch,
+    useSelector: typeof useSelector,
+    useStore: typeof useStore,
   };
 }

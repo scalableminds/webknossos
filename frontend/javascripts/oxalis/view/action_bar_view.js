@@ -161,6 +161,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const layoutMenu = (
       <LayoutMenu
         {...layoutProps}
+        key="layout-menu"
         addNewLayout={() => {
           this.setState({ isNewLayoutModalVisible: true });
         }}

@@ -262,12 +262,28 @@ class MappingInfoView extends React.Component<Props, State> {
       title,
       dataIndex,
     });
+    const showSegmentation64bitWarning =
+      segmentationLayer && segmentationLayer.elementClass === "uint64";
+    const maybeWithTooltipWarningTitle = title =>
+      showSegmentation64bitWarning ? (
+        <React.Fragment>
+          {title}{" "}
+          <Tooltip title={message["tracing.uin64_segmentation_warning"]}>
+            <Icon type="info-circle" style={{ color: "rgb(255, 155, 85)" }} />
+          </Tooltip>
+        </React.Fragment>
+      ) : (
+        title
+      );
     const idColumns =
       hasMapping && this.props.isMappingEnabled
         ? // Show an unmapped and mapped id column if there's a mapping
-          [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
+          [
+            columnHelper(maybeWithTooltipWarningTitle("Unmapped"), "unmapped"),
+            columnHelper(maybeWithTooltipWarningTitle("Mapped"), "mapped"),
+          ]
         : // Otherwise, only show an ID column
-          [columnHelper("ID", "unmapped")];
+          [columnHelper(maybeWithTooltipWarningTitle("ID"), "unmapped")];
     const columns = [
       columnHelper("", "name"),
       ...idColumns,

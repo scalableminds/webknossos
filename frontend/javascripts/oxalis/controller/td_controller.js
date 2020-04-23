@@ -114,6 +114,9 @@ class TDController extends React.PureComponent<Props, State> {
       this.props.tracing &&
       this.props.tracing.skeleton
     ) {
+      // The rotation center of this viewport is not updated to the new position after selecing a node in the viewport.
+      // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
+      // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map(activeNode =>
         this.setTargetAndFixPosition(activeNode.position),
       );
@@ -211,7 +214,7 @@ class TDController extends React.PureComponent<Props, State> {
     };
   }
 
-  setTargetAndFixPosition(position: ?Vector3 = null): void {
+  setTargetAndFixPosition(position?: Vector3): void {
     position = position || getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 

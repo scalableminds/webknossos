@@ -32,7 +32,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
-- Ignoring an error message caused by the drag and drop functionallity. This error claims that a reload of the tracing is required although everthing is fine. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
+- Ignoring an error message caused by the drag and drop functionality. This error claims that a reload of the tracing is required although everything is fine. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Fixed that after selecting a node in the 3d viewport the rotating center of the viewport was not updated immediately. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 - Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)

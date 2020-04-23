@@ -162,8 +162,7 @@ export default function ShareModalView(props: Props) {
             </Button>
           </Input.Group>
           <Hint style={{ margin: "6px 12px" }}>
-            This link includes the current position, zoom value and active tree node. Consider
-            fine-tuning your current view before copying the URL.
+            {messages["tracing.sharing_modal_basic_information"]}
           </Hint>
         </Col>
       </Row>

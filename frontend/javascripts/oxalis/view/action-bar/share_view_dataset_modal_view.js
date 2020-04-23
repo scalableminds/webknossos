@@ -2,6 +2,7 @@
 import { Modal, Input, Button, Row, Col } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
+import messages from "messages";
 import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
 
 type Props = {|
@@ -40,8 +41,7 @@ export default function ShareViewDatasetModalView(props: Props) {
               margin: "6px 12px",
             }}
           >
-            This link includes the current position and zoom value. Consider fine-tuning your
-            current view before copying the URL.{" "}
+            {messages["tracing.sharing_modal_basic_information"]}{" "}
             {!dataset.isPublic
               ? "Additionally, a private token is included in the link, since the dataset is not public."
               : null}

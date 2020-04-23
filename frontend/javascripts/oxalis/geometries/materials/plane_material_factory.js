@@ -579,7 +579,7 @@ class PlaneMaterialFactory {
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number) {
+  getLayersToRender(maximumLayerCountToRender: number): Array<string> {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
@@ -624,7 +624,7 @@ class PlaneMaterialFactory {
     return names.map(sanitizeName);
   }
 
-  onDisableColorLayer = layerName => {
+  onDisableColorLayer = (layerName: string) => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,
@@ -634,7 +634,7 @@ class PlaneMaterialFactory {
     this.recomputeFragmentShader();
   };
 
-  onEnableColorLayer = layerName => {
+  onEnableColorLayer = (layerName: string) => {
     this.leastRecentlyVisibleColorLayers = _.without(
       this.leastRecentlyVisibleColorLayers,
       layerName,

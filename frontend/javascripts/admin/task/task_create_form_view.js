@@ -543,10 +543,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
                     Manual Specification
                   </Radio>
-                  <Radio
-                    value={SpecificationEnum.Nml}
-                    disabled={isEditingMode}
-                  >
+                  <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
                     Upload NML File
                   </Radio>
                   <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>

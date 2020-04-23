@@ -186,7 +186,7 @@ class IsosurfaceService @Inject()(
                                   math.ceil(cuboid.depth / voxelDimensions.z).toInt)
 
     val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
-    val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource.scale.toVector
+    val scale = Vector3D(cuboid.topLeft.resolution) //* request.dataSource.scale.toVector
 
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 

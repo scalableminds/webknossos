@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
@@ -15,13 +15,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.BinaryDataService
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, IsosurfaceRequest, IsosurfaceService}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
 import play.api.libs.iteratee.Concurrent.Channel
@@ -36,7 +37,7 @@ import scala.util.Try
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    config: TracingStoreConfig,
+    isosurfaceService: IsosurfaceService,
     val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     val handledGroupIdStore: RedisTemporaryStore,
     val uncommittedUpdatesStore: RedisTemporaryStore,
@@ -253,4 +254,20 @@ class VolumeTracingService @Inject()(
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
+
+  def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+    for {
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      segmentationLayer = volumeTracingLayer(tracingId, tracing)
+      isosurfaceRequest = IsosurfaceRequest(
+        null,
+        segmentationLayer,
+        request.cuboid(segmentationLayer),
+        request.segmentId,
+        request.voxelDimensions,
+        request.mapping,
+        request.mappingType
+      )
+      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+    } yield result
 }

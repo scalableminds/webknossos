@@ -1,12 +1,14 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, IsosurfaceRequest, UserAccessRequest}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
 import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
@@ -146,4 +148,32 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
   }
+
+  /**
+    * Handles isosurface requests.
+    */
+  def requestIsosurface(tracingId: String) =
+    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
+            (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
+          } yield {
+            // We need four bytes for each float
+            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+            responseBuffer.asFloatBuffer().put(vertices)
+            Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          }
+        }
+      }
+    }
+
+  private def getNeighborIndices(neighbors: List[Int]) =
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+
+  private def formatNeighborList(neighbors: List[Int]): String =
+    "[" + neighbors.mkString(", ") + "]"
 }

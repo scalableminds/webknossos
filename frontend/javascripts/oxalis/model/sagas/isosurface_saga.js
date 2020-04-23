@@ -132,18 +132,18 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  const isControlModeSupported = yield* select(
+  const renderIsosurfaces = true; // yield* select(state => state.datasetConfiguration.renderIsosurfaces);
+  const isControlModeSupported = true; /* yield* select(
     state =>
       state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces,
-  );
+  ); */
   if (!renderIsosurfaces || !isControlModeSupported) {
     return;
   }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
   if (!layer) {
-    return;
+    // return;
   }
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));

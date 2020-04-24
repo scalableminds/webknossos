@@ -26,7 +26,7 @@ import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
 case class IsosurfaceRequest(
-    dataSource: DataSource,
+    dataSource: Option[DataSource],
     dataLayer: SegmentationLayer,
     cuboid: Cuboid,
     segmentId: Long,
@@ -99,9 +99,10 @@ class IsosurfaceService @Inject()(
         case Some(mappingName) =>
           request.mappingType match {
             case Some("JSON") =>
-              mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
-                                          data,
-                                          dataTypeFunctors.fromLong)
+              mappingService.applyMapping(
+                DataServiceMappingRequest(request.dataSource.orNull, request.dataLayer, mappingName),
+                data,
+                dataTypeFunctors.fromLong)
             case _ => Fox.successful(data)
           }
         case _ =>
@@ -114,12 +115,13 @@ class IsosurfaceService @Inject()(
           request.mappingType match {
             case Some("HDF5") =>
               val dataRequest = DataServiceDataRequest(
-                request.dataSource,
+                request.dataSource.orNull,
                 request.dataLayer,
                 request.mapping,
                 request.cuboid,
                 DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                Vector3I(1, 1, 1))
+                Vector3I(1, 1, 1)
+              )
               agglomerateService.applyAgglomerate(dataRequest)(data)
             case _ =>
               Fox.successful(data)
@@ -163,9 +165,8 @@ class IsosurfaceService @Inject()(
       val back_yz = BoundingBox(Point3D(x, 0, 0), x, 1, z)
       val surfaceBoundingBoxes = List(front_xy, front_xz, front_yz, back_xy, back_xz, back_yz)
       surfaceBoundingBoxes.zipWithIndex.filter {
-        case (surfaceBoundingBox, index) => {
+        case (surfaceBoundingBox, index) =>
           subVolumeContainsSegmentId(data, dataDimensions, surfaceBoundingBox, segmentId)
-        }
       }.map {
         case (surfaceBoundingBox, index) => index
       }
@@ -174,7 +175,7 @@ class IsosurfaceService @Inject()(
     val cuboid = request.cuboid
     val voxelDimensions = Vector3D(request.voxelDimensions.x, request.voxelDimensions.y, request.voxelDimensions.z)
 
-    val dataRequest = DataServiceDataRequest(request.dataSource,
+    val dataRequest = DataServiceDataRequest(request.dataSource.orNull,
                                              request.dataLayer,
                                              request.mapping,
                                              cuboid,
@@ -186,7 +187,9 @@ class IsosurfaceService @Inject()(
                                   math.ceil(cuboid.depth / voxelDimensions.z).toInt)
 
     val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
-    val scale = Vector3D(cuboid.topLeft.resolution) //* request.dataSource.scale.toVector
+    val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource
+      .map(_.scale.toVector)
+      .getOrElse(Vector3D(1, 1, 1))
 
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 

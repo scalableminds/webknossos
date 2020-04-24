@@ -260,7 +260,7 @@ class VolumeTracingService @Inject()(
       tracing <- find(tracingId) ?~> "tracing.notFound"
       segmentationLayer = volumeTracingLayer(tracingId, tracing)
       isosurfaceRequest = IsosurfaceRequest(
-        null,
+        None,
         segmentationLayer,
         request.cuboid(segmentationLayer),
         request.segmentId,

@@ -345,7 +345,7 @@ class BinaryDataController @Inject()(
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages(
               "dataLayer.mustBeSegmentation")
             isosurfaceRequest = IsosurfaceRequest(
-              dataSource,
+              Some(dataSource),
               segmentationLayer,
               request.body.cuboid(dataLayer),
               request.body.segmentId,

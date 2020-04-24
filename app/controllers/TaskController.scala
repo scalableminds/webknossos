@@ -241,17 +241,56 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       } yield volumeTracingOpt
     }
 
+  private def getTracingBases(skeletonBaseOpts: List[Option[SkeletonTracing]],
+                              volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]],
+                              fullParams: List[TaskParameters],
+                              taskType: TaskType,
+                              organizationId: ObjectId)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[(List[Option[SkeletonTracing]], List[Option[(VolumeTracing, Option[File])]])] =
+    if (taskType.tracingType == TracingType.skeleton)
+      if (volumeBaseOpts.forall(_.isEmpty)) Fox.failure(Messages("taskType.mismatch", "skeleton", "volume"))
+      else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
+    else if (taskType.tracingType == TracingType.volume)
+      if (skeletonBaseOpts.forall(_.isEmpty)) Fox.failure(Messages("taskType.mismatch", "volume", "skeleton"))
+      else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
+    else
+      Fox
+        .serialCombined((fullParams, skeletonBaseOpts, volumeBaseOpts).zipped.toList) {
+          case (params, skeleton, volume) =>
+            val skeletonOpt = Some(skeleton.getOrElse(annotationService
+              .createSkeletonTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)))
+            val volumeFox = volume
+              .map(Fox.successful(_))
+              .getOrElse(
+                annotationService
+                  .createVolumeTracingBase(
+                    params.dataSet,
+                    organizationId,
+                    params.boundingBox,
+                    params.editPosition,
+                    params.editRotation,
+                    false
+                  )
+                  .map(v => (v, None)))
+
+            volumeFox.map(v => (skeletonOpt, Some(v)))
+        }
+        .map(_.unzip)
+
   def createFromFiles = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
       inputFiles = body.files.filter(file =>
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
-      _ <- bool2Fox(inputFiles.length <= 1000) ?~> "task.create.limitExceeded"
       _ <- bool2Fox(inputFiles.nonEmpty) ?~> "nml.file.notFound"
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> "format.json.missing"
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> "task.create.failed"
       taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
-      _ <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
+      _ <- bool2Fox(
+        if (taskType.tracingType != TracingType.skeleton) inputFiles.length <= 100
+        else inputFiles.length <= 1000) ?~> "task.create.limitExceeded"
       project <- projectDAO
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
@@ -269,7 +308,12 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       skeletonBaseOpts = successes.map(_.skeletonTracing)
       volumeBaseOpts = successes.map(
         _.volumeTracingWithDataLocation.map(v => (v._1, extractedFiles.otherFiles.get(v._2).map(_.path.toFile))))
-      result <- createTasks((fullParams, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
+      (skeletonBases, volumeBases) <- getTracingBases(skeletonBaseOpts,
+                                                      volumeBaseOpts,
+                                                      fullParams,
+                                                      taskType,
+                                                      request.identity._organization)
+      result <- createTasks((fullParams, skeletonBases, volumeBases).zipped.toList)
     } yield {
       result
     }

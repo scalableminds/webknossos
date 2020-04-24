@@ -157,7 +157,7 @@ Will fetch all Scala, Java and node dependencies and run the application on Port
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Upgrades
-For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
+For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration guide](MIGRATIONS.released.md).
 
 ## Tests
 ```bash

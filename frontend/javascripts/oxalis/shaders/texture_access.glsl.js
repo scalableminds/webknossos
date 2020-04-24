@@ -116,6 +116,10 @@ export const getColorForCoords: ShaderModule = {
       float packingDegree,
       vec3 worldPositionUVW
     ) {
+      // This method looks up the color data at the given position.
+      // The data will be clamped to be non-negative, since negative data
+      // is reserved for missing buckets.
+
       vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
       vec3 relativeBucketPosition = div(coords, bucketWidth);
       vec3 offsetInBucket = mod(coords, bucketWidth);
@@ -216,7 +220,7 @@ export const getColorForCoords: ShaderModule = {
       );
 
       if (packingDegree == 1.0) {
-        return bucketColor;
+        return max(bucketColor, 0.0);
       }
 
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
@@ -226,21 +230,31 @@ export const getColorForCoords: ShaderModule = {
         // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
-          return vec4(bucketColor.r, bucketColor.g, bucketColor.r, bucketColor.g);
+          return vec4(
+            max(bucketColor.r, 0.0),
+            max(bucketColor.g, 0.0),
+            max(bucketColor.r, 0.0),
+            max(bucketColor.g, 0.0)
+          );
         } else if (rgbaIndex == 1.0) {
-          return vec4(bucketColor.b, bucketColor.a, bucketColor.b, bucketColor.a);
+          return vec4(
+            max(bucketColor.b, 0.0),
+            max(bucketColor.a, 0.0),
+            max(bucketColor.b, 0.0),
+            max(bucketColor.a, 0.0)
+          );
         }
       }
 
       // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
-        return vec4(bucketColor.r);
+        return vec4(max(bucketColor.r, 0.0));
       } else if (rgbaIndex == 1.0) {
-        return vec4(bucketColor.g);
+        return vec4(max(bucketColor.g, 0.0));
       } else if (rgbaIndex == 2.0) {
-        return vec4(bucketColor.b);
+        return vec4(max(bucketColor.b, 0.0));
       } else if (rgbaIndex == 3.0) {
-        return vec4(bucketColor.a);
+        return vec4(max(bucketColor.a, 0.0));
       }
 
       return vec4(0.0);

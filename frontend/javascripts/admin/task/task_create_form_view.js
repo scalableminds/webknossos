@@ -115,17 +115,17 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
         {successfulTasks.map(task => taskToText(task)).join("\n")}
       </pre>
     ) : (
-      `Too many tasks to show, please use CSV download for a full list.`
+      "Too many tasks to show, please use CSV download for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
       <pre>{failedTasksAsString}</pre>
     ) : (
-      `Too many failed tasks to show, please use CSV download for a full list.`
+      "Too many failed tasks to show, please use CSV download for a full list."
     );
   const subHeadingStyle = { fontWeight: "bold" };
   const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
-  const successPlural = successfulTasks.length == 1 ? "" : "s";
+  const successPlural = successfulTasks.length === 1 ? "" : "s";
   Modal.info({
     title: `${successfulTasks.length} task${successPlural} successfully created, ${
       failedTasks.length

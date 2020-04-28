@@ -122,7 +122,14 @@ export function __setupOxalis(t, mode, apiVersion) {
 
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
-    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)
+    .withArgs(
+      sinon.match(
+        arg =>
+          // Match against the URL while ignoring further GET parameters (such as timestamps)
+          typeof arg === "string" &&
+          arg.startsWith(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`),
+      ),
+    )
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
   const datasetClone = _.cloneDeep(DATASET);
 

@@ -17,6 +17,9 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants from "oxalis/constants";
 import messages from "messages";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+
+const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 8;
 
 export function* pushAnnotationUpdateAsync(): Saga<void> {
   const tracing = yield* select(state => state.tracing);
@@ -37,7 +40,7 @@ function shouldDisplaySegmentationData(): boolean {
   if (!segmentationLayerName || !canModeDisplaySegmentationData) {
     return false;
   }
-  const isSegmentationLayerDisabled = !Store.getState().datasetConfiguration.layers[
+  const isSegmentationLayerDisabled = Store.getState().datasetConfiguration.layers[
     segmentationLayerName
   ].isDisabled;
   return !isSegmentationLayerDisabled;
@@ -59,6 +62,25 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
+
+    const isAgglomerateMappingEnabled = yield* select(
+      storeState =>
+        storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
+        storeState.temporaryConfiguration.activeMapping.mappingType === "HDF5",
+    );
+
+    const isZoomThresholdExceeded = yield* select(
+      storeState => getRequestLogZoomStep(storeState) > Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
+    );
+
+    if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {
+      Toast.error(messages["tracing.segmentation_zoom_warning_agglomerate"], {
+        sticky: false,
+        timeout: 3000,
+      });
+    } else {
+      Toast.close(messages["tracing.segmentation_zoom_warning_agglomerate"]);
+    }
   }
 
   yield* take("WK_READY");
@@ -74,6 +96,8 @@ export function* warnAboutSegmentationOpacity(): Saga<void> {
       "ZOOM_BY_DELTA",
       "SET_ZOOM_STEP",
       "SET_STORED_LAYOUTS",
+      "SET_MAPPING",
+      "SET_MAPPING_ENABLED",
       action =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&

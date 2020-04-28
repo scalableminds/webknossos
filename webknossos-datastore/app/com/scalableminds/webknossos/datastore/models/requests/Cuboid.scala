@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition}
 
 /**
@@ -41,4 +42,6 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     }
     bucketList
   }
+
+  def resolution: Point3D = topLeft.resolution
 }

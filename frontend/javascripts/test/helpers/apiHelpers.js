@@ -122,7 +122,7 @@ export function __setupOxalis(t, mode, apiVersion) {
 
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
-    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`)
+    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
   const datasetClone = _.cloneDeep(DATASET);
 

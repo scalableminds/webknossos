@@ -25,7 +25,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationInfoV2(typ: String, id: String) =
     annotationController.info(typ, id, System.currentTimeMillis)
 
-  /* to provide v1, replace new field isVisible in annotation json by old field visibility */
+  /* to provide v1, replace new field “visibility” in annotation json by old boolean field “isPublic” */
 
   def annotationDuplicate(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {

@@ -75,7 +75,7 @@ List your own task annotations
  - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
 
 #### Changes Introduced in `v2`
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 ---
 ### `GET /user/annotations`
@@ -98,7 +98,7 @@ List your own explorative annotations
  - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
 #### Changes Introduced in `v2`
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 
 
@@ -136,7 +136,7 @@ List the task annotations of a user
 
 
 #### Changes Introduced in `v2`
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 ---
 ### `GET /users/:id/annotations`
@@ -160,7 +160,7 @@ List the explorative annotations of a user
  - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
 #### Changes Introduced in `v2`
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 
 ---
@@ -309,7 +309,7 @@ The compound annotations are created as merged from the finished annotations ass
  - Expects additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `GET /annotations/:typ/:id/download`
@@ -354,7 +354,7 @@ Duplicate an annotation (“copy to my account”)
  - JSON object containing annotation information about the newly created (duplicated) annotation, including the assigned id
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 
 ---
@@ -392,7 +392,7 @@ Edit metadata of an annotation
  - Expects additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 
 ---
@@ -406,7 +406,7 @@ Edit metadata of an annotation
  - JSON object containing annotation information about the reopened annotation
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `PUT /annotations/Task/:id/reset`
@@ -420,7 +420,7 @@ Reset a task annotation to its base state
  - JSON object containing annotation information about the reset task annotation
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `POST /annotations/:typ/:id/merge/:mergedTyp/:mergedId`
@@ -435,7 +435,7 @@ Merge two annotations, creating a new explorative.
  - JSON object containing annotation information about the merged annotation
 
 #### Changes Introduced in `v2`
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `POST /tasks`
@@ -572,7 +572,7 @@ List annotations of a task
  - Cancelled annotations are not returned
 
 #### Changes Introduced in `v2`
- - The annotation objects in the returned JSON contain the `isPublic` flag instead of the `visibility` field
+ - The annotation objects in the returned JSON contain the `visibility` flag instead of the `isPublic` field
 
 ---
 ### `GET /projects`

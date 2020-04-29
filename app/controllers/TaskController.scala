@@ -249,10 +249,10 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(List[Option[SkeletonTracing]], List[Option[(VolumeTracing, Option[File])]])] =
     if (taskType.tracingType == TracingType.skeleton)
-      if (volumeBaseOpts.forall(_.isEmpty)) Fox.failure(Messages("taskType.mismatch", "skeleton", "volume"))
+      if (volumeBaseOpts.exists(_.isDefined)) Fox.failure(Messages("taskType.mismatch", "skeleton", "volume"))
       else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
     else if (taskType.tracingType == TracingType.volume)
-      if (skeletonBaseOpts.forall(_.isEmpty)) Fox.failure(Messages("taskType.mismatch", "volume", "skeleton"))
+      if (skeletonBaseOpts.exists(_.isDefined)) Fox.failure(Messages("taskType.mismatch", "volume", "skeleton"))
       else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
     else
       Fox

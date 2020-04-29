@@ -1,5 +1,4 @@
 package com.scalableminds.webknossos.datastore.services
-import java.nio._
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
@@ -14,7 +13,6 @@ import play.api.libs.json.Json
 import spire.math._
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Double, max: Double)
 object Histogram { implicit val jsonFormat = Json.format[Histogram] }
@@ -50,8 +48,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                      positions: List[Point3D],
                                      resolution: Point3D) =
     for {
-      dataBucketWise: Seq[Array[Byte]] <- Fox.serialCombined(positions)(pos =>
-        getDataFor(dataSource, dataLayer, pos, resolution))
+      dataBucketWise: Seq[Array[Byte]] <- Fox
+        .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, resolution)))
+        .toFox
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
 
@@ -225,7 +224,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Point3D], resolution: Point3D) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "Could not get data at sampled positions"
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = convertData(dataConcatenated, dataLayer.elementClass, filterZeroes = !isUint24)
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
@@ -233,6 +232,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
-      Fox.empty ?~> "empty resolutions"
+      Fox.empty ?~> "dataSet.noResolutions"
   }
 }

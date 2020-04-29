@@ -51,6 +51,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       dataBucketWise: Seq[Array[Byte]] <- Fox
         .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, resolution)))
         .toFox
+      _ <- bool2Fox(dataBucketWise.nonEmpty) ?~> "dataSet.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
 

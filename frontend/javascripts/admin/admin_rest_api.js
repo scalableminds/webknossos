@@ -540,9 +540,12 @@ export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
-  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`, {
-    method: "PATCH",
-  });
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/finish?timestamp=${Date.now()}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function resetAnnotation(
@@ -566,12 +569,15 @@ export function deleteAnnotation(
 export function finishAllAnnotations(
   selectedAnnotationIds: Array<string>,
 ): Promise<{ messages: Array<Message> }> {
-  return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
-    method: "PATCH",
-    data: {
-      annotations: selectedAnnotationIds,
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/Explorational/finish?timestamp=${Date.now()}`,
+    {
+      method: "PATCH",
+      data: {
+        annotations: selectedAnnotationIds,
+      },
     },
-  });
+  );
 }
 
 export function copyAnnotationToUserAccount(
@@ -587,7 +593,7 @@ export function getAnnotationInformation(
   annotationType: APIAnnotationType,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info`;
+  const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   return Request.receiveJSON(infoUrl, options);
 }
 

@@ -67,7 +67,7 @@ class BinaryDataService(dataBaseDir: Path,
         for {
           data <- handleDataRequest(request)
           mappedData <- convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation,
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= 8,
             data,
             agglomerateService.applyAgglomerate(request),
             Fox.successful(_)

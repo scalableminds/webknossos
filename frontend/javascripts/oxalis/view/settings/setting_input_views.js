@@ -1,5 +1,5 @@
 // @flow
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Icon, Select } from "antd";
 import * as React from "react";
 
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -225,11 +225,13 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
   }
 }
 
-type VectorInputSettingPropTypes<T> = {
-  label: string,
-  value: T,
-  onChange: (value: T) => void,
+type UserBoundingBoxInputProps = {
+  value: Vector6,
+  color: Vector3,
   tooltipTitle: string,
+  onValueChange: (value: Vector6) => void,
+  onColorChange: (color: Vector3) => void,
+  onDelete: () => void,
 };
 
 type State = {
@@ -238,11 +240,8 @@ type State = {
   text: string,
 };
 
-export class Vector6InputSetting extends React.PureComponent<
-  VectorInputSettingPropTypes<?Vector6>,
-  State,
-> {
-  constructor(props: VectorInputSettingPropTypes<?Vector6>) {
+export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+  constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
       isEditing: false,
@@ -251,7 +250,7 @@ export class Vector6InputSetting extends React.PureComponent<
     };
   }
 
-  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<?Vector6>) {
+  componentWillReceiveProps(newProps: UserBoundingBoxInputProps) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
@@ -260,27 +259,16 @@ export class Vector6InputSetting extends React.PureComponent<
     }
   }
 
-  computeText(vector: ?Vector6) {
-    const defaultValue = "";
-    return vector != null ? vector.join(", ") : defaultValue;
+  computeText(vector: Vector6) {
+    return vector.join(", ");
   }
 
   handleBlur = () => {
     this.setState({
       isEditing: false,
+      isValid: true,
+      text: this.computeText(this.props.value),
     });
-    if (this.state.isValid) {
-      this.setState({
-        isValid: true,
-        text: this.computeText(this.props.value),
-      });
-    } else {
-      this.props.onChange();
-      this.setState({
-        isValid: true,
-        text: this.computeText(),
-      });
-    }
   };
 
   handleFocus = () => {
@@ -297,34 +285,24 @@ export class Vector6InputSetting extends React.PureComponent<
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
-    const isValidFormat = value.length === 6 || value.length === 0;
+    const isValidLength = value.length === 6;
+    const isValid = isValidInput && isValidLength;
 
-    if (isValidFormat && isValidInput) {
-      if (value.length === 0) {
-        this.props.onChange();
-      } else {
-        this.props.onChange(Utils.numberArrayToVector6(value));
-      }
+    if (isValid) {
+      this.props.onValueChange(Utils.numberArrayToVector6(value));
     }
-
-    this.setState({
-      text,
-      isValid: isValidInput && isValidFormat,
-    });
+    this.setState({ text, isValid });
   };
 
   render() {
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-
+    const { tooltipTitle, color, onColorChange, onDelete } = this.props;
     return (
       <Row className="margin-bottom" align="top">
-        <Col span={8}>
-          <label className="setting-label">{this.props.label}</label>
-        </Col>
-        <Col span={16}>
+        <Col span={18}>
           <Tooltip
             trigger={["focus"]}
-            title={this.props.tooltipTitle}
+            title={tooltipTitle}
             placement="topLeft"
             overlayStyle={tooltipStyle}
           >
@@ -336,6 +314,19 @@ export class Vector6InputSetting extends React.PureComponent<
               placeholder="0, 0, 0, 512, 512, 512"
               size="small"
             />
+          </Tooltip>
+        </Col>
+        <Col span={3}>
+          <ColorSetting
+            value={Utils.rgbToHex(color)}
+            onChange={onColorChange}
+            className="ant-btn"
+            style={{ marginLeft: 6 }}
+          />
+        </Col>
+        <Col span={3}>
+          <Tooltip title="Delete this bounding box.">
+            <Icon type="delete" onClick={onDelete} style={{ margin: "auto" }} />
           </Tooltip>
         </Col>
       </Row>

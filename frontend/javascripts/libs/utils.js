@@ -135,9 +135,17 @@ export function hexToRgb(hex: string): Vector3 {
   return [r, g, b];
 }
 
-export function computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
-  if (bb == null) return null;
+export function getRandomColor(): Vector3 {
+  const getRandomComponent = () => Math.floor(Math.random() * 256);
+  // Flow does not understand that the returned array has only three entries.
+  return (([0, 0, 0].map(getRandomComponent): any): Vector3);
+}
 
+export function addIdToArrayElements<T>(bboxes: Array<T>): Array<T & { id: number }> {
+  return bboxes.map((bb, index) => ({ ...bb, id: index }));
+}
+
+export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   const [x, y, z, width, height, depth] = bb;
 
   return {
@@ -145,18 +153,21 @@ export function computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
     max: [x + width, y + height, z + depth],
   };
 }
+export function computeBoundingBoxTypeFromBoundingBoxObject(
+  bb: BoundingBoxObject,
+): BoundingBoxType {
+  return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
+}
 
-export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
-  return bb != null
-    ? [
-        bb.min[0],
-        bb.min[1],
-        bb.min[2],
-        bb.max[0] - bb.min[0],
-        bb.max[1] - bb.min[1],
-        bb.max[2] - bb.min[2],
-      ]
-    : null;
+export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
+  return [
+    bb.min[0],
+    bb.min[1],
+    bb.min[2],
+    bb.max[0] - bb.min[0],
+    bb.max[1] - bb.min[1],
+    bb.max[2] - bb.min[2],
+  ];
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {

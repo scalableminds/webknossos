@@ -9,7 +9,10 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import {
+  convertServerBoundingBoxToFrontend,
+  convertServerBoundingBoxesToUserBoundingBoxes,
+} from "oxalis/model/reducers/reducer_helpers";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -95,7 +98,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
+        userBoundingBoxes: convertServerBoundingBoxesToUserBoundingBoxes(
+          action.tracing.userBoundingBoxes,
+        ),
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });

@@ -7,7 +7,10 @@ import update from "immutability-helper";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import {
+  convertServerBoundingBoxToFrontend,
+  convertServerBoundingBoxesToUserBoundingBoxes,
+} from "oxalis/model/reducers/reducer_helpers";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setToolReducer,
@@ -39,7 +42,9 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
+        userBoundingBoxes: convertServerBoundingBoxesToUserBoundingBoxes(
+          action.tracing.userBoundingBoxes,
+        ),
         fallbackLayer: action.tracing.fallbackLayer,
       };
 

@@ -259,7 +259,7 @@ function updateTracingPredicate(
   flycam: Flycam,
 ): boolean {
   return (
-    !_.isEqual(prevVolumeTracing.userBoundingBox, volumeTracing.userBoundingBox) ||
+    !_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes) ||
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
     prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
     prevFlycam !== flycam

@@ -196,7 +196,7 @@ async function sendUpdateActions(explorational, queue) {
 test.serial("Send update actions and compare resulting tracing", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
-  const initialSkeleton = { activeNodeId: undefined, userBoundingBox: undefined };
+  const initialSkeleton = { activeNodeId: undefined, userBoundingBoxes: [] };
   const saveQueue = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [

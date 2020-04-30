@@ -4,9 +4,10 @@ import Maybe from "data.maybe";
 import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
 import type { Annotation, BoundingBoxObject } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
-import type { BoundingBoxType } from "oxalis/constants";
+import type { BoundingBoxType, BoundingBoxWithColorAndId } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
+import { Vector3 } from "three";
 
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ?ServerBoundingBox,
@@ -18,6 +19,19 @@ export function convertServerBoundingBoxToFrontend(
       ),
     )
     .getOrElse(null);
+}
+
+export function convertServerBoundingBoxesToUserBoundingBoxes(
+  boundingBoxes: Array<ServerBoundingBox>,
+): Array<BoundingBoxWithColorAndId> {
+  // The explicit type assignment is needed for flow to understand that the elements of the returned array have an id.
+  const bboxesWithColor: Array<BoundingBoxType & { color: Vector3 }> = boundingBoxes.map(bb => ({
+    ...Utils.computeBoundingBoxFromArray(
+      Utils.concatVector3(Utils.point3ToVector3(bb.topLeft), [bb.width, bb.height, bb.depth]),
+    ),
+    color: bb.color != null ? bb.color : Utils.getRandomColor(),
+  }));
+  return Utils.addIdToArrayElements(bboxesWithColor);
 }
 
 export function convertFrontendBoundingBoxToServer(

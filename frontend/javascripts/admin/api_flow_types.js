@@ -553,6 +553,7 @@ export type ServerBoundingBox = {
   width: number,
   height: number,
   depth: number,
+  color?: Vector3,
 };
 
 export type ServerBoundingBoxTypeTuple = {
@@ -577,7 +578,7 @@ export type ServerSkeletonTracingTree = {
 
 export type ServerTracingBase = {|
   id: string,
-  userBoundingBox?: ServerBoundingBox,
+  userBoundingBoxes: Array<ServerBoundingBox>,
   createdTimestamp: number,
   dataSetName: string,
   editPosition: Point3,

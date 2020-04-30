@@ -4,6 +4,7 @@ import type { ServerVolumeTracing, APIAnnotation } from "admin/api_flow_types";
 export const tracing: ServerVolumeTracing = {
   activeSegmentId: 10000,
   boundingBox: { topLeft: { x: 0, y: 0, z: 0 }, width: 1024, height: 1024, depth: 1024 },
+  userBoundingBoxes: [],
   createdTimestamp: 1529066010230,
   dataSetName: "ROI2017_wkw",
   editPosition: { x: 3904, y: 4282, z: 2496 },

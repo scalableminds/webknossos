@@ -29,7 +29,7 @@ export const settings = {
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
-  userBoundingBox: "Bounding Box",
+  userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
   loadingStrategyDescription: `You can choose between loading the best quality first
     (will take longer until you see data) or alternatively,

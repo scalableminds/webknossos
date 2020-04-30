@@ -30,6 +30,7 @@ export const tracing: ServerSkeletonTracing = {
   dataSetName: "ROI2017_wkw",
   treeGroups: [],
   createdTimestamp: 1528811983951,
+  userBoundingBoxes: [],
   activeNodeId: 1,
   editPosition: { x: 0, y: 0, z: 0 },
   editRotation: { x: 0, y: 0, z: 0 },

@@ -6,7 +6,7 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "admin/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
+import type { BoundingBoxWithColorAndId } from "oxalis/constants";
 
 type InitializeAnnotation = {
   type: "INITIALIZE_ANNOTATION",
@@ -33,9 +33,9 @@ type SetAnnotationAllowUpdateAction = {
   allowUpdate: boolean,
 };
 
-type SetUserBoundingBox = {
-  type: "SET_USER_BOUNDING_BOX",
-  userBoundingBox: ?BoundingBoxType,
+type SetUserBoundingBoxes = {
+  type: "SET_USER_BOUNDING_BOXES",
+  userBoundingBoxes: Array<BoundingBoxWithColorAndId>,
 };
 
 export type UpdateRemoteMeshMetaDataAction = {
@@ -87,7 +87,7 @@ export type AnnotationActionTypes =
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
-  | SetUserBoundingBox
+  | SetUserBoundingBoxes
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
@@ -129,11 +129,11 @@ export const setAnnotationAllowUpdateAction = (
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
 // the tracing, hence no ANNOTATION in the action type.
-export const setUserBoundingBoxAction = (
-  userBoundingBox: ?BoundingBoxType,
-): SetUserBoundingBox => ({
-  type: "SET_USER_BOUNDING_BOX",
-  userBoundingBox,
+export const setUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<BoundingBoxWithColorAndId>,
+): SetUserBoundingBoxes => ({
+  type: "SET_USER_BOUNDING_BOXES",
+  userBoundingBoxes,
 });
 
 export const updateRemoteMeshMetaDataAction = (

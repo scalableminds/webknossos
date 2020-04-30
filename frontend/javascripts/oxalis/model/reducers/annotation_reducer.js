@@ -42,10 +42,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey2(state, "tracing", "restrictions", { allowUpdate });
     }
 
-    case "SET_USER_BOUNDING_BOX": {
+    case "SET_USER_BOUNDING_BOXES": {
       const updaterObject = {
-        userBoundingBox: {
-          $set: action.userBoundingBox,
+        userBoundingBoxes: {
+          $set: action.userBoundingBoxes,
         },
       };
       const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};

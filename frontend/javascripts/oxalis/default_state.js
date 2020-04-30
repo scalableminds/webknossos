@@ -136,9 +136,9 @@ const defaultState: OxalisState = {
   tracing: {
     ...initialAnnotationInfo,
     readOnly: {
+      userBoundingBoxes: [],
       boundingBox: null,
       createdTimestamp: 0,
-      userBoundingBox: null,
       type: "readonly",
       version: 0,
       tracingId: "",

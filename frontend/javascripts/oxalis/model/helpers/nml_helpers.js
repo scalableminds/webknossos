@@ -4,8 +4,7 @@ import Saxophone from "@scalableminds/saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "admin/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
+import type { BoundingBoxWithColorAndId } from "oxalis/constants";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
@@ -22,6 +21,8 @@ import {
   type TreeMap,
 } from "oxalis/store";
 import messages from "messages";
+import { computeArrayFromBoundingBox } from "libs/utils";
+import { Vector3 } from "three";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -54,6 +55,10 @@ function escape(string: string): string {
       .replace(/"/g, "&quot;")
       .replace(/\n/g, "&#xa;")
   );
+}
+
+function mapColorToComponents(color: Vector3) {
+  return { "color.r": color[0], "color.g": color[1], "color.b": color[2], "color.a": 1.0 };
 }
 
 function serializeTagWithChildren(
@@ -162,12 +167,12 @@ function serializeMetaInformation(
   ]);
 }
 
-function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
-  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
-  if (serverBoundingBox != null) {
-    const { topLeft, width, height, depth } = serverBoundingBox;
-    const [topLeftX, topLeftY, topLeftZ] = topLeft;
-    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+function serializeBoundingBox(bb: BoundingBoxWithColorAndId, name: string): string {
+  const boundingBoxArray = computeArrayFromBoundingBox(bb);
+  if (boundingBoxArray != null && bb) {
+    const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+    const color = bb.color ? mapColorToComponents(bb.color) : {};
+    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth, ...color });
   }
   return "";
 }
@@ -179,7 +184,7 @@ function serializeParameters(
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = skeletonTracing.userBoundingBox;
+  const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
@@ -212,8 +217,8 @@ function serializeParameters(
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        serializeBoundingBox(userBB, "userBoundingBox"),
-        serializeBoundingBox(taskBB, "taskBoundingBox"),
+        ...userBBoxes.map(userBB => serializeBoundingBox(userBB, "userBoundingBox")),
+        taskBB != null ? serializeBoundingBox(taskBB, "taskBoundingBox") : null,
       ]),
     ),
     "</parameters>",
@@ -227,10 +232,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         "thing",
         {
           id: tree.treeId,
-          "color.r": tree.color[0],
-          "color.g": tree.color[1],
-          "color.b": tree.color[2],
-          "color.a": 1.0,
+          ...mapColorToComponents(tree.color),
           name: tree.name,
           groupId: tree.groupId,
         },

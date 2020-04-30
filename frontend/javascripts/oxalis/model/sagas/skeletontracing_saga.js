@@ -248,7 +248,7 @@ function updateTracingPredicate(
   flycam: Flycam,
 ): boolean {
   return (
-    !_.isEqual(prevSkeletonTracing.userBoundingBox, skeletonTracing.userBoundingBox) ||
+    !_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes) ||
     prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId ||
     prevFlycam !== flycam
   );

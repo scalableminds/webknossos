@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
@@ -166,9 +166,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", (node \ "@id").text)
         name = (node \ "@name").text
         isVisible = (node \ "@isVisible").text.toBooleanOpt
+        color = parseColor(node)
         boundingBox <- parseBoundingBox(node \ "@boundingBox")
         nameOpt = if (name.isEmpty) None else Some(name)
-      } yield NamedBoundingBox(id, nameOpt, isVisible, boundingBox))
+      } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox))
 
   private def parseBoundingBox(node: NodeSeq) =
     node.headOption.flatMap(bb =>

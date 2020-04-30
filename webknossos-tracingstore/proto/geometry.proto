@@ -15,6 +15,13 @@ message Vector3D {
     required double z = 3;
 }
 
+message Color {
+  required double r = 1;
+  required double g = 2;
+  required double b = 3;
+  required double a = 4;
+}
+
 message BoundingBox {
     required Point3D topLeft = 1;
     required int32 width = 2;
@@ -26,5 +33,6 @@ message NamedBoundingBox {
   required int32 id = 1; // Zero shouldn't be used as an id because it's reserved for the original user bounding box
   optional string name = 2;
   optional bool isVisible = 3;
-  required BoundingBox boundingBox = 4;
+  optional Color color = 4;
+  required BoundingBox boundingBox = 5;
 }

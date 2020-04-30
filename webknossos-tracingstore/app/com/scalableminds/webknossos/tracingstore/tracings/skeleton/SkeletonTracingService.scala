@@ -129,7 +129,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   def duplicate(tracing: SkeletonTracing): Fox[String] = {
     val taskBoundingBox = tracing.boundingBox.map { bb =>
       val newId = tracing.userBoundingBoxes.map(_.id).max + 1
-      NamedBoundingBox(newId, Some("task bounding box"), Some(true), bb)
+      NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, bb)
     }
     val newTracing =
       tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)

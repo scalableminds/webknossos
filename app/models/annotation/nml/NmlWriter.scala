@@ -101,7 +101,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         s.editRotation,
         s.zoomLevel,
         s.activeNodeId,
-        s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, _)),
+        s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
         s.boundingBox
       )
     }.orElse {
@@ -116,7 +116,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           v.editRotation,
           v.zoomLevel,
           None,
-          v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, _)),
+          v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
           if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None
         )
       }

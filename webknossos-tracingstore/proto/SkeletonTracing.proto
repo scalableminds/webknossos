@@ -31,13 +31,6 @@ message BranchPoint {
     required int64 createdTimestamp = 2;
 }
 
-message Color {
-    required double r = 1;
-    required double g = 2;
-    required double b = 3;
-    required double a = 4;
-}
-
 message Tree {
      required int32 treeId = 1;
      repeated Node nodes = 2;

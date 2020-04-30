@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -138,7 +138,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         for {
           client <- tracingStoreService.clientFor(dataSet)
           oldTracingOpt <- Fox.runOptional(oldTracingId)(id => client.getVolumeTracing(id, skipVolumeData = true))
-          userBBoxOpt = oldTracingOpt.flatMap(_._1.userBoundingBox).map(NamedBoundingBox(0, None, None, _))
+          userBBoxOpt = oldTracingOpt.flatMap(_._1.userBoundingBox).map(NamedBoundingBox(0, None, None, None, _))
           userBBoxes = oldTracingOpt.map(_._1.userBoundingBoxes ++ userBBoxOpt)
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,

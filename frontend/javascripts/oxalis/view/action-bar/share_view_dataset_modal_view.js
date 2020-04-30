@@ -5,6 +5,8 @@ import React from "react";
 import messages from "messages";
 import { useDatasetSharingToken, getUrl, copyUrlToClipboard } from "./share_modal_view";
 
+const sharingActiveNode = false;
+
 type Props = {|
   isVisible: boolean,
   onOk: () => void,
@@ -41,7 +43,7 @@ export default function ShareViewDatasetModalView(props: Props) {
               margin: "6px 12px",
             }}
           >
-            {messages["tracing.sharing_modal_basic_information"]}{" "}
+            {messages["tracing.sharing_modal_basic_information"](sharingActiveNode)}{" "}
             {!dataset.isPublic
               ? "Additionally, a private token is included in the link, since the dataset is not public."
               : null}

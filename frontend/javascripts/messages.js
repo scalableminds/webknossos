@@ -78,8 +78,10 @@ data black. This means that in case of missing data, data of lower quality is re
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
-  "tracing.sharing_modal_basic_information":
-    "This link includes the current position, zoom value and active tree node. Consider fine-tuning your current view before copying the URL.",
+  "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
+    `This link includes the ${
+      sharingActiveNode ? "active tree node," : ""
+    } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",

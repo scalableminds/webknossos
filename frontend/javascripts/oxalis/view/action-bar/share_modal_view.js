@@ -18,6 +18,8 @@ import messages from "messages";
 
 const RadioGroup = Radio.Group;
 
+const sharingActiveNode = true;
+
 type Props = {|
   isVisible: boolean,
   onOk: () => void,
@@ -43,9 +45,8 @@ function Hint({ children, style }) {
 export function useDatasetSharingToken(dataset: APIDataset) {
   const [datasetToken, setDatasetToken] = useState("");
   const fetchAndSetToken = async () => {
-    const datasetId = { name: dataset.name, owningOrganization: dataset.owningOrganization };
     try {
-      const sharingToken = await getDatasetSharingToken(datasetId, { showErrorToast: false });
+      const sharingToken = await getDatasetSharingToken(dataset, { showErrorToast: false });
       setDatasetToken(sharingToken);
     } catch (error) {
       console.error(error);
@@ -162,7 +163,7 @@ export default function ShareModalView(props: Props) {
             </Button>
           </Input.Group>
           <Hint style={{ margin: "6px 12px" }}>
-            {messages["tracing.sharing_modal_basic_information"]}
+            {messages["tracing.sharing_modal_basic_information"](sharingActiveNode)}
           </Hint>
         </Col>
       </Row>

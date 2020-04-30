@@ -13,7 +13,10 @@ import window, { document, location } from "libs/window";
 
 // No more than MAX_NUM_ERRORS will be reported to airbrake
 const MAX_NUM_ERRORS = 50;
-const BLACKLISTED_ERROR_MESSAGES = ["ResizeObserver loop limit exceeded"];
+const BLACKLISTED_ERROR_MESSAGES = [
+  "ResizeObserver loop limit exceeded",
+  "Invariant Violation: Cannot call hover while not dragging.",
+];
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,

@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
 - When wK changes datasource-properties.json files of datasets, now it creates a backup log of previous versions. [#4534](https://github.com/scalableminds/webknossos/pull/4534)
+- Added a warning to the position input in tracings if the current position is out of bounds. The warning colors the position input orange. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Isosurface generation now also supports hdf5-style mappings. [#4531](https://github.com/scalableminds/webknossos/pull/4531)
 
 ### Changed
@@ -34,6 +35,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+- Ignoring an error message caused by the drag and drop functionality. This error claims that a reload of the tracing is required although everything is fine. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
+- Fixed that after selecting a node in the 3d viewport the rotating center of the viewport was not updated immediately. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 - Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - The datastore checks if a organization folder can be created before creating a new organization. [#4501](https://github.com/scalableminds/webknossos/pull/4501)

@@ -18,7 +18,7 @@ import {
   SwitchSetting,
   UserBoundingBoxInput,
 } from "oxalis/view/settings/setting_input_views";
-import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
+import type { UserConfiguration, OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -48,7 +48,6 @@ import Constants, {
   type ViewMode,
   type Vector6,
   type Vector3,
-  type BoundingBoxWithColorAndId,
 } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -64,7 +63,7 @@ type UserSettingsViewProps = {
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeActiveCellId: (value: number) => void,
-  onChangeBoundingBoxes: (value: Array<BoundingBoxWithColorAndId>) => void,
+  onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeEnableMergerMode: (active: boolean) => void,
@@ -96,27 +95,29 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     }
   };
 
-  handleChangeUserBoundingBox = (id: number, newBoundingBoxAsVector: Vector6) => {
-    const updatedBoundingBox = Utils.computeBoundingBoxFromArray(newBoundingBoxAsVector);
+  handleChangeUserBoundingBox = (
+    id: number,
+    newBoundingBoxAsVector?: Vector6,
+    newName?: string,
+    newColor?: Vector3,
+    isVisible?: boolean,
+  ) => {
+    const maybeUpdatedBoundingBox = newBoundingBoxAsVector
+      ? Utils.computeBoundingBoxFromArray(newBoundingBoxAsVector)
+      : undefined;
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
 
-    const updatedUserBoundingBoxes = userBoundingBoxes.map(boundingBox =>
-      boundingBox.id === id ? { ...updatedBoundingBox, id, color: boundingBox.color } : boundingBox,
+    const updatedUserBoundingBoxes = userBoundingBoxes.map(bb =>
+      bb.id === id
+        ? {
+            ...bb,
+            boundingBox: maybeUpdatedBoundingBox || bb.boundingBox,
+            name: newName != null ? newName : bb.name,
+            color: newColor || bb.color,
+            isVisible: isVisible != null ? isVisible : bb.isVisible,
+          }
+        : bb,
     );
-    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
-  };
-
-  handleChangeUserBoundingBoxColor = (id: number, color: Vector3) => {
-    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    const updatedUserBoundingBoxes = userBoundingBoxes.map(boundingBox =>
-      boundingBox.id === id ? { ...boundingBox, color } : boundingBox,
-    );
-    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
-  };
-
-  handleDeleteUserBoundingBox = (id: number) => {
-    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
     this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
   };
 
@@ -125,12 +126,21 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     // We use the default of -1 to get the id 0 for the first user bounding box.
     const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
     const datasetBoundingBox = getDatasetExtentInVoxel(this.props.dataset);
+    const boundingBoxId = highestBoundingBoxId + 1;
     const newUserBoundingBox = {
-      ...Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
-      id: highestBoundingBoxId + 1,
+      boundingBox: Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
+      id: boundingBoxId,
+      name: `UserBoundingBox_${boundingBoxId}`,
       color: Utils.getRandomColor(),
+      isVisible: true,
     };
     const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  };
+
+  handleDeleteUserBoundingBox = (id: number) => {
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
     this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
   };
 
@@ -433,15 +443,16 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
                 />
               </Tooltip>
             </div>
-            {userBoundingBoxes.map(boundingBox => (
+            {userBoundingBoxes.map(bb => (
               <UserBoundingBoxInput
-                key={boundingBox.id}
+                key={bb.id}
                 tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-                value={Utils.computeArrayFromBoundingBox(boundingBox)}
-                color={boundingBox.color}
-                onValueChange={_.partial(this.handleChangeUserBoundingBox, boundingBox.id)}
-                onColorChange={_.partial(this.handleChangeUserBoundingBoxColor, boundingBox.id)}
-                onDelete={_.partial(this.handleDeleteUserBoundingBox, boundingBox.id)}
+                value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+                color={bb.color}
+                name={bb.name}
+                isVisible={bb.isVisible}
+                onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
+                onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
               />
             ))}
           </Panel>
@@ -484,7 +495,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
   },
-  onChangeBoundingBoxes(userBoundingBoxes: Array<BoundingBoxWithColorAndId>) {
+  onChangeBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
     dispatch(setUserBoundingBoxesAction(userBoundingBoxes));
   },
   onChangeZoomStep(zoomStep: number) {

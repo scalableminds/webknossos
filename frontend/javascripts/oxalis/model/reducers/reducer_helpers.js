@@ -1,37 +1,48 @@
 // @flow
 import Maybe from "data.maybe";
 
-import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
-import type { Annotation, BoundingBoxObject } from "oxalis/store";
+import type { APIAnnotation, ServerBoundingBox, ServerUserBoundingBox } from "admin/api_flow_types";
+import type { Annotation, BoundingBoxObject, UserBoundingBox } from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
-import type { BoundingBoxType, BoundingBoxWithColorAndId } from "oxalis/constants";
+import type { BoundingBoxType } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
-import { Vector3 } from "three";
+
+function convertServerBoundingBoxToMinMaxBoundingBox(
+  boundingBox: ServerBoundingBox,
+): BoundingBoxType {
+  return Utils.computeBoundingBoxFromArray(
+    Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
+      boundingBox.width,
+      boundingBox.height,
+      boundingBox.depth,
+    ]),
+  );
+}
 
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ?ServerBoundingBox,
 ): ?BoundingBoxType {
   return Maybe.fromNullable(boundingBox)
-    .map(bb =>
-      Utils.computeBoundingBoxFromArray(
-        Utils.concatVector3(Utils.point3ToVector3(bb.topLeft), [bb.width, bb.height, bb.depth]),
-      ),
-    )
+    .map(bb => convertServerBoundingBoxToMinMaxBoundingBox(bb))
     .getOrElse(null);
 }
 
 export function convertServerBoundingBoxesToUserBoundingBoxes(
-  boundingBoxes: Array<ServerBoundingBox>,
-): Array<BoundingBoxWithColorAndId> {
+  boundingBoxes: Array<ServerUserBoundingBox>,
+): Array<UserBoundingBox> {
   // The explicit type assignment is needed for flow to understand that the elements of the returned array have an id.
-  const bboxesWithColor: Array<BoundingBoxType & { color: Vector3 }> = boundingBoxes.map(bb => ({
-    ...Utils.computeBoundingBoxFromArray(
-      Utils.concatVector3(Utils.point3ToVector3(bb.topLeft), [bb.width, bb.height, bb.depth]),
-    ),
-    color: bb.color != null ? bb.color : Utils.getRandomColor(),
-  }));
-  return Utils.addIdToArrayElements(bboxesWithColor);
+  return boundingBoxes.map(bb => {
+    const { color, id, name, isVisible, boundingBox } = bb;
+    const convertedBoundingBox = convertServerBoundingBoxToMinMaxBoundingBox(boundingBox);
+    return {
+      boundingBox: convertedBoundingBox,
+      color: color || Utils.getRandomColor(),
+      id,
+      name: name || `UserBoundingBox_${id}`,
+      isVisible: isVisible || true,
+    };
+  });
 }
 
 export function convertFrontendBoundingBoxToServer(

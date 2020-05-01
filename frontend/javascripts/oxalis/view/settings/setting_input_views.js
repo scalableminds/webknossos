@@ -227,10 +227,11 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
 
 type UserBoundingBoxInputProps = {
   value: Vector6,
+  name: string,
   color: Vector3,
+  isVisible: boolean,
   tooltipTitle: string,
-  onValueChange: (value: Vector6) => void,
-  onColorChange: (color: Vector3) => void,
+  onChange: (value?: Vector6, name?: string, color?: Vector3, isVisible?: boolean) => void,
   onDelete: () => void,
 };
 
@@ -289,47 +290,88 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      this.props.onValueChange(Utils.numberArrayToVector6(value));
+      this.props.onChange(Utils.numberArrayToVector6(value));
     }
     this.setState({ text, isValid });
   };
 
+  handleNameChange = (evt: SyntheticInputEvent<>) => {
+    this.props.onChange(undefined, evt.target.value);
+  };
+
+  handleColorChange = (newColor: Vector3) => {
+    this.props.onChange(undefined, undefined, newColor);
+  };
+
+  handleVisibilityChange = (isVisible: boolean) => {
+    this.props.onChange(undefined, undefined, undefined, isVisible);
+  };
+
   render() {
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, color, onColorChange, onDelete } = this.props;
+    const { tooltipTitle, name, color, isVisible, onDelete } = this.props;
+    const iconStyle = { margin: "auto 0px auto 6px" };
     return (
-      <Row className="margin-bottom" align="top">
-        <Col span={18}>
-          <Tooltip
-            trigger={["focus"]}
-            title={tooltipTitle}
-            placement="topLeft"
-            overlayStyle={tooltipStyle}
-          >
+      <React.Fragment>
+        <Row style={{ marginBottom: isVisible ? 16 : 0 }}>
+          <Col span={22}>
+            <Switch
+              size="small"
+              onChange={this.handleVisibilityChange}
+              checked={isVisible}
+              style={{ margin: "auto 0px" }}
+            />
+          </Col>
+          <Col span={2}>
+            <Tooltip title="Delete this bounding box.">
+              <Icon type="delete" onClick={onDelete} style={iconStyle} />
+            </Tooltip>
+          </Col>
+        </Row>
+        <Row className="margin-bottom" align="top">
+          <Col span={5}>
+            <label className="settings-label"> Name: </label>
+          </Col>
+          <Col span={17}>
             <Input
-              onChange={this.handleChange}
-              onFocus={this.handleFocus}
-              onBlur={this.handleBlur}
-              value={this.state.text}
-              placeholder="0, 0, 0, 512, 512, 512"
+              onChange={this.handleNameChange}
+              defaultValue={name}
+              placeholder="UserBoundingBoxName"
               size="small"
             />
-          </Tooltip>
-        </Col>
-        <Col span={3}>
-          <ColorSetting
-            value={Utils.rgbToHex(color)}
-            onChange={onColorChange}
-            className="ant-btn"
-            style={{ marginLeft: 6 }}
-          />
-        </Col>
-        <Col span={3}>
-          <Tooltip title="Delete this bounding box.">
-            <Icon type="delete" onClick={onDelete} style={{ margin: "auto" }} />
-          </Tooltip>
-        </Col>
-      </Row>
+          </Col>
+          <Col span={2}>
+            <ColorSetting
+              value={Utils.rgbToHex(color)}
+              onChange={this.handleColorChange}
+              className="ant-btn"
+              style={iconStyle}
+            />
+          </Col>
+        </Row>
+        <Row className="margin-bottom" align="top">
+          <Col span={5}>
+            <label className="settings-label"> Bounds: </label>
+          </Col>
+          <Col span={17}>
+            <Tooltip
+              trigger={["focus"]}
+              title={tooltipTitle}
+              placement="topLeft"
+              overlayStyle={tooltipStyle}
+            >
+              <Input
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
+                size="small"
+              />
+            </Tooltip>
+          </Col>
+        </Row>
+      </React.Fragment>
     );
   }
 }

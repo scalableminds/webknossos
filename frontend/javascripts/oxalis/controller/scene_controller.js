@@ -27,12 +27,11 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store from "oxalis/store";
+import Store, { type UserBoundingBox } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
   type BoundingBoxType,
-  type BoundingBoxWithColorAndId,
   type OrthoView,
   type OrthoViewMap,
   OrthoViewValuesWithoutTDView,
@@ -404,15 +403,17 @@ class SceneController {
     return this.rootNode;
   }
 
-  setUserBoundingBoxes(bboxes: Array<BoundingBoxWithColorAndId>): void {
+  setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
     this.userBoundingBoxes = bboxes.map(bb => {
+      const { min, max } = bb.boundingBox;
       const bbCube = new Cube({
-        min: bb.min,
-        max: bb.max,
+        min,
+        max,
         color: Utils.rgbToBigInt(bb.color),
         showCrossSections: true,
       });
+      bbCube.setVisibility(bb.isVisible);
       bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });

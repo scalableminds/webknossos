@@ -31,7 +31,7 @@ import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracin
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
-  type BoundingBoxWithColorAndId,
+  type BoundingBoxType,
   type ContourMode,
   type ControlMode,
   ControlModeEnum,
@@ -94,6 +94,14 @@ export type BoundingBoxObject = {
   +width: number,
   +height: number,
   +depth: number,
+};
+
+export type UserBoundingBox = {
+  id: number,
+  boundingBox: BoundingBoxType,
+  name: string,
+  color: Vector3,
+  isVisible: boolean,
 };
 
 export type Tree = {|
@@ -160,8 +168,8 @@ type TracingBase = {|
   +createdTimestamp: number,
   +version: number,
   +tracingId: string,
-  +boundingBox: ?BoundingBoxWithColorAndId,
-  +userBoundingBoxes: Array<BoundingBoxWithColorAndId>,
+  +boundingBox: ?BoundingBoxType,
+  +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
 export type SkeletonTracing = {|

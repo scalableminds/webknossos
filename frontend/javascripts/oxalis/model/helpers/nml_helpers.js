@@ -4,25 +4,26 @@ import Saxophone from "@scalableminds/saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "admin/api_flow_types";
-import type { BoundingBoxWithColorAndId } from "oxalis/constants";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import {
-  type NodeMap,
-  type OxalisState,
-  type SkeletonTracing,
-  type TemporaryMutableTreeMap,
-  type Tracing,
-  type Tree,
-  type TreeGroup,
-  type TreeMap,
+import type {
+  UserBoundingBox,
+  NodeMap,
+  OxalisState,
+  SkeletonTracing,
+  TemporaryMutableTreeMap,
+  Tracing,
+  Tree,
+  TreeGroup,
+  TreeMap,
 } from "oxalis/store";
 import messages from "messages";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import { Vector3 } from "three";
+import type { BoundingBoxType } from "oxalis/constants";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -167,12 +168,39 @@ function serializeMetaInformation(
   ]);
 }
 
-function serializeBoundingBox(bb: BoundingBoxWithColorAndId, name: string): string {
-  const boundingBoxArray = computeArrayFromBoundingBox(bb);
+function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string): string {
+  if (boundingBox) {
+    const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+    const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+    return serializeTag(tagName, {
+      topLeftX,
+      topLeftY,
+      topLeftZ,
+      width,
+      height,
+      depth,
+    });
+  }
+  return "";
+}
+
+function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
+  const { boundingBox, id, name } = bb;
+  const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
   if (boundingBoxArray != null && bb) {
     const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
     const color = bb.color ? mapColorToComponents(bb.color) : {};
-    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth, ...color });
+    return serializeTag(tagName, {
+      topLeftX,
+      topLeftY,
+      topLeftZ,
+      width,
+      height,
+      depth,
+      ...color,
+      id,
+      name,
+    });
   }
   return "";
 }
@@ -217,8 +245,8 @@ function serializeParameters(
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        ...userBBoxes.map(userBB => serializeBoundingBox(userBB, "userBoundingBox")),
-        taskBB != null ? serializeBoundingBox(taskBB, "taskBoundingBox") : null,
+        ...userBBoxes.map(userBB => serializeUserBoundingBox(userBB, "userBoundingBox")),
+        serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",

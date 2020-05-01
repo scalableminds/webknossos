@@ -17,10 +17,6 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
-export type BoundingBoxWithColorAndId = BoundingBoxType & {
-  id: number,
-  color: Vector3,
-};
 export type Rect = {
   top: number,
   left: number,

@@ -22,8 +22,7 @@ import type {
 } from "oxalis/store";
 import messages from "messages";
 import { computeArrayFromBoundingBox } from "libs/utils";
-import { Vector3 } from "three";
-import type { BoundingBoxType } from "oxalis/constants";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];

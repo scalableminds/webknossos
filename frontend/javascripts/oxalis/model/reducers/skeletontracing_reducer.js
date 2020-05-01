@@ -11,7 +11,7 @@ import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import {
   convertServerBoundingBoxToFrontend,
-  convertServerBoundingBoxesToUserBoundingBoxes,
+  convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import {
   createBranchPoint,
@@ -85,7 +85,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
-
+      console.log("got following bboxes");
+      console.log(action.tracing.userBoundingBoxes);
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
@@ -98,7 +99,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBoxes: convertServerBoundingBoxesToUserBoundingBoxes(
+        userBoundingBoxes: convertUserBoundingBoxesFromServerToFrontend(
           action.tracing.userBoundingBoxes,
         ),
       };

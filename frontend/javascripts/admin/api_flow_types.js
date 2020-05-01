@@ -13,7 +13,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
@@ -559,7 +559,7 @@ export type ServerUserBoundingBox = {
   boundingBox: ServerBoundingBox,
   id: number,
   name?: string,
-  color?: Vector3,
+  color?: ColorObject,
   isVisible?: boolean,
 };
 
@@ -572,7 +572,7 @@ export type ServerBoundingBoxTypeTuple = {
 
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>,
-  color: ?{ r: number, g: number, b: number },
+  color: ?ColorObject,
   comments: Array<CommentType>,
   edges: Array<Edge>,
   name: string,

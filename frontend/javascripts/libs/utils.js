@@ -5,8 +5,16 @@ import naturalSort from "javascript-natural-sort";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import type {
+  Vector3,
+  Vector4,
+  Vector6,
+  BoundingBoxType,
+  Point3,
+  ColorObject,
+} from "oxalis/constants";
 import window, { document, location } from "libs/window";
+import ColorGenerator from "libs/color_generator";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
@@ -139,10 +147,13 @@ export function hexToRgb(hex: string): Vector3 {
   return [r, g, b];
 }
 
+export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
+  return [r, g, b];
+}
+
 export function getRandomColor(): Vector3 {
-  const getRandomComponent = () => Math.floor(Math.random() * 256);
-  // Flow does not understand that the returned array has only three entries.
-  return (([0, 0, 0].map(getRandomComponent): any): Vector3);
+  const randomColor = ColorGenerator.getNRandomColors(1)[0];
+  return [randomColor[0] * 255, randomColor[1] * 255, randomColor[2] * 255];
 }
 
 export function addIdToArrayElements<T>(bboxes: Array<T>): Array<T & { id: number }> {
@@ -161,6 +172,18 @@ export function computeBoundingBoxTypeFromBoundingBoxObject(
   bb: BoundingBoxObject,
 ): BoundingBoxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
+}
+
+export function computeBoundingBoxObjectFromBoundingBoxType(
+  bb: BoundingBoxType,
+): BoundingBoxObject {
+  const boundingBoxArray = computeArrayFromBoundingBox(bb);
+  return {
+    topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],
+    width: boundingBoxArray[3],
+    height: boundingBoxArray[4],
+    depth: boundingBoxArray[5],
+  };
 }
 
 export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
@@ -278,8 +301,12 @@ export function numberArrayToVector6(array: Array<number>): Vector6 {
   return output;
 }
 
-export function point3ToVector3({ x, y, z }: { x: number, y: number, z: number }): Vector3 {
+export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
+}
+
+export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
+  return { x, y, z };
 }
 
 function isUserTeamManager(user: APIUser): boolean {

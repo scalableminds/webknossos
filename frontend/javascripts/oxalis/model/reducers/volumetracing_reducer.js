@@ -9,7 +9,7 @@ import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
-  convertServerBoundingBoxesToUserBoundingBoxes,
+  convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -42,7 +42,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBoxes: convertServerBoundingBoxesToUserBoundingBoxes(
+        userBoundingBoxes: convertUserBoundingBoxesFromServerToFrontend(
           action.tracing.userBoundingBoxes,
         ),
         fallbackLayer: action.tracing.fallbackLayer,

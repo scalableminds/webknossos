@@ -2,7 +2,12 @@
 import Maybe from "data.maybe";
 
 import type { APIAnnotation, ServerBoundingBox, ServerUserBoundingBox } from "admin/api_flow_types";
-import type { Annotation, BoundingBoxObject, UserBoundingBox } from "oxalis/store";
+import type {
+  Annotation,
+  BoundingBoxObject,
+  UserBoundingBox,
+  UserBoundingBoxToServer,
+} from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -28,19 +33,34 @@ export function convertServerBoundingBoxToFrontend(
     .getOrElse(null);
 }
 
-export function convertServerBoundingBoxesToUserBoundingBoxes(
+export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<ServerUserBoundingBox>,
 ): Array<UserBoundingBox> {
-  // The explicit type assignment is needed for flow to understand that the elements of the returned array have an id.
   return boundingBoxes.map(bb => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToMinMaxBoundingBox(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
-      color: color || Utils.getRandomColor(),
+      color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
       name: name || `UserBoundingBox_${id}`,
       isVisible: isVisible || true,
+    };
+  });
+}
+
+export function convertUserBoundingBoxesFromFrontendToServer(
+  boundingBoxes: Array<UserBoundingBox>,
+): Array<UserBoundingBoxToServer> {
+  // The exact spreading is needed for flow to grasp that the conversion is correct.
+  return boundingBoxes.map(bb => {
+    const { id, boundingBox, name, color, isVisible } = bb;
+    return {
+      id,
+      name,
+      color,
+      isVisible,
+      boundingBox: Utils.computeBoundingBoxObjectFromBoundingBoxType(boundingBox),
     };
   });
 }

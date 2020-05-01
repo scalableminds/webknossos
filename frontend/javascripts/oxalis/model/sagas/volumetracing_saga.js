@@ -18,7 +18,11 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { type UpdateAction, updateVolumeTracing } from "oxalis/model/sagas/update_actions";
+import {
+  type UpdateAction,
+  updateVolumeTracing,
+  updateUserBoundingBoxes,
+} from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
@@ -259,7 +263,6 @@ function updateTracingPredicate(
   flycam: Flycam,
 ): boolean {
   return (
-    !_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes) ||
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
     prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
     prevFlycam !== flycam
@@ -279,5 +282,8 @@ export function* diffVolumeTracing(
       getRotation(flycam),
       flycam.zoomStep,
     );
+  }
+  if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
+    yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 }

@@ -824,7 +824,7 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
         nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
         color:
           tree.color != null
-            ? [tree.color.r, tree.color.g, tree.color.b]
+            ? Utils.colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
         branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,

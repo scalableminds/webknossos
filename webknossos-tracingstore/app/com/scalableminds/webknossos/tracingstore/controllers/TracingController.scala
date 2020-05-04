@@ -115,21 +115,24 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-          AllowRemoteOrigin {
-            val updateGroups = request.body
-            val userToken = request.getQueryString("token")
-            if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-              commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
-            } else {
-              updateGroups
-                .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                  handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
-                }
-                .map(_ => Ok)
+        for {
+          _ <- Fox.successful(Thread.sleep(1000 * 60 * 2))
+          result <- accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+            AllowRemoteOrigin {
+              val updateGroups = request.body
+              val userToken = request.getQueryString("token")
+              if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
+                commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
+              } else {
+                updateGroups
+                  .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
+                    handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
+                  }
+                  .map(_ => Ok)
+              }
             }
           }
-        }
+        } yield result
       }
     }
   }

@@ -117,7 +117,7 @@ class ErrorHandling {
       const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
       // Put the actual error into the main string so that not all unhandled errors are grouped
       // together in airbrake
-      this.notify(Error(`Unhandled Rejection: ${originalError.toString().slice(0, 80)}`), {
+      this.notify(Error(`Unhandled Rejection: ${JSON.stringify(originalError).slice(0, 80)}`), {
         originalError,
       });
     });

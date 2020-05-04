@@ -80,7 +80,10 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
       case e: Exception => Fox.failure("Could not get from FossilDB: " + e.getMessage)
     }
 
-  def getVersion(key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean], emptyFallback: Option[Long] = None): Fox[Long] =
+  def getVersion(key: String,
+                 version: Option[Long] = None,
+                 mayBeEmpty: Option[Boolean],
+                 emptyFallback: Option[Long] = None): Fox[Long] =
     try {
       val reply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
       if (reply.success) Fox.successful(reply.actualVersion)

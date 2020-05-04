@@ -114,8 +114,11 @@ class ErrorHandling {
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      this.notify(Error("Unhandled Rejection"), {
-        originalError: event.reason instanceof Error ? event.reason.toString() : event.reason,
+      const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
+      // Put the actual error into the main string so that not all unhandled errors are grouped
+      // together in airbrake
+      this.notify(Error(`Unhandled Rejection: ${originalError.toString().slice(0, 80)}`), {
+        originalError,
       });
     });
 

@@ -200,7 +200,7 @@ export default class TextureBucketManager {
       if (bucket.data == null) {
         // The bucket is not available anymore (was collected
         // and not yet removed from the queue). Ignore it.
-        console.warn("Skipping unavailable bucket in TextureBucketManager.")
+        console.warn("Skipping unavailable bucket in TextureBucketManager.");
         continue;
       }
 

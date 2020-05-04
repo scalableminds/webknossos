@@ -197,14 +197,18 @@ export default class TextureBucketManager {
         // This bucket is not needed anymore
         continue;
       }
-
-      const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
-      const indexInDataTexture = _index % bucketsPerTexture;
+      if (bucket.data == null) {
+        // The bucket is not available anymore (was collected
+        // and not yet removed from the queue). Ignore it.
+        continue;
+      }
 
       if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 
+      const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
+      const indexInDataTexture = _index % bucketsPerTexture;
       const data = bucket.getData();
       const TypedArrayClass = this.elementClass === "float" ? Float32Array : Uint8Array;
       this.dataTextures[dataTextureIndex].update(

@@ -51,7 +51,6 @@ import Constants, {
 } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import ColorGenerator from "libs/color_generator";
 
 const { Panel } = Collapse;
 

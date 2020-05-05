@@ -1,6 +1,7 @@
 // @flow
 import { connect } from "react-redux";
 import React from "react";
+import _ from "lodash";
 
 import type { OxalisState, ProgressInfo, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
@@ -128,7 +129,10 @@ function getOldestUnsavedTimestamp(saveQueue): ?number {
   }
   if (saveQueue.volume.length > 0) {
     const oldestVolumeTimestamp = saveQueue.volume[0].timestamp;
-    oldestUnsavedTimestamp = Math.min(oldestUnsavedTimestamp || Infinity, oldestVolumeTimestamp);
+    oldestUnsavedTimestamp = Math.min(
+      oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
+      oldestVolumeTimestamp,
+    );
   }
   return oldestUnsavedTimestamp;
 }

@@ -53,7 +53,7 @@ import ErrorHandling from "libs/error_handling";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-const SLOW_SAVE_REQUEST_THRESHOLD = 0.01; // 60 * 1000;
+const SLOW_SAVE_REQUEST_THRESHOLD = 5 * 1000; // 60 * 1000;
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];

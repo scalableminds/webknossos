@@ -116,7 +116,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         for {
-          _ <- Fox.successful(Thread.sleep(1000 * 60 * 2))
+          _ <- Fox.successful(Thread.sleep(1000 * 10))
           result <- accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
             AllowRemoteOrigin {
               val updateGroups = request.body

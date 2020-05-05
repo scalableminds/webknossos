@@ -7,6 +7,8 @@ import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import window from "libs/window";
+import { Tooltip, Icon } from "antd";
+import ErrorHandling from "libs/error_handling";
 
 type OwnProps = {|
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
@@ -15,19 +17,33 @@ type OwnProps = {|
 type StateProps = {|
   progressInfo: ProgressInfo,
   isBusyInfo: IsBusyInfo,
+  oldestUnsavedTimestamp: ?number,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isStateSaved: boolean,
+  currentTimestamp: number,
 };
 
 const SAVE_POLLING_INTERVAL = 1000;
+const UNSAVED_WARNING_THRESHOLD = 1 * 1000;
+
+const reportUnsavedDurationThresholdExceeded = _.once(() => {
+  ErrorHandling.notify(
+    new Error(
+      `Warning: Saving lag detected. Some changes are unsaved and older than ${Math.ceil(
+        UNSAVED_WARNING_THRESHOLD / 1000 / 60,
+      )} minutes.`,
+    ),
+  );
+});
 
 class SaveButton extends React.PureComponent<Props, State> {
   savedPollingInterval: number = 0;
   state = {
     isStateSaved: false,
+    currentTimestamp: Date.now(),
   };
 
   componentDidMount() {
@@ -43,6 +59,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     const isStateSaved = Model.stateSaved();
     this.setState({
       isStateSaved,
+      currentTimestamp: Date.now(),
     });
   };
 
@@ -62,7 +79,15 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { progressInfo } = this.props;
+    const { progressInfo, oldestUnsavedTimestamp } = this.props;
+    const unsavedDuration =
+      oldestUnsavedTimestamp != null ? this.state.currentTimestamp - oldestUnsavedTimestamp : 0;
+    const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
+    if (showUnsavedWarning) {
+      reportUnsavedDurationThresholdExceeded();
+    }
+    console.log("The oldest unsaved action was", unsavedDuration, "ago");
+
     return (
       <ButtonComponent
         key="save-button"
@@ -70,6 +95,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
         className={this.props.className}
+        style={{ background: showUnsavedWarning ? "#e33f36" : null }}
       >
         {this.shouldShowProgress() ? (
           <span style={{ marginLeft: 8 }}>
@@ -79,16 +105,42 @@ class SaveButton extends React.PureComponent<Props, State> {
         ) : (
           <span className="hide-on-small-screen">Save</span>
         )}
+        {showUnsavedWarning ? (
+          <Tooltip
+            visible
+            title={`There are unsaved changes which are older than ${Math.ceil(
+              UNSAVED_WARNING_THRESHOLD / 1000 / 60,
+            )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}
+            placement="bottom"
+          >
+            <Icon type="exclamation-circle" />
+          </Tooltip>
+        ) : null}
       </ButtonComponent>
     );
   }
 }
 
+function getOldestUnsavedTimestamp(saveQueue): ?number {
+  let oldestUnsavedTimestamp;
+  if (saveQueue.skeleton.length > 0) {
+    oldestUnsavedTimestamp = saveQueue.skeleton[0].timestamp;
+  }
+  if (saveQueue.volume.length > 0) {
+    const oldestVolumeTimestamp = saveQueue.volume[0].timestamp;
+    oldestUnsavedTimestamp = Math.min(oldestUnsavedTimestamp || Infinity, oldestVolumeTimestamp);
+  }
+  return oldestUnsavedTimestamp;
+}
+
 function mapStateToProps(state: OxalisState): StateProps {
   const { progressInfo, isBusyInfo } = state.save;
+  const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(state.save.queue);
+
   return {
     progressInfo,
     isBusyInfo,
+    oldestUnsavedTimestamp,
   };
 }
 

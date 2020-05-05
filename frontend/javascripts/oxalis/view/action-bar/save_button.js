@@ -28,7 +28,7 @@ type State = {
 };
 
 const SAVE_POLLING_INTERVAL = 1000;
-const UNSAVED_WARNING_THRESHOLD = 1 * 1000;
+const UNSAVED_WARNING_THRESHOLD = 5 * 1000;
 
 const reportUnsavedDurationThresholdExceeded = _.once(() => {
   ErrorHandling.notify(

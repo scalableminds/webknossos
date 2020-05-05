@@ -163,6 +163,8 @@ trait SegmentationLayerLike extends DataLayerLike {
   def mappings: Option[Set[String]]
 
   def defaultViewConfiguration: Option[SegmentationLayerViewConfiguration]
+
+  def originalElementClass: Option[ElementClass.Value]
 }
 
 trait DataLayer extends DataLayerLike {
@@ -262,7 +264,8 @@ case class AbstractSegmentationLayer(
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     mappings: Option[Set[String]],
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None,
+    originalElementClass: Option[ElementClass.Value] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -276,7 +279,8 @@ object AbstractSegmentationLayer {
       layer.elementClass,
       layer.largestSegmentId,
       layer.mappings,
-      layer.defaultViewConfiguration
+      layer.defaultViewConfiguration,
+      layer.originalElementClass
     )
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]

@@ -52,7 +52,8 @@ case class WKWSegmentationLayer(
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None,
+    originalElementClass: Option[ElementClass.Value] = None
 ) extends SegmentationLayer
     with WKWLayer
 

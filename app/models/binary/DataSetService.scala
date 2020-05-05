@@ -353,9 +353,9 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   private def replaceUint64Layers(dataSource: GenericDataSource[DataLayer]) = {
     val newLayers = dataSource.dataLayers.map {
       case l: WKWSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
+        l.copy(elementClass = ElementClass.uint32, originalElementClass = Some(ElementClass.uint64))
       case l: AbstractSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
+        l.copy(elementClass = ElementClass.uint32, originalElementClass = Some(ElementClass.uint64))
       case l => l
     }
 

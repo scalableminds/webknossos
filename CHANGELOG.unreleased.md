@@ -20,7 +20,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 
-- Fixed the initial loading of agglomerate mappings, where some buckets remained black. [#4588](https://github.com/scalableminds/webknossos/pull/4588)
+- Fixed retrying of failed save requests sent during tracingstore restart. [#4591](https://github.com/scalableminds/webknossos/pull/4591)
+- Fixed the initial loading of agglomerate mappings, where some buckets remained black. [#4601](https://github.com/scalableminds/webknossos/pull/4601)
 
 ### Removed
 

@@ -20,7 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 
-- 
+- Fixed the initial loading of agglomerate mappings, where some buckets remained black. [#4588](https://github.com/scalableminds/webknossos/pull/4588)
 
 ### Removed
 

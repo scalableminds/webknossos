@@ -114,10 +114,15 @@ const tracing = {
       min: [0, 0, 0],
       max: [500, 500, 500],
     },
-    userBoundingBox: {
-      min: [5, 5, 5],
-      max: [250, 250, 250],
-    },
+    userBoundingBoxes: [
+      {
+        id: 10,
+        boundingBox: { min: [5, 5, 5], max: [250, 250, 250] },
+        name: "Test Bounding Box",
+        color: [255, 0, 0],
+        isVisible: true,
+      },
+    ],
   },
 };
 

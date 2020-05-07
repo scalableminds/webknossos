@@ -85,8 +85,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
-      console.log("got following bboxes");
-      console.log(action.tracing.userBoundingBoxes);
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",

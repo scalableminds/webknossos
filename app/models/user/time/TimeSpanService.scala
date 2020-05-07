@@ -34,10 +34,9 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private val MaxTracingPause =
     conf.WebKnossos.User.Time.tracingPauseInSeconds.toMillis
 
-  def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val timestamp = System.currentTimeMillis
+  def logUserInteraction(timestamp: Long, user: User, annotation: Annotation)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     logUserInteraction(Seq(timestamp), user, annotation)
-  }
 
   def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =

@@ -27,10 +27,11 @@ type State = {
   currentTimestamp: number,
 };
 
-const SAVE_POLLING_INTERVAL = 1000;
-const UNSAVED_WARNING_THRESHOLD = 5 * 1000;
+const SAVE_POLLING_INTERVAL = 1000; // 1s
+const UNSAVED_WARNING_THRESHOLD = 2 * 60 * 1000; // 2 min
+const REPORT_THROTTLE_THRESHOLD = 10 * 60 * 1000; // 10 min
 
-const reportUnsavedDurationThresholdExceeded = _.once(() => {
+const reportUnsavedDurationThresholdExceeded = _.throttle(() => {
   ErrorHandling.notify(
     new Error(
       `Warning: Saving lag detected. Some changes are unsaved and older than ${Math.ceil(
@@ -38,7 +39,7 @@ const reportUnsavedDurationThresholdExceeded = _.once(() => {
       )} minutes.`,
     ),
   );
-});
+}, REPORT_THROTTLE_THRESHOLD);
 
 class SaveButton extends React.PureComponent<Props, State> {
   savedPollingInterval: number = 0;

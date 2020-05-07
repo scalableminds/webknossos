@@ -115,9 +115,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
-        for {
-          _ <- Fox.successful(Thread.sleep(1000 * 10))
-          result <- accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
             AllowRemoteOrigin {
               val updateGroups = request.body
               val userToken = request.getQueryString("token")
@@ -132,7 +130,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
               }
             }
           }
-        } yield result
       }
     }
   }

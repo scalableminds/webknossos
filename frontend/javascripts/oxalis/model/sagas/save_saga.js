@@ -53,8 +53,6 @@ import ErrorHandling from "libs/error_handling";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-const SLOW_SAVE_REQUEST_THRESHOLD = 5 * 1000; // 60 * 1000;
-
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
   const redoStack = [];
@@ -185,19 +183,16 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
         {
           method: "POST",
-          // headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
           compress: true,
         },
       );
       const endTime = Date.now();
-      if (endTime - startTime > SLOW_SAVE_REQUEST_THRESHOLD) {
+      if (endTime - startTime > PUSH_THROTTLE_TIME) {
         yield* call(
           [ErrorHandling, ErrorHandling.notify],
           new Error(
-            `Warning: Save request took more than ${Math.ceil(
-              SLOW_SAVE_REQUEST_THRESHOLD / 1000,
-            )} seconds.`,
+            `Warning: Save request took more than ${Math.ceil(PUSH_THROTTLE_TIME / 1000)} seconds.`,
           ),
         );
       }
@@ -213,11 +208,11 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;
         yield* call(alert, messages["save.failed_simultaneous_tracing"]);
-        location.reload();
         yield* call(
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
+        location.reload();
         return;
       }
       yield* race({

@@ -1,8 +1,7 @@
 package backend
 
-import com.scalableminds.webknossos.datastore
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, Point3D, Vector3D}
 
 object Dummies {
   val timestamp = 123456789

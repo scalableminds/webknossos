@@ -27,7 +27,7 @@ trait VolumeBucketCompression extends LazyLogging {
   def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
     val compressedData = compressor.compress(data)
 
-    val uncompressedLength = java.nio.ByteBuffer.allocate(4).putInt(data.length).array()
+    val uncompressedLength = java.nio.ByteBuffer.allocate(Integer.BYTES).putInt(data.length).array()
     val compressedDataFull = compressedPrefix ++ uncompressedLength ++ compressedData
 
     logger.info(s"${data.length} -> ${compressedDataFull.length}")
@@ -36,9 +36,10 @@ trait VolumeBucketCompression extends LazyLogging {
 
   def decompressIfNeeded(data: Array[Byte]): Array[Byte] =
     if (data.take(13).sameElements(compressedPrefix)) {
-      val uncompressedLengthRaw = data.slice(13, 13 + 4)
+      val uncompressedLengthRaw: Array[Byte] =
+        data.slice(compressedPrefix.length, compressedPrefix.length + Integer.BYTES)
       val uncompressedLength: Int = ByteBuffer.wrap(uncompressedLengthRaw).getInt
-      decompressor.decompress(data.drop(13 + 4), uncompressedLength)
+      decompressor.decompress(data.drop(compressedPrefix.length + Integer.BYTES), uncompressedLength)
     } else {
       data
     }

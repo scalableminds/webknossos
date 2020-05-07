@@ -433,10 +433,14 @@ function setupLayerForVolumeTracing(
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
+  // The frontend does not support uint64 data. Thus if the segmentation is uint64
+  // we treat it as uint32 and save that it originally has the element class uint64.
+  const isUint64Segmentation = tracing.elementClass === "uint64";
 
   const tracingLayer = {
     name: tracing.id,
-    elementClass: tracing.elementClass,
+    elementClass: isUint64Segmentation ? "uint32" : tracing.elementClass,
+    originalElementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),

@@ -263,12 +263,12 @@ class MappingInfoView extends React.Component<Props, State> {
       dataIndex,
     });
     const showSegmentation64bitWarning =
-      segmentationLayer && segmentationLayer.elementClass === "uint64";
+      segmentationLayer && segmentationLayer.originalElementClass === "uint64";
     const maybeWithTooltipWarningTitle = title =>
       showSegmentation64bitWarning ? (
         <React.Fragment>
           {title}{" "}
-          <Tooltip title={message["tracing.uin64_segmentation_warning"]}>
+          <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
             <Icon type="info-circle" style={{ color: "rgb(255, 155, 85)" }} />
           </Tooltip>
         </React.Fragment>

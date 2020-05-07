@@ -163,11 +163,15 @@ class TimeLineView extends React.PureComponent<Props, State> {
     }
 
     // for same day use start and end timestamps
-    const dateRange = dates[0].isSame(dates[1], "day")
-      ? [dates[0].startOf("day"), dates[1].endOf("day")]
+    const dateRange = dates[0].isSame(dates[1], "minute")
+      ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
 
-    await this.setState({ dateRange });
+    this.setState({ dateRange });
+  };
+
+  handleDateOk = async (dates: DateRange) => {
+    await this.handleDateChange(dates);
     this.fetchTimeTrackingData();
   };
 
@@ -300,10 +304,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
+                  showTime
                   allowClear={false}
                   style={{ width: "100%" }}
                   value={dateRange}
                   onChange={this.handleDateChange}
+                  onOk={this.handleDateOk}
                 />
               </FormItem>
             </Col>

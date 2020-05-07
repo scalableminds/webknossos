@@ -167,11 +167,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
 
-    this.setState({ dateRange });
-  };
-
-  handleDateOk = async (dates: DateRange) => {
-    await this.handleDateChange(dates);
+    await this.setState({ dateRange });
     this.fetchTimeTrackingData();
   };
 
@@ -309,7 +305,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   style={{ width: "100%" }}
                   value={dateRange}
                   onChange={this.handleDateChange}
-                  onOk={this.handleDateOk}
                 />
               </FormItem>
             </Col>

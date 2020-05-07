@@ -4,6 +4,8 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import java.nio.ByteBuffer
+
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
@@ -11,35 +13,35 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
-import net.jpountz.lz4.LZ4Factory
+import net.jpountz.lz4.{LZ4Compressor, LZ4Decompressor, LZ4Factory, LZ4FastDecompressor}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait VolumeBucketCompression extends LazyLogging {
 
-  val lz4factory = LZ4Factory.fastestInstance
-  val compressor = lz4factory.fastCompressor
-  val decompressor = lz4factory.safeDecompressor
-  val compressedPrefix = "LZ4COMPRESSED".getBytes
+  private val lz4factory = LZ4Factory.fastestInstance
+  val compressor: LZ4Compressor = lz4factory.fastCompressor
+  val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
+  private val compressedPrefix = "LZ4COMPRESSED".getBytes
 
-  def compressVolumeBucket(data: Array[Byte]) = {
+  def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
     val compressedData = compressor.compress(data)
-    logger.info(
-      s"compresssed length: ${compressedData.length} as opposed to ${data.length}, prefix length: ${compressedPrefix.length}")
-    compressedPrefix ++ compressedData
+
+    val uncompressedLength = java.nio.ByteBuffer.allocate(4).putInt(data.length).array()
+    val compressedDataFull = compressedPrefix ++ uncompressedLength ++ compressedData
+
+    logger.info(s"${data.length} -> ${compressedDataFull.length}")
+    compressedDataFull
   }
 
-  def decompressIfNeeded(data: Array[Byte]) = {
-    val decompressedLength = 131072
+  def decompressIfNeeded(data: Array[Byte]): Array[Byte] =
     if (data.take(13).sameElements(compressedPrefix)) {
-      logger.info("decompressing...")
-      decompressor.decompress(data.drop(13), decompressedLength)
+      val uncompressedLengthRaw = data.slice(13, 13 + 4)
+      val uncompressedLength: Int = ByteBuffer.wrap(uncompressedLengthRaw).getInt
+      decompressor.decompress(data.drop(13 + 4), uncompressedLength)
     } else {
-      logger.info(
-        s"not decompressing as prefix did not match. prefix was: ${data.take(13).deep}, expected ${compressedPrefix.deep}...")
       data
     }
-  }
 }
 
 trait VolumeTracingBucketHelper

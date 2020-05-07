@@ -6,14 +6,47 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  VersionedKeyValuePair,
-  KeyValueStoreImplicits
+  KeyValueStoreImplicits,
+  VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
+import com.typesafe.scalalogging.LazyLogging
+import net.jpountz.lz4.LZ4Factory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits {
+trait VolumeBucketCompression extends LazyLogging {
+
+  val lz4factory = LZ4Factory.fastestInstance
+  val compressor = lz4factory.fastCompressor
+  val decompressor = lz4factory.safeDecompressor
+  val compressedPrefix = "LZ4COMPRESSED".getBytes
+
+  def compressVolumeBucket(data: Array[Byte]) = {
+    val compressedData = compressor.compress(data)
+    logger.info(
+      s"compresssed length: ${compressedData.length} as opposed to ${data.length}, prefix length: ${compressedPrefix.length}")
+    compressedPrefix ++ compressedData
+  }
+
+  def decompressIfNeeded(data: Array[Byte]) = {
+    val decompressedLength = 131072
+    if (data.take(13).sameElements(compressedPrefix)) {
+      logger.info("decompressing...")
+      decompressor.decompress(data.drop(13), decompressedLength)
+    } else {
+      logger.info(
+        s"not decompressing as prefix did not match. prefix was: ${data.take(13).deep}, expected ${compressedPrefix.deep}...")
+      data
+    }
+  }
+}
+
+trait VolumeTracingBucketHelper
+    extends WKWMortonHelper
+    with KeyValueStoreImplicits
+    with FoxImplicits
+    with VolumeBucketCompression {
 
   implicit def volumeDataStore: FossilDBClient
 
@@ -35,16 +68,27 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
       .map(
         _.toOption.map { versionedVolumeBucket =>
           if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-          else Fox.successful(versionedVolumeBucket.value)
+          else Fox.successful(decompressIfNeeded(versionedVolumeBucket.value))
         }
       )
       .toFox
       .flatten
   }
 
+  def toList[a](array: Array[a]): List[a] =
+    if (array == null || array.length == 0) Nil
+    else if (array.length == 1) List(array(0))
+    else array(0) :: toList(array.slice(1, array.length))
+
+  def bytes2hex(bytes: List[Byte], sep: Option[String] = None): String =
+    sep match {
+      case None => bytes.map("%02x".format(_)).mkString
+      case _    => bytes.map("%02x".format(_)).mkString(sep.get)
+    }
+
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.put(key, version, data)
+    volumeDataStore.put(key, version, compressVolumeBucket(data))
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer,
@@ -66,6 +110,7 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with WKWMortonHelper
     with KeyValueStoreImplicits
+    with VolumeBucketCompression
     with FoxImplicits {
   val batchSize = 64
 
@@ -88,7 +133,7 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
   override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key).map(key => (key._2, nextRes.value, nextRes.version)).get
+    parseBucketKey(nextRes.key).map(key => (key._2, decompressIfNeeded(nextRes.value), nextRes.version)).get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {

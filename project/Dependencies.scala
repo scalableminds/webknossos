@@ -41,6 +41,7 @@ object Dependencies {
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
   val redis = "net.debasishg" %% "redisclient" % "3.9"
   val spire = "org.typelevel" %% "spire" % "0.14.1"
+  val lz4compression = "org.lz4" % "lz4-java" % "1.7.1"
 
   val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",

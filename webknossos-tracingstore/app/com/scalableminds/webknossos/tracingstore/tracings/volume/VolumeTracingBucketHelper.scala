@@ -77,17 +77,6 @@ trait VolumeTracingBucketHelper
       .flatten
   }
 
-  def toList[a](array: Array[a]): List[a] =
-    if (array == null || array.length == 0) Nil
-    else if (array.length == 1) List(array(0))
-    else array(0) :: toList(array.slice(1, array.length))
-
-  def bytes2hex(bytes: List[Byte], sep: Option[String] = None): String =
-    sep match {
-      case None => bytes.map("%02x".format(_)).mkString
-      case _    => bytes.map("%02x".format(_)).mkString(sep.get)
-    }
-
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
     volumeDataStore.put(key, version, compressVolumeBucket(data))

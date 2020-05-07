@@ -76,8 +76,15 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "tracing.out_of_dataset_bounds":
+    "The current position is outside of the dataset's bounding box. No data will be shown here.",
+  "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
+    `This link includes the ${
+      sharingActiveNode ? "active tree node," : ""
+    } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -89,6 +96,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uin64_segmentation_warning":
     "This is a 64-bit segmentation. The displayed ids might not match the ids on the server.",
+  "tracing.segmentation_zoom_warning_agglomerate":
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",

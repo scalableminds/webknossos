@@ -24,6 +24,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
@@ -49,6 +50,8 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
   };
 }
 
+const INVALID_ACTIVE_NODE_ID = -1;
+
 type OwnProps = {|
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
   planeView?: PlaneView,
@@ -59,6 +62,12 @@ type StateProps = {|
   scale: Vector3,
 |};
 type Props = { ...OwnProps, ...StateProps };
+
+function maybeGetActiveNodeFromProps(props: Props) {
+  return props.tracing && props.tracing.skeleton && props.tracing.skeleton.activeNodeId != null
+    ? props.tracing.skeleton.activeNodeId
+    : INVALID_ACTIVE_NODE_ID;
+}
 
 class TDController extends React.PureComponent<Props> {
   controls: TrackballControls;
@@ -72,6 +81,22 @@ class TDController extends React.PureComponent<Props> {
     this.isStarted = true;
 
     this.initMouse();
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (
+      maybeGetActiveNodeFromProps(this.props) !== maybeGetActiveNodeFromProps(prevProps) &&
+      maybeGetActiveNodeFromProps(this.props) !== INVALID_ACTIVE_NODE_ID &&
+      this.props.tracing &&
+      this.props.tracing.skeleton
+    ) {
+      // The rotation center of this viewport is not updated to the new position after selecing a node in the viewport.
+      // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
+      // Thus we do it manually whenever the active node changes.
+      getActiveNode(this.props.tracing.skeleton).map(activeNode =>
+        this.setTargetAndFixPosition(activeNode.position),
+      );
+    }
   }
 
   componentWillUnmount() {
@@ -165,8 +190,8 @@ class TDController extends React.PureComponent<Props> {
     };
   }
 
-  setTargetAndFixPosition(): void {
-    const position = getPosition(this.props.flycam);
+  setTargetAndFixPosition(position?: Vector3): void {
+    position = position || getPosition(this.props.flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 
     this.controls.target.set(...nmPosition);

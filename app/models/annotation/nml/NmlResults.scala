@@ -21,13 +21,13 @@ object NmlResults extends LazyLogging {
 
     def succeeded: Boolean
 
-    def toSkeletonSuccessFox(implicit ec: ExecutionContext): Fox[NmlParseSuccess] = this match {
+    def toSuccessFox(implicit ec: ExecutionContext): Fox[NmlParseSuccess] = this match {
       case NmlParseFailure(fileName, error) =>
         Fox.failure(s"Couldn’t parse file: $fileName. $error")
-      case NmlParseSuccess(fileName, Some(skeletonTracing), _, description, organizationNameOpt) =>
-        Fox.successful(NmlParseSuccess(fileName, Some(skeletonTracing), None, description, organizationNameOpt))
+      case success: NmlParseSuccess =>
+        Fox.successful(success)
       case _ =>
-        Fox.failure("Couldn’t parse file")
+        Fox.failure(s"Couldn’t parse file: $fileName")
     }
 
     def withName(name: String): NmlParseResult = this

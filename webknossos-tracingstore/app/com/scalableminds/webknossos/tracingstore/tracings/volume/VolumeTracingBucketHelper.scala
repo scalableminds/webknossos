@@ -3,17 +3,12 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import java.nio.ByteBuffer
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  KeyValueStoreImplicits,
-  VersionedKeyValuePair
-}
+import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
-import net.jpountz.lz4.{LZ4Compressor, LZ4Decompressor, LZ4Factory, LZ4FastDecompressor}
+import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -22,27 +17,26 @@ trait VolumeBucketCompression extends LazyLogging {
   private val lz4factory = LZ4Factory.fastestInstance
   val compressor: LZ4Compressor = lz4factory.fastCompressor
   val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
-  private val compressedPrefix = "LZ4COMPRESSED".getBytes
 
   def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
     val compressedData = compressor.compress(data)
 
-    val uncompressedLength = java.nio.ByteBuffer.allocate(Integer.BYTES).putInt(data.length).array()
-    val compressedDataFull = compressedPrefix ++ uncompressedLength ++ compressedData
-
-    logger.info(s"${data.length} -> ${compressedDataFull.length}")
-    compressedDataFull
+    logger.info(s"${data.length} -> ${compressedData.length}")
+    if (compressedData.length < data.length) {
+      compressedData
+    } else data
   }
 
-  def decompressIfNeeded(data: Array[Byte]): Array[Byte] =
-    if (data.take(13).sameElements(compressedPrefix)) {
-      val uncompressedLengthRaw: Array[Byte] =
-        data.slice(compressedPrefix.length, compressedPrefix.length + Integer.BYTES)
-      val uncompressedLength: Int = ByteBuffer.wrap(uncompressedLengthRaw).getInt
-      decompressor.decompress(data.drop(compressedPrefix.length + Integer.BYTES), uncompressedLength)
-    } else {
+  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
+    if (data.length == expectedUncompressedBucketSize) {
       data
+    } else {
+      decompressor.decompress(data, expectedUncompressedBucketSize)
     }
+
+  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
+    ElementClass.bytesPerElement(dataLayer.elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
+  }
 }
 
 trait VolumeTracingBucketHelper
@@ -71,7 +65,7 @@ trait VolumeTracingBucketHelper
       .map(
         _.toOption.map { versionedVolumeBucket =>
           if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-          else Fox.successful(decompressIfNeeded(versionedVolumeBucket.value))
+          else Fox.successful(decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
         }
       )
       .toFox
@@ -87,18 +81,18 @@ trait VolumeTracingBucketHelper
                    resolution: Int,
                    version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    new BucketIterator(key, volumeDataStore, version)
+    new BucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 
   def bucketStreamWithVersion(dataLayer: VolumeTracingLayer,
                               resolution: Int,
                               version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    new VersionedBucketIterator(key, volumeDataStore, version)
+    new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 }
 
-class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None)
+class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, expectedUncompressedBucketSize: Int, version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with WKWMortonHelper
     with KeyValueStoreImplicits
@@ -125,7 +119,7 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
   override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key).map(key => (key._2, decompressIfNeeded(nextRes.value), nextRes.version)).get
+    parseBucketKey(nextRes.key).map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version)).get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
@@ -149,9 +143,9 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, v
 
 }
 
-class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, version: Option[Long] = None)
+class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, expectedUncompressedBucketSize: Int, version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte])] {
-  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, version)
+  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version)
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next

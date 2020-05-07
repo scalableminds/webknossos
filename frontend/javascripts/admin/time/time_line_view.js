@@ -162,7 +162,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       return;
     }
 
-    // for same day use start and end timestamps
+    // Force an interval of at least one minute.
     const dateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;

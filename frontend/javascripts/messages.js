@@ -94,6 +94,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
+  "tracing.uin64_segmentation_warning":
+    "This is a 64-bit segmentation. The displayed ids might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",

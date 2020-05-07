@@ -116,20 +116,20 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
-            AllowRemoteOrigin {
-              val updateGroups = request.body
-              val userToken = request.getQueryString("token")
-              if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
-                commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
-              } else {
-                updateGroups
-                  .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                    handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
-                  }
-                  .map(_ => Ok)
-              }
+          AllowRemoteOrigin {
+            val updateGroups = request.body
+            val userToken = request.getQueryString("token")
+            if (updateGroups.forall(_.transactionGroupCount.getOrElse(1) == 1)) {
+              commitUpdates(tracingId, updateGroups, userToken).map(_ => Ok)
+            } else {
+              updateGroups
+                .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
+                  handleUpdateGroupForTransaction(tracingId, currentCommittedVersionFox, updateGroup, userToken)
+                }
+                .map(_ => Ok)
             }
           }
+        }
       }
     }
   }

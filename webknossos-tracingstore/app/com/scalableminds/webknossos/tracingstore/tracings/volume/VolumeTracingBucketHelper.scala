@@ -5,7 +5,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, VersionedKeyValuePair}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  KeyValueStoreImplicits,
+  VersionedKeyValuePair
+}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
@@ -34,9 +38,8 @@ trait VolumeBucketCompression extends LazyLogging {
       decompressor.decompress(data, expectedUncompressedBucketSize)
     }
 
-  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
+  def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int =
     ElementClass.bytesPerElement(dataLayer.elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue
-  }
 }
 
 trait VolumeTracingBucketHelper
@@ -65,7 +68,9 @@ trait VolumeTracingBucketHelper
       .map(
         _.toOption.map { versionedVolumeBucket =>
           if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-          else Fox.successful(decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
+          else
+            Fox.successful(
+              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
         }
       )
       .toFox
@@ -92,7 +97,10 @@ trait VolumeTracingBucketHelper
   }
 }
 
-class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, expectedUncompressedBucketSize: Int, version: Option[Long] = None)
+class VersionedBucketIterator(prefix: String,
+                              volumeDataStore: FossilDBClient,
+                              expectedUncompressedBucketSize: Int,
+                              version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with WKWMortonHelper
     with KeyValueStoreImplicits
@@ -119,7 +127,9 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, e
   override def next: (BucketPosition, Array[Byte], Long) = {
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key).map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version)).get
+    parseBucketKey(nextRes.key)
+      .map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version))
+      .get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
@@ -143,9 +153,13 @@ class VersionedBucketIterator(prefix: String, volumeDataStore: FossilDBClient, e
 
 }
 
-class BucketIterator(prefix: String, volumeDataStore: FossilDBClient, expectedUncompressedBucketSize: Int, version: Option[Long] = None)
+class BucketIterator(prefix: String,
+                     volumeDataStore: FossilDBClient,
+                     expectedUncompressedBucketSize: Int,
+                     version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte])] {
-  val versionedBucketIterator = new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version)
+  val versionedBucketIterator =
+    new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version)
 
   override def next: (BucketPosition, Array[Byte]) = {
     val tuple = versionedBucketIterator.next

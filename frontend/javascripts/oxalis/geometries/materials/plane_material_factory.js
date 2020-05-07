@@ -264,7 +264,11 @@ class PlaneMaterialFactory {
 
     // Add mapping
     const segmentationLayer = Model.getSegmentationLayer();
-    if (segmentationLayer != null && Model.isMappingSupported) {
+    if (
+      segmentationLayer != null &&
+      segmentationLayer.mappings != null &&
+      Model.isMappingSupported
+    ) {
       const [
         mappingTexture,
         mappingLookupTexture,

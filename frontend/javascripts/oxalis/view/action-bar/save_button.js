@@ -88,7 +88,6 @@ class SaveButton extends React.PureComponent<Props, State> {
     if (showUnsavedWarning) {
       reportUnsavedDurationThresholdExceeded();
     }
-    console.log("The oldest unsaved action was", unsavedDuration, "ago");
 
     return (
       <ButtonComponent

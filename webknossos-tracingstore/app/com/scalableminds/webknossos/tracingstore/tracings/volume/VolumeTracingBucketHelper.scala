@@ -25,17 +25,17 @@ trait VolumeBucketCompression extends LazyLogging {
   def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
     val compressedData = compressor.compress(data)
 
-    logger.info(s"${data.length} -> ${compressedData.length}")
+    logger.info(s"${data.length} -> ${compressedData.length}, ${Math.round(data.length / compressedData.length)}x")
     if (compressedData.length < data.length) {
       compressedData
     } else data
   }
 
-  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
-    if (data.length == expectedUncompressedBucketSize) {
-      data
-    } else {
+  def decompressIfNeeded(key: String, data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
+    if (key.endsWith("/lz4")) {
       decompressor.decompress(data, expectedUncompressedBucketSize)
+    } else {
+      data
     }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int =
@@ -55,26 +55,25 @@ trait VolumeTracingBucketHelper
 
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]/lz4"
   }
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore
-      .get(key, version, mayBeEmpty = Some(true))
-      .futureBox
-      .map(
-        _.toOption.map { versionedVolumeBucket =>
-          if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-          else
-            Fox.successful(
-              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
-        }
-      )
-      .toFox
-      .flatten
+    val bucketAndCompressedBucket = volumeDataStore.getMultipleKeys(key, Some(key), version)
+    if (bucketAndCompressedBucket.isEmpty)
+      Fox.empty
+    else {
+      val newestBucket: VersionedKeyValuePair[Array[Byte]] = bucketAndCompressedBucket.maxBy(_.version)
+      if (newestBucket.value.sameElements(Array[Byte](0))) Fox.empty
+      else
+        Fox.successful(
+          decompressIfNeeded(newestBucket.key,
+                             bucketAndCompressedBucket.head.value,
+                             expectedUncompressedBucketSizeFor(dataLayer)))
+    }
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
@@ -107,35 +106,63 @@ class VersionedBucketIterator(prefix: String,
     with VolumeBucketCompression
     with FoxImplicits {
   val batchSize = 64
+  val batchPadding = 1
+  val batchOverlap = 1
 
-  var currentStartKey = prefix
-  var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
+  private var batchCursor = 0
+  private var currentStartKey = prefix
+  private var currentBatchList: List[VersionedKeyValuePair[Array[Byte]]] = fetchNext
 
-  def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
+  def fetchNext: List[VersionedKeyValuePair[Array[Byte]]] =
+    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize + batchPadding))
 
-  def fetchNextAndSave = {
-    currentBatchIterator = fetchNext
-    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
-    currentBatchIterator
+  private def fetchNextAndSave(): Unit = {
+    currentBatchList = fetchNext.tail //in pagination, skip first entry because it was already the last entry of the previous batch
+    batchCursor = 0
   }
 
-  override def hasNext: Boolean =
-    if (currentBatchIterator.hasNext) true
-    else fetchNextAndSave.hasNext
+  override def hasNext: Boolean = {
+    logger.info(s"hasNext. cursor $batchCursor, batchListLength ${currentBatchList.length}, batch size $batchSize")
+    if (batchCursor >= currentBatchList.length && batchCursor < batchSize)
+      // this is the last batch and we are at its end
+      false
+    else {
+      if (batchCursor >= batchSize) {
+        fetchNextAndSave()
+      }
+      currentBatchList.nonEmpty
+    }
+  }
 
   override def next: (BucketPosition, Array[Byte], Long) = {
-    val nextRes = currentBatchIterator.next
-    currentStartKey = nextRes.key
-    parseBucketKey(nextRes.key)
-      .map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version))
+    logger.info(s"next. cursor $batchCursor, batchListLength ${currentBatchList.length}, batch size $batchSize")
+    val nextBucket = currentBatchList(batchCursor)
+    val nextBucketAfterOpt = currentBatchList.lift(batchCursor + 1)
+    val nextBucketSelected =
+      if (nextBucketAfterOpt.isDefined) {
+        val nextBucketAfter = nextBucketAfterOpt.get
+        val nextKey = parseBucketKey(nextBucket.key).get
+        val nextAfterKey = parseBucketKey(nextBucketAfter.key).get
+        if (nextKey == nextAfterKey) {
+          batchCursor += 1
+          List(nextBucket, nextBucketAfter).maxBy(_.version)
+        } else nextBucket
+      } else nextBucket
+    batchCursor += 1
+    currentStartKey = nextBucket.key.replaceAll("/lz4", "")
+    parseBucketKey(nextBucketSelected.key)
+      .map(
+        key =>
+          (key._2,
+           decompressIfNeeded(nextBucketSelected.key, nextBucketSelected.value, expectedUncompressedBucketSize),
+           nextBucketSelected.version))
       .get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
-    val keyRx = "([0-9a-z-]+)/(\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)\\]".r
+    val keyRx = "([0-9a-z-]+)/(\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)\\]*".r
 
-    key match {
+    key.replaceAll("/lz4", "") match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
         val resolution = resolutionStr.toInt
         val x = xStr.toInt
@@ -147,6 +174,7 @@ class VersionedBucketIterator(prefix: String,
                                         Point3D(resolution, resolution, resolution))
         Some((name, bucket))
       case _ =>
+        logger.warn(s"Failed to parse bucket key $key")
         None
     }
   }

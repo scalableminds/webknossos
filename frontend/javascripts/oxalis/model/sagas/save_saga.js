@@ -207,11 +207,11 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;
-        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
         yield* call(
           [ErrorHandling, ErrorHandling.notify],
           new Error("Saving failed due to '409' status code"),
         );
+        yield* call(alert, messages["save.failed_simultaneous_tracing"]);
         location.reload();
         return;
       }

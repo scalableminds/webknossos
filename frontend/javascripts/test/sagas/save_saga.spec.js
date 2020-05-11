@@ -185,6 +185,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   );
 
   saga.throw({ status: 409 });
+  saga.next(); // error reporting
   const alertEffect = saga.next().value;
   t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);

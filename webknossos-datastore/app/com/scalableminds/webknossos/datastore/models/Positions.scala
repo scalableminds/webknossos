@@ -82,6 +82,7 @@ class BucketPosition(
                     bucketLength * resolution.x,
                     bucketLength * resolution.y,
                     bucketLength * resolution.z)
+
 }
 
 class CubePosition(

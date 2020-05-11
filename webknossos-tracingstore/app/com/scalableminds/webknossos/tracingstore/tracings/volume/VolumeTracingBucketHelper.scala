@@ -55,8 +55,11 @@ trait VolumeTracingBucketHelper
 
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]/lz4"
+    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
+
+  private def buildBucketKeyWithCompressionSuffix(dataLayerName: String, bucket: BucketPosition): String =
+    buildBucketKey(dataLayerName, bucket) + "/lz4"
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -77,7 +80,7 @@ trait VolumeTracingBucketHelper
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
-    val key = buildBucketKey(dataLayer.name, bucket)
+    val key = buildBucketKeyWithCompressionSuffix(dataLayer.name, bucket)
     volumeDataStore.put(key, version, compressVolumeBucket(data))
   }
 
@@ -106,19 +109,24 @@ class VersionedBucketIterator(prefix: String,
     with VolumeBucketCompression
     with FoxImplicits {
   val batchSize = 64
-  val batchPadding = 1
+  val batchPadding = 1 // fetch one more bucket to be able to select compressed vs uncompressed /lz4 buckets also across batches
   val batchOverlap = 1
 
   private var batchCursor = 0
   private var currentStartKey = prefix
   private var currentBatchList: List[VersionedKeyValuePair[Array[Byte]]] = fetchNext
 
-  def fetchNext: List[VersionedKeyValuePair[Array[Byte]]] =
-    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize + batchPadding))
+  def fetchNext: List[VersionedKeyValuePair[Array[Byte]]] = {
+    val res = volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize + batchPadding))
+    res.foreach(entry => logger.info(s"fetched key ${entry.key}"))
+    res
+  }
 
   private def fetchNextAndSave(): Unit = {
-    currentBatchList = fetchNext.tail //in pagination, skip first entry because it was already the last entry of the previous batch
-    batchCursor = 0
+    //in pagination, skip first entry because it was already the last entry of the previous batch
+    currentBatchList = fetchNext.tail
+    //if we combined the last two returned buckets of the previous batch, we already went one step too far, skip one more
+    batchCursor = if (batchCursor >= batchSize) 1 else 0
   }
 
   override def hasNext: Boolean = {
@@ -140,16 +148,20 @@ class VersionedBucketIterator(prefix: String,
     val nextBucketAfterOpt = currentBatchList.lift(batchCursor + 1)
     val nextBucketSelected =
       if (nextBucketAfterOpt.isDefined) {
+        logger.info(s"nextBucket: ${nextBucket.map(_.key)}")
+        logger.info(s"nextBucketAfter: ${nextBucketAfterOpt.map(_.key)}")
         val nextBucketAfter = nextBucketAfterOpt.get
-        val nextKey = parseBucketKey(nextBucket.key).get
-        val nextAfterKey = parseBucketKey(nextBucketAfter.key).get
+        val nextKey = nextBucket.key.replaceAll("/lz4", "")
+        val nextAfterKey = nextBucketAfter.key.replaceAll("/lz4", "")
         if (nextKey == nextAfterKey) {
+          logger.info("Keys equal, combining...")
           batchCursor += 1
           List(nextBucket, nextBucketAfter).maxBy(_.version)
         } else nextBucket
       } else nextBucket
     batchCursor += 1
-    currentStartKey = nextBucket.key.replaceAll("/lz4", "")
+    logger.info(s"returning ${nextBucketSelected.key}")
+    currentStartKey = nextBucketSelected.key.replaceAll("/lz4", "")
     parseBucketKey(nextBucketSelected.key)
       .map(
         key =>

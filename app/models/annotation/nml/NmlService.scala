@@ -19,19 +19,15 @@ import scala.concurrent.ExecutionContext
 class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String])(
-      implicit m: MessagesProvider): NmlParseResult =
-    extractFromNml(new FileInputStream(file), name, overwritingDataSetName)
-
   private def formatChain(chain: Box[Failure]): String = chain match {
     case Full(failure) =>
       " <~ " + failure.msg + formatChain(failure.chain)
     case _ => ""
   }
 
-  def extractFromNml(inputStream: InputStream, name: String, overwritingDataSetName: Option[String])(
+  def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String])(
       implicit m: MessagesProvider): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDataSetName) match {
+    NmlParser.parse(name, file, overwritingDataSetName) match {
       case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
         NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
@@ -46,15 +42,17 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
 
-    ZipIO.withUnziped(file) { (filename, file) =>
+    ZipIO.withUnziped(file) { (filename, fileStream) => {
+      val tempFile = temporaryFileCreator.create(filename.toString)
+      Files.copy(fileStream, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
       if (filename.toString.endsWith(".nml")) {
-        val result = extractFromNml(file, filename.toString, overwritingDataSetName)
+        val result = extractFromNml(tempFile, filename.toString, overwritingDataSetName)
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
-        val tempFile = temporaryFileCreator.create(filename.toString)
-        Files.copy(file, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
+
         otherFiles += (filename.toString -> tempFile)
       }
+    }
     }
     ZipParseResult(parseResults, otherFiles)
   }

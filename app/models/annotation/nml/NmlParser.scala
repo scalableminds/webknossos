@@ -1,20 +1,17 @@
 package models.annotation.nml
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
-  NodeDefaults,
-  SkeletonTracingDefaults,
-  TreeValidator
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
+import io.apigee.trireme.core.NodeEnvironment
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -39,7 +36,24 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
+  def parse(name: String, nmlFile: File, overwritingDataSetName: Option[String]):
+  Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
+
+    val nodeEnv = new NodeEnvironment()
+    nodeEnv.setDefaultNodeVersion("0.12.7")
+    val script = nodeEnv.createScript(
+      "nml_parser_wrapper.js",
+      new File("tools/nml/nml_parser_wrapper.js"),
+      Array(nmlFile.getAbsolutePath)
+
+    )
+    val status = script.execute().get()
+    logger.info(s"script returned status $status")
+
+    Failure("Not implemented")
+  }
+
+  /*@SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
   def parse(name: String, nmlInputStream: InputStream, overwritingDataSetName: Option[String])(
       implicit m: MessagesProvider)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
@@ -127,6 +141,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
+
+   */
 
   def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
       implicit m: MessagesProvider): Box[Seq[Tree]] =

@@ -287,8 +287,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
     return (
       <div className="flex-overflow">
-        <p>{annotationTypeLabel}</p>
-        <p>{descriptionEditField}</p>
+        <div>{annotationTypeLabel}</div>
+        <div>{descriptionEditField}</div>
       </div>
     );
   }

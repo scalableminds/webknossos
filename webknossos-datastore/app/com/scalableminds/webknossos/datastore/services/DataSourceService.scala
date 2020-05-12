@@ -45,21 +45,28 @@ class DataSourceService @Inject()(
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  def tick: Unit = checkInbox()
+  var inboxCheckVerboseCounter = 0
 
-  def checkInbox(): Fox[Unit] = {
-    logger.info(s"Scanning inbox at: $dataBaseDir")
+  def tick: Unit = {
+    checkInbox(verbose = inboxCheckVerboseCounter == 0)
+    inboxCheckVerboseCounter += 1
+    if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
+  }
+
+  def checkInbox(verbose: Boolean): Fox[Unit] = {
+    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
       _ <- PathUtils.listDirectories(dataBaseDir) match {
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
             foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-            dataSourceString = foundInboxSources.map { ds =>
-              s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-            }.mkString(", ")
-
-            _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+            dataSourceString = if (verbose) {
+              foundInboxSources.map { ds =>
+                s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+              }.mkString(", ")
+            } else s"${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources.count(!_.isUsable)} inactive"
+            _ = logger.info(s"Finished scanning inbox ($dataBaseDir): $dataSourceString")
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
         case e =>
@@ -193,7 +200,6 @@ class DataSourceService @Inject()(
         Nil
       case Full(dirs) =>
         val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
-        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ")}")
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")

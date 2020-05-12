@@ -199,7 +199,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         <CrossOriginApi />
         <Layout className="tracing-layout">
           <RenderToPortal portalId="navbarTracingSlot">
-            {this.state.status !== "loading" ? (
+            {this.state.status === "loaded" ? (
               <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
                 <ButtonComponent
                   className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}

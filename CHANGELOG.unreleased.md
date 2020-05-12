@@ -33,6 +33,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Disabled the backend-side apply agglomerate feature for downsampled magnifications (still allowed for 1 to 8) to save server capacity. [#4578](https://github.com/scalableminds/webknossos/pull/4578)
 - REST API endpoints finish and info now expect additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent). [#4580](https://github.com/scalableminds/webknossos/pull/4580)
 - It is now possible to upload volume tracings as a base for tasks. The upload format is similar to the project / task type download format. [#4565](https://github.com/scalableminds/webknossos/pull/4565)
+- Improved the UI in navigation bar during loading of tracings and datasets. [#4612](https://github.com/scalableminds/webknossos/pull/4612)
 
 ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)

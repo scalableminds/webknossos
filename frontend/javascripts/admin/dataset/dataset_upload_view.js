@@ -99,7 +99,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   <DatasetNameFormItem form={form} activeUser={activeUser} />
                 </Col>
                 <Col span={12}>
-                  <DatastoreFormItem form={form} datastores={datastores} />
+                  <DatastoreFormItem
+                    form={form}
+                    datastores={datastores.filter(datastore => datastore.allowsUpload)}
+                  />
                 </Col>
               </Row>
               <FormItem label="Dataset ZIP File" hasFeedback>

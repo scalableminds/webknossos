@@ -14,6 +14,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
@@ -102,18 +103,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   private def createVolumeTracing(
       dataSource: DataSource,
-      withFallback: Boolean,
+      fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Point3D] = None,
       startRotation: Option[Vector3D] = None
-  ): VolumeTracing = {
-    val fallbackLayer: Option[SegmentationLayer] = if (withFallback) {
-      dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer => Some(layer)
-        case _                        => None
-      }.headOption
-    } else None
-
+  ): VolumeTracing =
     VolumeTracing(
       None,
       boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
@@ -127,14 +121,21 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       0,
       VolumeTracingDefaults.zoomLevel
     )
-  }
 
   def createTracings(
       dataSet: DataSet,
       dataSource: DataSource,
       tracingType: TracingType.Value,
       withFallback: Boolean,
-      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
+      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
+    def getFallbackLayer(): Option[SegmentationLayer] =
+      if (withFallback) {
+        dataSource.dataLayers.flatMap {
+          case layer: SegmentationLayer => Some(layer)
+          case _                        => None
+        }.headOption
+      } else None
+
     tracingType match {
       case TracingType.skeleton =>
         for {
@@ -148,16 +149,21 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       case TracingType.volume =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+          fallbackLayer = getFallbackLayer()
+          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, fallbackLayer))
         } yield (None, Some(volumeTracingId))
       case TracingType.hybrid =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
+          fallbackLayer = getFallbackLayer()
+          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, fallbackLayer))
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
     }
+  }
 
   def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean)(
       implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -338,9 +344,18 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    dataSetName)
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+
+      fallbackLayer = if (volumeShowFallbackLayer) {
+        dataSource.dataLayers.flatMap {
+          case layer: SegmentationLayer => Some(layer)
+          case _                        => None
+        }.headOption
+      } else None
+      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+
       volumeTracing = createVolumeTracing(
         dataSource,
-        withFallback = volumeShowFallbackLayer,
+        fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)
         },

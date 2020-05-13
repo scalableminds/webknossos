@@ -24,8 +24,6 @@ trait VolumeBucketCompression extends LazyLogging {
 
   def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
     val compressedData = compressor.compress(data)
-
-    logger.info(s"${data.length} -> ${compressedData.length}")
     if (compressedData.length < data.length) {
       compressedData
     } else data

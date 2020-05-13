@@ -61,12 +61,7 @@ class DataSourceService @Inject()(
           for {
             _ <- Fox.successful(())
             foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-            dataSourceString = if (verbose) {
-              foundInboxSources.map { ds =>
-                s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-              }.mkString(", ")
-            } else s"${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources.count(!_.isUsable)} inactive"
-            _ = logger.info(s"Finished scanning inbox ($dataBaseDir): $dataSourceString")
+            _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
         case e =>
@@ -75,6 +70,27 @@ class DataSourceService @Inject()(
           Fox.failure(errorMsg)
       }
     } yield ()
+  }
+
+  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
+    val shortForm =
+      s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
+        .count(!_.isUsable)} inactive"
+    val msg = if (verbose) {
+      val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.team)
+      shortForm + ". " + byTeam.keys.map { team =>
+        val byUsable: Map[Boolean, Seq[InboxDataSource]] = byTeam(team).groupBy(_.isUsable)
+        team + ": [" + byUsable.keys.map { usable =>
+          val label = if (usable) "active: [" else "inactive: ["
+          label + byUsable(usable).map { ds =>
+            s"${ds.id.name}"
+          }.mkString(" ") + "]"
+        }.mkString(", ") + "]"
+      }.mkString(", ")
+    } else {
+      shortForm
+    }
+    logger.info(msg)
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {

@@ -56,8 +56,7 @@ case class KnossosSegmentationLayer(
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None,
-    originalElementClass: Option[ElementClass.Value] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 ) extends SegmentationLayer
     with KnossosLayer
 

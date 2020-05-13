@@ -52,5 +52,4 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   val defaultViewConfiguration = primary.defaultViewConfiguration
 
-  val originalElementClass = primary.originalElementClass
 }

@@ -71,6 +71,7 @@ for (const [key, proc] of Object.entries(processes).filter(x => x[1] !== null)) 
 process.on("SIGTERM", killAll);
 
 proxy.on("error", (err, req, res) => {
+  console.error("### Sending Bad gateway due to the following error: ", err);
   res.writeHead(503);
   res.end("Bad gateway");
 });

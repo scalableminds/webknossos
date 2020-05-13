@@ -58,6 +58,7 @@ class DataStoreWkRpcClient @Inject()(
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
+      .silent
       .put(dataSources)
 
   def validateDataSourceUpload(id: DataSourceId): Fox[_] =

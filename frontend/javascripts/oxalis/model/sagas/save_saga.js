@@ -49,6 +49,7 @@ import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
+import ErrorHandling from "libs/error_handling";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
@@ -176,16 +177,26 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
   let retryCount = 0;
   while (true) {
     try {
+      const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
         `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
         {
           method: "POST",
-          headers: { "X-Date": `${Date.now()}` },
           data: compactedSaveQueue,
           compress: true,
         },
       );
+      const endTime = Date.now();
+      if (endTime - startTime > PUSH_THROTTLE_TIME) {
+        yield* call(
+          [ErrorHandling, ErrorHandling.notify],
+          new Error(
+            `Warning: Save request took more than ${Math.ceil(PUSH_THROTTLE_TIME / 1000)} seconds.`,
+          ),
+        );
+      }
+
       yield* put(setVersionNumberAction(version + compactedSaveQueue.length, tracingType));
       yield* put(setLastSaveTimestampAction(tracingType));
       yield* put(shiftSaveQueueAction(saveQueue.length, tracingType));
@@ -196,6 +207,10 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;
+        yield* call(
+          [ErrorHandling, ErrorHandling.notify],
+          new Error("Saving failed due to '409' status code"),
+        );
         yield* call(alert, messages["save.failed_simultaneous_tracing"]);
         location.reload();
         return;

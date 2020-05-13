@@ -227,6 +227,7 @@ Create a new datastore
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
     - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
+    - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
 
 
 #### Returns
@@ -260,6 +261,7 @@ Update an existing datastore
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
     - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
+    - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
 
 
 #### Returns

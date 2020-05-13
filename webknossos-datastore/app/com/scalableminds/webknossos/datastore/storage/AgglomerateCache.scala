@@ -65,7 +65,6 @@ class AgglomerateFileCache(val maxEntries: Int)
         case Full(readerInstance) =>
           if (readerInstance.tryAccess()) Full(readerInstance) else Empty
         case f: Failure =>
-          println(f.msg)
           remove(cachedAgglomerateFile)
           f
         case _ =>
@@ -73,11 +72,7 @@ class AgglomerateFileCache(val maxEntries: Int)
       }.toFox
 
       put(cachedAgglomerateFile, readerFox)
-      readerFox.map { reader =>
-        val result = reader.copy()
-        reader.finishAccess()
-        result
-      }
+      readerFox
     }
 
     get(cachedAgglomerateFile) match {
@@ -97,10 +92,14 @@ class AgglomerateCache(val maxEntries: Int)
     val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId)
 
     def handleUncachedAgglomerate(): Fox[Long] = {
-      val reader = cachedFileHandles.withCache(dataRequest)(loadReader)
-      val agglomerateId = reader.flatMap(r => readFromFile(r.reader, segmentId))
+      def getAgglomerateId() =
+        for {
+          cachedReader <- cachedFileHandles.withCache(dataRequest)(loadReader)
+          agglomerateId <- readFromFile(cachedReader.reader, segmentId)
+          _ = cachedReader.finishAccess()
+        } yield agglomerateId
 
-      val checkedAgglomerateId = agglomerateId.futureBox.map {
+      val checkedAgglomerateId = getAgglomerateId().futureBox.map {
         case Full(id)   => Full(id)
         case f: Failure => remove(cachedAgglomerateKey); f
         case _          => Empty

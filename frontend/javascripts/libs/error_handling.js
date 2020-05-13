@@ -13,7 +13,10 @@ import window, { document, location } from "libs/window";
 
 // No more than MAX_NUM_ERRORS will be reported to airbrake
 const MAX_NUM_ERRORS = 50;
-const BLACKLISTED_ERROR_MESSAGES = ["ResizeObserver loop limit exceeded"];
+const BLACKLISTED_ERROR_MESSAGES = [
+  "ResizeObserver loop limit exceeded",
+  "Invariant Violation: Cannot call hover while not dragging.",
+];
 
 type ErrorHandlingOptions = {
   throwAssertions: boolean,
@@ -111,8 +114,11 @@ class ErrorHandling {
     window.removeEventListener("unhandledrejection", this.airbrake.onUnhandledrejection);
     window.addEventListener("unhandledrejection", event => {
       // Create our own error for unhandled rejections here to get additional information for [Object object] errors in airbrake
-      this.notify(Error("Unhandled Rejection"), {
-        originalError: event.reason instanceof Error ? event.reason.toString() : event.reason,
+      const originalError = event.reason instanceof Error ? event.reason.toString() : event.reason;
+      // Put the actual error into the main string so that not all unhandled errors are grouped
+      // together in airbrake
+      this.notify(Error(`Unhandled Rejection: ${JSON.stringify(originalError).slice(0, 80)}`), {
+        originalError,
       });
     });
 

@@ -19,7 +19,7 @@ class DataLayer {
   connectionInfo: ConnectionInfo;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
-  mappings: Mappings;
+  mappings: ?Mappings;
   activeMapping: ?string;
   activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
@@ -58,7 +58,7 @@ class DataLayer {
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
+    if (isSegmentation) this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,
@@ -73,6 +73,9 @@ class DataLayer {
     mappingType: MappingType,
     progressCallback?: ProgressCallback,
   ): void {
+    if (this.mappings == null) {
+      throw new Error("Mappings can only be activated for segmentation layers.");
+    }
     this.activeMapping = mappingName;
     this.activeMappingType = mappingType;
     this.mappings.activateMapping(mappingName, mappingType, progressCallback);

@@ -128,7 +128,6 @@ test("SaveSaga should send request to server", t => {
     saga.next(TRACINGSTORE_URL),
     call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
-      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
       compress: true,
     }),
@@ -146,7 +145,6 @@ test("SaveSaga should retry update actions", t => {
     `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`,
     {
       method: "POST",
-      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
       compress: true,
     },
@@ -181,13 +179,13 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
     saga.next(TRACINGSTORE_URL),
     call(sendRequestWithToken, `${TRACINGSTORE_URL}/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
-      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
       compress: true,
     }),
   );
 
   saga.throw({ status: 409 });
+  saga.next(); // error reporting
   const alertEffect = saga.next().value;
   t.is(alertEffect.payload.fn, alert);
   t.true(saga.next().done);

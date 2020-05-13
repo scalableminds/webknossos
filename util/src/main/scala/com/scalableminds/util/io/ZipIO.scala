@@ -20,6 +20,7 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
+import collection.JavaConverters._
 
 object ZipIO extends LazyLogging {
 
@@ -138,6 +139,11 @@ object ZipIO extends LazyLogging {
     gzipped
   }
 
+  private def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
+
+  def forallZipEntries(zip: ZipFile, includeHiddenFiles: Boolean = false)(f: ZipEntry => Boolean): Boolean =
+    zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).forall(f(_))
+
   def withUnziped[A](file: File, includeHiddenFiles: Boolean = false, truncateCommonPrefix: Boolean = false)(
       f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
     tryo(new java.util.zip.ZipFile(file))
@@ -148,8 +154,6 @@ object ZipIO extends LazyLogging {
                      truncateCommonPrefix: Boolean,
                      excludeFromPrefix: Option[List[String]])(f: (Path, InputStream) => Box[A])(
       implicit ec: ExecutionContext): Box[List[A]] = {
-
-    def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
     def stripPathFrom(path: Path, string: String): Option[Path] = {
       def stripPathHelper(i: Int): Option[Path] =
@@ -166,7 +170,6 @@ object ZipIO extends LazyLogging {
       stripPathHelper(0)
     }
 
-    import collection.JavaConverters._
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
     //color, mask, segmentation are the values for dataSet layer categories and a folder only has one category

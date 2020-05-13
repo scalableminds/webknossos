@@ -57,7 +57,7 @@ test.beforeEach(t => {
   model.state = { position: [1, 2, 3] };
 
   Request.receiveJSON
-    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info`)
+    .withArgs(`/api/annotations/${ANNOTATION_TYPE}/${ANNOTATION_ID}/info?timestamp=${Date.now()}`)
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)

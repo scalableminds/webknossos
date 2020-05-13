@@ -1,5 +1,5 @@
 // @flow
-import { Alert, Dropdown, Icon, Menu } from "antd";
+import { Alert, Dropdown } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -27,6 +27,7 @@ import TracingActionsView, {
   LayoutMenu,
   type LayoutProps,
 } from "oxalis/view/action-bar/tracing_actions_view";
+import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import AuthenticationModal from "admin/auth/authentication_modal";
@@ -160,6 +161,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const layoutMenu = (
       <LayoutMenu
         {...layoutProps}
+        key="layout-menu"
         addNewLayout={() => {
           this.setState({ isNewLayoutModalVisible: true });
         }}
@@ -169,23 +171,13 @@ class ActionBarView extends React.PureComponent<Props, State> {
       />
     );
 
-    const viewDropdown = (
-      <div style={{ marginLeft: 10 }}>
-        <Dropdown overlay={<Menu>{layoutMenu}</Menu>} trigger={["click"]}>
-          <ButtonComponent style={{ padding: "0 10px" }}>
-            <Icon type="down" />
-          </ButtonComponent>
-        </Dropdown>
-      </div>
-    );
-
     return (
       <React.Fragment>
         <div className="action-bar">
           {isTraceMode && !showVersionRestore ? (
             <TracingActionsView layoutMenu={layoutMenu} hasVolume={hasVolume} />
           ) : (
-            viewDropdown
+            <ViewDatasetActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />

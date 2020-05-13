@@ -33,7 +33,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
+    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   def handleUpdateGroup(tracingId: String,
                         updateActionGroup: UpdateActionGroup[SkeletonTracing],
@@ -70,14 +70,21 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing,
                                                  tracingId: String,
                                                  desiredVersion: Option[Long]): Fox[Long] =
-    (for {
-      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true))
+    /*
+     * Determines the newest saved version from the updates column.
+     * if there are no updates at all, assume tracing is brand new (possibly created from NML,
+     * hence the emptyFallbck tracing.version)
+     */
+    for {
+      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId,
+                                                                         mayBeEmpty = Some(true),
+                                                                         emptyFallback = Some(tracing.version))
     } yield {
       desiredVersion match {
         case None              => newestUpdateVersion
         case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
       }
-    }).getOrElse(tracing.version) //if there are no updates at all, assume tracing is brand new (possibly created from NML)
+    }
 
   private def findPendingUpdates(tracingId: String,
                                  existingVersion: Long,

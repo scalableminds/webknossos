@@ -92,6 +92,7 @@ export type APIDataStore = {
   +isForeign: boolean,
   +isScratch: boolean,
   +isConnector: boolean,
+  +allowsUpload: boolean,
 };
 
 export type APITracingStore = {

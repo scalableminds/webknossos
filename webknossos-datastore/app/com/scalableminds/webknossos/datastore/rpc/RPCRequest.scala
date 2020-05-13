@@ -20,9 +20,15 @@ import scala.concurrent.duration._
 class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxImplicits with LazyLogging {
 
   var request: WSRequest = wsClient.url(url)
+  private var verbose: Boolean = true
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
     request = request.addQueryStringParameters(parameters: _*)
+    this
+  }
+
+  def silent: RPCRequest = {
+    verbose = false
     this
   }
 
@@ -128,9 +134,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   }
 
   def getStream: Fox[Source[ByteString, _]] = {
-    logger.debug(
-      s"Sending WS request to $url (ID: $id). " +
-        s"RequestBody: '$requestBodyPreview'")
+    if (verbose) {
+      logger.debug(
+        s"Sending WS request to $url (ID: $id). " +
+          s"RequestBody: '$requestBodyPreview'")
+    }
     request
       .withMethod("GET")
       .withRequestTimeout(Duration.Inf)
@@ -146,9 +154,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   }
 
   private def performRequest: Fox[WSResponse] = {
-    logger.debug(
-      s"Sending WS request to $url (ID: $id). " +
-        s"RequestBody: '$requestBodyPreview'")
+    if (verbose) {
+      logger.debug(
+        s"Sending WS request to $url (ID: $id). " +
+          s"RequestBody: '$requestBodyPreview'")
+    }
     request
       .execute()
       .map { result =>
@@ -174,9 +184,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     r.flatMap { response =>
       if (response.status == OK) {
         val responseBytes = response.bodyAsBytes
-        logger.debug(
-          s"Successful request (ID: $id). " +
-            s"Body: '<${responseBytes.length} raw bytes>'")
+        if (verbose) {
+          logger.debug(
+            s"Successful request (ID: $id). " +
+              s"Body: '<${responseBytes.length} raw bytes>'")
+        }
         Fox.successful(responseBytes.toArray)
       } else {
         logger.error(
@@ -190,9 +202,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
   private def parseJsonResponse[T: Reads](r: Fox[WSResponse]): Fox[T] =
     r.flatMap { response =>
       if (response.status == OK) {
-        logger.debug(
-          s"Successful request (ID: $id). " +
-            s"Body: '${response.body.take(100)}'")
+        if (verbose) {
+          logger.debug(
+            s"Successful request (ID: $id). " +
+              s"Body: '${response.body.take(100)}'")
+        }
       } else {
         logger.error(
           s"Failed to send WS request to $url (ID: $id). " +
@@ -213,9 +227,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       companion: GeneratedMessageCompanion[T]) =
     r.flatMap { response =>
       if (response.status == OK) {
-        logger.debug(
-          s"Successful request (ID: $id). " +
-            s"Body: <${response.body.length} bytes of protobuf data>")
+        if (verbose) {
+          logger.debug(
+            s"Successful request (ID: $id). " +
+              s"Body: <${response.body.length} bytes of protobuf data>")
+        }
       } else {
         logger.error(
           s"Failed to send WS request to $url (ID: $id). " +

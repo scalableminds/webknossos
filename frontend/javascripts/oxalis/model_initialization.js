@@ -295,6 +295,24 @@ function initializeDataset(
     dataSet: dataset.dataSource.id.name,
   });
 
+  // Here we add the originalElementClass property to the segmentation layer if it exists.
+  // We also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
+  const updatedDataLayers = dataset.dataSource.dataLayers.map(dataLayer => {
+    const { elementClass } = dataLayer;
+    if (dataLayer.category === "segmentation") {
+      const adjustedElementClass = elementClass === "uint64" ? "uint32" : elementClass;
+      return {
+        ...dataLayer,
+        originalElementClass: elementClass,
+        elementClass: adjustedElementClass,
+      };
+    } else {
+      return dataLayer;
+    }
+  });
+  // $FlowFixMe we assign the adjusted dataset layers, although this property is not writable.
+  dataset.dataSource.dataLayers = updatedDataLayers;
+
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
     // $FlowFixMe We mutate the dataset here to avoid that an outdated version is used somewhere else
@@ -433,13 +451,13 @@ function setupLayerForVolumeTracing(
   const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
-  // The frontend does not support uint64 data. Thus if the segmentation is uint64
-  // we treat it as uint32 and save that it originally has the element class uint64.
-  const isUint64Segmentation = tracing.elementClass === "uint64";
 
+  // We do not adjust the elementClass here if it is uint64, because uint64 volume tracings are not supported.
+  // Not adjusting the elementClass will cause the later check for supported layer element classes to fail
+  // if the segmentation of type uint64.
   const tracingLayer = {
     name: tracing.id,
-    elementClass: isUint64Segmentation ? "uint32" : tracing.elementClass,
+    elementClass: tracing.elementClass,
     originalElementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,

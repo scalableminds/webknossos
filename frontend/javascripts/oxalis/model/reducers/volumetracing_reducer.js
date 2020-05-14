@@ -29,6 +29,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
       const maxCellId = action.tracing.largestSegmentId;
+      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+        action.tracing.userBoundingBoxes,
+        action.tracing.userBoundingBox,
+      );
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
@@ -42,10 +46,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBoxes: convertUserBoundingBoxesFromServerToFrontend(
-          action.tracing.userBoundingBoxes,
-        ),
         fallbackLayer: action.tracing.fallbackLayer,
+        userBoundingBoxes,
       };
 
       const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });

@@ -42,6 +42,7 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "libs/user_settings.schema";
+import { addNewUserBoundingBoxToArray } from "oxalis/model/reducers/reducer_helpers";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
@@ -123,18 +124,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
 
   handleAddNewUserBoundingBox = () => {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
-    // We use the default of -1 to get the id 0 for the first user bounding box.
-    const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
     const datasetBoundingBox = getDatasetExtentInVoxel(this.props.dataset);
-    const boundingBoxId = highestBoundingBoxId + 1;
-    const newUserBoundingBox = {
-      boundingBox: Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
-      id: boundingBoxId,
-      name: `UserBoundingBox_${boundingBoxId}`,
-      color: Utils.getRandomColor(),
-      isVisible: true,
-    };
-    const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+    const updatedUserBoundingBoxes = addNewUserBoundingBoxToArray(
+      userBoundingBoxes,
+      Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
+    );
     this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
   };
 
@@ -430,6 +424,18 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           {this.getViewportOptions()}
           {this.getSkeletonOrVolumeOptions()}
           <Panel header={settingsLabels.userBoundingBoxes} key="4">
+            {userBoundingBoxes.map(bb => (
+              <UserBoundingBoxInput
+                key={bb.id}
+                tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+                value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+                color={bb.color}
+                name={bb.name}
+                isVisible={bb.isVisible}
+                onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
+                onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
+              />
+            ))}
             <div style={{ display: "inline-block", width: "100%" }}>
               <Tooltip title="Click to add another bounding box.">
                 <Icon
@@ -443,18 +449,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
                 />
               </Tooltip>
             </div>
-            {userBoundingBoxes.map(bb => (
-              <UserBoundingBoxInput
-                key={bb.id}
-                tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-                value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
-                color={bb.color}
-                name={bb.name}
-                isVisible={bb.isVisible}
-                onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
-                onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
-              />
-            ))}
           </Panel>
           <Panel header="Other" key="5">
             <SwitchSetting

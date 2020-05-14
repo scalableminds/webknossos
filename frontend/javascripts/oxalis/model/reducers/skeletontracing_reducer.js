@@ -85,6 +85,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
+      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+        action.tracing.userBoundingBoxes,
+        action.tracing.userBoundingBox,
+      );
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
@@ -97,9 +101,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBoxes: convertUserBoundingBoxesFromServerToFrontend(
-          action.tracing.userBoundingBoxes,
-        ),
+        userBoundingBoxes,
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });

@@ -60,13 +60,9 @@ class DataSourceService @Inject()(
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
+            _ = if (verbose) logEmptyDirs(dirs)
             foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-            dataSourceString = if (verbose) {
-              foundInboxSources.map { ds =>
-                s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-              }.mkString(", ")
-            } else s"${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources.count(!_.isUsable)} inactive"
-            _ = logger.info(s"Finished scanning inbox ($dataBaseDir): $dataSourceString")
+            _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
         case e =>
@@ -75,6 +71,40 @@ class DataSourceService @Inject()(
           Fox.failure(errorMsg)
       }
     } yield ()
+  }
+
+  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
+    val shortForm =
+      s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
+        .count(!_.isUsable)} inactive"
+    val msg = if (verbose) {
+      val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.team)
+      shortForm + ". " + byTeam.keys.map { team =>
+        val byUsable: Map[Boolean, Seq[InboxDataSource]] = byTeam(team).groupBy(_.isUsable)
+        team + ": [" + byUsable.keys.map { usable =>
+          val label = if (usable) "active: [" else "inactive: ["
+          label + byUsable(usable).map { ds =>
+            s"${ds.id.name}"
+          }.mkString(" ") + "]"
+        }.mkString(", ") + "]"
+      }.mkString(", ")
+    } else {
+      shortForm
+    }
+    logger.info(msg)
+  }
+
+  private def logEmptyDirs(paths: List[Path]): Unit = {
+
+    val emptyDirs = paths.flatMap { path =>
+      PathUtils.listDirectories(path) match {
+        case Full(Nil) =>
+          Some(path)
+        case _ => None
+      }
+    }
+
+    if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
@@ -195,9 +225,6 @@ class DataSourceService @Inject()(
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
-      case Full(Nil) =>
-        logger.error(s"Failed to read datasets for organization $organization. Empty path: $path")
-        Nil
       case Full(dirs) =>
         val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
         dataSources

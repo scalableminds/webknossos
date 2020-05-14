@@ -587,6 +587,7 @@ export type ServerSkeletonTracingTree = {
 export type ServerTracingBase = {|
   id: string,
   userBoundingBoxes: Array<ServerUserBoundingBox>,
+  userBoundingBox?: ServerBoundingBox,
   createdTimestamp: number,
   dataSetName: string,
   editPosition: Point3,

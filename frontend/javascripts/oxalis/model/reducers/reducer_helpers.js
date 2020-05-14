@@ -33,10 +33,28 @@ export function convertServerBoundingBoxToFrontend(
     .getOrElse(null);
 }
 
+export const addNewUserBoundingBoxToArray = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+  newBounds: BoundingBoxType,
+) => {
+  // We use the default of -1 to get the id 0 for the first user bounding box.
+  const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+  const boundingBoxId = highestBoundingBoxId + 1;
+  const newUserBoundingBox = {
+    boundingBox: newBounds,
+    id: boundingBoxId,
+    name: `user bounding box ${boundingBoxId}`,
+    color: Utils.getRandomColor(),
+    isVisible: true,
+  };
+  return [...userBoundingBoxes, newUserBoundingBox];
+};
+
 export function convertUserBoundingBoxesFromServerToFrontend(
   boundingBoxes: Array<ServerUserBoundingBox>,
+  oldUserBoundingBox: ?ServerBoundingBox,
 ): Array<UserBoundingBox> {
-  return boundingBoxes.map(bb => {
+  let userBoundingBoxes = boundingBoxes.map(bb => {
     const { color, id, name, isVisible, boundingBox } = bb;
     const convertedBoundingBox = convertServerBoundingBoxToMinMaxBoundingBox(boundingBox);
     return {
@@ -44,9 +62,14 @@ export function convertUserBoundingBoxesFromServerToFrontend(
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
       id,
       name: name || `UserBoundingBox_${id}`,
-      isVisible: isVisible || true,
+      isVisible: isVisible != null ? isVisible : true,
     };
   });
+  const maybeConvertedBoundingBox = convertServerBoundingBoxToFrontend(oldUserBoundingBox);
+  if (maybeConvertedBoundingBox) {
+    userBoundingBoxes = addNewUserBoundingBoxToArray(userBoundingBoxes, maybeConvertedBoundingBox);
+  }
+  return userBoundingBoxes;
 }
 
 export function convertUserBoundingBoxesFromFrontendToServer(

@@ -14,7 +14,6 @@ import type {
   ColorObject,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
-import ColorGenerator from "libs/color_generator";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
 type UrlParams = { [key: string]: string };
@@ -152,8 +151,8 @@ export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
 }
 
 export function getRandomColor(): Vector3 {
-  const randomColor = ColorGenerator.getNRandomColors(1)[0];
-  return [randomColor[0] * 255, randomColor[1] * 255, randomColor[2] * 255];
+  const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256));
+  return ((randomColor: any): Vector3);
 }
 
 export function addIdToArrayElements<T>(bboxes: Array<T>): Array<T & { id: number }> {

@@ -33,7 +33,7 @@ class DataSourceController @Inject()(
     {
       accessTokenService.validateAccessForSyncBlock(UserAccessRequest.listDataSources) {
         AllowRemoteOrigin {
-          val ds = dataSourceRepository.findAll(false)
+          val ds = dataSourceRepository.findAll
           Ok(Json.toJson(ds))
         }
       }

@@ -300,7 +300,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
-                  showTime
+                  showTime={{ format: "HH:mm" }}
+                  format="YYYY-MM-DD HH:mm"
                   allowClear={false}
                   style={{ width: "100%" }}
                   value={dateRange}

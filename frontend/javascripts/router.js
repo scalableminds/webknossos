@@ -274,12 +274,18 @@ class ReactRouter extends React.Component<Props> {
                 render={this.tracingView}
                 serverAuthenticationCallback={async ({ match }: ContextRouter) => {
                   try {
-                    const annotationInformation = await getAnnotationInformation(
-                      match.params.id || "",
-                      Enum.coalesce(APIAnnotationTypeEnum, match.params.type) ||
-                        APIAnnotationTypeEnum.Explorational,
-                    );
-                    return annotationInformation.visibility === "Public";
+                    if (match.params.type === APIAnnotationTypeEnum.CompoundTask ||
+                      match.params.type === APIAnnotationTypeEnum.CompoundProject ||
+                      match.params.type === APIAnnotationTypeEnum.CompoundTaskType) {
+                      return false
+                    } else {
+                      const annotationInformation = await getAnnotationInformation(
+                        match.params.id || "",
+                        Enum.coalesce(APIAnnotationTypeEnum, match.params.type) ||
+                          APIAnnotationTypeEnum.Explorational,
+                      );
+                      return annotationInformation.visibility === "Public";
+                    }
                   } catch (ex) {
                     // Annotation could not be found
                   }

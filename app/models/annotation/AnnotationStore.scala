@@ -53,13 +53,13 @@ class AnnotationStore @Inject()(
   }
 
   private def storeInCache(id: AnnotationIdentifier, annotation: Annotation) =
-    temporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout), log=true)
+    temporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
 
   private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] =
-    temporaryAnnotationStore.find(annotationId.toUniqueString, log=true).map(Fox.successful(_))
+    temporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
 
   def findCachedByTracingId(tracingId: String): Box[Annotation] = {
-    val annotationOpt = temporaryAnnotationStore.findAll(log=true).find(a =>
+    val annotationOpt = temporaryAnnotationStore.findAll.find(a =>
       a.skeletonTracingId == Some(tracingId) || a.volumeTracingId == Some(tracingId))
     annotationOpt match {
       case Some(annotation) => Full(annotation)

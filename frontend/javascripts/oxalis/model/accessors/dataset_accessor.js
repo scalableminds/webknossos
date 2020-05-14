@@ -172,7 +172,7 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
   ];
 }
 
-export function getDatasetExtentInVoxel(dataset: APIDataset): BoundingBoxObject {
+export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);

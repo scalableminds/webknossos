@@ -2,18 +2,20 @@ package com.scalableminds.webknossos.datastore.storage
 
 import akka.actor.{Actor, ActorLogging, ActorSystem}
 import akka.agent.Agent
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.stm.Ref
 
-class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
+class TemporaryStore[K, V] @Inject()(system: ActorSystem) extends LazyLogging {
 
   lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
 
-  def find(id: K) =
+  def find(id: K, log: Boolean = false) =
     map.synchronized {
+      if (log) {logger.info(s"temporaryStore $this find $id")}
       map.get(id)
     }
 
@@ -22,8 +24,10 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.contains(id)
     )
 
-  def findAll =
+  def findAll(log: Boolean = false) =
     map.synchronized {
+      if (log) {logger.info(s"temporaryStore $this findAll")}
+      if (log) {logger.info(s"findAll values: ${map.values}")}
       map.values.toList
     }
 
@@ -44,8 +48,9 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       }
     }
 
-  def insert(id: K, t: V, to: Option[FiniteDuration] = None) = {
+  def insert(id: K, t: V, to: Option[FiniteDuration] = None, log: Boolean = false) = {
     map.synchronized {
+      if (log) {logger.info(s"temporaryStore $this insert $id")}
       map += (id -> t)
     }
     to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))

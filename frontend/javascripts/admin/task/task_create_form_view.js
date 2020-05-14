@@ -115,21 +115,21 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
         {successfulTasks.map(task => taskToText(task)).join("\n")}
       </pre>
     ) : (
-      `The number of successful tasks is too large to show them in the browser. 
-      Please download them as a CSV file if you need to view the output.`
+      "Too many tasks to show, please use CSV download for a full list."
     );
   const failedTasksContent =
     failedTasks.length <= maxDisplayedTasksCount ? (
       <pre>{failedTasksAsString}</pre>
     ) : (
-      `The number of failed tasks is too large to show them in the browser. 
-      Please download them as a CSV file if you need to view the output.`
+      "Too many failed tasks to show, please use CSV download for a full list."
     );
   const subHeadingStyle = { fontWeight: "bold" };
   const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
-  const downloadButtonStyle = { float: "right" };
+  const successPlural = successfulTasks.length === 1 ? "" : "s";
   Modal.info({
-    title: `Failed to create ${failedTasks.length} tasks.`,
+    title: `${successfulTasks.length} task${successPlural} successfully created, ${
+      failedTasks.length
+    } failed.`,
     content: (
       <div>
         {successfulTasks.length > 0 ? (
@@ -141,8 +141,8 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
         {successfulTasks.length > 0 ? (
           <React.Fragment>
             <br />
-            <Button style={downloadButtonStyle} onClick={() => downloadTasksAsCSV(successfulTasks)}>
-              Download tasks as CSV
+            <Button onClick={() => downloadTasksAsCSV(successfulTasks)}>
+              Download task info as CSV
             </Button>
             <br />
           </React.Fragment>
@@ -156,7 +156,6 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
               <div style={displayResultsStyle}> {failedTasksContent}</div>
               <br />
               <Button
-                style={downloadButtonStyle}
                 onClick={() => {
                   const blob = new Blob([failedTasksAsString], {
                     type: "text/plain;charset=utf-8",
@@ -164,7 +163,7 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
                   saveAs(blob, "failed-tasks.csv");
                 }}
               >
-                Download failed tasks as CSV
+                Download failed task info as CSV
               </Button>
               <br />
             </div>
@@ -543,10 +542,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
                     Manual Specification
                   </Radio>
-                  <Radio
-                    value={SpecificationEnum.Nml}
-                    disabled={isEditingMode || this.isVolumeTaskType()}
-                  >
+                  <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
                     Upload NML File
                   </Radio>
                   <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>

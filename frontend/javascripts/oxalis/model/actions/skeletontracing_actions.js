@@ -14,7 +14,7 @@ import Store, {
   type OxalisState,
   type SkeletonTracing,
   type TreeGroup,
-  type TreeMap,
+  type MutableTreeMap,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -75,7 +75,7 @@ type RequestDeleteBranchPointAction = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeAction = { type: "CREATE_TREE", timestamp: number };
 type AddTreesAndGroupsAction = {
   type: "ADD_TREES_AND_GROUPS",
-  trees: TreeMap,
+  trees: MutableTreeMap,
   treeGroups: Array<TreeGroup>,
 };
 type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number };
@@ -274,7 +274,7 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
 });
 
 export const addTreesAndGroupsAction = (
-  trees: TreeMap,
+  trees: MutableTreeMap,
   treeGroups: ?Array<TreeGroup>,
 ): AddTreesAndGroupsAction => ({
   type: "ADD_TREES_AND_GROUPS",

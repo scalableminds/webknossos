@@ -118,9 +118,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
-    logger.info(
-      s"[${dataStore.name}] Available datasets: " +
-        s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
 
     val groupedByOrga = dataSources.groupBy(_.id.team).toList
     Fox

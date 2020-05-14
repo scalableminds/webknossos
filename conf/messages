@@ -105,6 +105,7 @@ dataSet.downloadAlreadyRunning=Sample dataset download is already running.
 dataSet.alreadyPresent=Sample dataset is already present.
 dataSet.noResolutions=Data layer does not contain resolutions
 dataSet.sampledOnlyBlack=Sampled data positions contained only black data
+dataSet.noData=Could not get data for the requested dataset
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -260,6 +261,7 @@ taskType.deleteFailure=Task type “{0}” deletion failed
 taskType.noAnnotations=We couldn’t find finished annotations for this task type
 taskType.id.invalid=The provided task type id is invalid.
 taskType.tracingTypeImmutable=Tracing types of task types are immutable. Consider creating a new task type.
+taskType.mismatch=The tracing type of the task type is {0}, but found a {1} tracing as base. Consider choosing another task type or correct the NMLs.
 
 tracingType.invalid=The provided tracing type is invalid.
 

@@ -35,12 +35,12 @@ export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
       console.warn(
         "Using mappings.getAll() is deprecated. Please use the official front-end API function getMappingNames() instead.",
       );
-      return segmentationLayer.mappings.getMappingNames();
+      return segmentationLayer.mappings != null ? segmentationLayer.mappings.getMappingNames() : [];
     },
     getActive(): ?string {
       trackAction("Deprecated mapping usage (getActive)");
       console.warn(
-        "Using mappings.getAll() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
+        "Using mappings.getActive() is deprecated. Please use the official front-end API function getActiveMapping() instead.",
       );
       return segmentationLayer.activeMapping;
     },
@@ -92,6 +92,7 @@ class Mappings {
         const shouldReload = isAgglomerate(oldMapping) || isAgglomerate(mapping);
         oldMapping = mapping;
         if (shouldReload) {
+          // We cannot use the internal_api here as this will result in a circular dependency
           window.webknossos.apiReady().then(api => {
             api.data.reloadBuckets(this.layerName);
           });
@@ -295,7 +296,6 @@ class Mappings {
     const values = new Uint32Array(paddedLength);
 
     keys.set(mappingKeys);
-    // $FlowFixMe Flow doesn't recognize that mapping cannot be null or undefined :/
     values.set(mappingKeys.map(key => mapping[key]));
 
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted

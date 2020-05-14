@@ -186,7 +186,6 @@ async function sendUpdateActions(explorational, queue) {
     `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracingId}/update?token=`,
     {
       method: "POST",
-      headers: { "X-Date": "123456789" },
       data: queue,
       compress: false,
     },

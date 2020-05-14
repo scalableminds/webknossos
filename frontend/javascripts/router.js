@@ -140,14 +140,16 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
-                  if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
-                  if (features().isDemoInstance) return <SpotlightView />;
-
-                  return isAuthenticated ? (
-                    <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
-                  ) : (
-                    <Redirect to="/auth/login" />
-                  );
+                  if (!this.props.hasOrganizations) {
+                    return <Redirect to="/onboarding" />;
+                  }
+                  if (isAuthenticated) {
+                    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+                  }
+                  if (features().isDemoInstance) {
+                    return <SpotlightView />;
+                  }
+                  return <Redirect to="/auth/login" />;
                 }}
               />
               <SecuredRoute
@@ -436,7 +438,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
-                render={({ match, _location }: ContextRouter) => (
+                render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {

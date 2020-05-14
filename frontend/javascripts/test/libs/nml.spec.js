@@ -2,24 +2,22 @@
 
 import _ from "lodash";
 import update from "immutability-helper";
+import sinon from "sinon";
 
 import { type Node } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import mock from "mock-require";
 import test from "ava";
 
 const TIMESTAMP = 123456789;
-const DateMock = {
-  now: () => TIMESTAMP,
-};
 const buildInfo = {
   webknossos: {
     commitHash: "fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17",
   },
 };
-mock("libs/date", DateMock);
 const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
 const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
   .default;
@@ -60,7 +58,7 @@ const tracing = {
           [2, createDummyNode(2)],
           [7, createDummyNode(7)],
         ]),
-        timestamp: TIMESTAMP,
+        timestamp: 0,
         branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
         edges: EdgeCollection.loadFromArray([
           { source: 0, target: 1 },
@@ -80,7 +78,7 @@ const tracing = {
           [5, createDummyNode(5)],
           [6, createDummyNode(6)],
         ]),
-        timestamp: TIMESTAMP,
+        timestamp: 4,
         branchPoints: [],
         edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
         comments: [],
@@ -157,6 +155,15 @@ async function throwsAsyncParseError(t, fn, key) {
     }
   }
 }
+
+test.before("Mock Date.now", async () => {
+  // This only mocks Date.now, but leaves the constructor intact
+  sinon.stub(Date, "now").returns(TIMESTAMP);
+});
+
+test.after("Reset mocks", async () => {
+  Date.now.restore();
+});
 
 test("NML serializing and parsing should yield the same state", async t => {
   const serializedNml = serializeToNml(
@@ -374,15 +381,6 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       },
     },
   });
-  const disconnectedTreeState = update(initialState, {
-    tracing: {
-      skeleton: {
-        trees: {
-          "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } },
-        },
-      },
-    },
-  });
   const missingGroupIdState = update(initialState, {
     tracing: {
       skeleton: {
@@ -417,14 +415,13 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   await testThatParserThrowsWithState(t, duplicateEdgeState, "duplicateEdge");
   await testThatParserThrowsWithState(t, duplicateNodeState, "duplicateNode");
   await testThatParserThrowsWithState(t, duplicateTreeState, "duplicateTree");
-  await testThatParserThrowsWithState(t, disconnectedTreeState, "disconnectedTree");
   await testThatParserThrowsWithState(t, missingGroupIdState, "missingGroupId");
   await testThatParserThrowsWithState(t, duplicateGroupIdState, "duplicateGroupId");
 });
 
 test("addTreesAndGroups reducer should assign new node and tree ids", t => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    initialState.tracing.skeleton.trees,
+    _.cloneDeep(initialState.tracing.skeleton.trees),
     [],
   );
   const newState = SkeletonTracingReducer(initialState, action);
@@ -467,7 +464,7 @@ test("addTreesAndGroups reducer should assign new node and tree ids", t => {
 
 test("addTreesAndGroups reducer should assign new group ids", t => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    initialState.tracing.skeleton.trees,
+    _.cloneDeep(initialState.tracing.skeleton.trees),
     _.cloneDeep(initialState.tracing.skeleton.treeGroups),
   );
   const newState = SkeletonTracingReducer(initialState, action);
@@ -513,4 +510,46 @@ test("addTreesAndGroups reducer should replace nodeId references in comments whe
     "Reference to existing id in another tree #12",
   );
   t.is(newState.tracing.skeleton.trees[3].comments[2].content, commentWithoutValidReferences);
+});
+
+test("NML Parser should split up disconnected trees", async t => {
+  const disconnectedTreeState = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": { edges: { $set: EdgeCollection.loadFromArray([{ source: 0, target: 1 }]) } },
+        },
+      },
+    },
+  });
+
+  const nmlWithDisconnectedTree = serializeToNml(
+    disconnectedTreeState,
+    disconnectedTreeState.tracing,
+    disconnectedTreeState.tracing.skeleton,
+    buildInfo,
+  );
+  const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
+    nmlWithDisconnectedTree,
+  );
+
+  // Check that the tree was split up into its three components
+  t.is(_.size(parsedTrees), 4);
+  t.true(parsedTrees[3].nodes.has(0));
+  t.true(parsedTrees[3].nodes.has(1));
+  t.not(parsedTrees[3].nodes.has(2));
+  t.not(parsedTrees[3].nodes.has(7));
+  t.is(_.size(parsedTrees[3].branchPoints), 1);
+  t.is(_.size(parsedTrees[3].comments), 1);
+  t.true(parsedTrees[4].nodes.has(2));
+  t.true(parsedTrees[5].nodes.has(7));
+  t.is(_.size(parsedTrees[5].branchPoints), 1);
+
+  // Check that the split up trees were wrapped in a group
+  // which was inserted into the original tree's group
+  const parentGroup = findGroup(parsedTreeGroups, 3);
+  if (parentGroup == null)
+    throw Error("Assertion Error: Serialized group is missing after parsing.");
+  t.is(_.size(parentGroup.children), 1);
+  t.is(parentGroup.children[0].name, "TestTree-0");
 });

@@ -64,7 +64,7 @@ class DataSourceController @Inject()(
   def triggerInboxCheck() = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
-        dataSourceService.checkInbox()
+        dataSourceService.checkInbox(verbose = true)
         Ok
       }
     }
@@ -74,7 +74,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
-          _ <- dataSourceService.checkInbox()
+          _ <- dataSourceService.checkInbox(verbose = true)
         } yield Ok
       }
     }

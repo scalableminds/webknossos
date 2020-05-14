@@ -64,7 +64,7 @@ class VolumeTracingService @Inject()(
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
 
   override def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
+    tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],

@@ -182,6 +182,8 @@ export function getDatasetExtentInVoxel(dataset: APIDataset): BoundingBoxObject 
     width: max[0] - min[0],
     height: max[1] - min[1],
     depth: max[2] - min[2],
+    min,
+    max,
   };
   return extent;
 }

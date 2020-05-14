@@ -37,6 +37,7 @@ export const annotation: APIAnnotation = {
     isScratch: false,
     isForeign: false,
     isConnector: false,
+    allowsUpload: true,
   },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {

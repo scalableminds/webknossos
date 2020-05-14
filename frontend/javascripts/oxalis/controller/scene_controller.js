@@ -150,7 +150,7 @@ class SceneController {
     this.updateMeshPostion(id, position);
   }
 
-  addIsosurfaceFromVertices(vertices, segmentationId): void {
+  addIsosurfaceFromVertices(vertices: Float32Array, segmentationId: number): void {
     let geometry = new THREE.BufferGeometry();
     geometry.addAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -168,7 +168,7 @@ class SceneController {
     this.addIsosurfaceFromGeometry(geometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry, segmentationId): void {
+  addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
     const [hue] = convertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
@@ -198,7 +198,7 @@ class SceneController {
     this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
   }
 
-  removeIsosurfaceById(segmentationId): void {
+  removeIsosurfaceById(segmentationId: number): void {
     if (this.isosurfacesGroupsPerSegmentationId[segmentationId] == null) {
       return;
     }

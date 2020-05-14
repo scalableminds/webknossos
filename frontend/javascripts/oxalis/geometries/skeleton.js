@@ -547,7 +547,7 @@ class Skeleton {
   }
 
   getTreeRGBA(color: Vector3, isVisible: boolean): Vector4 {
-    return color.concat(isVisible ? 1 : 0);
+    return [...color, isVisible ? 1 : 0];
   }
 }
 

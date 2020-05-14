@@ -122,6 +122,7 @@ const defaultState: OxalisState = {
       isScratch: false,
       isForeign: false,
       isConnector: false,
+      allowsUpload: true,
     },
     owningOrganization: "Connectomics department",
     description: null,

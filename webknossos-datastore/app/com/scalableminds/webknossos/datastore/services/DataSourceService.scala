@@ -60,6 +60,7 @@ class DataSourceService @Inject()(
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
+            _ = if (verbose) logEmptyDirs(dirs)
             foundInboxSources = dirs.flatMap(teamAwareInboxSources)
             _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
@@ -91,6 +92,19 @@ class DataSourceService @Inject()(
       shortForm
     }
     logger.info(msg)
+  }
+
+  private def logEmptyDirs(paths: List[Path]): Unit = {
+
+    val emptyDirs = paths.flatMap { path =>
+      PathUtils.listDirectories(path) match {
+        case Full(Nil) =>
+          Some(path)
+        case _ => None
+      }
+    }
+
+    if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
@@ -211,9 +225,6 @@ class DataSourceService @Inject()(
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
-      case Full(Nil) =>
-        logger.error(s"Failed to read datasets for organization $organization. Empty path: $path")
-        Nil
       case Full(dirs) =>
         val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
         dataSources

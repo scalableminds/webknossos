@@ -133,14 +133,18 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): Fox[String] = {
-    val taskBoundingBox = tracing.boundingBox.map { bb =>
-      val newId = tracing.userBoundingBoxes.map(_.id).max + 1
-      NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, bb)
-    }
+  def duplicate(tracing: SkeletonTracing, fromTask: Boolean): Fox[String] = {
+    val taskBoundingBox = if (fromTask) {
+      tracing.boundingBox.map { bb =>
+        val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
+        NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, bb)
+      }
+    } else None
+
     val newTracing =
       tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
-    save(newTracing, None, newTracing.version)
+    val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
+    save(finalTracing, None, finalTracing.version)
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {

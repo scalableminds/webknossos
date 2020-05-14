@@ -327,8 +327,10 @@ class AnnotationController @Inject()(
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id =>
-        tracingStoreClient.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(
+        id =>
+          tracingStoreClient
+            .duplicateSkeletonTracing(id, None, annotation._task.isDefined)) ?~> "Failed to duplicate skeleton tracing."
       newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(
         id =>
           tracingStoreClient

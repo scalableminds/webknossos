@@ -209,7 +209,7 @@ class VolumeTracingService @Inject()(
 
   def duplicate(tracingId: String, tracing: VolumeTracing, isTask: Option[Boolean]): Fox[String] = {
     val taskBoundingBox = if (isTask.contains(true)) {
-      val newId = tracing.userBoundingBoxes.map(_.id).max + 1
+      val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       Some(NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, tracing.boundingBox))
     } else None
 

@@ -283,16 +283,17 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        editPosition: com.scalableminds.util.geometry.Point3D,
                                        editRotation: com.scalableminds.util.geometry.Vector3D,
                                        zoomLevel: Double,
+                                       userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
                                        actionTimestamp: Option[Long] = None,
                                        info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) =
-    tracing
-      .withEditPosition(editPosition)
-      .withEditRotation(editRotation)
-      .withZoomLevel(zoomLevel)
-      .copy(activeNodeId = activeNode)
+    tracing.copy(editPosition = editPosition,
+                 editRotation = editRotation,
+                 zoomLevel = zoomLevel,
+                 userBoundingBox = userBoundingBox,
+                 activeNodeId = activeNode)
 
   override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
     this.copy(actionTimestamp = Some(timestamp))

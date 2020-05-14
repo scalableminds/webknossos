@@ -71,19 +71,22 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postProtoWithJsonResponse[VolumeTracings, List[Box[Option[String]]]](tracings)
   }
 
-  def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[String] = {
+  def duplicateSkeletonTracing(skeletonTracingId: String,
+                               versionString: Option[String] = None,
+                               fromTask: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/${skeletonTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryStringOptional("version", versionString)
+      .addQueryString("fromTask" -> fromTask.toString)
       .getWithJsonResponse[String]
   }
 
-  def duplicateVolumeTracing(volumeTracingId: String, isTask: Boolean = false): Fox[String] = {
+  def duplicateVolumeTracing(volumeTracingId: String, fromTask: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .addQueryString("isTask" -> isTask.toString)
+      .addQueryString("fromTask" -> fromTask.toString)
       .getWithJsonResponse[String]
   }
 

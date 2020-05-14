@@ -160,27 +160,30 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       .toList
       .toSingleBox(Messages("nml.element.invalid", "trees"))
 
-  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider) =
-    boundingBoxNodes.flatMap(node =>
-      for {
-        id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", (node \ "@id").text)
-        name = (node \ "@name").text
-        isVisible = (node \ "@isVisible").text.toBooleanOpt
-        color = parseColor(node)
-        boundingBox <- parseBoundingBox(node \ "@boundingBox")
-        nameOpt = if (name.isEmpty) None else Some(name)
-      } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox))
+  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBox] =
+    if (boundingBoxNodes.size == 1 && (boundingBoxNodes \ "@id").text.isEmpty) {
+      Seq.empty ++ parseBoundingBox(boundingBoxNodes).map(NamedBoundingBox(0, None, None, None, _))
+    } else {
+      boundingBoxNodes.flatMap(node =>
+        for {
+          id <- (node \ "@id").text.toIntOpt ?~ Messages("nml.boundingbox.id.invalid", (node \ "@id").text)
+          name = (node \ "@name").text
+          isVisible = (node \ "@isVisible").text.toBooleanOpt
+          color = parseColor(node)
+          boundingBox <- parseBoundingBox(node)
+          nameOpt = if (name.isEmpty) None else Some(name)
+        } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox))
+    }
 
   private def parseBoundingBox(node: NodeSeq) =
-    node.headOption.flatMap(bb =>
-      for {
-        topLeftX <- (bb \ "@topLeftX").text.toIntOpt
-        topLeftY <- (bb \ "@topLeftY").text.toIntOpt
-        topLeftZ <- (bb \ "@topLeftZ").text.toIntOpt
-        width <- (bb \ "@width").text.toIntOpt
-        height <- (bb \ "@height").text.toIntOpt
-        depth <- (bb \ "@depth").text.toIntOpt
-      } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth))
+    for {
+      topLeftX <- (node \ "@topLeftX").text.toIntOpt
+      topLeftY <- (node \ "@topLeftY").text.toIntOpt
+      topLeftZ <- (node \ "@topLeftZ").text.toIntOpt
+      width <- (node \ "@width").text.toIntOpt
+      height <- (node \ "@height").text.toIntOpt
+      depth <- (node \ "@depth").text.toIntOpt
+    } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
   private def parseDataSetName(node: NodeSeq) =
     (node \ "@name").text

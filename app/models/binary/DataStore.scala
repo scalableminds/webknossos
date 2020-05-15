@@ -21,7 +21,8 @@ case class DataStore(
     isScratch: Boolean = false,
     isDeleted: Boolean = false,
     isForeign: Boolean = false,
-    isConnector: Boolean = false
+    isConnector: Boolean = false,
+    allowsUpload: Boolean = true,
 )
 
 object DataStore {
@@ -33,23 +34,28 @@ object DataStore {
                key: String,
                isScratch: Option[Boolean],
                isForeign: Option[Boolean],
-               isConnector: Option[Boolean]) =
-    DataStore(name,
-              url,
-              publicUrl,
-              key,
-              isScratch.getOrElse(false),
-              isDeleted = false,
-              isForeign.getOrElse(false),
-              isConnector.getOrElse(false))
+               isConnector: Option[Boolean],
+               allowsUpload: Option[Boolean]) =
+    DataStore(
+      name,
+      url,
+      publicUrl,
+      key,
+      isScratch.getOrElse(false),
+      isDeleted = false,
+      isForeign.getOrElse(false),
+      isConnector.getOrElse(false),
+      allowsUpload.getOrElse(true)
+    )
 
   def fromUpdateForm(name: String,
                      url: String,
                      publicUrl: String,
                      isScratch: Option[Boolean],
                      isForeign: Option[Boolean],
-                     isConnector: Option[Boolean]) =
-    fromForm(name, url, publicUrl, "", isScratch, isForeign, isConnector)
+                     isConnector: Option[Boolean],
+                     allowsUpload: Option[Boolean]): DataStore =
+    fromForm(name, url, publicUrl, "", isScratch, isForeign, isConnector, allowsUpload)
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext)
@@ -63,11 +69,12 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO)(implicit ec: Execut
         "url" -> dataStore.publicUrl,
         "isForeign" -> dataStore.isForeign,
         "isScratch" -> dataStore.isScratch,
-        "isConnector" -> dataStore.isConnector
+        "isConnector" -> dataStore.isConnector,
+        "allowsUpload" -> dataStore.allowsUpload
       ))
 
-  def validateAccess[A](name: String)(block: (DataStore) => Future[Result])(implicit request: Request[A],
-                                                                            m: MessagesProvider): Fox[Result] =
+  def validateAccess[A](name: String)(block: DataStore => Future[Result])(implicit request: Request[A],
+                                                                          m: MessagesProvider): Fox[Result] =
     (for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       key <- request.getQueryString("key").toFox
@@ -94,7 +101,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isscratch,
         r.isdeleted,
         r.isforeign,
-        r.isconnector
+        r.isconnector,
+        r.allowsupload
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -120,8 +128,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def insertOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector)
-                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector})""")
+        sqlu"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, isForeign, isConnector, allowsUpload)
+                             values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
     } yield ()
 
   def deleteOneByName(name: String) =
@@ -132,7 +140,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def updateOne(d: DataStore) =
     for {
       _ <- run(
-        sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isForeign = ${d.isForeign}, isConnector = ${d.isConnector} where name = ${d.name}""")
+        sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isForeign = ${d.isForeign}, isConnector = ${d.isConnector}, allowsUpload = ${d.allowsUpload} where name = ${d.name}""")
     } yield ()
 
 }

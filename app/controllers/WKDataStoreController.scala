@@ -55,6 +55,9 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
+            _ <- Fox.successful(
+              logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
+                s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
             existingIds <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
             _ <- dataSetService.deactivateUnreportedDataSources(existingIds, dataStore)(GlobalAccessContext)
           } yield {

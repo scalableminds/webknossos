@@ -42,17 +42,18 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
 
-    ZipIO.withUnziped(file) { (filename, fileStream) => {
-      val tempFile = temporaryFileCreator.create(filename.toString)
-      Files.copy(fileStream, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
-      if (filename.toString.endsWith(".nml")) {
-        val result = extractFromNml(tempFile, filename.toString, overwritingDataSetName)
-        parseResults ::= (if (useZipName) result.withName(name) else result)
-      } else {
+    ZipIO.withUnziped(file) { (filename, fileStream) =>
+      {
+        val tempFile = temporaryFileCreator.create(filename.toString)
+        Files.copy(fileStream, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
+        if (filename.toString.endsWith(".nml")) {
+          val result = extractFromNml(tempFile, filename.toString, overwritingDataSetName)
+          parseResults ::= (if (useZipName) result.withName(name) else result)
+        } else {
 
-        otherFiles += (filename.toString -> tempFile)
+          otherFiles += (filename.toString -> tempFile)
+        }
       }
-    }
     }
     ZipParseResult(parseResults, otherFiles)
   }

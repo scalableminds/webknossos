@@ -6,7 +6,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  NodeDefaults,
+  SkeletonTracingDefaults,
+  TreeValidator
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -15,10 +19,21 @@ import io.apigee.trireme.core.NodeEnvironment
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
 import play.api.i18n.{Messages, MessagesProvider}
+import sys.process._
 
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging with ProtoGeometryImplicits {
+trait TimeMeasurement extends LazyLogging {
+  def time[R](label: String)(block: => R): R = {
+    val t0 = System.nanoTime()
+    val result = block
+    val t1 = System.nanoTime()
+    logger.info(s"$label took ${(t1 - t0) / 1000} µs")
+    result
+  }
+}
+
+object NmlParser extends LazyLogging with ProtoGeometryImplicits with TimeMeasurement {
 
   val DEFAULT_TIME = 0L
 
@@ -36,19 +51,29 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(name: String, nmlFile: File, overwritingDataSetName: Option[String]):
-  Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
+  def parse(name: String, nmlFile: File, overwritingDataSetName: Option[String])
+    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
+    val useTrireme = false
 
-    val nodeEnv = new NodeEnvironment()
-    nodeEnv.setDefaultNodeVersion("0.12.7")
-    val script = nodeEnv.createScript(
-      "nml_parser_wrapper.js",
-      new File("tools/nml/nml_parser_wrapper.js"),
-      Array(nmlFile.getAbsolutePath)
+    if (useTrireme) {
+      val nodeEnv = new NodeEnvironment()
+      nodeEnv.setDefaultNodeVersion("0.12.7")
+      val script = nodeEnv.createScript(
+        "nml_parser_wrapper.js",
+        new File("tools/nml/nml_parser_wrapper.js"),
+        Array(nmlFile.getAbsolutePath)
+      )
+      val status = script.execute().get()
+      logger.info(s"script returned status $status")
+    } else {
+      val nodeExecResult = time("nmlParsing") {
+        Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
+                None,
+                "NODE_PATH" -> "public/test-bundle") !!
+      }
 
-    )
-    val status = script.execute().get()
-    logger.info(s"script returned status $status")
+      logger.info(s"node exec result: $nodeExecResult")
+    }
 
     Failure("Not implemented")
   }

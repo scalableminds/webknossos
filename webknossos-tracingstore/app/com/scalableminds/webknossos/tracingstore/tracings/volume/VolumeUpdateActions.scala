@@ -13,7 +13,8 @@ case class UpdateBucketVolumeAction(position: Point3D,
                                     zoomStep: Int,
                                     base64Data: String,
                                     actionTimestamp: Option[Long] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    isLz4Compressed: Option[Boolean] = None)
     extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 

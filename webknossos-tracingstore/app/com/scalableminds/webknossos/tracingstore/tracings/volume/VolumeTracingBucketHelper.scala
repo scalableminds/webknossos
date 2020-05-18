@@ -1,10 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import java.util.Base64
+
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
@@ -22,12 +23,20 @@ trait VolumeBucketCompression extends LazyLogging {
   val compressor: LZ4Compressor = lz4factory.fastCompressor
   val decompressor: LZ4FastDecompressor = lz4factory.fastDecompressor
 
-  def compressVolumeBucket(data: Array[Byte]): Array[Byte] = {
-    val compressedData = compressor.compress(data)
-    if (compressedData.length < data.length) {
-      compressedData
-    } else data
-  }
+  def compressVolumeBucket(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
+    if (data.length == expectedUncompressedBucketSize) {
+      val compressedData = compressor.compress(data)
+      if (compressedData.length < data.length) {
+        logger.info(
+          s"compressed data (${compressedData.length} bytes, originally $expectedUncompressedBucketSize): ${Base64.getEncoder
+            .encodeToString(compressedData)}")
+        compressedData
+      } else data
+    } else {
+      // assume already compressed
+      logger.info("Assuming already compressed")
+      data
+    }
 
   def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
     if (data.length == expectedUncompressedBucketSize) {
@@ -81,7 +90,7 @@ trait VolumeTracingBucketHelper
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.put(key, version, compressVolumeBucket(data))
+    volumeDataStore.put(key, version, compressVolumeBucket(data, expectedUncompressedBucketSizeFor(dataLayer)))
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer,

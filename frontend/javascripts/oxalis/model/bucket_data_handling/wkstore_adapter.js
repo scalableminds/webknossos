@@ -18,6 +18,7 @@ import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import lz4 from "lz4js";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
@@ -187,6 +188,12 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
       getResolutions(Store.getState().dataset),
     );
     const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    console.log("sendToStore");
+    const compressed = lz4.compress(byteArray);
+    // eslint-disable-next-line no-await-in-loop
+    const compressedBase64 = await byteArrayToBase64(compressed);
+    console.log("frontend uncompressed length: ", byteArray.length, " bytes");
+    console.log("frontend compressed (", compressed.length, " bytes): ", compressedBase64);
     // eslint-disable-next-line no-await-in-loop
     const base64 = await byteArrayToBase64(byteArray);
     items.push(updateBucket(bucketInfo, base64));

@@ -199,9 +199,9 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
 function compressLz4Block(data: Uint8Array): Uint8Array {
   // backend expects the frame-less version of lz4,
   // so we need to call lz4.compressBlock rather than compress
-  let hashSize = 1 << 16;
-  let hashTable = new Uint32Array(hashSize);
-  let compressedBuffer = new Uint8Array(data.length);
+  const hashSize = 1 << 16;
+  const hashTable = new Uint32Array(hashSize);
+  const compressedBuffer = new Uint8Array(data.length);
   const compressedSize = lz4.compressBlock(data, compressedBuffer, 0, data.length, hashTable);
   return compressedBuffer.slice(0, compressedSize);
 }

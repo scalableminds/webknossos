@@ -87,7 +87,6 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
       const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
         action.tracing.userBoundingBoxes,
-        action.tracing.userBoundingBox,
       );
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,

@@ -648,12 +648,12 @@ export async function getTracingForAnnotationType(
   );
 
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
-  // The tracing id is not contained in the server tracing, but in the annotation content
-  if(tracing.hasOwnProperty("userBoundingBox")) {
-    tracing.userBoundingBoxes.push({id: 0, boundingBox: tracing.userBoundingBox });
+  // The tracing id is not contained in the server tracing, but in the annotation content.
+  tracing.id = tracingId;
+  if (tracing.userBoundingBox != null) {
+    tracing.userBoundingBoxes.push({ id: 0, boundingBox: tracing.userBoundingBox });
     delete tracing.userBoundingBox;
   }
-  tracing.id = tracingId;
   return tracing;
 }
 

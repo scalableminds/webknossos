@@ -31,7 +31,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       const maxCellId = action.tracing.largestSegmentId;
       const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
         action.tracing.userBoundingBoxes,
-        action.tracing.userBoundingBox,
       );
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,

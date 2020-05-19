@@ -42,7 +42,6 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "libs/user_settings.schema";
-import { addNewUserBoundingBoxToArray } from "oxalis/model/reducers/reducer_helpers";
 import Constants, {
   type ControlMode,
   ControlModeEnum,
@@ -125,10 +124,17 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   handleAddNewUserBoundingBox = () => {
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
     const datasetBoundingBox = getDatasetExtentInVoxel(this.props.dataset);
-    const updatedUserBoundingBoxes = addNewUserBoundingBoxToArray(
-      userBoundingBoxes,
-      Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
-    );
+    // We use the default of -1 to get the id 0 for the first user bounding box.
+    const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+    const boundingBoxId = highestBoundingBoxId + 1;
+    const newUserBoundingBox = {
+      boundingBox: Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
+      id: boundingBoxId,
+      name: `user bounding box ${boundingBoxId}`,
+      color: Utils.getRandomColor(),
+      isVisible: true,
+    };
+    const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
     this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
   };
 

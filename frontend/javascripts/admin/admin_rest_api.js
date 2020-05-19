@@ -651,7 +651,12 @@ export async function getTracingForAnnotationType(
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
   if (tracing.userBoundingBox != null) {
-    tracing.userBoundingBoxes.push({ id: 0, boundingBox: tracing.userBoundingBox });
+    const oldBoundingBox = tracing.userBoundingBox;
+    const oldBoundingBoxId = Math.max(-1, ...tracing.userBoundingBoxes.map(bb => bb.id)) + 1;
+    tracing.userBoundingBoxes.push({
+      id: oldBoundingBoxId,
+      boundingBox: oldBoundingBox,
+    });
     delete tracing.userBoundingBox;
   }
   return tracing;

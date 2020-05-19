@@ -4,6 +4,7 @@ import _ from "lodash";
 
 import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { byteArrayToLz4Base64 } from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -47,7 +48,7 @@ mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestWithFallback, sendToStore, compressLz4Block } = mockRequire.reRequire(
+const { requestWithFallback, sendToStore } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 
@@ -206,8 +207,6 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const getBucketData = sinon.stub();
   getBucketData.returns(mockData);
 
-  const compressAndEncodeData = data => Base64.fromByteArray(compressLz4Block(data));
-
   const expectedSaveQueueItems = {
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
     items: [
@@ -217,7 +216,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [0, 0, 0],
           zoomStep: 0,
           cubeSize: 32,
-          base64Data: compressAndEncodeData(mockData),
+          base64Data: byteArrayToLz4Base64(mockData),
         },
       },
       {
@@ -226,7 +225,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [64, 64, 64],
           zoomStep: 1,
           cubeSize: 32,
-          base64Data: compressAndEncodeData(mockData),
+          base64Data: byteArrayToLz4Base64(mockData),
         },
       },
     ],

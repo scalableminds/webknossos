@@ -13,15 +13,14 @@ import {
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
-import lz4 from "lz4js";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
-const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
+const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
 
 export const REQUEST_TIMEOUT = 30000;
 
@@ -188,20 +187,9 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
       getResolutions(Store.getState().dataset),
     );
     const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    const compressed = compressLz4Block(byteArray);
     // eslint-disable-next-line no-await-in-loop
-    const compressedBase64 = await byteArrayToBase64(compressed);
+    const compressedBase64 = await byteArrayToLz4Base64(byteArray);
     items.push(updateBucket(bucketInfo, compressedBase64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
-}
-
-export function compressLz4Block(data: Uint8Array): Uint8Array {
-  // backend expects the frame-less version of lz4,
-  // so we need to call lz4.compressBlock rather than compress
-  const hashSize = 1 << 16;
-  const hashTable = new Uint32Array(hashSize);
-  const compressedBuffer = new Uint8Array(data.length);
-  const compressedSize = lz4.compressBlock(data, compressedBuffer, 0, data.length, hashTable);
-  return compressedBuffer.slice(0, compressedSize);
 }

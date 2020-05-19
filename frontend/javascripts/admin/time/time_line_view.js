@@ -162,9 +162,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
       return;
     }
 
-    // for same day use start and end timestamps
-    const dateRange = dates[0].isSame(dates[1], "day")
-      ? [dates[0].startOf("day"), dates[1].endOf("day")]
+    // Force an interval of at least one minute.
+    const dateRange = dates[0].isSame(dates[1], "minute")
+      ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
 
     await this.setState({ dateRange });
@@ -300,6 +300,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
+                  showTime={{ format: "HH:mm" }}
+                  format="YYYY-MM-DD HH:mm"
                   allowClear={false}
                   style={{ width: "100%" }}
                   value={dateRange}

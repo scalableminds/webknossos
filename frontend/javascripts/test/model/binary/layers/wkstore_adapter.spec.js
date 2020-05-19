@@ -1,5 +1,4 @@
 // @noflow
-import Base64 from "base64-js";
 import _ from "lodash";
 
 import "test/model/binary/layers/wkstore_adapter.mock.js";

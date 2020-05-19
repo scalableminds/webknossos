@@ -77,7 +77,7 @@ In order to restore the current window, a reload is necessary.`,
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
   "tracing.unhandled_initialization_error":
-    "Unfortunately, an error occurred during initialization. Please reload the page and try again. This might fix the error.",
+    "Initialization error. Please refresh the page to retry. If the error persists, please contact an administrator.",
   "tracing.out_of_dataset_bounds":
     "The current position is outside of the dataset's bounding box. No data will be shown here.",
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",

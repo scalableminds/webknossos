@@ -38,6 +38,11 @@ type SetUserBoundingBoxes = {
   userBoundingBoxes: Array<UserBoundingBox>,
 };
 
+type AddUserBoundingBoxes = {
+  type: "ADD_USER_BOUNDING_BOXES",
+  userBoundingBoxes: Array<UserBoundingBox>,
+};
+
 export type UpdateRemoteMeshMetaDataAction = {
   type: "UPDATE_REMOTE_MESH_METADATA",
   id: string,
@@ -88,6 +93,7 @@ export type AnnotationActionTypes =
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
   | SetUserBoundingBoxes
+  | AddUserBoundingBoxes
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
@@ -133,6 +139,13 @@ export const setUserBoundingBoxesAction = (
   userBoundingBoxes: Array<UserBoundingBox>,
 ): SetUserBoundingBoxes => ({
   type: "SET_USER_BOUNDING_BOXES",
+  userBoundingBoxes,
+});
+
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+): AddUserBoundingBoxes => ({
+  type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes,
 });
 

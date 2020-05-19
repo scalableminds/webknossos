@@ -255,6 +255,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
+  "nml.incomplete_bounds": "NML contains <userBoundingBox ...> with incomplete bounds properties.",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",

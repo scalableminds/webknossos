@@ -1,14 +1,33 @@
 // @flow
 
 import update from "immutability-helper";
+import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { type StateShape1, updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reducers/reducer_helpers";
 
 const updateTracing = (state: OxalisState, shape: StateShape1<"tracing">): OxalisState =>
   updateKey(state, "tracing", shape);
+
+const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<UserBoundingBox>) => {
+  const updaterObject = {
+    userBoundingBoxes: {
+      $set: userBoundingBoxes,
+    },
+  };
+  const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
+  const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
+  const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
+  return update(state, {
+    tracing: {
+      ...maybeSkeletonUpdater,
+      ...maybeVolumeUpdater,
+      ...maybeReadOnlyUpdater,
+    },
+  });
+};
 
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -43,21 +62,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_USER_BOUNDING_BOXES": {
-      const updaterObject = {
-        userBoundingBoxes: {
-          $set: action.userBoundingBoxes,
-        },
-      };
-      const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
-      const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
-      const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};
-      return update(state, {
-        tracing: {
-          ...maybeSkeletonUpdater,
-          ...maybeVolumeUpdater,
-          ...maybeReadOnlyUpdater,
-        },
-      });
+      return updateUserBoundingBoxes(state, action.userBoundingBoxes);
+    }
+
+    case "ADD_USER_BOUNDING_BOXES": {
+      const tracing = state.tracing.skeleton || state.tracing.volume || state.tracing.readOnly;
+      if (tracing == null) {
+        return state;
+      }
+      const mergedUserBoundingBoxes = _.unionWith(
+        tracing.userBoundingBoxes,
+        action.userBoundingBoxes,
+        _.isEqual,
+      );
+      return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 
     case "UPDATE_LOCAL_MESH_METADATA":

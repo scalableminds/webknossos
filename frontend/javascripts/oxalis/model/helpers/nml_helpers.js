@@ -28,7 +28,10 @@ import type {
 import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 import messages from "messages";
-import { computeArrayFromBoundingBox } from "libs/utils";
+import {
+  computeArrayFromBoundingBox,
+  computeBoundingBoxTypeFromBoundingBoxObject,
+} from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
@@ -41,6 +44,7 @@ const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
 const DEFAULT_RADIUS = 30;
+const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
 // SERIALIZE NML
 
@@ -540,7 +544,12 @@ export function wrapInNewGroup(
 
 export function parseNml(
   nmlString: string,
-): Promise<{ trees: MutableTreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
+): Promise<{
+  trees: MutableTreeMap,
+  treeGroups: Array<TreeGroup>,
+  userBoundingBoxes: Array<UserBoundingBox>,
+  datasetName: ?string,
+}> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
@@ -553,6 +562,7 @@ export function parseNml(
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
     const nodeIdToTreeId = {};
+    const userBoundingBoxes = [];
     let datasetName = null;
     parser
       .on("tagopen", node => {
@@ -690,6 +700,44 @@ export function parseNml(
             }
             break;
           }
+          case "userBoundingBox": {
+            const userBoundingBoxId = _parseInt(attr, "id");
+            const boundingBoxObject = {
+              topLeft: [
+                _parseInt(attr, "topLeftX"),
+                _parseInt(attr, "topLeftY"),
+                _parseInt(attr, "topLeftZ"),
+              ],
+              width: _parseInt(attr, "width"),
+              height: _parseInt(attr, "height"),
+              depth: _parseInt(attr, "depth"),
+            };
+            if (
+              boundingBoxObject.topLeft[0] == null ||
+              boundingBoxObject.topLeft[1] == null ||
+              boundingBoxObject.topLeft[2] == null ||
+              boundingBoxObject.width == null ||
+              boundingBoxObject.height == null ||
+              boundingBoxObject.depth == null
+            ) {
+              throw new NmlParseError(
+                `${messages["nml.incomplete_bounds"]} User bounding box id: ${userBoundingBoxId}.`,
+              );
+            }
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxTypeFromBoundingBoxObject(boundingBoxObject),
+              color: [
+                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
+                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
+                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
+              ],
+              id: userBoundingBoxId,
+              isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
+              name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
           default:
             break;
         }
@@ -740,7 +788,7 @@ export function parseNml(
             }
           }
         }
-        resolve({ trees, treeGroups, datasetName });
+        resolve({ trees, treeGroups, datasetName, userBoundingBoxes });
       })
       .on("error", reject);
 

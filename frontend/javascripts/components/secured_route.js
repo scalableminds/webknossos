@@ -29,7 +29,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    if (this.props.serverAuthenticationCallback != null) {
+    if (!this.props.isAuthenticated && this.props.serverAuthenticationCallback != null) {
       const isAdditionallyAuthenticated = await this.props.serverAuthenticationCallback({
         match: this.props.computedMatch,
         location: this.props.location,

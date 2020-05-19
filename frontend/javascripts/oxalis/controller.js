@@ -57,12 +57,17 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
-type State = {};
+type State = {
+  gotUnhandledError: boolean,
+};
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   isMounted: boolean;
+  state = {
+    gotUnhandledError: false,
+  };
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -110,6 +115,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         this.props.setControllerStatus("failedLoading");
         // Don't throw errors for errors already handled by the model.
         if (error !== HANDLED_ERROR) {
+          Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
+            sticky: true,
+          });
+          this.setState({ gotUnhandledError: true });
           throw error;
         }
       });
@@ -275,6 +284,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   render() {
     const status = this.props.controllerStatus;
     const { user, viewMode } = this.props;
+    const { gotUnhandledError } = this.state;
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
@@ -282,7 +292,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         <BrainSpinner
           message={
             <div style={{ textAlign: "center" }}>
-              Either the dataset does not exist or you do not have the necessary access rights.
+              {gotUnhandledError
+                ? messages["tracing.unhandled_initialization_error"]
+                : "Either the dataset does not exist or you do not have the necessary access rights."}
               <br />
               <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
                 <Button type="primary">Return to dashboard</Button>

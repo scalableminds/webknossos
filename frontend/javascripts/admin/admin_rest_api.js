@@ -1228,18 +1228,14 @@ type IsosurfaceRequest = {
 };
 
 export function computeIsosurface(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
+  requestUrl: string,
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
   const { position, zoomStep, segmentId, voxelDimensions, cubeSize } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      /*/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-      }*/
-      `${datastoreUrl}/tracings/volume/7e9e66d6-3efa-4a91-9b0a-87c4b2958166/isosurface?token=${token}`,
+      `${requestUrl}/isosurface?token=${token}`,
       {
         data: {
           // The back-end needs a small padding at the border of the

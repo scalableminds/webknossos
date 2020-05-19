@@ -194,7 +194,8 @@ class SceneController {
       this.isosurfacesRootGroup.add(newGroup);
       newGroup.cellId = segmentationId;
     }
-    this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
+    // this.isosurfacesGroupsPerSegmentationId[segmentationId].add(mesh);
+    this.rootNode.add(mesh);
   }
 
   removeIsosurfaceById(segmentationId: number): void {

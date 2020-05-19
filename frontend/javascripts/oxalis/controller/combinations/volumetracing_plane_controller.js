@@ -36,6 +36,7 @@ import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/acti
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
+import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;
@@ -174,6 +175,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         if (isAutomaticBrushEnabled()) {
           Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }
+        isosurfaceLeftClick(pos, plane, event);
       }
     },
 

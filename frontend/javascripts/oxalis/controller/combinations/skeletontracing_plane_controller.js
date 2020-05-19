@@ -42,6 +42,7 @@ import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
+import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -66,7 +67,7 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
+      onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const { volume } = Store.getState().tracing;
       if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
@@ -130,8 +131,9 @@ function onClick(
   ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
+  event?: MouseEvent,
 ): void {
-  if (!shiftPressed && !isTouch) {
+  if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
     // do nothing
     return;
   }
@@ -177,6 +179,8 @@ function onClick(
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
     }
+  } else if (ctrlPressed && event != null) {
+    isosurfaceLeftClick(position, plane, event);
   }
 }
 

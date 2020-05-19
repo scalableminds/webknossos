@@ -6,7 +6,7 @@ import {
   changeActiveIsosurfaceCellAction,
   type ChangeActiveIsosurfaceCellAction,
 } from "oxalis/model/actions/segmentation_actions";
-import { ControlModeEnum, type Vector3 } from "oxalis/constants";
+import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import type {
   ImportIsosurfaceFromStlAction,
@@ -128,22 +128,19 @@ function* ensureSuitableIsosurface(
   maybeFlycamAction: ?FlycamAction,
   seedPosition?: Vector3,
 ): Saga<void> {
-  const segmentId = yield* call(getCurrentCellId);
+  const segmentId = currentViewIsosurfaceCellId;
   if (segmentId === 0) {
     return;
   }
-  const renderIsosurfaces = true; // yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  const isControlModeSupported = true; /* yield* select(
-    state =>
-      state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces,
-  ); */
-  if (!renderIsosurfaces || !isControlModeSupported) {
+  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
+  if (!renderIsosurfaces) {
     return;
   }
   const dataset = yield* select(state => state.dataset);
+  const volumeTracing = yield* select(state => state.tracing.volume);
   const layer = Model.getSegmentationLayer();
-  if (!layer) {
-    // return;
+  if (!layer || (volumeTracing != null && volumeTracing.fallbackLayer != null)) {
+    return;
   }
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
@@ -218,11 +215,18 @@ function* maybeLoadIsosurface(
 
   const voxelDimensions = window.__isosurfaceVoxelDimensions || [4, 4, 4];
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
+  const tracingStoreHost = yield* select(state => state.tracing.tracingStore.url);
+
+  const dataStoreUrl = `${dataStoreHost}/data/datasets/${dataset.owningOrganization}/${
+    dataset.name
+  }/layers/${layer.fallbackLayer != null ? layer.fallbackLayer : layer.name}`;
+  const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
+
+  const volumeTracing = yield* select(state => state.tracing.volume);
 
   const { buffer: responseBuffer, neighbors } = yield* call(
     computeIsosurface,
-    dataStoreHost,
-    dataset,
+    volumeTracing == null ? dataStoreUrl : tracingStoreUrl,
     layer,
     {
       position: clippedPosition,
@@ -293,10 +297,7 @@ function* removeIsosurface(action: RemoveIsosurfaceAction): Saga<void> {
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
-  yield _takeEvery(
-    ["CHANGE_ACTIVE_ISOSURFACE_CELL", "SET_ACTIVE_CELL"],
-    changeActiveIsosurfaceCell,
-  );
+  yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);

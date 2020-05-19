@@ -269,7 +269,7 @@ class MappingInfoView extends React.Component<Props, State> {
         <React.Fragment>
           {title}{" "}
           <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
-            <Icon type="info-circle" style={{ color: "rgb(255, 155, 85)" }} />
+            <Icon type="warning" style={{ color: "rgb(255, 155, 85)" }} />
           </Tooltip>
         </React.Fragment>
       ) : (

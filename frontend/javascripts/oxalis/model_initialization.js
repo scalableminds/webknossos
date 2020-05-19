@@ -295,8 +295,8 @@ function initializeDataset(
     dataSet: dataset.dataSource.id.name,
   });
 
-  // Here we add the originalElementClass property to the segmentation layer if it exists.
-  // We also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
+  // Add the originalElementClass property to the segmentation layer if it exists.
+  // Also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
   const updatedDataLayers = dataset.dataSource.dataLayers.map(dataLayer => {
     const { elementClass } = dataLayer;
     if (dataLayer.category === "segmentation") {
@@ -310,7 +310,7 @@ function initializeDataset(
       return dataLayer;
     }
   });
-  // $FlowFixMe we assign the adjusted dataset layers, although this property is not writable.
+  // $FlowFixMe assigning the adjusted dataset layers, although this property is not writable.
   dataset.dataSource.dataLayers = updatedDataLayers;
 
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
@@ -452,13 +452,9 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
-  // We do not adjust the elementClass here if it is uint64, because uint64 volume tracings are not supported.
-  // Not adjusting the elementClass will cause the later check for supported layer element classes to fail
-  // if the segmentation of type uint64.
   const tracingLayer = {
     name: tracing.id,
     elementClass: tracing.elementClass,
-    originalElementClass: tracing.elementClass,
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),

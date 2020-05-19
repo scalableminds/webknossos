@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import java.util.Base64
-
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -27,14 +25,10 @@ trait VolumeBucketCompression extends LazyLogging {
     if (data.length == expectedUncompressedBucketSize) {
       val compressedData = compressor.compress(data)
       if (compressedData.length < data.length) {
-        logger.info(
-          s"compressed data (${compressedData.length} bytes, originally $expectedUncompressedBucketSize): ${Base64.getEncoder
-            .encodeToString(compressedData)}")
         compressedData
       } else data
     } else {
       // assume already compressed
-      logger.info("Assuming already compressed")
       data
     }
 

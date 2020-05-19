@@ -179,6 +179,12 @@ function sliceBufferIntoPieces(
   return bucketBuffers;
 }
 
+function toHexString(byteArray) {
+  return Array.from(byteArray, function(byte) {
+    return ("0" + (byte & 0xff).toString(16)).slice(-2);
+  }).join("");
+}
+
 export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const items = [];
   for (const bucket of batch) {
@@ -188,15 +194,18 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
       getResolutions(Store.getState().dataset),
     );
     const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-    console.log("sendToStore");
-    const compressed = lz4.compress(byteArray);
+    const compressed = compressLz4Block(byteArray);
     // eslint-disable-next-line no-await-in-loop
     const compressedBase64 = await byteArrayToBase64(compressed);
-    console.log("frontend uncompressed length: ", byteArray.length, " bytes");
-    console.log("frontend compressed (", compressed.length, " bytes): ", compressedBase64);
-    // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(byteArray);
-    items.push(updateBucket(bucketInfo, base64));
+    items.push(updateBucket(bucketInfo, compressedBase64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
+}
+
+function compressLz4Block(data: Uint8Array): Uint8Array {
+  let hashSize = 1 << 16;
+  let hashTable = new Uint32Array(hashSize);
+  let compressedBuffer = new Uint8Array(data.length);
+  const compressedSize = lz4.compressBlock(data, compressedBuffer, 0, data.length, hashTable);
+  return compressedBuffer.slice(0, compressedSize);
 }

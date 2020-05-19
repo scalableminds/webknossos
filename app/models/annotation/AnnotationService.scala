@@ -166,11 +166,12 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   }
 
   def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Annotation] =
     for {
-      dataSet <- dataSetDAO.findOne(_dataSet)
+      dataSet <- dataSetDAO.findOne(_dataSet) ?~> "dataSet.noAccessById"
       dataSource <- dataSetService.dataSourceFor(dataSet)
-      usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
+      usableDataSource <- dataSource.toUsable ?~> Messages("dataSet.notImported", dataSource.id.name)
       tracingIds <- createTracings(dataSet, usableDataSource, tracingType, withFallback)
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(

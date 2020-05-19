@@ -197,15 +197,15 @@ test.serial(
 );
 
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
-  const mockData = new Uint8Array(2);
+  const data = new Uint8Array(2);
   const bucket1 = new DataBucket("uint8", [0, 0, 0, 0], null);
-  bucket1.data = mockData;
+  bucket1.data = data;
   const bucket2 = new DataBucket("uint8", [1, 1, 1, 1], null);
-  bucket2.data = mockData;
+  bucket2.data = data;
   const batch = [bucket1, bucket2];
 
   const getBucketData = sinon.stub();
-  getBucketData.returns(mockData);
+  getBucketData.returns(data);
 
   const expectedSaveQueueItems = {
     type: "PUSH_SAVE_QUEUE_TRANSACTION",
@@ -216,7 +216,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [0, 0, 0],
           zoomStep: 0,
           cubeSize: 32,
-          base64Data: byteArrayToLz4Base64(mockData),
+          base64Data: byteArrayToLz4Base64(data),
         },
       },
       {
@@ -225,7 +225,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [64, 64, 64],
           zoomStep: 1,
           cubeSize: 32,
-          base64Data: byteArrayToLz4Base64(mockData),
+          base64Data: byteArrayToLz4Base64(data),
         },
       },
     ],

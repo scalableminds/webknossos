@@ -70,10 +70,20 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       if (tracing == null) {
         return state;
       }
+      let highestBoundingBoxId = Math.max(-1, ...tracing.userBoundingBoxes.map(bb => bb.id));
+      const additionalUserBoundingBoxes = action.userBoundingBoxes.map(bb => {
+        highestBoundingBoxId++;
+        return { ...bb, id: highestBoundingBoxId };
+      });
+      // Here we merge the existing user bounding boxes with the new ones.
+      // User bounding boxes with the same bounds, name and color are considered equal.
       const mergedUserBoundingBoxes = _.unionWith(
         tracing.userBoundingBoxes,
-        action.userBoundingBoxes,
-        _.isEqual,
+        additionalUserBoundingBoxes,
+        (bb: UserBoundingBox, otherBB: UserBoundingBox) =>
+          _.isEqual(bb.boundingBox, otherBB.boundingBox) &&
+          bb.name === otherBB.name &&
+          _.isEqual(bb.color, otherBB.color),
       );
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }

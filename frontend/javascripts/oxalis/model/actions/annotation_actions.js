@@ -8,7 +8,7 @@ import type {
 } from "admin/api_flow_types";
 import type { UserBoundingBox } from "oxalis/store";
 
-type InitializeAnnotation = {
+type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
   annotation: APIAnnotation,
 };
@@ -33,12 +33,12 @@ type SetAnnotationAllowUpdateAction = {
   allowUpdate: boolean,
 };
 
-type SetUserBoundingBoxes = {
+type SetUserBoundingBoxesAction = {
   type: "SET_USER_BOUNDING_BOXES",
   userBoundingBoxes: Array<UserBoundingBox>,
 };
 
-type AddUserBoundingBoxes = {
+type AddUserBoundingBoxesAction = {
   type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes: Array<UserBoundingBox>,
 };
@@ -86,14 +86,14 @@ export type RemoveIsosurfaceAction = {
 };
 
 export type AnnotationActionTypes =
-  | InitializeAnnotation
+  | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
-  | SetUserBoundingBoxes
-  | AddUserBoundingBoxes
+  | SetUserBoundingBoxesAction
+  | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
@@ -102,7 +102,9 @@ export type AnnotationActionTypes =
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction;
 
-export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
+export const initializeAnnotationAction = (
+  annotation: APIAnnotation,
+): InitializeAnnotationAction => ({
   type: "INITIALIZE_ANNOTATION",
   annotation,
 });
@@ -137,14 +139,14 @@ export const setAnnotationAllowUpdateAction = (
 // the tracing, hence no ANNOTATION in the action type.
 export const setUserBoundingBoxesAction = (
   userBoundingBoxes: Array<UserBoundingBox>,
-): SetUserBoundingBoxes => ({
+): SetUserBoundingBoxesAction => ({
   type: "SET_USER_BOUNDING_BOXES",
   userBoundingBoxes,
 });
 
 export const addUserBoundingBoxesAction = (
   userBoundingBoxes: Array<UserBoundingBox>,
-): AddUserBoundingBoxes => ({
+): AddUserBoundingBoxesAction => ({
   type: "ADD_USER_BOUNDING_BOXES",
   userBoundingBoxes,
 });

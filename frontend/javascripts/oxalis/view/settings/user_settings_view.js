@@ -17,6 +17,7 @@ import {
   NumberSliderSetting,
   SwitchSetting,
   UserBoundingBoxInput,
+  type UserBoundingBoxInputUpdate,
 } from "oxalis/view/settings/setting_input_views";
 import type { UserConfiguration, OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
 import {
@@ -97,13 +98,10 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
 
   handleChangeUserBoundingBox = (
     id: number,
-    newBoundingBoxAsVector?: Vector6,
-    newName?: string,
-    newColor?: Vector3,
-    isVisible?: boolean,
+    { boundingBox, name, color, isVisible }: UserBoundingBoxInputUpdate,
   ) => {
-    const maybeUpdatedBoundingBox = newBoundingBoxAsVector
-      ? Utils.computeBoundingBoxFromArray(newBoundingBoxAsVector)
+    const maybeUpdatedBoundingBox = boundingBox
+      ? Utils.computeBoundingBoxFromArray(boundingBox)
       : undefined;
     const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
 
@@ -112,8 +110,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         ? {
             ...bb,
             boundingBox: maybeUpdatedBoundingBox || bb.boundingBox,
-            name: newName != null ? newName : bb.name,
-            color: newColor || bb.color,
+            name: name != null ? name : bb.name,
+            color: color || bb.color,
             isVisible: isVisible != null ? isVisible : bb.isVisible,
           }
         : bb,
@@ -128,7 +126,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
     const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
     const boundingBoxId = highestBoundingBoxId + 1;
     const newUserBoundingBox = {
-      boundingBox: Utils.computeBoundingBoxTypeFromBoundingBoxObject(datasetBoundingBox),
+      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(datasetBoundingBox),
       id: boundingBoxId,
       name: `user bounding box ${boundingBoxId}`,
       color: Utils.getRandomColor(),

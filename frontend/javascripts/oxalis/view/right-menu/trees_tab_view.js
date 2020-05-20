@@ -207,9 +207,9 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // Dispatch the actual actions as the very last step, so that
     // not a single store mutation happens if something above throws
     // an error
-    _.flatten(importActionsWithDatasetNames.map(el => el.importActions)).forEach(action =>
-      Store.dispatch(action),
-    );
+    importActionsWithDatasetNames
+      .flatMap(el => el.importActions)
+      .forEach(action => Store.dispatch(action));
   } catch (e) {
     (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
   }

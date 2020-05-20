@@ -155,10 +155,6 @@ export function getRandomColor(): Vector3 {
   return ((randomColor: any): Vector3);
 }
 
-export function addIdToArrayElements<T>(bboxes: Array<T>): Array<T & { id: number }> {
-  return bboxes.map((bb, index) => ({ ...bb, id: index }));
-}
-
 export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   const [x, y, z, width, height, depth] = bb;
 
@@ -167,15 +163,11 @@ export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
     max: [x + width, y + height, z + depth],
   };
 }
-export function computeBoundingBoxTypeFromBoundingBoxObject(
-  bb: BoundingBoxObject,
-): BoundingBoxType {
+export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
   return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
 }
 
-export function computeBoundingBoxObjectFromBoundingBoxType(
-  bb: BoundingBoxType,
-): BoundingBoxObject {
+export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
   const boundingBoxArray = computeArrayFromBoundingBox(bb);
   return {
     topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],

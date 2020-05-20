@@ -1,7 +1,11 @@
 // @flow
 import Maybe from "data.maybe";
 
-import type { APIAnnotation, ServerBoundingBox, ServerUserBoundingBox } from "admin/api_flow_types";
+import type {
+  APIAnnotation,
+  ServerBoundingBox,
+  UserBoundingBoxFromServer,
+} from "admin/api_flow_types";
 import type {
   Annotation,
   BoundingBoxObject,
@@ -13,9 +17,7 @@ import type { BoundingBoxType } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 
-function convertServerBoundingBoxToMinMaxBoundingBox(
-  boundingBox: ServerBoundingBox,
-): BoundingBoxType {
+function convertServerBoundingBoxToBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxType {
   return Utils.computeBoundingBoxFromArray(
     Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
       boundingBox.width,
@@ -29,16 +31,16 @@ export function convertServerBoundingBoxToFrontend(
   boundingBox: ?ServerBoundingBox,
 ): ?BoundingBoxType {
   return Maybe.fromNullable(boundingBox)
-    .map(bb => convertServerBoundingBoxToMinMaxBoundingBox(bb))
+    .map(bb => convertServerBoundingBoxToBoundingBox(bb))
     .getOrElse(null);
 }
 
 export function convertUserBoundingBoxesFromServerToFrontend(
-  boundingBoxes: Array<ServerUserBoundingBox>,
+  boundingBoxes: Array<UserBoundingBoxFromServer>,
 ): Array<UserBoundingBox> {
   return boundingBoxes.map(bb => {
     const { color, id, name, isVisible, boundingBox } = bb;
-    const convertedBoundingBox = convertServerBoundingBoxToMinMaxBoundingBox(boundingBox);
+    const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
     return {
       boundingBox: convertedBoundingBox,
       color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
@@ -54,13 +56,10 @@ export function convertUserBoundingBoxesFromFrontendToServer(
 ): Array<UserBoundingBoxToServer> {
   // The exact spreading is needed for flow to grasp that the conversion is correct.
   return boundingBoxes.map(bb => {
-    const { id, boundingBox, name, color, isVisible } = bb;
+    const { boundingBox, ...rest } = bb;
     return {
-      id,
-      name,
-      color,
-      isVisible,
-      boundingBox: Utils.computeBoundingBoxObjectFromBoundingBoxType(boundingBox),
+      ...rest,
+      boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox),
     };
   });
 }

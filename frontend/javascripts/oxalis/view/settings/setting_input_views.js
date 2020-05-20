@@ -225,13 +225,20 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
   }
 }
 
+export type UserBoundingBoxInputUpdate = {
+  boundingBox?: Vector6,
+  name?: string,
+  color?: Vector3,
+  isVisible?: boolean,
+};
+
 type UserBoundingBoxInputProps = {
   value: Vector6,
   name: string,
   color: Vector3,
   isVisible: boolean,
   tooltipTitle: string,
-  onChange: (value?: Vector6, name?: string, color?: Vector3, isVisible?: boolean) => void,
+  onChange: UserBoundingBoxInputUpdate => void,
   onDelete: () => void,
 };
 
@@ -290,21 +297,21 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const isValid = isValidInput && isValidLength;
 
     if (isValid) {
-      this.props.onChange(Utils.numberArrayToVector6(value));
+      this.props.onChange({ boundingBox: Utils.numberArrayToVector6(value) });
     }
     this.setState({ text, isValid });
   };
 
   handleNameChange = (evt: SyntheticInputEvent<>) => {
-    this.props.onChange(undefined, evt.target.value);
+    this.props.onChange({ name: evt.target.value });
   };
 
-  handleColorChange = (newColor: Vector3) => {
-    this.props.onChange(undefined, undefined, newColor);
+  handleColorChange = (color: Vector3) => {
+    this.props.onChange({ color });
   };
 
   handleVisibilityChange = (isVisible: boolean) => {
-    this.props.onChange(undefined, undefined, undefined, isVisible);
+    this.props.onChange({ isVisible });
   };
 
   render() {
@@ -336,7 +343,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             <Input
               onChange={this.handleNameChange}
               defaultValue={name}
-              placeholder="UserBoundingBoxName"
+              placeholder="Bounding Box Name"
               size="small"
             />
           </Col>

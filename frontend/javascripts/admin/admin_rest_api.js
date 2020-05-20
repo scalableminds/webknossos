@@ -650,8 +650,14 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+  // Old tracings might include a single user bounding box. Here it is added to the user bounding box array to stay backward compatible.
   if (tracing.userBoundingBox != null) {
-    tracing.userBoundingBoxes.push({ id: 0, boundingBox: tracing.userBoundingBox });
+    // It should be impossible for a server tracing to have both: a filled userBoundingBoxes array and the userBoundingBox property.
+    // Thus using the id 0 as default should be fine.
+    tracing.userBoundingBoxes.push({
+      id: 0,
+      boundingBox: tracing.userBoundingBox,
+    });
     delete tracing.userBoundingBox;
   }
   return tracing;

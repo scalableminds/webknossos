@@ -17,6 +17,7 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
       $set: userBoundingBoxes,
     },
   };
+  // We mirror/sync the user bounding boxes between all tracing objects.
   const maybeSkeletonUpdater = state.tracing.skeleton ? { skeleton: updaterObject } : {};
   const maybeVolumeUpdater = state.tracing.volume ? { volume: updaterObject } : {};
   const maybeReadOnlyUpdater = state.tracing.readOnly ? { readOnly: updaterObject } : {};

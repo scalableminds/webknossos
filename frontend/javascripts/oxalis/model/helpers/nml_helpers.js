@@ -12,7 +12,6 @@ import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-
 import type {
   UserBoundingBox,
   NodeMap,
@@ -24,14 +23,9 @@ import type {
   MutableTree,
   TreeGroup,
 } from "oxalis/store";
-
 import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-
 import messages from "messages";
-import {
-  computeArrayFromBoundingBox,
-  computeBoundingBoxTypeFromBoundingBoxObject,
-} from "libs/utils";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
@@ -198,23 +192,20 @@ function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string
 function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
   const { boundingBox, id, name, isVisible } = bb;
   const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
-  if (boundingBoxArray != null && bb) {
-    const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
-    const color = bb.color ? mapColorToComponents(bb.color) : {};
-    return serializeTag(tagName, {
-      topLeftX,
-      topLeftY,
-      topLeftZ,
-      width,
-      height,
-      depth,
-      ...color,
-      id,
-      name,
-      isVisible,
-    });
-  }
-  return "";
+  const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+  const color = bb.color ? mapColorToComponents(bb.color) : {};
+  return serializeTag(tagName, {
+    topLeftX,
+    topLeftY,
+    topLeftZ,
+    width,
+    height,
+    depth,
+    ...color,
+    id,
+    name,
+    isVisible,
+  });
 }
 
 function serializeParameters(
@@ -713,20 +704,8 @@ export function parseNml(
               height: _parseInt(attr, "height"),
               depth: _parseInt(attr, "depth"),
             };
-            if (
-              boundingBoxObject.topLeft[0] == null ||
-              boundingBoxObject.topLeft[1] == null ||
-              boundingBoxObject.topLeft[2] == null ||
-              boundingBoxObject.width == null ||
-              boundingBoxObject.height == null ||
-              boundingBoxObject.depth == null
-            ) {
-              throw new NmlParseError(
-                `${messages["nml.incomplete_bounds"]} User bounding box id: ${userBoundingBoxId}.`,
-              );
-            }
             const userBoundingBox = {
-              boundingBox: computeBoundingBoxTypeFromBoundingBoxObject(boundingBoxObject),
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: [
                 _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
                 _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),

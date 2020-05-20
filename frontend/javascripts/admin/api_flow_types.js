@@ -556,7 +556,7 @@ export type ServerBoundingBox = {
   depth: number,
 };
 
-export type ServerUserBoundingBox = {
+export type UserBoundingBoxFromServer = {
   boundingBox: ServerBoundingBox,
   id: number,
   name?: string,
@@ -586,7 +586,7 @@ export type ServerSkeletonTracingTree = {
 
 export type ServerTracingBase = {|
   id: string,
-  userBoundingBoxes: Array<ServerUserBoundingBox>,
+  userBoundingBoxes: Array<UserBoundingBoxFromServer>,
   userBoundingBox?: ServerBoundingBox,
   createdTimestamp: number,
   dataSetName: string,

@@ -196,7 +196,7 @@ function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string
 }
 
 function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
-  const { boundingBox, id, name } = bb;
+  const { boundingBox, id, name, isVisible } = bb;
   const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
   if (boundingBoxArray != null && bb) {
     const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
@@ -211,6 +211,7 @@ function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string 
       ...color,
       id,
       name,
+      isVisible,
     });
   }
   return "";
@@ -701,7 +702,7 @@ export function parseNml(
             break;
           }
           case "userBoundingBox": {
-            const userBoundingBoxId = _parseInt(attr, "id");
+            const userBoundingBoxId = _parseInt(attr, "id", 0);
             const boundingBoxObject = {
               topLeft: [
                 _parseInt(attr, "topLeftX"),

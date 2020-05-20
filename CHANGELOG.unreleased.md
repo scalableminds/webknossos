@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 - Added the possibility to select hour, minute and second of the time range in the timetracking view. [#4604](https://github.com/scalableminds/webknossos/pull/4604)
 - Volume tracing data is now saved with lz4 compression, reducing I/O load and required disk space. [#4602](https://github.com/scalableminds/webknossos/pull/4602)
+- Volume tracing data is now already lz4-compressed in the browser, further reducing server load. [#4623](https://github.com/scalableminds/webknossos/pull/4623)
 - Added a warning to the segmentation tab when viewing `uint64` bit segmentation data. [#4598](https://github.com/scalableminds/webknossos/pull/4598)
 
 ### Changed

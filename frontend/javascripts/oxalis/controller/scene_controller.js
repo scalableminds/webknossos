@@ -410,7 +410,7 @@ class SceneController {
       const bbCube = new Cube({
         min,
         max,
-        color: Utils.rgbToBigInt(bb.color),
+        color: Utils.rgbToInt(bb.color),
         showCrossSections: true,
       });
       bbCube.setVisibility(bb.isVisible);

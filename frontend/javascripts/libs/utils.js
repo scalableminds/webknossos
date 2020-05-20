@@ -130,7 +130,7 @@ function intToHex(int: number, digits: number = 6): string {
   return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
 }
 
-export function rgbToBigInt(color: Vector3): number {
+export function rgbToInt(color: Vector3): number {
   return (color[0] << 16) + (color[1] << 8) + color[2];
 }
 

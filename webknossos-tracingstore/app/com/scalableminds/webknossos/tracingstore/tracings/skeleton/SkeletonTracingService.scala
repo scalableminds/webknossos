@@ -158,12 +158,20 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     } yield {
       BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
     }
+    val singleBoundingBoxes =
+      (tracingA.userBoundingBox ++ tracingB.userBoundingBox).map(bb => NamedBoundingBox(0, boundingBox = bb))
+    val userBoundingBoxes =
+      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes).zipWithIndex.map(uBB =>
+        uBB._1.copy(id = uBB._2))
 
-    tracingA.copy(trees = mergedTrees,
-                  treeGroups = mergedGroups,
-                  boundingBox = mergedBoundingBox,
-                  version = 0,
-                  userBoundingBox = None)
+    tracingA.copy(
+      trees = mergedTrees,
+      treeGroups = mergedGroups,
+      boundingBox = mergedBoundingBox,
+      version = 0,
+      userBoundingBox = None,
+      userBoundingBoxes = userBoundingBoxes
+    )
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)

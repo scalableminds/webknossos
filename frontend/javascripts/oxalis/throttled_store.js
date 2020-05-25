@@ -4,6 +4,7 @@ import Deferred from "libs/deferred";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 
+const MAXIMUM_STORE_UPDATE_DELAY = 10000;
 const listeners = [];
 let waitForUpdate = new Deferred();
 let prevState;
@@ -21,7 +22,7 @@ Store.subscribe(() => {
 async function go() {
   while (true) {
     await waitForUpdate.promise();
-    await Utils.animationFrame();
+    await Utils.animationFrame(MAXIMUM_STORE_UPDATE_DELAY);
     for (const listener of listeners) {
       listener();
     }

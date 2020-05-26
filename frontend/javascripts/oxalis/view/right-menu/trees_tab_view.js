@@ -21,13 +21,8 @@ import {
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
-import {
-  serializeToNml,
-  getNmlName,
-  parseNml,
-  wrapInNewGroup,
-  NmlParseError,
-} from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_serializer";
+import { parseNml, wrapInNewGroup, NmlParseError } from "oxalis/model/helpers/nml_parser";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {

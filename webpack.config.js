@@ -1,17 +1,18 @@
-module.exports = function(env = {}) {
+var webpack = require("webpack");
+var fs = require("fs");
+var path = require("path");
+
+var srcPath = path.resolve(__dirname, "frontend/javascripts/");
+var nodePath = path.join(__dirname, "node_modules/");
+var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
+
+const clientConfig = function(env = {}) {
   /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
-  var webpack = require("webpack");
-  var fs = require("fs");
-  var path = require("path");
   const TerserPlugin = require("terser-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
   // const HardSourceWebpackPlugin = require("hard-source-webpack-plugin");
   const CopyWebpackPlugin = require("copy-webpack-plugin");
-
-  var srcPath = path.resolve(__dirname, "frontend/javascripts/");
-  var nodePath = path.join(__dirname, "node_modules/");
-  var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
 
@@ -152,3 +153,26 @@ module.exports = function(env = {}) {
     },
   };
 };
+
+const serverConfig = (env = {}) => ({
+  entry: `${srcPath}/oxalis/model/helpers/nml_parser.js`,
+  mode: env.production ? "production" : "development",
+  output: {
+    path: `${__dirname}/public/server-bundle`,
+    filename: "[name].js",
+  },
+  resolve: {
+    modules: [srcPath, nodePath, protoPath],
+  },
+  module: {
+    rules: [
+      {
+        test: /\.js$/,
+        exclude: /(node_modules|bower_components)/,
+        use: "babel-loader",
+      },
+    ],
+  },
+});
+
+module.exports = [clientConfig, serverConfig];

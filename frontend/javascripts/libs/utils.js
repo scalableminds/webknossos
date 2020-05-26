@@ -377,10 +377,15 @@ export function busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(): Promise<void> {
-  return new Promise(resolve => {
+export function animationFrame(maxTimeout?: number): Promise<void> {
+  const rafPromise = new Promise(resolve => {
     window.requestAnimationFrame(resolve);
   });
+  if (maxTimeout == null) {
+    return rafPromise;
+  }
+  const timeoutPromise = sleep(maxTimeout);
+  return Promise.race([rafPromise, timeoutPromise]);
 }
 
 export function diffArrays<T>(

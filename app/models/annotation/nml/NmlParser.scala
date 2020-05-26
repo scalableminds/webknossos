@@ -69,7 +69,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with TimeMeasur
       val nodeExecResult = time("nmlParsing") {
         Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
                 None,
-                "NODE_PATH" -> "public/test-bundle") !!
+                "NODE_PATH" -> "public/server-bundle") !!
       }
 
       logger.info(s"node exec result: $nodeExecResult")

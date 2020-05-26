@@ -150,6 +150,10 @@ const clientConfig = function(env = {}) {
       port: env.PORT ? env.PORT : 9002,
       hot: false,
       inline: false,
+      // Webpack fails to honor the writeToDisk setting for multiple targets
+      // if only one of them has set writeToDisk to true
+      // This can be removed once https://github.com/webpack/webpack-dev-server/issues/2627 is fixed
+      writeToDisk: true,
     },
   };
 };
@@ -175,6 +179,9 @@ const serverConfig = (env = {}) => ({
         use: "babel-loader",
       },
     ],
+  },
+  devServer: {
+    writeToDisk: true,
   },
 });
 

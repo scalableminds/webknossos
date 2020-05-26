@@ -1,17 +1,13 @@
-
 const program = require("commander");
 const fs = require("fs");
 
-const { parseNml } = require("oxalis/model/helpers/nml_helpers.js");
-
+const { parseNml } = require("../../public/server-bundle/main");
 
 function parseFile(err, fileContent) {
   if (err) throw err;
   console.log(fileContent);
   console.log(parseNml(fileContent));
 }
-
-
 
 let nmlPath;
 program
@@ -25,7 +21,7 @@ if (process.argv.length !== 3) {
   // 2 "real" parameters
   console.log("Usage: $0 <nmlPath>");
   console.log("Example:");
-  console.log("  node ", scriptName, ' path/to/skeleton.nml');
+  console.log("  node ", process.argv[1], " path/to/skeleton.nml");
   process.exit(1);
 }
 
@@ -35,8 +31,7 @@ try {
   fs.readFile(nmlPath, "utf8", parseFile);
 
   console.log("Hello from NML Parser Node Script. Was called with nmlPath", nmlPath);
-}
-catch (err) {
+} catch (err) {
   console.log(err);
   exitCode = 2;
 }

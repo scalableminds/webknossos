@@ -18,7 +18,8 @@ const buildInfo = {
     commitHash: "fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17",
   },
 };
-const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
+const { serializeToNml, getNmlName } = mock.reRequire("oxalis/model/helpers/nml_serializer");
+const { parseNml } = mock.reRequire("oxalis/model/helpers/nml_parser");
 const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
   .default;
 const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");

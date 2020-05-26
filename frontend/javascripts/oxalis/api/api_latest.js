@@ -45,7 +45,7 @@ import {
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { parseNml } from "oxalis/model/helpers/nml_helpers";
+import { parseNml } from "oxalis/model/helpers/nml_parser";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
   bucketPositionToGlobalAddress,

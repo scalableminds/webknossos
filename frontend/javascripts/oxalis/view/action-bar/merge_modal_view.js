@@ -167,8 +167,9 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     }
     const { trees, treeGroups } = tracing;
     this.setState({ isUploading: true });
-    // Wait for an animation frame so that the loading animation is kicked off
-    await Utils.animationFrame();
+    // Wait for an animation frame (but not longer than a second) so that the loading
+    // animation is kicked off
+    await Utils.animationFrame(1000);
     this.props.addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups);
     this.setState({ isUploading: false });
     Toast.success(messages["tracing.merged"]);

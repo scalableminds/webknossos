@@ -155,11 +155,14 @@ const clientConfig = function(env = {}) {
 };
 
 const serverConfig = (env = {}) => ({
+  target: "node",
   entry: `${srcPath}/oxalis/model/helpers/nml_parser.js`,
   mode: env.production ? "production" : "development",
   output: {
     path: `${__dirname}/public/server-bundle`,
     filename: "[name].js",
+    library: "nml-parser",
+    libraryTarget: "umd",
   },
   resolve: {
     modules: [srcPath, nodePath, protoPath],

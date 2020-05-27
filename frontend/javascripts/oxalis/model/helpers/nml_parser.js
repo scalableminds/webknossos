@@ -14,6 +14,9 @@ import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { type MutableTreeMap, type MutableTree, type TreeGroup } from "oxalis/store";
 import messages from "messages";
 
+// Re-export this function as it's needed by the backend NML parser and this file is the backend parsers entry point.
+export { serializeProtoTracing } from "oxalis/model/helpers/proto_helpers";
+
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
 const DEFAULT_VIEWPORT = 0;

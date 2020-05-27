@@ -178,6 +178,7 @@ const serverConfig = (env = {}) => ({
         exclude: /(node_modules|bower_components)/,
         use: "babel-loader",
       },
+      { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
     ],
   },
   devServer: {

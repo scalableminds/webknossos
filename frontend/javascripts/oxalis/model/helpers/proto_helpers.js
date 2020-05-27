@@ -31,4 +31,13 @@ export function parseProtoTracing(
   });
 }
 
-export default {};
+export function serializeProtoTracing(tracing: ServerTracing): ArrayBuffer {
+  const protoRoot = Root.fromJSON(PROTO_FILES.skeleton);
+  const messageType = protoRoot.lookupType(PROTO_TYPES.skeleton);
+
+  // Verify that the message is valid
+  const error = messageType.verify(tracing);
+  if (error) throw Error(error);
+
+  return messageType.encode(tracing);
+}

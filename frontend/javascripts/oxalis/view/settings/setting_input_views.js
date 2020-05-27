@@ -102,7 +102,12 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) => Utils.roundTo(this.calculateValue(value), this.props.roundTo);
+  formatTooltip = (value: number) => {
+    const calculatedValue = this.calculateValue(value);
+    return calculatedValue >= 10000
+      ? calculatedValue.toExponential()
+      : Utils.roundTo(calculatedValue, this.props.roundTo);
+  };
 
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));

@@ -12,9 +12,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Added
 
-- 
+- Added a warning to the segmentation tab when viewing `uint64` bit segmentation data. [#4598](https://github.com/scalableminds/webknossos/pull/4598)
 
 ### Changed
+
 - 
 
 ### Fixed

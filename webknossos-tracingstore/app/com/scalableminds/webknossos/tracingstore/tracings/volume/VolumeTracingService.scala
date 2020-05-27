@@ -4,7 +4,7 @@ import java.io._
 import java.nio.file.Paths
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
@@ -33,7 +33,11 @@ import play.api.libs.json.{JsObject, Json}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.geometry.{
+  NamedBoundingBox,
+  BoundingBox => ProtoBox,
+  Point3D => ProtoPoint
+}
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -207,14 +211,19 @@ class VolumeTracingService @Inject()(
     binaryDataService.handleDataRequests(requests)
   }
 
-  def duplicate(tracingId: String, tracing: VolumeTracing, isTask: Option[Boolean]): Fox[String] = {
-    val taskBoundingBox = if (isTask.contains(true)) {
+  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
+  def duplicate(tracingId: String,
+                tracing: VolumeTracing,
+                fromTask: Boolean,
+                dataSetBoundingBox: Option[BoundingBox]): Fox[String] = {
+    val newTaskTracing = if (fromTask && dataSetBoundingBox.isDefined) {
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-      Some(NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, tracing.boundingBox))
-    } else None
+      tracing
+        .addUserBoundingBoxes(NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, tracing.boundingBox))
+        .withBoundingBox(dataSetBoundingBox.get)
+    } else tracing
 
-    val newTracing =
-      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
+    val newTracing = newTaskTracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
     for {
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, tracing, newId, newTracing)

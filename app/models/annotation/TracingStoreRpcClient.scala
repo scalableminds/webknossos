@@ -4,6 +4,7 @@ import java.io.File
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
@@ -14,6 +15,7 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
 import net.liftweb.common.Box
+import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 
@@ -82,12 +84,14 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .getWithJsonResponse[String]
   }
 
-  def duplicateVolumeTracing(volumeTracingId: String, fromTask: Boolean = false): Fox[String] = {
+  def duplicateVolumeTracing(volumeTracingId: String,
+                             fromTask: Boolean = false,
+                             dataSetBoundingBox: Option[BoundingBox] = None): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryString("fromTask" -> fromTask.toString)
-      .getWithJsonResponse[String]
+      .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
   def mergeSkeletonTracingsByIds(tracingIds: List[Option[String]], persistTracing: Boolean): Fox[String] = {

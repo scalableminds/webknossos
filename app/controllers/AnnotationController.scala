@@ -326,15 +326,16 @@ class AnnotationController @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      dataSource <- if (annotation._task.isDefined)
+        dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+      else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
       newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(
         id =>
           tracingStoreClient
             .duplicateSkeletonTracing(id, None, annotation._task.isDefined)) ?~> "Failed to duplicate skeleton tracing."
-      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(
-        id =>
-          tracingStoreClient
-            .duplicateVolumeTracing(id, annotation._task.isDefined)) ?~> "Failed to duplicate volume tracing."
+      newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id =>
+        tracingStoreClient.duplicateVolumeTracing(id, annotation._task.isDefined, dataSource.map(_.boundingBox))) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataSet,
                                                        newSkeletonTracingReference,

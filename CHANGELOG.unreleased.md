@@ -16,7 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 
-- 
+- The redundant “team” column was removed from bulk task creation. [#4629](https://github.com/scalableminds/webknossos/pull/4629)
 
 ### Fixed
 

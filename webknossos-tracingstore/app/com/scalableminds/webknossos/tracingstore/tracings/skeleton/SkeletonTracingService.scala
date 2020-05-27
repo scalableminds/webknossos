@@ -161,8 +161,11 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     val singleBoundingBoxes =
       (tracingA.userBoundingBox ++ tracingB.userBoundingBox).map(bb => NamedBoundingBox(0, boundingBox = bb))
     val userBoundingBoxes =
-      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes).zipWithIndex.map(uBB =>
-        uBB._1.copy(id = uBB._2))
+      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes)
+        .map(_.copy(id = 0, isVisible = None)) // This makes all userBoundingBoxes visible and easily comparable by their bounds, name and color
+        .distinct
+        .zipWithIndex
+        .map(uBB => uBB._1.copy(id = uBB._2))
 
     tracingA.copy(
       trees = mergedTrees,

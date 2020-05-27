@@ -321,13 +321,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
-      dataSourceWith64BitSupport = dataSource.toUsable.map(replaceUint64Layers).getOrElse(dataSource)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
-        "dataSource" -> dataSourceWith64BitSupport,
+        "dataSource" -> dataSource,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
@@ -346,16 +345,4 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isForeign" -> dataStore.isForeign
       )
     }
-
-  private def replaceUint64Layers(dataSource: GenericDataSource[DataLayer]) = {
-    val newLayers = dataSource.dataLayers.map {
-      case l: WKWSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
-      case l: AbstractSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
-      case l => l
-    }
-
-    dataSource.copy(dataLayers = newLayers)
-  }
 }

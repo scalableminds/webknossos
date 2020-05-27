@@ -85,6 +85,7 @@ dataSet.notFound=Dataset {0} does not exist or could not be accessed
 dataSet.notFoundConsiderLogin=Dataset {0} does not exist or could not be accessed. You may need to log in.
 dataSet.notFoundForAnnotation=The Dataset for this annotation does not exist or could not be accessed.
 dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
+dataSet.noAccessById=Could not access the corresponding DataSet. This is likely because you are not a member of a team that has access to it.
 dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
@@ -184,7 +185,8 @@ role.added=Added role to {0}
 tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
 
-annotation.create.failed=Failed to create annotation. This is likely because you are not a member of a team that has access to the dataset.
+annotation.create.failed=Failed to create annotation.
+annotation.volume.uint64=Creating volume tracings on a uint64 fallback layer is not allowed.
 annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation

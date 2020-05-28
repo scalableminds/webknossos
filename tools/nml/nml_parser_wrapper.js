@@ -51,7 +51,11 @@ async function parseFile(err, fileContent) {
   const parsedNml = await parseNml(fileContent);
   //console.log(`\nParsed NML:\n${JSON.stringify(parsedNml)}`);
 
-  const serverTracing = treesToServerTracing(parsedNml.trees, parsedNml.treeGroups, parsedNml.dataSetName);
+  const serverTracing = treesToServerTracing(
+    parsedNml.trees,
+    parsedNml.treeGroups,
+    parsedNml.dataSetName,
+  );
   //console.log(`\nServer Tracing:\n${JSON.stringify(serverTracing)}`);
 
   const protoTracing = serializeProtoTracing(serverTracing).finish();

@@ -6,7 +6,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  NodeDefaults,
+  SkeletonTracingDefaults,
+  TreeValidator
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -52,15 +56,16 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with TimeMeasur
 
     val byteOutputStream = new ByteArrayOutputStream()
     val process = Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
-      None,
-      "NODE_PATH" -> "public/server-bundle")
+                          None,
+                          "NODE_PATH" -> "public/server-bundle")
 
     val exitCode = time("nmlParsing") {
       process #> byteOutputStream !
     }
     if (exitCode == 0) {
       val skeletonTracing = SkeletonTracing.parseFrom(byteOutputStream.toByteArray)
-      logger.info(f"received tracing with ${skeletonTracing.trees.length} trees for dataset “${skeletonTracing.dataSetName}”")
+      logger.info(
+        f"received tracing with ${skeletonTracing.trees.length} trees for dataset “${skeletonTracing.dataSetName}”")
       Full((Some(skeletonTracing), None, "DESCRIPTION PARSING NOT IMPLEMENTED", None))
     } else {
       Failure(f"Could not parse as skeleton tracing via node. exit code $exitCode")

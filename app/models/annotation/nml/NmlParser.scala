@@ -1,26 +1,22 @@
 package models.annotation.nml
 
-import java.io.{File, InputStream}
+import java.io.{ByteArrayOutputStream, File, InputStream}
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
-  NodeDefaults,
-  SkeletonTracingDefaults,
-  TreeValidator
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import io.apigee.trireme.core.NodeEnvironment
 import net.liftweb.common.Box._
-import net.liftweb.common.{Box, Empty, Failure}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
-import sys.process._
 
+import sys.process._
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 trait TimeMeasurement extends LazyLogging {
@@ -53,29 +49,22 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with TimeMeasur
 
   def parse(name: String, nmlFile: File, overwritingDataSetName: Option[String])
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
-    val useTrireme = false
 
-    if (useTrireme) {
-      val nodeEnv = new NodeEnvironment()
-      nodeEnv.setDefaultNodeVersion("0.12.7")
-      val script = nodeEnv.createScript(
-        "nml_parser_wrapper.js",
-        new File("tools/nml/nml_parser_wrapper.js"),
-        Array(nmlFile.getAbsolutePath)
-      )
-      val status = script.execute().get()
-      logger.info(s"script returned status $status")
-    } else {
-      val nodeExecResult = time("nmlParsing") {
-        Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
-                None,
-                "NODE_PATH" -> "public/server-bundle") !!
-      }
+    val byteOutputStream = new ByteArrayOutputStream()
+    val process = Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
+      None,
+      "NODE_PATH" -> "public/server-bundle")
 
-      logger.info(s"node exec result: $nodeExecResult")
+    val exitCode = time("nmlParsing") {
+      process #> byteOutputStream !
     }
-
-    Failure("Not implemented")
+    if (exitCode == 0) {
+      val skeletonTracing = SkeletonTracing.parseFrom(byteOutputStream.toByteArray)
+      logger.info(f"received tracing with ${skeletonTracing.trees.length} trees for dataset “${skeletonTracing.dataSetName}”")
+      Full((Some(skeletonTracing), None, "DESCRIPTION PARSING NOT IMPLEMENTED", None))
+    } else {
+      Failure(f"Could not parse as skeleton tracing via node. exit code $exitCode")
+    }
   }
 
   /*@SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head

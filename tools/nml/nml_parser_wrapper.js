@@ -17,7 +17,7 @@ const branchPointToServerBranchPoint = ({ nodeId, timestamp }) => ({
   createdTimestamp: timestamp,
 });
 
-const treesToServerTracing = (trees, treeGroups) => {
+const treesToServerTracing = (trees, treeGroups, dataSetName) => {
   const serverTrees = Object.values(trees).map(
     ({ edges, nodes, timestamp, color, branchPoints, ...rest }) => ({
       createdTimestamp: timestamp,
@@ -30,7 +30,7 @@ const treesToServerTracing = (trees, treeGroups) => {
   );
 
   return {
-    dataSetName: "",
+    dataSetName: dataSetName || "ROI2017_wkw", // TODO remove fallback before merge
     trees: serverTrees,
     createdTimestamp: 0,
     boundingBox: undefined,
@@ -46,16 +46,16 @@ const treesToServerTracing = (trees, treeGroups) => {
 
 async function parseFile(err, fileContent) {
   if (err) throw err;
-  console.log(`\nFile Content:\n${fileContent}`);
+  //console.log(`\nFile Content:\n${fileContent}`);
 
   const parsedNml = await parseNml(fileContent);
-  console.log(`\nParsed NML:\n${JSON.stringify(parsedNml)}`);
+  //console.log(`\nParsed NML:\n${JSON.stringify(parsedNml)}`);
 
-  const serverTracing = treesToServerTracing(parsedNml.trees, parsedNml.treeGroups);
-  console.log(`\nServer Tracing:\n${JSON.stringify(serverTracing)}`);
+  const serverTracing = treesToServerTracing(parsedNml.trees, parsedNml.treeGroups, parsedNml.dataSetName);
+  //console.log(`\nServer Tracing:\n${JSON.stringify(serverTracing)}`);
 
-  const protoTracing = serializeProtoTracing(serverTracing);
-  console.log(`\nProto Tracing:\n${JSON.stringify(protoTracing)}`);
+  const protoTracing = serializeProtoTracing(serverTracing).finish();
+  process.stdout.write(new Uint8Array(protoTracing));
 }
 
 let nmlPath;
@@ -76,10 +76,7 @@ if (process.argv.length !== 3) {
 
 try {
   program.parse(process.argv);
-
   fs.readFile(nmlPath, "utf8", parseFile);
-
-  console.log("Hello from NML Parser Node Script. Was called with nmlPath", nmlPath);
 } catch (err) {
   console.log(err);
   exitCode = 2;

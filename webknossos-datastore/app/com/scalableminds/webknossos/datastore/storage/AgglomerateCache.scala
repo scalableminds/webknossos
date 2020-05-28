@@ -15,7 +15,7 @@ import spire.math.{UByte, UInt, ULong, UShort}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
-case class CachedReader(reader: IHDF5Reader) extends SafeCachable {
+case class CachedReader(reader: IHDF5Reader, size: ULong) extends SafeCachable {
   override protected def onFinalize(): Unit = reader.close()
 }
 
@@ -51,62 +51,51 @@ object CachedAgglomerateKey {
 }
 
 class AgglomerateFileCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedAgglomerateFile, Fox[CachedReader]]
+    extends LRUConcurrentCache[CachedAgglomerateFile, CachedReader]
     with FoxImplicits {
-  override def onElementRemoval(key: CachedAgglomerateFile, value: Fox[CachedReader]): Unit =
-    value.map(_.scheduleForRemoval())
+  override def onElementRemoval(key: CachedAgglomerateFile, value: CachedReader): Unit =
+    value.scheduleForRemoval()
 
-  def withCache(dataRequest: DataServiceDataRequest)(
-      loadFn: DataServiceDataRequest => Fox[CachedReader]): Fox[CachedReader] = {
+  def withCache(dataRequest: DataServiceDataRequest)(loadFn: DataServiceDataRequest => CachedReader): CachedReader = {
     val cachedAgglomerateFile = CachedAgglomerateFile.from(dataRequest)
 
     def handleUncachedAgglomerateFile() = {
-      val readerFox = loadFn(dataRequest).futureBox.map {
-        case Full(readerInstance) =>
-          if (readerInstance.tryAccess()) Full(readerInstance) else Empty
-        case f: Failure =>
-          remove(cachedAgglomerateFile)
-          f
-        case _ =>
-          Empty
-      }.toFox
-
-      put(cachedAgglomerateFile, readerFox)
-      readerFox
+      val reader = loadFn(dataRequest)
+      // We don't need to check the return value of the `tryAccess` call as we just created the reader and use it only to increase the access counter.
+      reader.tryAccess()
+      put(cachedAgglomerateFile, reader)
+      reader
     }
 
     get(cachedAgglomerateFile) match {
-      case Some(reader) => reader
+      case Some(reader) => if (reader.tryAccess()) reader else handleUncachedAgglomerateFile()
       case _            => handleUncachedAgglomerateFile()
     }
   }
 }
 
-class AgglomerateCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedAgglomerateKey, Fox[Long]]
-    with FoxImplicits {
+class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgglomerateKey, Long] with FoxImplicits {
+  val standardBlockSize = 10
 
-  def withCache(dataRequest: DataServiceDataRequest, segmentId: Long, cachedFileHandles: AgglomerateFileCache)(
-      readFromFile: (IHDF5Reader, Long) => Fox[Long])(
-      loadReader: DataServiceDataRequest => Fox[CachedReader]): Fox[Long] = {
-    val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId)
+  def withCache(dataRequest: DataServiceDataRequest, segmentId: ULong, cachedFileHandles: AgglomerateFileCache)(
+      readFromFile: (IHDF5Reader, Long, Long) => Array[Long])(
+      loadReader: DataServiceDataRequest => CachedReader): Long = {
+    val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId.toLong)
 
-    def handleUncachedAgglomerate(): Fox[Long] = {
-      def getAgglomerateId() =
-        for {
-          cachedReader <- cachedFileHandles.withCache(dataRequest)(loadReader)
-          agglomerateId <- readFromFile(cachedReader.reader, segmentId)
-          _ = cachedReader.finishAccess()
-        } yield agglomerateId
+    def handleUncachedAgglomerate(): Long = {
+      val cachedReader = cachedFileHandles.withCache(dataRequest)(loadReader)
 
-      val checkedAgglomerateId = getAgglomerateId().futureBox.map {
-        case Full(id)   => Full(id)
-        case f: Failure => remove(cachedAgglomerateKey); f
-        case _          => Empty
-      }.toFox
+      val minId = if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
+      val blockSize = spire.math.min(cachedReader.size - minId, ULong(standardBlockSize))
 
-      put(cachedAgglomerateKey, checkedAgglomerateId)
-      checkedAgglomerateId
+      val agglomerateIds = readFromFile(cachedReader.reader, minId.toLong, blockSize.toInt)
+      cachedReader.finishAccess()
+
+      agglomerateIds.zipWithIndex.foreach {
+        case (id, index) => put(CachedAgglomerateKey.from(dataRequest, index + minId.toLong), id)
+      }
+
+      agglomerateIds((segmentId - minId).toInt)
     }
 
     get(cachedAgglomerateKey) match {

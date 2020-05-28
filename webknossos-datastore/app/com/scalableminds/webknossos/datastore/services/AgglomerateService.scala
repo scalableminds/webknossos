@@ -38,8 +38,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       .toSet
   }
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Fox[Array[Byte]] = {
-    def segmentToAgglomerate(segmentId: Long) =
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Array[Byte] = {
+    def segmentToAgglomerate(segmentId: ULong) =
       cache.withCache(request, segmentId, cachedFileHandles)(readFromFile = readHDF)(loadReader = initHDFReader)
 
     def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
@@ -47,37 +47,39 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     def intFunc(buf: ByteBuffer, lon: Long) = buf putInt lon.toInt
     def longFunc(buf: ByteBuffer, lon: Long) = buf putLong lon
 
-    def convertToAgglomerate(input: Array[Long],
+    def convertToAgglomerate(input: Array[ULong],
                              numBytes: Int,
-                             bufferFunc: (ByteBuffer, Long) => ByteBuffer): Fox[Array[Byte]] = {
-      val agglomerateIds = Fox.combined(input.map(segmentToAgglomerate))
-      agglomerateIds.map(
-        _.foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc).array)
+                             bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
+      val agglomerateIds = input.map(segmentToAgglomerate)
+      agglomerateIds
+        .foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
+        .array
     }
 
     convertData(data, request.dataLayer.elementClass) match {
-      case data: Array[UByte]  => convertToAgglomerate(data.map(_.toLong), 1, byteFunc)
-      case data: Array[UShort] => convertToAgglomerate(data.map(_.toLong), 2, shortFunc)
-      case data: Array[UInt]   => convertToAgglomerate(data.map(_.toLong), 4, intFunc)
-      case data: Array[ULong]  => convertToAgglomerate(data.map(_.toLong), 8, longFunc)
+      case data: Array[UByte]  => convertToAgglomerate(data.map(e => ULong(e.toLong)), 1, byteFunc)
+      case data: Array[UShort] => convertToAgglomerate(data.map(e => ULong(e.toLong)), 2, shortFunc)
+      case data: Array[UInt]   => convertToAgglomerate(data.map(e => ULong(e.toLong)), 4, intFunc)
+      case data: Array[ULong]  => convertToAgglomerate(data, 8, longFunc)
       // we can safely map the ULong to Long because we only do operations that are compatible with the two's complement
-      case _ => Fox.successful(data)
+      case _ => data
     }
   }
 
-  private def readHDF(reader: IHDF5Reader, segmentId: Long): Fox[Long] =
+  private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long): Array[Long] =
     // We don't need to differentiate between the datatypes because the underlying library does the conversion for us
-    try2Fox(Try(reader.uint64().readArrayBlockWithOffset(datasetName, 1, segmentId).head))
+    reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
   private def initHDFReader(request: DataServiceDataRequest) = {
-    val hdfFile = Try(
+    val hdfFile =
       dataBaseDir
         .resolve(request.dataSource.id.team)
         .resolve(request.dataSource.id.name)
         .resolve(request.dataLayer.name)
         .resolve(agglomerateDir)
         .resolve(s"${request.settings.appliedAgglomerate.get}.${agglomerateFileExtension}")
-        .toFile)
-    try2Fox(hdfFile.map(f => CachedReader(HDF5FactoryProvider.get.openForReading(f))))
+        .toFile
+    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    CachedReader(reader, ULong(reader.getDataSetInformation(datasetName).getNumberOfElements))
   }
 }

@@ -57,27 +57,24 @@ class BinaryDataService(dataBaseDir: Path,
   def handleDataRequests(requests: List[DataServiceDataRequest]): Fox[(Array[Byte], List[Int])] = {
     def convertIfNecessary[T](isNecessary: Boolean,
                               inputArray: Array[Byte],
-                              conversionFunc: Array[Byte] => T,
-                              transformInput: Array[Byte] => T): T =
-      if (isNecessary) conversionFunc(inputArray) else transformInput(inputArray)
+                              conversionFunc: Array[Byte] => Array[Byte]): Array[Byte] =
+      if (isNecessary) conversionFunc(inputArray) else inputArray
 
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {
           data <- handleDataRequest(request)
-          mappedData <- convertIfNecessary(
+          mappedData = convertIfNecessary(
             request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= 8,
             data,
-            agglomerateService.applyAgglomerate(request),
-            Fox.successful(_)
+            agglomerateService.applyAgglomerate(request)
           )
           convertedData = convertIfNecessary(
             request.dataLayer.elementClass == ElementClass.uint64 && request.dataLayer.category == Category.segmentation,
             mappedData,
-            convertToUInt32,
-            identity)
-          resultData = convertIfNecessary(request.settings.halfByte, convertedData, convertToHalfByte, identity)
+            convertToUInt32)
+          resultData = convertIfNecessary(request.settings.halfByte, convertedData, convertToHalfByte)
         } yield (resultData, index)
     }
 

@@ -1,3 +1,5 @@
+// @flow
+
 const program = require("commander");
 const fs = require("fs");
 
@@ -46,17 +48,17 @@ const treesToServerTracing = (trees, treeGroups, dataSetName) => {
 
 async function parseFile(err, fileContent) {
   if (err) throw err;
-  //console.log(`\nFile Content:\n${fileContent}`);
+  // console.log(`\nFile Content:\n${fileContent}`);
 
   const parsedNml = await parseNml(fileContent);
-  //console.log(`\nParsed NML:\n${JSON.stringify(parsedNml)}`);
+  // console.log(`\nParsed NML:\n${JSON.stringify(parsedNml)}`);
 
   const serverTracing = treesToServerTracing(
     parsedNml.trees,
     parsedNml.treeGroups,
     parsedNml.dataSetName,
   );
-  //console.log(`\nServer Tracing:\n${JSON.stringify(serverTracing)}`);
+  // console.log(`\nServer Tracing:\n${JSON.stringify(serverTracing)}`);
 
   const protoTracing = serializeProtoTracing(serverTracing).finish();
   process.stdout.write(new Uint8Array(protoTracing));
@@ -66,7 +68,7 @@ let nmlPath;
 program
   .version("0.1.0", "-v, --version")
   .arguments("<parameter1>")
-  .action(function(parameter1) {
+  .action(parameter1 => {
     nmlPath = parameter1;
   });
 
@@ -83,5 +85,5 @@ try {
   fs.readFile(nmlPath, "utf8", parseFile);
 } catch (err) {
   console.log(err);
-  exitCode = 2;
+  process.exit(1);
 }

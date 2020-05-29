@@ -69,7 +69,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
           .filter(ds => !ds.isForeign)
           .map(datastore =>
             // Catch potentally failing triggers, since these should not
-            // block the consequent fetch of datasets. Otherwise, one offline
+            // block the subsequent fetch of datasets. Otherwise, one offline
             // datastore will stop the refresh for all datastres.
             triggerDatasetCheck(datastore.url).catch(() => {}),
           ),

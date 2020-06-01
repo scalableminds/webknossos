@@ -95,7 +95,6 @@ const newTask = {
   projectName: "Test_Project4",
   scriptId: null,
   openInstances: 3,
-  teamName: "570b9f4b2a7c0e3b008da6ec",
   taskTypeId: "570b9f4c2a7c0e4c008da6ee",
 };
 

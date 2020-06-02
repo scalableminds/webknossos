@@ -49,7 +49,7 @@ class AnnotationController @Inject()(
   implicit val timeout = Timeout(5 seconds)
   val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
 
-  def info(typ: String, id: String) = sil.UserAwareAction.async { implicit request =>
+  def info(typ: String, id: String, timestamp: Long) = sil.UserAwareAction.async { implicit request =>
     log {
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
@@ -63,7 +63,7 @@ class AnnotationController @Inject()(
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
-            timeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
+            timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
       } yield {
@@ -174,22 +174,22 @@ class AnnotationController @Inject()(
     }
   }
 
-  private def finishAnnotation(typ: String, id: String, issuingUser: User)(
+  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
       message <- annotationService.finish(annotation, issuingUser, restrictions) ?~> "annotation.finish.failed"
       updated <- provider.provideAnnotation(typ, id, issuingUser)
-      _ <- timeSpanService.logUserInteraction(issuingUser, annotation) // log time on tracing end
+      _ <- timeSpanService.logUserInteraction(timestamp, issuingUser, annotation) // log time on tracing end
     } yield {
       (updated, message)
     }
 
-  def finish(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+  def finish(typ: String, id: String, timestamp: Long) = sil.SecuredAction.async { implicit request =>
     log {
       for {
-        (updated, message) <- finishAnnotation(typ, id, request.identity) ?~> "annotation.finish.failed"
+        (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
         restrictions <- provider.restrictionsFor(typ, id)
         json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
       } yield {
@@ -198,11 +198,11 @@ class AnnotationController @Inject()(
     }
   }
 
-  def finishAll(typ: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def finishAll(typ: String, timestamp: Long) = sil.SecuredAction.async(parse.json) { implicit request =>
     log {
       withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
         val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
-          jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity))
+          jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))
         }
 
         results.map { results =>

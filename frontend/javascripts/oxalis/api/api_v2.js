@@ -686,7 +686,7 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration>, value) {
+  setConfiguration(key: $Keys<DatasetConfiguration>, value: any) {
     Store.dispatch(updateDatasetSettingAction(key, value));
   }
 }
@@ -741,7 +741,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value) {
+  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }
@@ -766,7 +766,7 @@ class UtilsApi {
    * @example // Wait for 5 seconds
    * await api.utils.sleep(5000);
    */
-  sleep(milliseconds: number) {
+  sleep(milliseconds: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 

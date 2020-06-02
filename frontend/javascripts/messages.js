@@ -76,8 +76,17 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "tracing.unhandled_initialization_error":
+    "Initialization error. Please refresh the page to retry. If the error persists, please contact an administrator.",
+  "tracing.out_of_dataset_bounds":
+    "The current position is outside of the dataset's bounding box. No data will be shown here.",
+  "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
+    `This link includes the ${
+      sharingActiveNode ? "active tree node," : ""
+    } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -87,6 +96,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
+  "tracing.uint64_segmentation_warning":
+    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
+  "tracing.segmentation_zoom_warning_agglomerate":
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -138,7 +151,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.content":
     "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
-    "Can not parse task specification. It includes at least one invalid task.",
+    "Can not parse task specification. It includes at least one invalid task. (Note that the obsolete “team” column was recently removed, are you still using the old format?)",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
@@ -231,6 +244,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
+  "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
@@ -245,7 +259,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
-  "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",

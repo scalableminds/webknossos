@@ -1088,7 +1088,10 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys, value) {
+  setConfiguration(
+    key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys,
+    value: any,
+  ) {
     const printDeprecationWarning = () =>
       console.warn(
         `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
@@ -1173,7 +1176,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value) {
+  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }
@@ -1198,7 +1201,7 @@ class UtilsApi {
    * @example // Wait for 5 seconds
    * await api.utils.sleep(5000);
    */
-  sleep(milliseconds: number) {
+  sleep(milliseconds: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 

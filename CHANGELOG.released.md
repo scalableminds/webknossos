@@ -1,20 +1,53 @@
-# Changelog
+# Changelog (Released)
 
 All notable user-facing changes to webknossos are documented in this file.
+See `CHANGELOG.unreleased.md` for the changes which are not yet part of an official release.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
-For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
+For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
-## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...HEAD)
+## [20.06.0](https://github.com/scalableminds/webknossos/releases/tag/20.06.0) - 2020-05-25
+[Commits](https://github.com/scalableminds/webknossos/compare/20.05.0...20.06.0)
+
+### Highlights
+- Compression of volume tracing data is now already done in the browser, reducing I/O load and required disk space. [#4602](https://github.com/scalableminds/webknossos/pull/4602) and [#4623](https://github.com/scalableminds/webknossos/pull/4623)
+
+### Added
+
+- Added the possibility to select hour, minute and second of the time range in the timetracking view. [#4604](https://github.com/scalableminds/webknossos/pull/4604)
+- Volume tracing data is now saved with lz4 compression, reducing I/O load and required disk space. [#4602](https://github.com/scalableminds/webknossos/pull/4602)
+- Volume tracing data is now already lz4-compressed in the browser, further reducing server load. [#4623](https://github.com/scalableminds/webknossos/pull/4623)
+
+### Changed
+- Improved the UI in navigation bar during loading of tracings and datasets. [#4612](https://github.com/scalableminds/webknossos/pull/4612)
+- Improved logging in case of very slow annotation saving. Additionally, the user is also warned when there are unsaved changes older than two minutes. [#4593](https://github.com/scalableminds/webknossos/pull/4593)
+- REST API for creating / changing datastores now contains additional field `allowsUpload` denoting if the datastore allows uploading datasets via browser. [#4614](https://github.com/scalableminds/webknossos/pull/4614)
+
+### Fixed
+
+- When activating an agglomerate file-based ID mapping, only the segmentation layer will be reloaded from now on. This will improve mapping activation performance. [#4600](https://github.com/scalableminds/webknossos/pull/4600)
+- Fixed retrying of failed save requests sent during tracingstore restart. [#4591](https://github.com/scalableminds/webknossos/pull/4591)
+- Fixed the initial loading of agglomerate mappings, where some buckets remained black. [#4601](https://github.com/scalableminds/webknossos/pull/4601)
+- Fixed occasional error during loading of compound annotations (such as viewing multiple finished task instances in one view). [#4619](https://github.com/scalableminds/webknossos/pull/4619)
+
+## [20.05.0](https://github.com/scalableminds/webknossos/releases/tag/20.05.0) - 2020-05-05
+[Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...20.05.0)
+
+### Highlights
+- Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
+- Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
+- It is now possible to upload volume tracings as a base for tasks. The upload format is similar to the project / task type download format. [#4565](https://github.com/scalableminds/webknossos/pull/4565)
+- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543) 
 
 ### Added
 - Users can undo finishing a task when the task was finished via the API, e.g. by a user script. [#4495](https://github.com/scalableminds/webknossos/pull/4495)
 - Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
+- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543) 
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
 - When wK changes datasource-properties.json files of datasets, now it creates a backup log of previous versions. [#4534](https://github.com/scalableminds/webknossos/pull/4534)
+- Added a warning to the position input in tracings if the current position is out of bounds. The warning colors the position input orange. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Isosurface generation now also supports hdf5-style mappings. [#4531](https://github.com/scalableminds/webknossos/pull/4531)
 
 ### Changed
@@ -24,19 +57,27 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 - Deleting an empty tree group in the `Trees` tab no longer prompts for user confirmation. [#4506](https://github.com/scalableminds/webknossos/pull/4506)
 - Toggling the "Render missing data black" option now automatically reloads all layers making it unnecessary to reload the whole page. [#4516](https://github.com/scalableminds/webknossos/pull/4516)
 - The "mappings" attribute of segmentation layers in datasource jsons can now be omitted. [#4532](https://github.com/scalableminds/webknossos/pull/4532)
+- Uploading a single nml, allows to wrap the tracing in a new tree group. [#4563](https://github.com/scalableminds/webknossos/pull/4563)
+- Unconnected trees no longer cause an error during NML import in the tracing view. Instead, unconnected trees are split into their components. The split components are wrapped in a tree group with the original tree's name. [#4541](https://github.com/scalableminds/webknossos/pull/4541)
+- Made the NML importer in the tracing view less strict. Incorrect timestamps, missing tree names or missing node radii no longer cause an error. [#4541](https://github.com/scalableminds/webknossos/pull/4541)
+- Disabled the backend-side apply agglomerate feature for downsampled magnifications (still allowed for 1 to 8) to save server capacity. [#4578](https://github.com/scalableminds/webknossos/pull/4578)
+- REST API endpoints finish and info now expect additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent). [#4580](https://github.com/scalableminds/webknossos/pull/4580)
+- It is now possible to upload volume tracings as a base for tasks. The upload format is similar to the project / task type download format. [#4565](https://github.com/scalableminds/webknossos/pull/4565)
 
 ### Fixed
 - Users only get tasks of datasets that they can access. [#4488](https://github.com/scalableminds/webknossos/pull/4488)
+- Ignoring an error message caused by the drag and drop functionality. This error claims that a reload of the tracing is required although everything is fine. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
+- Fixed that after selecting a node in the 3d viewport the rotating center of the viewport was not updated immediately. [#4544](https://github.com/scalableminds/webknossos/pull/4544)
 - Fixed the import of datasets which was temporarily broken. [#4497](https://github.com/scalableminds/webknossos/pull/4497)
 - Fixed the displayed segment ids in segmentation tab when "Render Missing Data Black" is turned off. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - The datastore checks if a organization folder can be created before creating a new organization. [#4501](https://github.com/scalableminds/webknossos/pull/4501)
 - Fixed a bug where under certain circumstances groups in the tree tab were not sorted by name. [#4542](https://github.com/scalableminds/webknossos/pull/4542)
 - Fixed that `segmentationOpacity` could not be set anymore as part of the recommended settings for a task type. [#4545](https://github.com/scalableminds/webknossos/pull/4545)
-
-### Removed
-
--
-
+- Fixed registration for setups with one organization and not configured defaultOrganization. [#4559](https://github.com/scalableminds/webknossos/pull/4559)
+- Fixed a rendering error which could make some layers disappear in certain circumstances. [#4556](https://github.com/scalableminds/webknossos/pull/4556)
+- Fixed a rendering error which caused negative float data to be rendered white. [#4556](https://github.com/scalableminds/webknossos/pull/4571)
+- Fixed the histogram creation if some sampled positions don't contain data. [#4584](https://github.com/scalableminds/webknossos/pull/4584)
+- Fixed a rendering exception which could occur in rare circumstances. [#4588](https://github.com/scalableminds/webknossos/pull/4588)
 
 ## [20.04.0](https://github.com/scalableminds/webknossos/releases/tag/20.04.0) - 2020-03-23
 [Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...20.04.0)

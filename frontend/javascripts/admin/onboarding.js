@@ -257,7 +257,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
           >
             {getFieldDecorator("organizationName", {
               rules: [{ required: true, message: "Please enter an organization name!" }],
-              initialValue: features().defaultOrganization,
+              initialValue: "",
             })(
               <AutoComplete
                 size="large"

@@ -54,6 +54,7 @@ export type APISegmentationLayer = {|
   ...APIDataLayerBase,
   +category: "segmentation",
   +largestSegmentId: number,
+  +originalElementClass?: ElementClass,
   +mappings?: Array<string>,
   +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
@@ -92,6 +93,7 @@ export type APIDataStore = {
   +isForeign: boolean,
   +isScratch: boolean,
   +isConnector: boolean,
+  +allowsUpload: boolean,
 };
 
 export type APITracingStore = {
@@ -517,7 +519,6 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +isDemoInstance: boolean,

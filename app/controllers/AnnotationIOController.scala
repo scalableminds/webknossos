@@ -101,13 +101,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       val overwritingDataSetName: Option[String] =
         request.body.dataParts.get("datasetName").flatMap(_.headOption)
 
-      val parsedFiles = request.body.files.foldLeft(NmlResults.ZipParseResult()) {
-        case (acc, next) =>
-          val file = new File(next.ref.path.toString)
-          acc.combineWith(
-            nmlService
-              .extractFromFile(file, next.filename, useZipName = true, overwritingDataSetName = overwritingDataSetName))
-      }
+      val parsedFiles =
+        nmlService.extractFromFiles(request.body.files.map(f => (new File(f.ref.path.toString), f.filename)),
+                                    useZipName = true,
+                                    overwritingDataSetName)
 
       val tracingsProcessed =
         if (shouldCreateGroupForEachFile)
@@ -141,12 +138,11 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           volumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { v =>
             for {
               processedVolumeTracing <- adaptPropertiesToFallbackLayer(v._1, dataSet)
-              savedTracingId <- tracingStoreClient.saveVolumeTracing(
-                processedVolumeTracing,
-                parsedFiles.otherFiles.get(v._2).map(tmpFile => new File(tmpFile.path.toString)))
+              savedTracingId <- tracingStoreClient
+                .saveVolumeTracing(processedVolumeTracing, parsedFiles.otherFiles.get(v._2).map(_.path.toFile))
             } yield savedTracingId
           }
-          mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { s =>
+          mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { _ =>
             tracingStoreClient.mergeSkeletonTracingsByContents(
               SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
               persistTracing = true)

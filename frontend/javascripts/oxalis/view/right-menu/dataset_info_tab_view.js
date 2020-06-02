@@ -208,7 +208,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isDatasetViewMode) {
       return (
         <div>
-          <p>
+          <p style={{ wordWrap: "break-word" }}>
             <strong>{displayName || datasetName}</strong>
           </p>
           {datasetDescription ? (
@@ -287,8 +287,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
     return (
       <div className="flex-overflow">
-        <p>{annotationTypeLabel}</p>
-        <p>{descriptionEditField}</p>
+        <div>{annotationTypeLabel}</div>
+        <div>{descriptionEditField}</div>
       </div>
     );
   }

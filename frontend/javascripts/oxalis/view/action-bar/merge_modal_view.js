@@ -6,12 +6,12 @@ import type { Dispatch } from "redux";
 
 import type { APIAnnotation } from "admin/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
-import Store, { type OxalisState, type TreeMap, type TreeGroup } from "oxalis/store";
+import Store, { type OxalisState, type MutableTreeMap, type TreeGroup } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
@@ -31,7 +31,7 @@ type StateProps = {|
   annotationType: string,
 |};
 type DispatchProps = {|
-  addTreesAndGroupsAction: (TreeMap, ?Array<TreeGroup>) => void,
+  addTreesAndGroupsAction: (MutableTreeMap, ?Array<TreeGroup>) => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
@@ -167,9 +167,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     }
     const { trees, treeGroups } = tracing;
     this.setState({ isUploading: true });
-    // Wait for an animation frame so that the loading animation is kicked off
-    await Utils.animationFrame();
-    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups);
+    // Wait for an animation frame (but not longer than a second) so that the loading
+    // animation is kicked off
+    await Utils.animationFrame(1000);
+    this.props.addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups);
     this.setState({ isUploading: false });
     Toast.success(messages["tracing.merged"]);
     this.props.onOk();
@@ -263,7 +264,7 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  addTreesAndGroupsAction(trees: TreeMap, treeGroups: ?Array<TreeGroup>) {
+  addTreesAndGroupsAction(trees: MutableTreeMap, treeGroups: ?Array<TreeGroup>) {
     dispatch(addTreesAndGroupsAction(trees, treeGroups));
   },
 });

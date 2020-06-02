@@ -169,7 +169,7 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
   ];
 }
 
-function getDatasetExtentInVoxel(dataset: APIDataset) {
+export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
@@ -178,6 +178,8 @@ function getDatasetExtentInVoxel(dataset: APIDataset) {
     width: max[0] - min[0],
     height: max[1] - min[1],
     depth: max[2] - min[2],
+    min,
+    max,
   };
   return extent;
 }
@@ -329,7 +331,7 @@ export function getEnabledLayers(
     if (settings == null) {
       return false;
     }
-    return settings.isDisabled === options.invert;
+    return settings.isDisabled === Boolean(options.invert);
   });
 }
 

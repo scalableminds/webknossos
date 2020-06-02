@@ -13,13 +13,13 @@ import features from "features";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type Props = {
+type Props = {|
   layout: "horizontal" | "vertical" | "inline",
   form: Object,
   onLoggedIn?: () => void,
   hideFooter?: boolean,
   style?: Object,
-};
+|};
 
 function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   const { getFieldDecorator } = form;

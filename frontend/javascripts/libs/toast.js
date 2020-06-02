@@ -41,7 +41,7 @@ const Toast = {
           style={{ background: "transparent", marginLeft: -16 }}
         >
           <Panel
-            header="Show debug information"
+            header="Show more information"
             style={{ background: "transparent", border: 0, fontSize: 10 }}
           >
             {errorChain}

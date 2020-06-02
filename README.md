@@ -72,7 +72,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
-* [node.js 9+](http://nodejs.org/download/)
+* [node.js 12+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -113,7 +113,7 @@ echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
 curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
@@ -145,7 +145,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **10+ is required**
+* node version **12+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
@@ -157,7 +157,7 @@ Will fetch all Scala, Java and node dependencies and run the application on Port
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Upgrades
-For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
+For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration guide](MIGRATIONS.released.md).
 
 ## Tests
 ```bash

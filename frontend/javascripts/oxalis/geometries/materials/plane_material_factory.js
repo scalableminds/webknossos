@@ -85,14 +85,14 @@ class PlaneMaterialFactory {
   attributes: Object;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
-  leastRecentlyVisibleLayers: Array<string>;
+  leastRecentlyVisibleColorLayers: Array<string>;
   oldShaderCode: ?string;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
-    this.leastRecentlyVisibleLayers = [];
+    this.leastRecentlyVisibleColorLayers = [];
   }
 
   setup() {
@@ -264,7 +264,11 @@ class PlaneMaterialFactory {
 
     // Add mapping
     const segmentationLayer = Model.getSegmentationLayer();
-    if (segmentationLayer != null && Model.isMappingSupported) {
+    if (
+      segmentationLayer != null &&
+      segmentationLayer.mappings != null &&
+      Model.isMappingSupported
+    ) {
       const [
         mappingTexture,
         mappingLookupTexture,
@@ -414,19 +418,20 @@ class PlaneMaterialFactory {
             const settings = layerSettings[dataLayer.name];
             if (settings != null) {
               const isLayerEnabled = !settings.isDisabled;
+              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
               if (
+                !isSegmentationLayer &&
                 oldVisibilityPerLayer[dataLayer.name] != null &&
                 oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
               ) {
                 if (settings.isDisabled) {
-                  this.onDisableLayer(dataLayer.name);
+                  this.onDisableColorLayer(dataLayer.name);
                 } else {
-                  this.onEnableLayer(dataLayer.name);
+                  this.onEnableColorLayer(dataLayer.name);
                 }
               }
               oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
               const name = sanitizeName(dataLayer.name);
-              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
               this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
@@ -578,7 +583,7 @@ class PlaneMaterialFactory {
     window.needsRerender = true;
   }, RECOMPILATION_THROTTLE_TIME);
 
-  getLayersToRender(maximumLayerCountToRender: number) {
+  getLayersToRender(maximumLayerCountToRender: number): Array<string> {
     // This function determines for which layers
     // the shader code should be compiled. If the GPU supports
     // all layers, we can simply return all layers here.
@@ -605,32 +610,39 @@ class PlaneMaterialFactory {
       onlyColorLayers: true,
     }).map(layer => layer.name);
 
-    // In case, this.leastRecentlyVisibleLayers does not contain all disabled layers
+    // In case, this.leastRecentlyVisibleColorLayers does not contain all disabled layers
     // because they were already disabled on page load), append the disabled layers
     // which are not already in that array.
     // Note that the order of this array is important (earlier elements are more "recently used")
     // which is why it is important how this operation is done.
-    this.leastRecentlyVisibleLayers = [
-      ...this.leastRecentlyVisibleLayers,
-      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleLayers),
+    this.leastRecentlyVisibleColorLayers = [
+      ...this.leastRecentlyVisibleColorLayers,
+      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleColorLayers),
     ];
 
-    return enabledLayerNames
-      .concat(this.leastRecentlyVisibleLayers)
+    const names = enabledLayerNames
+      .concat(this.leastRecentlyVisibleColorLayers)
       .slice(0, maximumLayerCountToRender)
-      .sort()
-      .map(sanitizeName);
+      .sort();
+
+    return names.map(sanitizeName);
   }
 
-  onDisableLayer = layerName => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
-    this.leastRecentlyVisibleLayers = [layerName, ...this.leastRecentlyVisibleLayers];
+  onDisableColorLayer = (layerName: string) => {
+    this.leastRecentlyVisibleColorLayers = _.without(
+      this.leastRecentlyVisibleColorLayers,
+      layerName,
+    );
+    this.leastRecentlyVisibleColorLayers = [layerName, ...this.leastRecentlyVisibleColorLayers];
 
     this.recomputeFragmentShader();
   };
 
-  onEnableLayer = layerName => {
-    this.leastRecentlyVisibleLayers = _.without(this.leastRecentlyVisibleLayers, layerName);
+  onEnableColorLayer = (layerName: string) => {
+    this.leastRecentlyVisibleColorLayers = _.without(
+      this.leastRecentlyVisibleColorLayers,
+      layerName,
+    );
     this.recomputeFragmentShader();
   };
 

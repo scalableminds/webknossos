@@ -13,14 +13,14 @@ import {
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
-const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
+const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
 
 export const REQUEST_TIMEOUT = 30000;
 
@@ -188,8 +188,8 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     );
     const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(byteArray);
-    items.push(updateBucket(bucketInfo, base64));
+    const compressedBase64 = await byteArrayToLz4Base64(byteArray);
+    items.push(updateBucket(bucketInfo, compressedBase64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

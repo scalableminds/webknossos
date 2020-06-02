@@ -26,6 +26,7 @@ const { RangePicker } = DatePicker;
 
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
+const hourFormatPrecise = "HH:mm:ss";
 
 type TimeTrackingStats = {
   totalTime: number,
@@ -161,9 +162,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
       return;
     }
 
-    // for same day use start and end timestamps
-    const dateRange = dates[0].isSame(dates[1], "day")
-      ? [dates[0].startOf("day"), dates[1].endOf("day")]
+    // Force an interval of at least one minute.
+    const dateRange = dates[0].isSame(dates[1], "minute")
+      ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
 
     await this.setState({ dateRange });
@@ -174,7 +175,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
-    const dayFormatForMomentJs = "DD, MMM, YYYY";
+    const dayFormatForMomentJs = "DD MMM, YYYY";
     const tooltip = (
       <div>
         <div className="highlighted">
@@ -191,7 +192,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
                 ) : (
                   <React.Fragment>
-                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> -{" "}
+                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> –{" "}
                     <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
                   </React.Fragment>
                 )}
@@ -200,8 +201,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
             <tr>
               <td className="highlighted">Time:</td>
               <td>
-                <FormattedDate timestamp={start} format={hourFormat} /> -{" "}
-                <FormattedDate timestamp={end} format={hourFormat} />
+                <FormattedDate timestamp={start} format={hourFormatPrecise} /> –{" "}
+                <FormattedDate timestamp={end} format={hourFormatPrecise} />
               </td>
             </tr>
             <tr>
@@ -299,6 +300,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
+                  showTime={{ format: "HH:mm" }}
+                  format="YYYY-MM-DD HH:mm"
                   allowClear={false}
                   style={{ width: "100%" }}
                   value={dateRange}

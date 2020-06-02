@@ -43,10 +43,12 @@ import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
-type ControllerStatus = "loading" | "loaded" | "failedLoading";
+export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {|
   initialAnnotationType: AnnotationType,
   initialCommandType: TraceOrViewCommand,
+  controllerStatus: ControllerStatus,
+  setControllerStatus: ControllerStatus => void,
 |};
 type StateProps = {|
   viewMode: ViewMode,
@@ -56,16 +58,15 @@ type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
-  status: ControllerStatus,
+  gotUnhandledError: boolean,
 };
 
 class Controller extends React.PureComponent<PropsWithRouter, State> {
   keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   isMounted: boolean;
-
   state = {
-    status: "loading",
+    gotUnhandledError: false,
   };
 
   // Main controller, responsible for setting modes and everything
@@ -104,16 +105,20 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   tryFetchingModel() {
-    this.setState({ status: "loading" });
+    this.props.setControllerStatus("loading");
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
       .then(() => this.modelFetchDone())
       .catch(error => {
-        this.setState({ status: "failedLoading" });
+        this.props.setControllerStatus("failedLoading");
         // Don't throw errors for errors already handled by the model.
         if (error !== HANDLED_ERROR) {
+          Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
+            sticky: true,
+          });
+          this.setState({ gotUnhandledError: true });
           throw error;
         }
       });
@@ -159,7 +164,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       // Give wk (sagas and bucket loading) a bit time to catch air before
       // showing the UI as "ready". The goal here is to avoid that the
       // UI is still freezing after the loading indicator is gone.
-      this.setState({ status: "loaded" });
+      this.props.setControllerStatus("loaded");
     }, 200);
   }
 
@@ -277,8 +282,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
   }
 
   render() {
-    const { status } = this.state;
+    const status = this.props.controllerStatus;
     const { user, viewMode } = this.props;
+    const { gotUnhandledError } = this.state;
     if (status === "loading") {
       return <BrainSpinner />;
     } else if (status === "failedLoading" && user != null) {
@@ -286,7 +292,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         <BrainSpinner
           message={
             <div style={{ textAlign: "center" }}>
-              Either the dataset does not exist or you do not have the necessary access rights.
+              {gotUnhandledError
+                ? messages["tracing.unhandled_initialization_error"]
+                : "Either the dataset does not exist or you do not have the necessary access rights."}
               <br />
               <Link to="/" style={{ marginTop: 16, display: "inline-block" }}>
                 <Button type="primary">Return to dashboard</Button>

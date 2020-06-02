@@ -7,7 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import type { SkeletonTracing, Tree, Node } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -546,8 +546,8 @@ class Skeleton {
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean) {
-    return color.concat(isVisible ? 1 : 0);
+  getTreeRGBA(color: Vector3, isVisible: boolean): Vector4 {
+    return [...color, isVisible ? 1 : 0];
   }
 }
 

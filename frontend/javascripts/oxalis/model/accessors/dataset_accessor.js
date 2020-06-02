@@ -63,7 +63,7 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
+export function _getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);
   const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
@@ -75,7 +75,7 @@ export function getLayerByName(dataset: APIDataset, layerName: string): DataLaye
   return layer;
 }
 
-// export const getLayerByName = _.memoize(_getLayerByName);
+export const getLayerByName = _.memoize(_getLayerByName);
 
 export function getMappings(dataset: APIDataset, layerName: string): string[] {
   return getLayerByName(dataset, layerName).mappings || [];

@@ -59,20 +59,14 @@ function DatasetView(props: Props) {
     }
     context.fetchDatasets({
       applyUpdatePredicate: newDatasets => {
-        // Only update the datasets when there are non currently
+        // Only update the datasets when there are none currently.
+        // This avoids sudden changes in the dataset table (since
+        // a cached version is already shown). As a result, the
+        // dataset list is outdated a bit (shows the list of the
+        // last page load). Since a simple page refresh (or clicking
+        // the Refresh button) will show a newer version, this is acceptable.
         const updateDatasets = context.datasets.length === 0;
-        if (!updateDatasets) {
-          console.log("Don't propagating update");
-        }
         return updateDatasets;
-
-        // if everything is equal (ignore LRU), dont show any update
-        // otherwise: show an indicator that something changed
-
-        // if a dataset was removed -> ignore (worst case: opening the ds will fail, which can also happen if the dashboard was left open for some time)
-        // if a dataset was added -> ignore or notify?
-        // if a dataset changed -> ignore or update it
-        // if a dataset LRU changed -> DONT update it
       },
     });
   }, []);

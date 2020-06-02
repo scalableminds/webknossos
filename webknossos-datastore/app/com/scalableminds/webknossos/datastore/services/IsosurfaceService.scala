@@ -31,6 +31,7 @@ case class IsosurfaceRequest(
     cuboid: Cuboid,
     segmentId: Long,
     voxelDimensions: Vector3I,
+    scale: Vector3D,
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 )
@@ -187,10 +188,7 @@ class IsosurfaceService @Inject()(
                                   math.ceil(cuboid.depth / voxelDimensions.z).toInt)
 
     val offset = Vector3D(cuboid.topLeft.x, cuboid.topLeft.y, cuboid.topLeft.z)
-    val scale = Vector3D(cuboid.topLeft.resolution) * request.dataSource
-      .map(_.scale.toVector)
-      .getOrElse(Vector3D(1, 1, 1))
-
+    val scale = Vector3D(cuboid.topLeft.resolution) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Vector3D]()

@@ -44,10 +44,7 @@ import Store, {
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, {
-  type ViewMode,
-  type Vector3,
-} from "oxalis/constants";
+import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";

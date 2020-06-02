@@ -265,6 +265,7 @@ class VolumeTracingService @Inject()(
         request.cuboid(segmentationLayer),
         request.segmentId,
         request.voxelDimensions,
+        request.scale,
         request.mapping,
         request.mappingType
       )

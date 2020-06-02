@@ -214,6 +214,7 @@ function* maybeLoadIsosurface(
   threeDMap.set(clippedPosition, true);
 
   const voxelDimensions = window.__isosurfaceVoxelDimensions || [4, 4, 4];
+  const scale = yield* select(state => state.dataset.dataSource.scale);
   const dataStoreHost = yield* select(state => state.dataset.dataStore.url);
   const tracingStoreHost = yield* select(state => state.tracing.tracingStore.url);
 
@@ -234,6 +235,7 @@ function* maybeLoadIsosurface(
       segmentId,
       voxelDimensions,
       cubeSize,
+      scale,
     },
   );
 

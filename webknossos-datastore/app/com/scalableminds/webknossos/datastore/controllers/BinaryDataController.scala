@@ -342,14 +342,14 @@ class BinaryDataController @Inject()(
         AllowRemoteOrigin {
           for {
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-            segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages(
-              "dataLayer.mustBeSegmentation")
+            segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
             isosurfaceRequest = IsosurfaceRequest(
               Some(dataSource),
               segmentationLayer,
               request.body.cuboid(dataLayer),
               request.body.segmentId,
               request.body.voxelDimensions,
+              request.body.scale,
               request.body.mapping,
               request.body.mappingType
             )

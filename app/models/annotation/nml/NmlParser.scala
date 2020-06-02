@@ -28,7 +28,7 @@ trait TimeMeasurement extends LazyLogging {
     val t0 = System.nanoTime()
     val result = block
     val t1 = System.nanoTime()
-    logger.info(s"$label took ${(t1 - t0) / 1000} µs")
+    logger.info(s"$label took ${(t1 - t0) / 1000000} ms")
     result
   }
 }
@@ -53,22 +53,24 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with TimeMeasur
 
   def parse(name: String, nmlFile: File, overwritingDataSetName: Option[String])
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
+    time("nmlParsing plus proto-to-java conversion") {
 
-    val byteOutputStream = new ByteArrayOutputStream()
-    val process = Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
-                          None,
-                          "NODE_PATH" -> "public/server-bundle")
+      val byteOutputStream = new ByteArrayOutputStream()
+      val process = Process(Seq("node", "tools/nml/nml_parser_wrapper.js", nmlFile.getAbsolutePath),
+        None,
+        "NODE_PATH" -> "public/server-bundle")
 
-    val exitCode = time("nmlParsing") {
-      process #> byteOutputStream !
-    }
-    if (exitCode == 0) {
-      val skeletonTracing = SkeletonTracing.parseFrom(byteOutputStream.toByteArray)
-      logger.info(
-        f"received tracing with ${skeletonTracing.trees.length} trees for dataset “${skeletonTracing.dataSetName}”")
-      Full((Some(skeletonTracing), None, "DESCRIPTION PARSING NOT IMPLEMENTED", None))
-    } else {
-      Failure(f"Could not parse as skeleton tracing via node. exit code $exitCode")
+      val exitCode = time("nmlParsing") {
+        process #> byteOutputStream !
+      }
+      if (exitCode == 0) {
+        val skeletonTracing = SkeletonTracing.parseFrom(byteOutputStream.toByteArray)
+        logger.info(
+          f"received tracing with ${skeletonTracing.trees.length} trees for dataset “${skeletonTracing.dataSetName}”")
+        Full((Some(skeletonTracing), None, "DESCRIPTION PARSING NOT IMPLEMENTED", None))
+      } else {
+        Failure(f"Could not parse as skeleton tracing via node. exit code $exitCode")
+      }
     }
   }
 

@@ -120,7 +120,7 @@ export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
-  isVolumeFallback: bool = false,
+  isVolumeFallback: boolean = false,
 ): Promise<Array<?Uint8Array>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
@@ -137,7 +137,9 @@ export async function requestFromStore(
 
   const resolutions = getResolutions(state.dataset);
   const version =
-    !isVolumeFallback && isSegmentation && state.tracing.volume != null ? state.tracing.volume.version : null;
+    !isVolumeFallback && isSegmentation && state.tracing.volume != null
+      ? state.tracing.volume.version
+      : null;
 
   const bucketInfo = batch.map(zoomedAddress =>
     createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),

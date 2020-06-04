@@ -1,22 +1,15 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import ch.systemsx.cisd.hdf5.IHDF5Reader
+import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.{Cube, SafeCachable}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.json.Json
-import spire.math.{UByte, UInt, ULong, UShort}
+import spire.math.ULong
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
-
-case class CachedReader(reader: IHDF5Reader, size: ULong) extends SafeCachable {
-  override protected def onFinalize(): Unit = reader.close()
+case class CachedReader(reader: IHDF5Reader, dataset: HDF5DataSet, size: ULong) extends SafeCachable {
+  override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
 case class CachedAgglomerateFile(
@@ -78,7 +71,7 @@ class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgg
   val standardBlockSize = 10
 
   def withCache(dataRequest: DataServiceDataRequest, segmentId: ULong, cachedFileHandles: AgglomerateFileCache)(
-      readFromFile: (IHDF5Reader, Long, Long) => Array[Long])(
+      readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long])(
       loadReader: DataServiceDataRequest => CachedReader): Long = {
     val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId.toLong)
 
@@ -88,7 +81,7 @@ class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgg
       val minId = if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
       val blockSize = spire.math.min(cachedReader.size - minId, ULong(standardBlockSize))
 
-      val agglomerateIds = readFromFile(cachedReader.reader, minId.toLong, blockSize.toInt)
+      val agglomerateIds = readFromFile(cachedReader.reader, cachedReader.dataset, minId.toLong, blockSize.toInt)
       cachedReader.finishAccess()
 
       agglomerateIds.zipWithIndex.foreach {
@@ -98,9 +91,11 @@ class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[CachedAgg
       agglomerateIds((segmentId - minId).toInt)
     }
 
-    get(cachedAgglomerateKey) match {
-      case Some(agglomerateId) => agglomerateId
-      case None                => handleUncachedAgglomerate()
+    this.synchronized {
+      get(cachedAgglomerateKey) match {
+        case Some(agglomerateId) => agglomerateId
+        case None                => handleUncachedAgglomerate()
+      }
     }
   }
 }

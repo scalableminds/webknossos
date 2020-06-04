@@ -5,7 +5,6 @@ import java.nio.file.Paths
 
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateCache, AgglomerateFileCache, CachedReader}
@@ -14,10 +13,7 @@ import javax.inject.Inject
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
-
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with FoxImplicits with LazyLogging {
+class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   val agglomerateDir = "agglomerates"
   val agglomerateFileExtension = "hdf5"
   val datasetName = "/segment_to_agglomerate"
@@ -61,14 +57,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       case data: Array[UShort] => convertToAgglomerate(data.map(e => ULong(e.toLong)), 2, shortFunc)
       case data: Array[UInt]   => convertToAgglomerate(data.map(e => ULong(e.toLong)), 4, intFunc)
       case data: Array[ULong]  => convertToAgglomerate(data, 8, longFunc)
-      // we can safely map the ULong to Long because we only do operations that are compatible with the two's complement
-      case _ => data
+      case _                   => data
     }
   }
 
-  private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long): Array[Long] =
-    // We don't need to differentiate between the datatypes because the underlying library does the conversion for us
-    reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
+  private def readHDF(reader: IHDF5Reader, dataSet: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
+    // We don't need to differentiate between the data types because the underlying library does the conversion for us
+    reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
 
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile =
@@ -80,6 +75,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .resolve(s"${request.settings.appliedAgglomerate.get}.${agglomerateFileExtension}")
         .toFile
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    CachedReader(reader, ULong(reader.getDataSetInformation(datasetName).getNumberOfElements))
+    CachedReader(reader,
+                 reader.`object`().openDataSet(datasetName),
+                 ULong(reader.getDataSetInformation(datasetName).getNumberOfElements))
   }
 }

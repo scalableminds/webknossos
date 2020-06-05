@@ -36,7 +36,7 @@ export class OxalisModel {
     initialFetch: boolean,
     versions?: Versions,
   ) {
-    const initializationInformation = await initialize(
+    const { initializationInformation, maybeOldBoundingBox } = await initialize(
       annotationType,
       initialCommandType,
       initialFetch,
@@ -55,6 +55,7 @@ export class OxalisModel {
       this.isMappingSupported = isMappingSupported;
       this.maximumTextureCountForLayer = maximumTextureCountForLayer;
     }
+    return maybeOldBoundingBox;
   }
 
   getAllLayers(): Array<DataLayer> {

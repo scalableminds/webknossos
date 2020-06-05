@@ -18,11 +18,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 
-- 
+- The redundant “team” column was removed from the bulk task creation format. [#4629](https://github.com/scalableminds/webknossos/pull/4629)
 
 ### Fixed
 
--
+- Fixed a bug where requesting volume tracing fallback layer data from webknossos-connect failed. [#4644](https://github.com/scalableminds/webknossos/pull/4644)
 
 ### Removed
 

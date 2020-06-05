@@ -43,13 +43,7 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "libs/user_settings.schema";
-import Constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  type Vector6,
-  type Vector3,
-} from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 

@@ -239,7 +239,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName } = activeUser;
+  const { firstName, lastName, organization } = activeUser;
   return (
     <NavbarMenuItem>
       <SubMenu
@@ -252,6 +252,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="userName">
           {`${firstName} ${lastName}`}
         </Menu.Item>
+        <Menu.Item disabled key="organization">{`${organization}`}</Menu.Item>
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>

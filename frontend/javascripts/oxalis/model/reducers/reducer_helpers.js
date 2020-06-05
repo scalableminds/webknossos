@@ -17,7 +17,9 @@ import type { BoundingBoxType } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 
-function convertServerBoundingBoxToBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxType {
+export function convertServerBoundingBoxToBoundingBox(
+  boundingBox: ServerBoundingBox,
+): BoundingBoxType {
   return Utils.computeBoundingBoxFromArray(
     Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
       boundingBox.width,

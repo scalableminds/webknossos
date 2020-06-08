@@ -8,11 +8,16 @@ import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
 
+type Options = {
+  datasetFilteringMode?: DatasetFilteringMode,
+  applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean,
+};
+
 type Context = {
   datasets: Array<APIMaybeUnimportedDataset>,
   isLoading: boolean,
   checkDatasets: () => Promise<void>,
-  fetchDatasets: (datasetFilteringMode?: DatasetFilteringMode) => Promise<void>,
+  fetchDatasets: (options?: Options) => Promise<void>,
 };
 
 const wkDatasetsCacheKey = "wk.datasets";
@@ -38,9 +43,10 @@ export const DatasetCacheContext = createContext<Context>({
 export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
-  async function fetchDatasets(
-    datasetFilteringMode?: DatasetFilteringMode = "onlyShowReported",
-  ): Promise<void> {
+  async function fetchDatasets(options?: Options = {}): Promise<void> {
+    const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
+    const applyUpdatePredicate = options.applyUpdatePredicate || (_datasets => true);
+
     try {
       setIsLoading(true);
       const mapFilterModeToUnreportedParameter = {
@@ -52,7 +58,9 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
         mapFilterModeToUnreportedParameter[datasetFilteringMode],
       );
       datasetCache.set(newDatasets);
-      setDatasets(newDatasets);
+      if (applyUpdatePredicate(newDatasets)) {
+        setDatasets(newDatasets);
+      }
     } catch (error) {
       handleGenericError(error);
     } finally {

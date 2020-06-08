@@ -56,7 +56,18 @@ function DatasetView(props: Props) {
     if (state.datasetFilteringMode != null) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
-    context.fetchDatasets();
+    context.fetchDatasets({
+      applyUpdatePredicate: _newDatasets => {
+        // Only update the datasets when there are none currently.
+        // This avoids sudden changes in the dataset table (since
+        // a cached version is already shown). As a result, the
+        // dataset list is outdated a bit (shows the list of the
+        // last page load). Since a simple page refresh (or clicking
+        // the Refresh button) will show a newer version, this is acceptable.
+        const updateDatasets = context.datasets.length === 0;
+        return updateDatasets;
+      },
+    });
   }, []);
 
   useEffect(() => {
@@ -151,7 +162,7 @@ function DatasetView(props: Props) {
     <Radio
       onChange={() => {
         setDatasetFilteringMode(key);
-        context.fetchDatasets(key);
+        context.fetchDatasets({ datasetFilteringMode: key });
       }}
       checked={datasetFilteringMode === key}
     >

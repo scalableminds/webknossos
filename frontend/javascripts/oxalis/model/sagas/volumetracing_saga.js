@@ -232,11 +232,7 @@ export function* finishLayer(
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    const start = Date.now();
-
     yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
-
-    console.log("Labeling time:", Date.now() - start);
   }
 
   yield* put(updateDirectionAction(layer.getCentroid()));

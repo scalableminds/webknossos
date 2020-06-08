@@ -170,7 +170,7 @@
     "pretty-bytes": "^5.1.0",
     "protobufjs": "^6.8.6",
     "react": "^16.8.0",
-    "react-debounce-render": "^4.0.1",
+    "react-debounce-render": "^6.0.0",
     "react-dom": "^16.8.0",
     "react-dropzone": "^4.2.13",
     "react-google-charts": "^2.0.0",

@@ -1,6 +1,5 @@
 // @flow
 
-import _ from "lodash";
 import React, { useState, useContext, useEffect } from "react";
 import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
@@ -58,7 +57,7 @@ function DatasetView(props: Props) {
       setDatasetFilteringMode(state.datasetFilteringMode);
     }
     context.fetchDatasets({
-      applyUpdatePredicate: newDatasets => {
+      applyUpdatePredicate: _newDatasets => {
         // Only update the datasets when there are none currently.
         // This avoids sudden changes in the dataset table (since
         // a cached version is already shown). As a result, the

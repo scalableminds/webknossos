@@ -45,7 +45,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [isLoading, setIsLoading] = useState(false);
   async function fetchDatasets(options?: Options = {}): Promise<void> {
     const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
-    const applyUpdatePredicate = options.applyUpdatePredicate || (datasets => true);
+    const applyUpdatePredicate = options.applyUpdatePredicate || (_datasets => true);
 
     try {
       setIsLoading(true);

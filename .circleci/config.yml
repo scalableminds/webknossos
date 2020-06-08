@@ -50,7 +50,7 @@ jobs:
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Install frontend dependencies
-          command: docker-compose run base "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true yarn install --frozen-lockfile"
+          command: docker-compose run --env PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
           name: Restore webpack-uglifyjs cache
           keys:

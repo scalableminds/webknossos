@@ -20,7 +20,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
-  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize)
+  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
+                                        config.Braingames.Binary.agglomerateStandardBlockSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)

@@ -286,7 +286,7 @@ workflows:
           filters:
             tags:
               only: /.*/
-
+      - nightly
   circleci_nightly:
     jobs:
       - nightly

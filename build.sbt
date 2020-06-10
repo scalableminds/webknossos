@@ -1,5 +1,3 @@
-import java.nio.file.Files
-
 import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
@@ -37,11 +35,11 @@ lazy val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-tracingstore/proto"))
 )
 
-lazy val copyConfFiles = {
+lazy val copyConfFilesSetting = {
   lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
   copyMessages := {
     val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    Files.copy(messagesFile.toPath, (baseDirectory.value / "conf" / "messages").toPath)
+    java.nio.file.Files.copy(messagesFile.toPath, (baseDirectory.value / "conf" / "messages").toPath)
   }
 }
 
@@ -68,7 +66,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    copyConfFiles
+    copyConfFilesSetting
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -83,7 +81,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
     protocolBufferSettings,
     routesGenerator := InjectedRoutesGenerator,
-    copyConfFiles
+    copyConfFilesSetting
   )
 
 lazy val webknossos = (project in file("."))

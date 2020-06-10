@@ -10,7 +10,6 @@ WORKDIR /srv/webknossos-tracingstore
 VOLUME /srv/webknossos-tracingstore/tracingData /tmp
 
 COPY target/universal/stage .
-COPY ../conf/messages target/universal/stage/conf/messages
 
 RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-tracingstore \

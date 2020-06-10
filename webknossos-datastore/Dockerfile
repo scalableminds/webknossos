@@ -10,6 +10,7 @@ VOLUME /srv/webknossos-datastore/binaryData /tmp
 
 COPY target/universal/stage .
 COPY lib/native target/universal/stage/lib/native
+COPY ../conf/messages target/universal/stage/conf/messages
 
 RUN chown -R webknossos . \
   && chmod go+x bin/webknossos-datastore \

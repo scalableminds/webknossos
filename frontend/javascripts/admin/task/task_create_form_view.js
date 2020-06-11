@@ -49,6 +49,9 @@ const RadioGroup = Radio.Group;
 const fullWidth = { width: "100%" };
 const maxDisplayedTasksCount = 50;
 
+const TASK_CSV_HEADER =
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId";
+
 type Props = {
   form: Object,
   taskId: ?string,
@@ -79,7 +82,6 @@ export function taskToShortText(task: APITask) {
 export function taskToText(task: APITask) {
   const {
     id,
-    created,
     dataSet,
     type,
     neededExperience,
@@ -91,18 +93,16 @@ export function taskToText(task: APITask) {
     script,
   } = task;
   const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
-  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(
-    vector3 => vector3.join(","),
+  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(vector3 =>
+    vector3.join(","),
   );
   const totalNumberOfInstances = status.open + status.active + status.finished;
-  const boundingBoxAsString = boundingBoxVec6
-    ? boundingBoxVec6.join(",")
-    : "0,0,0,0,0,0";
-  const scriptId = script ? `,${script.id}` : "";
+  const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
+  const scriptId = script ? `${script.id}` : "";
 
   const taskAsString =
-    `${id},${created},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
-    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName}${scriptId}`;
+    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId}`;
   return taskAsString;
 }
 
@@ -116,8 +116,9 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   const allTeamNames = _.uniq(tasks.map(task => task.team));
   const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
   const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
   const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
-  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
+  const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
   saveAs(blob, filename);
 }
 

@@ -28,6 +28,7 @@ case class User(
     loginInfo: LoginInfo,
     passwordInfo: PasswordInfo,
     isAdmin: Boolean,
+    hasAllDatasetAccess: Boolean,
     isSuperUser: Boolean,
     isDeactivated: Boolean,
     created: Long = System.currentTimeMillis(),
@@ -75,6 +76,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
         r.isadmin,
+        r.hasalldatasetaccess,
         r.issuperuser,
         r.isdeactivated,
         r.created.getTime,
@@ -148,13 +150,13 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
-                                            loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isSuperUser, created, isDeleted)
-                                            values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
-          u.lastActivity)},
-                                                   '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(
-          u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
-                                                   '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isSuperUser},
-                                                   ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+                     loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, hasAllDatasetAccess, isSuperUser, created, isDeleted)
+                     values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
+                     u.lastActivity)},
+                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(
+                     u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                     '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.hasAllDatasetAccess}, ${u.isSuperUser},
+                     ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()
 
@@ -184,6 +186,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    lastName: String,
                    email: String,
                    isAdmin: Boolean,
+                   hasAllDatasetAccess: Boolean,
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
@@ -192,11 +195,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
        row.email,
        row.logininfoProviderkey,
        row.isadmin,
+       row.hasalldatasetaccess,
        row.isdeactivated,
        row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated, lastTaskTypeId))
+      _ <- run(q.update(firstName, lastName, email, email, isAdmin, hasAllDatasetAccess, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 

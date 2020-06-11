@@ -78,6 +78,7 @@ Samplecountry
     userService.createLoginInfo(defaultUserEmail),
     userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
+    hasAllDatasetAccess = true,
     isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false,
     lastTaskTypeId = None

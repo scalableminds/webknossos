@@ -650,7 +650,6 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
-
   return tracing;
 }
 

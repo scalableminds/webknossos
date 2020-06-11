@@ -8,7 +8,6 @@ import type {
   APIDataLayer,
   HybridServerTracing,
   ServerVolumeTracing,
-  ServerBoundingBox,
 } from "admin/api_flow_types";
 import {
   computeDataTexturesSetup,
@@ -80,14 +79,11 @@ export async function initialize(
   initialCommandType: TraceOrViewCommand,
   initialFetch: boolean,
   versions?: Versions,
-): Promise<{
-  initializationInformation: ?{
-    dataLayers: DataLayerCollection,
-    connectionInfo: ConnectionInfo,
-    isMappingSupported: boolean,
-    maximumTextureCountForLayer: number,
-  },
-  maybeOldBoundingBox?: ?ServerBoundingBox,
+): Promise<?{
+  dataLayers: DataLayerCollection,
+  connectionInfo: ConnectionInfo,
+  isMappingSupported: boolean,
+  maximumTextureCountForLayer: number,
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
@@ -96,10 +92,7 @@ export async function initialize(
   if (initialCommandType.type === ControlModeEnum.TRACE) {
     const { annotationId } = initialCommandType;
     annotation = await getAnnotationInformation(annotationId, annotationType);
-    datasetId = {
-      name: annotation.dataSetName,
-      owningOrganization: annotation.organization,
-    };
+    datasetId = { name: annotation.dataSetName, owningOrganization: annotation.organization };
 
     if (!annotation.restrictions.allowAccess) {
       Toast.error(messages["tracing.no_access"]);
@@ -140,10 +133,10 @@ export async function initialize(
       ),
     );
   }
-  let maybeOldBoundingBox;
+
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null && tracing != null) {
-    maybeOldBoundingBox = initializeTracing(annotation, tracing);
+    initializeTracing(annotation, tracing);
   } else {
     // In view only tracings we need to set the view mode too.
     const { allowedModes } = determineAllowedModes(dataset);
@@ -156,7 +149,7 @@ export async function initialize(
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
 
-  return { initializationInformation, maybeOldBoundingBox };
+  return initializationInformation;
 }
 
 async function fetchParallel(
@@ -215,7 +208,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  const maybeOldBoundingBox = getSomeServerTracing(tracing).userBoundingBox;
+
   const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
   _.extend(annotation.settings, { allowedModes, preferredMode });
 
@@ -247,9 +240,6 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
         getSegmentationLayer(dataset) != null,
         messages["tracing.volume_missing_segmentation"],
       );
-      if (maybeOldBoundingBox) {
-        delete volumeTracing.userBoundingBox;
-      }
       Store.dispatch(initializeVolumeTracingAction(volumeTracing));
     });
 
@@ -257,9 +247,6 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
       // To generate a huge amount of dummy trees, use:
       // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
       // tracing.trees = generateDummyTrees(1, 200000);
-      if (maybeOldBoundingBox) {
-        delete skeletonTracing.userBoundingBox;
-      }
       Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
     });
   }
@@ -277,7 +264,6 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
-  return maybeOldBoundingBox;
 }
 
 function initializeDataset(

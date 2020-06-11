@@ -36,9 +36,7 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import type { APIUser, ServerBoundingBox } from "admin/api_flow_types";
-import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
-import { convertServerBoundingBoxToBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import type { APIUser } from "admin/api_flow_types";
 
 import app from "app";
 import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
@@ -112,7 +110,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const versions = Utils.hasUrlParam("showVersionRestore") ? { skeleton: 1 } : undefined;
 
     Model.fetch(this.props.initialAnnotationType, this.props.initialCommandType, true, versions)
-      .then(maybeOldBoundingBox => this.modelFetchDone(maybeOldBoundingBox))
+      .then(() => this.modelFetchDone())
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
         // Don't throw errors for errors already handled by the model.
@@ -126,7 +124,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       });
   }
 
-  modelFetchDone(maybeOldBoundingBox: ?ServerBoundingBox) {
+  modelFetchDone() {
     const beforeUnload = (evt, action) => {
       // Only show the prompt if this is a proper beforeUnload event from the browser
       // or the pathname changed
@@ -162,21 +160,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
 
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
-    // Add old user bounding box.
-    if (maybeOldBoundingBox) {
-      Store.dispatch(
-        addUserBoundingBoxesAction([
-          {
-            id: 0,
-            boundingBox: convertServerBoundingBoxToBoundingBox(maybeOldBoundingBox),
-            color: [255, 170, 0],
-            name: "user bounding box",
-            isVisible: true,
-          },
-        ]),
-      );
-    }
-
     setTimeout(() => {
       // Give wk (sagas and bucket loading) a bit time to catch air before
       // showing the UI as "ready". The goal here is to avoid that the

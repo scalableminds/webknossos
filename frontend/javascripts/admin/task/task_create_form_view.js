@@ -92,17 +92,17 @@ export function taskToText(task: APITask) {
   } = task;
   const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(
-    position => `${position[0]},${position[1]},${position[2]}`,
+    vector3 => vector3.join(","),
   );
   const totalNumberOfInstances = status.open + status.active + status.finished;
   const boundingBoxAsString = boundingBoxVec6
-    ? boundingBoxVec6.reduce((partialString, val) => `${partialString}${val},`)
-    : "0,0,0,0,0,0,";
+    ? boundingBoxVec6.join(",")
+    : "0,0,0,0,0,0";
   const scriptId = script ? `,${script.id}` : "";
 
   const taskAsString =
     `${id},${created},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
-    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString}${projectName}${scriptId}`;
+    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName}${scriptId}`;
   return taskAsString;
 }
 

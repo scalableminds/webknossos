@@ -42,7 +42,8 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
-      "version" -> webKnossosVersion
+      "version" -> webKnossosVersion,
+      "datastoreApiVersion" -> "1.0"
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

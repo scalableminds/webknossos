@@ -50,7 +50,7 @@ jobs:
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Install frontend dependencies
-          command: docker-compose run base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
           name: Restore webpack-uglifyjs cache
           keys:
@@ -286,7 +286,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-
   circleci_nightly:
     jobs:
       - nightly

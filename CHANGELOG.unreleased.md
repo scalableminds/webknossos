@@ -16,13 +16,15 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 
-- 
+- The redundant “team” column was removed from the bulk task creation format. [#4629](https://github.com/scalableminds/webknossos/pull/4629)
+- The brush size minimum was changed from 5 voxels to 1. [#4648](https://github.com/scalableminds/webknossos/pull/4648)
 
 ### Fixed
 
--
+- Fixed that the dataset list in the dashboard could reorder its items asynchronously which could be very annoying for the user. [#4640](https://github.com/scalableminds/webknossos/pull/4640)
+- Improved resilience when refreshing datasets while a datastore is down. [#4636](https://github.com/scalableminds/webknossos/pull/4636)
+- Fixed a bug where requesting volume tracing fallback layer data from webknossos-connect failed. [#4644](https://github.com/scalableminds/webknossos/pull/4644)
 
 ### Removed
 
 -
-

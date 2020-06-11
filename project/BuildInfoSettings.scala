@@ -1,49 +1,25 @@
-import sbt.Keys.{name, sbtVersion, scalaVersion, version}
+import scala.sys.process._
+import sbt.Keys.{name, sbtVersion, scalaVersion}
 import sbtbuildinfo.BuildInfoPlugin.autoImport._
 
 object BuildInfoSettings {
 
-  def commitHash = new java.lang.Object() {
-    override def toString(): String = {
-      try {
-        val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
-        (new java.io.BufferedReader(extracted)).readLine()
-      } catch {
-        case t: Throwable => "get git hash failed"
-      }
+  def getStdoutFromCommand(command: String, failureMsg: String): String = {
+    try {
+      (command !!).trim
+    } catch {
+      case _: Throwable => failureMsg
     }
-  }.toString()
-
-  def commitDate = new java.lang.Object() {
-    override def toString(): String = {
-      try {
-        val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git log -1 --format=%cd ").getInputStream())
-        (new java.io.BufferedReader(extracted)).readLine()
-
-      } catch {
-        case t: Throwable => "get git date failed"
-      }
-    }
-  }.toString()
-
-  def gitTag = new java.lang.Object() {
-    override def toString(): String = {
-      try {
-        val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git describe --abbrev=0 --tags").getInputStream())
-        (new java.io.BufferedReader(extracted)).readLine()
-      } catch {
-        case t: Throwable => "get git tag failed"
-      }
-    }
-  }.toString()
-
-  def version() = {
-    if (ciTag != "") ciTag else gitTag + "-" + (if (ciBuild != "") ciBuild else "dev")
   }
 
-  val ciBuild = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else "";
-  val ciTag = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else "";
+  val ciBuild: String = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else ""
+  val ciTag: String = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else ""
 
+  def commitHash: String = getStdoutFromCommand("git rev-parse HEAD", "<getting commit hash failed>")
+  def commitDate: String = getStdoutFromCommand("git log -1 --format=%cd ", "<getting git date failed>")
+  def gitTag: String = getStdoutFromCommand("git describe --abbrev=0 --tags", "<getting git tag failed>")
+
+  def webKnossosVersion: String = if (ciTag != "") ciTag else gitTag + "-" + (if (ciBuild != "") ciBuild else "dev")
 
   lazy val webknossosBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, scalaVersion, sbtVersion,
@@ -52,8 +28,8 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
-      "version" -> version(),
-      "datastoreApiVersion" -> "1.0"
+      "version" -> webKnossosVersion,
+      "datastoreApiVersion" -> "1.0",
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -66,8 +42,7 @@ object BuildInfoSettings {
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
       "gitTag" -> gitTag,
-      "version" -> version(),
-      "datastoreApiVersion" -> "1.0"
+      "version" -> webKnossosVersion
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -79,7 +54,8 @@ object BuildInfoSettings {
       "commitDate" -> commitDate,
       "ciBuild" -> ciBuild,
       "ciTag" -> ciTag,
-      "gitTag" -> gitTag
+      "gitTag" -> gitTag,
+      "version" -> webKnossosVersion
     ),
     buildInfoPackage := "webknossosTracingstore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

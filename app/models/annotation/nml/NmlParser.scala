@@ -255,6 +255,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseGroupId(node: XMLNode) =
     (node \ "@groupId").text.toIntOpt
 
+  private def parseVisibility(node: XMLNode, color: Option[Color]): Option[Boolean] =
+    (node \ "@isVisible").text.toBooleanOpt match {
+      case Some(isVisible) => Some(isVisible)
+      case None            => color.map(_.a != 0.0)
+    }
+
   private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
       implicit m: MessagesProvider): Box[Tree] =
     for {
@@ -262,6 +268,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       color = parseColor(tree)
       name = parseName(tree)
       groupId = parseGroupId(tree)
+      isVisible = parseVisibility(tree, color)
       nodes <- (tree \ "nodes" \ "node")
         .map(parseNode)
         .toList
@@ -275,7 +282,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
       createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
       else nodes.minBy(_.createdTimestamp).createdTimestamp
-    } yield Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId)
+    } yield Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId, isVisible)
 
   private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider) =
     (for {

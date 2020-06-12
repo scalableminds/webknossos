@@ -152,9 +152,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
                      loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, hasAllDatasetAccess, isSuperUser, created, isDeleted)
                      values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
-                     u.lastActivity)},
-                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(
-                     u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+          u.lastActivity)},
+                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                      '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.hasAllDatasetAccess}, ${u.isSuperUser},
                      ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)

@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.ExtendedTypes.{ExtendedString, ExtendedDouble}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
@@ -258,7 +258,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   private def parseVisibility(node: XMLNode, color: Option[Color]): Option[Boolean] =
     (node \ "@isVisible").text.toBooleanOpt match {
       case Some(isVisible) => Some(isVisible)
-      case None            => color.map(_.a != 0.0)
+      case None            => color.map(c => !c.a.isNearZero)
     }
 
   private def parseTree(tree: XMLNode, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(

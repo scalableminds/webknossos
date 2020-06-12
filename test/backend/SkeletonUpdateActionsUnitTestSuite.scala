@@ -26,7 +26,8 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
       timestamp = Dummies.timestamp,
       comments = List[UpdateActionComment](),
-      groupId = None
+      groupId = None,
+      isVisible = true
     )
     val result = applyUpdateAction(createTreeAction)
 
@@ -36,6 +37,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
     assert(tree.createdTimestamp == Dummies.timestamp)
     assert(tree.comments == createTreeAction.comments)
     assert(tree.name === createTreeAction.name)
+    assert(tree.isVisible == createTreeAction.isVisible)
   }
 
   "DeleteTreeSkeletonAction" should "delete the specified tree" in {

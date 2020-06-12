@@ -27,7 +27,7 @@ class SkeletonUpdateActionsUnitTestSuite extends FlatSpec {
       timestamp = Dummies.timestamp,
       comments = List[UpdateActionComment](),
       groupId = None,
-      isVisible = true
+      isVisible = Option(true)
     )
     val result = applyUpdateAction(createTreeAction)
 

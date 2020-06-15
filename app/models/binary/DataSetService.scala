@@ -299,8 +299,13 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamManagerMemberships)
-        } yield user.isAdminOf(dataSet._organization) || isTeamManagerInOrg
+          dataSetAllowedTeams <- dataSetAllowedTeamsDAO.findAllForDataSet(dataSet._id)
+          teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
+            userService.teamManagerMembershipsFor(user._id))
+        } yield
+          (user.isAdminOf(dataSet._organization)
+            || user.hasAllDatasetAccess
+            || teamManagerMemberships.map(_.teamId).intersect(dataSetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }
 

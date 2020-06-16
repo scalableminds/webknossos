@@ -50,6 +50,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
 
   val unreportedStatus = "No longer available on datastore."
+  val initialTeamsTimeoutMs: Long = 5 * 60 * 1000
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
@@ -310,6 +311,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
+
+  def addInitialTeams(dataSet: DataSet, user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
+      previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
+      _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
+      userTeams <- teamDAO.findAllEditable
+      userTeamIds = userTeams.map(_._id)
+      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+      _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+    } yield ()
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],

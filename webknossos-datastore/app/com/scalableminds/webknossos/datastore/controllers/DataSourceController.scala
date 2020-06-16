@@ -84,8 +84,9 @@ class DataSourceController @Inject()(
     val uploadForm = Form(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText
-      )).fill(("", ""))
+        "organization" -> nonEmptyText,
+        "initialTeams" -> play.api.data.Forms.list(nonEmptyText)
+      )).fill(("", "", List()))
 
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -94,12 +95,14 @@ class DataSourceController @Inject()(
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
-              case (name, organization) =>
+              case (name, organization, initialTeams) =>
                 val id = DataSourceId(name, organization)
                 for {
                   _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
                   zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
                   _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
+                  userTokenOpt = accessTokenService.tokenFromRequest(request)
+                  _ <- webKnossosServer.postInitialTeams(id, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
                 } yield {
                   Ok
                 }

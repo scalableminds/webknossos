@@ -325,6 +325,10 @@ class Mappings {
     );
     await progressCallback(true, "Mapping successfully applied.");
     Store.dispatch(setMappingEnabledAction(true));
+
+    // Reset progressCallback, so it doesn't trigger when setting mappings
+    // programmatically, later, e.g. in merger mode
+    this.progressCallback = noopProgressCallback;
   }
 
   getMappingTextures() {

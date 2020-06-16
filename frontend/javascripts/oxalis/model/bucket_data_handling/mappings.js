@@ -258,9 +258,13 @@ class Mappings {
       },
     );
 
+    // updateMappingColorTexture has to be called at least once to guarantee
+    // proper initialization of the texture with -1.
+    // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
       state => state.temporaryConfiguration.activeMapping.mappingColors,
       mappingColors => this.updateMappingColorTexture(mappingColors),
+      true,
     );
   }
 

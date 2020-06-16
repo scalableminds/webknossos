@@ -140,7 +140,7 @@ function deleteNode(mergerModeState: MergerModeState, nodeId: number) {
   }
 }
 
-function update(mergerModeState: MergerModeState, skeletonTracing: SkeletonTracing) {
+function updateState(mergerModeState: MergerModeState, skeletonTracing: SkeletonTracing) {
   const diff = cachedDiffTrees(mergerModeState.prevTracing, skeletonTracing);
 
   for (const action of diff) {
@@ -256,14 +256,9 @@ async function mergeSegmentsOfAlreadyExistingTrees(
   api.data.setMapping(segmentationLayerName, colorMapping);
 }
 
-export async function enableMergerMode(onProgressUpdate: number => void) {
-  if (isCodeActive) {
-    return;
-  }
-  isCodeActive = true;
+function resetState(mergerModeState?: MergerModeState = {}) {
   const segmentationLayerName = api.data.getVolumeTracingLayerName();
-  // Create an object that stores the state of the merger mode.
-  const mergerModeState: MergerModeState = {
+  const defaults = {
     treeColors: {},
     colorMapping: {},
     nodesPerSegment: {},
@@ -272,15 +267,26 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
     nodeSegmentMap: {},
     prevTracing: getSkeletonTracing(Store.getState().tracing).get(),
   };
+  // Keep the object identity when resetting
+  return Object.assign(mergerModeState, defaults);
+}
+
+export async function enableMergerMode(onProgressUpdate: number => void) {
+  if (isCodeActive) {
+    return;
+  }
+  isCodeActive = true;
+  // Create an object that stores the state of the merger mode.
+  const mergerModeState: MergerModeState = resetState();
   // Register for tracing changes
   unsubscribeFunctions.push(
     Store.subscribe(() => {
       getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
         if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
-          // TODO?
-          // reset(skeletonTracing);
+          resetState(mergerModeState);
+          api.data.setMappingEnabled(false);
         } else {
-          update(mergerModeState, skeletonTracing);
+          updateState(mergerModeState, skeletonTracing);
         }
       });
     }),

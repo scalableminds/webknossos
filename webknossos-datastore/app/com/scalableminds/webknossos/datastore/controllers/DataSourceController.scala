@@ -1,11 +1,10 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files}
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -16,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,

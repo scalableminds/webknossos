@@ -112,7 +112,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case Full(user) =>
           for {
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.hasAllDatasetAccess)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
 

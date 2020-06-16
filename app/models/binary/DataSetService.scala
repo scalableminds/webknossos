@@ -305,7 +305,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
             userService.teamManagerMembershipsFor(user._id))
         } yield
           (user.isAdminOf(dataSet._organization)
-            || user.hasAllDatasetAccess
+            || user.isDatasetManager
             || teamManagerMemberships.map(_.teamId).intersect(dataSetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }

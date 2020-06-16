@@ -246,7 +246,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "email").readNullable[String] and
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
-      (__ \ "hasAllDatasetAccess").readNullable[Boolean] and
+      (__ \ "isDatasetManager").readNullable[Boolean] and
       (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
@@ -267,9 +267,9 @@ class UserController @Inject()(userService: UserService,
   private def checkAdminOnlyUpdates(user: User,
                                     isActive: Boolean,
                                     isAdmin: Boolean,
-                                    hasAllDatasetAccess: Boolean,
+                                    isDatasetManager: Boolean,
                                     email: String)(issuingUser: User): Boolean =
-    if (isActive && user.isAdmin == isAdmin && user.email == email && hasAllDatasetAccess == user.hasAllDatasetAccess)
+    if (isActive && user.isAdmin == isAdmin && user.email == email && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
 
@@ -280,7 +280,7 @@ class UserController @Inject()(userService: UserService,
             lastNameOpt,
             emailOpt,
             isActiveOpt,
-            hasAllDatasetAccessOpt,
+            isDatasetManagerOpt,
             isAdminOpt,
             assignedMembershipsOpt,
             experiencesOpt,
@@ -295,12 +295,12 @@ class UserController @Inject()(userService: UserService,
           email = emailOpt.getOrElse(user.email)
           isActive = isActiveOpt.getOrElse(!user.isDeactivated)
           isAdmin = isAdminOpt.getOrElse(user.isAdmin)
-          hasAllDatasetAccess = hasAllDatasetAccessOpt.getOrElse(user.hasAllDatasetAccess)
+          isDatasetManager = isDatasetManagerOpt.getOrElse(user.isDatasetManager)
           assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, hasAllDatasetAccess, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
@@ -318,7 +318,7 @@ class UserController @Inject()(userService: UserService,
                                   email,
                                   isActive,
                                   isAdmin,
-                                  hasAllDatasetAccess,
+                                  isDatasetManager,
                                   updatedTeams,
                                   trimmedExperiences,
                                   lastTaskTypeId)

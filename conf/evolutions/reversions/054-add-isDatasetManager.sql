@@ -2,7 +2,7 @@ START TRANSACTION;
 
 DROP VIEW webknossos.users_;
 
-ALTER TABLE webknossos.users DROP hasAllDatasetAccess;
+ALTER TABLE webknossos.users DROP isDatasetManager;
 
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 

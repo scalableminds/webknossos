@@ -24,6 +24,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
+  def tracingMigrationService: TracingMigrationService[T]
+
   val handledGroupIdStore: RedisTemporaryStore
 
   val uncommittedUpdatesStore: RedisTemporaryStore
@@ -37,6 +39,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   private val temporaryStoreTimeout = 10 minutes
 
   def currentVersion(tracingId: String): Fox[Long]
+
+  def currentVersion(tracing: T): Long
 
   def transactionBatchKey(tracingId: String,
                           transactionidOpt: Option[String],
@@ -83,6 +87,15 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
+  def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
+    tracingMigrationService.migrateTracing(tracingFox).flatMap {
+      case (tracing, hasChanged) =>
+        if (hasChanged)
+          save(tracing, Some(tracingId), currentVersion(tracing)).map(_ => tracing)
+        else
+          Fox.successful(tracing)
+    }
+
   def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
@@ -93,11 +106,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
            applyUpdates: Boolean = false): Fox[T] = {
     val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
     tracingFox.flatMap { tracing =>
-      if (applyUpdates) {
+      val updatedTracing = if (applyUpdates) {
         applyPendingUpdates(tracing, tracingId, version)
       } else {
         Fox.successful(tracing)
       }
+      migrateTracing(updatedTracing, tracingId)
     }.orElse {
       if (useCache)
         temporaryTracingStore.find(tracingId)

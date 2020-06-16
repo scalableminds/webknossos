@@ -29,12 +29,16 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
 
   val tracingStore = tracingDataStore.skeletons
 
+  val tracingMigrationService = SkeletonTracingMigrationService
+
   implicit val tracingCompanion = SkeletonTracing
 
   implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  def currentVersion(tracing: SkeletonTracing): Long = tracing.version
 
   def handleUpdateGroup(tracingId: String,
                         updateActionGroup: UpdateActionGroup[SkeletonTracing],

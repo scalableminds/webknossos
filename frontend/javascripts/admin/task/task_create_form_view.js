@@ -69,6 +69,7 @@ type State = {
   scripts: Array<APIScript>,
   specificationType: Specification,
   isUploading: boolean,
+  isFetchingData: boolean,
 };
 
 export function taskToText(task: APITask) {
@@ -183,6 +184,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     scripts: [],
     specificationType: SpecificationEnum.Manual,
     isUploading: false,
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -191,14 +193,15 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const [datasets, projects, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
       getScripts(),
       getTaskTypes(),
     ]);
-
     this.setState({ datasets, projects, scripts, taskTypes });
+    this.setState({ isFetchingData: false });
   }
 
   async applyDefaults() {
@@ -390,11 +393,17 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
                 }
               >
-                {this.state.datasets.map((dataset: APIDataset) => (
-                  <Option key={dataset.name} value={dataset.name}>
-                    {dataset.name}
+                {this.state.isFetchingData ? (
+                  <Option value="Loading" disabled>
+                    Loading...
                   </Option>
-                ))}
+                ) : (
+                  this.state.datasets.map((dataset: APIDataset) => (
+                    <Option key={dataset.name} value={dataset.name}>
+                      {dataset.name}
+                    </Option>
+                  ))
+                )}
               </Select>,
             )}
           </FormItem>
@@ -441,11 +450,17 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     disabled={isEditingMode}
                     onChange={this.onChangeTaskType}
                   >
-                    {this.state.taskTypes.map((taskType: APITaskType) => (
-                      <Option key={taskType.id} value={taskType.id}>
-                        {taskType.summary}
+                    {this.state.isFetchingData ? (
+                      <Option value="Loading" disabled>
+                        Loading...
                       </Option>
-                    ))}
+                    ) : (
+                      this.state.taskTypes.map((taskType: APITaskType) => (
+                        <Option key={taskType.id} value={taskType.id}>
+                          {taskType.summary}
+                        </Option>
+                      ))
+                    )}
                   </Select>,
                 )}
               </FormItem>
@@ -493,11 +508,17 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                   >
-                    {this.state.projects.map((project: APIProject) => (
-                      <Option key={project.id} value={project.name}>
-                        {project.name}
+                    {this.state.isFetchingData ? (
+                      <Option value="Loading" disabled>
+                        Loading...
                       </Option>
-                    ))}
+                    ) : (
+                      this.state.projects.map((project: APIProject) => (
+                        <Option key={project.id} value={project.name}>
+                          {project.name}
+                        </Option>
+                      ))
+                    )}
                   </Select>,
                 )}
               </FormItem>
@@ -512,11 +533,17 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                   >
-                    {this.state.scripts.map((script: APIScript) => (
-                      <Option key={script.id} value={script.id}>
-                        {script.name}
+                    {this.state.isFetchingData ? (
+                      <Option value="Loading" disabled>
+                        Loading...
                       </Option>
-                    ))}
+                    ) : (
+                      this.state.scripts.map((script: APIScript) => (
+                        <Option key={script.id} value={script.id}>
+                          {script.name}
+                        </Option>
+                      ))
+                    )}
                   </Select>,
                 )}
               </FormItem>

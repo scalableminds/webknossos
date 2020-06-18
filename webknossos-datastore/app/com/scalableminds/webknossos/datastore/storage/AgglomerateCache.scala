@@ -54,14 +54,14 @@ class AgglomerateFileCache(val maxEntries: Int)
   def withCache(dataRequest: DataServiceDataRequest)(loadFn: DataServiceDataRequest => CachedReader): CachedReader = {
     val cachedAgglomerateFile = CachedAgglomerateFile.from(dataRequest)
 
-    def handleUncachedAgglomerateFile() =
-      TimeLogger.logTime("handle uncached agglomerate file", logger) {
-        val reader = loadFn(dataRequest)
-        // We don't need to check the return value of the `tryAccess` call as we just created the reader and use it only to increase the access counter.
-        reader.tryAccess()
-        put(cachedAgglomerateFile, reader)
-        reader
-      }
+    def handleUncachedAgglomerateFile() = {
+      //TimeLogger.logTime("handle uncached agglomerate file", logger) {
+      val reader = loadFn(dataRequest)
+      // We don't need to check the return value of the `tryAccess` call as we just created the reader and use it only to increase the access counter.
+      reader.tryAccess()
+      put(cachedAgglomerateFile, reader)
+      reader
+    }
 
     get(cachedAgglomerateFile) match {
       case Some(reader) => if (reader.tryAccess()) reader else handleUncachedAgglomerateFile()
@@ -79,23 +79,23 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
       loadReader: DataServiceDataRequest => CachedReader): Long = {
     val cachedAgglomerateKey = CachedAgglomerateKey.from(dataRequest, segmentId.toLong)
 
-    def handleUncachedAgglomerate(): Long =
-      TimeLogger.logTime("handle uncached agglomerate", logger) {
-        val cachedReader = cachedFileHandles.withCache(dataRequest)(loadReader)
+    def handleUncachedAgglomerate(): Long = {
+      // TimeLogger.logTime("handle uncached agglomerate", logger) {
+      val cachedReader = cachedFileHandles.withCache(dataRequest)(loadReader)
 
-        val minId =
-          if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
-        val blockSize = spire.math.min(cachedReader.size - minId, ULong(standardBlockSize))
+      val minId =
+        if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
+      val blockSize = spire.math.min(cachedReader.size - minId, ULong(standardBlockSize))
 
-        val agglomerateIds = readFromFile(cachedReader.reader, cachedReader.dataset, minId.toLong, blockSize.toInt)
-        cachedReader.finishAccess()
+      val agglomerateIds = readFromFile(cachedReader.reader, cachedReader.dataset, minId.toLong, blockSize.toInt)
+      cachedReader.finishAccess()
 
-        agglomerateIds.zipWithIndex.foreach {
-          case (id, index) => put(CachedAgglomerateKey.from(dataRequest, index + minId.toLong), id)
-        }
-
-        agglomerateIds((segmentId - minId).toInt)
+      agglomerateIds.zipWithIndex.foreach {
+        case (id, index) => put(CachedAgglomerateKey.from(dataRequest, index + minId.toLong), id)
       }
+
+      agglomerateIds((segmentId - minId).toInt)
+    }
 
     getOrHandleUncachedKey(cachedAgglomerateKey, handleUncachedAgglomerate)
   }

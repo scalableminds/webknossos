@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.geometry.{NamedBoundingBox => ProtoBox}
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox => ProtoBox}
 import net.liftweb.common.Full
 import scalapb.{GeneratedMessage, Message}
 
@@ -29,26 +29,34 @@ trait TracingMigrationService[T <: GeneratedMessage with Message[T]] extends Fox
   }
 }
 
-object SkeletonTracingMigrationService extends TracingMigrationService[SkeletonTracing] {
+trait ColorGenerator {
+  private def getRandomComponent(): Double =
+    Math.random() * 256
+
+  def getRandomColor(): Color =
+    Color(getRandomComponent(), getRandomComponent(), getRandomComponent(), 1.0)
+}
+
+object SkeletonTracingMigrationService extends TracingMigrationService[SkeletonTracing] with ColorGenerator {
   override val migrations = List(removeSingleUserBoundingBox)
 
   def removeSingleUserBoundingBox(tracing: SkeletonTracing) = {
     val newUserBoundingBox: Option[ProtoBox] = tracing.userBoundingBox.map { bb =>
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-      ProtoBox(newId, boundingBox = bb)
+      ProtoBox(newId, color = Some(getRandomColor()), boundingBox = bb)
     }
     Fox.successful(
       (tracing.clearUserBoundingBox.addAllUserBoundingBoxes(newUserBoundingBox), tracing.userBoundingBox.isDefined))
   }
 }
 
-object VolumeTracingMigrationService extends TracingMigrationService[VolumeTracing] {
+object VolumeTracingMigrationService extends TracingMigrationService[VolumeTracing] with ColorGenerator {
   override val migrations = List(removeSingleUserBoundingBox)
 
   def removeSingleUserBoundingBox(tracing: VolumeTracing) = {
     val newUserBoundingBox: Option[ProtoBox] = tracing.userBoundingBox.map { bb =>
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-      ProtoBox(newId, boundingBox = bb)
+      ProtoBox(newId, color = Some(getRandomColor()), boundingBox = bb)
     }
     Fox.successful(
       (tracing.clearUserBoundingBox.addAllUserBoundingBoxes(newUserBoundingBox), tracing.userBoundingBox.isDefined))

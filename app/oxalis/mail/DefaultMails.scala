@@ -65,7 +65,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def changePasswordMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
          subject = "webKnossos | Your webKnossos password was changed",
-         bodyText = html.mail.passwordChanged(name).body,
+         bodyText = html.mail.passwordChanged(name, uri).body,
          recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String) =

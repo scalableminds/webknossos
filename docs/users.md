@@ -45,26 +45,27 @@ Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the
 
 By default, each newly uploaded dataset can only be accessed by `Admins`, `Dataset Managers`, and members of the organization team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
 
+
 | Action                                           	| Admin 	| Dataset Manager 	| Team Manager 	| Team Member 	|
 |--------------------------------------------------	|-------	|-----------------	|--------------	|-------------	|
-| Access datasets of own teams                        	| Yes   	| Yes             	| Yes          	| Yes         	|
-| Access datasets of other teams                      	| Yes   	| Yes             	| No           	| No          	|
-| Edit datasets of own teams                       	| Yes   	| Yes             	| Yes          	| No          	|
-| Edit datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
-| Access all users of own teams                       	| Yes   	| Yes             	| Yes          	| Yes         	|
-| Access all users of other teams                     	| Yes   	| Yes             	| Yes          	| No          	|
-| Assign/remove team membership to own teams       	| Yes   	| No              	| Yes          	| No          	|
-| Make other users team manager of own teams   	| Yes   	| No              	| Yes          	| No          	|
-| Make other users team manager of other teams   	| Yes   	| No              	| No           	| No          	|
-| Grant *Dataset Manager* role to others        	| Yes   	| No              	| No           	| No          	|
-| Grant *Admin* role to others                           	| Yes   	| No              	| No           	| No          	|
-| Access time tracking for oneself                       	| Yes   	| Yes             	| Yes          	| Yes         	|
-| Access time tracking for users of managed teams          	| Yes   	| No              	| Yes          	| No          	|
-| Create scripts (visible to everyone)            	| Yes   	| No              	| Yes          	| No          	|
-| Upload Datasets via UI                           	| Yes   	| Yes             	| Yes          	| No          	|
-| Set *Allowed Teams* upon dataset upload    	| Yes   	| No              	| Yes          	| No          	|
-| Get tasks again after cancelling an instance     	| Yes   	| No              	| Yes          	| No          	|
-| Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
+| Access datasets of own teams                        	| ☑   	| ☑             	| ☑          	| ☑         	|
+| Access datasets of other teams                      	| ☑   	| ☑             	| ☐           	| ☐          	|
+| Edit datasets of own teams                       	| ☑   	| ☑             	| ☑          	| ☐          	|
+| Edit datasets of other teams                     	| ☑   	| ☑             	| ☐           	| ☐          	|
+| Access all users of own teams                       	| ☑   	| ☑             	| ☑          	| ☑         	|
+| Access all users of other teams                     	| ☑   	| ☑             	| ☑          	| ☐          	|
+| Assign/remove team membership to own teams       	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Make other users team manager of own teams   	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Make other users team manager of other teams   	| ☑   	| ☐              	| ☐           	| ☐          	|
+| Grant *Dataset Manager* role to others        	| ☑   	| ☐              	| ☐           	| ☐          	|
+| Grant *Admin* role to others                           	| ☑   	| ☐              	| ☐           	| ☐          	|
+| Access time tracking for oneself                       	| ☑   	| ☑             	| ☑          	| ☑         	|
+| Access time tracking for users of managed teams          	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Create scripts (visible to everyone)            	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Upload Datasets via UI                           	| ☑   	| ☑             	| ☑          	| ☐          	|
+| Set *Allowed Teams* upon dataset upload    	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Get tasks again after cancelling an instance     	| ☑   	| ☐              	| ☑          	| ☐          	|
+| Access to wK Statistics Menu  	| ☑   	| ☐              	| ☑          	| ☐          	|
 
 
 ## Registering New Users

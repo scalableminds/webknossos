@@ -43,7 +43,7 @@ There are four different roles for webKnossos users divided into global, organiz
 
 Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the navigation bar.
 
-By default, each newly uploaded dataset can only be accessed by `Admins`, `Dataset Managers`, and members of the organization team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
+By default, each newly uploaded dataset can only be accessed by `Admins` and `Dataset Managers`. Add or remove more teams to a dataset for fine-grained access controls. `Team Managers` can also upload datasets via the UI and assign teams during this step. For more information regarding dataset and access rights, [see the dataset guide](./sharing.md#general)
 
 
 | Action                                           	| Admin 	| Dataset Manager 	| Team Manager 	| Team Member 	|

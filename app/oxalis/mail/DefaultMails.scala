@@ -58,7 +58,7 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def activatedMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
-         subject = s"webKnossos | Account activated",
+         subject = "webKnossos | Account activated",
          bodyText = html.mail.validated(name, uri).body,
          recipients = List(receiver))
 
@@ -79,7 +79,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String) =
     Mail(
       from = defaultFrom,
-      subject = "webKnossos | New Organization created on " + domain,
+      subject = s"webKnossos | New Organization created on ${domain}",
       bodyHtml = html.mail.newOrganization(organizationName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )

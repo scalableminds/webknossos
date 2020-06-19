@@ -483,7 +483,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
-              <Route path="/onboarding" component={Onboarding} />
+              {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route path="/features" component={FeaturesView} />
               <Route path="/pricing" component={PricingView} />
               <Route component={PageNotFoundView} />

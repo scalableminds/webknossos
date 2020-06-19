@@ -63,12 +63,16 @@ class VolumeTracingService @Inject()(
 
   val tracingStore = tracingDataStore.volumes
 
+  val tracingMigrationService = VolumeTracingMigrationService
+
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  override def currentVersion(tracing: VolumeTracing): Long = tracing.version
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],

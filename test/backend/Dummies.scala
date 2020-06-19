@@ -18,7 +18,8 @@ object Dummies {
     Seq(Comment(0, "comment")),
     "TestTree-1",
     timestamp,
-    None
+    None,
+    Some(true)
   )
 
   val tree2 = Tree(
@@ -30,7 +31,8 @@ object Dummies {
     Seq[Comment](),
     "TestTree-2",
     timestamp,
-    Some(1)
+    Some(1),
+    Some(true)
   )
 
   val treeGroup1 = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))

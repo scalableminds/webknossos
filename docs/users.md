@@ -1,4 +1,4 @@
-# Managing Users & Permissions
+# Managing Users & Access Permissions
 
 webKnossos offers a built-in user management system to administer different user roles and permissions.
 
@@ -29,9 +29,9 @@ There are four different roles for webKnossos users divided into global, organiz
 
 **On a per team basis:**
 
-  - __User:__ A regular wK user account. Users are only able to access datasets of their respective teams and can create annotations for those. Further, the can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their annotations.
+  - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, the can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their annotations.
 
-  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Users`, they are only able to access datasets of their respective teams and can create annotations for those. 
+  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove new users to theirs teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those. 
 
 **On an organizational level:** 
 
@@ -44,6 +44,28 @@ There are four different roles for webKnossos users divided into global, organiz
 Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the navigation bar.
 
 By default, each newly uploaded dataset can only be accessed by `Admins`, `Dataset Managers`, and members of the organization team. Add or remove more teams to a dataset for fine-grained access controls. For more information dataset and access rights, [see the dataset guide](./sharing.md#general)
+
+| Action                                           	| Admin 	| Dataset Manager 	| Team Manager 	| Team Member 	|
+|--------------------------------------------------	|-------	|-----------------	|--------------	|-------------	|
+| Access datasets of own teams                        	| Yes   	| Yes             	| Yes          	| Yes         	|
+| Access datasets of other teams                      	| Yes   	| Yes             	| No           	| No          	|
+| Edit datasets of own teams                       	| Yes   	| Yes             	| Yes          	| No          	|
+| Edit datasets of other teams                     	| Yes   	| Yes             	| No           	| No          	|
+| Access all users of own teams                       	| Yes   	| Yes             	| Yes          	| Yes         	|
+| Access all users of other teams                     	| Yes   	| Yes             	| Yes          	| No          	|
+| Assign/remove team membership to own teams       	| Yes   	| No              	| Yes          	| No          	|
+| Make other users team manager of own teams   	| Yes   	| No              	| Yes          	| No          	|
+| Make other users team manager of other teams   	| Yes   	| No              	| No           	| No          	|
+| Grant *Dataset Manager* role to others        	| Yes   	| No              	| No           	| No          	|
+| Grant *Admin* role to others                           	| Yes   	| No              	| No           	| No          	|
+| Access time tracking for oneself                       	| Yes   	| Yes             	| Yes          	| Yes         	|
+| Access time tracking for users of managed teams          	| Yes   	| No              	| Yes          	| No          	|
+| Create scripts (visible to everyone)            	| Yes   	| No              	| Yes          	| No          	|
+| Upload Datasets via UI                           	| Yes   	| Yes             	| Yes          	| No          	|
+| Set *Allowed Teams* upon dataset upload    	| Yes   	| No              	| Yes          	| No          	|
+| Get tasks again after cancelling an instance     	| Yes   	| No              	| Yes          	| No          	|
+| Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
+
 
 ## Registering New Users
 

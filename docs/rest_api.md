@@ -323,9 +323,9 @@ Download an annotation as NML/ZIP
 
 #### Returns
  - As chunked file stream:
-   - In case of an explorative annotation with a volume tracing:
+   - In case of a volume annotation:
      - A ZIP file containing both an NML file and a data.zip file with the volume data
-   - In case of a single explorative or task annotation with no volume tracing:
+   - In case of a single explorative or task annotation with no volume annotation:
      - A single NML file
    - In case of compound downloads (CompoundTask/CompoundProject/CompoundTaskType):
      - A ZIP file containing individual NML files for all associated annotations

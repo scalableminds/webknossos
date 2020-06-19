@@ -43,7 +43,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       implicit messages: Messages) =
     Mail(
       from = defaultFrom,
-      subject = "Welcome to webKnossos,
+      subject = "Welcome to webKnossos",
       bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )

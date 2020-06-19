@@ -40,6 +40,7 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
+  isFetchingData: boolean,
 };
 
 type ButtonWithCheckboxProps = {
@@ -84,13 +85,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     isUploading: false,
+    isFetchingData: false,
   };
 
   componentWillMount() {
     (async () => {
+      this.setState({ isFetchingData: true });
       const projects = await Request.receiveJSON("/api/projects", { showErrorToast: false });
       this.setState({
-        projects: projects.map(project => ({ id: project.id, label: project.name })),
+        projects: projects.map(project => ({
+          id: project.id,
+          label: project.name,
+          isFetchingData: false,
+        })),
       });
     })();
   }
@@ -208,6 +215,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 value={this.state.selectedProject}
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeProject}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
               >
                 {this.state.projects.map(project => (
                   <Select.Option key={project.id} value={project.id}>

@@ -1,5 +1,5 @@
 // @flow
-import { Form, Input, Select, Button, Card } from "antd";
+import { Form, Input, Select, Button, Card, Spin } from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -15,7 +15,7 @@ import {
 } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 type OwnProps = {|
   scriptId?: ?string,
@@ -32,11 +32,13 @@ type PropsWithRouter = {|
 
 type State = {
   users: Array<APIUser>,
+  isFetchingData: boolean,
 };
 
 class ScriptCreateView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     users: [],
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -45,8 +47,9 @@ class ScriptCreateView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const users = await getTeamManagerOrAdminUsers();
-    this.setState({ users: users.filter(user => user.isActive) });
+    this.setState({ users: users.filter(user => user.isActive), isFetchingData: false });
   }
 
   async applyDefaults() {
@@ -117,6 +120,7 @@ class ScriptCreateView extends React.PureComponent<PropsWithRouter, State> {
                   placeholder="Select a User"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.users.map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>

@@ -310,7 +310,7 @@ class Skeleton {
           this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
           break;
         case "createTree":
-          this.updateTreeColor(update.value.id, update.value.color);
+          this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
           break;
         case "updateTreeVisibility": {
           const { treeId } = update.value;

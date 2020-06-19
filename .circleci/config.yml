@@ -79,11 +79,11 @@ jobs:
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt "project webknossosTracingstore" compile stage
+          command: docker-compose run base sbt "project webknossosTracingstore" copyMessages compile stage
 
       - save_cache:
           name: Save target cache

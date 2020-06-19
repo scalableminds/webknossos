@@ -61,6 +61,7 @@ export const createTracingOverlayMenuWithCallback = (
 type Props = {
   dataset: APIMaybeUnimportedDataset,
   isUserAdmin: boolean,
+  isUserDatasetManager: boolean,
 };
 
 type State = {
@@ -84,7 +85,8 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { dataset } = this.props;
+    const { dataset, isUserAdmin, isUserDatasetManager } = this.props;
+    const managesDataset = isUserAdmin || isUserDatasetManager;
     const { isReloading } = this.state;
     const centerBackgroundImageStyle: { verticalAlign: string, filter?: string } = {
       verticalAlign: "middle",
@@ -130,7 +132,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        {this.props.isUserAdmin && dataset.dataSource.dataLayers == null ? (
+        {managesDataset && dataset.dataSource.dataLayers == null ? (
           <div>
             <Link
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
@@ -143,9 +145,9 @@ class DatasetActionView extends React.PureComponent<Props, State> {
             <div className="text-danger">{dataset.dataSource.status}</div>
           </div>
         ) : null}
-        {dataset.isActive ? (
+        {managesDataset && dataset.isActive ? (
           <div className="dataset-actions nowrap">
-            {this.props.isUserAdmin && dataset.isEditable ? (
+            {dataset.isEditable ? (
               <React.Fragment>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}

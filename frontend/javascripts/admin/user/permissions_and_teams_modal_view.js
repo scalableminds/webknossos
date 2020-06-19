@@ -1,0 +1,271 @@
+// @flow
+import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
+import * as React from "react";
+import _ from "lodash";
+import update from "immutability-helper";
+
+import type { APIUser, APITeam, APITeamMembership } from "admin/api_flow_types";
+import { updateUser, getEditableTeams } from "admin/admin_rest_api";
+import messages from "messages";
+
+const RadioButton = Radio.Button;
+const RadioGroup = Radio.Group;
+
+const ROLES = {
+  teammanager: "teammanager",
+  user: "user",
+};
+
+const PERMISSIONS = {
+  admin: "admin",
+  datasetManager: "datasetManager",
+  member: "member",
+};
+
+type TeamRoleModalProp = {
+  onChange: Function,
+  onCancel: Function,
+  visible: boolean,
+  selectedUserIds: Array<string>,
+  users: Array<APIUser>,
+  activeUser: APIUser,
+};
+
+type State = {
+  teams: Array<APITeam>,
+  selectedTeams: { [key: string]: APITeamMembership },
+  selectedPermission: string,
+};
+
+function getPermissionGroupOfUser(user: APIUser) {
+  if (user.isAdmin) {
+    return PERMISSIONS.admin;
+  }
+  if (user.isDatasetManager) {
+    return PERMISSIONS.datasetManager;
+  }
+  return PERMISSIONS.member;
+}
+
+class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
+  state = {
+    selectedTeams: {},
+    teams: [],
+    selectedPermission: PERMISSIONS.member,
+  };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  componentWillReceiveProps(newProps: TeamRoleModalProp) {
+    // If a single user is selected, pre-select his teams
+    if (newProps.selectedUserIds.length === 1) {
+      const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
+      if (user) {
+        const newSelectedTeams = _.keyBy(user.teams, "name");
+        const userPermission = getPermissionGroupOfUser(user);
+        this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
+      }
+    }
+  }
+
+  async fetchData() {
+    const teams = await getEditableTeams();
+    this.setState({ teams });
+  }
+
+  setPermissionsAndTeams = () => {
+    const newUserPromises = this.props.users.map(user => {
+      if (this.props.selectedUserIds.includes(user.id)) {
+        const newTeams = ((Object.values(this.state.selectedTeams): any): Array<APITeamMembership>);
+        const newUser = Object.assign({}, user, { teams: newTeams });
+        if (this.props.activeUser.isAdmin && this.props.selectedUserIds.length === 1) {
+          // If the current user is admin and only one user is edited we also update the permissions.
+          if (this.state.selectedPermission === PERMISSIONS.admin) {
+            newUser.isAdmin = true;
+            newUser.isDatasetManager = false;
+          } else if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
+            newUser.isDatasetManager = true;
+            newUser.isAdmin = false;
+          } else {
+            newUser.isDatasetManager = false;
+            newUser.isAdmin = false;
+          }
+        }
+
+        // server-side validation can reject a user's new teams
+        return updateUser(newUser).then(
+          serverUser => Promise.resolve(serverUser),
+          () => Promise.reject(user),
+        );
+      }
+      return Promise.resolve(user);
+    });
+
+    Promise.all(newUserPromises).then(
+      newUsers => {
+        this.props.onChange(newUsers);
+      },
+      () => {
+        // do nothing and keep modal open
+      },
+    );
+  };
+
+  handlePermissionChanged = (evt: SyntheticInputEvent<>) => {
+    const selectedPermission: $Values<typeof PERMISSIONS> = evt.target.value;
+    this.setState({ selectedPermission });
+  };
+
+  handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
+    const team = this.state.teams.find(t => t.name === teamName);
+
+    if (team) {
+      const selectedTeam = { id: team.id, name: teamName, isTeamManager };
+      this.setState(prevState => ({
+        selectedTeams: update(prevState.selectedTeams, {
+          [teamName]: { $set: selectedTeam },
+        }),
+      }));
+    }
+  }
+
+  handleUnselectTeam(teamName: string) {
+    this.setState(prevState => ({
+      selectedTeams: update(prevState.selectedTeams, {
+        $unset: [teamName],
+      }),
+    }));
+  }
+
+  getTeamComponent(team: APITeam, isDisabled: boolean) {
+    return (
+      <Checkbox
+        value={team.name}
+        checked={_.has(this.state.selectedTeams, team.name)}
+        disabled={isDisabled}
+        onChange={(event: SyntheticInputEvent<>) => {
+          if (event.target.checked) {
+            this.handleSelectTeamRole(team.name, false);
+          } else {
+            this.handleUnselectTeam(team.name);
+          }
+        }}
+      >
+        {team.name}
+      </Checkbox>
+    );
+  }
+
+  getRoleComponent(team: APITeam, isDisabled: boolean) {
+    const selectedTeam = this.state.selectedTeams[team.name];
+    let selectedValue = null;
+    if (selectedTeam) {
+      selectedValue = selectedTeam.isTeamManager ? ROLES.teammanager : ROLES.user;
+    }
+
+    return (
+      <RadioGroup
+        size="small"
+        style={{ width: "100%" }}
+        value={selectedValue}
+        disabled={!_.has(this.state.selectedTeams, team.name) || isDisabled}
+        onChange={({ target: { value } }) =>
+          this.handleSelectTeamRole(team.name, value === ROLES.teammanager)
+        }
+      >
+        <RadioButton value={ROLES.teammanager}>Team Manager</RadioButton>
+        <RadioButton value={ROLES.user}>Member</RadioButton>
+      </RadioGroup>
+    );
+  }
+
+  getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
+    return (
+      <React.Fragment>
+        <h3>Organization Permissions</h3>
+        {!isUserAdmin && !onlyEditingSingleUser ? (
+          <p>{messages["users.needs_admin_rights"]}</p>
+        ) : null}
+        {onlyEditingSingleUser ? (
+          <Radio.Group
+            name="permission-role"
+            defaultValue={this.state.selectedPermission}
+            value={this.state.selectedPermission}
+            onChange={this.handlePermissionChanged}
+            disabled={!isUserAdmin}
+          >
+            <Radio value={PERMISSIONS.admin}>
+              <span style={{ fontWeight: "bold" }}>Admin</span>
+              <br />
+              Admin can do everything.
+            </Radio>
+            <Radio value={PERMISSIONS.datasetManager}>
+              <span style={{ fontWeight: "bold" }}>Dataset Manager</span>
+              <br />
+              View and edit all datasets. No administration capabilities.
+            </Radio>
+            <Radio value={PERMISSIONS.member}>
+              <span style={{ fontWeight: "bold" }}>Member</span>
+              <br />
+              No special permissions. Only sees assigned datasets.
+            </Radio>
+          </Radio.Group>
+        ) : (
+          <p>{messages["users.multiple_selected_users"]}</p>
+        )}
+      </React.Fragment>
+    );
+  }
+
+  render() {
+    const userIsAdmin = this.props.activeUser.isAdmin;
+    const onlyEditingSingleUser = this.props.selectedUserIds.length === 1;
+    const permissionEditingSection = this.getPermissionSelection(
+      onlyEditingSingleUser,
+      userIsAdmin,
+    );
+    const isAdminSelected = this.state.selectedPermission === PERMISSIONS.admin;
+    const teamsRoleComponents = this.state.teams.map(team => (
+      <Row key={team.id}>
+        <Col span={12}>{this.getTeamComponent(team, isAdminSelected)}</Col>
+        <Col span={12}>{this.getRoleComponent(team, isAdminSelected)}</Col>
+      </Row>
+    ));
+
+    return (
+      <Modal
+        title="Assign Permissions and Teams"
+        maskClosable={false}
+        closable={false}
+        visible={this.props.visible}
+        onCancel={this.props.onCancel}
+        footer={
+          <div>
+            <Button onClick={this.setPermissionsAndTeams} type="primary">
+              Set Teams &amp; Permissions
+            </Button>
+            <Button onClick={this.props.onCancel}>Cancel</Button>
+          </div>
+        }
+      >
+        {permissionEditingSection}
+        <hr />
+        <div>
+          <Row>
+            <Col span={12}>
+              <h4>Teams</h4>
+            </Col>
+            <Col span={12}>
+              <h4>Role</h4>
+            </Col>
+          </Row>
+          {teamsRoleComponents}
+        </div>
+      </Modal>
+    );
+  }
+}
+
+export default PermissionsAndTeamsModalView;

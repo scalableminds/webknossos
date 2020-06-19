@@ -25,6 +25,7 @@ type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
   isUserAdmin: boolean,
+  isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
 };
 
@@ -111,7 +112,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { isUserAdmin } = this.props;
+    const { isUserAdmin, isUserDatasetManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
@@ -257,7 +258,11 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
+            <DatasetActionView
+              isUserAdmin={isUserAdmin}
+              isUserDatasetManager={isUserDatasetManager}
+              dataset={dataset}
+            />
           )}
         />
       </FixedExpandableTable>

@@ -151,6 +151,7 @@ function DatasetView(props: Props) {
         datasets={filteredDatasets}
         searchQuery={searchQuery}
         isUserAdmin={Utils.isUserAdmin(props.user)}
+        isUserDatasetManager={props.user.isDatasetManager}
         datasetFilteringMode={datasetFilteringMode}
       />
     );

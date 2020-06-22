@@ -27,7 +27,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       headers = Map("Sender" -> defaultFrom),
       subject =
         s"webKnossos | A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
-      bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
+      bodyHtml = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )
 
@@ -35,7 +35,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = s"webKnossos | Time limit reached. ${user.abreviatedName} in $projectName",
-      bodyText = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
+      bodyHtml = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList)
     )
 
@@ -44,7 +44,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = "Welcome to webKnossos",
-      bodyText = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      bodyHtml = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
 
@@ -59,20 +59,20 @@ class DefaultMails @Inject()(conf: WkConf) {
   def activatedMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
          subject = "webKnossos | Account activated",
-         bodyText = html.mail.validated(name, uri).body,
+         bodyHtml = html.mail.validated(name, uri).body,
          recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
          subject = "webKnossos | Password changed",
-         bodyText = html.mail.passwordChanged(name, uri).body,
+         bodyHtml = html.mail.passwordChanged(name, uri).body,
          recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String) =
     Mail(
       from = defaultFrom,
       subject = "webKnossos | Password Reset",
-      bodyText = html.mail.resetPassword(name, uri, token).body,
+      bodyHtml = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver)
     )
 

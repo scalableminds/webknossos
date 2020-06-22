@@ -35,7 +35,7 @@ There are four different roles for webKnossos users divided into global, organiz
 
 **On an organizational level:** 
 
-  - __Admin:__ Manage a whole organization including full access to all datasets, teams, and projects. Admins can access all administrative settings - similiar to `Team Managers` but for all teams - and have full control over all dataset - similar to `Dataset Managers`. They can promote other users to admin or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access all annotations, datasets, projects, tasks, etc belonging to their respective organization.
+  - __Admin:__ Manage a whole organization including full access to all datasets, teams, and projects. Admins can access all administrative settings - similiar to `Team Managers` but for all teams - and have full control over all datasets - similar to `Dataset Managers`. They can promote other users to `Admin` or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access all annotations, datasets, projects, tasks, etc belonging to their respective organization.
 
   - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/write access to all datasets within their respective organizations regardless of whether a dataset has been made available only to a specific team. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
   Unlike `Admins`, Dataset Managers do NOT have access to any of the administration interfaces for users, tasks, and projects.

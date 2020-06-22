@@ -238,6 +238,19 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     } else return [];
   }
 
+  onSelectUserRow = userId => {
+    this.setState(prevState => {
+      const selectedUserIds = [...prevState.selectedUserIds];
+      const indexOfUser = selectedUserIds.indexOf(userId);
+      if (indexOfUser >= 0) {
+        selectedUserIds.splice(indexOfUser, 1);
+      } else {
+        selectedUserIds.push(userId);
+      }
+      this.setState({ selectedUserIds });
+    });
+  };
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -329,6 +342,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 activationFilter: filters.isActive,
               })
             }
+            onRow={user => ({ onClick: () => this.onSelectUserRow(user.id) })}
             className="large-table"
             scroll={{ x: "max-content" }}
           >

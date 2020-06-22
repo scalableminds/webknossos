@@ -47,6 +47,13 @@ function getPermissionGroupOfUser(user: APIUser) {
   return PERMISSIONS.member;
 }
 
+function getSingleUserMaybe(props: TeamRoleModalProp) {
+  if (props.selectedUserIds.length === 1) {
+    return props.users.find(_user => _user.id === props.selectedUserIds[0]);
+  }
+  return false;
+}
+
 class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
   state = {
     selectedTeams: {},
@@ -60,13 +67,11 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
   componentWillReceiveProps(newProps: TeamRoleModalProp) {
     // If a single user is selected, pre-select his teams
-    if (newProps.selectedUserIds.length === 1) {
-      const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
-      if (user) {
-        const newSelectedTeams = _.keyBy(user.teams, "name");
-        const userPermission = getPermissionGroupOfUser(user);
-        this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
-      }
+    const singleUserMaybe = getSingleUserMaybe(newProps);
+    if (singleUserMaybe) {
+      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
+      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
+      this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
     }
   }
 
@@ -74,6 +79,45 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     const teams = await getEditableTeams();
     this.setState({ teams });
   }
+
+  didPermissionsChange = () => {
+    const singleUserMaybe = getSingleUserMaybe(this.props);
+    if (!singleUserMaybe) {
+      return false;
+    }
+    let previousPermission = PERMISSIONS.member;
+    if (singleUserMaybe.isAdmin) {
+      previousPermission = PERMISSIONS.admin;
+    } else if (singleUserMaybe.isDatasetManager) {
+      previousPermission = PERMISSIONS.datasetManager;
+    }
+    return previousPermission !== this.state.selectedPermission;
+  };
+
+  handleUpdatePermissionsAndTeams = () => {
+    if (this.didPermissionsChange()) {
+      const user = getSingleUserMaybe(this.props);
+      if (user) {
+        const userName = `${user.firstName} ${user.lastName}`;
+        let message = messages["users.revoke_all_permissions"];
+        if (this.state.selectedPermission === PERMISSIONS.admin) {
+          message = messages["users.set_admin"];
+        }
+        if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
+          message = messages["users.set_dataset_manager"];
+        }
+        Modal.confirm({
+          title: messages["users.change_permissions_title"],
+          content: message({
+            userName,
+          }),
+          onOk: this.setPermissionsAndTeams,
+        });
+      }
+    } else {
+      this.setPermissionsAndTeams();
+    }
+  };
 
   setPermissionsAndTeams = () => {
     const newUserPromises = this.props.users.map(user => {
@@ -243,7 +287,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         onCancel={this.props.onCancel}
         footer={
           <div>
-            <Button onClick={this.setPermissionsAndTeams} type="primary">
+            <Button onClick={this.handleUpdatePermissionsAndTeams} type="primary">
               Set Teams &amp; Permissions
             </Button>
             <Button onClick={this.props.onCancel}>Cancel</Button>

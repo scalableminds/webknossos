@@ -119,7 +119,7 @@ export default function ShareModalView(props: Props) {
         "The dataset of this annotation is not public. The Sharing Link will make the dataset accessible to everyone you share it with.";
     } else if (visibility === "Private") {
       message =
-        "The annotation is currently private, so Team Sharing is disabled and only admins and dataset managers can use the Sharing Link.";
+        "The annotation is currently private, so Team Sharing is disabled and only admins and team managers can use the Sharing Link.";
     }
 
     return message != null ? (

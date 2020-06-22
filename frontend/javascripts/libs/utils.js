@@ -272,7 +272,7 @@ function isUserTeamManager(user: APIUser): boolean {
 }
 
 export function isUserAdmin(user: APIUser): boolean {
-  return user.isAdmin
+  return user.isAdmin;
 }
 
 export function isUserAdminOrTeamManager(user: APIUser): boolean {
@@ -280,7 +280,7 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
 }
 
 export function isUserDatasetManager(user: APIUser): boolean {
-  return user.isDatasetManager
+  return user.isDatasetManager;
 }
 
 export function getUrlParamsObject(): UrlParams {

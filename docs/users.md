@@ -29,15 +29,15 @@ There are four different roles for webKnossos users divided into global, organiz
 
 **On a per team basis:**
 
-  - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, the can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their own annotations or [annotations shared with them](./sharing.md).
+  - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, they can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their own annotations or [annotations shared with them](./sharing.md).
 
-  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove new users to theirs teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those. 
+  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove users to/from their teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those. 
 
 **On an organizational level:** 
 
-  - __Admin:__ Manage a whole organization including full access to all datasets, teams, and projects. Admins can access all administrative settings - similiar to `Team Managers` but for all teams - and have full control over all dataset - similar to `Dataset Managers`. They can promote other users to admin or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access all annotations, datasets, projects, tasks, etc belonging to their respective organization.
+  - __Admin:__ Manage a whole organization including full access to all datasets, teams, and projects. Admins can access all administrative settings - similiar to `Team Managers` but for all teams - and have full control over all datasets - similar to `Dataset Managers`. They can promote other users to `Admin` or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access all annotations, datasets, projects, tasks, etc belonging to their respective organization.
 
-  - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/wrote access to all datasets within their respective organizations regardless of if a dataset is only been made available to a certain team. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
+  - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/write access to all datasets within their respective organizations regardless of whether a dataset has been made available only to a specific team. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
   Unlike `Admins`, Dataset Managers do NOT have access to any of the administration interfaces for users, tasks, and projects.
   
 

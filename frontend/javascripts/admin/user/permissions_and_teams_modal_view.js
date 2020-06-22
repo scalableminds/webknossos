@@ -257,7 +257,9 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
                 </tr>
                 <tr>
                   <td />
-                  <td style={explanationStyle}>Admin can do everything.</td>
+                  <td style={explanationStyle}>
+                    Full administration capabilities. View and edit all datasets.
+                  </td>
                 </tr>
                 <tr />
                 <tr>
@@ -269,7 +271,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
                 <tr>
                   <td />
                   <td style={explanationStyle}>
-                    View and edit all datasets. No administration capabilities.
+                    No administration capabilities. View and edit all datasets.
                   </td>
                 </tr>
                 <tr />
@@ -282,7 +284,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
                 <tr>
                   <td />
                   <td style={explanationStyle}>
-                    No special permissions. Only sees assigned datasets.
+                    No special permissions. Dataset access based on team memberships.
                   </td>
                 </tr>
                 <tr />

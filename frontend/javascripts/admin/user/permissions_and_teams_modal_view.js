@@ -1,5 +1,5 @@
 // @flow
-import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
+import { Modal, Button, Radio, Col, Row, Checkbox, Divider, Icon } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -212,7 +212,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     return (
       <RadioGroup
         size="small"
-        style={{ width: "100%" }}
+        style={{ width: "100%", paddingBottom: 8 }}
         value={selectedValue}
         disabled={!_.has(this.state.selectedTeams, team.name) || isDisabled}
         onChange={({ target: { value } }) =>
@@ -226,9 +226,16 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   }
 
   getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
+    const roleStyle = { fontWeight: "bold" };
+    const explanationStyle = { color: "rgba(0, 0, 0, 0.55", paddingBottom: 12 };
     return (
       <React.Fragment>
-        <h3>Organization Permissions</h3>
+        <h4>
+          Organization Permissions{" "}
+          <a href="https://docs.webknossos.org/guides/users">
+            <Icon type="info-circle" />
+          </a>
+        </h4>
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -240,21 +247,47 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             onChange={this.handlePermissionChanged}
             disabled={!isUserAdmin}
           >
-            <Radio value={PERMISSIONS.admin}>
-              <span style={{ fontWeight: "bold" }}>Admin</span>
-              <br />
-              Admin can do everything.
-            </Radio>
-            <Radio value={PERMISSIONS.datasetManager}>
-              <span style={{ fontWeight: "bold" }}>Dataset Manager</span>
-              <br />
-              View and edit all datasets. No administration capabilities.
-            </Radio>
-            <Radio value={PERMISSIONS.member}>
-              <span style={{ fontWeight: "bold" }}>Member</span>
-              <br />
-              No special permissions. Only sees assigned datasets.
-            </Radio>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.admin} />
+                  </td>
+                  <td style={roleStyle}>Admin</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>Admin can do everything.</td>
+                </tr>
+                <tr />
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.datasetManager} />
+                  </td>
+                  <td style={roleStyle}>Dataset Manager</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>
+                    View and edit all datasets. No administration capabilities.
+                  </td>
+                </tr>
+                <tr />
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.member} />
+                  </td>
+                  <td style={roleStyle}>Member</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>
+                    No special permissions. Only sees assigned datasets.
+                  </td>
+                </tr>
+                <tr />
+              </tbody>
+            </table>
           </Radio.Group>
         ) : (
           <p>{messages["users.multiple_selected_users"]}</p>
@@ -280,7 +313,6 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
     return (
       <Modal
-        title="Assign Permissions and Teams"
         maskClosable={false}
         closable={false}
         visible={this.props.visible}
@@ -295,7 +327,8 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         }
       >
         {permissionEditingSection}
-        <hr />
+        <Divider />
+        <h4>Team Permissions</h4>
         <div>
           <Row>
             <Col span={12}>

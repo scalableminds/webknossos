@@ -267,12 +267,12 @@ export function point3ToVector3({ x, y, z }: { x: number, y: number, z: number }
   return [x, y, z];
 }
 
-function isUserTeamManager(user: APIUser): boolean {
+export function isUserTeamManager(user: APIUser): boolean {
   return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
 }
 
 export function isUserAdmin(user: APIUser): boolean {
-  return user.isAdmin
+  return user.isAdmin;
 }
 
 export function isUserAdminOrTeamManager(user: APIUser): boolean {
@@ -280,7 +280,7 @@ export function isUserAdminOrTeamManager(user: APIUser): boolean {
 }
 
 export function isUserDatasetManager(user: APIUser): boolean {
-  return user.isDatasetManager
+  return user.isDatasetManager;
 }
 
 export function getUrlParamsObject(): UrlParams {

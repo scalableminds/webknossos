@@ -41,6 +41,7 @@ const persistence: Persistence<PersistenceState> = new Persistence(
 );
 
 function DatasetView(props: Props) {
+  const { user } = props;
   const history = useHistory();
   const context = useContext(DatasetCacheContext);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -85,14 +86,14 @@ function DatasetView(props: Props) {
     renderIndependently(destroy => (
       <SampleDatasetsModal
         onOk={context.checkDatasets}
-        organizationName={props.user.organization}
+        organizationName={user.organization}
         destroy={destroy}
       />
     ));
   }
 
   function renderPlaceholder() {
-    const isUserAdminOrDatasetManager = Utils.isUserAdmin(props.user) || Utils.isUserDatasetManager(props.user);
+    const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
     const noDatasetsPlaceholder =
       "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
     const uploadPlaceholder = (
@@ -144,14 +145,15 @@ function DatasetView(props: Props) {
 
   function renderTable() {
     const filteredDatasets = features().isDemoInstance
-      ? context.datasets.filter(d => d.owningOrganization === props.user.organization)
+      ? context.datasets.filter(d => d.owningOrganization === user.organization)
       : context.datasets;
     return (
       <DatasetTable
         datasets={filteredDatasets}
         searchQuery={searchQuery}
-        isUserAdmin={Utils.isUserAdmin(props.user)}
-        isUserDatasetManager={Utils.isUserDatasetManager(props.user)}
+        isUserAdmin={Utils.isUserAdmin(user)}
+        isUserTeamManager={Utils.isUserTeamManager(user)}
+        isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
       />
     );
@@ -160,16 +162,16 @@ function DatasetView(props: Props) {
   const margin = { marginRight: 5 };
   const createFilteringModeRadio = (key, label) => (
     <Radio
-    onChange={() => {
-      setDatasetFilteringMode(key);
-      context.fetchDatasets({ datasetFilteringMode: key });
-    }}
-    checked={datasetFilteringMode === key}
+      onChange={() => {
+        setDatasetFilteringMode(key);
+        context.fetchDatasets({ datasetFilteringMode: key });
+      }}
+      checked={datasetFilteringMode === key}
     >
       {label}
     </Radio>
   );
-  
+
   const filterMenu = (
     <Menu onClick={() => {}}>
       <Menu.Item>{createFilteringModeRadio("showAllDatasets", "Show all datasets")}</Menu.Item>
@@ -183,28 +185,28 @@ function DatasetView(props: Props) {
   );
   const searchBox = (
     <Search
-    style={{ width: 200 }}
-    onPressEnter={handleSearch}
-    onChange={handleSearch}
-    value={searchQuery}
+      style={{ width: 200 }}
+      onPressEnter={handleSearch}
+      onChange={handleSearch}
+      value={searchQuery}
     />
-    );
-    
-    const isUserAdminOrDatasetManager = Utils.isUserAdmin(props.user) || Utils.isUserDatasetManager(props.user);;
-    const search = isUserAdminOrDatasetManager ? (
-      <InputGroup compact>
-        {searchBox}
-        <Dropdown overlay={filterMenu} trigger={["click"]}>
-          <Button>
-            <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-              <Icon type="setting" />
-            </Badge>
-          </Button>
-        </Dropdown>
-      </InputGroup>
-    ) : (
-      searchBox
-    );
+  );
+
+  const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
+  const search = isUserAdminOrDatasetManager ? (
+    <InputGroup compact>
+      {searchBox}
+      <Dropdown overlay={filterMenu} trigger={["click"]}>
+        <Button>
+          <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
+            <Icon type="setting" />
+          </Badge>
+        </Button>
+      </Dropdown>
+    </InputGroup>
+  ) : (
+    searchBox
+  );
 
   const adminHeader = (
     <div className="pull-right" style={{ display: "flex" }}>

@@ -143,7 +143,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   <Upload.Dragger
                     name="files"
                     beforeUpload={file => {
-                      if (!form.getFieldValue("name") || form.getFieldValue("name") === "") {
+                      if (!form.getFieldValue("name")) {
                         const filename = file.name
                           .split(".")
                           .slice(0, -1)

@@ -4,14 +4,18 @@
 
   <p>Hi @name,</p>
 
-  <p>
-    Welcome to your new webKnossos account. You are almost ready to start exploring and to collaboratively
-    annotate large 3D datasets.
-  </p>
-
-  @if(!enableAutoVerify) { 
+  @if(!enableAutoVerify) {
+    <p>
+      Welcome to your new webKnossos account. You are almost ready to start exploring and to collaboratively
+      annotate large 3D datasets.
+    </p>
     <p>Your account is currently under review. An administrator will activate you soon.</p>
-  } 
+  } else {
+    <p>
+      Welcome to your new webKnossos account. Get ready to start exploring and to collaboratively
+      annotate large 3D datasets.
+    </p>
+  }
 
   @if(brainDBresult.isDefined) { 
     <p>@brainDBresult.get</p>

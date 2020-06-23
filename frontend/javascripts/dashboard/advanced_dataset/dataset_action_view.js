@@ -60,7 +60,6 @@ export const createTracingOverlayMenuWithCallback = (
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
-  isUserAdminOrDatasetManager: boolean,
 };
 
 type State = {
@@ -84,7 +83,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { dataset, isUserAdminOrDatasetManager } = this.props;
+    const { dataset } = this.props;
     const { isReloading } = this.state;
     const centerBackgroundImageStyle: { verticalAlign: string, filter?: string } = {
       verticalAlign: "middle",

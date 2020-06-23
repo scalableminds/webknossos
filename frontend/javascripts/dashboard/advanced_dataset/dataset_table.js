@@ -113,7 +113,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { isUserAdmin, isUserDatasetManager, isUserTeamManager } = this.props;
+    const { isUserAdmin, isUserTeamManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
@@ -262,7 +262,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <DatasetActionView
-              isUserAdminOrDatasetManager={isUserAdmin || isUserDatasetManager}
               dataset={dataset}
             />
           )}

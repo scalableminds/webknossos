@@ -92,7 +92,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                   style={iconStyle}
                   onClick={evt => {
                     evt.stopPropagation();
-                    this.handleOnChange;
+                    this.handleOnChange();
                   }}
                 />
               </Tooltip>

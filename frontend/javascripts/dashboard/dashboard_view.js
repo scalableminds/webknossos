@@ -103,7 +103,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     const { isAdminView } = this.props;
 
     return {
-      publications: features().isDemoInstance,
+      publications: !isAdminView && features().isDemoInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
@@ -126,10 +126,10 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             <DatasetView user={user} />
           </TabPane>
         ) : null,
-        <TabPane tab="My Tasks" key="tasks">
+        <TabPane tab={isAdminView ? "Tasks" : "My Tasks"} key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab="My Annotations" key="explorativeAnnotations">
+        <TabPane tab={isAdminView ? "Annotations" : "My Annotations"} key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}

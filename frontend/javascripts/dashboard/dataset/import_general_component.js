@@ -17,7 +17,7 @@ export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Prop
 
   const allowedTeamsComponent = (
     <FormItemWithInfo
-      label="Allowed Teams"
+      label="Teams allowed to access this dataset"
       info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
       validateStatus={hasNoAllowedTeams ? "warning" : "success"}
       help={

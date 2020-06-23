@@ -63,7 +63,7 @@ By default, each newly uploaded dataset can only be accessed by `Admins` and `Da
 | Access time tracking for users of managed teams          	| Yes   	| No              	| Yes          	| No          	|
 | Create scripts (visible to everyone)            	| Yes   	| No              	| Yes          	| No          	|
 | Upload Datasets via UI                           	| Yes   	| Yes             	| Yes          	| No          	|
-| Set *Allowed Teams* upon dataset upload    	| Yes   	| Yes              	| Yes          	| No          	|
+| Set team access permissions upon dataset upload    	| Yes   	| Yes              	| Yes          	| No          	|
 | Get tasks again after cancelling an instance     	| Yes   	| No              	| Yes          	| No          	|
 | Access to wK Statistics Menu  	| Yes   	| No              	| Yes          	| No          	|
 

@@ -193,7 +193,8 @@ function DatasetView(props: Props) {
   );
 
   const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
-  const isUserAdminOrDatasetManagerOrTeamManager = isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
+  const isUserAdminOrDatasetManagerOrTeamManager =
+    isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
     <InputGroup compact>
       {searchBox}

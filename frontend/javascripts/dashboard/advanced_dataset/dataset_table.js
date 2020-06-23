@@ -261,9 +261,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView
-              dataset={dataset}
-            />
+            <DatasetActionView dataset={dataset} />
           )}
         />
       </FixedExpandableTable>

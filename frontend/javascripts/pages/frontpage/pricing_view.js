@@ -151,7 +151,7 @@ const PricingView = () => (
             "Suggest new datasets for publication",
             "Community Support",
             "All webKnossos features",
-            <Link to="/onboarding" key="link-to-onboarding">
+            <Link to="/" key="link-to-onboarding">
               <Button
                 size="large"
                 style={{ marginTop: 20 }}
@@ -280,7 +280,7 @@ const PricingView = () => (
         <FAQItem title="How do I get started?">
           <p>
             You can try webKnossos for free with any of public dataset here on webknossos.org.{" "}
-            <Link to="/onboarding" onClick={() => trackAction("[Pricing] CreateFreeAccount")}>
+            <Link to="/" onClick={() => trackAction("[Pricing] CreateFreeAccount")}>
               Create a free account today.
             </Link>
           </p>

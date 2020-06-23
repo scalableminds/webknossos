@@ -12,8 +12,9 @@ case class CreateTreeSkeletonAction(id: Int,
                                     branchPoints: List[UpdateActionBranchPoint],
                                     timestamp: Long,
                                     comments: List[UpdateActionComment],
-                                    actionTimestamp: Option[Long] = None,
                                     groupId: Option[Int],
+                                    isVisible: Option[Boolean],
+                                    actionTimestamp: Option[Long] = None,
                                     info: Option[String] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
@@ -26,7 +27,8 @@ case class CreateTreeSkeletonAction(id: Int,
                        comments.map(convertComment),
                        name,
                        timestamp,
-                       groupId)
+                       groupId,
+                       isVisible)
     tracing.withTrees(newTree +: tracing.trees)
   }
 

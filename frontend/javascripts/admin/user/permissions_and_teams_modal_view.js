@@ -1,5 +1,5 @@
 // @flow
-import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
+import { Modal, Button, Radio, Col, Row, Checkbox, Divider, Icon } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
@@ -47,6 +47,13 @@ function getPermissionGroupOfUser(user: APIUser) {
   return PERMISSIONS.member;
 }
 
+function getSingleUserMaybe(props: TeamRoleModalProp) {
+  if (props.selectedUserIds.length === 1) {
+    return props.users.find(_user => _user.id === props.selectedUserIds[0]);
+  }
+  return false;
+}
+
 class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp, State> {
   state = {
     selectedTeams: {},
@@ -60,13 +67,11 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
   componentWillReceiveProps(newProps: TeamRoleModalProp) {
     // If a single user is selected, pre-select his teams
-    if (newProps.selectedUserIds.length === 1) {
-      const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
-      if (user) {
-        const newSelectedTeams = _.keyBy(user.teams, "name");
-        const userPermission = getPermissionGroupOfUser(user);
-        this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
-      }
+    const singleUserMaybe = getSingleUserMaybe(newProps);
+    if (singleUserMaybe) {
+      const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
+      const userPermission = getPermissionGroupOfUser(singleUserMaybe);
+      this.setState({ selectedTeams: newSelectedTeams, selectedPermission: userPermission });
     }
   }
 
@@ -74,6 +79,45 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     const teams = await getEditableTeams();
     this.setState({ teams });
   }
+
+  didPermissionsChange = () => {
+    const singleUserMaybe = getSingleUserMaybe(this.props);
+    if (!singleUserMaybe) {
+      return false;
+    }
+    let previousPermission = PERMISSIONS.member;
+    if (singleUserMaybe.isAdmin) {
+      previousPermission = PERMISSIONS.admin;
+    } else if (singleUserMaybe.isDatasetManager) {
+      previousPermission = PERMISSIONS.datasetManager;
+    }
+    return previousPermission !== this.state.selectedPermission;
+  };
+
+  handleUpdatePermissionsAndTeams = () => {
+    if (this.didPermissionsChange()) {
+      const user = getSingleUserMaybe(this.props);
+      if (user) {
+        const userName = `${user.firstName} ${user.lastName}`;
+        let message = messages["users.revoke_all_permissions"];
+        if (this.state.selectedPermission === PERMISSIONS.admin) {
+          message = messages["users.set_admin"];
+        }
+        if (this.state.selectedPermission === PERMISSIONS.datasetManager) {
+          message = messages["users.set_dataset_manager"];
+        }
+        Modal.confirm({
+          title: messages["users.change_permissions_title"],
+          content: message({
+            userName,
+          }),
+          onOk: this.setPermissionsAndTeams,
+        });
+      }
+    } else {
+      this.setPermissionsAndTeams();
+    }
+  };
 
   setPermissionsAndTeams = () => {
     const newUserPromises = this.props.users.map(user => {
@@ -168,7 +212,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     return (
       <RadioGroup
         size="small"
-        style={{ width: "100%" }}
+        style={{ width: "100%", paddingBottom: 8 }}
         value={selectedValue}
         disabled={!_.has(this.state.selectedTeams, team.name) || isDisabled}
         onChange={({ target: { value } }) =>
@@ -182,9 +226,20 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
   }
 
   getPermissionSelection(onlyEditingSingleUser: boolean, isUserAdmin: boolean) {
+    const roleStyle = { fontWeight: "bold" };
+    const explanationStyle = { color: "rgba(0, 0, 0, 0.55", paddingBottom: 12 };
     return (
       <React.Fragment>
-        <h3>Organization Permissions</h3>
+        <h4>
+          Organization Permissions{" "}
+          <a
+            href="https://docs.webknossos.org/guides/users"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon type="info-circle" />
+          </a>
+        </h4>
         {!isUserAdmin && !onlyEditingSingleUser ? (
           <p>{messages["users.needs_admin_rights"]}</p>
         ) : null}
@@ -196,21 +251,49 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
             onChange={this.handlePermissionChanged}
             disabled={!isUserAdmin}
           >
-            <Radio value={PERMISSIONS.admin}>
-              <span style={{ fontWeight: "bold" }}>Admin</span>
-              <br />
-              Admin can do everything.
-            </Radio>
-            <Radio value={PERMISSIONS.datasetManager}>
-              <span style={{ fontWeight: "bold" }}>Dataset Manager</span>
-              <br />
-              View and edit all datasets. No administration capabilities.
-            </Radio>
-            <Radio value={PERMISSIONS.member}>
-              <span style={{ fontWeight: "bold" }}>Member</span>
-              <br />
-              No special permissions. Only sees assigned datasets.
-            </Radio>
+            <table>
+              <tbody>
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.admin} />
+                  </td>
+                  <td style={roleStyle}>Admin</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>
+                    Full administration capabilities. View and edit all datasets.
+                  </td>
+                </tr>
+                <tr />
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.datasetManager} />
+                  </td>
+                  <td style={roleStyle}>Dataset Manager</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>
+                    No administration capabilities. View and edit all datasets.
+                  </td>
+                </tr>
+                <tr />
+                <tr>
+                  <td>
+                    <Radio value={PERMISSIONS.member} />
+                  </td>
+                  <td style={roleStyle}>Member</td>
+                </tr>
+                <tr>
+                  <td />
+                  <td style={explanationStyle}>
+                    No special permissions. Dataset access based on team memberships.
+                  </td>
+                </tr>
+                <tr />
+              </tbody>
+            </table>
           </Radio.Group>
         ) : (
           <p>{messages["users.multiple_selected_users"]}</p>
@@ -236,14 +319,13 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
 
     return (
       <Modal
-        title="Assign Permissions and Teams"
         maskClosable={false}
         closable={false}
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         footer={
           <div>
-            <Button onClick={this.setPermissionsAndTeams} type="primary">
+            <Button onClick={this.handleUpdatePermissionsAndTeams} type="primary">
               Set Teams &amp; Permissions
             </Button>
             <Button onClick={this.props.onCancel}>Cancel</Button>
@@ -251,7 +333,8 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
         }
       >
         {permissionEditingSection}
-        <hr />
+        <Divider />
+        <h4>Team Permissions</h4>
         <div>
           <Row>
             <Col span={12}>

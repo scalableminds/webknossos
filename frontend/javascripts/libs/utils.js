@@ -267,7 +267,7 @@ export function point3ToVector3({ x, y, z }: { x: number, y: number, z: number }
   return [x, y, z];
 }
 
-function isUserTeamManager(user: APIUser): boolean {
+export function isUserTeamManager(user: APIUser): boolean {
   return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
 }
 

@@ -265,7 +265,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",
   "users.needs_admin_rights": "Admin rights are required to change the permissions of users.",
   "users.multiple_selected_users":
-    "You selected more than one user. To change the permissions of users you need to select them individually.",
+    "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
   "users.revoke_all_permissions": _.template(
     "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",

@@ -401,7 +401,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
                     <span
-                      onClick={() => {
+                      onClick={evt => {
+                        evt.stopPropagation();
                         this.setState(prevState => ({
                           // If no user is selected, set singleSelectedUser. Otherwise,
                           // open the modal so that all selected users are edited.

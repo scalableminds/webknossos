@@ -87,7 +87,14 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             <React.Fragment>
               <Input {...inputComponentProps} />
               <Tooltip title={`Save ${this.props.label}`} placement="bottom">
-                <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
+                <Icon
+                  type="check"
+                  style={iconStyle}
+                  onClick={evt => {
+                    evt.stopPropagation();
+                    this.handleOnChange;
+                  }}
+                />
               </Tooltip>
             </React.Fragment>
           ) : (
@@ -119,7 +126,10 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             <Icon
               type="edit"
               style={iconStyle}
-              onClick={() => this.setState({ isEditing: true })}
+              onClick={evt => {
+                evt.stopPropagation();
+                this.setState({ isEditing: true });
+              }}
             />
           </Tooltip>
         </span>

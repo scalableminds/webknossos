@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.File
 import java.nio._
 import java.nio.file.{Files, Paths}
 
@@ -12,7 +11,6 @@ import com.scalableminds.webknossos.datastore.storage.{
   AgglomerateCache,
   AgglomerateFileCache,
   BoundingBoxCache,
-  BoundingBoxFinder,
   CachedReader,
   CumsumParser
 }
@@ -29,8 +27,6 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val cumsumFileName = "cumsum.json"
 
   lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
-//  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
-  //                                      config.Braingames.Binary.agglomerateStandardBlockSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -45,13 +41,6 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Array[Byte] = {
-    def findInitialBoundingBox(finder: BoundingBoxFinder): (Long, Long, Long) = {
-      val x = finder.xCoordinates.floor(request.cuboid.topLeft.x)
-      val y = finder.yCoordinates.floor(request.cuboid.topLeft.y)
-      val z = finder.zCoordinates.floor(request.cuboid.topLeft.z)
-      (x, y, z)
-    }
-
     def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
     def shortFunc(buf: ByteBuffer, lon: Long) = buf putShort lon.toShort
     def intFunc(buf: ByteBuffer, lon: Long) = buf putInt lon.toInt
@@ -67,17 +56,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
           input.map(el =>
             agglomerateCache.withCache(el, cachedAgglomerate.reader, cachedAgglomerate.dataset, cachedAgglomerate.size)(
               readHDF))
-        case Right((finder, cache)) =>
-          val initialBoundingBox = findInitialBoundingBox(finder)
-          val readerRange = cache.withCache(request, initialBoundingBox)
-          val agglomerateIds =
-            readHDF(cachedAgglomerate.reader,
-                    cachedAgglomerate.dataset,
-                    readerRange._1,
-                    readerRange._2 - readerRange._1,
-                    false)
-          input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i.toLong - readerRange._1).toInt))
+        case Right(boundingBoxCache) => boundingBoxCache.withCache(request, input, cachedAgglomerate.reader)(readHDF)
       }
+      cachedAgglomerate.finishAccess()
 
       agglomerateIds
         .foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
@@ -93,17 +74,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
-  private def readHDF(reader: IHDF5Reader,
-                      dataSet: HDF5DataSet,
-                      segmentId: Long,
-                      blockSize: Long,
-                      useDataset: Boolean = true): Array[Long] =
+  private def readHDF(reader: IHDF5Reader, dataSet: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
-    if (useDataset) {
-      reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
-    } else {
-      reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
-    }
+    reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
+
+  private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
+    reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile =
@@ -125,7 +101,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
 
-    val cache: Either[AgglomerateCache, (BoundingBoxFinder, BoundingBoxCache)] =
+    val cache: Either[AgglomerateCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
         Right(CumsumParser.parse(cumsumPath.toFile))
       } else {

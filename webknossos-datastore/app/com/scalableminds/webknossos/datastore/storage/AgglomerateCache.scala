@@ -11,6 +11,8 @@ import spire.math.ULong
 import com.scalableminds.util.tools.TimeLogger
 import com.typesafe.scalalogging.LazyLogging
 
+import scala.collection.mutable
+
 case class BoundingBoxFinder(xCoordinates: util.TreeSet[Long],
                              yCoordinates: util.TreeSet[Long],
                              zCoordinates: util.TreeSet[Long])
@@ -18,7 +20,7 @@ case class BoundingBoxFinder(xCoordinates: util.TreeSet[Long],
 case class CachedReader(reader: IHDF5Reader,
                         dataset: HDF5DataSet,
                         size: ULong,
-                        cache: Either[AgglomerateCache, (BoundingBoxFinder, BoundingBoxCache)])
+                        cache: Either[AgglomerateCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
@@ -87,14 +89,14 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
     with LazyLogging {
 
   def withCache(segmentId: ULong, reader: IHDF5Reader, dataSet: HDF5DataSet, size: ULong)(
-      readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long, Boolean) => Array[Long]): Long = {
+      readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
 
     def handleUncachedAgglomerate(): Long = {
       val minId =
         if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
       val blockSize = spire.math.min(size - minId, ULong(standardBlockSize))
 
-      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, blockSize.toInt, true)
+      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, blockSize.toInt)
 
       agglomerateIds.zipWithIndex.foreach {
         case (id, index) => put(index + minId.toLong, id)
@@ -107,12 +109,21 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
   }
 }
 
-class BoundingBoxCache(val maxEntries: Int) extends LRUConcurrentCache[(Long, Long, Long), BoundingBoxValues] {
-  var minBoundingBox: (Long, Long, Long) = (0, 0, 0)
-  def withCache(request: DataServiceDataRequest, initialBoundingBox: (Long, Long, Long)): (Long, Long) = {
+class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
+                       val boundingBoxFinder: BoundingBoxFinder,
+                       val minBoundingBox: (Long, Long, Long) = (0, 0, 0)) {
+  def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
+    val x = boundingBoxFinder.xCoordinates.floor(cuboid.topLeft.x)
+    val y = boundingBoxFinder.yCoordinates.floor(cuboid.topLeft.y)
+    val z = boundingBoxFinder.zCoordinates.floor(cuboid.topLeft.z)
+    (x, y, z)
+  }
+
+  def getReaderRange(request: DataServiceDataRequest): (Long, Long) = {
+    val initialBoundingBox = findInitialBoundingBox(request.cuboid)
     val requestedCuboid = request.cuboid.bottomRight
     val dataLayerBox = request.dataLayer.boundingBox.bottomRight
-    val initialValues = get(initialBoundingBox).getOrElse(get(minBoundingBox).get)
+    val initialValues = cache.getOrElse(initialBoundingBox, cache(minBoundingBox))
     var range = initialValues.range
     var currDimensions = initialValues.dimensions
 
@@ -125,7 +136,7 @@ class BoundingBoxCache(val maxEntries: Int) extends LRUConcurrentCache[(Long, Lo
       while (y < requestedCuboid.y && y < dataLayerBox.y) {
         val prevY = (y, currDimensions._2)
         while (z < requestedCuboid.z && z < dataLayerBox.z) {
-          get((x, y, z)).foreach { value =>
+          cache.get((x, y, z)).foreach { value =>
             range = (math.min(range._1, value.range._1), math.max(range._2, value.range._2))
             currDimensions = value.dimensions
           }
@@ -136,6 +147,13 @@ class BoundingBoxCache(val maxEntries: Int) extends LRUConcurrentCache[(Long, Lo
       x = prevX._1 + prevX._2
     }
     range
+  }
+
+  def withCache(request: DataServiceDataRequest, input: Array[ULong], reader: IHDF5Reader)(
+      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) = {
+    val readerRange = getReaderRange(request)
+    val agglomerateIds = readHDF(reader, readerRange._1, readerRange._2 - readerRange._1)
+    input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i.toLong - readerRange._1).toInt))
   }
 
 }

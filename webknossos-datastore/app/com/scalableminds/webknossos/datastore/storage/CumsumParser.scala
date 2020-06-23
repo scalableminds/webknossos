@@ -13,7 +13,7 @@ import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {
 
-  def parse(r: Reader): (BoundingBoxFinder, BoundingBoxCache) =
+  def parse(r: Reader): (BoundingBoxCache) =
     try {
       parseImpl(r)
     } catch {
@@ -29,7 +29,7 @@ object CumsumParser extends LazyLogging {
       r.close()
     }
 
-  def parse(f: File): (BoundingBoxFinder, BoundingBoxCache) =
+  def parse(f: File): BoundingBoxCache =
     parse(new FileReader(f))
 
   private def parseImpl(r: Reader) = {
@@ -38,7 +38,8 @@ object CumsumParser extends LazyLogging {
     val jsonReader = new JsonReader(r)
     var boundingBoxList = List[(Long, Long, Long, Long, Long, Long)]()
     val boundingBoxFinder = BoundingBoxFinder(new java.util.TreeSet(), new java.util.TreeSet(), new java.util.TreeSet())
-    val boundingBoxCache = new BoundingBoxCache(10000)
+    var cache = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
+    var minBoundingBox: (Long, Long, Long) = (0, 0, 0)
 
     jsonReader.beginObject()
     while (jsonReader.hasNext) {
@@ -46,7 +47,9 @@ object CumsumParser extends LazyLogging {
         case "max_ids" =>
           boundingBoxList = parseBoundingBoxes(jsonReader)
         case "cumsum" =>
-          parseCumSum(jsonReader, boundingBoxList, boundingBoxFinder, boundingBoxCache)
+          val tuple = parseCumSum(jsonReader, boundingBoxList, boundingBoxFinder)
+          cache = tuple._1
+          minBoundingBox = tuple._2
         case _ =>
           jsonReader.skipValue()
       }
@@ -56,7 +59,7 @@ object CumsumParser extends LazyLogging {
     val end = System.currentTimeMillis()
     logger.info(s"Cumsum parsing took ${end - start} ms")
 
-    (boundingBoxFinder, boundingBoxCache)
+    new BoundingBoxCache(cache, boundingBoxFinder, minBoundingBox)
   }
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
@@ -76,28 +79,31 @@ object CumsumParser extends LazyLogging {
 
   private def parseCumSum(reader: JsonReader,
                           boundingBoxes: List[(Long, Long, Long, Long, Long, Long)],
-                          boundingBoxFinder: BoundingBoxFinder,
-                          boundingBoxCache: BoundingBoxCache) = {
+                          boundingBoxFinder: BoundingBoxFinder) = {
     def addToFinder(bb: (Long, Long, Long, Long, Long, Long)) = {
       boundingBoxFinder.xCoordinates.add(bb._1)
       boundingBoxFinder.yCoordinates.add(bb._2)
       boundingBoxFinder.zCoordinates.add(bb._3)
     }
 
-    def iter(list: List[(Long, Long, Long, Long, Long, Long)], prevEnd: Long): Unit =
+    def iter(list: List[(Long, Long, Long, Long, Long, Long)],
+             hashMap: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
+             prevEnd: Long): Unit =
       list match {
         case head :: tail if reader.hasNext =>
           addToFinder(head)
           val newEnd = reader.nextLong()
           val currValues = BoundingBoxValues((prevEnd + 1, newEnd), (head._4, head._5, head._6))
-          boundingBoxCache.put((head._1, head._2, head._3), currValues)
-          iter(tail, newEnd)
+          hashMap put ((head._1, head._2, head._3), currValues)
+          iter(tail, hashMap, newEnd)
         case _ => ()
       }
+    val hashMap = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
     reader.beginArray()
     val head = boundingBoxes.head
-    boundingBoxCache.minBoundingBox = (head._1, head._2, head._3)
-    iter(boundingBoxes, 0)
+    val minBoundingBox = (head._1, head._2, head._3)
+    iter(boundingBoxes, hashMap, 0)
     reader.endArray()
+    (hashMap, minBoundingBox)
   }
 }

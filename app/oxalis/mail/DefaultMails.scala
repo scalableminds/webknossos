@@ -17,7 +17,7 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   val defaultFrom = "no-reply@webknossos.org"
 
-  val demoSender = conf.Mail.demoSender
+  val wkOrgSender = conf.Mail.demoSender
 
   val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
 
@@ -39,7 +39,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(organization.overTimeMailingList)
     )
 
-  def registerMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
+  def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
       implicit messages: Messages) =
     Mail(
       from = defaultFrom,
@@ -48,9 +48,18 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  def registerMailWKOrg(name: String, receiver: String)(implicit messages: Messages) =
+  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean)(
+      implicit messages: Messages) =
     Mail(
-      from = demoSender,
+      from = wkOrgSender,
+      subject = "Welcome to webKnossos",
+      bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify).body,
+      recipients = List(receiver)
+    )
+  
+  def newAdminWKOrgMail(name: String, receiver: String)(implicit messages: Messages) =
+    Mail(
+      from = wkOrgSender,
       subject = "Welcome to webKnossos",
       bodyHtml = html.mail.newAdminWKOrg(name).body,
       recipients = List(receiver)

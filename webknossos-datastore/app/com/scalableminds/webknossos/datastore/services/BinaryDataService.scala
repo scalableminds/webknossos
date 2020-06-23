@@ -195,7 +195,7 @@ class BinaryDataService(dataBaseDir: Path,
       cachedAgglomerate.dataSourceName == dataSetName && cachedAgglomerate.organization == organizationName && layerName
         .forall(_ == cachedAgglomerate.dataLayerName)
 
-    agglomerateService.cache.clear(matchingAgglomerate)
+    //agglomerateService.cache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
   }
 }

@@ -1,13 +1,21 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.io.File
 import java.nio._
-import java.nio.file.Paths
+import java.nio.file.{Files, Paths}
 
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateCache, AgglomerateFileCache, CachedReader}
+import com.scalableminds.webknossos.datastore.storage.{
+  AgglomerateCache,
+  AgglomerateFileCache,
+  BoundingBoxCache,
+  BoundingBoxFinder,
+  CachedReader,
+  CumsumParser
+}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import org.apache.commons.io.FilenameUtils
@@ -18,10 +26,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val agglomerateFileExtension = "hdf5"
   val datasetName = "/segment_to_agglomerate"
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  val cumsumFileName = "cumsum.json"
 
   lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
-  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
-                                        config.Braingames.Binary.agglomerateStandardBlockSize)
+//  lazy val cache = new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
+  //                                      config.Braingames.Binary.agglomerateStandardBlockSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -36,8 +45,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte]): Array[Byte] = {
-    def segmentToAgglomerate(segmentId: ULong) =
-      cache.withCache(request, segmentId, cachedFileHandles)(readFromFile = readHDF)(loadReader = initHDFReader)
+    def findInitialBoundingBox(finder: BoundingBoxFinder): (Long, Long, Long) = {
+      val x = finder.xCoordinates.floor(request.cuboid.topLeft.x)
+      val y = finder.yCoordinates.floor(request.cuboid.topLeft.y)
+      val z = finder.zCoordinates.floor(request.cuboid.topLeft.z)
+      (x, y, z)
+    }
 
     def byteFunc(buf: ByteBuffer, lon: Long) = buf put lon.toByte
     def shortFunc(buf: ByteBuffer, lon: Long) = buf putShort lon.toShort
@@ -47,7 +60,25 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     def convertToAgglomerate(input: Array[ULong],
                              numBytes: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-      val agglomerateIds = input.map(segmentToAgglomerate)
+      val cachedAgglomerate = cachedFileHandles.withCache(request)(initHDFReader)
+
+      val agglomerateIds = cachedAgglomerate.cache match {
+        case Left(agglomerateCache) =>
+          input.map(el =>
+            agglomerateCache.withCache(el, cachedAgglomerate.reader, cachedAgglomerate.dataset, cachedAgglomerate.size)(
+              readHDF))
+        case Right((finder, cache)) =>
+          val initialBoundingBox = findInitialBoundingBox(finder)
+          val readerRange = cache.withCache(request, initialBoundingBox)
+          val agglomerateIds =
+            readHDF(cachedAgglomerate.reader,
+                    cachedAgglomerate.dataset,
+                    readerRange._1,
+                    readerRange._2 - readerRange._1,
+                    false)
+          input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i.toLong - readerRange._1).toInt))
+      }
+
       agglomerateIds
         .foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
         .array
@@ -62,9 +93,17 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
-  private def readHDF(reader: IHDF5Reader, dataSet: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
+  private def readHDF(reader: IHDF5Reader,
+                      dataSet: HDF5DataSet,
+                      segmentId: Long,
+                      blockSize: Long,
+                      useDataset: Boolean = true): Array[Long] =
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
-    reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
+    if (useDataset) {
+      reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
+    } else {
+      reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
+    }
 
   private def initHDFReader(request: DataServiceDataRequest) = {
     val hdfFile =
@@ -75,9 +114,29 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .resolve(agglomerateDir)
         .resolve(s"${request.settings.appliedAgglomerate.get}.${agglomerateFileExtension}")
         .toFile
+
+    val cumsumPath =
+      dataBaseDir
+        .resolve(request.dataSource.id.team)
+        .resolve(request.dataSource.id.name)
+        .resolve(request.dataLayer.name)
+        .resolve(agglomerateDir)
+        .resolve(cumsumFileName)
+
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+
+    val cache: Either[AgglomerateCache, (BoundingBoxFinder, BoundingBoxCache)] =
+      if (Files.exists(cumsumPath)) {
+        Right(CumsumParser.parse(cumsumPath.toFile))
+      } else {
+        Left(
+          new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
+                               config.Braingames.Binary.agglomerateStandardBlockSize))
+      }
+
     CachedReader(reader,
                  reader.`object`().openDataSet(datasetName),
-                 ULong(reader.getDataSetInformation(datasetName).getNumberOfElements))
+                 ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
+                 cache)
   }
 }

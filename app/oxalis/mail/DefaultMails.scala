@@ -27,7 +27,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       headers = Map("Sender" -> defaultFrom),
       subject =
         s"webKnossos | A new user (${user.name}) registered on $uri for ${organization.displayName} (${organization.name})",
-      bodyHtml = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
+      bodyHtml = html.mail.notifyAdminNewUser(user, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )
 
@@ -35,7 +35,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = s"webKnossos | Time limit reached. ${user.abreviatedName} in $projectName",
-      bodyHtml = html.mail.timeLimit(user.name, projectName, taskId, annotationId, uri).body,
+      bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
       recipients = List(organization.overTimeMailingList)
     )
 
@@ -44,22 +44,22 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.register(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      bodyHtml = html.mail.newUser(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
       recipients = List(receiver)
     )
 
-  def registerMailDemo(name: String, receiver: String)(implicit messages: Messages) =
+  def registerMailWKOrg(name: String, receiver: String)(implicit messages: Messages) =
     Mail(
       from = demoSender,
       subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.registerDemo(name).body,
+      bodyHtml = html.mail.newAdminWKOrg(name).body,
       recipients = List(receiver)
     )
 
   def activatedMail(name: String, receiver: String) =
     Mail(from = defaultFrom,
          subject = "webKnossos | Account activated",
-         bodyHtml = html.mail.validated(name, uri).body,
+         bodyHtml = html.mail.validateUser(name, uri).body,
          recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String) =
@@ -80,7 +80,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultFrom,
       subject = s"webKnossos | New Organization created on ${domain}",
-      bodyHtml = html.mail.newOrganization(organizationName, creatorEmail, domain).body,
+      bodyHtml = html.mail.notifyAdminNewOrganization(organizationName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )
 }

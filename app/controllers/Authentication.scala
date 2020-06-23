@@ -471,7 +471,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      Mailer ! Send(defaultMails.registerMailDemo(user.firstName, user.email))
+                      Mailer ! Send(defaultMails.registerMailWKOrg(user.firstName, user.email))
                     }
                     Ok
                   }

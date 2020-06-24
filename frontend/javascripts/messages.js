@@ -177,6 +177,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
+  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
@@ -262,15 +263,18 @@ instead. Only enable this option if you understand its effect. All layers will n
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",
-  "users.is_admin":
-    "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
-  "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
-  "users.grant_admin_rights": _.template(
-    "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
+  "users.needs_admin_rights": "Admin rights are required to change the permissions of users.",
+  "users.multiple_selected_users":
+    "You selected more than one user. To change the organization permissions of users you need to select them individually.",
+  "users.change_permissions_title": "Do you really want to change the permissions of this user?",
+  "users.revoke_all_permissions": _.template(
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
   ),
-  "users.revoke_admin_rights_title": "Do you really want to revoke admin rights?",
-  "users.revoke_admin_rights": _.template(
-    "You are about to revoke admin privileges from <%- numUsers %> user(s). Do you want to proceed?",
+  "users.set_dataset_manager": _.template(
+    "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
+  ),
+  "users.set_admin": _.template(
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(

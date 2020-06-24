@@ -27,7 +27,7 @@ In the `Segmentation` tab on the right-hand side, you can see the cell IDs which
 
 webKnossos support proof-reading of segments from automatic segmentations. With "Merger Mode" individual segments (e.g. from over-segmentation) can be combined to refine the segmentation. 
 
-The "merger mode" is available in skeleton and hybrid tracing mode. Mark connected segments by right clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
+The "merger mode" is available in skeleton and hybrid annotation mode. Mark connected segments by right clicking and placing nodes in the corresponding segments to merge them together. Several segments can be combined by making sure that all "correcting nodes" are part of the same tree.
 
 "Merger mode" can be enabled in the settings under "Nodes & Trees" with the option "Enable Merger Mode". As soon as you enable it, all already existing trees will be used to form merged segments.
 
@@ -82,9 +82,9 @@ Mapping files are in JSON and need to follow this schema. All segment IDs belong
 <!-- ![An example of applying a mapping file to agglomerate individal segments from an automated over-segmentation. webKnossos applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
 ### Download File Format
-Volume tracings can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
+Volume annotations can be downloaded and imported using ZIP files that contain [WKW](./data_formats.md#wkw-datasets) datasets.
 The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
-Additionally, there is another embedded ZIP file that contains the volume tracings in WKW file format.
+Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
 
 {% hint style='info' %}
 In contrast to on-disk WKW datasets, the WKW files in downloaded volume annotations only contain a single 32^3 bucket in each file.
@@ -101,7 +101,7 @@ volumetracing.zip # A ZIP file containing the volume annotation
 │   │ └─ y5445/...
 │   ├─ z49/...
 │   └─ header.wkw # Information about the WKW files
-└─ volumetracing.nml # Tracing metadata NML file
+└─ volumetracing.nml # Annotation metadata NML file
 ```
 
 After unzipping the archives, the WKW files can be read or modified with the WKW libraries that are available for [Python, MATLAB and other languages](https://github.com/scalableminds/webknossos-wrap/). 

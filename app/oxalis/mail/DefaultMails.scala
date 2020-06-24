@@ -48,15 +48,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean)(
-      implicit messages: Messages) =
+  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean)(implicit messages: Messages) =
     Mail(
       from = wkOrgSender,
       subject = "Welcome to webKnossos",
       bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify).body,
       recipients = List(receiver)
     )
-  
+
   def newAdminWKOrgMail(name: String, receiver: String)(implicit messages: Messages) =
     Mail(
       from = wkOrgSender,

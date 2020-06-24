@@ -294,7 +294,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       content: (
         <p>
           You did not specify any teams, for which this dataset should be visible. This means that
-          only administrators and team managers will be able to view this dataset.
+          only administrators and dataset managers will be able to view this dataset.
           <br /> Please hit &ldquo;Cancel&rdquo; if you would like to review the team permissions in
           the &ldquo;General&rdquo; tab.
         </p>

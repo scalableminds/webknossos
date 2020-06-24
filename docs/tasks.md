@@ -6,9 +6,9 @@ webKnossos has a task system that is useful for efficiently managing large annot
 
 - `Task`: Is an assignment for a small piece of work. A Team Manager or Admin creates Tasks with information about the Task Type, the referenced dataset, starting positions and advanced options. These tasks will be distributed to eligible users. 
 - `Task Instance`: Some Tasks need to be completed redundantly by multiple users in order to assure quality. The single assignments of the tasks are called Instances.
-- `Task Type`: Contains a blue print for Tasks. Includes information such as a description with instructions, allowed tracing modes, and advanced options.
+- `Task Type`: Contains a blue print for Tasks. Includes information such as a description with instructions, allowed annotation modes, and advanced options.
 - `Project`: A group of many related Tasks is called a Project. Projects have a priority assigned to them which affects the order of assignment to users. Projects may be paused and resumed in order to manage the user workloads.
-- `Experience`: Admins and Team Managers can assign experience levels to users. Experiences are defined by a domain and a value, such as `flight-tracing` and `100`. Tasks specify the required experience level of a user.
+- `Experience`: Admins and Team Managers can assign experience levels to users. Experiences are defined by a domain and a value, such as `flight-annotation` and `100`. Tasks specify the required experience level of a user.
 
 It is possible to download all annotations that belong to either a Project or a Task Type for further processing.
 

@@ -19,7 +19,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
 
-## Skeleton Tracings
+## Skeleton Annotation Mode
 
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |

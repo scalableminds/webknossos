@@ -495,12 +495,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
       normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
-      organizationName = organizationNameOpt.flatMap(normalizeName).getOrElse(normalizedDisplayName)
-      organization = Organization(ObjectId.generate,
-                                  organizationName.replaceAll(" ", "_"),
-                                  "",
-                                  "",
-                                  organizationDisplayName)
+      organizationName = organizationNameOpt
+        .flatMap(normalizeName)
+        .getOrElse(normalizedDisplayName)
+        .replaceAll(" ", "_")
+      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
+      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
+      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)

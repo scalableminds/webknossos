@@ -259,7 +259,7 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  name VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL UNIQUE,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',

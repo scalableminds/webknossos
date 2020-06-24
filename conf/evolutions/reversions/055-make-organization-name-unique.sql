@@ -1,7 +1,7 @@
 
 START TRANSACTION;
 
-ALTER TABLE webknossos.organizations DROP CONSTRAINT organization_name_unique;
+ALTER TABLE webknossos.organizations DROP CONSTRAINT organizations_name_key;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 54;
 

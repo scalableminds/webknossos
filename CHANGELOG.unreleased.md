@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where requesting volume tracing fallback layer data from webknossos-connect failed. [#4644](https://github.com/scalableminds/webknossos/pull/4644)
 - Fixed a bug where imported invisible trees were still visible. [#4659](https://github.com/scalableminds/webknossos/issues/4659)
 - Fixed the message formatting for standalone datastores and tracingstores. [#4656](https://github.com/scalableminds/webknossos/pull/4656)
+- Fixed a bug where webKnossos relied upon but did not enforce organization names to be unique. [#4685](https://github.com/scalableminds/webknossos/pull/4685)
 
 ### Removed
 

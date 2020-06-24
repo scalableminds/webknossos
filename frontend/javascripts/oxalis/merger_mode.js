@@ -86,6 +86,21 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   return nodes;
 }
 
+// Do not create nodes if they are set outside of segments.
+async function createNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
+  const { segmentationLayerName } = mergerModeState;
+  const { position } = action;
+  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+
+  // If there is no segment id, the node was set outside of all segments.
+  // Drop the node creation action in that case.
+  if (!segmentId) {
+    api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
+  } else {
+    call(action);
+  }
+}
+
 /* React to added nodes. Look up the segment id at the node position and
   display it in the same color as the rest of the aggregate. */
 async function createNode(
@@ -97,12 +112,10 @@ async function createNode(
   const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
   const segmentId = await api.data.getDataValue(segmentationLayerName, position);
 
-  // If there is no segment id, the node was set too close to a border between segments.
-  if (!segmentId) {
-    api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
-    api.tracing.deleteNode(nodeId, treeId);
-    return;
-  }
+  // It can still happen that there are createNode diffing actions for nodes which
+  // are placed outside of a segment, for example when merging trees that were created
+  // outside of merger mode. Ignore those nodes.
+  if (!segmentId) return;
 
   // Set segment id
   nodeSegmentMap[nodeId] = segmentId;
@@ -288,6 +301,12 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
         }
       });
     }),
+  );
+  // Register for single CREATE_NODE actions to avoid setting nodes outside of segments
+  unsubscribeFunctions.push(
+    api.utils.registerOverwrite("CREATE_NODE", (store, next, originalAction) =>
+      createNodeOverwrite(store, next, originalAction, mergerModeState),
+    ),
   );
   // Register the additional key handlers
   unregisterKeyHandlers.push(

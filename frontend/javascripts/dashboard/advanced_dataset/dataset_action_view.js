@@ -60,7 +60,6 @@ export const createTracingOverlayMenuWithCallback = (
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
-  isUserAdmin: boolean,
 };
 
 type State = {
@@ -130,7 +129,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        {this.props.isUserAdmin && dataset.dataSource.dataLayers == null ? (
+        {dataset.isEditable && dataset.dataSource.dataLayers == null ? (
           <div>
             <Link
               to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
@@ -145,7 +144,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
         ) : null}
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
-            {this.props.isUserAdmin && dataset.isEditable ? (
+            {dataset.isEditable ? (
               <React.Fragment>
                 <Link
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}

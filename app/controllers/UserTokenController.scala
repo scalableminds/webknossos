@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import javax.inject.Inject
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -13,7 +12,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import models.annotation._
-import models.binary.{DataSetDAO, DataStoreRpcClient, DataStoreService}
+import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
@@ -23,6 +22,7 @@ import play.api.mvc.{PlayBodyParsers, Result}
 import scala.concurrent.ExecutionContext
 
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
+                                    dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
                                     userService: UserService,
                                     annotationStore: AnnotationStore,
@@ -102,7 +102,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
         user <- userBox.toFox
-        isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, dataset._organization)
+        isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
       } yield {
         UserAccessAnswer(isAllowed)
       }
@@ -111,8 +111,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       userBox match {
         case Full(user) =>
           for {
-            isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-          } yield UserAccessAnswer(isAllowed)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
 

@@ -17,7 +17,7 @@ import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import Persistence from "libs/persistence";
-import TeamRoleModalView from "admin/user/team_role_modal_view";
+import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -167,24 +167,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  setAdminRightsTo = async (isAdmin: boolean) => {
-    if (this.props.activeUser.isAdmin) {
-      const newUserPromises = this.state.users.map(user => {
-        if (this.state.selectedUserIds.includes(user.id)) {
-          const newUser = Object.assign({}, user, { isAdmin });
-
-          return updateUser(newUser);
-        }
-
-        return Promise.resolve(user);
-      });
-
-      this.setState({
-        users: await Promise.all(newUserPromises),
-      });
-    }
-  };
-
   renderNewUsersAlert() {
     const now = moment();
     const newInactiveUsers = this.state.users.filter(
@@ -256,6 +238,19 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     } else return [];
   }
 
+  onSelectUserRow = userId => {
+    this.setState(prevState => {
+      const selectedUserIds = [...prevState.selectedUserIds];
+      const indexOfUser = selectedUserIds.indexOf(userId);
+      if (indexOfUser >= 0) {
+        selectedUserIds.splice(indexOfUser, 1);
+      } else {
+        selectedUserIds.push(userId);
+      }
+      this.setState({ selectedUserIds });
+    });
+  };
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -291,7 +286,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             disabled={!hasRowsSelected}
             style={marginRight}
           >
-            Edit Teams
+            Edit Teams &amp; Permissions
           </Button>
           <Button
             onClick={() => {
@@ -303,42 +298,6 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           >
             Change Experience
           </Button>
-          {this.props.activeUser.isAdmin ? (
-            <React.Fragment>
-              <Button
-                onClick={() =>
-                  Modal.confirm({
-                    title: messages["users.grant_admin_rights_title"],
-                    content: messages["users.grant_admin_rights"]({
-                      numUsers: this.state.selectedUserIds.length,
-                    }),
-                    onOk: () => this.setAdminRightsTo(true),
-                  })
-                }
-                icon="rocket"
-                disabled={!hasRowsSelected}
-                style={marginRight}
-              >
-                Grant Admin Rights
-              </Button>
-              <Button
-                onClick={() =>
-                  Modal.confirm({
-                    title: messages["users.revoke_admin_rights_title"],
-                    content: messages["users.revoke_admin_rights"]({
-                      numUsers: this.state.selectedUserIds.length,
-                    }),
-                    onOk: () => this.setAdminRightsTo(false),
-                  })
-                }
-                icon="rollback"
-                disabled={!hasRowsSelected}
-                style={marginRight}
-              >
-                Revoke Admin Rights
-              </Button>
-            </React.Fragment>
-          ) : null}
           <InviteUsersPopover
             organizationName={this.props.activeUser.organization}
             visible={this.state.isInvitePopoverVisible}
@@ -383,6 +342,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 activationFilter: filters.isActive,
               })
             }
+            onRow={user => ({ onClick: () => this.onSelectUserRow(user.id) })}
             className="large-table"
             scroll={{ x: "max-content" }}
           >
@@ -441,7 +401,8 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                 _.map(experiences, (value, domain) => (
                   <Tag key={`experience_${user.id}_${domain}`}>
                     <span
-                      onClick={() => {
+                      onClick={evt => {
+                        evt.stopPropagation();
                         this.setState(prevState => ({
                           // If no user is selected, set singleSelectedUser. Otherwise,
                           // open the modal so that all selected users are edited.
@@ -478,14 +439,26 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
                     </Tag>
                   );
                 } else {
-                  return teams.map(team => {
-                    const roleName = team.isTeamManager ? "Team Manager" : "User";
-                    return (
-                      <Tag key={`team_role_${user.id}_${team.id}`} color={stringToColor(roleName)}>
-                        {team.name}: {roleName}
-                      </Tag>
-                    );
-                  });
+                  const teamTags = user.isDatasetManager
+                    ? [
+                        <Tag key={`dataset_manager_${user.id}`} color="geekblue">
+                          Dataset Manager - Edit all Datasets
+                        </Tag>,
+                      ]
+                    : [];
+                  return teamTags.concat(
+                    teams.map(team => {
+                      const roleName = team.isTeamManager ? "Team Manager" : "Member";
+                      return (
+                        <Tag
+                          key={`team_role_${user.id}_${team.id}`}
+                          color={stringToColor(roleName)}
+                        >
+                          {team.name}: {roleName}
+                        </Tag>
+                      );
+                    }),
+                  );
                 }
               }}
             />
@@ -556,12 +529,13 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
             }
           />
         ) : null}
-        <TeamRoleModalView
+        <PermissionsAndTeamsModalView
           visible={this.state.isTeamRoleModalVisible}
           selectedUserIds={this.state.selectedUserIds}
           users={this.state.users}
           onChange={this.handleUsersChange}
           onCancel={() => this.setState({ isTeamRoleModalVisible: false })}
+          activeUser={this.props.activeUser}
         />
       </div>
     );

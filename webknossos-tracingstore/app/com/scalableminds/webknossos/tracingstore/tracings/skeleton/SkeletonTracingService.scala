@@ -141,7 +141,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     val taskBoundingBox = if (fromTask) {
       tracing.boundingBox.map { bb =>
         val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
-        NamedBoundingBox(newId, Some("task bounding box"), Some(true), None, bb)
+        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), bb)
       }
     } else None
 

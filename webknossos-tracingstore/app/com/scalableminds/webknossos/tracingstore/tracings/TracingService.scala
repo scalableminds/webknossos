@@ -14,7 +14,8 @@ import scala.concurrent.duration._
 trait TracingService[T <: GeneratedMessage with Message[T]]
     extends KeyValueStoreImplicits
     with FoxImplicits
-    with LazyLogging {
+    with LazyLogging
+    with ColorGenerator {
 
   val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 

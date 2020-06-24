@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
-import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.tracingstore.tracings.{ColorGenerator, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
   NodeDefaults,
   SkeletonTracingDefaults,
@@ -22,7 +22,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging with ProtoGeometryImplicits {
+object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGenerator {
 
   val DEFAULT_TIME = 0L
 
@@ -41,7 +41,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String, nmlInputStream: InputStream, overwritingDataSetName: Option[String])(
+  def parse(name: String, nmlInputStream: InputStream, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
@@ -70,8 +70,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val editRotation =
           parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        val userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
-        val taskBoundingBox: Option[BoundingBox] = parseBoundingBox(parameters \ "taskBoundingBox")
+        var userBoundingBoxes = parseBoundingBoxes(parameters \ "userBoundingBox")
+        var taskBoundingBox: Option[BoundingBox] = None
+        parseTaskBoundingBox(parameters \ "taskBoundingBox", isTaskUpload, userBoundingBoxes).foreach {
+          case Left(value)  => taskBoundingBox = Some(value)
+          case Right(value) => userBoundingBoxes = userBoundingBoxes :+ value
+        }
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
@@ -173,6 +177,19 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           boundingBox <- parseBoundingBox(node)
           nameOpt = if (name.isEmpty) None else Some(name)
         } yield NamedBoundingBox(id, nameOpt, isVisible, color, boundingBox))
+    }
+
+  private def parseTaskBoundingBox(
+      node: NodeSeq,
+      isTask: Boolean,
+      userBoundingBoxes: Seq[NamedBoundingBox]): Option[Either[BoundingBox, NamedBoundingBox]] =
+    parseBoundingBox(node).map { bb =>
+      if (isTask) {
+        Left(bb)
+      } else {
+        val newId = userBoundingBoxes.map(_.id).max + 1
+        Right(NamedBoundingBox(newId, Some("task bounding box"), None, Some(getRandomColor()), bb))
+      }
     }
 
   private def parseBoundingBox(node: NodeSeq) =

@@ -9,6 +9,14 @@ import scalapb.{GeneratedMessage, Message}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+trait ColorGenerator {
+  private def getRandomComponent(): Double =
+    Math.random() * 256
+
+  def getRandomColor(): Color =
+    Color(getRandomComponent(), getRandomComponent(), getRandomComponent(), 1.0)
+}
+
 trait TracingMigrationService[T <: GeneratedMessage with Message[T]] extends FoxImplicits {
   // Each migration transforms a tracing and additionally returns whether the tracing was modified
   def migrations: List[T => Fox[(T, Boolean)]]
@@ -27,14 +35,6 @@ trait TracingMigrationService[T <: GeneratedMessage with Message[T]] extends Fox
 
     migrateIter(tracing.map((_, false)), migrations)
   }
-}
-
-trait ColorGenerator {
-  private def getRandomComponent(): Double =
-    Math.random() * 256
-
-  def getRandomColor(): Color =
-    Color(getRandomComponent(), getRandomComponent(), getRandomComponent(), 1.0)
 }
 
 object SkeletonTracingMigrationService extends TracingMigrationService[SkeletonTracing] with ColorGenerator {

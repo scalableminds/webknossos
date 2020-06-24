@@ -4,6 +4,7 @@ import type { Node, TreeMap, SkeletonTracing } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
+import messages from "messages";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -98,10 +99,7 @@ async function createNode(
 
   // If there is no segment id, the node was set too close to a border between segments.
   if (!segmentId) {
-    api.utils.showToast(
-      "warning",
-      "You've set a node too close to grey. The node will be removed now.",
-    );
+    api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
     api.tracing.deleteNode(nodeId, treeId);
     return;
   }

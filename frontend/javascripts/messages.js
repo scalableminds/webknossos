@@ -123,6 +123,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+  "tracing.merger_mode_node_outside_segment":
+    "You have placed a node outside of a segment. The node will be removed now.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

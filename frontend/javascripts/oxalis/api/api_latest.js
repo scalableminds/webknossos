@@ -75,6 +75,7 @@ import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
   setMappingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
@@ -772,6 +773,13 @@ class DataApi {
   }
 
   /**
+   * Enables/Disables the active mapping.
+   */
+  setMappingEnabled(isEnabled: boolean) {
+    Store.dispatch(setMappingEnabledAction(isEnabled));
+  }
+
+  /**
    * Gets all available mapping names for a given layer. When the layer name
    * is omitted, "segmentation" is assumed.
    *
@@ -1216,7 +1224,7 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: ToastStyle, message: string, timeout: number): ?Function {
+  showToast(type: ToastStyle, message: string, timeout?: number): ?Function {
     Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }

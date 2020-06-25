@@ -56,7 +56,7 @@ object CachedAgglomerateKey {
                                  segmentId)
 }
 
-case class BoundingBoxValues(range: (Long, Long), dimensions: (Long, Long, Long))
+case class BoundingBoxValues(range: (ULong, ULong), dimensions: (Long, Long, Long))
 
 class AgglomerateFileCache(val maxEntries: Int)
     extends LRUConcurrentCache[CachedAgglomerateFile, CachedReader]
@@ -119,7 +119,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
     (x, y, z)
   }
 
-  def getReaderRange(request: DataServiceDataRequest): (Long, Long) = {
+  def getReaderRange(request: DataServiceDataRequest): (ULong, ULong) = {
     val initialBoundingBox = findInitialBoundingBox(request.cuboid)
     val requestedCuboid = request.cuboid.bottomRight
     val dataLayerBox = request.dataLayer.boundingBox.bottomRight
@@ -137,7 +137,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
         val prevY = (y, currDimensions._2)
         while (z < requestedCuboid.z && z < dataLayerBox.z) {
           cache.get((x, y, z)).foreach { value =>
-            range = (math.min(range._1, value.range._1), math.max(range._2, value.range._2))
+            range = (spire.math.min(range._1, value.range._1), spire.math.max(range._2, value.range._2))
             currDimensions = value.dimensions
           }
           z = z + currDimensions._3
@@ -152,8 +152,26 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
   def withCache(request: DataServiceDataRequest, input: Array[ULong], reader: IHDF5Reader)(
       readHDF: (IHDF5Reader, Long, Long) => Array[Long]) = {
     val readerRange = getReaderRange(request)
-    val agglomerateIds = readHDF(reader, readerRange._1, readerRange._2 - readerRange._1)
-    input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i.toLong - readerRange._1).toInt))
+    if (readerRange._2 - readerRange._1 < ULong(1310720)) {
+      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
+      input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
+    } else {
+      var offset = ULong(0)
+      val result = Array.ofDim[Long](input.length)
+      val isTransformed = Array.fill[Boolean](input.length)(false)
+      while (offset < readerRange._2 - readerRange._1) {
+        val agglomerateIds =
+          readHDF(reader, offset.toLong, spire.math.min(ULong(1310720), readerRange._2 - offset).toLong)
+        for (i <- input.indices) {
+          val inputElement = input(i)
+          if (!isTransformed(i) && inputElement >= offset && inputElement < offset + ULong(1310720)) {
+            result(i) = if (inputElement == ULong(0)) 0L else agglomerateIds((inputElement - offset).toInt)
+            isTransformed(i) = true
+          }
+        }
+        offset = offset + ULong(1310720)
+      }
+    }
   }
 
 }

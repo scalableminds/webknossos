@@ -73,9 +73,12 @@ trait AccessTokenService {
 
   private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
-    val tokenOpt = request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
+    val tokenOpt = tokenFromRequest(request)
     hasUserAccess(accessRequest, tokenOpt)
   }
+
+  def tokenFromRequest[A](request: Request[A]): Option[String] =
+    request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {

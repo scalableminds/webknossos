@@ -18,6 +18,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 - The redundant “team” column was removed from the bulk task creation format. [#4629](https://github.com/scalableminds/webknossos/pull/4629)
 - The brush size minimum was changed from 5 voxels to 1. [#4648](https://github.com/scalableminds/webknossos/pull/4648)
+- Separated the permissions of Team Managers (now actually team-scoped) and Dataset Managers (who can see all datasets). The database evolution makes all Team Managers also Dataset Managers, so no workflows should be interrupted. New users may have to be made Dataset Managers, though. For more information, refer to the updated documentation. [#4663](https://github.com/scalableminds/webknossos/pull/4663)
+- Refined all webKnossos emails for user signups etc. Switched emails to use HTML templates for more bling bling [#4676](https://github.com/scalableminds/webknossos/pull/4676)
 
 ### Fixed
 

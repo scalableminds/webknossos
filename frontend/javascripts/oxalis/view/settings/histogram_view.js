@@ -138,8 +138,10 @@ class Histogram extends React.PureComponent<HistogramProps> {
     }
     ctx.stroke();
     ctx.closePath();
-    activeRegion.lineTo(((intensityRangeMax - minRange) / fullLength) * canvasWidth, 0);
-    activeRegion.lineTo(((intensityRangeMin - minRange) / fullLength) * canvasWidth, 0);
+    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
+    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
+    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };

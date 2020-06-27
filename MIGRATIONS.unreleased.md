@@ -10,3 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 
+- [054-add-isDatasetManager.sql](conf/evolutions/054-add-isDatasetManager.sql)
+

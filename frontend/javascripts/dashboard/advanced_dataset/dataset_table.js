@@ -25,6 +25,8 @@ type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
   isUserAdmin: boolean,
+  isUserTeamManager: boolean,
+  isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
 };
 
@@ -84,7 +86,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       );
 
     const filterByHasLayers = datasets =>
-      this.props.isUserAdmin
+      this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
         : datasets.filter(dataset => dataset.dataSource.dataLayers != null);
 
@@ -111,7 +113,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { isUserAdmin } = this.props;
+    const { isUserAdmin, isUserTeamManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
@@ -153,7 +155,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           defaultPageSize: 50,
         }}
         expandedRowRender={
-          isUserAdmin ? dataset => <DatasetAccessListView dataset={dataset} /> : null
+          isUserAdmin || isUserTeamManager
+            ? dataset => <DatasetAccessListView dataset={dataset} />
+            : null
         }
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
@@ -257,7 +261,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
+            <DatasetActionView dataset={dataset} />
           )}
         />
       </FixedExpandableTable>

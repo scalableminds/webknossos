@@ -50,7 +50,7 @@ jobs:
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Install frontend dependencies
-          command: docker-compose run base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
           name: Restore webpack-uglifyjs cache
           keys:
@@ -79,11 +79,11 @@ jobs:
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt "project webknossosTracingstore" compile stage
+          command: docker-compose run base sbt "project webknossosTracingstore" copyMessages compile stage
 
       - save_cache:
           name: Save target cache
@@ -243,16 +243,16 @@ jobs:
       - image: scalableminds/puppeteer:master
     steps:
       - checkout
-      #- run:
-      #    name: Remove dev-deployment
-      #    command: >
-      #      curl
-      #      -X POST
-      #      -H "X-Auth-Token: $RELEASE_API_TOKEN"
-      #      https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
-      #- run:
-      #    name: Wait 3min
-      #    command: sleep 180
+      - run:
+          name: Remove dev-deployment
+          command: >
+            curl
+            -X POST
+            -H "X-Auth-Token: $RELEASE_API_TOKEN"
+            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+      - run:
+          name: Wait 3min
+          command: sleep 180
       - run:
           name: Install dev-deployment
           command: >
@@ -286,7 +286,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-
   circleci_nightly:
     jobs:
       - nightly

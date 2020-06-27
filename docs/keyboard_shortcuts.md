@@ -19,7 +19,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
 
-## Skeleton Tracings
+## Skeleton Annotation Mode
 
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
@@ -74,7 +74,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | --------------------------------- | ----------------------------------------------------------- |
 | Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
 | SHIFT + Left Click                | Select Active Cell                                          |
-| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode)    |
+| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode); i.e., does not overwrite other cells    |
 | Right Mouse Drag                  | Remove Voxels From Current Cell                             |
 | CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
 | Alt + Mouse Move                  | Move                                                        |

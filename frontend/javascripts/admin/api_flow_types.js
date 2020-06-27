@@ -190,6 +190,7 @@ export type APIUser = APIUserBase & {
   +created: number,
   +experiences: ExperienceMap,
   +isAdmin: boolean,
+  +isDatasetManager: boolean,
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,

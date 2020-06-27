@@ -258,7 +258,7 @@ class SpotlightView extends React.PureComponent<PropsWithRouter, State> {
                 <React.Fragment>
                   <p style={{ textAlign: "center" }}>There are no publications yet.</p>
                   <p style={{ textAlign: "center" }}>
-                    <Link to={useOnboardingFlow ? "/onboarding" : "/dashboard"}>
+                    <Link to={useOnboardingFlow ? "/" : "/dashboard"}>
                       Start importing your data
                     </Link>{" "}
                     or check out <a href="https://webknossos.org/">webknossos.org</a> for some

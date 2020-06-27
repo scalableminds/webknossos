@@ -22,6 +22,7 @@ import type {
   Tree,
   MutableTree,
   TreeGroup,
+  BoundingBoxObject,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import messages from "messages";
@@ -29,7 +30,8 @@ import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } 
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
-const DEFAULT_COLOR = [1, 0, 0];
+const DEFAULT_COLOR = [255, 0, 0];
+const TASK_BOUNDING_BOX_COLOR = [0, 255, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
 const DEFAULT_BITDEPTH = 0;
@@ -534,6 +536,32 @@ export function wrapInNewGroup(
   return [trees, treeGroups];
 }
 
+function getUnusedUserBoundingBoxId(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  proposedId: number = 0,
+): number {
+  const isProposedIdUsed = userBoundingBoxes.some(userBB => userBB.id === proposedId);
+  if (!isProposedIdUsed) {
+    return proposedId;
+  }
+  const maxId = Math.max(...userBoundingBoxes.map(userBB => userBB.id));
+  return maxId + 1;
+}
+
+function parseBoundingBoxObject(attr): BoundingBoxObject {
+  const boundingBoxObject = {
+    topLeft: [
+      _parseInt(attr, "topLeftX"),
+      _parseInt(attr, "topLeftY"),
+      _parseInt(attr, "topLeftZ"),
+    ],
+    width: _parseInt(attr, "width"),
+    height: _parseInt(attr, "height"),
+    depth: _parseInt(attr, "depth"),
+  };
+  return boundingBoxObject;
+}
+
 export function parseNml(
   nmlString: string,
 ): Promise<{
@@ -693,17 +721,12 @@ export function parseNml(
             break;
           }
           case "userBoundingBox": {
-            const userBoundingBoxId = _parseInt(attr, "id", 0);
-            const boundingBoxObject = {
-              topLeft: [
-                _parseInt(attr, "topLeftX"),
-                _parseInt(attr, "topLeftY"),
-                _parseInt(attr, "topLeftZ"),
-              ],
-              width: _parseInt(attr, "width"),
-              height: _parseInt(attr, "height"),
-              depth: _parseInt(attr, "depth"),
-            };
+            const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(
+              userBoundingBoxes,
+              parsedUserBoundingBoxId,
+            );
+            const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
               boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: [
@@ -714,6 +737,19 @@ export function parseNml(
               id: userBoundingBoxId,
               isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
               name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
+          case "taskBoundingBox": {
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
+            const boundingBoxObject = parseBoundingBoxObject(attr);
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              color: TASK_BOUNDING_BOX_COLOR,
+              id: userBoundingBoxId,
+              isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+              name: "task bounding box",
             };
             userBoundingBoxes.push(userBoundingBox);
             break;

@@ -7,7 +7,7 @@ notAllowed=You are not authorized to view or edit this resource
 
 binary.payload.invalid=Couldn’t parse payload
 
-organization.list.moreThanOnehistogram.layerMissing=Could not generate histogram data: missing layer {0}
+histogram.layerMissing=Could not generate histogram data: missing layer {0}
 histogram.failed=Could not generate histogram data for layer {0}
 
 email=Email
@@ -107,6 +107,9 @@ dataSet.alreadyPresent=Sample dataset is already present.
 dataSet.noResolutions=Data layer does not contain resolutions
 dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 dataSet.noData=Could not get data for the requested dataset
+dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
+dataset.initialTeams.invalidTeams=Can only assign teams of user
+dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually?
 
 dataSource.notFound=Datasource not found on datastore server
 

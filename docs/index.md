@@ -10,7 +10,7 @@
 * [Understanding the User Interface](./tracing_ui.md)
 * [Mesh Visualization](./mesh_visualization.md)
 * [Managing Datasets](./datasets.md)
-* [Managing Users and Access Rights](./users.md)
+* [Managing Users and Access Permissions](./users.md)
 * [Managing Tasks and Projects](./tasks.md)
 * [Sharing](./sharing.md)
 * [Installation on your own Server](./installation.md)

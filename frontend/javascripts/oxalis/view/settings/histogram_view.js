@@ -36,6 +36,11 @@ const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
 
+function isANumber(value: number | string): boolean {
+  // Code from https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
+  return !isNaN(parseFloat(value)) && isFinite(value);
+}
+
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
@@ -177,12 +182,11 @@ class Histogram extends React.PureComponent<HistogramProps> {
       onChangeLayer,
     } = this.props;
     const { min: minRange, max: maxRange } = this.getMinAndMax();
-    const formatValue = value => {
-      if (isNaN(value)) {
-        return value;
+    const formatValue = (newValue: string): number | string => {
+      if (!isANumber(newValue)) {
+        return newValue;
       }
-      value = parseFloat(value);
-      return value >= 10000 ? value.toExponential() : roundTo(value, 2);
+      return roundTo(parseFloat(newValue), 2);
     };
     const tooltipTitleFor = (minimumOrMaximum: string) =>
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
@@ -225,7 +229,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
                   value={minRange}
                   formatter={formatValue}
                   onChange={value => {
-                    if (value <= maxRange) {
+                    value = parseFloat(value);
+                    if (isANumber(value) && value <= maxRange) {
                       onChangeLayer(layerName, "min", value);
                     }
                   }}
@@ -248,7 +253,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
                   value={maxRange}
                   formatter={formatValue}
                   onChange={value => {
-                    if (value >= minRange) {
+                    value = parseFloat(value);
+                    if (isANumber(value) && value >= minRange) {
                       onChangeLayer(layerName, "max", value);
                     }
                   }}

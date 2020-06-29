@@ -140,7 +140,7 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
-                  if (!this.props.hasOrganizations) {
+                  if (!this.props.hasOrganizations && !features().isDemoInstance) {
                     return <Redirect to="/onboarding" />;
                   }
                   if (isAuthenticated) {

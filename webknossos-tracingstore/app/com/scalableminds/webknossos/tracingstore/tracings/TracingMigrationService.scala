@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 trait ColorGenerator {
   private def getRandomComponent(): Double =
-    Math.random() * 256
+    Math.random()
 
   def getRandomColor(): Color =
     Color(getRandomComponent(), getRandomComponent(), getRandomComponent(), 1.0)

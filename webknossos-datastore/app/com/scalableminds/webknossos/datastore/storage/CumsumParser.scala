@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonReader
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
+import spire.math.ULong
 
 import scala.collection.mutable
 
@@ -93,7 +94,7 @@ object CumsumParser extends LazyLogging {
         case head :: tail if reader.hasNext =>
           addToFinder(head)
           val newEnd = reader.nextLong()
-          val currValues = BoundingBoxValues((prevEnd + 1, newEnd), (head._4, head._5, head._6))
+          val currValues = BoundingBoxValues((ULong(prevEnd + 1), ULong(newEnd)), (head._4, head._5, head._6))
           hashMap put ((head._1, head._2, head._3), currValues)
           iter(tail, hashMap, newEnd)
         case _ => ()

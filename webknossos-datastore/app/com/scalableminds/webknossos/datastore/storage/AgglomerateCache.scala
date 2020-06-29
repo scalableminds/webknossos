@@ -113,28 +113,28 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
                        val boundingBoxFinder: BoundingBoxFinder,
                        val minBoundingBox: (Long, Long, Long) = (0, 0, 0)) {
   def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
-    val x = boundingBoxFinder.xCoordinates.floor(cuboid.topLeft.x)
-    val y = boundingBoxFinder.yCoordinates.floor(cuboid.topLeft.y)
-    val z = boundingBoxFinder.zCoordinates.floor(cuboid.topLeft.z)
-    (x, y, z)
+    val x = Option(boundingBoxFinder.xCoordinates.floor(cuboid.topLeft.x))
+    val y = Option(boundingBoxFinder.yCoordinates.floor(cuboid.topLeft.y))
+    val z = Option(boundingBoxFinder.zCoordinates.floor(cuboid.topLeft.z))
+    (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3))
   }
 
   def getReaderRange(request: DataServiceDataRequest): (ULong, ULong) = {
     val initialBoundingBox = findInitialBoundingBox(request.cuboid)
     val requestedCuboid = request.cuboid.bottomRight
     val dataLayerBox = request.dataLayer.boundingBox.bottomRight
-    val initialValues = cache.getOrElse(initialBoundingBox, cache(minBoundingBox))
+    val initialValues = cache(initialBoundingBox)
     var range = initialValues.range
     var currDimensions = initialValues.dimensions
 
-    var x = initialBoundingBox._1 + currDimensions._1
-    var y = initialBoundingBox._2 + currDimensions._2
+    var x = initialBoundingBox._1
+    var y = initialBoundingBox._2
     var z = initialBoundingBox._3 + currDimensions._3
 
     while (x < requestedCuboid.x && x < dataLayerBox.x) {
-      val prevX = (x, currDimensions._1)
+      val nextBBinX = (x + currDimensions._1, y, z)
       while (y < requestedCuboid.y && y < dataLayerBox.y) {
-        val prevY = (y, currDimensions._2)
+        val nextBBinY = (x, y + currDimensions._2, z)
         while (z < requestedCuboid.z && z < dataLayerBox.z) {
           cache.get((x, y, z)).foreach { value =>
             range = (spire.math.min(range._1, value.range._1), spire.math.max(range._2, value.range._2))
@@ -142,9 +142,13 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
           }
           z = z + currDimensions._3
         }
-        y = prevY._1 + prevY._2
+        x = nextBBinY._1
+        y = nextBBinY._2
+        z = nextBBinY._3
       }
-      x = prevX._1 + prevX._2
+      x = nextBBinX._1
+      y = nextBBinX._2
+      z = nextBBinX._3
     }
     range
   }
@@ -171,6 +175,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
         }
         offset = offset + ULong(1310720)
       }
+      result
     }
   }
 

@@ -4,11 +4,12 @@ import java.util
 
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage
 import spire.math.ULong
-import com.scalableminds.util.tools.TimeLogger
+import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
@@ -112,6 +113,15 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
 class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
                        val boundingBoxFinder: BoundingBoxFinder,
                        val minBoundingBox: (Long, Long, Long) = (0, 0, 0)) {
+  private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
+    val res = cuboid.resolution
+    val tl = cuboid.topLeft
+    Cuboid(new VoxelPosition(tl.x * res.x, tl.y * res.y, tl.z * res.z, Point3D(1, 1, 1)),
+           cuboid.width * res.x,
+           cuboid.height * res.y,
+           cuboid.depth * res.z)
+  }
+
   def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
     val x = Option(boundingBoxFinder.xCoordinates.floor(cuboid.topLeft.x))
     val y = Option(boundingBoxFinder.yCoordinates.floor(cuboid.topLeft.y))
@@ -120,8 +130,9 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
   }
 
   def getReaderRange(request: DataServiceDataRequest): (ULong, ULong) = {
-    val initialBoundingBox = findInitialBoundingBox(request.cuboid)
-    val requestedCuboid = request.cuboid.bottomRight
+    val globalCuboid = getGlobalCuboid(request.cuboid)
+    val initialBoundingBox = findInitialBoundingBox(globalCuboid)
+    val requestedCuboid = globalCuboid.bottomRight
     val dataLayerBox = request.dataLayer.boundingBox.bottomRight
     val initialValues = cache(initialBoundingBox)
     var range = initialValues.range
@@ -181,7 +192,8 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
     } catch {
       case _: ArrayIndexOutOfBoundsException =>
         val range = getReaderRange(request)
-        println(s"Error: ${request.cuboid.topLeft} - ${request.cuboid.bottomRight}: ${range._1} - ${range._2}")
+        val cuboid = getGlobalCuboid(request.cuboid)
+        println(s"Error: ${cuboid.topLeft} - ${cuboid.bottomRight}: ${range._1} - ${range._2}")
         input.map(_.toLong)
     }
 

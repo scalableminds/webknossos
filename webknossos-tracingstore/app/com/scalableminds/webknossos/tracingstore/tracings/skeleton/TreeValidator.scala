@@ -8,6 +8,12 @@ import net.liftweb.util.A
 import scala.collection.mutable
 
 object TreeValidator {
+  def splitMulticomponentTrees(trees: Seq[Tree]): Seq[Tree] = {
+    trees.map { tree =>
+      }
+    trees
+  }
+
   def validateTrees(trees: Seq[Tree]): Box[Unit] =
     for {
       _ <- checkNoDuplicateTreeIds(trees)

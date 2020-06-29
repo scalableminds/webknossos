@@ -132,7 +132,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       implicit m: MessagesProvider): Box[Seq[Tree]] =
     for {
       trees <- parseTrees(treeNodes, branchPoints, comments)
-      _ <- TreeValidator.validateTrees(trees)
+      treesSplit = TreeValidator.splitMulticomponentTrees(trees)
+      _ <- TreeValidator.validateTrees(treesSplit)
     } yield trees
 
   def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(implicit m: MessagesProvider): Box[List[TreeGroup]] = {

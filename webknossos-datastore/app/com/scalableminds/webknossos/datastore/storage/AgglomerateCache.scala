@@ -154,29 +154,35 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
   }
 
   def withCache(request: DataServiceDataRequest, input: Array[ULong], reader: IHDF5Reader)(
-      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) = {
-    val readerRange = getReaderRange(request)
-    if (readerRange._2 - readerRange._1 < ULong(1310720)) {
-      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
-      input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
-    } else {
-      var offset = ULong(0)
-      val result = Array.ofDim[Long](input.length)
-      val isTransformed = Array.fill[Boolean](input.length)(false)
-      while (offset < readerRange._2 - readerRange._1) {
-        val agglomerateIds =
-          readHDF(reader, offset.toLong, spire.math.min(ULong(1310720), readerRange._2 - offset).toLong)
-        for (i <- input.indices) {
-          val inputElement = input(i)
-          if (!isTransformed(i) && inputElement >= offset && inputElement < offset + ULong(1310720)) {
-            result(i) = if (inputElement == ULong(0)) 0L else agglomerateIds((inputElement - offset).toInt)
-            isTransformed(i) = true
+      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) =
+    try {
+      val readerRange = getReaderRange(request)
+      if (readerRange._2 - readerRange._1 < ULong(1310720)) {
+        val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
+        input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
+      } else {
+        var offset = ULong(0)
+        val result = Array.ofDim[Long](input.length)
+        val isTransformed = Array.fill[Boolean](input.length)(false)
+        while (offset < readerRange._2 - readerRange._1) {
+          val agglomerateIds =
+            readHDF(reader, offset.toLong, spire.math.min(ULong(1310720), readerRange._2 - offset).toLong)
+          for (i <- input.indices) {
+            val inputElement = input(i)
+            if (!isTransformed(i) && inputElement >= offset && inputElement < offset + ULong(1310720)) {
+              result(i) = if (inputElement == ULong(0)) 0L else agglomerateIds((inputElement - offset).toInt)
+              isTransformed(i) = true
+            }
           }
+          offset = offset + ULong(1310720)
         }
-        offset = offset + ULong(1310720)
+        result
       }
-      result
+    } catch {
+      case _: ArrayIndexOutOfBoundsException =>
+        val range = getReaderRange(request)
+        println(s"Error: ${request.cuboid.topLeft} - ${request.cuboid.bottomRight}: ${range._1} - ${range._2}")
+        input.map(_.toLong)
     }
-  }
 
 }

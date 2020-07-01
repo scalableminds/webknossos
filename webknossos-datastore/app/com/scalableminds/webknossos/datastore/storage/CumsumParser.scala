@@ -65,17 +65,14 @@ object CumsumParser extends LazyLogging {
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
     val formRx = "([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)".r
-    val list = mutable.MutableList[(Long, Long, Long, Long, Long, Long)]()
+    val list = mutable.MutableList[String]()
     reader.beginObject()
     while (reader.hasNext) {
-      reader.nextName() match {
-        case formRx(x, y, z, w, h, d) =>
-          list += ((x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong))
-          reader.nextLong()
-      }
+      list += reader.nextName()
+      reader.nextLong()
     }
     reader.endObject()
-    list.sorted.toList
+    list.sorted.map { case formRx(x, y, z, w, h, d) => (x.toLong, y.toLong, z.toLong, w.toLong, h.toLong, d.toLong) }.toList
   }
 
   private def parseCumSum(reader: JsonReader,
@@ -101,8 +98,8 @@ object CumsumParser extends LazyLogging {
       }
     val hashMap = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
     reader.beginArray()
-    val head = boundingBoxes.head
-    val minBoundingBox = (head._1, head._2, head._3)
+    val minElement = boundingBoxes.min
+    val minBoundingBox = (minElement._1, minElement._2, minElement._3)
     iter(boundingBoxes, hashMap, 0)
     reader.endArray()
     (hashMap, minBoundingBox)

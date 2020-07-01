@@ -6,14 +6,10 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
-  NodeDefaults,
-  SkeletonTracingDefaults,
-  TreeValidator
-}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.tools.ExtendedTypes.{ExtendedString, ExtendedDouble}
+import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
@@ -132,7 +128,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       implicit m: MessagesProvider): Box[Seq[Tree]] =
     for {
       trees <- parseTrees(treeNodes, branchPoints, comments)
-      treesSplit = TreeValidator.splitMulticomponentTrees(trees)
+      treesSplit = MultiComponentTreeSplitter.splitMulticomponentTrees(trees)
       _ <- TreeValidator.validateTrees(treesSplit)
     } yield trees
 

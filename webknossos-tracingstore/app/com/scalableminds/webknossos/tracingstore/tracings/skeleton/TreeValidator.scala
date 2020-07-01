@@ -3,16 +3,10 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.A
 
 import scala.collection.mutable
 
 object TreeValidator {
-  def splitMulticomponentTrees(trees: Seq[Tree]): Seq[Tree] = {
-    trees.map { tree =>
-      }
-    trees
-  }
 
   def validateTrees(trees: Seq[Tree]): Box[Unit] =
     for {

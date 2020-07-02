@@ -20,8 +20,8 @@ Try webKnossos on a large selection of published datasets: [https://webknossos.o
 * Exploration of large 3D image datasets
 * Fully browser-based user experience with efficient data streaming
 * Creation/editing of skeleton and volume annotations
-* [Innovative flight mode for fast skeleton tracing](https://www.nature.com/articles/nmeth.4331)
-* Optimized performance for large tracings
+* [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
+* Optimized performance for large annotations
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments

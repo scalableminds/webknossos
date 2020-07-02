@@ -32,6 +32,11 @@ type HistogramProps = {
   ) => void,
 };
 
+type HistorgramState = {
+  currentMin: number,
+  currentMax: number,
+};
+
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
@@ -45,8 +50,24 @@ export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
 
-class Histogram extends React.PureComponent<HistogramProps> {
+function getMinAndMax(props: HistogramProps) {
+  const { min, max, data } = props;
+  if (min != null && max != null) {
+    return { min, max };
+  }
+  const dataMin = Math.min(...data.map(({ min: minOfHistPart }) => minOfHistPart));
+  const dataMax = Math.max(...data.map(({ max: maxOfHistPart }) => maxOfHistPart));
+  return { min: dataMin, max: dataMax };
+}
+
+class Histogram extends React.PureComponent<HistogramProps, HistorgramState> {
   canvasRef: ?HTMLCanvasElement;
+
+  constructor(props: HistogramProps) {
+    super(props);
+    const { min, max } = getMinAndMax(props);
+    this.state = { currentMin: min, currentMax: max };
+  }
 
   componentDidMount() {
     if (this.canvasRef == null) {
@@ -58,6 +79,11 @@ class Histogram extends React.PureComponent<HistogramProps> {
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
     this.updateCanvas();
+  }
+
+  componentWillReceiveProps(newProps: HistogramProps) {
+    const { min, max } = getMinAndMax(newProps);
+    this.setState({ currentMin: min, currentMax: max });
   }
 
   componentDidUpdate() {
@@ -174,6 +200,17 @@ class Histogram extends React.PureComponent<HistogramProps> {
   tipFormatter = (value: number) =>
     value > 10000 ? value.toExponential() : roundTo(value, 2).toString();
 
+  // eslint-disable-next-line react/sort-comp
+  updateMinimumDebounced = _.debounce(
+    (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
+    1000,
+  );
+
+  updateMaximumDebounced = _.debounce(
+    (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
+    1000,
+  );
+
   render() {
     const {
       intensityRangeMin,
@@ -183,7 +220,8 @@ class Histogram extends React.PureComponent<HistogramProps> {
       layerName,
       onChangeLayer,
     } = this.props;
-    const { min: minRange, max: maxRange } = this.getMinAndMax();
+    const { currentMin, currentMax } = this.state;
+    const { min: minRange, max: maxRange } = getMinAndMax(this.props);
     const formatValue = (newValue: string): number | string => {
       if (!isANumber(newValue)) {
         return newValue;
@@ -227,13 +265,14 @@ class Histogram extends React.PureComponent<HistogramProps> {
                   size="small"
                   min={defaultMinMax[0]}
                   max={maxRange}
-                  defaultValue={minRange}
-                  value={minRange}
+                  defaultValue={currentMin}
+                  value={currentMin}
                   formatter={formatValue}
                   onChange={value => {
                     value = parseFloat(value);
                     if (isANumber(value) && value <= maxRange) {
-                      onChangeLayer(layerName, "min", value);
+                      this.setState({ currentMin: value });
+                      this.updateMinimumDebounced(value, layerName);
                     }
                   }}
                   style={minMaxInputStyle}
@@ -251,13 +290,14 @@ class Histogram extends React.PureComponent<HistogramProps> {
                   size="small"
                   min={minRange}
                   max={defaultMinMax[1]}
-                  defaultValue={maxRange}
-                  value={maxRange}
+                  defaultValue={currentMax}
+                  value={currentMax}
                   formatter={formatValue}
                   onChange={value => {
                     value = parseFloat(value);
                     if (isANumber(value) && value >= minRange) {
-                      onChangeLayer(layerName, "max", value);
+                      this.setState({ currentMax: value });
+                      this.updateMaximumDebounced(value, layerName);
                     }
                   }}
                   style={minMaxInputStyle}

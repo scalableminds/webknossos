@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility to adjust the minimum and maximum value of the histogram for a layer. This option can be opened in the top right corner of the histogram. [#4630](https://github.com/scalableminds/webknossos/pull/4630)  
 
 - Added a warning to the segmentation tab when viewing `uint64` bit segmentation data. [#4598](https://github.com/scalableminds/webknossos/pull/4598)
+- Added additional information to each task in CSV download. [#4647](https://github.com/scalableminds/webknossos/pull/4647)
 
 ### Changed
 
@@ -31,6 +32,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where imported invisible trees were still visible. [#4659](https://github.com/scalableminds/webknossos/issues/4659)
 - Fixed the message formatting for standalone datastores and tracingstores. [#4656](https://github.com/scalableminds/webknossos/pull/4656)
 - Fixed that merger mode didn't work with undo and redo. Also fixed that the mapping was not disabled when disabling merger mode. [#4669](https://github.com/scalableminds/webknossos/pull/4669)
+- Fixed a bug where webKnossos relied upon but did not enforce organization names to be unique. [#4685](https://github.com/scalableminds/webknossos/pull/4685)
+- Fixed that being outside of a bounding box could be rendered as if one was inside the bounding box in some cases. [#4690](https://github.com/scalableminds/webknossos/pull/4690)
 
 ### Removed
 

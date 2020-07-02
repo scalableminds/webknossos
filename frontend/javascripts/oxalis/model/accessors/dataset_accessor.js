@@ -134,6 +134,10 @@ export function getDefaultIntensityRangeOfLayer(
 
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
+/*
+   The returned Boundary denotes a half-open interval. This means that the lowerBoundary
+   is included in the bounding box and the upper boundary is *not* included.
+*/
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const lowerBoundary = topLeft;

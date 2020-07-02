@@ -4,7 +4,7 @@ The following HTTP requests may be used to interact with the backend of webKnoss
 
 ## Authentication
 
-All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly below “logout”.
+All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly above “logout”.
 
 ## Versioning
 

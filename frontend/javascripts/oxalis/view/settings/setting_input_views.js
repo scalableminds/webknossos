@@ -246,6 +246,7 @@ type State = {
   isEditing: boolean,
   isValid: boolean,
   text: string,
+  name: string,
 };
 
 export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
@@ -255,6 +256,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isEditing: false,
       isValid: true,
       text: this.computeText(props.value),
+      name: props.name,
     };
   }
 
@@ -265,6 +267,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         text: this.computeText(newProps.value),
       });
     }
+    this.setState({ name: newProps.name });
   }
 
   computeText(vector: Vector6) {
@@ -302,10 +305,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     this.setState({ text, isValid });
   };
 
-  handleNameChange = (evt: SyntheticInputEvent<>) => {
-    this.props.onChange({ name: evt.target.value });
-  };
-
   handleColorChange = (color: Vector3) => {
     color = ((color.map(colorPart => colorPart / 255): any): Vector3);
     this.props.onChange({ color });
@@ -315,9 +314,17 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     this.props.onChange({ isVisible });
   };
 
+  handleNameChanged = (evt: SyntheticInputEvent<>) => {
+    const currentEnteredName = evt.target.value;
+    if (currentEnteredName !== this.props.name) {
+      this.props.onChange({ name: evt.target.value });
+    }
+  };
+
   render() {
+    const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-    const { tooltipTitle, name, color, isVisible, onDelete } = this.props;
+    const { tooltipTitle, color, isVisible, onDelete } = this.props;
     const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
     return (
@@ -343,10 +350,15 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={17}>
             <Input
-              onChange={this.handleNameChange}
               defaultValue={name}
               placeholder="Bounding Box Name"
               size="small"
+              value={name}
+              onChange={(evt: SyntheticInputEvent<>) => {
+                this.setState({ name: evt.target.value });
+              }}
+              onPressEnter={this.handleNameChanged}
+              onBlur={this.handleNameChanged}
             />
           </Col>
           <Col span={2}>

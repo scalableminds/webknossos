@@ -9,7 +9,7 @@ import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
-import { isUserAdmin } from "libs/utils";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -95,7 +95,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
     if (isAdminOrTeamManger) {
       this.fetchData();
     } else {
@@ -262,7 +262,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
 
     const { firstName, lastName, email } = this.props.activeUser;
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
 
     return (
       <div className="container">

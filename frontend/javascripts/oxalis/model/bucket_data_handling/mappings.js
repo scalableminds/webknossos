@@ -258,9 +258,13 @@ class Mappings {
       },
     );
 
+    // updateMappingColorTexture has to be called at least once to guarantee
+    // proper initialization of the texture with -1.
+    // There is a race condition otherwise leading to hard-to-debug errors.
     listenToStoreProperty(
       state => state.temporaryConfiguration.activeMapping.mappingColors,
       mappingColors => this.updateMappingColorTexture(mappingColors),
+      true,
     );
   }
 
@@ -325,6 +329,10 @@ class Mappings {
     );
     await progressCallback(true, "Mapping successfully applied.");
     Store.dispatch(setMappingEnabledAction(true));
+
+    // Reset progressCallback, so it doesn't trigger when setting mappings
+    // programmatically, later, e.g. in merger mode
+    this.progressCallback = noopProgressCallback;
   }
 
   getMappingTextures() {

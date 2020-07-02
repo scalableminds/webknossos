@@ -159,7 +159,7 @@ function getTimeTrackingMenu({ collapse }) {
   );
 }
 
-function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
+function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   return (
     <SubMenu
       title={
@@ -176,7 +176,7 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
           User Documentation
         </a>
       </Menu.Item>
-      {(!features().discussionBoardRequiresAdmin || isAdmin) &&
+      {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
       features().discussionBoard !== false ? (
         <Menu.Item key="discussion-board">
           <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
@@ -239,7 +239,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName } = activeUser;
+  const { firstName, lastName, organization } = activeUser;
   return (
     <NavbarMenuItem>
       <SubMenu
@@ -252,6 +252,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="userName">
           {`${firstName} ${lastName}`}
         </Menu.Item>
+        <Menu.Item disabled key="organization">{`${organization}`}</Menu.Item>
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
@@ -319,7 +320,8 @@ function Navbar({
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
-  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
+  const isAdminOrTeamManager =
+    activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
 
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
@@ -332,7 +334,7 @@ function Navbar({
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
-    if (isAdmin) {
+    if (isAdminOrTeamManager) {
       menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
     } else {
@@ -372,7 +374,7 @@ function Navbar({
     <HelpSubMenu
       key="helpMenu"
       version={version}
-      isAdmin={isAdmin}
+      isAdminOrTeamManager={isAdminOrTeamManager}
       collapse={collapseAllNavItems}
     />,
   );

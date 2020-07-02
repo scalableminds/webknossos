@@ -3,7 +3,7 @@ import sbt._
 
 object Dependencies {
   val akkaVersion = "2.5.22"
-  val log4jVersion = "2.0-beta9"
+  val log4jVersion = "2.13.3"
   val webknossosWrapVersion = "1.1.7"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
@@ -20,8 +20,8 @@ object Dependencies {
   val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   val liftCommon = "net.liftweb" %% "lift-common" % "3.0.2"
   val liftUtil = "net.liftweb" %% "lift-util" % "3.0.2"
-  val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
-  val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion
+  val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion % Provided
+  val log4jCore = "org.apache.logging.log4j" % "log4j-api" % log4jVersion % Provided
   val playFramework = "com.typesafe.play" %% "play" % "2.7.1"
   val playJson = "com.typesafe.play" %% "play-json" % "2.7.2"
   val playIteratees = "com.typesafe.play" %% "play-iteratees" % "2.6.1"
@@ -41,8 +41,7 @@ object Dependencies {
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
   val redis = "net.debasishg" %% "redisclient" % "3.9"
   val spire = "org.typelevel" %% "spire" % "0.14.1"
-  val spark = "org.apache.spark" %% "spark-core" % "3.0.0"
-  val graphx = "org.apache.spark" %% "spark-graphx" % "3.0.0"
+  val jgrapht = "org.jgrapht" % "jgrapht-core" % "1.4.0"
 
   val sql = Seq(
     "com.typesafe.slick" %% "slick" % "3.2.3",
@@ -85,8 +84,7 @@ object Dependencies {
     grpcServices,
     redis,
     scalapbRuntimeGrpc,
-    spark,
-    graphx
+    jgrapht
   )
 
   val webknossosDependencies = Seq(

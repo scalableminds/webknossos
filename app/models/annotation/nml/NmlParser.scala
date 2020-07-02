@@ -6,7 +6,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, NodeDefaults, SkeletonTracingDefaults, TreeValidator}
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  MultiComponentTreeSplitter,
+  NodeDefaults,
+  SkeletonTracingDefaults,
+  TreeValidator
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
@@ -130,7 +135,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       trees <- parseTrees(treeNodes, branchPoints, comments)
       treesSplit = MultiComponentTreeSplitter.splitMulticomponentTrees(trees)
       _ <- TreeValidator.validateTrees(treesSplit)
-    } yield trees
+    } yield treesSplit
 
   def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(implicit m: MessagesProvider): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")

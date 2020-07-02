@@ -69,6 +69,7 @@ type State = {
   scripts: Array<APIScript>,
   specificationType: Specification,
   isUploading: boolean,
+  isFetchingData: boolean,
 };
 
 export function taskToText(task: APITask) {
@@ -183,6 +184,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     scripts: [],
     specificationType: SpecificationEnum.Manual,
     isUploading: false,
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -191,14 +193,14 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const [datasets, projects, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
       getScripts(),
       getTaskTypes(),
     ]);
-
-    this.setState({ datasets, projects, scripts, taskTypes });
+    this.setState({ datasets, projects, scripts, taskTypes, isFetchingData: false });
   }
 
   async applyDefaults() {
@@ -389,6 +391,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 disabled={
                   isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
                 }
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
               >
                 {this.state.datasets.map((dataset: APIDataset) => (
                   <Option key={dataset.name} value={dataset.name}>
@@ -440,6 +443,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                     onChange={this.onChangeTaskType}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.taskTypes.map((taskType: APITaskType) => (
                       <Option key={taskType.id} value={taskType.id}>
@@ -492,6 +496,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     style={fullWidth}
                     autoFocus
                     disabled={isEditingMode}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.projects.map((project: APIProject) => (
                       <Option key={project.id} value={project.name}>
@@ -511,6 +516,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     style={fullWidth}
                     autoFocus
                     disabled={isEditingMode}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.scripts.map((script: APIScript) => (
                       <Option key={script.id} value={script.id}>

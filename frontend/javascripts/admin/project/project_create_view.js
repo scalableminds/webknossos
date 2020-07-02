@@ -1,5 +1,5 @@
 // @flow
-import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
+import { Form, Input, Select, Button, Card, InputNumber, Checkbox, Spin } from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
@@ -18,7 +18,7 @@ import {
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 type OwnProps = {|
   projectName?: ?string,
@@ -36,12 +36,14 @@ type PropsWithRouter = {|
 type State = {
   teams: Array<APITeam>,
   users: Array<APIUser>,
+  isFetchingData: boolean,
 };
 
 class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
   state = {
     teams: [],
     users: [],
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -50,11 +52,12 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const [users, teams] = await Promise.all([getUsers(), getEditableTeams()]);
-
     this.setState({
       users: users.filter(user => user.isActive),
       teams,
+      isFetchingData: false,
     });
   }
 
@@ -126,6 +129,7 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
                   optionFilterProp="children"
                   style={fullWidth}
                   disabled={isEditMode}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.teams.map((team: APITeam) => (
                     <Option key={team.id} value={team.id}>
@@ -146,6 +150,7 @@ class ProjectCreateView extends React.PureComponent<PropsWithRouter, State> {
                   optionFilterProp="children"
                   style={fullWidth}
                   disabled={isEditMode}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.users.map((user: APIUser) => (
                     <Option key={user.id} value={user.id}>

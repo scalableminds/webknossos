@@ -47,6 +47,7 @@ type State = {
   timeTrackingData: Array<APITimeTracking>,
   stats: TimeTrackingStats,
   isLoading: boolean,
+  isFetchingUsers: boolean,
 };
 
 function compressTimeLogs(logs) {
@@ -90,6 +91,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       averageTimePerTask: 0,
     },
     isLoading: false,
+    isFetchingUsers: false,
   };
 
   componentDidMount() {
@@ -102,8 +104,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingUsers: true });
     const users = await getEditableUsers();
-    this.setState({ users });
+    this.setState({ users, isFetchingUsers: false });
   }
 
   async fetchTimeTrackingData() {
@@ -276,6 +279,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={{ width: "100%" }}
                     onChange={this.handleUserChange}
+                    notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.users
                       .filter(u => u.isActive)

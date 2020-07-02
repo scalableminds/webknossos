@@ -49,6 +49,9 @@ const RadioGroup = Radio.Group;
 const fullWidth = { width: "100%" };
 const maxDisplayedTasksCount = 50;
 
+const TASK_CSV_HEADER =
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId";
+
 type Props = {
   form: Object,
   taskId: ?string,
@@ -72,9 +75,36 @@ type State = {
   isFetchingData: boolean,
 };
 
-export function taskToText(task: APITask) {
+export function taskToShortText(task: APITask) {
   const { id, creationInfo, editPosition } = task;
   return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
+}
+
+export function taskToText(task: APITask) {
+  const {
+    id,
+    dataSet,
+    type,
+    neededExperience,
+    editPosition,
+    editRotation,
+    status,
+    boundingBoxVec6,
+    projectName,
+    script,
+  } = task;
+  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(vector3 =>
+    vector3.join(","),
+  );
+  const totalNumberOfInstances = status.open + status.active + status.finished;
+  const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
+  const scriptId = script ? `${script.id}` : "";
+
+  const taskAsString =
+    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId}`;
+  return taskAsString;
 }
 
 export function downloadTasksAsCSV(tasks: Array<APITask>) {
@@ -87,8 +117,9 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   const allTeamNames = _.uniq(tasks.map(task => task.team));
   const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
   const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
   const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
-  const blob = new Blob([allTasksAsStrings], { type: "text/plain;charset=utf-8" });
+  const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
   saveAs(blob, filename);
 }
 
@@ -113,7 +144,7 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
       <pre>
         taskId,filename,position
         <br />
-        {successfulTasks.map(task => taskToText(task)).join("\n")}
+        {successfulTasks.map(task => taskToShortText(task)).join("\n")}
       </pre>
     ) : (
       "Too many tasks to show, please use CSV download for a full list."

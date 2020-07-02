@@ -322,7 +322,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const iconStyle = { margin: "auto 0px auto 6px" };
     return (
       <React.Fragment>
-        <Row style={{ marginBottom: isVisible ? 16 : 0 }}>
+        <Row style={{ marginBottom: 16 }}>
           <Col span={22}>
             <Switch
               size="small"

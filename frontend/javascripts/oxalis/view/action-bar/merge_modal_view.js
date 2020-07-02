@@ -96,8 +96,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
         projects: projects.map(project => ({
           id: project.id,
           label: project.name,
-          isFetchingData: false,
         })),
+        isFetchingData: false,
       });
     })();
   }

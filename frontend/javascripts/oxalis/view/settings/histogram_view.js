@@ -32,7 +32,7 @@ type HistogramProps = {
   ) => void,
 };
 
-type HistorgramState = {
+type HistogramState = {
   currentMin: number,
   currentMax: number,
 };
@@ -60,7 +60,7 @@ function getMinAndMax(props: HistogramProps) {
   return { min: dataMin, max: dataMax };
 }
 
-class Histogram extends React.PureComponent<HistogramProps, HistorgramState> {
+class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   canvasRef: ?HTMLCanvasElement;
 
   constructor(props: HistogramProps) {
@@ -90,23 +90,13 @@ class Histogram extends React.PureComponent<HistogramProps, HistorgramState> {
     this.updateCanvas();
   }
 
-  getMinAndMax = () => {
-    const { min, max, data } = this.props;
-    if (min != null && max != null) {
-      return { min, max };
-    }
-    const dataMin = Math.min(...data.map(({ min: minOfHistPart }) => minOfHistPart));
-    const dataMax = Math.max(...data.map(({ max: maxOfHistPart }) => maxOfHistPart));
-    return { min: dataMin, max: dataMax };
-  };
-
   updateCanvas() {
     if (this.canvasRef == null) {
       return;
     }
     const ctx = this.canvasRef.getContext("2d");
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    const { min, max } = this.getMinAndMax();
+    const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
@@ -203,12 +193,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistorgramState> {
   // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
-    1000,
+    500,
   );
 
   updateMaximumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
-    1000,
+    500,
   );
 
   render() {

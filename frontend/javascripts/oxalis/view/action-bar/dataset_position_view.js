@@ -52,9 +52,9 @@ class DatasetPositionView extends PureComponent<Props> {
       position[0] < min[0] ||
       position[1] < min[1] ||
       position[2] < min[2] ||
-      position[0] > max[0] ||
-      position[1] > max[1] ||
-      position[2] > max[2];
+      position[0] >= max[0] ||
+      position[1] >= max[1] ||
+      position[2] >= max[2];
     const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
     let isOutOfTaskBounds = false;
     if (task && task.boundingBox) {

@@ -151,7 +151,7 @@ export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
 }
 
 export function getRandomColor(): Vector3 {
-  const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256));
+  const randomColor = [0, 1, 2].map(() => Math.random());
   return ((randomColor: any): Vector3);
 }
 

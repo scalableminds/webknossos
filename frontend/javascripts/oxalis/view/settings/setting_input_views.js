@@ -307,6 +307,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   };
 
   handleColorChange = (color: Vector3) => {
+    color = ((color.map(colorPart => colorPart / 255): any): Vector3);
     this.props.onChange({ color });
   };
 
@@ -317,6 +318,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   render() {
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
     const { tooltipTitle, name, color, isVisible, onDelete } = this.props;
+    const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
     return (
       <React.Fragment>
@@ -349,7 +351,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={2}>
             <ColorSetting
-              value={Utils.rgbToHex(color)}
+              value={Utils.rgbToHex(upscaledColor)}
               onChange={this.handleColorChange}
               className="ant-btn"
               style={iconStyle}

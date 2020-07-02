@@ -30,8 +30,8 @@ import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } 
 import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
-const DEFAULT_COLOR = [255, 0, 0];
-const TASK_BOUNDING_BOX_COLOR = [0, 255, 0];
+const DEFAULT_COLOR = [1, 0, 0];
+const TASK_BOUNDING_BOX_COLOR = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
 const DEFAULT_BITDEPTH = 0;
@@ -401,6 +401,15 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   return obj[key] === "true";
 }
 
+function _parseColor(obj: Object, defaultColor: Vector3): Vector3 {
+  const color = [
+    _parseFloat(obj, "color.r", defaultColor[0]),
+    _parseFloat(obj, "color.g", defaultColor[1]),
+    _parseFloat(obj, "color.b", defaultColor[2]),
+  ];
+  return color;
+}
+
 function _parseEntities(obj: Object, key: string, defaultValue?: string): string {
   if (obj[key] == null) {
     if (defaultValue == null) {
@@ -596,11 +605,7 @@ export function parseNml(
             const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
-              color: [
-                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
-                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
-                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
-              ],
+              color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
               name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
               comments: [],
@@ -729,11 +734,7 @@ export function parseNml(
             const boundingBoxObject = parseBoundingBoxObject(attr);
             const userBoundingBox = {
               boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
-              color: [
-                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
-                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
-                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
-              ],
+              color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
               isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
               name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),

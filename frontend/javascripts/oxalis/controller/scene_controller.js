@@ -405,15 +405,16 @@ class SceneController {
 
   setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
     const newUserBoundingBoxGroup = new THREE.Group();
-    this.userBoundingBoxes = bboxes.map(bb => {
-      const { min, max } = bb.boundingBox;
+    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color }) => {
+      const { min, max } = boundingBox;
+      const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
       const bbCube = new Cube({
         min,
         max,
-        color: Utils.rgbToInt(bb.color),
+        color: Utils.rgbToInt(bbColor),
         showCrossSections: true,
       });
-      bbCube.setVisibility(bb.isVisible);
+      bbCube.setVisibility(isVisible);
       bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
       return bbCube;
     });

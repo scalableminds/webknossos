@@ -241,6 +241,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         setSingleLayerVisibility(true);
       }
     };
+    const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
       <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
@@ -250,7 +251,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
           </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
-          {this.getEditMinMaxButton(layerName, isInEditMode)}
+          {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
         </Col>

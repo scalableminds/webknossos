@@ -1,5 +1,5 @@
 // @flow
-import { Select } from "antd";
+import { Select, Spin } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
@@ -19,12 +19,14 @@ type Props = {
 type State = {
   possibleTeams: Array<APITeam>,
   selectedTeams: Array<APITeam>,
+  isFetchingData: boolean,
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
     possibleTeams: [],
     selectedTeams: this.props.value ? _.flatten([this.props.value]) : [],
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -40,11 +42,13 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const possibleTeams = this.props.allowNonEditableTeams
       ? await getTeams()
       : await getEditableTeams();
     this.setState({
       possibleTeams,
+      isFetchingData: false,
     });
   }
 
@@ -80,6 +84,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         value={this.state.selectedTeams.map(t => t.id)}
         filterOption
         disabled={this.props.disabled ? this.props.disabled : false}
+        notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
       >
         {this.getAllTeams().map(team => (
           <Option

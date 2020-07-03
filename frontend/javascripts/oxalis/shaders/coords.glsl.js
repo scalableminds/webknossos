@@ -94,7 +94,7 @@ export const isOutsideOfBoundingBox: ShaderModule = {
       vec3 worldCoord = transDim(worldCoordUVW);
       return (
         worldCoord.x < bboxMin.x || worldCoord.y < bboxMin.y || worldCoord.z < bboxMin.z ||
-        worldCoord.x > bboxMax.x || worldCoord.y > bboxMax.y || worldCoord.z > bboxMax.z
+        worldCoord.x >= bboxMax.x || worldCoord.y >= bboxMax.y || worldCoord.z >= bboxMax.z
       );
     }
   `,

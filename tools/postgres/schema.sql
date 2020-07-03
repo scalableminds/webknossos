@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(53);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(55);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -259,7 +259,7 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  name VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL UNIQUE,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
@@ -286,6 +286,7 @@ CREATE TABLE webknossos.users(
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,

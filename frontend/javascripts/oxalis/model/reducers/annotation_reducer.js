@@ -1,7 +1,6 @@
 // @flow
 
 import update from "immutability-helper";
-import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -76,16 +75,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         highestBoundingBoxId++;
         return { ...bb, id: highestBoundingBoxId };
       });
-      // Here we merge the existing user bounding boxes with the new ones.
-      // User bounding boxes with the same bounds, name and color are considered equal.
-      const mergedUserBoundingBoxes = _.unionWith(
-        tracing.userBoundingBoxes,
-        additionalUserBoundingBoxes,
-        (bb: UserBoundingBox, otherBB: UserBoundingBox) =>
-          _.isEqual(bb.boundingBox, otherBB.boundingBox) &&
-          bb.name === otherBB.name &&
-          _.isEqual(bb.color, otherBB.color),
-      );
+      const mergedUserBoundingBoxes = [
+        ...tracing.userBoundingBoxes,
+        ...additionalUserBoundingBoxes,
+      ];
       return updateUserBoundingBoxes(state, mergedUserBoundingBoxes);
     }
 

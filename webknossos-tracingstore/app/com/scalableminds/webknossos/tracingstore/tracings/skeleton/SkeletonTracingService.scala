@@ -165,9 +165,8 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     val singleBoundingBoxes =
       (tracingA.userBoundingBox ++ tracingB.userBoundingBox).map(bb => NamedBoundingBox(0, boundingBox = bb))
     val userBoundingBoxes =
-      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes)
-        .zipWithIndex
-        .map(uBB => uBB._1.copy(id = uBB._2))
+      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes).zipWithIndex.map(uBB =>
+        uBB._1.copy(id = uBB._2))
 
     tracingA.copy(
       trees = mergedTrees,

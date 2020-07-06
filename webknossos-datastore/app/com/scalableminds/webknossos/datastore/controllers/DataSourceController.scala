@@ -233,4 +233,14 @@ class DataSourceController @Inject()(
       }
   }
 
+  def deleteOnDisk(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+      AllowRemoteOrigin {
+        for {
+          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName, dataSetName)
+        } yield Ok
+      }
+    }
+  }
+
 }

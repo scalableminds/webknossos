@@ -1,4 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
+import scala.reflect.io.Directory
+import java.io.File
 
 import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
 import java.nio.file.{Path, Paths}
@@ -200,5 +202,12 @@ class BinaryDataService(dataBaseDir: Path,
 
     agglomerateService.cache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
+  }
+
+  def deleteOnDisk(organizationName: String, dataSetName: String): Fox[Unit] = {
+    val path = dataBaseDir.resolve(organizationName).resolve(dataSetName)
+    val directory = new Directory(new File(path.toString))
+    val success = directory.deleteRecursively()
+    if (success) Fox.successful(()) else Fox.failure("Could not delete directory")
   }
 }

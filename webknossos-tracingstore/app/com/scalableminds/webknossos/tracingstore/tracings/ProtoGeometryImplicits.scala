@@ -26,7 +26,7 @@ trait ProtoGeometryImplicits {
     BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth)
 
   implicit def boundingBoxOptToProto(bbOpt: Option[BoundingBox]): Option[ProtoBoundingBox] =
-    bbOpt.map(bb => ProtoBoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))
+    bbOpt.map(boundingBoxToProto)
 
   implicit def boundingBoxOptFromProto(bbOpt: Option[ProtoBoundingBox]): Option[BoundingBox] =
     bbOpt.map(bb => BoundingBox(bb.topLeft, bb.width, bb.height, bb.depth))

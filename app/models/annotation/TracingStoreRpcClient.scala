@@ -4,6 +4,7 @@ import java.io.File
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
@@ -14,6 +15,7 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
 import net.liftweb.common.Box
+import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 
@@ -71,19 +73,25 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postProtoWithJsonResponse[VolumeTracings, List[Box[Option[String]]]](tracings)
   }
 
-  def duplicateSkeletonTracing(skeletonTracingId: String, versionString: Option[String] = None): Fox[String] = {
+  def duplicateSkeletonTracing(skeletonTracingId: String,
+                               versionString: Option[String] = None,
+                               fromTask: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate SkeletonTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/${skeletonTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryStringOptional("version", versionString)
+      .addQueryString("fromTask" -> fromTask.toString)
       .getWithJsonResponse[String]
   }
 
-  def duplicateVolumeTracing(volumeTracingId: String): Fox[String] = {
+  def duplicateVolumeTracing(volumeTracingId: String,
+                             fromTask: Boolean = false,
+                             dataSetBoundingBox: Option[BoundingBox] = None): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-      .getWithJsonResponse[String]
+      .addQueryString("fromTask" -> fromTask.toString)
+      .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
   def mergeSkeletonTracingsByIds(tracingIds: List[Option[String]], persistTracing: Boolean): Fox[String] = {

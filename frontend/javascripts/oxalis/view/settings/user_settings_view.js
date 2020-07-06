@@ -4,7 +4,7 @@
  */
 
 import features from "features";
-import { Collapse } from "antd";
+import { Collapse, Tooltip, Icon } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -16,9 +16,10 @@ import {
   NumberInputSetting,
   NumberSliderSetting,
   SwitchSetting,
-  Vector6InputSetting,
+  UserBoundingBoxInput,
+  type UserBoundingBoxInputUpdate,
 } from "oxalis/view/settings/setting_input_views";
-import type { UserConfiguration, OxalisState, Tracing } from "oxalis/store";
+import type { UserConfiguration, OxalisState, Tracing, UserBoundingBox } from "oxalis/store";
 import {
   enforceSkeletonTracing,
   getActiveNode,
@@ -26,7 +27,7 @@ import {
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import { hasSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import { hasSegmentation, getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -34,7 +35,7 @@ import {
   setNodeRadiusAction,
   setMergerModeEnabledAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
+import { setUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import { settings as settingsLabels } from "messages";
 import {
@@ -42,12 +43,7 @@ import {
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "libs/user_settings.schema";
-import Constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  type Vector6,
-} from "oxalis/constants";
+import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 
@@ -62,7 +58,7 @@ type UserSettingsViewProps = {
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeActiveCellId: (value: number) => void,
-  onChangeBoundingBox: (value: ?Vector6) => void,
+  onChangeBoundingBoxes: (value: Array<UserBoundingBox>) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   onChangeEnableMergerMode: (active: boolean) => void,
@@ -92,6 +88,52 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
         "You enabled the experimental automatic brush feature. Activate the brush tool and use CTRL+Click to use it.",
       );
     }
+  };
+
+  handleChangeUserBoundingBox = (
+    id: number,
+    { boundingBox, name, color, isVisible }: UserBoundingBoxInputUpdate,
+  ) => {
+    const maybeUpdatedBoundingBox = boundingBox
+      ? Utils.computeBoundingBoxFromArray(boundingBox)
+      : undefined;
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+
+    const updatedUserBoundingBoxes = userBoundingBoxes.map(bb =>
+      bb.id === id
+        ? {
+            ...bb,
+            boundingBox: maybeUpdatedBoundingBox || bb.boundingBox,
+            name: name != null ? name : bb.name,
+            color: color || bb.color,
+            isVisible: isVisible != null ? isVisible : bb.isVisible,
+          }
+        : bb,
+    );
+    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  };
+
+  handleAddNewUserBoundingBox = () => {
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const datasetBoundingBox = getDatasetExtentInVoxel(this.props.dataset);
+    // We use the default of -1 to get the id 0 for the first user bounding box.
+    const highestBoundingBoxId = Math.max(-1, ...userBoundingBoxes.map(bb => bb.id));
+    const boundingBoxId = highestBoundingBoxId + 1;
+    const newUserBoundingBox = {
+      boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(datasetBoundingBox),
+      id: boundingBoxId,
+      name: `user bounding box ${boundingBoxId}`,
+      color: Utils.getRandomColor(),
+      isVisible: true,
+    };
+    const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
+    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
+  };
+
+  handleDeleteUserBoundingBox = (id: number) => {
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+    const updatedUserBoundingBoxes = userBoundingBoxes.filter(boundingBox => boundingBox.id !== id);
+    this.props.onChangeBoundingBoxes(updatedUserBoundingBoxes);
   };
 
   getViewportOptions = () => {
@@ -337,6 +379,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   }
 
   render() {
+    const { userBoundingBoxes } = getSomeTracing(this.props.tracing);
+
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
         label={settingsLabels.moveValue3d}
@@ -377,15 +421,34 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           </Panel>
           {this.getViewportOptions()}
           {this.getSkeletonOrVolumeOptions()}
-          <Panel header="Other" key="4">
-            <Vector6InputSetting
-              label={settingsLabels.userBoundingBox}
-              tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-              value={Utils.computeArrayFromBoundingBox(
-                getSomeTracing(this.props.tracing).userBoundingBox,
-              )}
-              onChange={this.props.onChangeBoundingBox}
-            />
+          <Panel header={settingsLabels.userBoundingBoxes} key="4">
+            {userBoundingBoxes.map(bb => (
+              <UserBoundingBoxInput
+                key={bb.id}
+                tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+                value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+                color={bb.color}
+                name={bb.name}
+                isVisible={bb.isVisible}
+                onChange={_.partial(this.handleChangeUserBoundingBox, bb.id)}
+                onDelete={_.partial(this.handleDeleteUserBoundingBox, bb.id)}
+              />
+            ))}
+            <div style={{ display: "inline-block", width: "100%" }}>
+              <Tooltip title="Click to add another bounding box.">
+                <Icon
+                  type="plus"
+                  onClick={this.handleAddNewUserBoundingBox}
+                  style={{
+                    float: "right",
+                    cursor: "pointer",
+                    marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
+                  }}
+                />
+              </Tooltip>
+            </div>
+          </Panel>
+          <Panel header="Other" key="5">
             <SwitchSetting
               label={settingsLabels.tdViewDisplayPlanes}
               value={this.props.userConfiguration.tdViewDisplayPlanes}
@@ -424,8 +487,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
   },
-  onChangeBoundingBox(boundingBox: ?Vector6) {
-    dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));
+  onChangeBoundingBoxes(userBoundingBoxes: Array<UserBoundingBox>) {
+    dispatch(setUserBoundingBoxesAction(userBoundingBoxes));
   },
   onChangeZoomStep(zoomStep: number) {
     dispatch(setZoomStepAction(zoomStep));

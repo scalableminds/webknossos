@@ -10,7 +10,12 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "admin/api_flow_types";
-import type { Settings, DataLayerType, DatasetConfiguration } from "oxalis/store";
+import type {
+  Settings,
+  DataLayerType,
+  DatasetConfiguration,
+  BoundingBoxObject,
+} from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
@@ -177,6 +182,7 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
   const { min, max } = unifiedBoundingBoxes;
   const extent = {
+    topLeft: min,
     width: max[0] - min[0],
     height: max[1] - min[1],
     depth: max[2] - min[2],
@@ -186,10 +192,12 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   return extent;
 }
 
-function getDatasetExtentInLength(dataset: APIDataset) {
+function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
   const { scale } = dataset.dataSource;
+  const topLeft = ((extentInVoxel.topLeft.map((val, index) => val * scale[index]): any): Vector3);
   const extent = {
+    topLeft,
     width: extentInVoxel.width * scale[0],
     height: extentInVoxel.height * scale[1],
     depth: extentInVoxel.depth * scale[2],

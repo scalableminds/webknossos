@@ -15,10 +15,10 @@ import javax.inject.Inject
 import models.annotation.nml.NmlResults.NmlParseResult
 import models.annotation.nml.NmlService
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService}
-import models.project.ProjectDAO
+import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.project.{Project, ProjectDAO}
 import models.task._
-import models.team.TeamDAO
+import models.team.{Team, TeamDAO}
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WkEnv
@@ -420,15 +420,29 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             dataSet._id,
             description = tuple._1._1.description
         ))
+      warnings <- warnIfTeamHasNoAccess(requestedTasks.map(_._1), dataSet)
       zippedTasksAndAnnotations = taskObjects zip annotationBases
       taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonFoxed(tuple._1, tuple._2))
       result <- {
         val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
         taskJsonFuture.map { taskJsonBoxes =>
-          bulk2StatusJson(taskJsonBoxes)
+          Json.obj("tasks" -> bulk2StatusJson(taskJsonBoxes), "warnings" -> warnings)
         }
       }
     } yield Ok(Json.toJson(result))
+  }
+
+  private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataSet: DataSet)(
+      implicit ctx: DBAccessContext): Fox[List[String]] = {
+    val projectNames = requestedTasks.map(_.projectName).distinct
+    for {
+      projects: List[Project] <- Fox.serialCombined(projectNames)(projectDAO.findOneByName(_))
+      dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
+      noAccessTeamIds = projects.map(_._team).filter(projectTeam => !dataSetTeams.map(_._id).contains(projectTeam))
+      noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIds)(id => teamDAO.findOne(id))
+      warnings = noAccessTeams.map(team =>
+        s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
+    } yield warnings
   }
 
   private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[WkEnv, _]): Fox[Unit] =

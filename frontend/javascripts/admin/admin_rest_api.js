@@ -915,6 +915,20 @@ export async function triggerDatasetClearCache(
   );
 }
 
+export async function deleteDatasetOnDisk(
+  datastoreHost: string,
+  datasetId: APIDatasetId,
+): Promise<void> {
+  await doWithToken(token =>
+    Request.triggerRequest(
+      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/deleteOnDisk?token=${token}`,
+      {
+        host: datastoreHost,
+      },
+    ),
+  );
+}
+
 export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
   await Request.triggerRequest(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,

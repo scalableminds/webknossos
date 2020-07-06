@@ -325,7 +325,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
     const { tooltipTitle, color, isVisible, onDelete } = this.props;
-    const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
+    const upscaledColor = ((color.map(colorPart => Math.round(colorPart * 255)): any): Vector3);
     const iconStyle = { margin: "auto 0px auto 6px" };
     return (
       <React.Fragment>

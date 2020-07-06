@@ -1,16 +1,17 @@
 // @flow
 import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Vector3, BoundingBoxType } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type {
   VolumeTracing,
   BranchPoint,
   CommentType,
   Tree,
   Node,
-  BoundingBoxObject,
   TreeGroup,
+  UserBoundingBox,
+  UserBoundingBoxToServer,
 } from "oxalis/store";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
+import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeId = { treeId: number } & Node;
 
@@ -98,7 +99,6 @@ export type UpdateSkeletonTracingUpdateAction = {|
     activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
-    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
   |},
 |};
@@ -109,8 +109,13 @@ type UpdateVolumeTracingUpdateAction = {|
     editPosition: Vector3,
     editRotation: Vector3,
     largestSegmentId: number,
-    userBoundingBox: ?BoundingBoxObject,
     zoomLevel: number,
+  |},
+|};
+type UpdateUserBoundingBoxesAction = {|
+  name: "updateUserBoundingBoxes",
+  value: {|
+    boundingBoxes: Array<UserBoundingBoxToServer>,
   |},
 |};
 type UpdateBucketUpdateAction = {|
@@ -144,6 +149,7 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction
+  | UpdateUserBoundingBoxesAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
@@ -178,6 +184,7 @@ export type ServerUpdateAction =
   | AsServerAction<DeleteEdgeUpdateAction>
   | AsServerAction<UpdateSkeletonTracingUpdateAction>
   | AsServerAction<UpdateVolumeTracingUpdateAction>
+  | AsServerAction<UpdateUserBoundingBoxesAction>
   | AsServerAction<UpdateBucketUpdateAction>
   | AsServerAction<UpdateTreeVisibilityUpdateAction>
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
@@ -303,7 +310,7 @@ export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateActi
   };
 }
 export function updateSkeletonTracing(
-  tracing: { activeNodeId: ?number, userBoundingBox: ?BoundingBoxType },
+  tracing: { activeNodeId: ?number },
   position: Vector3,
   rotation: Vector3,
   zoomLevel: number,
@@ -314,7 +321,6 @@ export function updateSkeletonTracing(
       activeNode: tracing.activeNodeId,
       editPosition: position,
       editRotation: rotation,
-      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
     },
   };
@@ -346,8 +352,17 @@ export function updateVolumeTracing(
       editPosition: position,
       editRotation: rotation,
       largestSegmentId: tracing.maxCellId,
-      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
+    },
+  };
+}
+export function updateUserBoundingBoxes(
+  userBoundingBoxes: Array<UserBoundingBox>,
+): UpdateUserBoundingBoxesAction {
+  return {
+    name: "updateUserBoundingBoxes",
+    value: {
+      boundingBoxes: convertUserBoundingBoxesFromFrontendToServer(userBoundingBoxes),
     },
   };
 }

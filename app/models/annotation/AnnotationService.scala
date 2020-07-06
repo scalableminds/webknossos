@@ -4,21 +4,19 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Source, StreamConverters}
-import akka.util.ByteString
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
-import com.scalableminds.webknossos.tracingstore.geometry
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -34,14 +32,14 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
-import utils.ObjectId
-import play.api.i18n.{I18nSupport, Messages, MessagesApi, MessagesProvider}
-
-import scala.concurrent.{ExecutionContext, Future}
 import net.liftweb.common.{Box, Full}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, Json}
+import utils.ObjectId
+
+import scala.concurrent.{ExecutionContext, Future}
 
 case class DownloadAnnotation(skeletonTracingOpt: Option[SkeletonTracing],
                               volumeTracingOpt: Option[VolumeTracing],
@@ -141,10 +139,13 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         for {
           client <- tracingStoreService.clientFor(dataSet)
           oldTracingOpt <- Fox.runOptional(oldTracingId)(id => client.getVolumeTracing(id, skipVolumeData = true))
-          userBBoxOpt = oldTracingOpt.map(_._1).flatMap(_.userBoundingBox)
+          userBBoxOpt = oldTracingOpt.flatMap(_._1.userBoundingBox).map(NamedBoundingBox(0, None, None, None, _))
+          userBBoxes = oldTracingOpt.map(_._1.userBoundingBoxes ++ userBBoxOpt)
           skeletonTracingId <- client.saveSkeletonTracing(
-            SkeletonTracingDefaults.createInstance
-              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBBoxOpt))
+            SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
+                                                        editPosition = dataSource.center,
+                                                        userBoundingBox = None,
+                                                        userBoundingBoxes = userBBoxes.getOrElse(Seq.empty)))
         } yield (Some(skeletonTracingId), None)
       case TracingType.volume =>
         for {
@@ -188,7 +189,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       annotation
     }
 
-  def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
+  def makeAnnotationHybrid(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton =>
         createTracings(dataSet, dataSource, TracingType.volume, true).flatMap {

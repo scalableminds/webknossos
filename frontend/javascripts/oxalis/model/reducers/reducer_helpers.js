@@ -1,23 +1,69 @@
 // @flow
 import Maybe from "data.maybe";
 
-import type { APIAnnotation, ServerBoundingBox } from "admin/api_flow_types";
-import type { Annotation, BoundingBoxObject } from "oxalis/store";
+import type {
+  APIAnnotation,
+  ServerBoundingBox,
+  UserBoundingBoxFromServer,
+} from "admin/api_flow_types";
+import type {
+  Annotation,
+  BoundingBoxObject,
+  UserBoundingBox,
+  UserBoundingBoxToServer,
+} from "oxalis/store";
 import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import type { BoundingBoxType } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 
+export function convertServerBoundingBoxToBoundingBox(
+  boundingBox: ServerBoundingBox,
+): BoundingBoxType {
+  return Utils.computeBoundingBoxFromArray(
+    Utils.concatVector3(Utils.point3ToVector3(boundingBox.topLeft), [
+      boundingBox.width,
+      boundingBox.height,
+      boundingBox.depth,
+    ]),
+  );
+}
+
 export function convertServerBoundingBoxToFrontend(
   boundingBox: ?ServerBoundingBox,
 ): ?BoundingBoxType {
   return Maybe.fromNullable(boundingBox)
-    .map(bb =>
-      Utils.computeBoundingBoxFromArray(
-        Utils.concatVector3(Utils.point3ToVector3(bb.topLeft), [bb.width, bb.height, bb.depth]),
-      ),
-    )
+    .map(bb => convertServerBoundingBoxToBoundingBox(bb))
     .getOrElse(null);
+}
+
+export function convertUserBoundingBoxesFromServerToFrontend(
+  boundingBoxes: Array<UserBoundingBoxFromServer>,
+): Array<UserBoundingBox> {
+  return boundingBoxes.map(bb => {
+    const { color, id, name, isVisible, boundingBox } = bb;
+    const convertedBoundingBox = convertServerBoundingBoxToBoundingBox(boundingBox);
+    return {
+      boundingBox: convertedBoundingBox,
+      color: color ? Utils.colorObjectToRGBArray(color) : Utils.getRandomColor(),
+      id,
+      name: name || `user bounding box ${id}`,
+      isVisible: isVisible != null ? isVisible : true,
+    };
+  });
+}
+
+export function convertUserBoundingBoxesFromFrontendToServer(
+  boundingBoxes: Array<UserBoundingBox>,
+): Array<UserBoundingBoxToServer> {
+  // The exact spreading is needed for flow to grasp that the conversion is correct.
+  return boundingBoxes.map(bb => {
+    const { boundingBox, ...rest } = bb;
+    return {
+      ...rest,
+      boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox),
+    };
+  });
 }
 
 export function convertFrontendBoundingBoxToServer(

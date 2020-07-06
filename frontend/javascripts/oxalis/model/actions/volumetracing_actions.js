@@ -50,7 +50,8 @@ export type VolumeTracingAction =
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
-  "SET_USER_BOUNDING_BOX",
+  "SET_USER_BOUNDING_BOXES",
+  "ADD_USER_BOUNDING_BOXES",
 ];
 
 export const initializeVolumeTracingAction = (

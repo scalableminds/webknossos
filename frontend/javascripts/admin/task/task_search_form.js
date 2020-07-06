@@ -1,5 +1,5 @@
 // @flow
-import { Icon, Form, Row, Dropdown, Menu, Col, Button, Input, Select } from "antd";
+import { Icon, Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
@@ -42,6 +42,7 @@ type State = {
   projects: Array<APIProject>,
   taskTypes: Array<APITaskType>,
   fieldValues: TaskFormFieldValues,
+  isFetchingData: boolean,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -62,6 +63,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     projects: [],
     taskTypes: [],
     fieldValues: {},
+    isFetchingData: false,
   };
 
   componentWillMount() {
@@ -88,12 +90,13 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const [users, projects, taskTypes] = await Promise.all([
       getEditableUsers(),
       getProjects(),
       getTaskTypes(),
     ]);
-    this.setState({ users, projects, taskTypes });
+    this.setState({ users, projects, taskTypes, isFetchingData: false });
   }
 
   handleFormSubmit = (
@@ -178,6 +181,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   placeholder="Select a Task Type"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.taskTypes.map((taskType: APITaskType) => (
                     <Option key={taskType.id} value={taskType.id}>
@@ -199,6 +203,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   placeholder="Select a Project"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.projects.map((project: APIProject) => (
                     <Option key={project.id} value={project.name}>
@@ -218,6 +223,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                   placeholder="Select a User"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.users
                     .filter(u => u.isActive)

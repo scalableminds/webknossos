@@ -52,13 +52,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         time = parseTime(parameters \ "time")
         comments <- parseComments(data \ "comments")
         branchPoints <- parseBranchPoints(data \ "branchpoints", time)
-        trees <- extractTrees(data \ "thing", branchPoints, comments)
+        trees <- parseTrees(data \ "thing", branchPoints, comments)
         treeGroups <- extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
-        _ <- TreeValidator.checkNoDuplicateTreeGroupIds(treeGroups)
-        _ <- TreeValidator.checkAllTreeGroupIdsUsedExist(trees, treeGroups)
-        _ <- TreeValidator.checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
-        _ <- TreeValidator.checkAllNodesUsedInCommentsExist(trees, comments)
+        treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
+        treesSplit = treesAndGroupsAfterSplitting._1
+        treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
+        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -73,7 +73,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val userBoundingBox = parseBoundingBox(parameters \ "userBoundingBox")
         val taskBoundingBox: Option[BoundingBox] = parseBoundingBox(parameters \ "taskBoundingBox")
 
-        logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
+        logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         val volumeTracingWithDataLocation =
           if (volumes.isEmpty) None
@@ -97,11 +97,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
             )
 
         val skeletonTracing =
-          if (trees.isEmpty) None
+          if (treesSplit.isEmpty) None
           else
             Some(
               SkeletonTracing(dataSetName,
-                              trees,
+                              treesSplit,
                               time,
                               taskBoundingBox,
                               activeNodeId,
@@ -110,7 +110,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
                               zoomLevel,
                               version = 0,
                               userBoundingBox,
-                              treeGroups)
+                              treeGroupsAfterSplit)
             )
 
         (skeletonTracing, volumeTracingWithDataLocation, description, organizationName)
@@ -128,14 +128,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
-
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
-      implicit m: MessagesProvider): Box[Seq[Tree]] =
-    for {
-      trees <- parseTrees(treeNodes, branchPoints, comments)
-      treesSplit = MultiComponentTreeSplitter.splitMulticomponentTrees(trees)
-      _ <- TreeValidator.validateTrees(treesSplit)
-    } yield treesSplit
 
   def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(implicit m: MessagesProvider): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")

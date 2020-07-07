@@ -151,7 +151,7 @@ export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
 }
 
 export function getRandomColor(): Vector3 {
-  // Here we generate three values between 0 and 1 that multipled with 255 will be integers.
+  // Generate three values between 0 and 1 that multiplied with 255 will be integers.
   const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
   return ((randomColor: any): Vector3);
 }

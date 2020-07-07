@@ -101,7 +101,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     def tryWrite: Fox[UserAccessAnswer] =
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
-        user <- userBox.toFox
+        user <- userBox.toFox ?~> "auth.token.noUser"
         isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
       } yield {
         UserAccessAnswer(isAllowed)
@@ -116,10 +116,18 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
 
+    def tryDelete: Fox[UserAccessAnswer] =
+      for {
+        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
+          GlobalAccessContext) ?~> "datasource.notFound"
+        user <- userBox.toFox ?~> "auth.token.noUser"
+      } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
+
     mode match {
       case AccessMode.read         => tryRead
       case AccessMode.write        => tryWrite
       case AccessMode.administrate => tryAdministrate
+      case AccessMode.delete       => tryDelete
       case _                       => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
     }
   }

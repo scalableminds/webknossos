@@ -8,10 +8,10 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{
+  AgglomerateIdCache,
   AgglomerateCache,
-  AgglomerateFileCache,
   BoundingBoxCache,
-  CachedReader,
+  CachedAgglomerate,
   CumsumParser
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -26,7 +26,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
   val cumsumFileName = "cumsum.json"
 
-  lazy val cachedFileHandles = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
+  lazy val agglomerateCache = new AgglomerateCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -49,13 +49,14 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     def convertToAgglomerate(input: Array[ULong],
                              numBytes: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-      val cachedAgglomerate = cachedFileHandles.withCache(request)(initHDFReader)
+      val cachedAgglomerate = agglomerateCache.withCache(request)(initHDFReader)
 
       val agglomerateIds = cachedAgglomerate.cache match {
-        case Left(agglomerateCache) =>
-          input.map(el =>
-            agglomerateCache.withCache(el, cachedAgglomerate.reader, cachedAgglomerate.dataset, cachedAgglomerate.size)(
-              readHDF))
+        case Left(agglomerateIdCache) =>
+          input.map(
+            el =>
+              agglomerateIdCache
+                .withCache(el, cachedAgglomerate.reader, cachedAgglomerate.dataset, cachedAgglomerate.size)(readHDF))
         case Right(boundingBoxCache) => boundingBoxCache.withCache(request, input, cachedAgglomerate.reader)(readHDF)
       }
       cachedAgglomerate.finishAccess()
@@ -101,18 +102,18 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
 
-    val cache: Either[AgglomerateCache, BoundingBoxCache] =
+    val cache: Either[AgglomerateIdCache, BoundingBoxCache] =
       if (Files.exists(cumsumPath)) {
-        Right(CumsumParser.parse(cumsumPath.toFile))
+        Right(CumsumParser.parse(cumsumPath.toFile, ULong(config.Braingames.Binary.agglomerateMaxReaderRange)))
       } else {
         Left(
-          new AgglomerateCache(config.Braingames.Binary.agglomerateCacheMaxSize,
-                               config.Braingames.Binary.agglomerateStandardBlockSize))
+          new AgglomerateIdCache(config.Braingames.Binary.agglomerateCacheMaxSize,
+                                 config.Braingames.Binary.agglomerateStandardBlockSize))
       }
 
-    CachedReader(reader,
-                 reader.`object`().openDataSet(datasetName),
-                 ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
-                 cache)
+    CachedAgglomerate(reader,
+                      reader.`object`().openDataSet(datasetName),
+                      ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
+                      cache)
   }
 }

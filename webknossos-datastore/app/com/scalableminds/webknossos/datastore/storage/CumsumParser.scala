@@ -14,54 +14,46 @@ import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {
 
-  def parse(r: Reader): (BoundingBoxCache) =
+  def parse(r: Reader, maxReaderRange: ULong): BoundingBoxCache =
     try {
-      parseImpl(r)
+      val start = System.currentTimeMillis()
+
+      val jsonReader = new JsonReader(r)
+      var boundingBoxList = List[(Long, Long, Long, Long, Long, Long)]()
+      val boundingBoxFinder =
+        BoundingBoxFinder(new java.util.TreeSet(), new java.util.TreeSet(), new java.util.TreeSet())
+      var cache = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
+      var minBoundingBox: (Long, Long, Long) = (0, 0, 0)
+
+      jsonReader.beginObject()
+      while (jsonReader.hasNext) {
+        jsonReader.nextName() match {
+          case "max_ids" =>
+            boundingBoxList = parseBoundingBoxes(jsonReader)
+          case "cumsum" =>
+            val tuple = parseCumSum(jsonReader, boundingBoxList, boundingBoxFinder)
+            cache = tuple._1
+            minBoundingBox = tuple._2
+          case _ =>
+            jsonReader.skipValue()
+        }
+      }
+      jsonReader.endObject()
+
+      val end = System.currentTimeMillis()
+      logger.info(s"Cumsum parsing took ${end - start} ms")
+
+      new BoundingBoxCache(cache, boundingBoxFinder, minBoundingBox, maxReaderRange)
     } catch {
       case e: JsonParseException =>
-        logger.error(s"Parse exception while parsing mapping: ${e.getMessage}.")
-        //Failure(e.getMessage)
-        throw e
-      case e: Exception =>
-        logger.error(s"Unknown exception while parsing mapping: ${e.getMessage}.")
-        //Failure(e.getMessage)
+        logger.error(s"Parse exception while parsing cumsum: ${e.getMessage}.")
         throw e
     } finally {
       r.close()
     }
 
-  def parse(f: File): BoundingBoxCache =
-    parse(new FileReader(f))
-
-  private def parseImpl(r: Reader) = {
-    val start = System.currentTimeMillis()
-
-    val jsonReader = new JsonReader(r)
-    var boundingBoxList = List[(Long, Long, Long, Long, Long, Long)]()
-    val boundingBoxFinder = BoundingBoxFinder(new java.util.TreeSet(), new java.util.TreeSet(), new java.util.TreeSet())
-    var cache = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
-    var minBoundingBox: (Long, Long, Long) = (0, 0, 0)
-
-    jsonReader.beginObject()
-    while (jsonReader.hasNext) {
-      jsonReader.nextName() match {
-        case "max_ids" =>
-          boundingBoxList = parseBoundingBoxes(jsonReader)
-        case "cumsum" =>
-          val tuple = parseCumSum(jsonReader, boundingBoxList, boundingBoxFinder)
-          cache = tuple._1
-          minBoundingBox = tuple._2
-        case _ =>
-          jsonReader.skipValue()
-      }
-    }
-    jsonReader.endObject()
-
-    val end = System.currentTimeMillis()
-    logger.info(s"Cumsum parsing took ${end - start} ms")
-
-    new BoundingBoxCache(cache, boundingBoxFinder, minBoundingBox)
-  }
+  def parse(f: File, maxReaderRange: ULong): BoundingBoxCache =
+    parse(new FileReader(f), maxReaderRange)
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
     val formRx = "([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)".r

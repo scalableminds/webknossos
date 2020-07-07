@@ -1,29 +1,16 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
-import java.nio.file.{Path, Paths}
+import java.nio.file.Path
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataReadInstruction,
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  MappingReadInstruction
-}
-import com.scalableminds.webknossos.datastore.storage.{
-  CachedAgglomerateFile,
-  CachedAgglomerateKey,
-  CachedCube,
-  DataCubeCache
-}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
-import spire.math.UInt
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -191,11 +178,11 @@ class BinaryDataService(dataBaseDir: Path,
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
-    def matchingAgglomerate(cachedAgglomerate: CachedAgglomerateKey) =
-      cachedAgglomerate.dataSourceName == dataSetName && cachedAgglomerate.organization == organizationName && layerName
-        .forall(_ == cachedAgglomerate.dataLayerName)
+    def matchingAgglomerate(agglomerateKey: AgglomerateKey) =
+      agglomerateKey.dataSourceName == dataSetName && agglomerateKey.organization == organizationName && layerName
+        .forall(_ == agglomerateKey.dataLayerName)
 
-    //agglomerateService.cache.clear(matchingAgglomerate)
+    agglomerateService.agglomerateCache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
   }
 }

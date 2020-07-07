@@ -14,59 +14,36 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 
-case class BoundingBoxFinder(xCoordinates: util.TreeSet[Long],
-                             yCoordinates: util.TreeSet[Long],
-                             zCoordinates: util.TreeSet[Long])
-
-case class CachedReader(reader: IHDF5Reader,
-                        dataset: HDF5DataSet,
-                        size: ULong,
-                        cache: Either[AgglomerateCache, BoundingBoxCache])
+case class CachedAgglomerate(reader: IHDF5Reader,
+                             dataset: HDF5DataSet,
+                             size: ULong,
+                             cache: Either[AgglomerateIdCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
-case class CachedAgglomerateFile(
+case class AgglomerateKey(
     organization: String,
     dataSourceName: String,
     dataLayerName: String,
     agglomerateName: String
 )
 
-object CachedAgglomerateFile {
-
-  def from(dataRequest: DataServiceDataRequest): CachedAgglomerateFile =
-    storage.CachedAgglomerateFile(dataRequest.dataSource.id.team,
-                                  dataRequest.dataSource.id.name,
-                                  dataRequest.dataLayer.name,
-                                  dataRequest.settings.appliedAgglomerate.get)
+object AgglomerateKey {
+  def from(dataRequest: DataServiceDataRequest): AgglomerateKey =
+    storage.AgglomerateKey(dataRequest.dataSource.id.team,
+                           dataRequest.dataSource.id.name,
+                           dataRequest.dataLayer.name,
+                           dataRequest.settings.appliedAgglomerate.get)
 }
 
-case class CachedAgglomerateKey(organization: String,
-                                dataSourceName: String,
-                                dataLayerName: String,
-                                agglomerateName: String,
-                                segmentId: Long)
-
-object CachedAgglomerateKey {
-  def from(dataRequest: DataServiceDataRequest, segmentId: Long) =
-    storage.CachedAgglomerateKey(dataRequest.dataSource.id.team,
-                                 dataRequest.dataSource.id.name,
-                                 dataRequest.dataLayer.name,
-                                 dataRequest.settings.appliedAgglomerate.get,
-                                 segmentId)
-}
-
-case class BoundingBoxValues(range: (ULong, ULong), dimensions: (Long, Long, Long))
-
-class AgglomerateFileCache(val maxEntries: Int)
-    extends LRUConcurrentCache[CachedAgglomerateFile, CachedReader]
-    with LazyLogging {
-  override def onElementRemoval(key: CachedAgglomerateFile, value: CachedReader): Unit =
+class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateKey, CachedAgglomerate] {
+  override def onElementRemoval(key: AgglomerateKey, value: CachedAgglomerate): Unit =
     value.scheduleForRemoval()
 
-  def withCache(dataRequest: DataServiceDataRequest)(loadFn: DataServiceDataRequest => CachedReader): CachedReader = {
-    val cachedAgglomerateFile = CachedAgglomerateFile.from(dataRequest)
+  def withCache(dataRequest: DataServiceDataRequest)(
+      loadFn: DataServiceDataRequest => CachedAgglomerate): CachedAgglomerate = {
+    val cachedAgglomerateFile = AgglomerateKey.from(dataRequest)
 
     def handleUncachedAgglomerateFile() = {
       val reader = loadFn(dataRequest)
@@ -85,10 +62,7 @@ class AgglomerateFileCache(val maxEntries: Int)
   }
 }
 
-class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
-    extends LRUConcurrentCache[Long, Long]
-    with LazyLogging {
-
+class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extends LRUConcurrentCache[Long, Long] {
   def withCache(segmentId: ULong, reader: IHDF5Reader, dataSet: HDF5DataSet, size: ULong)(
       readFromFile: (IHDF5Reader, HDF5DataSet, Long, Long) => Array[Long]): Long = {
 
@@ -97,7 +71,7 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
         if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
       val blockSize = spire.math.min(size - minId, ULong(standardBlockSize))
 
-      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, blockSize.toInt)
+      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, blockSize.toLong)
 
       agglomerateIds.zipWithIndex.foreach {
         case (id, index) => put(index + minId.toLong, id)
@@ -110,9 +84,17 @@ class AgglomerateCache(val maxEntries: Int, val standardBlockSize: Int)
   }
 }
 
+case class BoundingBoxValues(range: (ULong, ULong), dimensions: (Long, Long, Long))
+
+case class BoundingBoxFinder(xCoordinates: util.TreeSet[Long],
+                             yCoordinates: util.TreeSet[Long],
+                             zCoordinates: util.TreeSet[Long])
+
 class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
                        val boundingBoxFinder: BoundingBoxFinder,
-                       val minBoundingBox: (Long, Long, Long) = (0, 0, 0)) {
+                       val minBoundingBox: (Long, Long, Long) = (0, 0, 0),
+                       val maxReaderRange: ULong)
+    extends LazyLogging {
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
     val res = cuboid.resolution
     val tl = cuboid.topLeft
@@ -165,36 +147,29 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
   }
 
   def withCache(request: DataServiceDataRequest, input: Array[ULong], reader: IHDF5Reader)(
-      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) =
-    try {
-      val readerRange = getReaderRange(request)
-      if (readerRange._2 - readerRange._1 < ULong(1310720)) {
-        val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
-        input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
-      } else {
-        var offset = ULong(0)
-        val result = Array.ofDim[Long](input.length)
-        val isTransformed = Array.fill[Boolean](input.length)(false)
-        while (offset < readerRange._2 - readerRange._1) {
-          val agglomerateIds =
-            readHDF(reader, offset.toLong, spire.math.min(ULong(1310720), readerRange._2 - offset).toLong)
-          for (i <- input.indices) {
-            val inputElement = input(i)
-            if (!isTransformed(i) && inputElement >= offset && inputElement < offset + ULong(1310720)) {
-              result(i) = if (inputElement == ULong(0)) 0L else agglomerateIds((inputElement - offset).toInt)
-              isTransformed(i) = true
-            }
+      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) = {
+    val readerRange = getReaderRange(request)
+    if (readerRange._2 - readerRange._1 < maxReaderRange) {
+      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
+      input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
+    } else {
+      var offset = ULong(0)
+      val result = Array.ofDim[Long](input.length)
+      val isTransformed = Array.fill(input.length)(false)
+      while (offset < readerRange._2 - readerRange._1) {
+        val agglomerateIds =
+          readHDF(reader, offset.toLong, spire.math.min(maxReaderRange, readerRange._2 - offset).toLong)
+        for (i <- input.indices) {
+          val inputElement = input(i)
+          if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {
+            result(i) = if (inputElement == ULong(0)) 0L else agglomerateIds((inputElement - offset).toInt)
+            isTransformed(i) = true
           }
-          offset = offset + ULong(1310720)
         }
-        result
+        offset = offset + maxReaderRange
       }
-    } catch {
-      case _: ArrayIndexOutOfBoundsException =>
-        val range = getReaderRange(request)
-        val cuboid = getGlobalCuboid(request.cuboid)
-        println(s"Error: ${cuboid.topLeft} - ${cuboid.bottomRight}: ${range._1} - ${range._2}")
-        input.map(_.toLong)
+      result
     }
+  }
 
 }

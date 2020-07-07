@@ -44,6 +44,7 @@ organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
+organization.name.alreadyInUse=The chosen organization name is already in use.
 organization.folderCreation.failed=Failed to create organization directory, please make sure webKnossos has write permissions in the “binaryData” directory.
 
 user.activated={0} has been activated
@@ -107,6 +108,9 @@ dataSet.alreadyPresent=Sample dataset is already present.
 dataSet.noResolutions=Data layer does not contain resolutions
 dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 dataSet.noData=Could not get data for the requested dataset
+dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
+dataset.initialTeams.invalidTeams=Can only assign teams of user
+dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually?
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -158,6 +162,7 @@ nml.edge.invalid=Invalid edge {0} {1}
 nml.tree.id.invalid=Invalid tree id {0}
 nml.tree.elements.invalid=Invalid {0} in tree {1}
 nml.treegroup.id.invalid=Invalid tree group id {0}
+nml.boundingbox.id.invalid=Invalid user bounding box id {0}
 
 owner=Owner
 priority=Priority

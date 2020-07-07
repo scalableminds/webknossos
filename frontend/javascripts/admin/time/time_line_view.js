@@ -9,7 +9,7 @@ import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
-import { isUserAdmin } from "libs/utils";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -47,6 +47,7 @@ type State = {
   timeTrackingData: Array<APITimeTracking>,
   stats: TimeTrackingStats,
   isLoading: boolean,
+  isFetchingUsers: boolean,
 };
 
 function compressTimeLogs(logs) {
@@ -90,10 +91,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
       averageTimePerTask: 0,
     },
     isLoading: false,
+    isFetchingUsers: false,
   };
 
   componentDidMount() {
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
     if (isAdminOrTeamManger) {
       this.fetchData();
     } else {
@@ -102,8 +104,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingUsers: true });
     const users = await getEditableUsers();
-    this.setState({ users });
+    this.setState({ users, isFetchingUsers: false });
   }
 
   async fetchTimeTrackingData() {
@@ -259,7 +262,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
 
     const { firstName, lastName, email } = this.props.activeUser;
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
 
     return (
       <div className="container">
@@ -276,6 +279,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={{ width: "100%" }}
                     onChange={this.handleUserChange}
+                    notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.users
                       .filter(u => u.isActive)

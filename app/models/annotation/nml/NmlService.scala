@@ -19,9 +19,9 @@ import scala.concurrent.ExecutionContext
 class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String])(
+  def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =
-    extractFromNml(new FileInputStream(file), name, overwritingDataSetName)
+    extractFromNml(new FileInputStream(file), name, overwritingDataSetName, isTaskUpload)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
     case Full(failure) =>
@@ -29,9 +29,11 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     case _ => ""
   }
 
-  def extractFromNml(inputStream: InputStream, name: String, overwritingDataSetName: Option[String])(
-      implicit m: MessagesProvider): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDataSetName) match {
+  def extractFromNml(inputStream: InputStream,
+                     name: String,
+                     overwritingDataSetName: Option[String],
+                     isTaskUpload: Boolean)(implicit m: MessagesProvider): NmlParseResult =
+    NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload) match {
       case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
         NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
@@ -41,14 +43,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
   def extractFromZip(file: File,
                      zipFileName: Option[String] = None,
                      useZipName: Boolean,
-                     overwritingDataSetName: Option[String])(implicit m: MessagesProvider): ZipParseResult = {
+                     overwritingDataSetName: Option[String],
+                     isTaskUpload: Boolean)(implicit m: MessagesProvider): ZipParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
 
     ZipIO.withUnziped(file) { (filename, file) =>
       if (filename.toString.endsWith(".nml")) {
-        val result = extractFromNml(file, filename.toString, overwritingDataSetName)
+        val result = extractFromNml(file, filename.toString, overwritingDataSetName, isTaskUpload)
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile = temporaryFileCreator.create(filename.toString)
@@ -101,8 +104,10 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)], useZipName: Boolean, overwritingDataSetName: Option[String] = None)(
-      implicit m: MessagesProvider): ZipParseResult =
+  def extractFromFiles(files: Seq[(File, String)],
+                       useZipName: Boolean,
+                       overwritingDataSetName: Option[String] = None,
+                       isTaskUpload: Boolean = false)(implicit m: MessagesProvider): ZipParseResult =
     files.foldLeft(NmlResults.ZipParseResult()) {
       case (acc, (file, name)) =>
         if (name.endsWith(".zip"))
@@ -111,24 +116,28 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
               if (allZips)
                 acc.combineWith(
                   extractFromFiles(
-                    extractFromZip(file, Some(name), useZipName, overwritingDataSetName).otherFiles.toSeq.map(tuple =>
-                      (tuple._2.path.toFile, tuple._1)),
+                    extractFromZip(file, Some(name), useZipName, overwritingDataSetName, isTaskUpload).otherFiles.toSeq
+                      .map(tuple => (tuple._2.path.toFile, tuple._1)),
                     useZipName,
-                    overwritingDataSetName
+                    overwritingDataSetName,
+                    isTaskUpload
                   ))
-              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName))
+              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, isTaskUpload))
             case _ => acc
-          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName))
+          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, isTaskUpload))
     }
 
-  def extractFromFile(file: File, fileName: String, useZipName: Boolean, overwritingDataSetName: Option[String])(
-      implicit m: MessagesProvider): ZipParseResult =
+  def extractFromFile(file: File,
+                      fileName: String,
+                      useZipName: Boolean,
+                      overwritingDataSetName: Option[String],
+                      isTaskUpload: Boolean)(implicit m: MessagesProvider): ZipParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
-      extractFromZip(file, Some(fileName), useZipName, overwritingDataSetName)
+      extractFromZip(file, Some(fileName), useZipName, overwritingDataSetName, isTaskUpload)
     } else {
       logger.trace("Extracting from Nml file")
-      val parseResult = extractFromNml(file, fileName, overwritingDataSetName)
+      val parseResult = extractFromNml(file, fileName, overwritingDataSetName, isTaskUpload)
       ZipParseResult(List(parseResult), Map.empty)
     }
 

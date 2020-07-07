@@ -117,7 +117,7 @@ class Skeleton {
     this.rootNode.remove(...this.rootNode.children);
     this.pickingNode.remove(...this.pickingNode.children);
 
-    const trees = skeletonTracing.trees;
+    const { trees } = skeletonTracing;
     const nodeCount = _.sum(_.map(trees, tree => tree.nodes.size()));
     const edgeCount = _.sum(_.map(trees, tree => tree.edges.size()));
 
@@ -371,9 +371,9 @@ class Skeleton {
 
     // Uniforms
     const { particleSize, overrideNodeRadius } = state.userConfiguration;
-    let activeNodeId = skeletonTracing.activeNodeId;
+    let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
-    let activeTreeId = skeletonTracing.activeTreeId;
+    let { activeTreeId } = skeletonTracing;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
@@ -450,7 +450,7 @@ class Skeleton {
   createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, ({ buffer, index }) => {
-      const attributes = buffer.geometry.attributes;
+      const { attributes } = buffer.geometry;
       attributes.position.set(node.position, index * 3);
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;

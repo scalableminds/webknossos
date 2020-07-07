@@ -66,7 +66,7 @@ const tracing = {
           { source: 1, target: 7 },
         ]),
         comments: [{ content: "comment", nodeId: 0 }],
-        color: [23, 23, 23],
+        color: [0.09019607843137255, 0.09019607843137255, 0.09019607843137255],
         isVisible: true,
         groupId: 3,
       },
@@ -82,7 +82,7 @@ const tracing = {
         branchPoints: [],
         edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
         comments: [],
-        color: [30, 30, 30],
+        color: [0.11764705882352941, 0.11764705882352941, 0.11764705882352941],
         isVisible: true,
         groupId: 2,
       },
@@ -112,10 +112,15 @@ const tracing = {
       min: [0, 0, 0],
       max: [500, 500, 500],
     },
-    userBoundingBox: {
-      min: [5, 5, 5],
-      max: [250, 250, 250],
-    },
+    userBoundingBoxes: [
+      {
+        id: 10,
+        boundingBox: { min: [5, 5, 5], max: [250, 250, 250] },
+        name: "Test Bounding Box",
+        color: [1, 0, 0],
+        isVisible: true,
+      },
+    ],
   },
 };
 

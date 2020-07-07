@@ -13,6 +13,7 @@ export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
+export type ColorObject = { r: number, g: number, b: number, a: number };
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,

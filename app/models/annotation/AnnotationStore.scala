@@ -15,7 +15,6 @@ import scala.concurrent.duration._
 
 class AnnotationStore @Inject()(
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-    system: ActorSystem,
     temporaryAnnotationStore: TemporaryStore[String, Annotation])(implicit ec: ExecutionContext)
     extends LazyLogging {
 

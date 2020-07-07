@@ -49,6 +49,7 @@ import {
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { type Action } from "oxalis/model/actions/actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
@@ -116,22 +117,31 @@ type State = {
 
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName) => {
+    const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName, userBoundingBoxes) => {
+      const actions =
+        userBoundingBoxes && userBoundingBoxes.length > 0
+          ? [addUserBoundingBoxesAction(userBoundingBoxes)]
+          : [];
       if (createGroupForEachFile) {
         const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(trees, treeGroups, groupName);
-        return addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups);
+        return [...actions, addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups)];
       } else {
-        return addTreesAndGroupsAction(trees, treeGroups);
+        return [...actions, addTreesAndGroupsAction(trees, treeGroups)];
       }
     };
 
     const tryParsingFileAsNml = async file => {
       try {
         const nmlString = await readFileAsText(file);
-        const { trees, treeGroups, datasetName } = await parseNml(nmlString);
+        const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);
 
         return {
-          importAction: wrappedAddTreesAndGroupsAction(trees, treeGroups, file.name),
+          importActions: wrappedAddTreesAndGroupsAction(
+            trees,
+            treeGroups,
+            file.name,
+            userBoundingBoxes,
+          ),
           datasetName,
         };
       } catch (error) {
@@ -158,7 +168,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         }
 
         return {
-          importAction: wrappedAddTreesAndGroupsAction(
+          importActions: wrappedAddTreesAndGroupsAction(
             createMutableTreeMapFromTreeArray(parsedTracing.trees),
             parsedTracing.treeGroups,
             file.name,
@@ -198,7 +208,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // not a single store mutation happens if something above throws
     // an error
     importActionsWithDatasetNames
-      .map(el => el.importAction)
+      .flatMap(el => el.importActions)
       .forEach(action => Store.dispatch(action));
   } catch (e) {
     (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));

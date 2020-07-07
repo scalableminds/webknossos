@@ -66,19 +66,20 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-            newId <- tracingService.duplicate(tracing)
-          } yield {
-            Ok(Json.toJson(newId))
+  def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]) = Action.async {
+    implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+              newId <- tracingService.duplicate(tracing, fromTask.getOrElse(false))
+            } yield {
+              Ok(Json.toJson(newId))
+            }
           }
         }
       }
-    }
   }
 
   def updateActionLog(tracingId: String) = Action.async { implicit request =>

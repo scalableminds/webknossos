@@ -135,7 +135,7 @@ export function rgbToInt(color: Vector3): number {
 }
 
 export function rgbToHex(color: Vector3): string {
-  return `#${color.map(int => intToHex(int, 2)).join("")}`;
+  return `#${color.map(int => intToHex(Math.round(int), 2)).join("")}`;
 }
 
 export function hexToRgb(hex: string): Vector3 {

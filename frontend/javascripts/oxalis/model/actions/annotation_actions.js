@@ -6,9 +6,9 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "admin/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
+import type { UserBoundingBox } from "oxalis/store";
 
-type InitializeAnnotation = {
+type InitializeAnnotationAction = {
   type: "INITIALIZE_ANNOTATION",
   annotation: APIAnnotation,
 };
@@ -33,9 +33,14 @@ type SetAnnotationAllowUpdateAction = {
   allowUpdate: boolean,
 };
 
-type SetUserBoundingBox = {
-  type: "SET_USER_BOUNDING_BOX",
-  userBoundingBox: ?BoundingBoxType,
+type SetUserBoundingBoxesAction = {
+  type: "SET_USER_BOUNDING_BOXES",
+  userBoundingBoxes: Array<UserBoundingBox>,
+};
+
+type AddUserBoundingBoxesAction = {
+  type: "ADD_USER_BOUNDING_BOXES",
+  userBoundingBoxes: Array<UserBoundingBox>,
 };
 
 export type UpdateRemoteMeshMetaDataAction = {
@@ -81,13 +86,14 @@ export type RemoveIsosurfaceAction = {
 };
 
 export type AnnotationActionTypes =
-  | InitializeAnnotation
+  | InitializeAnnotationAction
   | SetAnnotationNameAction
   | SetAnnotationVisibilityAction
   | SetAnnotationDescriptionAction
   | SetAnnotationAllowUpdateAction
   | UpdateRemoteMeshMetaDataAction
-  | SetUserBoundingBox
+  | SetUserBoundingBoxesAction
+  | AddUserBoundingBoxesAction
   | AddMeshMetadataAction
   | DeleteMeshAction
   | CreateMeshFromBufferAction
@@ -96,7 +102,9 @@ export type AnnotationActionTypes =
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction;
 
-export const initializeAnnotationAction = (annotation: APIAnnotation): InitializeAnnotation => ({
+export const initializeAnnotationAction = (
+  annotation: APIAnnotation,
+): InitializeAnnotationAction => ({
   type: "INITIALIZE_ANNOTATION",
   annotation,
 });
@@ -129,11 +137,18 @@ export const setAnnotationAllowUpdateAction = (
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
 // the tracing, hence no ANNOTATION in the action type.
-export const setUserBoundingBoxAction = (
-  userBoundingBox: ?BoundingBoxType,
-): SetUserBoundingBox => ({
-  type: "SET_USER_BOUNDING_BOX",
-  userBoundingBox,
+export const setUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+): SetUserBoundingBoxesAction => ({
+  type: "SET_USER_BOUNDING_BOXES",
+  userBoundingBoxes,
+});
+
+export const addUserBoundingBoxesAction = (
+  userBoundingBoxes: Array<UserBoundingBox>,
+): AddUserBoundingBoxesAction => ({
+  type: "ADD_USER_BOUNDING_BOXES",
+  userBoundingBoxes,
 });
 
 export const updateRemoteMeshMetaDataAction = (

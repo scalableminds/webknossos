@@ -166,7 +166,7 @@ class AnnotationController @Inject()(
     for {
       _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
       annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- annotationService.makeAnnotationHybrid(request.identity, annotation) ?~> "annotation.makeHybrid.failed"
+      _ <- annotationService.makeAnnotationHybrid(annotation) ?~> "annotation.makeHybrid.failed"
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
     } yield {
@@ -326,11 +326,16 @@ class AnnotationController @Inject()(
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      dataSource <- if (annotation._task.isDefined)
+        dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+      else Fox.successful(None)
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(id =>
-        tracingStoreClient.duplicateSkeletonTracing(id)) ?~> "Failed to duplicate skeleton tracing."
+      newSkeletonTracingReference <- Fox.runOptional(annotation.skeletonTracingId)(
+        id =>
+          tracingStoreClient
+            .duplicateSkeletonTracing(id, None, annotation._task.isDefined)) ?~> "Failed to duplicate skeleton tracing."
       newVolumeTracingReference <- Fox.runOptional(annotation.volumeTracingId)(id =>
-        tracingStoreClient.duplicateVolumeTracing(id)) ?~> "Failed to duplicate volume tracing."
+        tracingStoreClient.duplicateVolumeTracing(id, annotation._task.isDefined, dataSource.map(_.boundingBox))) ?~> "Failed to duplicate volume tracing."
       clonedAnnotation <- annotationService.createFrom(user,
                                                        dataSet,
                                                        newSkeletonTracingReference,

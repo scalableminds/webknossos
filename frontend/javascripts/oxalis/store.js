@@ -101,6 +101,22 @@ export type BoundingBoxObject = {
   +depth: number,
 };
 
+export type UserBoundingBoxToServer = {
+  boundingBox: BoundingBoxObject,
+  id: number,
+  name?: string,
+  color?: Vector3,
+  isVisible?: boolean,
+};
+
+export type UserBoundingBox = {
+  id: number,
+  boundingBox: BoundingBoxType,
+  name: string,
+  color: Vector3,
+  isVisible: boolean,
+};
+
 export type MutableTree = {|
   treeId: number,
   groupId: ?number,
@@ -178,7 +194,7 @@ type TracingBase = {|
   +version: number,
   +tracingId: string,
   +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
+  +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
 export type SkeletonTracing = {|

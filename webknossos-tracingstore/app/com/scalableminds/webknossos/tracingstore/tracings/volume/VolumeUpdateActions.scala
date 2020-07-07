@@ -5,7 +5,7 @@ import java.util.Base64
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, ProtoGeometryImplicits}
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D,
@@ -32,7 +32,6 @@ case class UpdateTracingVolumeAction(
     editRotation: Vector3D,
     largestSegmentId: Long,
     zoomLevel: Double,
-    userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
     actionTimestamp: Option[Long] = None,
     info: Option[String] = None
 ) extends VolumeUpdateAction {
@@ -59,6 +58,38 @@ object RevertToVersionVolumeAction {
   implicit val revertToVersionVolumeActionFormat = Json.format[RevertToVersionVolumeAction]
 }
 
+case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
+                                   actionTimestamp: Option[Long] = None,
+                                   info: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact =
+    CompactVolumeUpdateAction("updateUserBoundingBoxes", actionTimestamp, Json.obj())
+}
+
+object UpdateUserBoundingBoxes {
+  implicit val updateUserBoundingBoxesFormat = Json.format[UpdateUserBoundingBoxes]
+}
+
+case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
+                                           isVisible: Boolean,
+                                           actionTimestamp: Option[Long] = None,
+                                           info: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact =
+    CompactVolumeUpdateAction("updateUserBoundingBoxVisibility",
+                              actionTimestamp,
+                              Json.obj("boundingBoxId" -> boundingBoxId, "newVisibility" -> isVisible))
+}
+
+object UpdateUserBoundingBoxVisibility {
+  implicit val updateUserBoundingBoxVisibilityFormat = Json.format[UpdateUserBoundingBoxVisibility]
+}
+
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
     extends VolumeUpdateAction
 
@@ -81,10 +112,12 @@ object VolumeUpdateAction {
   implicit object volumeUpdateActionFormat extends Format[VolumeUpdateAction] {
     override def reads(json: JsValue): JsResult[VolumeUpdateAction] =
       (json \ "name").validate[String].flatMap {
-        case "updateBucket"        => (json \ "value").validate[UpdateBucketVolumeAction]
-        case "updateTracing"       => (json \ "value").validate[UpdateTracingVolumeAction]
-        case "revertToVersion"     => (json \ "value").validate[RevertToVersionVolumeAction]
-        case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
+        case "updateBucket"                    => (json \ "value").validate[UpdateBucketVolumeAction]
+        case "updateTracing"                   => (json \ "value").validate[UpdateTracingVolumeAction]
+        case "revertToVersion"                 => (json \ "value").validate[RevertToVersionVolumeAction]
+        case "updateUserBoundingBoxes"         => (json \ "value").validate[UpdateUserBoundingBoxes]
+        case "updateUserBoundingBoxVisibility" => (json \ "value").validate[UpdateUserBoundingBoxVisibility]
+        case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 
     override def writes(o: VolumeUpdateAction): JsValue = o match {
@@ -97,6 +130,12 @@ object VolumeUpdateAction {
       case s: RevertToVersionVolumeAction =>
         Json.obj("name" -> "revertToVersion",
                  "value" -> Json.toJson(s)(RevertToVersionVolumeAction.revertToVersionVolumeActionFormat))
+      case s: UpdateUserBoundingBoxes =>
+        Json.obj("name" -> "updateUserBoundingBoxes",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.updateUserBoundingBoxesFormat))
+      case s: UpdateUserBoundingBoxVisibility =>
+        Json.obj("name" -> "updateUserBoundingBoxVisibility",
+                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.updateUserBoundingBoxVisibilityFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

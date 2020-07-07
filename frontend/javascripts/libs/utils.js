@@ -5,7 +5,14 @@ import naturalSort from "javascript-natural-sort";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import type {
+  Vector3,
+  Vector4,
+  Vector6,
+  BoundingBoxType,
+  Point3,
+  ColorObject,
+} from "oxalis/constants";
 import window, { document, location } from "libs/window";
 
 export type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -123,6 +130,10 @@ function intToHex(int: number, digits: number = 6): string {
   return (_.repeat("0", digits) + int.toString(16)).slice(-digits);
 }
 
+export function rgbToInt(color: Vector3): number {
+  return (color[0] << 16) + (color[1] << 8) + color[2];
+}
+
 export function rgbToHex(color: Vector3): string {
   return `#${color.map(int => intToHex(int, 2)).join("")}`;
 }
@@ -135,9 +146,16 @@ export function hexToRgb(hex: string): Vector3 {
   return [r, g, b];
 }
 
-export function computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
-  if (bb == null) return null;
+export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
+  return [r, g, b];
+}
 
+export function getRandomColor(): Vector3 {
+  const randomColor = [0, 1, 2].map(() => Math.random());
+  return ((randomColor: any): Vector3);
+}
+
+export function computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
   const [x, y, z, width, height, depth] = bb;
 
   return {
@@ -145,18 +163,29 @@ export function computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
     max: [x + width, y + height, z + depth],
   };
 }
+export function computeBoundingBoxFromBoundingBoxObject(bb: BoundingBoxObject): BoundingBoxType {
+  return computeBoundingBoxFromArray([...bb.topLeft, bb.width, bb.height, bb.depth]);
+}
 
-export function computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
-  return bb != null
-    ? [
-        bb.min[0],
-        bb.min[1],
-        bb.min[2],
-        bb.max[0] - bb.min[0],
-        bb.max[1] - bb.min[1],
-        bb.max[2] - bb.min[2],
-      ]
-    : null;
+export function computeBoundingBoxObjectFromBoundingBox(bb: BoundingBoxType): BoundingBoxObject {
+  const boundingBoxArray = computeArrayFromBoundingBox(bb);
+  return {
+    topLeft: [boundingBoxArray[0], boundingBoxArray[1], boundingBoxArray[2]],
+    width: boundingBoxArray[3],
+    height: boundingBoxArray[4],
+    depth: boundingBoxArray[5],
+  };
+}
+
+export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
+  return [
+    bb.min[0],
+    bb.min[1],
+    bb.min[2],
+    bb.max[0] - bb.min[0],
+    bb.max[1] - bb.min[1],
+    bb.max[2] - bb.min[2],
+  ];
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
@@ -263,8 +292,12 @@ export function numberArrayToVector6(array: Array<number>): Vector6 {
   return output;
 }
 
-export function point3ToVector3({ x, y, z }: { x: number, y: number, z: number }): Vector3 {
+export function point3ToVector3({ x, y, z }: Point3): Vector3 {
   return [x, y, z];
+}
+
+export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
+  return { x, y, z };
 }
 
 export function isUserTeamManager(user: APIUser): boolean {

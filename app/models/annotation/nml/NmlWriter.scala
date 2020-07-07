@@ -6,10 +6,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.webknossos.tracingstore.geometry.{BoundingBox, Color, NamedBoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
-import models.annotation.{Annotation}
+import models.annotation.Annotation
 import models.task.Task
 import models.user.User
 import org.joda.time.DateTime
@@ -27,7 +27,7 @@ case class NmlParameters(
     editRotation: Vector3D,
     zoomLevel: Double,
     activeNodeId: Option[Int],
-    userBoundingBox: Option[BoundingBox],
+    userBoundingBoxes: Seq[NamedBoundingBox],
     taskBoundingBox: Option[BoundingBox]
 )
 
@@ -101,7 +101,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         s.editRotation,
         s.zoomLevel,
         s.activeNodeId,
-        s.userBoundingBox,
+        s.userBoundingBoxes ++ s.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
         s.boundingBox
       )
     }.orElse {
@@ -116,7 +116,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           v.editRotation,
           v.zoomLevel,
           None,
-          v.userBoundingBox,
+          v.userBoundingBoxes ++ v.userBoundingBox.map(NamedBoundingBox(0, None, None, None, _)),
           if (annotation.exists(_._task.isDefined)) Some(v.boundingBox) else None
         )
       }
@@ -160,25 +160,17 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           writer.writeAttribute("id", nodeId.toString)
         }
       }
-      parameters.userBoundingBox.foreach { b =>
+      parameters.userBoundingBoxes.foreach { b =>
         Xml.withinElementSync("userBoundingBox") {
-          writer.writeAttribute("topLeftX", b.topLeft.x.toString)
-          writer.writeAttribute("topLeftY", b.topLeft.y.toString)
-          writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
-          writer.writeAttribute("width", b.width.toString)
-          writer.writeAttribute("height", b.height.toString)
-          writer.writeAttribute("depth", b.depth.toString)
+          writer.writeAttribute("id", b.id.toString)
+          b.name.foreach(writer.writeAttribute("name", _))
+          b.isVisible.foreach(isVisible => writer.writeAttribute("isVisible", isVisible.toString))
+          writeColor(b.color)
+          writeBoundingBox(b.boundingBox)
         }
       }
       parameters.taskBoundingBox.foreach { b =>
-        Xml.withinElementSync("taskBoundingBox") {
-          writer.writeAttribute("topLeftX", b.topLeft.x.toString)
-          writer.writeAttribute("topLeftY", b.topLeft.y.toString)
-          writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
-          writer.writeAttribute("width", b.width.toString)
-          writer.writeAttribute("height", b.height.toString)
-          writer.writeAttribute("depth", b.depth.toString)
-        }
+        Xml.withinElementSync("taskBoundingBox")(writeBoundingBox(b))
       }
     }
 
@@ -202,10 +194,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     trees.foreach { t =>
       Xml.withinElementSync("thing") {
         writer.writeAttribute("id", t.treeId.toString)
-        writer.writeAttribute("color.r", t.color.map(_.r.toString).getOrElse(""))
-        writer.writeAttribute("color.g", t.color.map(_.g.toString).getOrElse(""))
-        writer.writeAttribute("color.b", t.color.map(_.b.toString).getOrElse(""))
-        writer.writeAttribute("color.a", t.color.map(_.a.toString).getOrElse(""))
+        writeColor(t.color)
         writer.writeAttribute("name", t.name)
         t.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
@@ -297,5 +286,21 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("content", task._id.toString)
       }
     }
+  }
+
+  def writeBoundingBox(b: BoundingBox)(implicit writer: XMLStreamWriter): Unit = {
+    writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+    writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+    writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+    writer.writeAttribute("width", b.width.toString)
+    writer.writeAttribute("height", b.height.toString)
+    writer.writeAttribute("depth", b.depth.toString)
+  }
+
+  def writeColor(color: Option[Color])(implicit writer: XMLStreamWriter): Unit = {
+    writer.writeAttribute("color.r", color.map(_.r.toString).getOrElse(""))
+    writer.writeAttribute("color.g", color.map(_.g.toString).getOrElse(""))
+    writer.writeAttribute("color.b", color.map(_.b.toString).getOrElse(""))
+    writer.writeAttribute("color.a", color.map(_.a.toString).getOrElse(""))
   }
 }

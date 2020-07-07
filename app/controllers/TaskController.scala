@@ -295,7 +295,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
         .findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
-                                                   useZipName = false)
+                                                   useZipName = false,
+                                                   isTaskUpload = true)
       successes <- Fox.serialCombined(extractedFiles.parseResults)(_.toSuccessFox) ?~> "task.create.failed"
       _ <- bool2Fox(successes.forall(s => s.skeletonTracing.isDefined || s.volumeTracingWithDataLocation.isDefined)) ?~> "task.create.needsEitherSkeletonOrVolume"
       fullParams = successes.map(

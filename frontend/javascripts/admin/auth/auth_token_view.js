@@ -49,26 +49,38 @@ class AuthTokenView extends React.PureComponent<{}, State> {
 
   render() {
     return (
-      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
-        <Col span={8}>
-          <Spin size="large" spinning={this.state.isLoading}>
-            <h3>Auth Token</h3>
-            <Form>
-              <FormItem>
-                <Input.Group compact>
-                  <Input value={this.state.currentToken} style={{ width: "90%" }} readOnly />
-                  <Button onClick={this.copyTokenToClipboard} icon="copy" />
-                </Input.Group>
-              </FormItem>
-              <FormItem>
-                <Button icon="swap" onClick={this.handleRevokeToken}>
-                  Revoke Token
-                </Button>
-              </FormItem>
-            </Form>
-          </Spin>
-        </Col>
-      </Row>
+      <div>
+        <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+          <Col span={8}>
+            <Spin size="large" spinning={this.state.isLoading}>
+              <h3>Auth Token</h3>
+              <Form>
+                <FormItem>
+                  <Input.Group compact>
+                    <Input value={this.state.currentToken} style={{ width: "90%" }} readOnly />
+                    <Button onClick={this.copyTokenToClipboard} icon="copy" />
+                  </Input.Group>
+                </FormItem>
+                <FormItem>
+                  <Button icon="swap" onClick={this.handleRevokeToken}>
+                    Revoke Token
+                  </Button>
+                </FormItem>
+              </Form>
+            </Spin>
+          </Col>
+        </Row>
+        <Row type="flex" justify="center" align="middle">
+          <Col span={8}>
+            An Auth Token is a series of symbols that serves to authenticate you. It is used in
+            communication with the backend API and sent with every request to verify your identity.
+            <br />
+            You should revoke it if somebody else has acquired your token or you have the suspicion
+            this has happened.{" "}
+            <a href="https://docs.webknossos.org/reference/rest_api#authentication">Read more</a>
+          </Col>
+        </Row>
+      </div>
     );
   }
 }

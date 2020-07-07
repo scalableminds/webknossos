@@ -832,7 +832,7 @@ export function createMutableTreeMapFromTreeArray(
         ),
         color:
           tree.color != null
-            ? [tree.color.r, tree.color.g, tree.color.b]
+            ? Utils.colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
         branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,

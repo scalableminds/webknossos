@@ -44,6 +44,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val pass = get[String]("mail.smtp.pass")
     }
     val demoSender = get[String]("mail.demoSender")
+    val defaultSender = get[String]("mail.defaultSender")
   }
 
   object WebKnossos {

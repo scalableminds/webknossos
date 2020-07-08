@@ -136,6 +136,27 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
+  getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
+    const tooltipText = isInEditMode
+      ? "Stop editing the possible range of the histogram."
+      : "Manually set the possible range of the histogram.";
+    return (
+      <Tooltip title={tooltipText}>
+        <Icon
+          type="edit"
+          onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 30,
+            cursor: "pointer",
+            color: isInEditMode ? "rgb(24, 144, 255)" : null,
+          }}
+        />
+      </Tooltip>
+    );
+  };
+
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
     Object.keys(layers).forEach(otherLayerName =>
@@ -165,9 +186,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   );
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
-    const { intensityRange } = layer;
+    const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
-    const highestRangeValue = defaultIntensityRange[1];
     let histograms = [];
     if (this.props.histogramData && this.props.histogramData[layerName]) {
       histograms = this.props.histogramData[layerName];
@@ -176,8 +196,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         {
           numberOfElements: 0,
           elementCounts: [],
-          min: 0,
-          max: highestRangeValue,
+          min: defaultIntensityRange[0],
+          max: defaultIntensityRange[1],
         },
       ];
     }
@@ -186,7 +206,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}
+        min={min}
+        max={max}
+        isInEditMode={isInEditMode}
         layerName={layerName}
+        defaultMinMax={defaultIntensityRange}
       />
     );
   };
@@ -194,6 +218,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getLayerSettingsHeader = (
     isDisabled: boolean,
     isColorLayer: boolean,
+    isInEditMode: boolean,
     layerName: string,
     elementClass: string,
   ) => {
@@ -216,6 +241,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         setSingleLayerVisibility(true);
       }
     };
+    const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
       <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
@@ -225,6 +251,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
           </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
+          {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
         </Col>
@@ -242,11 +269,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const { isDisabled } = layerConfiguration;
+    const { isDisabled, isInEditMode } = layerConfiguration;
 
     return (
       <div key={layerName}>
-        {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
+        {this.getLayerSettingsHeader(
+          isDisabled,
+          isColorLayer,
+          isInEditMode,
+          layerName,
+          elementClass,
+        )}
         {isDisabled ? null : (
           <React.Fragment>
             {isHistogramSupported(elementClass) && layerName != null && isColorLayer

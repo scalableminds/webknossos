@@ -54,6 +54,14 @@ export default function* loadHistogramData(): Saga<void> {
       newIntensityRange = [minimumInHistogramData, maximumInHistogramData];
     }
     yield* put(updateLayerSettingAction(layerName, "intensityRange", newIntensityRange));
+    // Here we also set the minium and maximum values for the intensity range that the user can enter.
+    // If values already exist, we skip this step.
+    if (layerConfigurations[layerName] == null || layerConfigurations[layerName].min == null) {
+      yield* put(updateLayerSettingAction(layerName, "min", minimumInHistogramData));
+    }
+    if (layerConfigurations[layerName] == null || layerConfigurations[layerName].max == null) {
+      yield* put(updateLayerSettingAction(layerName, "max", maximumInHistogramData));
+    }
   }
   yield* put(setHistogramDataAction(histograms));
 }

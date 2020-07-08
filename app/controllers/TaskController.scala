@@ -438,7 +438,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(projectDAO.findOneByName(_))
       dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
-      noAccessTeamIds = projects.map(_._team).filter(projectTeam => !dataSetTeams.map(_._id).contains(projectTeam))
+      noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
       noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIds)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
         s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")

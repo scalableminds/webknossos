@@ -97,13 +97,6 @@ class NMLUnitTestSuite extends FlatSpec {
     assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
   }
 
-  it should "throw an error for disconnected tree state" in {
-    val wrongTree = dummyTracing.trees(1).copy(edges = Seq(Edge(4, 5)))
-    val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
-
-    assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
-  }
-
   it should "throw an error for duplicate tree state" in {
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), dummyTracing.trees(0)))
 

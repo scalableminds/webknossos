@@ -3,12 +3,15 @@ package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.A
 
 import scala.collection.mutable
 
 object TreeValidator {
-  def validateTrees(trees: Seq[Tree]): Box[Unit] =
+
+  def validateTrees(trees: Seq[Tree],
+                    treeGroups: Seq[TreeGroup],
+                    branchPoints: Seq[BranchPoint],
+                    comments: Seq[Comment]): Box[Unit] =
     for {
       _ <- checkNoDuplicateTreeIds(trees)
       _ <- checkNoDuplicateNodeIds(trees)
@@ -16,6 +19,10 @@ object TreeValidator {
       _ <- checkAllNodesUsedInEdgesExist(trees)
       _ <- checkNoEdgesWithSameSourceAndTarget(trees)
       _ <- checkTreesAreConnected(trees)
+      _ <- checkNoDuplicateTreeGroupIds(treeGroups)
+      _ <- checkAllTreeGroupIdsUsedExist(trees, treeGroups)
+      _ <- checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
+      _ <- checkAllNodesUsedInCommentsExist(trees, comments)
     } yield Full(())
 
   private def checkNoDuplicateTreeIds(trees: Seq[Tree]): Box[Unit] = {

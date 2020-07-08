@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that merger mode didn't work with undo and redo. Also fixed that the mapping was not disabled when disabling merger mode. [#4669](https://github.com/scalableminds/webknossos/pull/4669)
 - Fixed a bug where webKnossos relied upon but did not enforce organization names to be unique. [#4685](https://github.com/scalableminds/webknossos/pull/4685)
 - Fixed that being outside of a bounding box could be rendered as if one was inside the bounding box in some cases. [#4690](https://github.com/scalableminds/webknossos/pull/4690)
+- Fixed a bug where admins could revoke their own admin rights even if they are the only admin in their organization, leading to an invalid state. [#4698](https://github.com/scalableminds/webknossos/pull/4698)
 - Fixed a bug where webKnossos ignored existing layer category information from datasource-properties.json when exploring layers on disk. [#4694](https://github.com/scalableminds/webknossos/pull/4694)
 
 ### Removed

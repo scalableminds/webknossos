@@ -146,6 +146,14 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
+  def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(
+        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId} and isAdmin"
+          .as[Int])
+      result <- resultList.headOption
+    } yield result
+
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(

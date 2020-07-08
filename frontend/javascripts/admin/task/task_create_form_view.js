@@ -21,7 +21,10 @@ import _ from "lodash";
 
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import type {
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector6 } from "oxalis/constants";
 import {
@@ -123,19 +126,31 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   saveAs(blob, filename);
 }
 
-export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
+export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
+  const { tasks, warnings } = response;
   const successfulTasks = [];
   const failedTasks = [];
   let teamName = null;
 
-  responses.forEach((response: TaskCreationResponse, i: number) => {
-    if (response.status === 200 && response.success) {
+  const subHeadingStyle = { fontWeight: "bold" };
+  const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
+
+  const warningsContent =
+    warnings.length > 0 ? (
+      <div>
+        <div style={subHeadingStyle}>There were warnings during task creation:</div>
+        <div>{warnings.join("\n")}</div>
+      </div>
+    ) : null;
+
+  tasks.forEach((taskResponse: TaskCreationResponse, i: number) => {
+    if (taskResponse.status === 200 && taskResponse.success) {
       if (!teamName) {
-        teamName = response.success.team;
+        teamName = taskResponse.success.team;
       }
-      successfulTasks.push(response.success);
-    } else if (response.error) {
-      failedTasks.push(`Line ${i}: ${response.error} \n`);
+      successfulTasks.push(taskResponse.success);
+    } else if (taskResponse.error) {
+      failedTasks.push(`Line ${i}: ${taskResponse.error} \n`);
     }
   });
   const failedTasksAsString = failedTasks.join("");
@@ -155,15 +170,15 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
     ) : (
       "Too many failed tasks to show, please use CSV download for a full list."
     );
-  const subHeadingStyle = { fontWeight: "bold" };
-  const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
   const successPlural = successfulTasks.length === 1 ? "" : "s";
+  const warningsPlural = warnings.length === 1 ? "" : "s";
   Modal.info({
     title: `${successfulTasks.length} task${successPlural} successfully created, ${
       failedTasks.length
-    } failed.`,
+    } failed. ${warnings.length} warning${warningsPlural}.`,
     content: (
       <div>
+        {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
             <div style={subHeadingStyle}> Successful Tasks: </div>

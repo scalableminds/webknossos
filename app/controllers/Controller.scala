@@ -31,7 +31,7 @@ trait Controller
       })
     )
 
-  def bulk2StatusJson(results: List[Box[JsObject]]) =
+  def bulk2StatusJson(results: List[Box[JsObject]]): Seq[JsObject] =
     results.map {
       case Full(s) =>
         Json.obj("status" -> OK, jsonSuccess -> s)

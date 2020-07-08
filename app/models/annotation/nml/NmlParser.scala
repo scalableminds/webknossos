@@ -2,19 +2,20 @@ package models.annotation.nml
 
 import java.io.InputStream
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings.{ColorGenerator, ProtoGeometryImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{
+  MultiComponentTreeSplitter,
   NodeDefaults,
   SkeletonTracingDefaults,
   TreeValidator
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.Volume
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.tools.ExtendedTypes.{ExtendedString, ExtendedDouble}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure}
@@ -52,13 +53,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         time = parseTime(parameters \ "time")
         comments <- parseComments(data \ "comments")
         branchPoints <- parseBranchPoints(data \ "branchpoints", time)
-        trees <- extractTrees(data \ "thing", branchPoints, comments)
+        trees <- parseTrees(data \ "thing", branchPoints, comments)
         treeGroups <- extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
-        _ <- TreeValidator.checkNoDuplicateTreeGroupIds(treeGroups)
-        _ <- TreeValidator.checkAllTreeGroupIdsUsedExist(trees, treeGroups)
-        _ <- TreeValidator.checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
-        _ <- TreeValidator.checkAllNodesUsedInCommentsExist(trees, comments)
+        treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
+        treesSplit = treesAndGroupsAfterSplitting._1
+        treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
+        _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
       } yield {
         val dataSetName = overwritingDataSetName.getOrElse(parseDataSetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
@@ -77,7 +78,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           case Right(value) => userBoundingBoxes = userBoundingBoxes :+ value
         }
 
-        logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
+        logger.debug(s"Parsed NML file. Trees: ${treesSplit.size}, Volumes: ${volumes.size}")
 
         val volumeTracingWithDataLocation =
           if (volumes.isEmpty) None
@@ -102,11 +103,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             )
 
         val skeletonTracing =
-          if (trees.isEmpty) None
+          if (treesSplit.isEmpty) None
           else
             Some(
               SkeletonTracing(dataSetName,
-                              trees,
+                              treesSplit,
                               time,
                               taskBoundingBox,
                               activeNodeId,
@@ -115,7 +116,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                               zoomLevel,
                               version = 0,
                               None,
-                              treeGroups,
+                              treeGroupsAfterSplit,
                               userBoundingBoxes)
             )
 
@@ -134,13 +135,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
-
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment])(
-      implicit m: MessagesProvider): Box[Seq[Tree]] =
-    for {
-      trees <- parseTrees(treeNodes, branchPoints, comments)
-      _ <- TreeValidator.validateTrees(trees)
-    } yield trees
 
   def extractTreeGroups(treeGroupContainerNodes: NodeSeq)(implicit m: MessagesProvider): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")

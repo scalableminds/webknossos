@@ -53,6 +53,7 @@ user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account hasn’t been activated yet
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
+user.lastAdmin=Cannot remove admin privileges from the only admin in the organization
 
 user.resetPassword.failed=Invalid old password
 user.resetPassword.success=Your password was successfully changed

@@ -99,7 +99,8 @@ const newTask = {
 };
 
 test.serial("createTasks() and deleteTask()", async t => {
-  const createdTaskWrappers = await api.createTasks([newTask]);
+  const createTaskResponse = await api.createTasks([newTask]);
+  const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
   const createdTaskWrapper = createdTaskWrappers[0];
 
@@ -117,7 +118,8 @@ test.serial("createTasks() and deleteTask()", async t => {
 });
 
 test.serial("requestTask()", async t => {
-  const createdTaskWrappers = await api.createTasks([newTask]);
+  const createTaskResponse = await api.createTasks([newTask]);
+  const createdTaskWrappers = createTaskResponse.tasks;
   t.is(createdTaskWrappers.length, 1);
   const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();

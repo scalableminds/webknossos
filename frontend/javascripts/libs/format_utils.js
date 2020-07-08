@@ -3,6 +3,7 @@ import moment from "moment";
 
 import { Unicode, type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
+import type { BoundingBoxObject } from "oxalis/store";
 
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 
@@ -69,7 +70,7 @@ export function formatNumberToLength(numberInNm: number): string {
 }
 
 export function formatExtentWithLength(
-  extent: Object,
+  extent: BoundingBoxObject,
   formattingFunction: number => string,
 ): string {
   return `${formattingFunction(extent.width)}${ThinSpace}×${ThinSpace}${formattingFunction(

@@ -50,7 +50,7 @@ import {
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
-import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
@@ -408,14 +408,14 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
 }
 
 // TODO fix return types
-export function createTasks(tasks: Array<NewTask>): Promise<Array<TaskCreationResponse>> {
+export function createTasks(tasks: Array<NewTask>): Promise<TaskCreationResponseContainer> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });
 }
 
 // TODO fix return types
-export function createTaskFromNML(task: NewTask): Promise<Array<TaskCreationResponse>> {
+export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
       nmlFiles: task.nmlFiles,
@@ -648,7 +648,7 @@ export async function getTracingForAnnotationType(
   );
 
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
-  // The tracing id is not contained in the server tracing, but in the annotation content
+  // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
   return tracing;
 }

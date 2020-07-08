@@ -273,6 +273,16 @@ class UserController @Inject()(userService: UserService,
       true
     else issuingUser.isAdminOf(user)
 
+  private def preventZeroAdmins(user: User, isAdmin: Boolean) =
+    if (user.isAdmin && !isAdmin) {
+      for {
+        adminCount <- userDAO.countAdminsForOrganization(user._organization)
+        _ <- bool2Fox(adminCount > 1) ?~> "user.lastAdmin"
+      } yield ()
+    } else {
+      Fox.successful(())
+    }
+
   def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
@@ -301,6 +311,7 @@ class UserController @Inject()(userService: UserService,
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- preventZeroAdmins(user, isAdmin)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)

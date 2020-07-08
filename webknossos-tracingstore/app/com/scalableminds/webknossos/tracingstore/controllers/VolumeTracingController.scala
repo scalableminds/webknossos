@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
@@ -116,14 +117,15 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
+  def duplicate(tracingId: String, fromTask: Option[Boolean]) = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           AllowRemoteOrigin {
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              newId <- tracingService.duplicate(tracingId, tracing)
+              dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
+              newId <- tracingService.duplicate(tracingId, tracing, fromTask.getOrElse(false), dataSetBoundingBox)
             } yield {
               Ok(Json.toJson(newId))
             }

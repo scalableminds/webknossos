@@ -147,7 +147,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   }
 
   setValueOfEntry = (index: number, value: number) => {
-    if (value < 0) {
+    if (value < 0 || typeof value !== "number") {
       return;
     }
     this.setState(prevState => ({
@@ -351,6 +351,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
                         : ""
                     }
                     onChange={value => this.setValueOfEntry(index, value)}
+                    type="number"
                   />
                   {record.changed ? (
                     <Tooltip placement="top" title="Revert Changes">

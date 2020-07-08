@@ -135,7 +135,7 @@ export function rgbToInt(color: Vector3): number {
 }
 
 export function rgbToHex(color: Vector3): string {
-  return `#${color.map(int => intToHex(int, 2)).join("")}`;
+  return `#${color.map(int => intToHex(Math.round(int), 2)).join("")}`;
 }
 
 export function hexToRgb(hex: string): Vector3 {
@@ -151,7 +151,8 @@ export function colorObjectToRGBArray({ r, g, b }: ColorObject): Vector3 {
 }
 
 export function getRandomColor(): Vector3 {
-  const randomColor = [0, 1, 2].map(() => Math.random());
+  // Generate three values between 0 and 1 that multiplied with 255 will be integers.
+  const randomColor = [0, 1, 2].map(() => Math.floor(Math.random() * 256) / 255);
   return ((randomColor: any): Vector3);
 }
 

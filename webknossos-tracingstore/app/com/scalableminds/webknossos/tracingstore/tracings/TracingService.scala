@@ -4,6 +4,7 @@ import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
@@ -157,4 +158,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
+
+  def merge(tracings: Seq[T]): T = tracings.reduceLeft(mergeTwo)
+
+  def mergeTwo(tracingA: T, tracingB: T): T
+
 }

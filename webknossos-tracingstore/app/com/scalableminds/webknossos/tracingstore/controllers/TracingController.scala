@@ -215,4 +215,20 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       case None => Fox.failure(errorMessage) ~> CONFLICT
     }
   }
+
+  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          for {
+            tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
+            mergedTracing = tracingService.merge(tracings.flatten)
+            newId <- tracingService.save(mergedTracing, None, version = 0, toCache = !persist)
+          } yield {
+            Ok(Json.toJson(newId))
+          }
+        }
+      }
+    }
+  }
 }

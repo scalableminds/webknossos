@@ -151,7 +151,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     save(finalTracing, None, finalTracing.version)
   }
 
-  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
+  def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
@@ -177,8 +177,6 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
       userBoundingBoxes = userBoundingBoxes
     )
   }
-
-  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
 
   def updateActionLog(tracingId: String) = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

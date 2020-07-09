@@ -38,6 +38,7 @@ import com.scalableminds.webknossos.tracingstore.geometry.{
   BoundingBox => ProtoBox,
   Point3D => ProtoPoint
 }
+import com.sun.xml.internal.bind.v2.TODO
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -287,4 +288,8 @@ class VolumeTracingService @Inject()(
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
+
+  def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing =
+    // TODO
+    tracingA
 }

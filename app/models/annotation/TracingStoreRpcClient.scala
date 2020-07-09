@@ -102,6 +102,14 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postWithJsonResponse[List[Option[TracingSelector]], String](tracingIds.map(id => id.map(TracingSelector(_))))
   }
 
+  def mergeVolumeTracingsByIds(tracingIds: List[Option[String]], persistTracing: Boolean): Fox[String] = {
+    logger.debug("Called to merge VolumeTracings by ids." + baseInfo)
+    rpc(s"${tracingStore.url}/tracings/volume/mergedFromIds")
+      .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+      .addQueryString("persist" -> persistTracing.toString)
+      .postWithJsonResponse[List[Option[TracingSelector]], String](tracingIds.map(id => id.map(TracingSelector(_))))
+  }
+
   def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by contents." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents")

@@ -14,7 +14,7 @@ import play.twirl.api._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait ResultBox extends I18nSupport {
+trait ResultBox extends I18nSupport with Formatter {
 
   def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = b match {
     case Full(result) =>
@@ -34,9 +34,11 @@ trait ResultBox extends I18nSupport {
     case _             => None
   }
 
-  private def formatChain(chain: Box[Failure])(implicit messages: MessagesProvider): String = chain match {
+  private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
+      implicit messages: MessagesProvider): String = chain match {
     case Full(failure) =>
-      " <~ " + Messages(failure.msg) + formatChain(failure.chain)
+      val serverTimeMsg = if (includeTime) "[Server Time " + formatDate(System.currentTimeMillis()) + "] " else ""
+      serverTimeMsg + " <~ " + Messages(failure.msg) + formatChain(failure.chain, includeTime = false)
     case _ => ""
   }
 

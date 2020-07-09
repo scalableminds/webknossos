@@ -926,6 +926,7 @@ export async function deleteDatasetOnDisk(
       }/deleteOnDisk?token=${token}`,
       {
         host: datastoreHost,
+        method: "DELETE",
       },
     ),
   );

@@ -29,6 +29,7 @@ import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_co
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 import ImportSharingComponent from "./import_sharing_component";
+import ImportDeleteComponent from "./import_delete_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
@@ -537,6 +538,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 >
                   <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
                     <DefaultConfigComponent form={form} />
+                  </Hideable>
+                </TabPane>
+
+                <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
+                  <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
+                    <ImportDeleteComponent datasetId={this.props.datasetId} />
                   </Hideable>
                 </TabPane>
               </Tabs>

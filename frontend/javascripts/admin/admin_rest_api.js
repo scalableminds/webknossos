@@ -921,7 +921,9 @@ export async function deleteDatasetOnDisk(
 ): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(
-      `/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/deleteOnDisk?token=${token}`,
+      `/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/deleteOnDisk?token=${token}`,
       {
         host: datastoreHost,
       },

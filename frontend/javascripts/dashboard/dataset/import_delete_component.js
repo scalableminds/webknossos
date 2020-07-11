@@ -9,19 +9,21 @@ import { getDataset, deleteDatasetOnDisk } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 
+import { type RouterHistory, withRouter } from "react-router-dom";
 import { confirmAsync } from "./helper_components";
 
 type Props = {
   datasetId: APIDatasetId,
+  history: RouterHistory,
 };
 
-export default function ImportSharingComponent({ datasetId }: Props) {
+const ImportDeleteComponent = ({ datasetId, history }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [dataSet, setDataSet] = useState<?APIDataset>(null);
+  const [dataset, setDataset] = useState<?APIDataset>(null);
 
   async function fetch() {
-    const newDataSet = await getDataset(datasetId);
-    setDataSet(newDataSet);
+    const newDataset = await getDataset(datasetId);
+    setDataset(newDataset);
   }
 
   useEffect(() => {
@@ -29,23 +31,28 @@ export default function ImportSharingComponent({ datasetId }: Props) {
   }, []);
 
   async function handleDeleteButtonClicked(): Promise<void> {
-    if (!dataSet) {
+    if (!dataset) {
       return;
     }
-    await confirmAsync({
-      title: "Deleting a dataset on disk cannot be undone. Are you certain?",
+    const deleteDataset = await confirmAsync({
+      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete Dataset ${
+        dataset.name
+      }?`,
       okText: "Yes, Delete Dataset on Disk now",
     });
+    if (!deleteDataset) {
+      return;
+    }
     setIsDeleting(true);
-    await deleteDatasetOnDisk(dataSet.dataStore.url, datasetId);
+    await deleteDatasetOnDisk(dataset.dataStore.url, datasetId);
     Toast.success(
       messages["dataset.delete_success"]({
-        datasetName: dataSet.name,
+        datasetName: dataset.name,
       }),
     );
     await Utils.sleep(2000);
     setIsDeleting(false);
-    location.href = "/dashboard";
+    history.push("/dashboard");
   }
 
   return (
@@ -58,4 +65,6 @@ export default function ImportSharingComponent({ datasetId }: Props) {
       </Button>
     </div>
   );
-}
+};
+
+export default withRouter(ImportDeleteComponent);

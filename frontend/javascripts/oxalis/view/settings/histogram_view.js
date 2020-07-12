@@ -1,6 +1,6 @@
 // @flow
 
-import { Slider } from "antd";
+import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
 import * as _ from "lodash";
 import * as React from "react";
 import type { Dispatch } from "redux";
@@ -9,7 +9,7 @@ import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import { type ElementClass } from "admin/api_flow_types";
 import type { APIHistogramData } from "admin/api_flow_types";
-import { type Vector3 } from "oxalis/constants";
+import type { Vector3, Vector2 } from "oxalis/constants";
 import { roundTo } from "libs/utils";
 
 type OwnProps = {|
@@ -17,6 +17,10 @@ type OwnProps = {|
   layerName: string,
   intensityRangeMin: number,
   intensityRangeMax: number,
+  min?: number,
+  max?: number,
+  isInEditMode: boolean,
+  defaultMinMax: Vector2,
 |};
 
 type HistogramProps = {
@@ -24,20 +28,46 @@ type HistogramProps = {
   onChangeLayer: (
     layerName: string,
     propertyName: $Keys<DatasetLayerConfiguration>,
-    value: [number, number],
+    value: [number, number] | number,
   ) => void,
+};
+
+type HistogramState = {
+  currentMin: number,
+  currentMax: number,
 };
 
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
 
+function isANumber(value: number | string): boolean {
+  // Code from https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
+  return !isNaN(parseFloat(value)) && isFinite(value);
+}
+
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
 
-class Histogram extends React.PureComponent<HistogramProps> {
+function getMinAndMax(props: HistogramProps) {
+  const { min, max, data } = props;
+  if (min != null && max != null) {
+    return { min, max };
+  }
+  const dataMin = Math.min(...data.map(({ min: minOfHistPart }) => minOfHistPart));
+  const dataMax = Math.max(...data.map(({ max: maxOfHistPart }) => maxOfHistPart));
+  return { min: dataMin, max: dataMax };
+}
+
+class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   canvasRef: ?HTMLCanvasElement;
+
+  constructor(props: HistogramProps) {
+    super(props);
+    const { min, max } = getMinAndMax(props);
+    this.state = { currentMin: min, currentMax: max };
+  }
 
   componentDidMount() {
     if (this.canvasRef == null) {
@@ -51,6 +81,11 @@ class Histogram extends React.PureComponent<HistogramProps> {
     this.updateCanvas();
   }
 
+  componentWillReceiveProps(newProps: HistogramProps) {
+    const { min, max } = getMinAndMax(newProps);
+    this.setState({ currentMin: min, currentMax: max });
+  }
+
   componentDidUpdate() {
     this.updateCanvas();
   }
@@ -61,12 +96,25 @@ class Histogram extends React.PureComponent<HistogramProps> {
     }
     const ctx = this.canvasRef.getContext("2d");
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
-    // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other
-    const maxValue = Math.max(...data.map(({ elementCounts }) => Math.max(...elementCounts)));
+    // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
+    const maxValue = Math.max(
+      ...data.map(({ elementCounts, min: histogramMin, max: histogramMax }) => {
+        // We only take the elements of the array into account that are displayed.
+        const displayedPartStartOffset = Math.max(histogramMin, min) - histogramMin;
+        const displayedPartEndOffset = Math.min(histogramMax, max) - histogramMin;
+        // Here we scale the offsets to the range of the elements array.
+        const startingIndex =
+          (displayedPartStartOffset * elementCounts.length) / (histogramMax - histogramMin);
+        const endingIndex =
+          (displayedPartEndOffset * elementCounts.length) / (histogramMax - histogramMin);
+        return Math.max(...elementCounts.slice(startingIndex, endingIndex + 1));
+      }),
+    );
     for (const [i, histogram] of data.entries()) {
       const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
-      this.drawHistogram(ctx, histogram, maxValue, color);
+      this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }
 
@@ -75,10 +123,14 @@ class Histogram extends React.PureComponent<HistogramProps> {
     histogram: $ElementType<APIHistogramData, number>,
     maxValue: number,
     color: Vector3,
+    minRange: number,
+    maxRange: number,
   ) => {
     const { intensityRangeMin, intensityRangeMax } = this.props;
-    const { min: minRange, max: maxRange, elementCounts } = histogram;
-    const rangeLength = maxRange - minRange;
+    const { min: histogramMin, max: histogramMax, elementCounts } = histogram;
+    const histogramLength = histogramMax - histogramMin;
+    const fullLength = maxRange - minRange;
+    const xOffset = histogramMin - minRange;
     this.drawYAxis(ctx);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
@@ -89,20 +141,23 @@ class Histogram extends React.PureComponent<HistogramProps> {
       value => Math.log10(downscalingFactor * value + 1) * canvasHeight,
     );
     const activeRegion = new Path2D();
-    ctx.moveTo(0, downscaledData[0]);
-    activeRegion.moveTo(((intensityRangeMin - minRange) / rangeLength) * canvasWidth, 0);
+    ctx.moveTo(0, 0);
+    activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * canvasWidth, 0);
     for (let i = 0; i < downscaledData.length; i++) {
-      const x = (i / downscaledData.length) * canvasWidth;
-      const xValue = minRange + i * (rangeLength / downscaledData.length);
+      const xInHistogramScale = (i * histogramLength) / downscaledData.length;
+      const xInCanvasScale = ((xOffset + xInHistogramScale) * canvasWidth) / fullLength;
+      const xValue = histogramMin + xInHistogramScale;
       if (xValue >= intensityRangeMin && xValue <= intensityRangeMax) {
-        activeRegion.lineTo(x, downscaledData[i]);
+        activeRegion.lineTo(xInCanvasScale, downscaledData[i]);
       }
-      ctx.lineTo(x, downscaledData[i]);
+      ctx.lineTo(xInCanvasScale, downscaledData[i]);
     }
     ctx.stroke();
     ctx.closePath();
-    activeRegion.lineTo(((intensityRangeMax - minRange) / rangeLength) * canvasWidth, 0);
-    activeRegion.lineTo(((intensityRangeMin - minRange) / rangeLength) * canvasWidth, 0);
+    const activeRegionRightLimit = Math.min(histogramMax, intensityRangeMax);
+    const activeRegionLeftLimit = Math.max(histogramMin, intensityRangeMin);
+    activeRegion.lineTo(((activeRegionRightLimit - minRange) / fullLength) * canvasWidth, 0);
+    activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
   };
@@ -132,9 +187,41 @@ class Histogram extends React.PureComponent<HistogramProps> {
     }
   };
 
+  tipFormatter = (value: number) =>
+    value > 10000 ? value.toExponential() : roundTo(value, 2).toString();
+
+  // eslint-disable-next-line react/sort-comp
+  updateMinimumDebounced = _.debounce(
+    (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
+    500,
+  );
+
+  updateMaximumDebounced = _.debounce(
+    (value, layerName) => this.props.onChangeLayer(layerName, "max", value),
+    500,
+  );
+
   render() {
-    const { intensityRangeMin, intensityRangeMax, data } = this.props;
-    const { min: minRange, max: maxRange } = data[0];
+    const {
+      intensityRangeMin,
+      intensityRangeMax,
+      isInEditMode,
+      defaultMinMax,
+      layerName,
+    } = this.props;
+    const { currentMin, currentMax } = this.state;
+    const { min: minRange, max: maxRange } = getMinAndMax(this.props);
+    const formatValue = (newValue: string): number | string => {
+      if (!isANumber(newValue)) {
+        return newValue;
+      }
+      return roundTo(parseFloat(newValue), 2);
+    };
+    const tooltipTitleFor = (minimumOrMaximum: string) =>
+      `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
+
+    const minMaxInputStyle = { width: "100%" };
+
     return (
       <React.Fragment>
         <canvas
@@ -145,17 +232,69 @@ class Histogram extends React.PureComponent<HistogramProps> {
           height={canvasHeight}
         />
         <Slider
+          range
           value={[intensityRangeMin, intensityRangeMax]}
           min={minRange}
           max={maxRange}
-          range
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
           onAfterChange={this.onThresholdChange}
-          style={{ width: canvasWidth, margin: 0, marginBottom: 18 }}
           step={(maxRange - minRange) / 255}
-          tipFormatter={val => roundTo(val, 2).toString()}
+          tipFormatter={this.tipFormatter}
+          style={{ width: canvasWidth, margin: 0, marginBottom: 18 }}
         />
+        {isInEditMode ? (
+          <Row type="flex" align="middle">
+            <Col span={4}>
+              <label className="setting-label">min:</label>
+            </Col>
+            <Col span={8}>
+              <Tooltip title={tooltipTitleFor("minimum")}>
+                <InputNumber
+                  size="small"
+                  min={defaultMinMax[0]}
+                  max={maxRange}
+                  defaultValue={currentMin}
+                  value={currentMin}
+                  formatter={formatValue}
+                  onChange={value => {
+                    value = parseFloat(value);
+                    if (isANumber(value) && value <= maxRange) {
+                      this.setState({ currentMin: value });
+                      this.updateMinimumDebounced(value, layerName);
+                    }
+                  }}
+                  style={minMaxInputStyle}
+                />
+              </Tooltip>
+            </Col>
+            <Col span={4}>
+              <label className="setting-label" style={{ width: "100%", textAlign: "center" }}>
+                max:
+              </label>
+            </Col>
+            <Col span={8}>
+              <Tooltip title={tooltipTitleFor("maximum")}>
+                <InputNumber
+                  size="small"
+                  min={minRange}
+                  max={defaultMinMax[1]}
+                  defaultValue={currentMax}
+                  value={currentMax}
+                  formatter={formatValue}
+                  onChange={value => {
+                    value = parseFloat(value);
+                    if (isANumber(value) && value >= minRange) {
+                      this.setState({ currentMax: value });
+                      this.updateMaximumDebounced(value, layerName);
+                    }
+                  }}
+                  style={minMaxInputStyle}
+                />
+              </Tooltip>
+            </Col>
+          </Row>
+        ) : null}
       </React.Fragment>
     );
   }

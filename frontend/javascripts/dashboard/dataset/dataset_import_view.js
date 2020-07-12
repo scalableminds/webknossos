@@ -25,7 +25,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
-import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
+import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 import ImportSharingComponent from "./import_sharing_component";
@@ -285,23 +285,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
-  async doesUserWantToChangeAllowedTeams(teamIds: Array<string>): Promise<boolean> {
-    if (teamIds.length > 0) {
-      return false;
-    }
-    return !(await confirmAsync({
-      title: "Are you sure?",
-      content: (
-        <p>
-          You did not specify any teams, for which this dataset should be visible. This means that
-          only administrators and dataset managers will be able to view this dataset.
-          <br /> Please hit &ldquo;Cancel&rdquo; if you would like to review the team permissions in
-          the &ldquo;General&rdquo; tab.
-        </p>
-      ),
-    }));
-  }
-
   handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
     // Ensure that all form fields are in sync
@@ -318,9 +301,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
       }
       const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
-      if (await this.doesUserWantToChangeAllowedTeams(teamIds)) {
-        return;
-      }
 
       await updateDataset(this.props.datasetId, Object.assign({}, dataset, datasetChangeValues));
 

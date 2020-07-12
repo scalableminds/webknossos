@@ -224,7 +224,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                   Mailer ! Send(
                     defaultMails.newUserMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
                 }
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, brainDBResult, organization))
                 Ok
               }
             }

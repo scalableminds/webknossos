@@ -98,6 +98,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
               intensityRange,
               isDisabled: false,
               isInverted: false,
+              isInEditMode: false,
             },
             initialLayerSettings[layer.name],
           );

@@ -35,6 +35,7 @@ import {
   mergeTreesAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setNodePositionAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
@@ -99,6 +100,14 @@ function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 
+function moveNode(dx: number, dy: number) {
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  getActiveNode(skeletonTracing).map(activeNode => {
+    const [x, y, z] = activeNode.position;
+    Store.dispatch(setNodePositionAction([x + dx, y + dy, z], activeNode.id));
+  });
+}
+
 export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
@@ -110,6 +119,11 @@ export function getKeyboardControls() {
 
     e: () => moveAlongDirection(),
     r: () => moveAlongDirection(true),
+
+    "shift + left": () => moveNode(-1, 0),
+    "shift + right": () => moveNode(1, 0),
+    "shift + up": () => moveNode(0, -1),
+    "shift + down": () => moveNode(0, 1),
 
     // Branches
     b: () => Store.dispatch(createBranchPointAction()),

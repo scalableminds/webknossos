@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import type { SkeletonTracing, Tree, Node } from "oxalis/store";
+import type { SkeletonTracing, Tree, Node, Edge } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
@@ -306,9 +306,13 @@ class Skeleton {
         case "deleteEdge":
           this.deleteEdge(update.value.treeId, update.value.source, update.value.target);
           break;
-        case "updateNode":
-          this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
+        case "updateNode": {
+          const { treeId, id, radius, position } = update.value;
+          this.updateNodeRadius(treeId, id, radius);
+          const tree = skeletonTracing.trees[treeId];
+          this.updateNodePosition(treeId, id, position, tree);
           break;
+        }
         case "createTree":
           this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
           break;
@@ -483,6 +487,36 @@ class Skeleton {
       attribute.array[index] = radius;
       return [attribute];
     });
+  }
+
+  /**
+   * Updates a node's position and that of its edges in a WebGL buffer.
+   */
+  updateNodePosition(treeId: number, nodeId: number, position: Vector3, tree: Tree) {
+    const bufferNodeId = this.combineIds(nodeId, treeId);
+    this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
+      const attribute = buffer.geometry.attributes.position;
+      attribute.set(position, index * 3);
+      return [attribute];
+    });
+
+    const edgePositionUpdater = (edge: Edge, indexOffset: number) => {
+      const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
+      this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
+        const positionAttribute = buffer.geometry.attributes.position;
+        positionAttribute.set(position, index * 6 + indexOffset);
+        return [positionAttribute];
+      });
+    };
+
+    for (const edge of tree.edges.getOutgoingEdgesForNode(nodeId)) {
+      edgePositionUpdater(edge, 0);
+    }
+    for (const edge of tree.edges.getIngoingEdgesForNode(nodeId)) {
+      // The changed node is the target node of the edge which is saved
+      // after the source node in the buffer
+      edgePositionUpdater(edge, 3);
+    }
   }
 
   /**

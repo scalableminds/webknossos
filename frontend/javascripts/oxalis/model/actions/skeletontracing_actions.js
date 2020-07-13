@@ -55,6 +55,12 @@ type SetNodeRadiusAction = {
   nodeId: ?number,
   treeId: ?number,
 };
+type SetNodePositionAction = {
+  type: "SET_NODE_POSITION",
+  position: Vector3,
+  nodeId: ?number,
+  treeId: ?number,
+};
 type CreateBranchPointAction = {
   type: "CREATE_BRANCHPOINT",
   nodeId?: number,
@@ -117,6 +123,7 @@ export type SkeletonTracingAction =
   | SetActiveGroupAction
   | DeselectActiveGroupAction
   | SetNodeRadiusAction
+  | SetNodePositionAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
   | RequestDeleteBranchPointAction
@@ -153,6 +160,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
+  "SET_NODE_POSITION",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
@@ -246,6 +254,17 @@ export const setNodeRadiusAction = (
 ): SetNodeRadiusAction => ({
   type: "SET_NODE_RADIUS",
   radius,
+  nodeId,
+  treeId,
+});
+
+export const setNodePositionAction = (
+  position: Vector3,
+  nodeId?: number,
+  treeId?: number,
+): SetNodePositionAction => ({
+  type: "SET_NODE_POSITION",
+  position,
   nodeId,
   treeId,
 });

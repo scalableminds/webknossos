@@ -269,6 +269,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
       r <- run(sql"""select #${userDAO.columnsWithPrefix("u.")} from webknossos.users_
                      join webknossos.user_team_roles tr on u._id = tr._user
                      where not u.isAdmin
+                     and not u.isDeactivated
                      and tr._team = $potentialSubteam
                      and u._id not in
                      (select _user from webknossos.user_team_roles

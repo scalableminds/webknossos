@@ -1,7 +1,7 @@
 // @flow
 
 import { Button } from "antd";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import * as Utils from "libs/utils";
 
 import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
@@ -10,6 +10,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 import { type RouterHistory, withRouter } from "react-router-dom";
+import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import { confirmAsync } from "./helper_components";
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
 const ImportDeleteComponent = ({ datasetId, history }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [dataset, setDataset] = useState<?APIDataset>(null);
+  const datasetContext = useContext(DatasetCacheContext);
 
   async function fetch() {
     const newDataset = await getDataset(datasetId);
@@ -35,7 +37,7 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
       return;
     }
     const deleteDataset = await confirmAsync({
-      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete Dataset ${
+      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${
         dataset.name
       }?`,
       okText: "Yes, Delete Dataset on Disk now",
@@ -50,8 +52,10 @@ const ImportDeleteComponent = ({ datasetId, history }: Props) => {
         datasetName: dataset.name,
       }),
     );
-    await Utils.sleep(2000);
     setIsDeleting(false);
+    // Trigger dataset check to make sure the dataset list is up-to-date
+    // but also make sure that the toast can be read
+    await Promise.all([datasetContext.checkDatasets(), Utils.sleep(2000)]);
     history.push("/dashboard");
   }
 

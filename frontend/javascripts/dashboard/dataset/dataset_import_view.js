@@ -7,7 +7,7 @@ import moment from "moment";
 
 import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
-import { datasetCache } from "dashboard/dataset/dataset_cache_provider";
+import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
@@ -543,7 +543,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
                 <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
-                    <ImportDeleteComponent datasetId={this.props.datasetId} />
+                    <DatasetCacheProvider>
+                      <ImportDeleteComponent datasetId={this.props.datasetId} />
+                    </DatasetCacheProvider>
                   </Hideable>
                 </TabPane>
               </Tabs>

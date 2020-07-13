@@ -52,6 +52,11 @@ export type TaskCreationResponse = {
   error?: string,
 };
 
+export type TaskCreationResponseContainer = {
+  tasks: Array<TaskCreationResponse>,
+  warnings: Array<string>,
+};
+
 class TaskCreateBulkView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
@@ -226,19 +231,21 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     });
 
     try {
-      let responses = [];
+      let taskResponses = [];
+      let warnings = [];
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
         // eslint-disable-next-line no-await-in-loop
         const response = await createTasks(subArray);
-        responses = responses.concat(response);
+        taskResponses = taskResponses.concat(response.tasks);
+        warnings = warnings.concat(response.warnings);
         this.setState({
           tasksProcessed: i + NUM_TASKS_PER_BATCH,
         });
       }
 
-      handleTaskCreationResponse(responses);
+      handleTaskCreationResponse({ tasks: taskResponses, warnings: _.uniq(warnings) });
     } finally {
       this.setState({
         isUploading: false,

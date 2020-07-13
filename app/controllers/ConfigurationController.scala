@@ -91,7 +91,9 @@ class ConfigurationController @Inject()(userService: UserService,
         _ <- dataSetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
-        _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
+        _ <- dataSetDAO.updateDefaultConfigurationByNameAndOrganization(dataSetName,
+                                                                        request.identity._organization,
+                                                                        DataSetConfiguration(conf))
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }

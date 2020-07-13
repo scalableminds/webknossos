@@ -242,12 +242,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield ()
   }
 
-  def updateDefaultConfigurationByName(name: String, configuration: DataSetConfiguration)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDefaultConfigurationByNameAndOrganization(
+      name: String,
+      organizationId: ObjectId,
+      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.dataSets
                       set defaultConfiguration = '#${sanitize(Json.toJson(configuration).toString)}'
-                      where name = ${name}""")
+                      where name = ${name} and _organization = $organizationId""")
     } yield ()
 
   def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {

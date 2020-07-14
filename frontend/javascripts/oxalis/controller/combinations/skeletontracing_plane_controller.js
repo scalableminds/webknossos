@@ -16,6 +16,7 @@ import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller
 import { enforce } from "libs/utils";
 import {
   enforceSkeletonTracing,
+  getSkeletonTracing,
   getActiveNode,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -43,6 +44,8 @@ import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import Dimensions from "oxalis/model/dimensions";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -100,12 +103,25 @@ function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 
-function moveNode(dx: number, dy: number) {
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-  getActiveNode(skeletonTracing).map(activeNode => {
-    const [x, y, z] = activeNode.position;
-    Store.dispatch(setNodePositionAction([x + dx, y + dy, z], activeNode.id));
-  });
+export function moveNode(dx: number, dy: number) {
+  getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+    getActiveNode(skeletonTracing).map(activeNode => {
+      const state = Store.getState();
+      const { activeViewport } = state.viewModeData.plane;
+      const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+      const zoomFactor = state.flycam.zoomStep;
+      const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+      const delta = [
+        vector[0] * zoomFactor * scaleFactor[0],
+        vector[1] * zoomFactor * scaleFactor[1],
+        vector[2] * zoomFactor * scaleFactor[2],
+      ];
+      const [x, y, z] = activeNode.position;
+      Store.dispatch(
+        setNodePositionAction([x + delta[0], y + delta[1], z + delta[2]], activeNode.id),
+      );
+    }),
+  );
 }
 
 export function getKeyboardControls() {

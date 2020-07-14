@@ -162,7 +162,13 @@ class PlaneController extends React.PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
-      leftDownMove: (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]),
+      leftDownMove: (delta: Point2, _pos, _id, event) => {
+        if (event.shiftKey) {
+          skeletonController.moveNode(delta.x, delta.y);
+        } else {
+          this.movePlane([-delta.x, -delta.y, 0]);
+        }
+      },
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));

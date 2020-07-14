@@ -9,9 +9,9 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{
   AgglomerateIdCache,
-  AgglomerateCache,
+  AgglomerateFileCache,
   BoundingBoxCache,
-  CachedAgglomerate,
+  CachedAgglomerateFile,
   CumsumParser
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -26,7 +26,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
   val cumsumFileName = "cumsum.json"
 
-  lazy val agglomerateCache = new AgglomerateCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
+  lazy val agglomerateFileCache = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
 
   def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
     val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
@@ -49,17 +49,20 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     def convertToAgglomerate(input: Array[ULong],
                              numBytes: Int,
                              bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-      val cachedAgglomerate = agglomerateCache.withCache(request)(initHDFReader)
+      val cachedAgglomerateFile = agglomerateFileCache.withCache(request)(initHDFReader)
 
-      val agglomerateIds = cachedAgglomerate.cache match {
+      val agglomerateIds = cachedAgglomerateFile.cache match {
         case Left(agglomerateIdCache) =>
           input.map(
             el =>
-              agglomerateIdCache
-                .withCache(el, cachedAgglomerate.reader, cachedAgglomerate.dataset, cachedAgglomerate.size)(readHDF))
-        case Right(boundingBoxCache) => boundingBoxCache.withCache(request, input, cachedAgglomerate.reader)(readHDF)
+              agglomerateIdCache.withCache(el,
+                                           cachedAgglomerateFile.reader,
+                                           cachedAgglomerateFile.dataset,
+                                           cachedAgglomerateFile.size)(readHDF))
+        case Right(boundingBoxCache) =>
+          boundingBoxCache.withCache(request, input, cachedAgglomerateFile.reader)(readHDF)
       }
-      cachedAgglomerate.finishAccess()
+      cachedAgglomerateFile.finishAccess()
 
       agglomerateIds
         .foldLeft(ByteBuffer.allocate(numBytes * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
@@ -75,10 +78,12 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
   }
 
+  // This uses a HDF5DataSet, which improves performance per call but doesn't permit parallel calls with the same dataset.
   private def readHDF(reader: IHDF5Reader, dataSet: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
     reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
 
+  // This uses the datasetName, which allows us to call it on the same hdf file in parallel.
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
     reader.uint64().readArrayBlockWithOffset(datasetName, blockSize.toInt, segmentId)
 
@@ -111,9 +116,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                                  config.Braingames.Binary.agglomerateStandardBlockSize))
       }
 
-    CachedAgglomerate(reader,
-                      reader.`object`().openDataSet(datasetName),
-                      ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
-                      cache)
+    CachedAgglomerateFile(reader,
+                          reader.`object`().openDataSet(datasetName),
+                          ULong(reader.getDataSetInformation(datasetName).getNumberOfElements),
+                          cache)
   }
 }

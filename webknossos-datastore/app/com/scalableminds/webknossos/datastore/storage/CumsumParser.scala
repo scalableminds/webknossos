@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.storage
 
 import java.io._
 import java.nio.file.Path
+import java.util
 
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
@@ -14,36 +15,50 @@ import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {
 
-  def parse(r: Reader, maxReaderRange: ULong): BoundingBoxCache =
+  def parseImpl(f: File,
+                maxReaderRange: ULong,
+                initialBoundingBoxList: List[(Long, Long, Long, Long, Long, Long)],
+                start: Long): BoundingBoxCache = {
+    val r = new FileReader(f)
     try {
-      val start = System.currentTimeMillis()
-
       val jsonReader = new JsonReader(r)
-      var boundingBoxList = List[(Long, Long, Long, Long, Long, Long)]()
-      val boundingBoxFinder =
-        BoundingBoxFinder(new java.util.TreeSet(), new java.util.TreeSet(), new java.util.TreeSet())
+      var boundingBoxList = initialBoundingBoxList
+      val positionSets = (new java.util.TreeSet[Long](), new java.util.TreeSet[Long](), new java.util.TreeSet[Long]())
       var cache = mutable.HashMap[(Long, Long, Long), BoundingBoxValues]()
       var minBoundingBox: (Long, Long, Long) = (0, 0, 0)
+      var correctOrder = true
 
       jsonReader.beginObject()
       while (jsonReader.hasNext) {
         jsonReader.nextName() match {
-          case "max_ids" =>
+          case "max_ids" if boundingBoxList.isEmpty =>
             boundingBoxList = parseBoundingBoxes(jsonReader)
           case "cumsum" =>
-            val tuple = parseCumSum(jsonReader, boundingBoxList, boundingBoxFinder)
-            cache = tuple._1
-            minBoundingBox = tuple._2
+            if (boundingBoxList.nonEmpty) {
+              val tuple = parseCumSum(jsonReader, boundingBoxList, positionSets)
+              cache = tuple._1
+              minBoundingBox = tuple._2
+            } else {
+              correctOrder = false
+              jsonReader.skipValue()
+            }
           case _ =>
             jsonReader.skipValue()
         }
       }
       jsonReader.endObject()
 
+      if (!correctOrder) {
+        r.close()
+        return parseImpl(f, maxReaderRange, boundingBoxList, start)
+      }
+
       val end = System.currentTimeMillis()
       logger.info(s"Cumsum parsing took ${end - start} ms")
 
-      new BoundingBoxCache(cache, boundingBoxFinder, minBoundingBox, maxReaderRange)
+      new BoundingBoxCache(cache,
+                           BoundingBoxFinder(positionSets._1, positionSets._2, positionSets._3, minBoundingBox),
+                           maxReaderRange)
     } catch {
       case e: JsonParseException =>
         logger.error(s"Parse exception while parsing cumsum: ${e.getMessage}.")
@@ -51,9 +66,10 @@ object CumsumParser extends LazyLogging {
     } finally {
       r.close()
     }
+  }
 
   def parse(f: File, maxReaderRange: ULong): BoundingBoxCache =
-    parse(new FileReader(f), maxReaderRange)
+    parseImpl(f, maxReaderRange, List(), System.currentTimeMillis())
 
   private def parseBoundingBoxes(reader: JsonReader): List[(Long, Long, Long, Long, Long, Long)] = {
     val formRx = "([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)_([0-9]+)".r
@@ -69,11 +85,11 @@ object CumsumParser extends LazyLogging {
 
   private def parseCumSum(reader: JsonReader,
                           boundingBoxes: List[(Long, Long, Long, Long, Long, Long)],
-                          boundingBoxFinder: BoundingBoxFinder) = {
+                          positionSets: (util.TreeSet[Long], util.TreeSet[Long], util.TreeSet[Long])) = {
     def addToFinder(bb: (Long, Long, Long, Long, Long, Long)) = {
-      boundingBoxFinder.xCoordinates.add(bb._1)
-      boundingBoxFinder.yCoordinates.add(bb._2)
-      boundingBoxFinder.zCoordinates.add(bb._3)
+      positionSets._1.add(bb._1)
+      positionSets._2.add(bb._2)
+      positionSets._3.add(bb._3)
     }
 
     def iter(list: List[(Long, Long, Long, Long, Long, Long)],

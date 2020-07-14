@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
-import com.scalableminds.webknossos.datastore.storage.{AgglomerateKey, CachedCube, DataCubeCache}
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,7 +53,7 @@ class BinaryDataService(dataBaseDir: Path,
         for {
           data <- handleDataRequest(request)
           mappedData = convertIfNecessary(
-            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= 8,
+            request.settings.appliedAgglomerate.isDefined && request.dataLayer.category == Category.segmentation && request.cuboid.resolution.maxDim <= 16,
             data,
             agglomerateService.applyAgglomerate(request)
           )
@@ -178,11 +178,11 @@ class BinaryDataService(dataBaseDir: Path,
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)
 
-    def matchingAgglomerate(agglomerateKey: AgglomerateKey) =
+    def matchingAgglomerate(agglomerateKey: AgglomerateFileKey) =
       agglomerateKey.dataSourceName == dataSetName && agglomerateKey.organization == organizationName && layerName
         .forall(_ == agglomerateKey.dataLayerName)
 
-    agglomerateService.agglomerateCache.clear(matchingAgglomerate)
+    agglomerateService.agglomerateFileCache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
   }
 }

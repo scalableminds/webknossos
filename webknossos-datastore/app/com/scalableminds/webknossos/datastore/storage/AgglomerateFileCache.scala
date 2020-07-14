@@ -14,49 +14,50 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 
-case class CachedAgglomerate(reader: IHDF5Reader,
-                             dataset: HDF5DataSet,
-                             size: ULong,
-                             cache: Either[AgglomerateIdCache, BoundingBoxCache])
+case class CachedAgglomerateFile(reader: IHDF5Reader,
+                                 dataset: HDF5DataSet,
+                                 size: ULong,
+                                 cache: Either[AgglomerateIdCache, BoundingBoxCache])
     extends SafeCachable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 
-case class AgglomerateKey(
+case class AgglomerateFileKey(
     organization: String,
     dataSourceName: String,
     dataLayerName: String,
     agglomerateName: String
 )
 
-object AgglomerateKey {
-  def from(dataRequest: DataServiceDataRequest): AgglomerateKey =
-    storage.AgglomerateKey(dataRequest.dataSource.id.team,
-                           dataRequest.dataSource.id.name,
-                           dataRequest.dataLayer.name,
-                           dataRequest.settings.appliedAgglomerate.get)
+object AgglomerateFileKey {
+  def from(dataRequest: DataServiceDataRequest): AgglomerateFileKey =
+    storage.AgglomerateFileKey(dataRequest.dataSource.id.team,
+                               dataRequest.dataSource.id.name,
+                               dataRequest.dataLayer.name,
+                               dataRequest.settings.appliedAgglomerate.get)
 }
 
-class AgglomerateCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateKey, CachedAgglomerate] {
-  override def onElementRemoval(key: AgglomerateKey, value: CachedAgglomerate): Unit =
+class AgglomerateFileCache(val maxEntries: Int) extends LRUConcurrentCache[AgglomerateFileKey, CachedAgglomerateFile] {
+  override def onElementRemoval(key: AgglomerateFileKey, value: CachedAgglomerateFile): Unit =
     value.scheduleForRemoval()
 
   def withCache(dataRequest: DataServiceDataRequest)(
-      loadFn: DataServiceDataRequest => CachedAgglomerate): CachedAgglomerate = {
-    val cachedAgglomerateFile = AgglomerateKey.from(dataRequest)
+      loadFn: DataServiceDataRequest => CachedAgglomerateFile): CachedAgglomerateFile = {
+    val agglomerateFileKey = AgglomerateFileKey.from(dataRequest)
 
     def handleUncachedAgglomerateFile() = {
-      val reader = loadFn(dataRequest)
-      // We don't need to check the return value of the `tryAccess` call as we just created the reader and use it only to increase the access counter.
-      reader.tryAccess()
-      put(cachedAgglomerateFile, reader)
-      reader
+      val agglomerateFile = loadFn(dataRequest)
+      // We don't need to check the return value of the `tryAccess` call as we just created the agglomerate file and use it only to increase the access counter.
+      agglomerateFile.tryAccess()
+      put(agglomerateFileKey, agglomerateFile)
+      agglomerateFile
     }
 
     this.synchronized {
-      get(cachedAgglomerateFile) match {
-        case Some(reader) => if (reader.tryAccess()) reader else handleUncachedAgglomerateFile()
-        case _            => handleUncachedAgglomerateFile()
+      get(agglomerateFileKey) match {
+        case Some(agglomerateFile) =>
+          if (agglomerateFile.tryAccess()) agglomerateFile else handleUncachedAgglomerateFile()
+        case _ => handleUncachedAgglomerateFile()
       }
     }
   }
@@ -84,15 +85,22 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
   }
 }
 
-case class BoundingBoxValues(range: (ULong, ULong), dimensions: (Long, Long, Long))
+case class BoundingBoxValues(idRange: (ULong, ULong), dimensions: (Long, Long, Long))
 
 case class BoundingBoxFinder(xCoordinates: util.TreeSet[Long],
                              yCoordinates: util.TreeSet[Long],
-                             zCoordinates: util.TreeSet[Long])
+                             zCoordinates: util.TreeSet[Long],
+                             minBoundingBox: (Long, Long, Long)) {
+  def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
+    val x = Option(xCoordinates.floor(cuboid.topLeft.x))
+    val y = Option(yCoordinates.floor(cuboid.topLeft.y))
+    val z = Option(zCoordinates.floor(cuboid.topLeft.z))
+    (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3))
+  }
+}
 
 class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
                        val boundingBoxFinder: BoundingBoxFinder,
-                       val minBoundingBox: (Long, Long, Long) = (0, 0, 0),
                        val maxReaderRange: ULong)
     extends LazyLogging {
   private def getGlobalCuboid(cuboid: Cuboid): Cuboid = {
@@ -104,20 +112,13 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
            cuboid.depth * res.z)
   }
 
-  def findInitialBoundingBox(cuboid: Cuboid): (Long, Long, Long) = {
-    val x = Option(boundingBoxFinder.xCoordinates.floor(cuboid.topLeft.x))
-    val y = Option(boundingBoxFinder.yCoordinates.floor(cuboid.topLeft.y))
-    val z = Option(boundingBoxFinder.zCoordinates.floor(cuboid.topLeft.z))
-    (x.getOrElse(minBoundingBox._1), y.getOrElse(minBoundingBox._2), z.getOrElse(minBoundingBox._3))
-  }
-
   def getReaderRange(request: DataServiceDataRequest): (ULong, ULong) = {
     val globalCuboid = getGlobalCuboid(request.cuboid)
-    val initialBoundingBox = findInitialBoundingBox(globalCuboid)
+    val initialBoundingBox = boundingBoxFinder.findInitialBoundingBox(globalCuboid)
     val requestedCuboid = globalCuboid.bottomRight
     val dataLayerBox = request.dataLayer.boundingBox.bottomRight
     val initialValues = cache(initialBoundingBox)
-    var range = initialValues.range
+    var range = initialValues.idRange
     var currDimensions = initialValues.dimensions
 
     var x = initialBoundingBox._1
@@ -130,7 +131,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
         val nextBBinY = (x, y + currDimensions._2, z)
         while (z < requestedCuboid.z && z < dataLayerBox.z) {
           cache.get((x, y, z)).foreach { value =>
-            range = (spire.math.min(range._1, value.range._1), spire.math.max(range._2, value.range._2))
+            range = (spire.math.min(range._1, value.idRange._1), spire.math.max(range._2, value.idRange._2))
             currDimensions = value.dimensions
           }
           z = z + currDimensions._3

@@ -76,7 +76,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
   private def mergeSkeletonTracings(tracingStoreClient: TracingStoreRpcClient,
                                     skeletonTracingIds: List[Option[String]],
                                     persistTracing: Boolean) =
-    if (skeletonTracingIds.isEmpty)
+    if (skeletonTracingIds.flatten.isEmpty)
       Fox.successful(None)
     else
       tracingStoreClient
@@ -86,7 +86,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
   private def mergeVolumeTracings(tracingStoreClient: TracingStoreRpcClient,
                                   volumeTracingIds: List[Option[String]],
                                   persistTracing: Boolean) =
-    if (volumeTracingIds.isEmpty)
+    if (volumeTracingIds.flatten.isEmpty)
       Fox.successful(None)
     else
       tracingStoreClient

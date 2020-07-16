@@ -2,9 +2,9 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import java.util.UUID
 
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
@@ -16,7 +16,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging
-    with ColorGenerator {
+    with ColorGenerator
+    with BoundingBoxMerger {
 
   val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 
@@ -161,6 +162,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
-  def merge(tracingSelectors: Seq[TracingSelector], tracings: Seq[T], newId: String): T
+  def merge(tracings: Seq[T]): T
+
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector], tracings: Seq[T], newId: String, newTracing: T): Fox[Unit]
 
 }

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, List } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -442,7 +442,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {layerSettings}
+          <List
+            itemLayout="vertical"
+            dataSource={layerSettings}
+            split
+            renderItem={item => <List.Item>{item}</List.Item>}
+          />
         </Panel>
         <Panel header="Data Rendering" key="3">
           <DropdownSetting

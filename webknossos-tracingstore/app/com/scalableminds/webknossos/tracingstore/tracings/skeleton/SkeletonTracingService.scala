@@ -151,6 +151,9 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     save(finalTracing, None, finalTracing.version)
   }
 
+  def merge(tracingSelectors: Seq[TracingSelector], tracings: Seq[SkeletonTracing], newId: String): SkeletonTracing =
+    tracings.reduceLeft(mergeTwo)
+
   def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)

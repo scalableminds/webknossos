@@ -39,6 +39,7 @@ import com.scalableminds.webknossos.tracingstore.geometry.{
   Point3D => ProtoPoint
 }
 import com.sun.xml.internal.bind.v2.TODO
+import play.libs.F.Tuple
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -289,7 +290,15 @@ class VolumeTracingService @Inject()(
     } yield Json.toJson(updateActionGroupsJs)
   }
 
+  def merge(tracingSelectors: Seq[TracingSelector], tracings: Seq[VolumeTracing], newId: String): VolumeTracing = {
+    mergeVolumeData(tracingSelectors, newId)
+    tracings.reduceLeft(mergeTwo)
+  }
+
   def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing =
     // TODO
     tracingA
+
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector], newId: String): Unit =
+    ()
 }

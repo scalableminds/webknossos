@@ -132,8 +132,10 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
       }
     }
 
+  def generateTracingId: String = UUID.randomUUID.toString
+
   def save(tracing: T, tracingId: Option[String], version: Long, toCache: Boolean = false): Fox[String] = {
-    val id = tracingId.getOrElse(UUID.randomUUID.toString)
+    val id = tracingId.getOrElse(generateTracingId)
     if (toCache) {
       temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
       Fox.successful(id)
@@ -159,8 +161,6 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
 
-  def merge(tracings: Seq[T]): T = tracings.reduceLeft(mergeTwo)
-
-  def mergeTwo(tracingA: T, tracingB: T): T
+  def merge(tracingSelectors: Seq[TracingSelector], tracings: Seq[T], newId: String): T
 
 }

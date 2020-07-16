@@ -222,8 +222,9 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         AllowRemoteOrigin {
           for {
             tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
-            mergedTracing = tracingService.merge(tracings.flatten)
-            newId <- tracingService.save(mergedTracing, None, version = 0, toCache = !persist)
+            newId = tracingService.generateTracingId
+            mergedTracing = tracingService.merge(request.body.flatten, tracings.flatten, newId)
+            _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))
           }

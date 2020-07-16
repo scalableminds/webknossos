@@ -266,7 +266,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
 
   def findMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
     for {
-      r <- run(sql"""select #${userDAO.columnsWithPrefix("u.")} from webknossos.users_
+      r <- run(sql"""select #${userDAO.columnsWithPrefix("u.")} from webknossos.users_ u
                      join webknossos.user_team_roles tr on u._id = tr._user
                      where not u.isAdmin
                      and not u.isDeactivated

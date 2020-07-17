@@ -69,7 +69,7 @@ class AnnotationMerger @Inject()(dataSetDAO: DataSetDAO, tracingStoreService: Tr
       tracingStoreClient: TracingStoreRpcClient <- tracingStoreService.clientFor(dataSet)
       skeletonTracingIds <- Fox.successful(annotations.map(_.skeletonTracingId))
       skeletonTracingReference <- mergeSkeletonTracings(tracingStoreClient, skeletonTracingIds, persistTracing)
-      volumeTracingIds <- Fox.successful(annotations.map(_.volumeTracingId))
+      volumeTracingIds <- Fox.successful(annotations.sortBy(_.modified).map(_.volumeTracingId))
       volumeTracingReference <- mergeVolumeTracings(tracingStoreClient, volumeTracingIds, persistTracing)
     } yield (skeletonTracingReference, volumeTracingReference)
 

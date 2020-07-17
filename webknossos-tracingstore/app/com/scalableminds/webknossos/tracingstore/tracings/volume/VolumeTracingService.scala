@@ -139,6 +139,59 @@ class VolumeTracingService @Inject()(
     Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
+    if (tracing.version != 0L) {
+      return Failure("Tracing has already been edited.")
+    }
+    val mergedVolume = new MergedVolume
+
+    ZipIO.withUnziped(initialData) {
+      case (_, is) =>
+        ZipIO.withUnziped(is) {
+          case (fileName, is) =>
+            WKWFile.read(is) {
+              case (header, buckets) =>
+                if (header.numBlocksPerCube == 1) {
+                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                    val data = buckets.next()
+                    if (!isAllZero(data)) {
+                      mergedVolume.add(bucketPosition, data)
+                    }
+                  }
+                }
+            }
+        }
+    }
+
+    val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
+    mergedVolume.saveTo(destinationDataLayer, tracing.version)
+  }
+
+  class MergedVolume {
+    private var mergedVolume = scala.collection.mutable.HashMap.empty[BucketPosition, Array[Byte]]
+    def add(bucketPosition: BucketPosition, data: Array[Byte]): Unit =
+      if (mergedVolume.contains(bucketPosition)) {
+        val mutableBucketData = mergedVolume(bucketPosition)
+        data.zipWithIndex.foreach {
+          case (byteValue, index) =>
+            if (byteValue != 0) {
+              mutableBucketData(index) = byteValue
+            }
+        }
+        mergedVolume += ((bucketPosition, mutableBucketData))
+      } else {
+        mergedVolume += ((bucketPosition, data))
+      }
+
+    def saveTo(layer: VolumeTracingLayer, version: Long): Fox[Unit] =
+      for {
+        _ <- Fox.combined(mergedVolume.map {
+          case (bucketPosition, bucketData) =>
+            saveBucket(layer, bucketPosition, bucketData, version)
+        }.toList)
+      } yield ()
+  }
+
   def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
@@ -306,7 +359,7 @@ class VolumeTracingService @Inject()(
                       tracings: Seq[VolumeTracing],
                       newId: String,
                       newTracing: VolumeTracing): Fox[Unit] = {
-    var mergedVolume = scala.collection.mutable.HashMap.empty[BucketPosition, Array[Byte]]
+    val mergedVolume = new MergedVolume
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
@@ -314,26 +367,11 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, data) =>
-            if (mergedVolume.contains(bucketPosition)) {
-              val mutableBucketData = mergedVolume(bucketPosition)
-              data.zipWithIndex.foreach {
-                case (byteValue, index) =>
-                  if (byteValue != 0) {
-                    mutableBucketData(index) = byteValue
-                  }
-              }
-              mergedVolume += ((bucketPosition, mutableBucketData))
-            } else {
-              mergedVolume += ((bucketPosition, data))
-            }
+            mergedVolume.add(bucketPosition, data)
         }
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
-    for {
-      _ <- Fox.combined(mergedVolume.map {
-        case (bucketPosition, bucketData) =>
-          saveBucket(destinationDataLayer, bucketPosition, bucketData, newTracing.version)
-      }.toList)
-    } yield ()
+    mergedVolume.saveTo(destinationDataLayer, newTracing.version)
   }
+
 }

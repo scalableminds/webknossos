@@ -1,6 +1,6 @@
 package controllers
 
-import java.io.File
+import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -8,8 +8,9 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
+import com.scalableminds.util.io.{NamedEnumeratorStream, NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWBucketStreamSink
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
@@ -28,7 +29,7 @@ import models.team.OrganizationDAO
 import models.user._
 import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files.TemporaryFile
+import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
@@ -48,6 +49,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        taskTypeDAO: TaskTypeDAO,
                                        tracingStoreService: TracingStoreService,
                                        annotationService: AnnotationService,
+                                       temporaryFileCreator: TemporaryFileCreator,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
                                        nmlService: NmlService)(implicit ec: ExecutionContext)

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig,
@@ -59,6 +59,36 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+            } yield Ok(Json.toJson(tracingId))
+          }
+        }
+      }
+    }
+  }
+
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[VolumeTracings]) { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          val tracings: List[Option[VolumeTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
+          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
+            Ok(Json.toJson(newId))
+          }
+        }
+      }
+    }
+  }
+
+  def initialDataMultiple(tracingId: String) = Action.async { implicit request =>
+    log {
+      logTime(slackNotificationService.reportUnusalRequest) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              _ <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData)
             } yield Ok(Json.toJson(tracingId))
           }
         }

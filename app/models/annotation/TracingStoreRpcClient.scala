@@ -1,10 +1,11 @@
 package models.annotation
 
-import java.io.File
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
@@ -15,6 +16,7 @@ import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
 import net.liftweb.common.Box
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
@@ -127,15 +129,15 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .addQueryString("persist" -> persistTracing.toString)
         .postProtoWithJsonResponse[VolumeTracings, String](tracings)
-      packedVolumeDataZips <- packVolumeDataZips(initialData.flatten)
-      _ <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
+      packedVolumeDataZips = packVolumeDataZips(initialData.flatten)
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialDataMultiple")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
         .post(packedVolumeDataZips)
     } yield tracingId
   }
 
-  private def packVolumeDataZips(files: List[File]): Fox[File] =
-    files.headOption
+  private def packVolumeDataZips(files: List[File]): File =
+    ZipIO.zipToTempFile(files)
 
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)

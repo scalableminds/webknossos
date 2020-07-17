@@ -56,6 +56,12 @@ object ZipIO extends LazyLogging {
       stream.closeEntry()
     }
 
+    def addFileFromFile(name: String, data: File): Unit = {
+      stream.putNextEntry(new ZipEntry(name))
+      stream.write(Files.readAllBytes(data.toPath))
+      stream.closeEntry()
+    }
+
     def addFileFromEnumerator(name: String, data: Enumerator[Array[Byte]])(
         implicit ec: ExecutionContext): Future[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
@@ -139,20 +145,37 @@ object ZipIO extends LazyLogging {
     gzipped
   }
 
+  def zipToTempFile(files: List[File])(implicit ec: ExecutionContext): File = {
+    val outfile = File.createTempFile("data", System.nanoTime().toString + ".zip")
+    val zip: OpenZip = startZip(new FileOutputStream(outfile))
+    files.foreach { file =>
+      zip.addFileFromFile(file.getName, file)
+    }
+    zip.close()
+    outfile
+  }
+
   private def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
   def forallZipEntries(zip: ZipFile, includeHiddenFiles: Boolean = false)(f: ZipEntry => Boolean): Boolean =
     zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).forall(f(_))
 
-  def withUnziped[A](file: File, includeHiddenFiles: Boolean = false, truncateCommonPrefix: Boolean = false)(
-      f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
-    tryo(new java.util.zip.ZipFile(file))
-      .flatMap(withUnziped(_, includeHiddenFiles, truncateCommonPrefix, None)((name, is) => Full(f(name, is))))
+  def withUnziped[A](inputStream: InputStream)(f: (Path, InputStream) => A)(
+      implicit ec: ExecutionContext): Box[List[A]] = {
+    val tempFile = File.createTempFile("data", "zip")
+    tempFile.deleteOnExit()
+    val out = new FileOutputStream(tempFile)
+    IOUtils.copy(inputStream, out)
+    withUnziped(tempFile)(f)
+  }
+
+  def withUnziped[A](file: File)(f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
+    tryo(new java.util.zip.ZipFile(file)).flatMap(withUnziped(_)((name, is) => Full(f(name, is))))
 
   def withUnziped[A](zip: ZipFile,
-                     includeHiddenFiles: Boolean,
-                     truncateCommonPrefix: Boolean,
-                     excludeFromPrefix: Option[List[String]])(f: (Path, InputStream) => Box[A])(
+                     includeHiddenFiles: Boolean = false,
+                     truncateCommonPrefix: Boolean = false,
+                     excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A])(
       implicit ec: ExecutionContext): Box[List[A]] = {
 
     def stripPathFrom(path: Path, string: String): Option[Path] = {

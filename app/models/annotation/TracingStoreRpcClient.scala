@@ -118,9 +118,24 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
-  def mergeVolumeTracingsByContents(tracings: VolumeTracings, initialData: List[Option[File]], persistTracing: Boolean): Fox[String] = {
-
+  def mergeVolumeTracingsByContents(tracings: VolumeTracings,
+                                    initialData: List[Option[File]],
+                                    persistTracing: Boolean): Fox[String] = {
+    logger.debug("Called to merge VolumeTracings by contents." + baseInfo)
+    for {
+      tracingId <- rpc(s"${tracingStore.url}/tracings/volume/mergedFromContents")
+        .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryString("persist" -> persistTracing.toString)
+        .postProtoWithJsonResponse[VolumeTracings, String](tracings)
+      packedVolumeDataZips <- packVolumeDataZips(initialData.flatten)
+      _ <- rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
+        .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .post(packedVolumeDataZips)
+    } yield tracingId
   }
+
+  private def packVolumeDataZips(files: List[File]): Fox[File] =
+    files.headOption
 
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)

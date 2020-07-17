@@ -62,7 +62,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     ZipParseResult(parseResults, otherFiles)
   }
 
-  def wrapOrPrefixTrees(parseResults: List[NmlParseResult], shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
+  def wrapOrPrefixTrees(parseResults: List[NmlParseResult],
+                        shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
     if (shouldCreateGroupForEachFile)
       wrapTreesInGroups(parseResults)
     else

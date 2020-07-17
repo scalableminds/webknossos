@@ -118,6 +118,10 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .postProtoWithJsonResponse[SkeletonTracings, String](tracings)
   }
 
+  def mergeVolumeTracingsByContents(tracings: VolumeTracings, initialData: List[Option[File]], persistTracing: Boolean): Fox[String] = {
+
+  }
+
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {

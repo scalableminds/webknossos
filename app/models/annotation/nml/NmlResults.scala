@@ -63,7 +63,7 @@ object NmlResults extends LazyLogging {
     def combineWith(other: ZipParseResult) =
       ZipParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
 
-    def isEmpty =
+    def containsNoSuccesses =
       !parseResults.exists(_.succeeded)
 
     def containsFailure =

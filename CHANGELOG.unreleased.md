@@ -25,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Separated the permissions of Team Managers (now actually team-scoped) and Dataset Managers (who can see all datasets). The database evolution makes all Team Managers also Dataset Managers, so no workflows should be interrupted. New users may have to be made Dataset Managers, though. For more information, refer to the updated documentation. [#4663](https://github.com/scalableminds/webknossos/pull/4663)
 - Refined all webKnossos emails for user signups etc. Switched emails to use HTML templates for more bling bling. [#4676](https://github.com/scalableminds/webknossos/pull/4676)
 - Backend NML parser no longer rejects NMLs with trees that have multiple connected components. Instead, it splits those into one separate tree per component. [#4688](https://github.com/scalableminds/webknossos/pull/4688)
+- When uploading tasks via NML, mistyped NMLs don't throw an error directly and display them in the task modal instead. [#4723](https://github.com/scalableminds/webknossos/pull/4723)
 
 ### Fixed
 - Fixed that merger mode didn't work with undo and redo. Also fixed that the mapping was not disabled when disabling merger mode. [#4669](https://github.com/scalableminds/webknossos/pull/4669)

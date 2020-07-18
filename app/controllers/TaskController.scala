@@ -20,7 +20,7 @@ import models.project.{Project, ProjectDAO}
 import models.task._
 import models.team.{Team, TeamDAO}
 import models.user._
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.security.WkEnv
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
@@ -103,11 +103,11 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       isVolumeOrHybrid <- isVolumeOrHybridTaskType(request.body)
       _ <- bool2Fox(if (isVolumeOrHybrid) request.body.length <= 100 else request.body.length <= 1000) ?~> "task.create.limitExceeded"
       taskParameters <- duplicateAllBaseTracings(request.body, request.identity._organization)
-      skeletonBaseOpts: List[Option[SkeletonTracing]] <- createTaskSkeletonTracingBases(taskParameters)
-      volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- createTaskVolumeTracingBases(
+      skeletonBaseBoxes: List[Box[SkeletonTracing]] <- createTaskSkeletonTracingBases(taskParameters)
+      volumeBaseBoxes: List[Box[(VolumeTracing, Option[File])]] <- createTaskVolumeTracingBases(
         taskParameters,
         request.identity._organization)
-      result <- createTasks((taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.toList)
+      result <- createTasks((taskParameters, skeletonBaseBoxes, volumeBaseBoxes).zipped.toList)
     } yield result
   }
 
@@ -201,32 +201,31 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
 
   def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
+      m: MessagesProvider): Fox[List[Box[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-        skeletonTracingOpt <- if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
-          Fox.successful(
-            Some(
-              annotationService.createSkeletonTracingBase(
-                params.dataSet,
-                params.boundingBox,
-                params.editPosition,
-                params.editRotation
-              )))
-        } else Fox.successful(None)
-      } yield skeletonTracingOpt
+        skeletonTracingBox = if ((taskType.tracingType == TracingType.skeleton || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
+          Full(
+            annotationService.createSkeletonTracingBase(
+              params.dataSet,
+              params.boundingBox,
+              params.editPosition,
+              params.editRotation
+            ))
+        } else Empty
+      } yield skeletonTracingBox
     }
 
   def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
+      m: MessagesProvider): Fox[List[Box[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
-        volumeTracingOpt <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
+        volumeTracingBox <- if ((taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid) && params.baseAnnotation.isEmpty) {
           annotationService
             .createVolumeTracingBase(
               params.dataSet,
@@ -234,11 +233,11 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
               params.boundingBox,
               params.editPosition,
               params.editRotation,
-              false
+              volumeShowFallbackLayer = false
             )
-            .map(v => Some((v, None)))
-        } else Fox.successful(None)
-      } yield volumeTracingOpt
+            .map(v => Full((v, None)))
+        } else Fox.successful(Empty)
+      } yield volumeTracingBox
     }
 
   private def getTracingBases(skeletonBaseOpts: List[Option[SkeletonTracing]],
@@ -247,18 +246,36 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                               taskType: TaskType,
                               organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[(List[Option[SkeletonTracing]], List[Option[(VolumeTracing, Option[File])]])] =
-    if (taskType.tracingType == TracingType.skeleton)
-      if (volumeBaseOpts.exists(_.isDefined)) Fox.failure(Messages("taskType.mismatch", "skeleton", "volume"))
-      else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
-    else if (taskType.tracingType == TracingType.volume)
-      if (skeletonBaseOpts.exists(_.isDefined)) Fox.failure(Messages("taskType.mismatch", "volume", "skeleton"))
-      else Fox.successful((skeletonBaseOpts, volumeBaseOpts))
-    else
+      m: MessagesProvider): Fox[(List[Box[SkeletonTracing]], List[Box[(VolumeTracing, Option[File])]])] =
+    if (taskType.tracingType == TracingType.skeleton) {
+      Fox.successful(
+        skeletonBaseOpts
+          .zip(volumeBaseOpts)
+          .map {
+            case (skeletonTracingOpt, volumeTracingOpt) =>
+              volumeTracingOpt match {
+                case Some(_) => (Failure(Messages("taskType.mismatch", "skeleton", "volume")), Empty)
+                case _       => (Box(skeletonTracingOpt), Empty)
+              }
+          }
+          .unzip)
+    } else if (taskType.tracingType == TracingType.volume) {
+      Fox.successful(
+        skeletonBaseOpts
+          .zip(volumeBaseOpts)
+          .map {
+            case (skeletonTracingOpt, volumeTracingOpt) =>
+              skeletonTracingOpt match {
+                case Some(_) => (Empty, Failure(Messages("taskType.mismatch", "volume", "skeleton")))
+                case _       => (Empty, Box(volumeTracingOpt))
+              }
+          }
+          .unzip)
+    } else
       Fox
         .serialCombined((fullParams, skeletonBaseOpts, volumeBaseOpts).zipped.toList) {
           case (params, skeleton, volume) =>
-            val skeletonOpt = Some(skeleton.getOrElse(annotationService
+            val skeletonBox = Full(skeleton.getOrElse(annotationService
               .createSkeletonTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)))
             val volumeFox = volume
               .map(Fox.successful(_))
@@ -274,7 +291,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                   )
                   .map(v => (v, None)))
 
-            volumeFox.map(v => (skeletonOpt, Some(v)))
+            volumeFox.map(v => (skeletonBox, Full(v)))
         }
         .map(_.unzip)
 
@@ -356,18 +373,27 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       tuple._1.baseAnnotation.map(bA => Full(if (isSkeletonId) bA.skeletonId else bA.volumeId)).getOrElse(tuple._2)
     }
 
-  def createTasks(
-      requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])(
+  def createTasks(requestedTasks: List[(TaskParameters, Box[SkeletonTracing], Box[(VolumeTracing, Option[File])])])(
       implicit request: SecuredRequest[WkEnv, _]): Fox[Result] = {
 
     def assertEachHasEitherSkeletonOrVolume: Fox[Boolean] =
       bool2Fox(requestedTasks.forall { tuple =>
-        tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined
+        val skeletonDefinedOrFailure = tuple._2 match {
+          case Empty => false
+          case _     => true
+        }
+
+        val volumeDefinedOrFailure = tuple._3 match {
+          case Empty => false
+          case _     => true
+        }
+
+        tuple._1.baseAnnotation.isDefined || skeletonDefinedOrFailure || volumeDefinedOrFailure
       })
 
     def assertAllOnSameDataset(firstDatasetName: String): Fox[String] = {
       def allOnSameDatasetIter(
-          requestedTasksRest: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])],
+          requestedTasksRest: List[(TaskParameters, Box[SkeletonTracing], Box[(VolumeTracing, Option[File])])],
           dataSetName: String): Boolean =
         requestedTasksRest match {
           case List()       => true
@@ -398,11 +424,19 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
         slackNotificationService.noticeBaseAnnotationTaskCreation(requestedTasks.map(_._1.taskTypeId).distinct,
                                                                   requestedTasks.count(_._1.baseAnnotation.isDefined))
       tracingStoreClient <- tracingStoreService.clientFor(dataSet)
-      skeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
+      savedSkeletonTracingIds: List[Box[Option[String]]] <- tracingStoreClient.saveSkeletonTracings(
         SkeletonTracings(requestedTasks.map(taskTuple => SkeletonTracingOpt(taskTuple._2))))
+      skeletonTracingIds: List[Box[Option[String]]] = savedSkeletonTracingIds.zip(requestedTasks.map(_._2)).map {
+        case (savedId, baseTracing) =>
+          baseTracing match {
+            case f: Failure => f
+            case _          => savedId
+          }
+      }
       volumeTracingIds: List[Box[Option[String]]] <- Fox.sequence(requestedTasks.map(_._3).map {
-        case Some((tracing, initialFile)) => tracingStoreClient.saveVolumeTracing(tracing, initialFile).map(Some(_))
-        case None                         => Fox.successful(None)
+        case Full((tracing, initialFile)) => tracingStoreClient.saveVolumeTracing(tracing, initialFile).map(Some(_))
+        case f: Failure                   => box2Fox(f)
+        case Empty                        => Fox.successful(None)
       })
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_._1), skeletonTracingIds).zipped.toList, true)
       volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_._1), volumeTracingIds).zipped.toList, false)

@@ -48,9 +48,9 @@ trait WKWDataFormatHelper {
       case CubeRx(res, z, y, x) =>
         Some(
           BucketPosition(x.toInt * DataLayer.bucketLength,
-                             y.toInt * DataLayer.bucketLength,
-                             z.toInt * DataLayer.bucketLength,
-                             Point3D(res.toInt, res.toInt, res.toInt)))
+                         y.toInt * DataLayer.bucketLength,
+                         z.toInt * DataLayer.bucketLength,
+                         Point3D(res.toInt, res.toInt, res.toInt)))
       case _ =>
         None
     }

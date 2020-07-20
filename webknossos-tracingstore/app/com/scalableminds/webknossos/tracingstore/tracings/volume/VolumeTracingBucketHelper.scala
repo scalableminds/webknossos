@@ -4,7 +4,13 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits, TemporaryVolumeDataStore, VersionedKey, VersionedKeyValuePair}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  KeyValueStoreImplicits,
+  TemporaryVolumeDataStore,
+  VersionedKey,
+  VersionedKeyValuePair
+}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
 import scala.concurrent.duration._
@@ -107,8 +113,7 @@ trait VolumeTracingBucketHelper
     new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 
-  def bucketStreamFromCache(dataLayer: VolumeTracingLayer,
-                            resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+  def bucketStreamFromCache(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(dataLayer.name, resolution)
     val keyValuePairs = volumeDataCache.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
     keyValuePairs.flatMap {
@@ -138,9 +143,9 @@ trait VolumeBucketKeys extends WKWMortonHelper {
         val y = yStr.toInt
         val z = zStr.toInt
         val bucket = BucketPosition(x * resolution * DataLayer.bucketLength,
-          y * resolution * DataLayer.bucketLength,
-          z * resolution * DataLayer.bucketLength,
-          Point3D(resolution, resolution, resolution))
+                                    y * resolution * DataLayer.bucketLength,
+                                    z * resolution * DataLayer.bucketLength,
+                                    Point3D(resolution, resolution, resolution))
         Some((name, bucket))
       case _ =>
         None

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSi
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
@@ -30,6 +30,21 @@ import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
+import scala.collection.mutable
+
+trait FilterBytes {
+  // extracted to here because ambiguous implicits broke the filter method inside of VolumeTracingService
+  protected def filterBytes(bytes: Array[Byte], predicate: Byte => Boolean): Array[Byte] = bytes.filter(predicate)
+
+  protected def mapBytes(data: Array[Byte], map: mutable.Map[Byte, Byte]): Array[Byte] =
+    data.map { byteValue =>
+      if (byteValue != 0) {
+        map(byteValue)
+      } else byteValue
+    }
+
+}
+
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
@@ -42,19 +57,21 @@ class VolumeTracingService @Inject()(
     with WKWDataFormatHelper
     with ProtoGeometryImplicits
     with FoxImplicits
+    with FilterBytes
     with LazyLogging {
 
-  implicit val volumeDataStore = tracingDataStore.volumeData
+  implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
 
-  implicit val tracingCompanion = VolumeTracing
+  implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
 
-  implicit val updateActionJsonFormat = VolumeUpdateAction.volumeUpdateActionFormat
+  implicit val updateActionJsonFormat: VolumeUpdateAction.volumeUpdateActionFormat.type =
+    VolumeUpdateAction.volumeUpdateActionFormat
 
-  val tracingType = TracingType.volume
+  val tracingType: TracingType.Value = TracingType.volume
 
-  val tracingStore = tracingDataStore.volumes
+  val tracingStore: FossilDBClient = tracingDataStore.volumes
 
-  val tracingMigrationService = VolumeTracingMigrationService
+  val tracingMigrationService: VolumeTracingMigrationService.type = VolumeTracingMigrationService
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
@@ -75,10 +92,8 @@ class VolumeTracingService @Inject()(
             action match {
               case a: UpdateBucketVolumeAction =>
                 val resolution = math.pow(2, a.zoomStep).toInt
-                val bucket = BucketPosition(a.position.x,
-                                                a.position.y,
-                                                a.position.z,
-                                                Point3D(resolution, resolution, resolution))
+                val bucket =
+                  BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
                 saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
@@ -148,6 +163,24 @@ class VolumeTracingService @Inject()(
 
     ZipIO.withUnziped(initialData) {
       case (_, is) =>
+        val labelSet: mutable.Set[Byte] = scala.collection.mutable.Set()
+        ZipIO.withUnziped(is) {
+          case (_, is) =>
+            WKWFile.read(is) {
+              case (header, buckets) =>
+                if (header.numBlocksPerCube == 1) {
+                  val data: Array[Byte] = buckets.next()
+                  val nonZeroData: Array[Byte] = filterBytes(data, byte => byte != 0x00)
+                  labelSet ++= nonZeroData
+                }
+            }
+        }
+        mergedVolume.addLabelSet(labelSet)
+    }
+
+    var sourceVolumeIndex = 0
+    ZipIO.withUnziped(initialData) {
+      case (_, is) =>
         ZipIO.withUnziped(is) {
           case (fileName, is) =>
             WKWFile.read(is) {
@@ -156,12 +189,13 @@ class VolumeTracingService @Inject()(
                   parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                     val data = buckets.next()
                     if (!isAllZero(data)) {
-                      mergedVolume.add(bucketPosition, data)
+                      mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
                     }
                   }
                 }
             }
         }
+        sourceVolumeIndex += 1
     }
 
     val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
@@ -169,20 +203,47 @@ class VolumeTracingService @Inject()(
   }
 
   class MergedVolume {
-    private var mergedVolume = scala.collection.mutable.HashMap.empty[BucketPosition, Array[Byte]]
-    def add(bucketPosition: BucketPosition, data: Array[Byte]): Unit =
+    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
+    private var labelSets = mutable.ListBuffer[mutable.Set[Byte]]()
+    private var labelMaps = mutable.ListBuffer[mutable.HashMap[Byte, Byte]]()
+    def addLabelSet(labelSet: mutable.Set[Byte]): Unit = labelSets += labelSet
+
+    private def prepareLabelMaps(): Unit =
+      if (labelSets.isEmpty || labelMaps.nonEmpty) {
+        ()
+      } else {
+        var i: Byte = 0x01
+        labelSets.toList.foreach { labelSet =>
+          var labelMap = mutable.HashMap.empty[Byte, Byte]
+          labelSet.foreach { label =>
+            labelMap += ((label, i))
+            i = (i.toInt + 0x01).toByte
+          }
+          labelMaps += labelMap
+        }
+      }
+
+    def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
+      prepareLabelMaps()
       if (mergedVolume.contains(bucketPosition)) {
         val mutableBucketData = mergedVolume(bucketPosition)
         data.zipWithIndex.foreach {
           case (byteValue, index) =>
             if (byteValue != 0) {
-              mutableBucketData(index) = byteValue
+              val byteValueMapped = if (labelMaps.isEmpty) byteValue else labelMaps(sourceVolumeIndex)(byteValue)
+              mutableBucketData(index) = byteValueMapped
             }
         }
         mergedVolume += ((bucketPosition, mutableBucketData))
       } else {
-        mergedVolume += ((bucketPosition, data))
+        if (labelMaps.isEmpty) {
+          mergedVolume += ((bucketPosition, data))
+        } else {
+          val dataMapped = mapBytes(data, labelMaps(sourceVolumeIndex))
+          mergedVolume += ((bucketPosition, dataMapped))
+        }
       }
+    }
 
     def saveTo(layer: VolumeTracingLayer, version: Long, toCache: Boolean): Fox[Unit] =
       for {
@@ -245,7 +306,7 @@ class VolumeTracingService @Inject()(
       case failure: scala.util.Failure[Unit] =>
         logger.debug(
           s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case success: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+      case _: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
     }
     zipResult
   }
@@ -366,14 +427,29 @@ class VolumeTracingService @Inject()(
                       newTracing: VolumeTracing,
                       toCache: Boolean): Fox[Unit] = {
     val mergedVolume = new MergedVolume
+
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
+        val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
+        val labelSet: mutable.Set[Byte] = scala.collection.mutable.Set()
+        val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
+          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+        bucketStream.foreach {
+          case (_, data) =>
+            val nonZeroData: Array[Byte] = filterBytes(data, byte => byte != 0x00)
+            labelSet ++= nonZeroData
+        }
+        mergedVolume.addLabelSet(labelSet)
+    }
+
+    tracingSelectors.zip(tracings).zipWithIndex.foreach {
+      case ((selector, tracing), sourceVolumeIndex) =>
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
         val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, data) =>
-            mergedVolume.add(bucketPosition, data)
+            mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
         }
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)

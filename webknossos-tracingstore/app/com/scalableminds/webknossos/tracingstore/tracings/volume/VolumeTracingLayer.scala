@@ -7,7 +7,10 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
-import com.scalableminds.webknossos.tracingstore.tracings.FossilDBClient
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  FossilDBClient,
+  TemporaryVolumeDataStore
+}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
@@ -18,6 +21,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     with FoxImplicits {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
+  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
 
   override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
@@ -31,13 +35,29 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     bucketStreamWithVersion(layer, resolution, version)
 }
 
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)
+  extends BucketProvider
+    with VolumeTracingBucketHelper
+    with FoxImplicits {
+
+  val volumeDataStore: FossilDBClient = layer.volumeDataStore
+  val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
+
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+    implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    loadBucket(layer, readInstruction.bucket, readInstruction.version)
+
+  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    bucketStreamFromCache(layer, resolution)
+}
+
 case class VolumeTracingLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
-)(implicit val volumeDataStore: FossilDBClient)
+)(implicit val volumeDataStore: FossilDBClient, implicit val volumeDataCache: TemporaryVolumeDataStore)
     extends SegmentationLayer {
 
   def lengthOfUnderlyingCubes(resolution: Point3D): Int = DataLayer.bucketLength
@@ -45,6 +65,8 @@ case class VolumeTracingLayer(
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
   val volumeBucketProvider: VolumeTracingBucketProvider = new VolumeTracingBucketProvider(this)
+
+  val temporaryBucketProvider: TemporaryVolumeTracingBucketProvider = new TemporaryVolumeTracingBucketProvider(this)
 
   val bucketProvider: BucketProvider = volumeBucketProvider
 

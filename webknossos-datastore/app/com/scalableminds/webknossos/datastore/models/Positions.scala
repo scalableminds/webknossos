@@ -18,7 +18,7 @@ class VoxelPosition(
   val z: Int = globalZ / resolution.z
 
   def toBucket: BucketPosition =
-    new BucketPosition(globalX, globalY, globalZ, resolution)
+    BucketPosition(globalX, globalY, globalZ, resolution)
 
   def move(dx: Int, dy: Int, dz: Int) =
     new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
@@ -69,13 +69,13 @@ case class BucketPosition(
   }
 
   def nextBucketInX: BucketPosition =
-    new BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
+    BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
 
   def nextBucketInY: BucketPosition =
-    new BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
+    BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
 
   def nextBucketInZ: BucketPosition =
-    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
+    BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
 
   def toHighestResBoundingBox: BoundingBox =
     new BoundingBox(Point3D(globalX, globalY, globalZ),

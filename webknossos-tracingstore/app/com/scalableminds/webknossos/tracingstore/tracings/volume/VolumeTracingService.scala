@@ -33,6 +33,7 @@ import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+    implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: RedisTemporaryStore,
     val uncommittedUpdatesStore: RedisTemporaryStore,
     val temporaryFileCreator: TemporaryFileCreator
@@ -74,7 +75,7 @@ class VolumeTracingService @Inject()(
             action match {
               case a: UpdateBucketVolumeAction =>
                 val resolution = math.pow(2, a.zoomStep).toInt
-                val bucket = new BucketPosition(a.position.x,
+                val bucket = BucketPosition(a.position.x,
                                                 a.position.y,
                                                 a.position.z,
                                                 Point3D(resolution, resolution, resolution))
@@ -164,7 +165,7 @@ class VolumeTracingService @Inject()(
     }
 
     val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-    mergedVolume.saveTo(destinationDataLayer, tracing.version)
+    mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
   }
 
   class MergedVolume {
@@ -183,11 +184,11 @@ class VolumeTracingService @Inject()(
         mergedVolume += ((bucketPosition, data))
       }
 
-    def saveTo(layer: VolumeTracingLayer, version: Long): Fox[Unit] =
+    def saveTo(layer: VolumeTracingLayer, version: Long, toCache: Boolean): Fox[Unit] =
       for {
         _ <- Fox.combined(mergedVolume.map {
           case (bucketPosition, bucketData) =>
-            saveBucket(layer, bucketPosition, bucketData, version)
+            saveBucket(layer, bucketPosition, bucketData, version, toCache)
         }.toList)
       } yield ()
   }
@@ -281,10 +282,14 @@ class VolumeTracingService @Inject()(
   def duplicateData(sourceId: String,
                     sourceTracing: VolumeTracing,
                     destinationId: String,
-                    destinationTracing: VolumeTracing) = {
+                    destinationTracing: VolumeTracing): Fox[Unit] = {
     val sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing)
     val destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
-    val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
+    val buckets: Iterator[(BucketPosition, Array[Byte])] =
+      if (temporaryTracingStore.find(sourceId).isDefined)
+        sourceDataLayer.temporaryBucketProvider.bucketStream(1)
+      else
+        sourceDataLayer.bucketProvider.bucketStream(1)
     for {
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
@@ -358,7 +363,8 @@ class VolumeTracingService @Inject()(
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
-                      newTracing: VolumeTracing): Fox[Unit] = {
+                      newTracing: VolumeTracing,
+                      toCache: Boolean): Fox[Unit] = {
     val mergedVolume = new MergedVolume
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
@@ -371,7 +377,7 @@ class VolumeTracingService @Inject()(
         }
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
-    mergedVolume.saveTo(destinationDataLayer, newTracing.version)
+    mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
   }
 
 }

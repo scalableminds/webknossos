@@ -27,6 +27,13 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map.values.toList
     }
 
+  def findAllConditionalWithKey(predicate: K => Boolean): collection.Set[(K, V)] =
+    map.synchronized {
+      map.keySet.filter(predicate).map {key =>
+        (key, map(key))
+      }
+    }
+
   def removeAll =
     map.synchronized {
       map.clear()

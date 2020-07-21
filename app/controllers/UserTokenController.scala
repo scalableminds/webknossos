@@ -147,9 +147,12 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
 
     for {
-      annotation <- Fox.failure("nope") ?~> "annotation.notFound"
+      annotation <- findAnnotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+      restrictions <- annotationInformationProvider.restrictionsFor(
+        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+      allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
     } yield {
-      UserAccessAnswer(true)
+      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
 }

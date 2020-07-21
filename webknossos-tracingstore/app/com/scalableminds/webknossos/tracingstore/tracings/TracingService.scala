@@ -41,7 +41,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
-  private val temporaryStoreTimeout = 10 minutes
+  private val temporaryStoreTimeout = 70 minutes
 
   // the information that a tracing is/was temporary needs to be stored longer
   // to provide useful error messages to the user if the temporary tracing is no longer present

@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
                                        val handledGroupIdStore: RedisTemporaryStore,
+                                       val temporaryTracingIdStore: RedisTemporaryStore,
                                        val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits

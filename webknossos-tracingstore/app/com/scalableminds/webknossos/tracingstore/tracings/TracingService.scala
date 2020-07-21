@@ -27,6 +27,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
+  def temporaryTracingIdStore: RedisTemporaryStore
+
   def tracingMigrationService: TracingMigrationService[T]
 
   val handledGroupIdStore: RedisTemporaryStore
@@ -41,6 +43,10 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
+  // the information that a tracing is/was temporary needs to be stored longer
+  // to provide useful error messages to the user if the temporary tracing is no longer present
+  private val temporaryIdStoreTimeout = 10 days
+
   def currentVersion(tracingId: String): Fox[Long]
 
   def currentVersion(tracing: T): Long
@@ -50,6 +56,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
                           transactionGroupindexOpt: Option[Int],
                           version: Long) =
     s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+
+  protected def temporaryIdKey(tracingId: String) =
+    s"temporaryTracingId___${tracingId}"
 
   def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
     transactionIdOpt match {
@@ -139,6 +148,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     val id = tracingId.getOrElse(generateTracingId)
     if (toCache) {
       temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
+      temporaryTracingIdStore.insert(temporaryIdKey(id), "", Some(temporaryIdStoreTimeout))
       Fox.successful(id)
     } else {
       tracingStore.put(id, version, tracing).map(_ => id)

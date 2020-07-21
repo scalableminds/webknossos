@@ -83,6 +83,8 @@ trait VolumeTracingBucketHelper
       .flatten
   }
 
+  def loadBucketFromCache(dataLayer: VolumeTracingLayer, bucket: BucketPosition) = {}
+
   def saveBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  data: Array[Byte],

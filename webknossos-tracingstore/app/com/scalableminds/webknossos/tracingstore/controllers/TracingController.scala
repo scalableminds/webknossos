@@ -86,13 +86,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   def get(tracingId: String, version: Option[Long]) = Action.async { implicit request =>
     log {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
-        AllowRemoteOrigin {
-          for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-          } yield {
-            Ok(tracing.toByteArray).as("application/x-protobuf")
-          }
+      AllowRemoteOrigin {
+        for {
+          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+        } yield {
+          Ok(tracing.toByteArray).as("application/x-protobuf")
         }
       }
     }

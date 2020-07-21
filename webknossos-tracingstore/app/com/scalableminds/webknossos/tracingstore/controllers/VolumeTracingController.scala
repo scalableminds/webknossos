@@ -4,6 +4,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
@@ -25,7 +26,7 @@ import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{PlayBodyParsers, Result}
 
 import scala.concurrent.ExecutionContext
 

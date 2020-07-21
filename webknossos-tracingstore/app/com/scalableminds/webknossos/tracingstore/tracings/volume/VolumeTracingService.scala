@@ -7,7 +7,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -47,10 +46,11 @@ trait FilterBytes {
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
+    implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: RedisTemporaryStore,
     val uncommittedUpdatesStore: RedisTemporaryStore,
+    val temporaryTracingIdStore: RedisTemporaryStore,
     val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
@@ -311,14 +311,18 @@ class VolumeTracingService @Inject()(
     zipResult
   }
 
+  def isTemporaryTracing(tracingId: String): Fox[Boolean] =
+    temporaryTracingIdStore.contains(temporaryIdKey(tracingId))
+
   def data(tracingId: String,
            tracing: VolumeTracing,
-           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] = {
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-
-    val requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
-    binaryDataService.handleDataRequests(requests)
-  }
+           dataRequests: DataRequestCollection): Fox[(Array[Byte], List[Int])] =
+    for {
+      isTemporaryTracing <- isTemporaryTracing(tracingId)
+      dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing)
+      requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
+      data <- binaryDataService.handleDataRequests(requests)
+    } yield data
 
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   def duplicate(tracingId: String,
@@ -343,45 +347,26 @@ class VolumeTracingService @Inject()(
   def duplicateData(sourceId: String,
                     sourceTracing: VolumeTracing,
                     destinationId: String,
-                    destinationTracing: VolumeTracing): Fox[Unit] = {
-    val sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing)
-    val destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
-    val buckets: Iterator[(BucketPosition, Array[Byte])] =
-      if (temporaryTracingStore.find(sourceId).isDefined)
-        sourceDataLayer.temporaryBucketProvider.bucketStream(1)
-      else
-        sourceDataLayer.bucketProvider.bucketStream(1)
+                    destinationTracing: VolumeTracing): Fox[Unit] =
     for {
+      isTemporaryTracing <- isTemporaryTracing(sourceId)
+      sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
+      destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
           saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
       }.toList)
     } yield ()
-  }
 
-  private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer =
-    VolumeTracingLayer(tracingId, tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
-
-  private def volumeTracingLayerWithFallback(tracingId: String,
-                                             tracing: VolumeTracing,
-                                             dataSource: DataSource): SegmentationLayer = {
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-    tracing.fallbackLayer
-      .flatMap(dataSource.getDataLayer)
-      .map {
-        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
-          new FallbackLayerAdapter(dataLayer, layer)
-        case _ =>
-          logger.error(
-            s"Fallback layer is not a segmentation layer and thus being ignored. " +
-              s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
-          dataLayer
-      }
-      .getOrElse(dataLayer)
-  }
-
-  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] =
-    find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
+  private def volumeTracingLayer(tracingId: String,
+                                 tracing: VolumeTracing,
+                                 isTemporaryTracing: Boolean = false): VolumeTracingLayer =
+    VolumeTracingLayer(tracingId,
+                       tracing.boundingBox,
+                       tracing.elementClass,
+                       tracing.largestSegmentId,
+                       isTemporaryTracing)
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =

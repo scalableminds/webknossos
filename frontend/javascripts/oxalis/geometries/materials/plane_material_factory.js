@@ -298,6 +298,9 @@ class PlaneMaterialFactory {
         fragmentShader: this.getFragmentShader(),
       }),
     );
+    this.material.extensions = {
+      derivatives: true,
+    };
 
     shaderEditor.addMaterial(this.shaderId, this.material);
 

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, List } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -281,7 +281,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           elementClass,
         )}
         {isDisabled ? null : (
-          <React.Fragment>
+          <div style={{ marginBottom: 30 }}>
             {isHistogramSupported(elementClass) && layerName != null && isColorLayer
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
@@ -293,7 +293,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
             {isColorLayer ? (
-              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+              <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
                 </Col>
@@ -318,7 +318,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                       style={{
                         position: "absolute",
                         top: 0,
-                        right: -9,
+                        right: -15,
+                        marginTop: 0,
                         display: "inline-flex",
                       }}
                     >
@@ -353,7 +354,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
-          </React.Fragment>
+          </div>
         )}
       </div>
     );
@@ -442,12 +443,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          <List
-            itemLayout="vertical"
-            dataSource={layerSettings}
-            split
-            renderItem={item => <List.Item>{item}</List.Item>}
-          />
+          {layerSettings}
         </Panel>
         <Panel header="Data Rendering" key="3">
           <DropdownSetting

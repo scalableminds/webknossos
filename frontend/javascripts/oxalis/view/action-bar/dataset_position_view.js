@@ -125,11 +125,7 @@ class DatasetPositionView extends PureComponent<Props> {
         ) : null}
       </div>
     );
-    return maybeErrorMessage ? (
-      <Tooltip title={maybeErrorMessage}>{positionView}</Tooltip>
-    ) : (
-      positionView
-    );
+    return <Tooltip title={maybeErrorMessage || null}>{positionView}</Tooltip>;
   }
 }
 

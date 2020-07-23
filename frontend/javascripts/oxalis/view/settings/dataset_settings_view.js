@@ -281,7 +281,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           elementClass,
         )}
         {isDisabled ? null : (
-          <div style={{ marginBottom: 30 }}>
+          <div style={{ marginBottom: 30, marginLeft: 10 }}>
             {isHistogramSupported(elementClass) && layerName != null && isColorLayer
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
@@ -318,7 +318,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                       style={{
                         position: "absolute",
                         top: 0,
-                        right: -15,
+                        right: -9,
                         marginTop: 0,
                         display: "inline-flex",
                       }}

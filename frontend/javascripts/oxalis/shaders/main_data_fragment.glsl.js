@@ -70,6 +70,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform vec4 activeCellId;
   uniform bool isMouseInActiveViewport;
   uniform float activeVolumeToolIndex;
+  uniform float segmentationPatternOpacity;
 
   <% if (isMappingSupported) { %>
     uniform bool isMappingEnabled;

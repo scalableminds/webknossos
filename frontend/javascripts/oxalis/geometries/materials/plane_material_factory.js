@@ -159,6 +159,10 @@ class PlaneMaterialFactory {
         type: "f",
         value: 0,
       },
+      segmentationPatternOpacity: {
+        type: "f",
+        value: 40,
+      },
       activeCellId: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
@@ -475,6 +479,16 @@ class PlaneMaterialFactory {
           storeState => storeState.userConfiguration.brushSize,
           brushSize => {
             this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.datasetConfiguration.segmentationPatternOpacity,
+          segmentationPatternOpacity => {
+            this.uniforms.segmentationPatternOpacity.value = segmentationPatternOpacity;
           },
           true,
         ),

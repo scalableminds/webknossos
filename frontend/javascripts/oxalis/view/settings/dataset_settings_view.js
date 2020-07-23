@@ -11,6 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
+import { settings as settingsLabels } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -353,6 +354,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
+            {!isColorLayer && (
+              <NumberSliderSetting
+                label={settingsLabels.segmentationPatternOpacity}
+                min={0}
+                max={100}
+                step={1}
+                value={this.props.datasetConfiguration.segmentationPatternOpacity}
+                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+              />
+            )}
           </React.Fragment>
         )}
       </div>

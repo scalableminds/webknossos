@@ -8,8 +8,9 @@ export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
 
-    // https://www.shadertoy.com/view/wtjGzt
-    float aastep(float x) {     // --- antialiased step(.5)
+    // Antialiased step
+    // See: https://www.shadertoy.com/view/wtjGzt
+    float aa_step(float x) {     //
         float w = fwidth(x);    // pixel width. NB: x must not be discontinuous or factor discont out
         return smoothstep(.7,-.7,(abs(fract(x-.25)-.5)-.25)/w); // just use (offseted) smooth squares
     }
@@ -18,22 +19,37 @@ export const convertCellIdToRGB: ShaderModule = {
         return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
     }
 
+    // Seeds should be tested manually to guarantee a good permutation for
+    // a specific sequenceLength
+    float getElementOfPermutation(float index, float sequenceLength, float seed) {
+      float oneBasedIndex = index + 1.0; // Alternatively: (mod(index, sequenceLength) + 1.0);
+      float fraction = mod(oneBasedIndex * seed, 1.0);
+      return ceil(fraction * sequenceLength);
+    }
 
     vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
+      float square_root_two = 1.41421;
       float lastEightBits = id.r;
-      float value = mod( lastEightBits * golden_ratio, 1.0);
+      float significantSegmentIndex = 255.0 * id.g + id.r;
+
+      float colorCount = 17.;
+      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, square_root_two);
+      float colorValue = 1.0 / colorCount * colorIndex;
+
+      // Old colorValue calculation
+      // colorValue = mod(lastEightBits * golden_ratio, 1.0);
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized
-        // value of -1, no mapping colors have been specified
+        // colorValue of -1, no mapping colors have been specified
         bool hasCustomMappingColors = getRgbaAtIndex(
           <%= segmentationName %>_mapping_color_texture,
           <%= mappingColorTextureWidth %>,
           0.0
         ).r != -1.0;
         if (isMappingEnabled && hasCustomMappingColors) {
-          value = getRgbaAtIndex(
+          colorValue = getRgbaAtIndex(
             <%= segmentationName %>_mapping_color_texture,
             <%= mappingColorTextureWidth %>,
             lastEightBits
@@ -43,26 +59,29 @@ export const convertCellIdToRGB: ShaderModule = {
 
       vec3 worldCoordUVW = 1.0 / 10.0 * getWorldCoordUVW();
 
-      // anti aliasing
       vec2 worldCoordUV = vec2(worldCoordUVW.x, worldCoordUVW.y);
-      float dp = length(vec2(abs(dFdx(worldCoordUV.x)), abs(dFdy(worldCoordUV.y))));
-      float Frequency = 0.5;
-      float edge = dp * Frequency * 2.0;
 
+      float angleCount = 19.;
+      float angleSeed = 0.618033988749895;
+      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, angleSeed);
 
-      float pos = mix(
-        worldCoordUVW.x,
-        worldCoordUVW.y,
-        floor(rand(id.rg) * 10.) / 10.0
-        // floor((lastEightBits) / (255. / 10.)) / 10.0
+      // When zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
+      // zoomStep compensates this.
+      float stripe_value = mix(
+        worldCoordUVW.x / (zoomStep + 1.0),
+        worldCoordUVW.y / (zoomStep + 1.0),
+        angle
+      );
+      float aa_stripe_value = aa_step(stripe_value);
+
+      vec4 HSV = vec4(
+        colorValue,
+        1.0 - aa_stripe_value * segmentationPatternOpacity / 100.0,
+        1.0,
+        1.0
       );
 
-
-      float stripe_value = aastep(pos);
-
-      vec4 HSV = vec4( value, 0.5 + mod(lastEightBits / 2.0, 1.0), 1.0, 1.0 );
-      return mix(hsvToRgb(HSV).xyz, vec3(stripe_value), 0.5);
-      return hsvToRgb(HSV);
+      return hsvToRgb(HSV).xyz;
     }
   `,
 };

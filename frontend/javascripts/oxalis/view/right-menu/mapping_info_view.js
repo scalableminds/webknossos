@@ -83,7 +83,6 @@ export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): A
 
   const last8Bits = id % 2 ** 8;
   const last16Bits = id % 2 ** 16;
-  const goldenRatio = 0.618033988749895;
 
   const colorCount = 17;
   const colorSeed = 1.41421;

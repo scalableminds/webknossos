@@ -307,7 +307,10 @@ See the following example for reference:
 
 ```
 
-TODO: Explain format
+Each NML contains some metadata about the tracing inside the `parameters`-tag. An example of important metadata is the dataset name inside the `experiment`-tag and the scale of the dataset saved in the `scale`-tag.
+The trees of the skeleton have their own `thing`-tag containing a list of nodes and edges of that tree.
+The comments of the skeleton are saved in a separate list and refer to their corresponding nodes by id.
+The structure of the tree groups is listed inside the `groups`-tag. Here groups can be freely nested inside each other.
 
 ## Dataset Metadata Specification
 

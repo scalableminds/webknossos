@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Changed
-- 
+- Disabled the autofill feature of the brush when using this tool to erase data. [#4729](https://github.com/scalableminds/webknossos/pull/4729)
 
 ### Fixed
 - 

@@ -66,6 +66,14 @@ type State = {
   didRefreshMappingList: boolean,
 };
 
+function getElementOfPermutation(index: number, sequenceLength: number, seed: number): number {
+  // The index should not be modded with the sequenceLength if one wants to
+  // better utilize an index domain which is larger than sequenceLength.
+  const oneBasedIndex = index + 1.0;
+  const fraction = (oneBasedIndex * seed) % 1.0;
+  return Math.ceil(fraction * sequenceLength);
+}
+
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
 export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
   if (id === 0) {
@@ -73,10 +81,16 @@ export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): A
     return [1, 1, 1, 1];
   }
 
+  const last8Bits = id % 2 ** 8;
+  const last16Bits = id % 2 ** 16;
   const goldenRatio = 0.618033988749895;
-  const lastEightBits = id & (2 ** 8 - 1);
-  const computedColor = (lastEightBits * goldenRatio) % 1.0;
-  const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
+
+  const colorCount = 17;
+  const colorSeed = 1.41421;
+  const colorIndex = getElementOfPermutation(last16Bits, colorCount, colorSeed);
+  const colorValue = (1.0 / colorCount) * colorIndex;
+
+  const value = customColors != null ? customColors[last8Bits] || 0 : colorValue;
 
   return [value, 1, 0.5, 0.15];
 };

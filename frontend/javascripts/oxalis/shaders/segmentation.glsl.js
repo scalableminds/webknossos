@@ -8,37 +8,54 @@ export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
 
-    // Antialiased step
-    // See: https://www.shadertoy.com/view/wtjGzt
-    float aa_step(float x) {     //
-        float w = fwidth(x);    // pixel width. NB: x must not be discontinuous or factor discont out
-        return smoothstep(.7,-.7,(abs(fract(x-.25)-.5)-.25)/w); // just use (offseted) smooth squares
+    /*
+      Antialiased step function.
+      Parameter x must not be discontinuous
+
+      See: https://www.shadertoy.com/view/wtjGzt
+    */
+    float aa_step(float x) {
+        float w = fwidth(x);    // pixel width
+        return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
     }
 
-    float rand(vec2 co){
-        return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
-    }
+    /*
+      getElementOfPermutation produces a poor-man's permutation of the numbers
+      [1, ..., sequenceLength] and returns the index-th element.
+      The "permutation" is generated using a seed which should be tested manually
+      to ensure a good-enough permutation.
 
-    // Seeds should be tested manually to guarantee a good permutation for
-    // a specific sequenceLength
+      To achieve a diverse combination with little collisions, multiple, dependent
+      usages of getElementOfPermutation should use a sequenceLength which is prime
+      and unique. Refer to this super-dirty code when in need:
+        https://gist.github.com/philippotto/88487cddcff049c2aac70b69041efacf
+
+      Seeds should be tested manually to guarantee a good permutation for
+      a specific sequenceLength.
+
+      Good seeds for different sequenceLengths are:
+      sequenceLength=13.0, seed=0.618033988749895) --> "Perfect" permutation
+      sequenceLength=17.0, seed=1.41421            --> "Perfect" permutation
+      sequenceLength=19.0, seed=0.618033988749895  --> 1 collision (Utilization 94.74%)
+    */
     float getElementOfPermutation(float index, float sequenceLength, float seed) {
-      float oneBasedIndex = index + 1.0; // Alternatively: (mod(index, sequenceLength) + 1.0);
+      // The index should not be modded with the sequenceLength if one wants to
+      // better utilize an index domain which is larger than sequenceLength.
+      float oneBasedIndex = index + 1.0;
       float fraction = mod(oneBasedIndex * seed, 1.0);
       return ceil(fraction * sequenceLength);
     }
 
     vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
-      float square_root_two = 1.41421;
       float lastEightBits = id.r;
-      float significantSegmentIndex = 255.0 * id.g + id.r;
+      float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 17.;
-      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, square_root_two);
+      float colorSeed = 1.41421;
+      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, colorSeed);
       float colorValue = 1.0 / colorCount * colorIndex;
-
-      // Old colorValue calculation
-      // colorValue = mod(lastEightBits * golden_ratio, 1.0);
+      // For historical reference: the old color generation was: colorValue = mod(lastEightBits * golden_ratio, 1.0);
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized
@@ -57,19 +74,19 @@ export const convertCellIdToRGB: ShaderModule = {
         }
       <% } %>
 
-      vec3 worldCoordUVW = 1.0 / 10.0 * getWorldCoordUVW();
-
-      vec2 worldCoordUV = vec2(worldCoordUVW.x, worldCoordUVW.y);
+      // Scale world coordinates for a pleasant coordinate frequency.
+      // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
+      // zoomStep compensates this.
+      float coordScaling = 0.1;
+      vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / (zoomStep + 1.0);
 
       float angleCount = 19.;
       float angleSeed = 0.618033988749895;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, angleSeed);
 
-      // When zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
-      // zoomStep compensates this.
       float stripe_value = mix(
-        worldCoordUVW.x / (zoomStep + 1.0),
-        worldCoordUVW.y / (zoomStep + 1.0),
+        worldCoordUVW.x,
+        worldCoordUVW.y,
         angle
       );
       float aa_stripe_value = aa_step(stripe_value);

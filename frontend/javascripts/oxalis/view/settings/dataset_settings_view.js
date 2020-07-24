@@ -244,7 +244,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
-      <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
+      <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>

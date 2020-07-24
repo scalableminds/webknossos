@@ -230,7 +230,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           }}
           width={canvasWidth}
           height={canvasHeight}
-          style={{ marginTop: -13 }}
         />
         <Slider
           range

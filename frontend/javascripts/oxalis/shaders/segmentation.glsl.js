@@ -46,6 +46,14 @@ export const convertCellIdToRGB: ShaderModule = {
       return ceil(fraction * sequenceLength);
     }
 
+    vec3 colormapJet(float x) {
+      vec3 result;
+      result.r = x < 0.89 ? ((x - 0.35) / 0.31) : (1.0 - (x - 0.89) / 0.11 * 0.5);
+      result.g = x < 0.64 ? ((x - 0.125) * 4.0) : (1.0 - (x - 0.64) / 0.27);
+      result.b = x < 0.34 ? (0.5 + x * 0.5 / 0.11) : (1.0 - (x - 0.34) / 0.31);
+      return clamp(result, 0.0, 1.0);
+    }
+
     vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
       float lastEightBits = id.r;
@@ -98,7 +106,7 @@ export const convertCellIdToRGB: ShaderModule = {
         1.0
       );
 
-      return hsvToRgb(HSV).xyz;
+      return colormapJet(lastEightBits / 255.0);
     }
   `,
 };

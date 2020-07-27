@@ -18,6 +18,7 @@ import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, Result}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
@@ -30,6 +31,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                    conf: WkConf,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -118,6 +120,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
+        _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
           GlobalAccessContext) ?~> "datasource.notFound"
         user <- userBox.toFox ?~> "auth.token.noUser"

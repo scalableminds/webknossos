@@ -24,6 +24,7 @@ import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
+import features from "features";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
 import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
@@ -528,7 +529,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   </Hideable>
                 </TabPane>
 
-                {isUserAdmin ? (
+                {isUserAdmin && features().allowDeleteDatasets ? (
                   <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
                     <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
                       <DatasetCacheProvider>

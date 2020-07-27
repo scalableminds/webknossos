@@ -158,6 +158,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
   ),
+  "dataset.delete_success": _.template(
+    "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
+  ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",

@@ -82,27 +82,41 @@ export const convertCellIdToRGB: ShaderModule = {
         }
       <% } %>
 
+
       // Scale world coordinates for a pleasant coordinate frequency.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
       // zoomStep compensates this.
-      float coordScaling = 0.1;
+      float coordScaling = 0.25 * mix(1., 2., mod(significantSegmentIndex, 2.));
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / (zoomStep + 1.0);
+
+      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+      vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
+      worldCoordUVW.x = worldCoordUVW.x * datasetScaleUVW.x;
+      worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
 
       float angleCount = 19.;
       float angleSeed = 0.618033988749895;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, angleSeed);
 
-      float stripe_value = mix(
+      float stripe_value_a = mix(
         worldCoordUVW.x,
         worldCoordUVW.y,
         angle
       );
-      float aa_stripe_value = aa_step(stripe_value);
+      float stripe_value_b = mix(
+        worldCoordUVW.x,
+        -worldCoordUVW.y,
+        1.0 - angle
+      );
+      float use_grid = step(mod(significantSegmentIndex * 1.81893, 1.0), 0.5);
+      float aa_stripe_value_a = aa_step(stripe_value_a);
+      float aa_stripe_value_b = aa_step(stripe_value_b);
+      float aa_stripe_value = 1.0 - max(aa_stripe_value_a, use_grid * aa_stripe_value_b);
 
       vec4 HSV = vec4(
         colorValue,
-        1.0 - aa_stripe_value * segmentationPatternOpacity / 100.0,
-        1.0,
+        1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
+        1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
         1.0
       );
 

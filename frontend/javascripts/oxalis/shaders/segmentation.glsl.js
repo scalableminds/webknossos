@@ -107,7 +107,7 @@ export const convertCellIdToRGB: ShaderModule = {
 
       vec4 HSV = vec4(
         colorValue,
-        1.0,
+        1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
         1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
         1.0
       );

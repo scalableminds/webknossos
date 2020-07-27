@@ -113,14 +113,18 @@ export const convertCellIdToRGB: ShaderModule = {
       float aa_stripe_value_b = aa_step(stripe_value_b);
       float aa_stripe_value = 1.0 - max(aa_stripe_value_a, use_grid * aa_stripe_value_b);
 
-      vec4 HSV = vec4(
-        colorValue,
-        1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
-        1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
-        1.0
-      );
+      // vec4 HSV = vec4(
+      //   colorValue,
+      //   1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
+      //   1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
+      //   1.0
+      // );
 
-      return colormapJet(lastEightBits / 255.0);
+      vec4 HSV = vec4(rgb2hsv(colormapJet(lastEightBits / 255.0)), 1.0);
+      HSV.y = 1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0);
+      HSV.z = 1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0);
+
+      return hsvToRgb(HSV);
     }
   `,
 };

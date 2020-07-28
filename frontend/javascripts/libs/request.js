@@ -242,8 +242,8 @@ class Request {
       }
     }
 
-    fetchPromise = fetchPromise.catch(
-      this.handleError.bind(this, url, options.showErrorToast, !options.doNotInvestigate),
+    fetchPromise = fetchPromise.catch(error =>
+      this.handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
     );
 
     if (options.timeout != null) {

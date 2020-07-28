@@ -17,6 +17,7 @@ import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
+import Toast from "libs/toast";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
@@ -146,21 +147,33 @@ export async function requestFromStore(
   );
 
   return doWithToken(async token => {
-    const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataUrl}/data?token=${token}`,
-      {
-        data: bucketInfo,
-        timeout: REQUEST_TIMEOUT,
-      },
-    );
-    const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+    try {
+      const stuff = await Request.sendJSONReceiveArraybufferWithHeaders(
+        `${dataUrl}/data?token=${token}`,
+        {
+          data: bucketInfo,
+          timeout: REQUEST_TIMEOUT,
+          showErrorToast: false,
+          doNotInvestigate: true,
+        },
+      );
+      const { buffer: responseBuffer, headers } = stuff;
+      const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
 
-    let resultBuffer = responseBuffer;
-    if (fourBit) {
-      resultBuffer = await decodeFourBit(resultBuffer);
+      let resultBuffer = responseBuffer;
+      if (fourBit) {
+        resultBuffer = await decodeFourBit(resultBuffer);
+      }
+
+      return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
+    } catch (errorResponse) {
+      const errorMessage = `Requesting buckets from layer "${layerInfo.name}" failed with code ${
+        errorResponse.status
+      } - "${errorResponse.statusText}" . URL - ${dataUrl}`;
+      console.error(errorMessage);
+      console.error(errorResponse);
+      Toast.error(errorMessage);
     }
-
-    return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
   });
 }
 

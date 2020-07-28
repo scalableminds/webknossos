@@ -1,6 +1,6 @@
 // @flow
 import {
-  headersTransferHandler,
+  requestOptionsTransferHandler,
   throwTransferHandlerWithResponseSupport,
 } from "oxalis/workers/headers_transfer_handler";
 
@@ -27,7 +27,7 @@ const { wrap, transferHandlers, _expose } = importComlink();
 // not from another file. Otherwise, callers would need to register the handler
 // in the main thread as well as in the web worker.
 // Since this wrapper is imported from both sides, the handlers are also registered on both sides.
-transferHandlers.set("Headers", headersTransferHandler);
+transferHandlers.set("requestOptions", requestOptionsTransferHandler);
 // Overwrite the default throw handler with ours that supports responses.
 transferHandlers.set("throw", throwTransferHandlerWithResponseSupport);
 

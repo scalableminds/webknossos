@@ -1,30 +1,48 @@
 // @flow
+import type { RequestOptionsBase } from "libs/request";
 
-export const headersTransferHandler = {
+type SerializedHeaders = Array<[string, string]>;
+type RequestOptionsWithParsedHeaders = RequestOptionsBase<Headers>;
+type SerializedRequestOptions = RequestOptionsBase<SerializedHeaders>;
+
+export const requestOptionsTransferHandler = {
   canHandle(obj: any) {
     return obj != null && !(obj instanceof Response) && obj.headers instanceof Headers;
   },
-  serialize(obj: Object): Object {
-    if (obj.headers != null) {
-      const clone = Object.assign({}, obj);
-      clone.headers = Array.from(obj.headers.entries());
-      return [clone, []];
+  serialize(obj: RequestOptionsWithParsedHeaders): [SerializedRequestOptions, []] {
+    const clone = Object.assign({}, obj);
+    if (obj.headers && clone.headers) {
+      const headers: Array<[string, string]> = Array.from(obj.headers.entries());
+      clone.headers = headers;
     }
-    console.log("This should not happen");
-    throw new Error("wahhhhh :/");
+    const cloneWithCorrectType = ((clone: any): SerializedRequestOptions);
+    return [cloneWithCorrectType, []];
   },
-  deserialize(options: Object): Object {
-    if (options.headers == null) {
-      console.log("This should not happen2");
-      throw new Error("wahhhhh :/ 2");
-    }
+  deserialize(options: SerializedRequestOptions): RequestOptionsWithParsedHeaders {
     const clone = Object.assign({}, options);
     const headers = new Headers();
-    for (const [key, value] of options.headers) {
-      headers.set(key, value);
+    if (options.headers) {
+      for (const [key, value] of options.headers) {
+        headers.set(key, value);
+      }
     }
     clone.headers = headers;
-    return clone;
+    const cloneWithCorrectType = ((clone: any): RequestOptionsWithParsedHeaders);
+    return cloneWithCorrectType;
+  },
+};
+
+type SerializedErrorOrResponse = {
+  isError: boolean,
+  value?: {
+    message: string,
+    name: string,
+    stack: string,
+  },
+  response?: {
+    status: number,
+    statusText: string,
+    headers: SerializedHeaders,
   },
 };
 
@@ -34,7 +52,7 @@ export const throwTransferHandlerWithResponseSupport = {
   canHandle(obj: any) {
     return obj != null && (obj.value instanceof Error || obj.value instanceof Response);
   },
-  serialize({ value }: { value: Error | Response }) {
+  serialize({ value }: { value: Error | Response }): [SerializedErrorOrResponse, []] {
     let serialized;
     if (value instanceof Error) {
       serialized = {
@@ -57,8 +75,8 @@ export const throwTransferHandlerWithResponseSupport = {
       return [{ response: clone, isError: true }, []];
     }
   },
-  deserialize(serialized) {
-    if (serialized.isError && serialized.response == null) {
+  deserialize(serialized: SerializedErrorOrResponse) {
+    if (serialized.isError && serialized.value != null) {
       throw Object.assign(new Error(serialized.value.message), serialized.value);
     } else if (serialized.isError && serialized.response != null) {
       const options = {

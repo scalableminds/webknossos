@@ -167,12 +167,17 @@ export async function requestFromStore(
 
       return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
     } catch (errorResponse) {
-      const errorMessage = `Requesting buckets from layer "${layerInfo.name}" failed with code ${
-        errorResponse.status
-      } - "${errorResponse.statusText}" . URL - ${dataUrl}`;
-      console.error(errorMessage);
+      const errorMessage = `Requesting buckets from layer "${
+        layerInfo.name
+      }" failed with status code ${errorResponse.status} - "${errorResponse.statusText}".`;
+      const urlAsString = `URL - ${dataUrl}`;
+      console.error(`${errorMessage} ${urlAsString}`);
       console.error(errorResponse);
-      Toast.error(errorMessage);
+      Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
+        sticky: true,
+        key: errorMessage,
+      });
+      return batch.map(_val => null);
     }
   });
 }

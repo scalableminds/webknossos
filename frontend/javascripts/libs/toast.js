@@ -2,7 +2,7 @@
 import { notification, Icon, Collapse } from "antd";
 import React from "react";
 
-const Panel = Collapse.Panel;
+const { Panel } = Collapse;
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = { success?: string, error?: string, chain?: string };
@@ -31,7 +31,12 @@ const Toast = {
     });
   },
 
-  renderDetailedErrorMessage(errorString: string, errorChain: string): void {
+  renderDetailedErrorMessage(
+    errorString: string,
+    errorChain: string,
+    config: ToastConfig = {},
+  ): void {
+    config.sticky = config.sticky || true;
     this.error(
       <div>
         {errorString}
@@ -48,7 +53,7 @@ const Toast = {
           </Panel>
         </Collapse>
       </div>,
-      { sticky: true },
+      config,
     );
   },
 

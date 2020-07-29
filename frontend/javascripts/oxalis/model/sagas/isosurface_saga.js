@@ -8,9 +8,10 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type {
-  ImportIsosurfaceFromStlAction,
-  RemoveIsosurfaceAction,
+import {
+  removeIsosurfaceAction,
+  type ImportIsosurfaceFromStlAction,
+  type RemoveIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
@@ -33,9 +34,11 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
+const modifiedCells: Set<number> = new Set();
 
 export function isIsosurfaceStl(buffer: ArrayBuffer): boolean {
   const dataView = new DataView(buffer);
@@ -127,8 +130,9 @@ function* getCurrentCellId(): Saga<number> {
 function* ensureSuitableIsosurface(
   maybeFlycamAction: ?FlycamAction,
   seedPosition?: Vector3,
+  cellId?: number,
 ): Saga<void> {
-  const segmentId = currentViewIsosurfaceCellId;
+  const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
   if (segmentId === 0) {
     return;
   }
@@ -296,6 +300,37 @@ function* removeIsosurface(action: RemoveIsosurfaceAction): Saga<void> {
   }
 }
 
+function* refreshIsosurfaces(): Saga<void> {
+  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
+  if (!renderIsosurfaces) {
+    return;
+  }
+  // We reload all cells that got modified till the start of reloading.
+  // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
+  const currentlyModifiedCells = new Set(modifiedCells);
+  modifiedCells.clear();
+  // We first create an array containing information about all loaded isosurfaces as the map is manipulated within the loop.
+  for (const [cellId, threeDMap] of Array.from(isosurfacesMap.entries())) {
+    if (!currentlyModifiedCells.has(cellId)) {
+      continue;
+    }
+    // debugger;
+    const possibleEntry = threeDMap.entries().find(([value, _position]) => value);
+    if (!possibleEntry) {
+      return;
+    }
+    const [, possibleSeedPosition] = possibleEntry;
+    yield* put(removeIsosurfaceAction(cellId));
+    // Reload the Isosurface.
+    yield* call(ensureSuitableIsosurface, null, possibleSeedPosition, cellId);
+  }
+}
+
+function* noteEveryEditedCell(): Saga<void> {
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  modifiedCells.add(activeCellId);
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
@@ -303,4 +338,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
+  yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
+  yield _takeEvery("START_EDITING", noteEveryEditedCell);
 }

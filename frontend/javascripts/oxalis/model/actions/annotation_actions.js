@@ -70,6 +70,10 @@ export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
 };
 
+export type RefreshIsosurfacesAction = {
+  type: "REFRESH_ISOSURFACES",
+};
+
 export type ImportIsosurfaceFromStlAction = {
   type: "IMPORT_ISOSURFACE_FROM_STL",
   buffer: ArrayBuffer,
@@ -93,6 +97,7 @@ export type AnnotationActionTypes =
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
   | TriggerIsosurfaceDownloadAction
+  | RefreshIsosurfacesAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction;
 
@@ -175,6 +180,10 @@ export const createMeshFromBufferAction = (
 
 export const triggerIsosurfaceDownloadAction = (): TriggerIsosurfaceDownloadAction => ({
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+});
+
+export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
+  type: "REFRESH_ISOSURFACES",
 });
 
 export const importIsosurfaceFromStlAction = (

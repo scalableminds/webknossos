@@ -45,6 +45,7 @@ const StoreMock = {
 
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
+mockRequire("libs/toast", { renderDetailedErrorMessage: _.noop });
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
 const { requestWithFallback, sendToStore } = mockRequire.reRequire(

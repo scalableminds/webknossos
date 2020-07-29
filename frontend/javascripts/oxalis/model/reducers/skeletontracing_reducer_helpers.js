@@ -72,8 +72,10 @@ function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
 }
 
 export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
-  const maxTreeId = _.max(_.map(trees, "treeId"));
-  return maxTreeId != null ? maxTreeId : Constants.MIN_TREE_ID - 1;
+  return Object.values(trees).reduce(
+    (maxId, tree) => (tree.treeId > maxId ? tree.treeId : maxId),
+    Constants.MIN_TREE_ID - 1,
+  );
 }
 
 function getNearestTreeId(treeId: number, trees: TreeMap): number {

@@ -216,9 +216,15 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
-  const dim = Dimensions.getIndices(activeViewport)[2];
-  const direction = spaceDirectionOrtho[dim];
+  let direction = 1;
+  const useDynamicSpaceDirection = yield* select(
+    state => state.userConfiguration.dynamicSpaceDirection,
+  );
+  if (useDynamicSpaceDirection) {
+    const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
+    const dim = Dimensions.getIndices(activeViewport)[2];
+    direction = spaceDirectionOrtho[dim];
+  }
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;

@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.07.0...HEAD)
 
 ### Added
--
+- Added the possibility to delete datasets on disk from webKnossos. Use with care. [#4696]()(https://github.com/scalableminds/webknossos/pull/4696)
 
 ### Changed
 - Disabled the autofill feature of the brush when using this tool to erase data. [#4729](https://github.com/scalableminds/webknossos/pull/4729)

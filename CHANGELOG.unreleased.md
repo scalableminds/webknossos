@@ -18,7 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Disabled the autofill feature of the brush when using this tool to erase data. [#4729](https://github.com/scalableminds/webknossos/pull/4729)
 
 ### Fixed
-- 
+- Speed up NML import in existing tracings for NMLs with many trees (20,000+). [#4742](https://github.com/scalableminds/webknossos/pull/4742)
 
 ### Removed
 -

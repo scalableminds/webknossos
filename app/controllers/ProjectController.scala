@@ -51,15 +51,6 @@ class ProjectController @Inject()(projectService: ProjectService,
       Ok(Json.toJson(js))
     }
   }
-  
-  def projectsForTaskType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
-      js <- Fox.serialCombined(projects)(p => projectService.publicWrites(p))
-    } yield {
-      Ok(Json.toJson(js))
-    }
-  }
 
   def read(projectName: String) = sil.SecuredAction.async { implicit request =>
     for {
@@ -129,6 +120,15 @@ class ProjectController @Inject()(projectService: ProjectService,
     } yield {
       Ok(js)
     }
+
+  def projectsForTaskType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
+      js <- Fox.serialCombined(projects)(p => projectService.publicWrites(p))
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
 
   def tasksForProject(projectName: String,
                       limit: Option[Int] = None,

@@ -794,15 +794,17 @@ export function parseNml(
       .on("end", () => {
         // Split potentially unconnected trees
         const originalTreeIds = Object.keys(trees);
+        let maxTreeId = getMaximumTreeId(trees);
         for (const treeId of originalTreeIds) {
           const tree = trees[Number(treeId)];
-          const maxTreeId = getMaximumTreeId(trees);
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
-          if (_.size(newTrees) > 1) {
+          const newTreesSize = _.size(newTrees);
+          if (newTreesSize > 1) {
             delete trees[tree.treeId];
             for (const newTree of newTrees) {
               trees[newTree.treeId] = newTree;
             }
+            maxTreeId += newTreesSize;
           }
         }
         resolve({ trees, treeGroups, datasetName, userBoundingBoxes });

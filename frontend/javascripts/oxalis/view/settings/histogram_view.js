@@ -241,7 +241,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           onAfterChange={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tipFormatter={this.tipFormatter}
-          style={{ width: canvasWidth, margin: 0, marginBottom: 18 }}
+          style={{ width: canvasWidth, margin: 0, marginBottom: 6 }}
         />
         {isInEditMode ? (
           <Row type="flex" align="middle">

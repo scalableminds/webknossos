@@ -85,6 +85,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const contourTracingMode = yield* select(
       state => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
+    const isDrawing =
+      contourTracingMode === ContourModeEnum.DRAW_OVERWRITE ||
+      contourTracingMode === ContourModeEnum.DRAW;
 
     // Volume tracing for higher zoomsteps is currently not allowed
     if (yield* select(state => isVolumeTracingDisallowed(state))) {
@@ -118,7 +121,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         // if the current viewport does not match the initial viewport -> dont draw
         continue;
       }
-      if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
+      if (
+        activeTool === VolumeToolEnum.TRACE ||
+        (activeTool === VolumeToolEnum.BRUSH && isDrawing)
+      ) {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
@@ -210,9 +216,15 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
-  const dim = Dimensions.getIndices(activeViewport)[2];
-  const direction = spaceDirectionOrtho[dim];
+  let direction = 1;
+  const useDynamicSpaceDirection = yield* select(
+    state => state.userConfiguration.dynamicSpaceDirection,
+  );
+  if (useDynamicSpaceDirection) {
+    const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
+    const dim = Dimensions.getIndices(activeViewport)[2];
+    direction = spaceDirectionOrtho[dim];
+  }
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;

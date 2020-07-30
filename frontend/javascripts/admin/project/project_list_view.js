@@ -51,7 +51,7 @@ type State = {
   searchQuery: string,
   isTransferTasksVisible: boolean,
   selectedProject: ?APIProjectWithAssignments,
-  taskTypeName: string,
+  taskTypeName: ?string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -92,8 +92,10 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     let projects;
     let taskTypeName = null;
     if (this.props.taskTypeId) {
-      projects = await getProjectsForTaskType(this.props.taskTypeId);
-      taskTypeName = await getTaskType(this.props.taskTypeId);
+      [projects, taskTypeName] = await Promise.all([
+        getProjectsForTaskType(this.props.taskTypeId),
+        getTaskType(this.props.taskTypeId),
+      ]);
     } else {
       projects = await getProjectsWithOpenAssignments();
     }

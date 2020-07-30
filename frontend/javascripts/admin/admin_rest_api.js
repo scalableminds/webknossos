@@ -306,6 +306,13 @@ export async function getProjectsWithOpenAssignments(): Promise<Array<APIProject
   return responses.map(transformProject);
 }
 
+export async function getProjectsForTaskType(taskTypeId: string): Promise<Array<APIProject>> {
+  const responses = await Request.receiveJSON(`/api/taskTypes/${taskTypeId}/projects`);
+  assertResponseLimit(responses);
+
+  return responses.map(transformProject);
+}
+
 export async function getProject(projectName: string): Promise<APIProject> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
   return transformProject(project);

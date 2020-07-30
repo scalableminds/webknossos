@@ -13,12 +13,14 @@ import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
+  getProjectsForTaskType,
   increaseProjectTaskInstances,
   deleteProject,
   pauseProject,
   resumeProject,
   downloadNml,
   getTasks,
+  getTaskType,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { handleGenericError } from "libs/error_handling";
@@ -32,6 +34,7 @@ const { Search } = Input;
 
 type OwnProps = {|
   initialSearchValue?: string,
+  taskTypeId?: string,
 |};
 type StateProps = {|
   activeUser: APIUser,
@@ -48,6 +51,7 @@ type State = {
   searchQuery: string,
   isTransferTasksVisible: boolean,
   selectedProject: ?APIProjectWithAssignments,
+  taskTypeName: string,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -85,11 +89,18 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   }
 
   async fetchData(): Promise<void> {
-    const projects = await getProjectsWithOpenAssignments();
-
+    let projects;
+    let taskTypeName = null;
+    if (this.props.taskTypeId) {
+      projects = await getProjectsForTaskType(this.props.taskTypeId);
+      taskTypeName = await getTaskType(this.props.taskTypeId);
+    } else {
+      projects = await getProjectsWithOpenAssignments();
+    }
     this.setState({
       isLoading: false,
       projects: projects.filter(p => p.owner != null),
+      taskTypeName,
     });
   }
 
@@ -180,11 +191,13 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       <div className="container TestProjectListView">
         <div>
           <div className="pull-right">
-            <Link to="/projects/create">
-              <Button icon="plus" style={marginRight} type="primary">
-                Add Project
-              </Button>
-            </Link>
+            {this.props.taskTypeId ? null : (
+              <Link to="/projects/create">
+                <Button icon="plus" style={marginRight} type="primary">
+                  Add Project
+                </Button>
+              </Link>
+            )}
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -192,7 +205,11 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
               value={this.state.searchQuery}
             />
           </div>
-          <h3>Projects</h3>
+          <h3>
+            {this.props.taskTypeId
+              ? `Projects for task type ${this.state.taskTypeName}`
+              : "Projects"}
+          </h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
           <Spin spinning={this.state.isLoading} size="large">
             <Table

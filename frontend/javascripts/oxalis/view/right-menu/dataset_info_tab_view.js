@@ -232,7 +232,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     let annotationTypeLabel;
 
     const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "<untitled>";
+    const tracingName = name || "[untitled]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -257,7 +257,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         </span>
       );
     }
-    const tracingDescription = this.props.tracing.description || "<no description>";
+    const tracingDescription = this.props.tracing.description || "[no description]";
 
     let descriptionEditField;
     if (this.props.tracing.restrictions.allowUpdate) {

@@ -7,7 +7,10 @@ import update from "immutability-helper";
 import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import {
+  convertServerBoundingBoxToFrontend,
+  convertUserBoundingBoxesFromServerToFrontend,
+} from "oxalis/model/reducers/reducer_helpers";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   setToolReducer,
@@ -26,6 +29,9 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
       const maxCellId = action.tracing.largestSegmentId;
+      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+        action.tracing.userBoundingBoxes,
+      );
       const volumeTracing: VolumeTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
@@ -39,8 +45,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
         fallbackLayer: action.tracing.fallbackLayer,
+        userBoundingBoxes,
       };
 
       const newState = update(state, { tracing: { volume: { $set: volumeTracing } } });

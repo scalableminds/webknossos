@@ -1,6 +1,6 @@
 ## Skeleton Annotations
-The goal of tracing skeletons is to reconstruct structures in a dataset that span across many data slices as a graph of connected nodes.
-A typical example of a skeleton annotation is to follow a nerve cell for a few nanometers, placing a node every few slices. (See image below)
+The typical goal of skeleton annotations is the reconstruction of long-running structures in a dataset that span across many data slices as a graph of connected nodes.
+A typical example of creating skeleton annotations is the analysis of nerve cells placing a node every few slices to reconstruct their path through a dataset. (See image below)
 
 A typical skeleton annotation contains the reconstruction of one or more structures, often with many thousand nodes.
 All connected nodes form a tree or more generally speaking a graph.
@@ -13,7 +13,7 @@ This article outlines commonly used features and operations for viewing, editing
 
 {% embed url="https://www.youtube.com/watch?v=9cqLuJIDDFg "%}
 
-### Tracing Modes
+### Annotation Modes
 webKnossos supports several modes for displaying your dataset & interacting with skeleton annotations.
 
 #### Orthogonal Mode
@@ -23,9 +23,9 @@ All camera movements happen along the respective main axis.
 This view is especially useful for viewing your data in the highest possible quality alongside its main imaging axis, typically XY.
 Every single slice of the raw data can be viewed.
 
-Most skeleton tracing operations and keyboard shortcuts are tailored for the Orthogonal Mode.
+Most skeleton annotation operations and keyboard shortcuts are tailored for the Orthogonal Mode.
 
-![Switch between different tracing modes using the buttons in the toolbar](images/tracing_ui_modes.png)
+![Switch between different annotation modes using the buttons in the toolbar](images/tracing_ui_modes.png)
 
 #### Oblique Mode
 
@@ -36,7 +36,7 @@ In contrast to Orthogonal mode, any arbitrary slice through the dataset at any r
 Flight mode also allows a resliced view through the data.
 In contrast to Oblique mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere.
 
-![Tracing neurons efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
+![Annotate neurons efficiently in Flight mode](./images/tracing_ui_flightmode.jpg)
 
 Spherical projection is especially useful when rotating the camera, as pixels close to the center of the screen move in a predictable manner.
 Interactions and movements in Flight mode feel similar to First-Person-View (FPV) games.
@@ -137,9 +137,9 @@ There are two ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
 
-2. If you need more fine-grained control over which trees to download use the `Download Selected Trees` option. From the `Trees Tab` click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger tracing.
+2. If you need more fine-grained control over which trees to download use the `Download Selected Trees` option. From the `Trees Tab` click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
 
-![Skeletons can be exported and downloaded as NML files from the tracing view. Either download all or only selected trees.](images/tracing_ui_download.png)
+![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](images/tracing_ui_download.png)
 
 Importing a skeleton annotation can be achieved using two approaches as well:
 
@@ -147,12 +147,12 @@ Importing a skeleton annotation can be achieved using two approaches as well:
 
 2. To import a skeleton annotation as a completely new webKnossos annotation, just drag and drop the NML file anywhere on your user dashboard. Alternately, navigate to your user dashboard and use the `Upload Annotation` button within the "Explorative Annotations" section.
 
-![Skeletons can be imported by drag and drop in the tracing view or from the dashboard](images/tracing_ui_import.png)
+![Skeletons can be imported by drag and drop in the annotation view or from the dashboard](images/tracing_ui_import.png)
 
 ### Merging Skeleton Annotations
 There are two ways for merging annotations:
 
-1. While in the tracing UI, **drag and drop** an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
+1. While in the annotation UI, **drag and drop** an NML file onto your browser window to import a skeleton. The imported skeleton will be merged with currently open annotation.
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button. (see image) Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation. Otherwise, the merge will happen in your current annotation.
 

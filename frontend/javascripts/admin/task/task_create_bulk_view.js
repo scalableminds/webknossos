@@ -38,7 +38,6 @@ export type NewTask = {|
   +projectName: string,
   +scriptId: ?string,
   +openInstances: number,
-  +teamName: string,
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFiles?: File,
@@ -51,6 +50,11 @@ export type TaskCreationResponse = {
   status: number,
   success?: APITask,
   error?: string,
+};
+
+export type TaskCreationResponseContainer = {
+  tasks: Array<TaskCreationResponse>,
+  warnings: Array<string>,
 };
 
 class TaskCreateBulkView extends React.PureComponent<Props, State> {
@@ -72,7 +76,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
       !_.isString(task.taskTypeId) ||
-      !_.isString(task.teamName) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
@@ -127,21 +130,20 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
     const openInstances = parseInt(words[10]);
-    const teamName = words[11];
-    const boundingBoxX = parseInt(words[12]);
-    const boundingBoxY = parseInt(words[13]);
-    const boundingBoxZ = parseInt(words[14]);
-    const width = parseInt(words[15]);
-    const height = parseInt(words[16]);
-    const depth = parseInt(words[17]);
-    const projectName = words[18];
+    const boundingBoxX = parseInt(words[11]);
+    const boundingBoxY = parseInt(words[12]);
+    const boundingBoxZ = parseInt(words[13]);
+    const width = parseInt(words[14]);
+    const height = parseInt(words[15]);
+    const depth = parseInt(words[16]);
+    const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
     function mapOptional<U>(word, fn: string => U): ?U {
       return word != null && word !== "" ? fn(word) : undefined;
     }
-    const scriptId = mapOptional(words[19], a => a);
-    const baseAnnotation = mapOptional(words[20], word => ({ baseId: word }));
+    const scriptId = mapOptional(words[18], a => a);
+    const baseAnnotation = mapOptional(words[19], word => ({ baseId: word }));
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -156,7 +158,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
 
     return {
       dataSet,
-      teamName,
       taskTypeId,
       scriptId,
       openInstances,
@@ -230,19 +231,21 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     });
 
     try {
-      let responses = [];
+      let taskResponses = [];
+      let warnings = [];
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
         // eslint-disable-next-line no-await-in-loop
         const response = await createTasks(subArray);
-        responses = responses.concat(response);
+        taskResponses = taskResponses.concat(response.tasks);
+        warnings = warnings.concat(response.warnings);
         this.setState({
           tasksProcessed: i + NUM_TASKS_PER_BATCH,
         });
       }
 
-      handleTaskCreationResponse(responses);
+      handleTaskCreationResponse({ tasks: taskResponses, warnings: _.uniq(warnings) });
     } finally {
       this.setState({
         isUploading: false,
@@ -269,9 +272,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               following format:
               <br />
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>, baseAnnotationId]
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,{" "}
+              minZ, width, height, depth, <a href="/projects">project</a> [,{" "}
+              <a href="/scripts">scriptId</a>, baseAnnotationId]
               <br />
               If you want to define some (but not all) of the optional values, please list all
               optional values and use an empty value for the ones you do not want to set (e.g.,
@@ -300,7 +303,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                 })(
                   <TextArea
                     className="input-monospace"
-                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                     autosize={{ minRows: 6 }}
                     style={{
                       fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',

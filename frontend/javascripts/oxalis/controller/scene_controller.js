@@ -27,7 +27,7 @@ import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
-import Store from "oxalis/store";
+import Store, { type UserBoundingBox } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import constants, {
@@ -51,7 +51,8 @@ class SceneController {
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   datasetBoundingBox: Cube;
-  userBoundingBox: Cube;
+  userBoundingBoxGroup: THREE.Group;
+  userBoundingBoxes: Array<Cube>;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMap<Plane>;
@@ -234,6 +235,9 @@ class SceneController {
 
   createMeshes(): void {
     this.rootNode = new THREE.Object3D();
+    this.userBoundingBoxGroup = new THREE.Group();
+    this.rootNode.add(this.userBoundingBoxGroup);
+    this.userBoundingBoxes = [];
 
     // Cubes
     const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
@@ -244,13 +248,6 @@ class SceneController {
       showCrossSections: true,
     });
     this.datasetBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
-
-    this.userBoundingBox = new Cube({
-      max: [0, 0, 0],
-      color: 0xffaa00,
-      showCrossSections: true,
-    });
-    this.userBoundingBox.getMeshes().forEach(mesh => this.rootNode.add(mesh));
 
     const taskBoundingBox = getSomeTracing(Store.getState().tracing).boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
@@ -309,7 +306,7 @@ class SceneController {
     // things have to be changed for each cam.
 
     this.datasetBoundingBox.updateForCam(id);
-    this.userBoundingBox.updateForCam(id);
+    this.userBoundingBoxes.forEach(bbCube => bbCube.updateForCam(id));
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
 
     this.isosurfacesRootGroup.visible = id === OrthoViews.TDView;
@@ -406,9 +403,24 @@ class SceneController {
     return this.rootNode;
   }
 
-  setUserBoundingBox(bb: ?BoundingBoxType): void {
-    if (bb == null) bb = { min: [0, 0, 0], max: [0, 0, 0] };
-    this.userBoundingBox.setCorners(bb.min, bb.max);
+  setUserBoundingBoxes(bboxes: Array<UserBoundingBox>): void {
+    const newUserBoundingBoxGroup = new THREE.Group();
+    this.userBoundingBoxes = bboxes.map(({ boundingBox, isVisible, color }) => {
+      const { min, max } = boundingBox;
+      const bbColor = [color[0] * 255, color[1] * 255, color[2] * 255];
+      const bbCube = new Cube({
+        min,
+        max,
+        color: Utils.rgbToInt(bbColor),
+        showCrossSections: true,
+      });
+      bbCube.setVisibility(isVisible);
+      bbCube.getMeshes().forEach(mesh => newUserBoundingBoxGroup.add(mesh));
+      return bbCube;
+    });
+    this.rootNode.remove(this.userBoundingBoxGroup);
+    this.userBoundingBoxGroup = newUserBoundingBoxGroup;
+    this.rootNode.add(this.userBoundingBoxGroup);
   }
 
   stopPlaneMode(): void {
@@ -416,7 +428,7 @@ class SceneController {
       plane.setVisible(false);
     }
     this.datasetBoundingBox.setVisibility(false);
-    this.userBoundingBox.setVisibility(false);
+    this.userBoundingBoxGroup.visible = false;
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(false));
     if (this.isosurfacesRootGroup != null) {
       this.isosurfacesRootGroup.visible = false;
@@ -428,7 +440,7 @@ class SceneController {
       plane.setVisible(true);
     }
     this.datasetBoundingBox.setVisibility(true);
-    this.userBoundingBox.setVisibility(true);
+    this.userBoundingBoxGroup.visible = true;
     Utils.__guard__(this.taskBoundingBox, x => x.setVisibility(true));
   }
 
@@ -449,8 +461,8 @@ class SceneController {
     );
 
     listenToStoreProperty(
-      storeState => getSomeTracing(storeState.tracing).userBoundingBox,
-      bb => this.setUserBoundingBox(bb),
+      storeState => getSomeTracing(storeState.tracing).userBoundingBoxes,
+      bboxes => this.setUserBoundingBoxes(bboxes),
     );
 
     listenToStoreProperty(

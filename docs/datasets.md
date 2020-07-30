@@ -102,7 +102,7 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 ### General
 - `Display Name`: Used as the name of the dataset in the [Gallery view](./sharing.md#public-sharing).
 - `Description`: Contains more information about your datasets including authors, paper reference, descriptions. Supports Markdown formatting. The description will be featured in the [Gallery view](./sharing.md#public-sharing) as well.
-- `Allowed Teams`: Defines which [teams of your organization](./users.md) have access to this dataset. By default no team has access but admins and team managers can see and edit the dataset.
+- `Teams allowed to access this dataset`: Defines which [teams of your organization](./users.md) have access to this dataset. By default no team has access but admins and team managers can see and edit the dataset.
 - `Visibility`: Lets you make the dataset available to the general public and shows it in the public [Gallery view](./sharing.md#public-sharing). This will enable any visitor to your webKnossos instance to view the data, even unregistered users.
 - `Sharing Link`: A special URL which allows any user to view your dataset that uses this link. Because of the included random token, the link cannot be guessed by random visitors. You may also revoke the random token and create a new one when you don't want previous users to access your data anymore. Read more in [the Sharing guide](./sharing.md).
 

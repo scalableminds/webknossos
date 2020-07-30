@@ -1,5 +1,5 @@
 // @flow
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
+import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Icon, Select } from "antd";
 import * as React from "react";
 
 import type { Vector3, Vector6 } from "oxalis/constants";
@@ -102,7 +102,12 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) => Utils.roundTo(this.calculateValue(value), this.props.roundTo);
+  formatTooltip = (value: number) => {
+    const calculatedValue = this.calculateValue(value);
+    return calculatedValue >= 10000
+      ? calculatedValue.toExponential()
+      : Utils.roundTo(calculatedValue, this.props.roundTo);
+  };
 
   getSliderValue = () => {
     const a = 200 / (Math.log(this.props.max) - Math.log(this.props.min));
@@ -225,62 +230,61 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
   }
 }
 
-type VectorInputSettingPropTypes<T> = {
-  label: string,
-  value: T,
-  onChange: (value: T) => void,
+export type UserBoundingBoxInputUpdate = {
+  boundingBox?: Vector6,
+  name?: string,
+  color?: Vector3,
+  isVisible?: boolean,
+};
+
+type UserBoundingBoxInputProps = {
+  value: Vector6,
+  name: string,
+  color: Vector3,
+  isVisible: boolean,
   tooltipTitle: string,
+  onChange: UserBoundingBoxInputUpdate => void,
+  onDelete: () => void,
 };
 
 type State = {
   isEditing: boolean,
   isValid: boolean,
   text: string,
+  name: string,
 };
 
-export class Vector6InputSetting extends React.PureComponent<
-  VectorInputSettingPropTypes<?Vector6>,
-  State,
-> {
-  constructor(props: VectorInputSettingPropTypes<?Vector6>) {
+export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+  constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
       isEditing: false,
       isValid: true,
       text: this.computeText(props.value),
+      name: props.name,
     };
   }
 
-  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<?Vector6>) {
+  componentWillReceiveProps(newProps: UserBoundingBoxInputProps) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
         text: this.computeText(newProps.value),
       });
     }
+    this.setState({ name: newProps.name });
   }
 
-  computeText(vector: ?Vector6) {
-    const defaultValue = "";
-    return vector != null ? vector.join(", ") : defaultValue;
+  computeText(vector: Vector6) {
+    return vector.join(", ");
   }
 
   handleBlur = () => {
     this.setState({
       isEditing: false,
+      isValid: true,
+      text: this.computeText(this.props.value),
     });
-    if (this.state.isValid) {
-      this.setState({
-        isValid: true,
-        text: this.computeText(this.props.value),
-      });
-    } else {
-      this.props.onChange();
-      this.setState({
-        isValid: true,
-        text: this.computeText(),
-      });
-    }
   };
 
   handleFocus = () => {
@@ -297,48 +301,103 @@ export class Vector6InputSetting extends React.PureComponent<
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
-    const isValidFormat = value.length === 6 || value.length === 0;
+    const isValidLength = value.length === 6;
+    const isValid = isValidInput && isValidLength;
 
-    if (isValidFormat && isValidInput) {
-      if (value.length === 0) {
-        this.props.onChange();
-      } else {
-        this.props.onChange(Utils.numberArrayToVector6(value));
-      }
+    if (isValid) {
+      this.props.onChange({ boundingBox: Utils.numberArrayToVector6(value) });
     }
+    this.setState({ text, isValid });
+  };
 
-    this.setState({
-      text,
-      isValid: isValidInput && isValidFormat,
-    });
+  handleColorChange = (color: Vector3) => {
+    color = ((color.map(colorPart => colorPart / 255): any): Vector3);
+    this.props.onChange({ color });
+  };
+
+  handleVisibilityChange = (isVisible: boolean) => {
+    this.props.onChange({ isVisible });
+  };
+
+  handleNameChanged = (evt: SyntheticInputEvent<>) => {
+    const currentEnteredName = evt.target.value;
+    if (currentEnteredName !== this.props.name) {
+      this.props.onChange({ name: evt.target.value });
+    }
   };
 
   render() {
+    const { name } = this.state;
     const tooltipStyle = this.state.isValid ? null : { backgroundColor: "red" };
-
+    const { tooltipTitle, color, isVisible, onDelete } = this.props;
+    const upscaledColor = ((color.map(colorPart => colorPart * 255): any): Vector3);
+    const iconStyle = { margin: "auto 0px auto 6px" };
     return (
-      <Row className="margin-bottom" align="top">
-        <Col span={8}>
-          <label className="setting-label">{this.props.label}</label>
-        </Col>
-        <Col span={16}>
-          <Tooltip
-            trigger={["focus"]}
-            title={this.props.tooltipTitle}
-            placement="topLeft"
-            overlayStyle={tooltipStyle}
-          >
-            <Input
-              onChange={this.handleChange}
-              onFocus={this.handleFocus}
-              onBlur={this.handleBlur}
-              value={this.state.text}
-              placeholder="0, 0, 0, 512, 512, 512"
+      <React.Fragment>
+        <Row style={{ marginBottom: 16 }}>
+          <Col span={22}>
+            <Switch
               size="small"
+              onChange={this.handleVisibilityChange}
+              checked={isVisible}
+              style={{ margin: "auto 0px" }}
             />
-          </Tooltip>
-        </Col>
-      </Row>
+          </Col>
+          <Col span={2}>
+            <Tooltip title="Delete this bounding box.">
+              <Icon type="delete" onClick={onDelete} style={iconStyle} />
+            </Tooltip>
+          </Col>
+        </Row>
+        <Row className="margin-bottom" align="top">
+          <Col span={5}>
+            <label className="settings-label"> Name: </label>
+          </Col>
+          <Col span={17}>
+            <Input
+              defaultValue={name}
+              placeholder="Bounding Box Name"
+              size="small"
+              value={name}
+              onChange={(evt: SyntheticInputEvent<>) => {
+                this.setState({ name: evt.target.value });
+              }}
+              onPressEnter={this.handleNameChanged}
+              onBlur={this.handleNameChanged}
+            />
+          </Col>
+          <Col span={2}>
+            <ColorSetting
+              value={Utils.rgbToHex(upscaledColor)}
+              onChange={this.handleColorChange}
+              className="ant-btn"
+              style={iconStyle}
+            />
+          </Col>
+        </Row>
+        <Row className="margin-bottom" align="top">
+          <Col span={5}>
+            <label className="settings-label"> Bounds: </label>
+          </Col>
+          <Col span={17}>
+            <Tooltip
+              trigger={["focus"]}
+              title={tooltipTitle}
+              placement="topLeft"
+              overlayStyle={tooltipStyle}
+            >
+              <Input
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
+                size="small"
+              />
+            </Tooltip>
+          </Col>
+        </Row>
+      </React.Fragment>
     );
   }
 }

@@ -29,7 +29,7 @@ export const settings = {
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
-  userBoundingBox: "Bounding Box",
+  userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
   loadingStrategyDescription: `You can choose between loading the best quality first
     (will take longer until you see data) or alternatively,
@@ -96,6 +96,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
+  "tracing.uint64_segmentation_warning":
+    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
     "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
@@ -121,6 +123,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+  "tracing.merger_mode_node_outside_segment":
+    "You cannot place nodes outside of a segment in merger mode.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -149,10 +153,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.content":
     "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
-    "Can not parse task specification. It includes at least one invalid task.",
+    "Can not parse task specification. It includes at least one invalid task. (Note that the obsolete “team” column was recently removed, are you still using the old format?)",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
+  ),
+  "dataset.delete_success": _.template(
+    "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
@@ -175,6 +182,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
+  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
@@ -257,18 +265,22 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
+  "nml.incomplete_bounds": "NML contains <userBoundingBox ...> with incomplete bounds properties.",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
   "merge.volume_unsupported": "Merging is not supported for volume annotations.",
-  "users.is_admin":
-    "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
-  "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
-  "users.grant_admin_rights": _.template(
-    "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
+  "users.needs_admin_rights": "Admin rights are required to change the permissions of users.",
+  "users.multiple_selected_users":
+    "You selected more than one user. To change the organization permissions of users you need to select them individually.",
+  "users.change_permissions_title": "Do you really want to change the permissions of this user?",
+  "users.revoke_all_permissions": _.template(
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
   ),
-  "users.revoke_admin_rights_title": "Do you really want to revoke admin rights?",
-  "users.revoke_admin_rights": _.template(
-    "You are about to revoke admin privileges from <%- numUsers %> user(s). Do you want to proceed?",
+  "users.set_dataset_manager": _.template(
+    "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
+  ),
+  "users.set_admin": _.template(
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(

@@ -4,8 +4,6 @@ import Saxophone from "@scalableminds/saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "admin/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
@@ -14,21 +12,26 @@ import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
-import {
-  type NodeMap,
-  type OxalisState,
-  type SkeletonTracing,
-  type MutableTreeMap,
-  type Tracing,
-  type Tree,
-  type MutableTree,
-  type TreeGroup,
+import type {
+  UserBoundingBox,
+  NodeMap,
+  OxalisState,
+  SkeletonTracing,
+  MutableTreeMap,
+  Tracing,
+  Tree,
+  MutableTree,
+  TreeGroup,
+  BoundingBoxObject,
 } from "oxalis/store";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import messages from "messages";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
+const TASK_BOUNDING_BOX_COLOR = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
 const DEFAULT_BITDEPTH = 0;
@@ -37,6 +40,7 @@ const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
 const DEFAULT_RADIUS = 30;
+const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
 // SERIALIZE NML
 
@@ -59,6 +63,10 @@ function escape(string: string): string {
       .replace(/"/g, "&quot;")
       .replace(/\n/g, "&#xa;")
   );
+}
+
+function mapColorToComponents(color: Vector3) {
+  return { "color.r": color[0], "color.g": color[1], "color.b": color[2], "color.a": 1.0 };
 }
 
 function serializeTagWithChildren(
@@ -167,14 +175,39 @@ function serializeMetaInformation(
   ]);
 }
 
-function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
-  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
-  if (serverBoundingBox != null) {
-    const { topLeft, width, height, depth } = serverBoundingBox;
-    const [topLeftX, topLeftY, topLeftZ] = topLeft;
-    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string): string {
+  if (boundingBox) {
+    const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+    const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+    return serializeTag(tagName, {
+      topLeftX,
+      topLeftY,
+      topLeftZ,
+      width,
+      height,
+      depth,
+    });
   }
   return "";
+}
+
+function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
+  const { boundingBox, id, name, isVisible } = bb;
+  const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+  const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+  const color = bb.color ? mapColorToComponents(bb.color) : {};
+  return serializeTag(tagName, {
+    topLeftX,
+    topLeftY,
+    topLeftZ,
+    width,
+    height,
+    depth,
+    ...color,
+    id,
+    name,
+    isVisible,
+  });
 }
 
 function serializeParameters(
@@ -184,7 +217,7 @@ function serializeParameters(
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = skeletonTracing.userBoundingBox;
+  const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
@@ -217,8 +250,8 @@ function serializeParameters(
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        serializeBoundingBox(userBB, "userBoundingBox"),
-        serializeBoundingBox(taskBB, "taskBoundingBox"),
+        ...userBBoxes.map(userBB => serializeUserBoundingBox(userBB, "userBoundingBox")),
+        serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",
@@ -232,10 +265,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         "thing",
         {
           id: tree.treeId,
-          "color.r": tree.color[0],
-          "color.g": tree.color[1],
-          "color.b": tree.color[2],
-          "color.a": 1.0,
+          ...mapColorToComponents(tree.color),
           name: tree.name,
           groupId: tree.groupId,
         },
@@ -369,6 +399,15 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
     }
   }
   return obj[key] === "true";
+}
+
+function _parseColor(obj: Object, defaultColor: Vector3): Vector3 {
+  const color = [
+    _parseFloat(obj, "color.r", defaultColor[0]),
+    _parseFloat(obj, "color.g", defaultColor[1]),
+    _parseFloat(obj, "color.b", defaultColor[2]),
+  ];
+  return color;
 }
 
 function _parseEntities(obj: Object, key: string, defaultValue?: string): string {
@@ -506,9 +545,40 @@ export function wrapInNewGroup(
   return [trees, treeGroups];
 }
 
+function getUnusedUserBoundingBoxId(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  proposedId: number = 0,
+): number {
+  const isProposedIdUsed = userBoundingBoxes.some(userBB => userBB.id === proposedId);
+  if (!isProposedIdUsed) {
+    return proposedId;
+  }
+  const maxId = Math.max(...userBoundingBoxes.map(userBB => userBB.id));
+  return maxId + 1;
+}
+
+function parseBoundingBoxObject(attr): BoundingBoxObject {
+  const boundingBoxObject = {
+    topLeft: [
+      _parseInt(attr, "topLeftX"),
+      _parseInt(attr, "topLeftY"),
+      _parseInt(attr, "topLeftZ"),
+    ],
+    width: _parseInt(attr, "width"),
+    height: _parseInt(attr, "height"),
+    depth: _parseInt(attr, "depth"),
+  };
+  return boundingBoxObject;
+}
+
 export function parseNml(
   nmlString: string,
-): Promise<{ trees: MutableTreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
+): Promise<{
+  trees: MutableTreeMap,
+  treeGroups: Array<TreeGroup>,
+  userBoundingBoxes: Array<UserBoundingBox>,
+  datasetName: ?string,
+}> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
@@ -521,6 +591,7 @@ export function parseNml(
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
     const nodeIdToTreeId = {};
+    const userBoundingBoxes = [];
     let datasetName = null;
     parser
       .on("tagopen", node => {
@@ -534,11 +605,7 @@ export function parseNml(
             const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
-              color: [
-                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
-                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
-                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
-              ],
+              color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
               name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
               comments: [],
@@ -658,6 +725,36 @@ export function parseNml(
             }
             break;
           }
+          case "userBoundingBox": {
+            const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(
+              userBoundingBoxes,
+              parsedUserBoundingBoxId,
+            );
+            const boundingBoxObject = parseBoundingBoxObject(attr);
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              color: _parseColor(attr, DEFAULT_COLOR),
+              id: userBoundingBoxId,
+              isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
+              name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
+          case "taskBoundingBox": {
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
+            const boundingBoxObject = parseBoundingBoxObject(attr);
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              color: TASK_BOUNDING_BOX_COLOR,
+              id: userBoundingBoxId,
+              isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+              name: "task bounding box",
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
           default:
             break;
         }
@@ -697,18 +794,20 @@ export function parseNml(
       .on("end", () => {
         // Split potentially unconnected trees
         const originalTreeIds = Object.keys(trees);
+        let maxTreeId = getMaximumTreeId(trees);
         for (const treeId of originalTreeIds) {
           const tree = trees[Number(treeId)];
-          const maxTreeId = getMaximumTreeId(trees);
           const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
-          if (_.size(newTrees) > 1) {
+          const newTreesSize = _.size(newTrees);
+          if (newTreesSize > 1) {
             delete trees[tree.treeId];
             for (const newTree of newTrees) {
               trees[newTree.treeId] = newTree;
             }
+            maxTreeId += newTreesSize;
           }
         }
-        resolve({ trees, treeGroups, datasetName });
+        resolve({ trees, treeGroups, datasetName, userBoundingBoxes });
       })
       .on("error", reject);
 

@@ -218,9 +218,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
-                Mailer ! Send(
-                  defaultMails.registerMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
+                if (conf.Features.isDemoInstance) {
+                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, user.email, organization.enableAutoVerify))
+                } else {
+                  Mailer ! Send(
+                    defaultMails.newUserMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
+                }
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, brainDBResult, organization))
                 Ok
               }
             }
@@ -471,7 +475,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      Mailer ! Send(defaultMails.registerMailDemo(user.firstName, user.email))
+                      Mailer ! Send(defaultMails.newAdminWKOrgMail(user.firstName, user.email))
                     }
                     Ok
                   }
@@ -495,12 +499,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
       normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
-      organizationName = organizationNameOpt.flatMap(normalizeName).getOrElse(normalizedDisplayName)
-      organization = Organization(ObjectId.generate,
-                                  organizationName.replaceAll(" ", "_"),
-                                  "",
-                                  "",
-                                  organizationDisplayName)
+      organizationName = organizationNameOpt
+        .flatMap(normalizeName)
+        .getOrElse(normalizedDisplayName)
+        .replaceAll(" ", "_")
+      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
+      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
+      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)

@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 
 object AccessMode extends Enumeration {
 
-  val administrate, list, read, write = Value
+  val administrate, list, read, write, delete = Value
 
   implicit val jsonFormat = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
 }
@@ -35,6 +35,8 @@ object UserAccessAnswer { implicit val jsonFormat = Json.format[UserAccessAnswer
 object UserAccessRequest {
   implicit val jsonFormat = Json.format[UserAccessRequest]
 
+  def deleteDataSource(dataSourceId: DataSourceId) =
+    UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
   def administrateDataSources =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
   def listDataSources =
@@ -73,9 +75,12 @@ trait AccessTokenService {
 
   private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
-    val tokenOpt = request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
+    val tokenOpt = tokenFromRequest(request)
     hasUserAccess(accessRequest, tokenOpt)
   }
+
+  def tokenFromRequest[A](request: Request[A]): Option[String] =
+    request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
 
   private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {

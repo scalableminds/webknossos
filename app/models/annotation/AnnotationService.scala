@@ -4,20 +4,19 @@ import java.io.{BufferedOutputStream, File, FileOutputStream}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Source, StreamConverters}
-import akka.util.ByteString
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  ElementClass,
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
-import com.scalableminds.webknossos.tracingstore.geometry
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
@@ -33,14 +32,14 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
-import utils.ObjectId
-import play.api.i18n.{I18nSupport, Messages, MessagesApi, MessagesProvider}
-
-import scala.concurrent.{ExecutionContext, Future}
 import net.liftweb.common.{Box, Full}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsNull, JsObject, Json}
+import utils.ObjectId
+
+import scala.concurrent.{ExecutionContext, Future}
 
 case class DownloadAnnotation(skeletonTracingOpt: Option[SkeletonTracing],
                               volumeTracingOpt: Option[VolumeTracing],
@@ -102,18 +101,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
 
   private def createVolumeTracing(
       dataSource: DataSource,
-      withFallback: Boolean,
+      fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Point3D] = None,
       startRotation: Option[Vector3D] = None
-  ): VolumeTracing = {
-    val fallbackLayer: Option[SegmentationLayer] = if (withFallback) {
-      dataSource.dataLayers.flatMap {
-        case layer: SegmentationLayer => Some(layer)
-        case _                        => None
-      }.headOption
-    } else None
-
+  ): VolumeTracing =
     VolumeTracing(
       None,
       boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
@@ -127,44 +119,60 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       0,
       VolumeTracingDefaults.zoomLevel
     )
-  }
 
   def createTracings(
       dataSet: DataSet,
       dataSource: DataSource,
       tracingType: TracingType.Value,
       withFallback: Boolean,
-      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] =
+      oldTracingId: Option[String] = None)(implicit ctx: DBAccessContext): Fox[(Option[String], Option[String])] = {
+    def getFallbackLayer(): Option[SegmentationLayer] =
+      if (withFallback) {
+        dataSource.dataLayers.flatMap {
+          case layer: SegmentationLayer => Some(layer)
+          case _                        => None
+        }.headOption
+      } else None
+
     tracingType match {
       case TracingType.skeleton =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
           oldTracingOpt <- Fox.runOptional(oldTracingId)(id => client.getVolumeTracing(id, skipVolumeData = true))
-          userBBoxOpt = oldTracingOpt.map(_._1).flatMap(_.userBoundingBox)
+          userBBoxOpt = oldTracingOpt.flatMap(_._1.userBoundingBox).map(NamedBoundingBox(0, None, None, None, _))
+          userBBoxes = oldTracingOpt.map(_._1.userBoundingBoxes ++ userBBoxOpt)
           skeletonTracingId <- client.saveSkeletonTracing(
-            SkeletonTracingDefaults.createInstance
-              .copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = userBBoxOpt))
+            SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
+                                                        editPosition = dataSource.center,
+                                                        userBoundingBox = None,
+                                                        userBoundingBoxes = userBBoxes.getOrElse(Seq.empty)))
         } yield (Some(skeletonTracingId), None)
       case TracingType.volume =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+          fallbackLayer = getFallbackLayer()
+          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, fallbackLayer))
         } yield (None, Some(volumeTracingId))
       case TracingType.hybrid =>
         for {
           client <- tracingStoreService.clientFor(dataSet)
+          fallbackLayer = getFallbackLayer()
+          _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
           skeletonTracingId <- client.saveSkeletonTracing(
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
+          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, fallbackLayer))
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
     }
+  }
 
   def createExplorationalFor(user: User, _dataSet: ObjectId, tracingType: TracingType.Value, withFallback: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Annotation] =
     for {
-      dataSet <- dataSetDAO.findOne(_dataSet)
+      dataSet <- dataSetDAO.findOne(_dataSet) ?~> "dataSet.noAccessById"
       dataSource <- dataSetService.dataSourceFor(dataSet)
-      usableDataSource <- dataSource.toUsable ?~> "DataSet is not imported."
+      usableDataSource <- dataSource.toUsable ?~> Messages("dataSet.notImported", dataSource.id.name)
       tracingIds <- createTracings(dataSet, usableDataSource, tracingType, withFallback)
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(
@@ -181,7 +189,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       annotation
     }
 
-  def makeAnnotationHybrid(user: User, annotation: Annotation)(implicit ctx: DBAccessContext) = {
+  def makeAnnotationHybrid(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton =>
         createTracings(dataSet, dataSource, TracingType.volume, true).flatMap {
@@ -338,9 +346,18 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    dataSetName)
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
+
+      fallbackLayer = if (volumeShowFallbackLayer) {
+        dataSource.dataLayers.flatMap {
+          case layer: SegmentationLayer => Some(layer)
+          case _                        => None
+        }.headOption
+      } else None
+      _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
+
       volumeTracing = createVolumeTracing(
         dataSource,
-        withFallback = volumeShowFallbackLayer,
+        fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)
         },

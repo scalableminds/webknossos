@@ -1,11 +1,10 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files}
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -16,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxData
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
@@ -84,8 +82,9 @@ class DataSourceController @Inject()(
     val uploadForm = Form(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText
-      )).fill(("", ""))
+        "organization" -> nonEmptyText,
+        "initialTeams" -> play.api.data.Forms.list(nonEmptyText)
+      )).fill(("", "", List()))
 
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -94,12 +93,14 @@ class DataSourceController @Inject()(
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
-              case (name, organization) =>
+              case (name, organization, initialTeams) =>
                 val id = DataSourceId(name, organization)
                 for {
                   _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
                   zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
                   _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
+                  userTokenOpt = accessTokenService.tokenFromRequest(request)
+                  _ <- webKnossosServer.postInitialTeams(id, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
                 } yield {
                   Ok
                 }
@@ -230,6 +231,16 @@ class DataSourceController @Inject()(
           } yield Ok(Json.toJson(reloadedDataSource))
         }
       }
+  }
+
+  def deleteOnDisk(organizationName: String, dataSetName: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        for {
+          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName, dataSetName)
+        } yield Ok
+      }
+    }
   }
 
 }

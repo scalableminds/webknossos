@@ -4,7 +4,7 @@ import java.io._
 import java.nio.file.Paths
 
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
@@ -34,6 +34,11 @@ import play.api.libs.json.{JsObject, Json}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
+import com.scalableminds.webknossos.tracingstore.geometry.{
+  NamedBoundingBox,
+  BoundingBox => ProtoBox,
+  Point3D => ProtoPoint
+}
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -59,12 +64,16 @@ class VolumeTracingService @Inject()(
 
   val tracingStore = tracingDataStore.volumes
 
+  val tracingMigrationService = VolumeTracingMigrationService
+
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  override def currentVersion(tracing: VolumeTracing): Long = tracing.version
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup[VolumeTracing],
@@ -88,12 +97,13 @@ class VolumeTracingService @Inject()(
                     editPosition = a.editPosition,
                     editRotation = a.editRotation,
                     largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel,
-                    userBoundingBox = a.userBoundingBox
+                    zoomLevel = a.zoomLevel
                   ))
               case a: RevertToVersionVolumeAction =>
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
-              case _ => Fox.failure("Unknown action.")
+              case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
+              case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
+              case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -126,6 +136,18 @@ class VolumeTracingService @Inject()(
           }
     }
     sourceTracing
+  }
+
+  private def updateBoundingBoxVisibility(tracing: VolumeTracing, boundingBoxId: Option[Int], isVisible: Boolean) = {
+    def updateUserBoundingBoxes() =
+      tracing.userBoundingBoxes.map { boundingBox =>
+        if (boundingBoxId.forall(_ == boundingBox.id))
+          boundingBox.copy(isVisible = Some(isVisible))
+        else
+          boundingBox
+      }
+
+    Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
@@ -194,8 +216,20 @@ class VolumeTracingService @Inject()(
     binaryDataService.handleDataRequests(requests)
   }
 
-  def duplicate(tracingId: String, tracing: VolumeTracing): Fox[String] = {
-    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
+  def duplicate(tracingId: String,
+                tracing: VolumeTracing,
+                fromTask: Boolean,
+                dataSetBoundingBox: Option[BoundingBox]): Fox[String] = {
+    val newTaskTracing = if (fromTask && dataSetBoundingBox.isDefined) {
+      val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
+      tracing
+        .addUserBoundingBoxes(
+          NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), tracing.boundingBox))
+        .withBoundingBox(dataSetBoundingBox.get)
+    } else tracing
+
+    val newTracing = newTaskTracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
     for {
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, tracing, newId, newTracing)

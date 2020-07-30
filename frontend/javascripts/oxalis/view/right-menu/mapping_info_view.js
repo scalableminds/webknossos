@@ -262,12 +262,28 @@ class MappingInfoView extends React.Component<Props, State> {
       title,
       dataIndex,
     });
+    const showSegmentation64bitWarning =
+      segmentationLayer && segmentationLayer.originalElementClass === "uint64";
+    const maybeWithTooltipWarningTitle = title =>
+      showSegmentation64bitWarning ? (
+        <React.Fragment>
+          {title}{" "}
+          <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
+            <Icon type="warning" style={{ color: "rgb(255, 155, 85)" }} />
+          </Tooltip>
+        </React.Fragment>
+      ) : (
+        title
+      );
     const idColumns =
       hasMapping && this.props.isMappingEnabled
         ? // Show an unmapped and mapped id column if there's a mapping
-          [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
+          [
+            columnHelper(maybeWithTooltipWarningTitle("Unmapped"), "unmapped"),
+            columnHelper(maybeWithTooltipWarningTitle("Mapped"), "mapped"),
+          ]
         : // Otherwise, only show an ID column
-          [columnHelper("ID", "unmapped")];
+          [columnHelper(maybeWithTooltipWarningTitle("ID"), "unmapped")];
     const columns = [
       columnHelper("", "name"),
       ...idColumns,
@@ -378,8 +394,12 @@ class MappingInfoView extends React.Component<Props, State> {
       return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
     };
 
+    // The mapping toggle should be active if either the user clicked on it (this.state.shouldMappingBeEnabled)
+    // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
+    const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
+
     const renderHideUnmappedSegmentsSwitch =
-      (this.state.shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
+      (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
 
@@ -396,7 +416,7 @@ class MappingInfoView extends React.Component<Props, State> {
                   ID Mapping
                   <Switch
                     onChange={this.handleSetMappingEnabled}
-                    checked={this.state.shouldMappingBeEnabled}
+                    checked={shouldMappingBeEnabled}
                     style={{ float: "right" }}
                     loading={this.state.isRefreshingMappingList}
                   />
@@ -407,7 +427,7 @@ class MappingInfoView extends React.Component<Props, State> {
             Show mapping-select even when the mapping is disabled but the UI was used before
             (i.e., mappingName != null)
           */}
-              {this.state.shouldMappingBeEnabled || this.props.mappingName != null ? (
+              {shouldMappingBeEnabled || this.props.mappingName != null ? (
                 <Select
                   placeholder="Select mapping"
                   defaultActiveFirstOption={false}
@@ -478,6 +498,7 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const debounceTime = 100;
+const maxWait = 500;
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
@@ -485,4 +506,4 @@ export default connect<Props, OwnProps, _, _, _, _>(
   {
     pure: false,
   },
-)(debounceRender(MappingInfoView, debounceTime));
+)(debounceRender(MappingInfoView, debounceTime, { maxWait }));

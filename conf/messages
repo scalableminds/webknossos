@@ -7,7 +7,7 @@ notAllowed=You are not authorized to view or edit this resource
 
 binary.payload.invalid=Couldn’t parse payload
 
-organization.list.moreThanOnehistogram.layerMissing=Could not generate histogram data: missing layer {0}
+histogram.layerMissing=Could not generate histogram data: missing layer {0}
 histogram.failed=Could not generate histogram data for layer {0}
 
 email=Email
@@ -32,6 +32,7 @@ image.create.failed=Failed to create image
 
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
+auth.token.noUser=Could not determine user for access token
 
 team.created=Team was created
 team.notAllowed=You are not part of this team. Project can’t be created.
@@ -44,6 +45,7 @@ organization.create.failed=Failed to create a new organization
 organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
+organization.name.alreadyInUse=The chosen organization name is already in use.
 organization.folderCreation.failed=Failed to create organization directory, please make sure webKnossos has write permissions in the “binaryData” directory.
 
 user.activated={0} has been activated
@@ -52,6 +54,7 @@ user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account hasn’t been activated yet
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
+user.lastAdmin=Cannot remove admin privileges from the only admin in the organization
 
 user.resetPassword.failed=Invalid old password
 user.resetPassword.success=Your password was successfully changed
@@ -85,6 +88,7 @@ dataSet.notFound=Dataset {0} does not exist or could not be accessed
 dataSet.notFoundConsiderLogin=Dataset {0} does not exist or could not be accessed. You may need to log in.
 dataSet.notFoundForAnnotation=The Dataset for this annotation does not exist or could not be accessed.
 dataSet.noAccess=Could not access DataSet {0}. Does your team have access?
+dataSet.noAccessById=Could not access the corresponding DataSet. This is likely because you are not a member of a team that has access to it.
 dataSet.notImported=Dataset {0} is not imported
 dataSet.name.invalid=A dataset name can only contain letters, digits and underscores
 dataSet.import.impossible.name=Import impossible. Dataset name can only consist of a-Z, 0-9, "-" and "_".
@@ -106,6 +110,10 @@ dataSet.alreadyPresent=Sample dataset is already present.
 dataSet.noResolutions=Data layer does not contain resolutions
 dataSet.sampledOnlyBlack=Sampled data positions contained only black data
 dataSet.noData=Could not get data for the requested dataset
+dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
+dataset.initialTeams.invalidTeams=Can only assign teams of user
+dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually?
+dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -157,6 +165,7 @@ nml.edge.invalid=Invalid edge {0} {1}
 nml.tree.id.invalid=Invalid tree id {0}
 nml.tree.elements.invalid=Invalid {0} in tree {1}
 nml.treegroup.id.invalid=Invalid tree group id {0}
+nml.boundingbox.id.invalid=Invalid user bounding box id {0}
 
 owner=Owner
 priority=Priority
@@ -183,7 +192,8 @@ role.added=Added role to {0}
 tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
 
-annotation.create.failed=Failed to create annotation. This is likely because you are not a member of a team that has access to the dataset.
+annotation.create.failed=Failed to create annotation.
+annotation.volume.uint64=Creating volume tracings on a uint64 fallback layer is not allowed.
 annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation

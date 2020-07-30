@@ -4,7 +4,7 @@ The following HTTP requests may be used to interact with the backend of webKnoss
 
 ## Authentication
 
-All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly below “logout”.
+All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly above “logout”.
 
 ## Versioning
 
@@ -323,9 +323,9 @@ Download an annotation as NML/ZIP
 
 #### Returns
  - As chunked file stream:
-   - In case of an explorative annotation with a volume tracing:
+   - In case of a volume annotation:
      - A ZIP file containing both an NML file and a data.zip file with the volume data
-   - In case of a single explorative or task annotation with no volume tracing:
+   - In case of a single explorative or task annotation with no volume annotation:
      - A single NML file
    - In case of compound downloads (CompoundTask/CompoundProject/CompoundTaskType):
      - A ZIP file containing individual NML files for all associated annotations

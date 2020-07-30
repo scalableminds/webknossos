@@ -13,7 +13,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
@@ -54,6 +54,7 @@ export type APISegmentationLayer = {|
   ...APIDataLayerBase,
   +category: "segmentation",
   +largestSegmentId: number,
+  +originalElementClass?: ElementClass,
   +mappings?: Array<string>,
   +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
@@ -189,6 +190,7 @@ export type APIUser = APIUserBase & {
   +created: number,
   +experiences: ExperienceMap,
   +isAdmin: boolean,
+  +isDatasetManager: boolean,
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
@@ -524,6 +526,7 @@ export type APIFeatureToggles = {
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
+  +allowDeleteDatasets: boolean,
 };
 
 // Tracing related datatypes
@@ -556,6 +559,14 @@ export type ServerBoundingBox = {
   depth: number,
 };
 
+export type UserBoundingBoxFromServer = {
+  boundingBox: ServerBoundingBox,
+  id: number,
+  name?: string,
+  color?: ColorObject,
+  isVisible?: boolean,
+};
+
 export type ServerBoundingBoxTypeTuple = {
   topLeft: Vector3,
   width: number,
@@ -565,7 +576,7 @@ export type ServerBoundingBoxTypeTuple = {
 
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>,
-  color: ?{ r: number, g: number, b: number },
+  color: ?ColorObject,
   comments: Array<CommentType>,
   edges: Array<Edge>,
   name: string,
@@ -578,6 +589,7 @@ export type ServerSkeletonTracingTree = {
 
 export type ServerTracingBase = {|
   id: string,
+  userBoundingBoxes: Array<UserBoundingBoxFromServer>,
   userBoundingBox?: ServerBoundingBox,
   createdTimestamp: number,
   dataSetName: string,

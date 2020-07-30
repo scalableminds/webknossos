@@ -40,6 +40,7 @@ class Cube {
   listenTo: Function;
 
   constructor(properties: Properties) {
+    // min/max should denote a half-open interval.
     this.min = properties.min || [0, 0, 0];
     this.max = properties.max;
     const lineWidth = properties.lineWidth != null ? properties.lineWidth : 1;
@@ -72,10 +73,13 @@ class Cube {
     });
   }
 
-  setCorners(min1: Vector3, max1: Vector3) {
-    this.min = min1;
-    this.max = max1;
-    const { min, max } = this;
+  setCorners(min: Vector3, max: Vector3) {
+    this.min = min;
+    this.max = max;
+
+    // Since `max` itself should not be included in the rendered
+    // box, we subtract Number.EPSILON.
+    max = [max[0] - Number.EPSILON, max[1] - Number.EPSILON, max[2] - Number.EPSILON];
 
     const vec = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -163,7 +167,7 @@ class Cube {
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
       const position = getPosition(Store.getState().flycam);
-      if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] <= this.max[thirdDim]) {
+      if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] < this.max[thirdDim]) {
         this.crossSections[planeId].visible =
           this.visible && planeId === id && this.showCrossSections;
       } else {

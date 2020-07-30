@@ -7,6 +7,90 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [20.08.0](https://github.com/scalableminds/webknossos/releases/tag/20.07.0) - 2020-07-20
+[Commits](https://github.com/scalableminds/webknossos/compare/20.07.0...20.08.0)
+
+### Highlights
+- Added the possibility to have multiple user-defined bounding boxes in an annotation. Task bounding boxes are automatically converted to such user bounding boxes upon “copy to my account” / reupload as explorational annotation. [#4536](https://github.com/scalableminds/webknossos/pull/4536)
+- Separated the permissions of Team Managers (now actually team-scoped) and Dataset Managers (who can see all datasets). The database evolution makes all Team Managers also Dataset Managers, so no workflows should be interrupted. New users may have to be made Dataset Managers, though. For more information, refer to the updated documentation. [#4663](https://github.com/scalableminds/webknossos/pull/4663)
+- Backend NML parser no longer rejects NMLs with trees that have multiple connected components. Instead, it splits those into one separate tree per component. [#4688](https://github.com/scalableminds/webknossos/pull/4688)
+
+### Added
+
+- Added the possibility to adjust the minimum and maximum value of the histogram for a layer. This option can be opened in the top right corner of the histogram. [#4630](https://github.com/scalableminds/webknossos/pull/4630)
+- Added a warning to the segmentation tab when viewing `uint64` bit segmentation data. [#4598](https://github.com/scalableminds/webknossos/pull/4598)
+- Added the possibility to have multiple user-defined bounding boxes in an annotation. Task bounding boxes are automatically converted to such user bounding boxes upon “copy to my account” / reupload as explorational annotation. [#4536](https://github.com/scalableminds/webknossos/pull/4536)
+- Added additional information to each task in CSV download. [#4647](https://github.com/scalableminds/webknossos/pull/4647)
+- Added the possibility to configure the sender address used in emails wk sends (mail.defaultSender in application.conf). [#4701](https://github.com/scalableminds/webknossos/pull/4701)
+- Added a warning during task creation if task dataset cannot be accessed by project team members. [#4695](https://github.com/scalableminds/webknossos/pull/4695)
+- Included the server time in error messages, making debugging misbehavior easier. [#4707](https://github.com/scalableminds/webknossos/pull/4707)
+
+### Changed
+- Separated the permissions of Team Managers (now actually team-scoped) and Dataset Managers (who can see all datasets). The database evolution makes all Team Managers also Dataset Managers, so no workflows should be interrupted. New users may have to be made Dataset Managers, though. For more information, refer to the updated documentation. [#4663](https://github.com/scalableminds/webknossos/pull/4663)
+- Refined all webKnossos emails for user signups etc. Switched emails to use HTML templates for more bling bling. [#4676](https://github.com/scalableminds/webknossos/pull/4676)
+- Backend NML parser no longer rejects NMLs with trees that have multiple connected components. Instead, it splits those into one separate tree per component. [#4688](https://github.com/scalableminds/webknossos/pull/4688)
+
+### Fixed
+- Fixed that merger mode didn't work with undo and redo. Also fixed that the mapping was not disabled when disabling merger mode. [#4669](https://github.com/scalableminds/webknossos/pull/4669)
+- Fixed a bug where webKnossos relied upon but did not enforce organization names to be unique. [#4685](https://github.com/scalableminds/webknossos/pull/4685)
+- Fixed that being outside of a bounding box could be rendered as if one was inside the bounding box in some cases. [#4690](https://github.com/scalableminds/webknossos/pull/4690)
+- Fixed a bug where admins could revoke their own admin rights even if they are the only admin in their organization, leading to an invalid state. [#4698](https://github.com/scalableminds/webknossos/pull/4698)
+- Fixed a bug where webKnossos ignored existing layer category information from datasource-properties.json when exploring layers on disk. [#4694](https://github.com/scalableminds/webknossos/pull/4694)
+
+### Removed
+
+- Removed the “are you sure” warning when editing datasets with no allowed teams. Instead, a warning during task creation is shown in this case. [#4695](https://github.com/scalableminds/webknossos/pull/4695)
+
+
+
+## [20.07.0](https://github.com/scalableminds/webknossos/releases/tag/20.07.0) - 2020-06-29
+[Commits](https://github.com/scalableminds/webknossos/compare/20.06.0...20.07.0)
+
+### Highlights
+
+- Fixed that the dataset list in the dashboard could reorder its items asynchronously which could be very annoying for the user. [#4640](https://github.com/scalableminds/webknossos/pull/4640)
+
+### Added
+
+- Added a warning to the segmentation tab when viewing `uint64` bit segmentation data. [#4598](https://github.com/scalableminds/webknossos/pull/4598)
+
+### Changed
+
+- The redundant “team” column was removed from the bulk task creation format. [#4629](https://github.com/scalableminds/webknossos/pull/4629)
+- The brush size minimum was changed from 5 voxels to 1. [#4648](https://github.com/scalableminds/webknossos/pull/4648)
+
+### Fixed
+
+- Fixed that the dataset list in the dashboard could reorder its items asynchronously which could be very annoying for the user. [#4640](https://github.com/scalableminds/webknossos/pull/4640)
+- Improved resilience when refreshing datasets while a datastore is down. [#4636](https://github.com/scalableminds/webknossos/pull/4636)
+- Fixed a bug where requesting volume tracing fallback layer data from webknossos-connect failed. [#4644](https://github.com/scalableminds/webknossos/pull/4644)
+- Fixed a bug where imported invisible trees were still visible. [#4659](https://github.com/scalableminds/webknossos/issues/4659)
+- Fixed the message formatting for standalone datastores and tracingstores. [#4656](https://github.com/scalableminds/webknossos/pull/4656)
+
+## [20.06.0](https://github.com/scalableminds/webknossos/releases/tag/20.06.0) - 2020-05-25
+[Commits](https://github.com/scalableminds/webknossos/compare/20.05.0...20.06.0)
+
+### Highlights
+- Compression of volume tracing data is now already done in the browser, reducing I/O load and required disk space. [#4602](https://github.com/scalableminds/webknossos/pull/4602) and [#4623](https://github.com/scalableminds/webknossos/pull/4623)
+
+### Added
+
+- Added the possibility to select hour, minute and second of the time range in the timetracking view. [#4604](https://github.com/scalableminds/webknossos/pull/4604)
+- Volume tracing data is now saved with lz4 compression, reducing I/O load and required disk space. [#4602](https://github.com/scalableminds/webknossos/pull/4602)
+- Volume tracing data is now already lz4-compressed in the browser, further reducing server load. [#4623](https://github.com/scalableminds/webknossos/pull/4623)
+
+### Changed
+- Improved the UI in navigation bar during loading of tracings and datasets. [#4612](https://github.com/scalableminds/webknossos/pull/4612)
+- Improved logging in case of very slow annotation saving. Additionally, the user is also warned when there are unsaved changes older than two minutes. [#4593](https://github.com/scalableminds/webknossos/pull/4593)
+- REST API for creating / changing datastores now contains additional field `allowsUpload` denoting if the datastore allows uploading datasets via browser. [#4614](https://github.com/scalableminds/webknossos/pull/4614)
+
+### Fixed
+
+- When activating an agglomerate file-based ID mapping, only the segmentation layer will be reloaded from now on. This will improve mapping activation performance. [#4600](https://github.com/scalableminds/webknossos/pull/4600)
+- Fixed retrying of failed save requests sent during tracingstore restart. [#4591](https://github.com/scalableminds/webknossos/pull/4591)
+- Fixed the initial loading of agglomerate mappings, where some buckets remained black. [#4601](https://github.com/scalableminds/webknossos/pull/4601)
+- Fixed occasional error during loading of compound annotations (such as viewing multiple finished task instances in one view). [#4619](https://github.com/scalableminds/webknossos/pull/4619)
+
 ## [20.05.0](https://github.com/scalableminds/webknossos/releases/tag/20.05.0) - 2020-05-05
 [Commits](https://github.com/scalableminds/webknossos/compare/20.04.0...20.05.0)
 
@@ -53,7 +137,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rendering error which could make some layers disappear in certain circumstances. [#4556](https://github.com/scalableminds/webknossos/pull/4556)
 - Fixed a rendering error which caused negative float data to be rendered white. [#4556](https://github.com/scalableminds/webknossos/pull/4571)
 - Fixed the histogram creation if some sampled positions don't contain data. [#4584](https://github.com/scalableminds/webknossos/pull/4584)
-- Fixed a rendering exception which could occur in rare circumstandes. [#4588](https://github.com/scalableminds/webknossos/pull/4588)
+- Fixed a rendering exception which could occur in rare circumstances. [#4588](https://github.com/scalableminds/webknossos/pull/4588)
 
 ## [20.04.0](https://github.com/scalableminds/webknossos/releases/tag/20.04.0) - 2020-03-23
 [Commits](https://github.com/scalableminds/webknossos/compare/20.03.0...20.04.0)

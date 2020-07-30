@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import javax.inject.Inject
-
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -13,16 +12,18 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import models.annotation._
-import models.binary.{DataSetDAO, DataStoreRpcClient, DataStoreService}
+import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
 import play.api.mvc.{PlayBodyParsers, Result}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
 class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
+                                    dataSetService: DataSetService,
                                     annotationDAO: AnnotationDAO,
                                     userService: UserService,
                                     annotationStore: AnnotationStore,
@@ -30,6 +31,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     dataStoreService: DataStoreService,
                                     tracingStoreService: TracingStoreService,
                                     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                    conf: WkConf,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -101,8 +103,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     def tryWrite: Fox[UserAccessAnswer] =
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team) ?~> "datasource.notFound"
-        user <- userBox.toFox
-        isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, dataset._organization)
+        user <- userBox.toFox ?~> "auth.token.noUser"
+        isAllowed <- dataSetService.isEditableBy(dataset, Some(user))
       } yield {
         UserAccessAnswer(isAllowed)
       }
@@ -111,15 +113,24 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       userBox match {
         case Full(user) =>
           for {
-            isAllowed <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-          } yield UserAccessAnswer(isAllowed)
+            isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
+          } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
+
+    def tryDelete: Fox[UserAccessAnswer] =
+      for {
+        _ <- bool2Fox(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team)(
+          GlobalAccessContext) ?~> "datasource.notFound"
+        user <- userBox.toFox ?~> "auth.token.noUser"
+      } yield UserAccessAnswer(user._organization == dataset._organization && user.isAdmin)
 
     mode match {
       case AccessMode.read         => tryRead
       case AccessMode.write        => tryWrite
       case AccessMode.administrate => tryAdministrate
+      case AccessMode.delete       => tryDelete
       case _                       => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
     }
   }

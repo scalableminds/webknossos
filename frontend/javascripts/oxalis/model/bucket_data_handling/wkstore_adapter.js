@@ -148,16 +148,14 @@ export async function requestFromStore(
 
   try {
     return doWithToken(async token => {
-      const stuff = await Request.sendJSONReceiveArraybufferWithHeaders(
-        `${dataUrl}/data?token=${token}`,
-        {
-          data: bucketInfo,
-          timeout: REQUEST_TIMEOUT,
-          showErrorToast: false,
-          doNotInvestigate: true,
-        },
-      );
-      const { buffer: responseBuffer, headers } = stuff;
+      const {
+        buffer: responseBuffer,
+        headers,
+      } = await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
+        data: bucketInfo,
+        timeout: REQUEST_TIMEOUT,
+        showErrorToast: false,
+      });
       const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
 
       let resultBuffer = responseBuffer;
@@ -175,7 +173,6 @@ export async function requestFromStore(
     console.error(`${errorMessage} ${urlAsString}`);
     console.error(errorResponse);
     Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
-      sticky: true,
       key: errorMessage,
     });
     return batch.map(_val => null);

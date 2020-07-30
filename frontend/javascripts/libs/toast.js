@@ -36,7 +36,7 @@ const Toast = {
     errorChain: string,
     config: ToastConfig = {},
   ): void {
-    config.sticky = config.sticky || true;
+    config.sticky = config.sticky != null ? config.sticky : true;
     this.error(
       <div>
         {errorString}

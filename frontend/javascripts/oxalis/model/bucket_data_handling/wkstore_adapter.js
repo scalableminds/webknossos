@@ -147,7 +147,7 @@ export async function requestFromStore(
   );
 
   try {
-    return doWithToken(async token => {
+    return await doWithToken(async token => {
       const {
         buffer: responseBuffer,
         headers,
@@ -166,14 +166,18 @@ export async function requestFromStore(
       return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
     });
   } catch (errorResponse) {
-    const errorMessage = `Requesting buckets from layer "${
-      layerInfo.name
-    }" failed with status code ${errorResponse.status} - "${errorResponse.statusText}".`;
+    let errorMessage = `Requesting buckets from layer "${layerInfo.name}" failed. `;
+    if (errorResponse.status != null) {
+      errorMessage += `Status code ${errorResponse.status} - "${errorResponse.statusText}".`;
+    } else {
+      errorMessage += errorResponse.message;
+    }
     const urlAsString = `URL - ${dataUrl}`;
     console.error(`${errorMessage} ${urlAsString}`);
     console.error(errorResponse);
     Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
       key: errorMessage,
+      sticky: false,
     });
     return batch.map(_val => null);
   }

@@ -146,8 +146,8 @@ export async function requestFromStore(
     createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
   );
 
-  return doWithToken(async token => {
-    try {
+  try {
+    return doWithToken(async token => {
       const stuff = await Request.sendJSONReceiveArraybufferWithHeaders(
         `${dataUrl}/data?token=${token}`,
         {
@@ -166,20 +166,20 @@ export async function requestFromStore(
       }
 
       return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
-    } catch (errorResponse) {
-      const errorMessage = `Requesting buckets from layer "${
-        layerInfo.name
-      }" failed with status code ${errorResponse.status} - "${errorResponse.statusText}".`;
-      const urlAsString = `URL - ${dataUrl}`;
-      console.error(`${errorMessage} ${urlAsString}`);
-      console.error(errorResponse);
-      Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
-        sticky: true,
-        key: errorMessage,
-      });
-      return batch.map(_val => null);
-    }
-  });
+    });
+  } catch (errorResponse) {
+    const errorMessage = `Requesting buckets from layer "${
+      layerInfo.name
+    }" failed with status code ${errorResponse.status} - "${errorResponse.statusText}".`;
+    const urlAsString = `URL - ${dataUrl}`;
+    console.error(`${errorMessage} ${urlAsString}`);
+    console.error(errorResponse);
+    Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
+      sticky: true,
+      key: errorMessage,
+    });
+    return batch.map(_val => null);
+  }
 }
 
 function sliceBufferIntoPieces(

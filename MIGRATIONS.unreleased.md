@@ -9,7 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
-
-- [054-add-isDatasetManager.sql](conf/evolutions/054-add-isDatasetManager.sql)
-- [055-make-organization-name-unique.sql](conf/evolutions/055-make-organization-name-unique.sql)
-
+- 

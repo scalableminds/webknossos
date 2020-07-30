@@ -101,7 +101,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     } yield parsed
 
   def findAllWithTaskType(taskTypeId: String)(implicit ctx: DBAccessContext): Fox[List[Project]] =
-    for{
+    for {
       accessQuery <- readAccessQuery
       r <- run(
         sql"""select distinct p._id, p._team, p._owner, p.name, p.priority, p.paused, p.expectedTime, p.isBlacklistedFromReport, p.created, p.isDeleted

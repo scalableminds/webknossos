@@ -29,7 +29,7 @@ object MultiComponentTreeSplitter {
         val newTreeGroup = TreeGroup(tree.name, largestGroupId, List())
         val parentTreeGroupIdOpt: Option[Int] = tree.groupId
         parentTreeGroupIdOpt.foreach { parentTreeGroupId =>
-          treeGroupsMutable = addTreeGroupAsChild(treeGroups, parentTreeGroupId, newTreeGroup)
+          treeGroupsMutable = addTreeGroupAsChild(treeGroupsMutable, parentTreeGroupId, newTreeGroup)
         }
         if (parentTreeGroupIdOpt.isEmpty) {
           treeGroupsMutable = newTreeGroup +: treeGroupsMutable

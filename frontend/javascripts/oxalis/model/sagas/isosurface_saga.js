@@ -35,6 +35,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { saveNowAction } from "oxalis/model/actions/save_actions";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -305,6 +306,7 @@ function* refreshIsosurfaces(): Saga<void> {
   if (!renderIsosurfaces) {
     return;
   }
+  yield* put(saveNowAction());
   // We reload all cells that got modified till the start of reloading.
   // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
   const currentlyModifiedCells = new Set(modifiedCells);
@@ -314,15 +316,15 @@ function* refreshIsosurfaces(): Saga<void> {
     if (!currentlyModifiedCells.has(cellId)) {
       continue;
     }
-    // debugger;
-    const possibleEntry = threeDMap.entries().find(([value, _position]) => value);
-    if (!possibleEntry) {
-      return;
+    const isoSurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
+    if (isoSurfacePositions.length <= 0) {
+      continue;
     }
-    const [, possibleSeedPosition] = possibleEntry;
     yield* put(removeIsosurfaceAction(cellId));
+    for (const [, position] of isoSurfacePositions) {
+      yield* call(ensureSuitableIsosurface, null, position, cellId);
+    }
     // Reload the Isosurface.
-    yield* call(ensureSuitableIsosurface, null, possibleSeedPosition, cellId);
   }
 }
 

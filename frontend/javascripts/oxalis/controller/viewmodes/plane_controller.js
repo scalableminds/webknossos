@@ -163,7 +163,7 @@ class PlaneController extends React.PureComponent<Props> {
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
       leftDownMove: (delta: Point2, _pos, _id, event) => {
-        if (event.shiftKey) {
+        if (event.ctrlKey) {
           skeletonController.moveNode(delta.x, delta.y);
         } else {
           this.movePlane([-delta.x, -delta.y, 0]);

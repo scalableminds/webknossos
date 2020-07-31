@@ -136,10 +136,10 @@ export function getKeyboardControls() {
     e: () => moveAlongDirection(),
     r: () => moveAlongDirection(true),
 
-    "shift + left": () => moveNode(-1, 0),
-    "shift + right": () => moveNode(1, 0),
-    "shift + up": () => moveNode(0, -1),
-    "shift + down": () => moveNode(0, 1),
+    "ctrl + left": () => moveNode(-1, 0),
+    "ctrl + right": () => moveNode(1, 0),
+    "ctrl + up": () => moveNode(0, -1),
+    "ctrl + down": () => moveNode(0, 1),
 
     // Branches
     b: () => Store.dispatch(createBranchPointAction()),

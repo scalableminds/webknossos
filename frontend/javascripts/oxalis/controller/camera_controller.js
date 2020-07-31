@@ -183,8 +183,9 @@ type TweenState = {
 export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const state = Store.getState();
   const { dataset } = state;
+  const { tdCamera } = state.viewModeData.plane;
   const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
-  const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
+  const flycamPos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
@@ -201,8 +202,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const b1 = -b[1];
     const x1 = 0;
     const y1 = b[1];
-    const x2 = pos[0];
-    const y2 = pos[1];
+    const x2 = flycamPos[0];
+    const y2 = flycamPos[1];
 
     const b2 = 1 / Math.sqrt((b1 * b1) / a1 / a1 + 1);
     const a2 = (-b2 * b1) / a1;
@@ -212,7 +213,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const distance = Dimensions.distance([x1, y1], intersect);
 
     // Approximation to center the view vertically
-    const yOffset = pos[2] - b[2] / 2;
+    const yOffset = flycamPos[2] - b[2] / 2;
 
     // Calulate the x coordinate so that the vector from the camera to the cube's middle point is
     // perpendicular to the vector going from (0, b[1], 0) to (b[0], 0, 0).
@@ -240,18 +241,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       b: squareCenterY - height / 2,
     };
   } else {
-    const ind = Dimensions.getIndices(id);
-    const width = Math.max(b[ind[0]], b[ind[1]] * 1.12) * 1.1;
-    const height = width / aspectRatio;
-
-    const paddingTop = width * 0.12;
-    const padding = ((width / 1.1) * 0.1) / 2;
-    const offsetX = pos[ind[0]] + padding + (width - b[ind[0]]) / 2;
-    const offsetY = pos[ind[1]] + paddingTop + padding;
-
-    const l = -offsetX;
-    const t = offsetY;
-
+    const width = tdCamera.right - tdCamera.left;
+    const height = tdCamera.top - tdCamera.bottom;
     const positionOffset: OrthoViewMap<Vector3> = {
       [OrthoViews.PLANE_XY]: [0, 0, -clippingOffsetFactor],
       [OrthoViews.PLANE_YZ]: [clippingOffsetFactor, 0, 0],
@@ -270,46 +261,47 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       upX: upVector[id][0],
       upY: upVector[id][1],
       upZ: upVector[id][2],
-      l,
-      t,
-      r: l + width,
-      b: t - height,
+      l: -width / 2,
+      r: width / 2,
+      t: height / 2,
+      b: -height / 2,
     };
   }
 
   const updateCameraTDView = (tweenState: TweenState) => {
-    const p = voxelToNm(
+    const currentFlycamPos = voxelToNm(
       Store.getState().dataset.dataSource.scale,
       getPosition(Store.getState().flycam),
     );
-
     Store.dispatch(
       setTDCameraAction({
-        position: [tweenState.dx + p[0], tweenState.dy + p[1], tweenState.dz + p[2]],
+        position: [
+          tweenState.dx + currentFlycamPos[0],
+          tweenState.dy + currentFlycamPos[1],
+          tweenState.dz + currentFlycamPos[2],
+        ],
         left: tweenState.l,
         right: tweenState.r,
         top: tweenState.t,
         bottom: tweenState.b,
         up: [tweenState.upX, tweenState.upY, tweenState.upZ],
-        lookAt: p,
+        lookAt: currentFlycamPos,
       }),
     );
   };
 
   if (animate) {
-    const camera = state.viewModeData.plane.tdCamera;
-
     const from = {
-      upX: camera.up[0],
-      upY: camera.up[1],
-      upZ: camera.up[2],
-      dx: camera.position[0] - pos[0],
-      dy: camera.position[1] - pos[1],
-      dz: camera.position[2] - pos[2],
-      l: camera.left,
-      r: camera.right,
-      t: camera.top,
-      b: camera.bottom,
+      upX: tdCamera.up[0],
+      upY: tdCamera.up[1],
+      upZ: tdCamera.up[2],
+      dx: tdCamera.position[0] - flycamPos[0],
+      dy: tdCamera.position[1] - flycamPos[1],
+      dz: tdCamera.position[2] - flycamPos[2],
+      l: tdCamera.left,
+      r: tdCamera.right,
+      t: tdCamera.top,
+      b: tdCamera.bottom,
     };
     const tween = new TWEEN.Tween(from);
 

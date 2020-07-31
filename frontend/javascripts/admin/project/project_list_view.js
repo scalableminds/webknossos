@@ -66,6 +66,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     searchQuery: "",
     isTransferTasksVisible: false,
     selectedProject: null,
+    taskTypeName: "",
   };
 
   componentWillMount() {
@@ -90,12 +91,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
 
   async fetchData(): Promise<void> {
     let projects;
-    let taskTypeName = null;
+    let taskTypeName;
+    let taskType;
     if (this.props.taskTypeId) {
-      [projects, taskTypeName] = await Promise.all([
+      [projects, taskType] = await Promise.all([
         getProjectsForTaskType(this.props.taskTypeId),
-        getTaskType(this.props.taskTypeId),
+        getTaskType(this.props.taskTypeId || ""),
       ]);
+      taskTypeName = taskType.summary;
     } else {
       projects = await getProjectsWithOpenAssignments();
     }
@@ -208,7 +211,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
             />
           </div>
           <h3>
-            {this.props.taskTypeId
+            {this.state.taskTypeName
               ? `Projects for task type ${this.state.taskTypeName}`
               : "Projects"}
           </h3>

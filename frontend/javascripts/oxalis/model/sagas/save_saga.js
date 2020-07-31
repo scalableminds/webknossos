@@ -31,7 +31,9 @@ import {
 import {
   SkeletonTracingSaveRelevantActions,
   setTracingAction,
+  centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import type { Action } from "oxalis/model/actions/actions";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { doWithToken } from "admin/admin_rest_api";
@@ -56,6 +58,7 @@ import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 export function* collectUndoStates(): Saga<void> {
   const undoStack = [];
   const redoStack = [];
+  let previousAction: ?Action = null;
 
   yield* take("INITIALIZE_SKELETONTRACING");
   let prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
@@ -68,16 +71,21 @@ export function* collectUndoStates(): Saga<void> {
     const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
     if (userAction) {
       if (curTracing !== prevTracing) {
+        if (!shallSkipPreviousState(userAction, previousAction)) {
+          undoStack.push(prevTracing);
+        }
         // Clear the redo stack when a new action is executed
         redoStack.splice(0);
-        undoStack.push(prevTracing);
         if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
+        previousAction = userAction;
       }
     } else if (undo) {
       if (undoStack.length) {
+        previousAction = null;
         redoStack.push(prevTracing);
         const newTracing = undoStack.pop();
         yield* put(setTracingAction(newTracing));
+        yield* put(centerActiveNodeAction());
       } else {
         Toast.info(messages["undo.no_undo"]);
       }
@@ -86,12 +94,30 @@ export function* collectUndoStates(): Saga<void> {
         undoStack.push(prevTracing);
         const newTracing = redoStack.pop();
         yield* put(setTracingAction(newTracing));
+        yield* put(centerActiveNodeAction());
       } else {
         Toast.info(messages["undo.no_redo"]);
       }
     }
     // We need the updated tracing here
     prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
+  }
+}
+
+function shallSkipPreviousState(currentUserAction: Action, previousAction: ?Action) {
+  if (previousAction == null) {
+    return false;
+  }
+  switch (currentUserAction.type) {
+    case "SET_NODE_POSITION": {
+      return (
+        previousAction.type === "SET_NODE_POSITION" &&
+        currentUserAction.nodeId === previousAction.nodeId &&
+        currentUserAction.treeId === previousAction.treeId
+      );
+    }
+    default:
+      return false;
   }
 }
 

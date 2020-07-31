@@ -18,6 +18,7 @@ import {
   enforceSkeletonTracing,
   getSkeletonTracing,
   getActiveNode,
+  getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -105,7 +106,7 @@ function moveAlongDirection(reverse: boolean = false): void {
 
 export function moveNode(dx: number, dy: number) {
   getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
-    getActiveNode(skeletonTracing).map(activeNode => {
+    getNodeAndTree(skeletonTracing).map(([activeTree, activeNode]) => {
       const state = Store.getState();
       const { activeViewport } = state.viewModeData.plane;
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
@@ -118,7 +119,11 @@ export function moveNode(dx: number, dy: number) {
       ];
       const [x, y, z] = activeNode.position;
       Store.dispatch(
-        setNodePositionAction([x + delta[0], y + delta[1], z + delta[2]], activeNode.id),
+        setNodePositionAction(
+          [x + delta[0], y + delta[1], z + delta[2]],
+          activeNode.id,
+          activeTree.treeId,
+        ),
       );
     }),
   );

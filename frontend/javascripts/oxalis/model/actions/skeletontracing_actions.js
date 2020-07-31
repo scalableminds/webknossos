@@ -49,6 +49,10 @@ type SetActiveNodeAction = {
   nodeId: number,
   suppressAnimation: boolean,
 };
+type CenterActiveNodeAction = {
+  type: "CENTER_ACTIVE_NODE",
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusAction = {
   type: "SET_NODE_RADIUS",
   radius: number,
@@ -120,6 +124,7 @@ export type SkeletonTracingAction =
   | DeleteNodeAction
   | DeleteEdgeAction
   | SetActiveNodeAction
+  | CenterActiveNodeAction
   | SetActiveGroupAction
   | DeselectActiveGroupAction
   | SetNodeRadiusAction
@@ -246,6 +251,10 @@ export const setActiveNodeAction = (
   nodeId,
   suppressAnimation,
 });
+
+export const centerActiveNodeAction = (
+  suppressAnimation: boolean = false,
+): CenterActiveNodeAction => ({ type: "CENTER_ACTIVE_NODE", suppressAnimation });
 
 export const setNodeRadiusAction = (
   radius: number,

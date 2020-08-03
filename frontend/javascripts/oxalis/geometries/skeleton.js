@@ -500,7 +500,10 @@ class Skeleton {
       return [attribute];
     });
 
-    const edgePositionUpdater = (edge: Edge, indexOffset: number) => {
+    const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
+      // The changed node is the target node of the edge which is saved
+      // after the source node in the buffer. THus we need an offset.
+      const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
         const positionAttribute = buffer.geometry.attributes.position;
@@ -510,12 +513,10 @@ class Skeleton {
     };
 
     for (const edge of tree.edges.getOutgoingEdgesForNode(nodeId)) {
-      edgePositionUpdater(edge, 0);
+      edgePositionUpdater(edge, false);
     }
     for (const edge of tree.edges.getIngoingEdgesForNode(nodeId)) {
-      // The changed node is the target node of the edge which is saved
-      // after the source node in the buffer
-      edgePositionUpdater(edge, 3);
+      edgePositionUpdater(edge, true);
     }
   }
 

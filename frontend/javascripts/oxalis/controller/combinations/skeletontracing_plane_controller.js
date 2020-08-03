@@ -105,6 +105,7 @@ function moveAlongDirection(reverse: boolean = false): void {
 }
 
 export function moveNode(dx: number, dy: number) {
+  // dx and dy are measured in pixel.
   getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
     getNodeAndTree(skeletonTracing).map(([activeTree, activeNode]) => {
       const state = Store.getState();

@@ -170,8 +170,12 @@ class CameraController extends React.PureComponent<Props> {
 }
 
 type TweenState = {
-  up: Vector3,
-  position: Vector3,
+  upX: number,
+  upY: number,
+  upZ: number,
+  xPos: number,
+  yPos: number,
+  zPos: number,
   left: number,
   right: number,
   top: number,
@@ -248,8 +252,12 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   width = width > 0 ? width : datasetExtent.width;
   height = height > 0 ? height : datasetExtent.height;
   const to: TweenState = {
-    position,
-    up,
+    xPos: position[0],
+    yPos: position[1],
+    zPos: position[2],
+    upX: up[0],
+    upY: up[1],
+    upZ: up[2],
     left: -width / 2,
     right: width / 2,
     top: height / 2,
@@ -261,11 +269,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       Store.getState().dataset.dataSource.scale,
       getPosition(Store.getState().flycam),
     );
-    const { position: newPosition, up: upDirection, left, right, top, bottom } = tweenState;
+    const { xPos, yPos, zPos, upX, upY, upZ, left, right, top, bottom } = tweenState;
     Store.dispatch(
       setTDCameraAction({
-        position: newPosition,
-        up: upDirection,
+        position: [xPos, yPos, zPos],
+        up: [upX, upY, upZ],
         left,
         right,
         top,
@@ -276,13 +284,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   };
 
   if (animate) {
-    const from = {
+    const from: TweenState = {
       upX: tdCamera.up[0],
       upY: tdCamera.up[1],
       upZ: tdCamera.up[2],
-      dx: tdCamera.position[0],
-      dy: tdCamera.position[1],
-      dz: tdCamera.position[2],
+      xPos: tdCamera.position[0],
+      yPos: tdCamera.position[1],
+      zPos: tdCamera.position[2],
       left: tdCamera.left,
       right: tdCamera.right,
       top: tdCamera.top,

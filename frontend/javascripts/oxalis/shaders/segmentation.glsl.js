@@ -34,7 +34,7 @@ export const convertCellIdToRGB: ShaderModule = {
       a specific sequenceLength.
 
       Good seeds for different sequenceLengths are:
-      sequenceLength=13.0, seed=0.618033988749895) --> "Perfect" permutation
+      sequenceLength=13.0, seed=0.618033988749895 --> "Perfect" permutation
       sequenceLength=17.0, seed=1.41421            --> "Perfect" permutation
       sequenceLength=19.0, seed=0.618033988749895  --> 1 collision (Utilization 94.74%)
     */

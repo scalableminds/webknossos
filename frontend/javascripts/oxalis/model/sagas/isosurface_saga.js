@@ -251,7 +251,9 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   const currentId = yield* call(getCurrentCellId);
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(currentId);
-
+  if (geometry == null) {
+    return;
+  }
   const stl = exportToStl(geometry);
 
   // Encode isosurface and cell id property

@@ -334,6 +334,8 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getLoopedKeyboardControls() {
+    // Note that this code needs to be adapted in case the volumeController also starts to expose
+    // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
     return this.props.tracing.skeleton != null
       ? skeletonController.getLoopedKeyboardControls()
       : {};

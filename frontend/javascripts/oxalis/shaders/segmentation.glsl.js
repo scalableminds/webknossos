@@ -29,7 +29,7 @@ export const convertCellIdToRGB: ShaderModule = {
         an implicit sequence of
           7, 2, 6, 4, 5, 1, 3
         is accessed at index 3 to return a value.
-        Thus, 4 s returned.
+        Thus, 4 is returned.
 
       Additional explanation:
       3 is a primitive root modulo 7. This fact can be used to generate
@@ -82,8 +82,7 @@ export const convertCellIdToRGB: ShaderModule = {
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 17.;
-      float colorSeed = 3.;
-      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, colorSeed);
+      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 3.);
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       // For historical reference: the old color generation was: colorValue = mod(lastEightBits * golden_ratio, 1.0);
@@ -123,7 +122,6 @@ export const convertCellIdToRGB: ShaderModule = {
       worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
 
       float angleCount = 19.;
-      float angleSeed = 2.;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 2.0);
 
       float stripeValueA = mix(

@@ -71,7 +71,7 @@ export function* collectUndoStates(): Saga<void> {
     const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
     if (userAction) {
       if (curTracing !== prevTracing) {
-        if (!shallSkipPreviousState(userAction, previousAction)) {
+        if (!shouldAddToUndoStack(userAction, previousAction)) {
           undoStack.push(prevTracing);
         }
         // Clear the redo stack when a new action is executed
@@ -104,7 +104,7 @@ export function* collectUndoStates(): Saga<void> {
   }
 }
 
-function shallSkipPreviousState(currentUserAction: Action, previousAction: ?Action) {
+function shouldAddToUndoStack(currentUserAction: Action, previousAction: ?Action) {
   if (previousAction == null) {
     return false;
   }
@@ -112,14 +112,14 @@ function shallSkipPreviousState(currentUserAction: Action, previousAction: ?Acti
     case "SET_NODE_POSITION": {
       // We do not need to save the previous state if the previous and this action both move the same node.
       // This causes the undo queue to only have the state before the node got moved and the state when moving the node finished.
-      return (
+      return !(
         previousAction.type === "SET_NODE_POSITION" &&
         currentUserAction.nodeId === previousAction.nodeId &&
         currentUserAction.treeId === previousAction.treeId
       );
     }
     default:
-      return false;
+      return true;
   }
 }
 

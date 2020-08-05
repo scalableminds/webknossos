@@ -310,7 +310,7 @@ class Skeleton {
           const { treeId, id, radius, position } = update.value;
           this.updateNodeRadius(treeId, id, radius);
           const tree = skeletonTracing.trees[treeId];
-          this.updateNodePosition(treeId, id, position, tree);
+          this.updateNodePosition(tree, id, position);
           break;
         }
         case "createTree":
@@ -492,7 +492,8 @@ class Skeleton {
   /**
    * Updates a node's position and that of its edges in a WebGL buffer.
    */
-  updateNodePosition(treeId: number, nodeId: number, position: Vector3, tree: Tree) {
+  updateNodePosition(tree: Tree, nodeId: number, position: Vector3) {
+    const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.position;

@@ -42,9 +42,9 @@ object MultiComponentTreeSplitter {
               connectedNodeSet.contains(edge.source) && connectedNodeSet.contains(edge.target))
             val branchPoints = tree.branchPoints.filter(bp => connectedNodeSet.contains(bp.nodeId))
             val comments = tree.comments.filter(comment => connectedNodeSet.contains(comment.nodeId))
+            largestTreeId += 1
             val treeId = largestTreeId
             val name = tree.name + "_" + index
-            largestTreeId += 1
             Tree(treeId,
                  nodes,
                  edges,

@@ -292,6 +292,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
+            {!isColorLayer && (
+              <NumberSliderSetting
+                label={settings.segmentationPatternOpacity}
+                min={0}
+                max={100}
+                step={1}
+                value={this.props.datasetConfiguration.segmentationPatternOpacity}
+                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+              />
+            )}
             {isColorLayer ? (
               <Row className="margin-bottom" style={{ marginTop: 4 }}>
                 <Col span={12}>
@@ -353,16 +363,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
-            {!isColorLayer && (
-              <NumberSliderSetting
-                label={settings.segmentationPatternOpacity}
-                min={0}
-                max={100}
-                step={1}
-                value={this.props.datasetConfiguration.segmentationPatternOpacity}
-                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
-              />
-            )}
           </React.Fragment>
         )}
       </div>

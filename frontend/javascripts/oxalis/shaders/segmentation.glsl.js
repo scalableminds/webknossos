@@ -22,28 +22,50 @@ export const convertCellIdToRGB: ShaderModule = {
     /*
       getElementOfPermutation produces a poor-man's permutation of the numbers
       [1, ..., sequenceLength] and returns the index-th element.
-      The "permutation" is generated using a seed which should be tested manually
-      to ensure a good-enough permutation.
+      The "permutation" is generated using primitive roots.
+      Example:
+        When calling
+          getElementOfPermutation(3, 7, 3)
+        an implicit sequence of
+          7, 2, 6, 4, 5, 1, 3
+        is accessed at index 3 to return a value.
+        Thus, 4 s returned.
+
+      Additional explanation:
+      3 is a primitive root modulo 7. This fact can be used to generate
+      the following pseudo-random sequence by calculating
+      primitiveRoot**index % sequenceLength:
+      3, 2, 6, 4, 5, 1, 3
+      (see https://en.wikipedia.org/wiki/Primitive_root_modulo_n for a more
+      in-depth explanation).
+      Since the above sequence contains 7 elements (as requested), but exactly *one*
+      collision (the first and last elements will always be the same), we swap the
+      first element with 7.
 
       To achieve a diverse combination with little collisions, multiple, dependent
-      usages of getElementOfPermutation should use a sequenceLength which is prime
-      and unique. Refer to this super-dirty code when in need:
+      usages of getElementOfPermutation should use unique sequenceLength values
+      which are prime. You can check out this super-dirty code to double-check
+      collisions:
         https://gist.github.com/philippotto/88487cddcff049c2aac70b69041efacf
 
-      Seeds should be tested manually to guarantee a good permutation for
-      a specific sequenceLength.
-
-      Good seeds for different sequenceLengths are:
-      sequenceLength=13.0, seed=0.618033988749895) --> "Perfect" permutation
-      sequenceLength=17.0, seed=1.41421            --> "Perfect" permutation
-      sequenceLength=19.0, seed=0.618033988749895  --> 1 collision (Utilization 94.74%)
+      Sample primitiveRoots for different prime sequenceLengths are:
+      sequenceLength=13.0, seed=2
+      sequenceLength=17.0, seed=3
+      sequenceLength=19.0, seed=2
+      More primitive roots for different prime values can be looked up online.
     */
-    float getElementOfPermutation(float index, float sequenceLength, float seed) {
-      // The index should not be modded with the sequenceLength if one wants to
-      // better utilize an index domain which is larger than sequenceLength.
-      float oneBasedIndex = index + 1.0;
-      float fraction = mod(oneBasedIndex * seed, 1.0);
-      return ceil(fraction * sequenceLength);
+    float getElementOfPermutation(float index, float sequenceLength, float primitiveRoot) {
+      float oneBasedIndex = mod(index, sequenceLength) + 1.0;
+      // If oneBasedIndex == 1, isNotFirstElement == 0:
+      float isNotFirstElement = step(1.5, oneBasedIndex);
+
+      float sequenceValue = mod(pow(primitiveRoot, oneBasedIndex), sequenceLength);
+
+      return
+        // Only use sequenceLength if request element is not the first of the sequence
+        isNotFirstElement * sequenceValue
+        // Otherwise, return sequenceLength
+        + (1. - isNotFirstElement) * sequenceLength;
     }
 
     vec3 colormapJet(float x) {
@@ -60,9 +82,10 @@ export const convertCellIdToRGB: ShaderModule = {
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
       float colorCount = 17.;
-      float colorSeed = 1.41421;
+      float colorSeed = 3.;
       float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, colorSeed);
-      float colorValue = 1.0 / colorCount * colorIndex;
+      float colorValueDecimal = 1.0 / colorCount * colorIndex;
+      float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       // For historical reference: the old color generation was: colorValue = mod(lastEightBits * golden_ratio, 1.0);
 
       <% if (isMappingSupported) { %>
@@ -82,12 +105,17 @@ export const convertCellIdToRGB: ShaderModule = {
         }
       <% } %>
 
-
       // Scale world coordinates for a pleasant coordinate frequency.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
-      // zoomStep compensates this.
-      float coordScaling = 0.25 * mix(1., 2., mod(significantSegmentIndex, 2.));
-      vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / (zoomStep + 1.0);
+      // zoomValue compensates this. Note that the zoomStep should not be used, because that value relates to the
+      // three-dimensional dataset. Since the patterns are only 2D, the zoomValue is a better proxy.
+      float finedTunedScale = 0.15;
+      float frequency_sequence_length = 3.;
+      float frequencyModulator = mix(1., 2., getElementOfPermutation(significantSegmentIndex, frequency_sequence_length, 2.));
+      float coordScaling = finedTunedScale * frequencyModulator;
+      float zoomAdaption = ceil(zoomValue);
+      vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
+
 
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
       vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
@@ -95,8 +123,8 @@ export const convertCellIdToRGB: ShaderModule = {
       worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
 
       float angleCount = 19.;
-      float angleSeed = 0.618033988749895;
-      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, angleSeed);
+      float angleSeed = 2.;
+      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 2.0);
 
       float stripe_value_a = mix(
         worldCoordUVW.x,
@@ -108,21 +136,21 @@ export const convertCellIdToRGB: ShaderModule = {
         -worldCoordUVW.y,
         1.0 - angle
       );
-      float use_grid = step(mod(significantSegmentIndex * 1.81893, 1.0), 0.5);
+
+      // use_grid is binary, but we generate a pseudo-random sequence of 13 elements which we map
+      // to ones and zeros. This has the benefit that the periodicity has a prime length.
+      float use_grid_sequence_length = 13.;
+      float use_grid = step(mod(getElementOfPermutation(significantSegmentIndex, use_grid_sequence_length, 2.0), 2.0), 0.5);
       float aa_stripe_value_a = aa_step(stripe_value_a);
       float aa_stripe_value_b = aa_step(stripe_value_b);
       float aa_stripe_value = 1.0 - max(aa_stripe_value_a, use_grid * aa_stripe_value_b);
 
-      // vec4 HSV = vec4(
-      //   colorValue,
-      //   1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
-      //   1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
-      //   1.0
-      // );
-
-      vec4 HSV = vec4(rgb2hsv(colormapJet(lastEightBits / 255.0)), 1.0);
-      HSV.y = 1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0);
-      HSV.z = 1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0);
+      vec4 HSV = vec4(
+        colorValue,
+        1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
+        1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
+        1.0
+      );
 
       return hsvToRgb(HSV);
     }

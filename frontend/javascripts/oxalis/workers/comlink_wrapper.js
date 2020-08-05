@@ -1,5 +1,8 @@
 // @flow
-import headersTransferHandler from "oxalis/workers/headers_transfer_handler";
+import {
+  requestOptionsTransferHandler,
+  throwTransferHandlerWithResponseSupport,
+} from "oxalis/workers/headers_transfer_handler";
 
 function importComlink() {
   const isNodeContext = typeof process !== "undefined" && process.title !== "browser";
@@ -7,24 +10,26 @@ function importComlink() {
     // Comlink should only be imported in a browser context, since it makes use of functionality
     // which does not exist in node
     // eslint-disable-next-line global-require
-    const { proxy, transferHandlers, expose: _expose } = require("comlinkjs");
-    return { proxy, transferHandlers, _expose };
+    const { wrap, transferHandlers, expose: _expose } = require("comlink");
+    return { wrap, transferHandlers, _expose };
   } else {
     return {
-      proxy: null,
+      wrap: null,
       transferHandlers: new Map(),
       _expose: null,
     };
   }
 }
 
-const { proxy, transferHandlers, _expose } = importComlink();
+const { wrap, transferHandlers, _expose } = importComlink();
 
 // It's important that transferHandlers are registered in this wrapper module and
 // not from another file. Otherwise, callers would need to register the handler
 // in the main thread as well as in the web worker.
 // Since this wrapper is imported from both sides, the handlers are also registered on both sides.
-transferHandlers.set("Headers", headersTransferHandler);
+transferHandlers.set("requestOptions", requestOptionsTransferHandler);
+// Overwrite the default throw handler with ours that supports responses.
+transferHandlers.set("throw", throwTransferHandlerWithResponseSupport);
 
 // Worker modules export bare functions, but webpack turns these into Worker classes which need to be
 // instantiated first.
@@ -36,14 +41,14 @@ transferHandlers.set("Headers", headersTransferHandler);
 type UseCreateWorkerToUseMe<T> = { +_wrapped: T };
 
 export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
-  if (proxy == null) {
+  if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
     // $FlowIgnore
     return WorkerClass;
   }
 
-  return proxy(
+  return wrap(
     // $FlowIgnore
     new WorkerClass(),
   );

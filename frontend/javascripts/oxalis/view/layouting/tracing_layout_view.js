@@ -255,7 +255,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               trigger={null}
               collapsed={this.state.isSettingsCollapsed}
               collapsedWidth={0}
-              width={350}
+              width={360}
               style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
             >
               <SettingsView dontRenderContents={this.state.isSettingsCollapsed} />

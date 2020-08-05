@@ -110,8 +110,8 @@ export const convertCellIdToRGB: ShaderModule = {
       // zoomValue compensates this. Note that the zoomStep should not be used, because that value relates to the
       // three-dimensional dataset. Since the patterns are only 2D, the zoomValue is a better proxy.
       float finedTunedScale = 0.15;
-      float frequency_sequence_length = 3.;
-      float frequencyModulator = mix(1., 2., getElementOfPermutation(significantSegmentIndex, frequency_sequence_length, 2.));
+      float frequencySequenceLength = 3.;
+      float frequencyModulator = mix(0.5, 1.5, getElementOfPermutation(significantSegmentIndex, frequencySequenceLength, 2.) / frequencySequenceLength);
       float coordScaling = finedTunedScale * frequencyModulator;
       float zoomAdaption = ceil(zoomValue);
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
@@ -126,29 +126,29 @@ export const convertCellIdToRGB: ShaderModule = {
       float angleSeed = 2.;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 2.0);
 
-      float stripe_value_a = mix(
+      float stripeValueA = mix(
         worldCoordUVW.x,
         worldCoordUVW.y,
         angle
       );
-      float stripe_value_b = mix(
+      float stripeValueB = mix(
         worldCoordUVW.x,
         -worldCoordUVW.y,
         1.0 - angle
       );
 
-      // use_grid is binary, but we generate a pseudo-random sequence of 13 elements which we map
+      // useGrid is binary, but we generate a pseudo-random sequence of 13 elements which we map
       // to ones and zeros. This has the benefit that the periodicity has a prime length.
-      float use_grid_sequence_length = 13.;
-      float use_grid = step(mod(getElementOfPermutation(significantSegmentIndex, use_grid_sequence_length, 2.0), 2.0), 0.5);
-      float aa_stripe_value_a = aa_step(stripe_value_a);
-      float aa_stripe_value_b = aa_step(stripe_value_b);
-      float aa_stripe_value = 1.0 - max(aa_stripe_value_a, use_grid * aa_stripe_value_b);
+      float useGridSequenceLength = 13.;
+      float useGrid = step(mod(getElementOfPermutation(significantSegmentIndex, useGridSequenceLength, 2.0), 2.0), 0.5);
+      float aaStripeValueA = aa_step(stripeValueA);
+      float aaStripeValueB = aa_step(stripeValueB);
+      float aaStripeValue = 1.0 - max(aaStripeValueA, useGrid * aaStripeValueB);
 
       vec4 HSV = vec4(
         colorValue,
-        1.0 - 0.5 * ((1. - aa_stripe_value) * segmentationPatternOpacity / 100.0),
-        1.0 - 0.5 * (aa_stripe_value * segmentationPatternOpacity / 100.0),
+        1.0 - 0.5 * ((1. - aaStripeValue) * segmentationPatternOpacity / 100.0),
+        1.0 - 0.5 * (aaStripeValue * segmentationPatternOpacity / 100.0),
         1.0
       );
 

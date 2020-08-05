@@ -237,6 +237,10 @@ class PlaneController extends React.PureComponent<Props> {
       down: timeFactor => this.moveY(getMoveValue(timeFactor)),
     });
 
+    const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
+    const loopedKeyboardControls = this.getLoopedKeyboardControls();
+    ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
+
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
@@ -258,11 +262,12 @@ class PlaneController extends React.PureComponent<Props> {
 
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
+        ...loopedKeyboardControls,
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -277,7 +282,7 @@ class PlaneController extends React.PureComponent<Props> {
     );
   }
 
-  getKeyboardControls(): Object {
+  getNotLoopedKeyboardControls(): Object {
     const baseControls = {
       "ctrl + i": event => {
         const segmentationLayer = Model.getSegmentationLayer();
@@ -326,6 +331,12 @@ class PlaneController extends React.PureComponent<Props> {
       c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
       "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),
     };
+  }
+
+  getLoopedKeyboardControls() {
+    return this.props.tracing.skeleton != null
+      ? skeletonController.getLoopedKeyboardControls()
+      : {};
   }
 
   init(): void {

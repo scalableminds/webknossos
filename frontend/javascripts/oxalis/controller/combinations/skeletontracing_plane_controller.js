@@ -142,11 +142,6 @@ export function getKeyboardControls() {
     e: () => moveAlongDirection(),
     r: () => moveAlongDirection(true),
 
-    "ctrl + left": () => moveNode(-1, 0),
-    "ctrl + right": () => moveNode(1, 0),
-    "ctrl + up": () => moveNode(0, -1),
-    "ctrl + down": () => moveNode(0, 1),
-
     // Branches
     b: () => Store.dispatch(createBranchPointAction()),
     j: () => Store.dispatch(requestDeleteBranchPointAction()),
@@ -155,6 +150,14 @@ export function getKeyboardControls() {
       api.tracing.centerNode();
       api.tracing.centerTDView();
     },
+  };
+}
+export function getLoopedKeyboardControls() {
+  return {
+    "ctrl + left": () => moveNode(-1, 0),
+    "ctrl + right": () => moveNode(1, 0),
+    "ctrl + up": () => moveNode(0, -1),
+    "ctrl + down": () => moveNode(0, 1),
   };
 }
 

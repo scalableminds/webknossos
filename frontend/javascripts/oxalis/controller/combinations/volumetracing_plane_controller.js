@@ -13,6 +13,7 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import {
   createCellAction,
   setToolAction,
@@ -52,13 +53,13 @@ const simulateTracing = async (): Promise<void> => {
   controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
   await Utils.sleep(100);
   const nullDelta = { x: 0, y: 0 };
-  controls.leftDownMove(nullDelta, pos(200, 100));
+  controls.leftDownMove(nullDelta, pos(200, 100), null, { ctrlKey: false });
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(200, 200));
+  controls.leftDownMove(nullDelta, pos(200, 200), null, { ctrlKey: false });
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(100, 200));
+  controls.leftDownMove(nullDelta, pos(100, 200), null, { ctrlKey: false });
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(100, 100));
+  controls.leftDownMove(nullDelta, pos(100, 100), null, { ctrlKey: false });
   controls.leftMouseUp();
   await Utils.sleep(100);
   pos = _.clone(getPosition(Store.getState().flycam));
@@ -70,7 +71,7 @@ const simulateTracing = async (): Promise<void> => {
 
 export function getPlaneMouseControls(_planeId: OrthoView): * {
   return {
-    leftDownMove: (delta: Point2, pos: Point2) => {
+    leftDownMove: (delta: Point2, pos: Point2, _id, event) => {
       const { tracing } = Store.getState();
       const volumeTracing = enforceVolumeTracing(tracing);
       const tool = getVolumeTool(volumeTracing);
@@ -78,9 +79,13 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (tool === VolumeToolEnum.MOVE) {
         const state = Store.getState();
-        const { activeViewport } = state.viewModeData.plane;
-        const v = [-delta.x, -delta.y, 0];
-        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+        if (state.tracing.skeleton != null && event.ctrlKey) {
+          skeletonController.moveNode(delta.x, delta.y);
+        } else {
+          const { activeViewport } = state.viewModeData.plane;
+          const v = [-delta.x, -delta.y, 0];
+          Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+        }
       }
 
       if (

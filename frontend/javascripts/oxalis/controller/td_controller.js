@@ -26,29 +26,13 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
-import CameraController from "oxalis/controller/camera_controller";
+import CameraController, { threeCameraToCameraData } from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
 import Store, { type CameraData, type Flycam, type OxalisState, type Tracing } from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
-
-export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
-  const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
-  const objToArr = ({ x, y, z }) => [x, y, z];
-  return {
-    left,
-    right,
-    top,
-    bottom,
-    near,
-    far,
-    position: objToArr(position),
-    up: objToArr(up),
-    lookAt: objToArr(lookAt),
-  };
-}
 
 const INVALID_ACTIVE_NODE_ID = -1;
 

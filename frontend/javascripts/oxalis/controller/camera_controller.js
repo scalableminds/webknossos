@@ -151,13 +151,7 @@ class CameraController extends React.PureComponent<Props> {
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
 
-    tdCamera.position.set(...cameraData.position);
-    tdCamera.left = cameraData.left;
-    tdCamera.right = cameraData.right;
-    tdCamera.top = cameraData.top;
-    tdCamera.bottom = cameraData.bottom;
-    tdCamera.up = new THREE.Vector3(...cameraData.up);
-    tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
+    updateCamera(tdCamera, cameraData);
 
     tdCamera.updateProjectionMatrix();
 
@@ -182,6 +176,43 @@ type TweenState = {
   bottom: number,
 };
 
+function updateCamera(camera: THREE.Camera, cameraData: CameraData) {
+  camera.position.set(...cameraData.position);
+  camera.left = cameraData.left;
+  camera.right = cameraData.right;
+  camera.top = cameraData.top;
+  camera.bottom = cameraData.bottom;
+  camera.up = new THREE.Vector3(...cameraData.up);
+  camera.lookAt(new THREE.Vector3(...cameraData.lookAt));
+
+  camera.updateProjectionMatrix();
+}
+
+const quaternionPresets = {
+  [OrthoViews.TDView]: new THREE.Quaternion(
+    0.29375689501628066,
+    0.8059019432542462,
+    -0.4760969023931061,
+    -0.19380578944167975,
+  ),
+};
+
+export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+  const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
+  const objToArr = ({ x, y, z }) => [x, y, z];
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    near,
+    far,
+    position: objToArr(position),
+    up: objToArr(up),
+    lookAt: objToArr(lookAt),
+  };
+}
+
 export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const state = Store.getState();
   const { dataset } = state;
@@ -191,6 +222,33 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
   const clippingOffsetFactor = 900000;
+  const copyOfTdCamera = new THREE.OrthographicCamera();
+  copyOfTdCamera.useQuaternion = true;
+  updateCamera(copyOfTdCamera, tdCamera);
+  const cameraStartingQuaternion = copyOfTdCamera.quaternion.clone();
+  console.log(copyOfTdCamera.quaternion);
+  const currentQuaternion = new THREE.Quaternion();
+  new TWEEN.Tween({})
+    .to({}, 1000)
+    .onUpdate(passedTime => {
+      // TweenJS passes the current state via the `this` object.
+      // However, for better type checking, we pass it as an explicit
+      // parameter.
+      // console.log("passedTime", passedTime);
+      THREE.Quaternion.slerp(
+        cameraStartingQuaternion,
+        quaternionPresets[OrthoViews.TDView],
+        currentQuaternion,
+        passedTime,
+      );
+      copyOfTdCamera.quaternion.slerp(currentQuaternion, 0.01);
+      copyOfTdCamera.updateProjectionMatrix();
+      console.log(currentQuaternion.clone());
+      console.log(copyOfTdCamera.quaternion.clone());
+      console.log(threeCameraToCameraData(copyOfTdCamera));
+    })
+    .start();
+
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;

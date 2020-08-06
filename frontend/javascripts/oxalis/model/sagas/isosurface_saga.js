@@ -33,6 +33,8 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -252,6 +254,8 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(currentId);
   if (geometry == null) {
+    const errorMessages = messages["tracing.not_isosurface_available_to_download"];
+    Toast.renderDetailedErrorMessage(errorMessages[0], errorMessages[1], { sticky: false });
     return;
   }
   const stl = exportToStl(geometry);

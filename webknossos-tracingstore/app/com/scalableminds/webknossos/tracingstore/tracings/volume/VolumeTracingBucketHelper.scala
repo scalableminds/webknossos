@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -56,12 +57,18 @@ trait VolumeTracingBucketHelper
   implicit def volumeDataStore: FossilDBClient
 
   private def buildKeyPrefix(dataLayerName: String, resolution: Int): String =
-    s"$dataLayerName/${resolution}/"
+    s"$dataLayerName/$resolution/"
 
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+    s"$dataLayerName/${formatResolution(bucket.resolution)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
+
+  private def formatResolution(resolution: Point3D): String =
+    if (resolution.x == resolution.y && resolution.x == resolution.z)
+      s"${resolution.maxDim}"
+    else
+      s"${resolution.x}-${resolution.y}-${resolution.z}"
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -111,15 +118,15 @@ class VersionedBucketIterator(prefix: String,
     with KeyValueStoreImplicits
     with VolumeBucketCompression
     with FoxImplicits {
-  val batchSize = 64
+  private val batchSize = 64
 
-  var currentStartKey = prefix
-  var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
+  private var currentStartKey = prefix
+  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
 
-  def fetchNext =
+  private def fetchNext =
     volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
 
-  def fetchNextAndSave = {
+  private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
     if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator
@@ -138,23 +145,39 @@ class VersionedBucketIterator(prefix: String,
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
-    val keyRx = "([0-9a-z-]+)/(\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)\\]".r
+    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
 
     key match {
       case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolution = resolutionStr.toInt
-        val x = xStr.toInt
-        val y = yStr.toInt
-        val z = zStr.toInt
-        val bucket = new BucketPosition(x * resolution * DataLayer.bucketLength,
-                                        y * resolution * DataLayer.bucketLength,
-                                        z * resolution * DataLayer.bucketLength,
-                                        Point3D(resolution, resolution, resolution))
-        Some((name, bucket))
+        val resolutionOpt = parseResolution(resolutionStr)
+        resolutionOpt match {
+          case Some(resolution) =>
+            val x = xStr.toInt
+            val y = yStr.toInt
+            val z = zStr.toInt
+            val bucket = new BucketPosition(x * resolution.x * DataLayer.bucketLength,
+                                            y * resolution.y * DataLayer.bucketLength,
+                                            z * resolution.z * DataLayer.bucketLength,
+                                            resolution)
+            Some((name, bucket))
+          case _ => None
+        }
+
       case _ =>
         None
     }
   }
+
+  private def parseResolution(resolutionStr: String): Option[Point3D] =
+    resolutionStr.toIntOpt match {
+      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
+      case None =>
+        val pattern = """(\d+)-(\d+)-(\d+)""".r
+        resolutionStr match {
+          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
+          case _                => None
+        }
+    }
 
 }
 

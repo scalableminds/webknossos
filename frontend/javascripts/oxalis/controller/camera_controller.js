@@ -199,13 +199,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   let up: Vector3;
   // Way to calculate the position and rotation of the camera:
   // First, the camera is either positioned at the current center of the flycam or in the dataset center.
-  // Second, the camera is the moved backwards by a clipping factor into the wanted direction.
+  // Second, the camera is moved backwards by a clipping offset into the wanted direction.
   // Together with matching lookUp (up) vectors and keeping the width and height, the position and rotation updates correctly.
   if (id === OrthoViews.TDView && (height <= 0 || width <= 0)) {
     // This should only be the case when initializing the 3D-viewport.
     const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
     const datasetCenter = voxelToNm(dataset.dataSource.scale, getDatasetCenter(dataset));
-    // The camera has not width and height which might be due to a bug or the camera has not been initialized.
+    // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
     const paddingFactor = 1.1;
     width =
@@ -214,7 +214,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       ) * paddingFactor;
     height = width / aspectRatio;
     up = [0, 0, -1];
-    // For very high datasets that have a very low or hight z starting coordinate, the planes might not be visible.
+    // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
     position = [
       datasetCenter[0] - clippingOffsetFactor,

@@ -191,8 +191,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
   const clippingOffsetFactor = 900000;
-  // Factor to reduce the clipping offset of the z coordinate to get a better angle on the dataset.
-  const zReductionFactor = 0.7;
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
@@ -221,13 +219,13 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     position = [
       datasetCenter[0] - clippingOffsetFactor,
       datasetCenter[1] - clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor * zReductionFactor,
+      flycamPos[2] - clippingOffsetFactor,
     ];
   } else if (id === OrthoViews.TDView) {
     position = [
       flycamPos[0] - clippingOffsetFactor,
       flycamPos[1] - clippingOffsetFactor,
-      flycamPos[2] - clippingOffsetFactor * zReductionFactor,
+      flycamPos[2] - clippingOffsetFactor,
     ];
     up = [0, 0, -1];
   } else {

@@ -53,13 +53,13 @@ const simulateTracing = async (): Promise<void> => {
   controls.leftMouseDown(pos(100, 100), OrthoViews.PLANE_XY, ({}: any));
   await Utils.sleep(100);
   const nullDelta = { x: 0, y: 0 };
-  controls.leftDownMove(nullDelta, pos(200, 100), null, { ctrlKey: false });
+  controls.leftDownMove(nullDelta, pos(200, 100));
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(200, 200), null, { ctrlKey: false });
+  controls.leftDownMove(nullDelta, pos(200, 200));
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(100, 200), null, { ctrlKey: false });
+  controls.leftDownMove(nullDelta, pos(100, 200));
   await Utils.sleep(100);
-  controls.leftDownMove(nullDelta, pos(100, 100), null, { ctrlKey: false });
+  controls.leftDownMove(nullDelta, pos(100, 100));
   controls.leftMouseUp();
   await Utils.sleep(100);
   pos = _.clone(getPosition(Store.getState().flycam));
@@ -71,21 +71,16 @@ const simulateTracing = async (): Promise<void> => {
 
 export function getPlaneMouseControls(_planeId: OrthoView): * {
   return {
-    leftDownMove: (delta: Point2, pos: Point2, _id, event) => {
-      const { tracing } = Store.getState();
+    leftDownMove: (delta: Point2, pos: Point2) => {
+      const { tracing, viewModeData } = Store.getState();
       const volumeTracing = enforceVolumeTracing(tracing);
       const tool = getVolumeTool(volumeTracing);
       const contourTracingMode = getContourTracingMode(volumeTracing);
 
       if (tool === VolumeToolEnum.MOVE) {
-        const state = Store.getState();
-        if (state.tracing.skeleton != null && event.ctrlKey) {
-          skeletonController.moveNode(delta.x, delta.y);
-        } else {
-          const { activeViewport } = state.viewModeData.plane;
-          const v = [-delta.x, -delta.y, 0];
-          Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
-        }
+        const { activeViewport } = viewModeData.plane;
+        const v = [-delta.x, -delta.y, 0];
+        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
       }
 
       if (

@@ -39,7 +39,10 @@ import {
   toggleInactiveTreesAction,
   setNodePositionAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setDirectionAction,
+  movePlaneFlycamOrthoAction,
+} from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
@@ -70,6 +73,17 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
 
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
+    leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
+      const { tracing } = Store.getState();
+      const state = Store.getState();
+      if (tracing.skeleton != null && event.ctrlKey) {
+        moveNode(delta.x, delta.y);
+      } else {
+        const { activeViewport } = state.viewModeData.plane;
+        const v = [-delta.x, -delta.y, 0];
+        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+      }
+    },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {

@@ -162,13 +162,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): Object {
     const baseControls = {
-      leftDownMove: (delta: Point2, _pos, _id, event) => {
-        if (event.ctrlKey) {
-          skeletonController.moveNode(delta.x, delta.y);
-        } else {
-          this.movePlane([-delta.x, -delta.y, 0]);
-        }
-      },
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));
@@ -183,13 +176,21 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { leftClick: null };
-    const { leftClick: maybeSkeletonLeftClick, ...skeletonControls } =
+    const emptyDefaultHandler = { leftClick: null, leftDownMove: null };
+    const {
+      leftClick: maybeSkeletonLeftClick,
+      leftDownMove: maybeSkeletonLeftDownMove,
+      ...skeletonControls
+    } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : emptyDefaultHandler;
 
-    const { leftClick: maybeVolumeLeftClick, ...volumeControls } =
+    const {
+      leftClick: maybeVolumeLeftClick,
+      leftDownMove: maybeVolumeLeftDownMove,
+      ...volumeControls
+    } =
       this.props.tracing.volume != null
         ? volumeController.getPlaneMouseControls(planeId)
         : emptyDefaultHandler;
@@ -205,6 +206,10 @@ class PlaneController extends React.PureComponent<Props> {
         maybeVolumeLeftClick,
         // The isosurfaceLeftClick handler should only be used in view mode.
         isosurfaceLeftClick,
+      ),
+      leftDownMove: this.createToolDependentHandler(
+        maybeSkeletonLeftDownMove,
+        maybeVolumeLeftDownMove,
       ),
     };
   }

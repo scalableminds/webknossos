@@ -71,7 +71,7 @@ export function* collectUndoStates(): Saga<void> {
     const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
     if (userAction) {
       if (curTracing !== prevTracing) {
-        if (!shouldAddToUndoStack(userAction, previousAction)) {
+        if (shouldAddToUndoStack(userAction, previousAction)) {
           undoStack.push(prevTracing);
         }
         // Clear the redo stack when a new action is executed
@@ -106,7 +106,7 @@ export function* collectUndoStates(): Saga<void> {
 
 function shouldAddToUndoStack(currentUserAction: Action, previousAction: ?Action) {
   if (previousAction == null) {
-    return false;
+    return true;
   }
   switch (currentUserAction.type) {
     case "SET_NODE_POSITION": {

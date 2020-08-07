@@ -161,6 +161,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): Object {
+    const defaultDragHandler = (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]);
     const baseControls = {
       scroll: this.scrollPlanes.bind(this),
       over: () => {
@@ -210,6 +211,7 @@ class PlaneController extends React.PureComponent<Props> {
       leftDownMove: this.createToolDependentHandler(
         maybeSkeletonLeftDownMove,
         maybeVolumeLeftDownMove,
+        defaultDragHandler,
       ),
     };
   }

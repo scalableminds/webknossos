@@ -13,7 +13,6 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import {
   createCellAction,
   setToolAction,

@@ -1,6 +1,7 @@
 // @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Icon, Select } from "antd";
 import * as React from "react";
+import _ from "lodash";
 
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
@@ -29,7 +30,11 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
   };
 
   render() {
-    const { value, label, max, min, step, onChange, disabled } = this.props;
+    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+
+    // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
+    const isValueValid = _.isNumber(originalValue) && originalValue >= min && originalValue <= max;
+    const value = isValueValid ? originalValue : Math.floor((min + max) / 2);
 
     return (
       <Row type="flex" align="middle">

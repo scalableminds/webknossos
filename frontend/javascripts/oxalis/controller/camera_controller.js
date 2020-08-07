@@ -248,9 +248,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       positionOffset[id][2] + flycamPos[2],
     ];
   }
-  // Ensure a valid width and height if camera ended up with no width and height due to a bug.
-  width = width > 0 ? width : datasetExtent.width;
-  height = height > 0 ? height : datasetExtent.height;
+  width = datasetExtent.width;
+  height = datasetExtent.height;
   const to: TweenState = {
     xPos: position[0],
     yPos: position[1],

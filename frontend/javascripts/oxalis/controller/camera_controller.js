@@ -216,15 +216,17 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     up = [0, 0, -1];
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.
     // Thus take the z coordinate of the flycam instead of the z coordinate of the center.
+    // The clippingOffsetFactor is added in x and y direction to get a view on the dataset the 3D view that is close to the plane views.
+    // Thus the rotation between the 3D view to the eg. XY plane views is much shorter and the interpolated rotation does not look weird.
     position = [
-      datasetCenter[0] - clippingOffsetFactor,
-      datasetCenter[1] - clippingOffsetFactor,
+      datasetCenter[0] + clippingOffsetFactor,
+      datasetCenter[1] + clippingOffsetFactor,
       flycamPos[2] - clippingOffsetFactor,
     ];
   } else if (id === OrthoViews.TDView) {
     position = [
-      flycamPos[0] - clippingOffsetFactor,
-      flycamPos[1] - clippingOffsetFactor,
+      flycamPos[0] + clippingOffsetFactor,
+      flycamPos[1] + clippingOffsetFactor,
       flycamPos[2] - clippingOffsetFactor,
     ];
     up = [0, 0, -1];

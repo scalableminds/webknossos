@@ -303,6 +303,7 @@ class PlaneMaterialFactory {
       }),
     );
     this.material.extensions = {
+      // Necessary for anti-aliasing via fwidth in shader
       derivatives: true,
     };
 

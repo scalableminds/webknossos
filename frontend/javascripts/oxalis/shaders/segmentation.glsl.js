@@ -56,16 +56,15 @@ export const convertCellIdToRGB: ShaderModule = {
     */
     float getElementOfPermutation(float index, float sequenceLength, float primitiveRoot) {
       float oneBasedIndex = mod(index, sequenceLength) + 1.0;
-      // If oneBasedIndex == 1, isNotFirstElement == 0:
-      float isNotFirstElement = step(1.5, oneBasedIndex);
+      float isFirstElement = float(oneBasedIndex == 1.0);
 
       float sequenceValue = mod(pow(primitiveRoot, oneBasedIndex), sequenceLength);
 
       return
-        // Only use sequenceLength if request element is not the first of the sequence
-        isNotFirstElement * sequenceValue
-        // Otherwise, return sequenceLength
-        + (1. - isNotFirstElement) * sequenceLength;
+        // Only use sequenceLength if the requested element is the first of the sequence
+        (isFirstElement) * sequenceLength
+        // Otherwise, return the actual sequenceValue
+        + (1. - isFirstElement) * sequenceValue;
     }
 
     vec3 colormapJet(float x) {
@@ -77,7 +76,22 @@ export const convertCellIdToRGB: ShaderModule = {
     }
 
     vec3 convertCellIdToRGB(vec4 id) {
-      float golden_ratio = 0.618033988749895;
+      /*
+      This function maps from a segment id to a color with a pattern.
+      For the color, the jet color map is used. For the patterns, we employ the following
+      features:
+      - different shapes (stripes and grid)
+      - different angles
+      - different densities (see frequencyModulator)
+
+      The features are pseudo-randomly combined using `getElementOfPermutation`.
+      This approach gives us 17 colors  * 2 shapes * 19 angles * 3 densities and therefore
+      1938 different segment styles.
+
+      If custom colors were provided via mappings, the color values are used from there.
+      The patterns are still painted on top of these, though.
+      */
+
       float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
@@ -85,7 +99,7 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 3.);
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
-      // For historical reference: the old color generation was: colorValue = mod(lastEightBits * golden_ratio, 1.0);
+      // For historical reference: the old color generation was: colorValue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       <% if (isMappingSupported) { %>
         // If the first element of the mapping colors texture is still the initialized
@@ -104,17 +118,21 @@ export const convertCellIdToRGB: ShaderModule = {
         }
       <% } %>
 
-      // Scale world coordinates for a pleasant coordinate frequency.
+      // The following code scales the world coordinates so that the coordinate frequency is in a "pleasant" range.
       // Also, when zooming out, coordinates change faster which make the pattern more turbulent. Dividing by the
-      // zoomValue compensates this. Note that the zoomStep should not be used, because that value relates to the
+      // zoomValue compensates this. Note that the zoom *step* should not be used here, because that value relates to the
       // three-dimensional dataset. Since the patterns are only 2D, the zoomValue is a better proxy.
-      float finedTunedScale = 0.15;
+      //
+      // By default, scale everything with fineTunedScale as this seemed a good value during testing.
+      float fineTunedScale = 0.15;
+      // Additionally, apply another scale factor (between 0.5 and 1.5) depending on the segment id.
       float frequencySequenceLength = 3.;
       float frequencyModulator = mix(0.5, 1.5, getElementOfPermutation(significantSegmentIndex, frequencySequenceLength, 2.) / frequencySequenceLength);
-      float coordScaling = finedTunedScale * frequencyModulator;
+      float coordScaling = fineTunedScale * frequencyModulator;
+      // Round the zoomValue so that the pattern frequency only changes at distinct steps. Otherwise, zooming out
+      // wouldn't change the pattern at all, which would feel weird.
       float zoomAdaption = ceil(zoomValue);
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
-
 
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
       vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;

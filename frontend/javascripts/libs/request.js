@@ -16,11 +16,11 @@ const compress = createWorker(CompressWorker);
 
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
-export type RequestOptions = {
+export type RequestOptionsBase<T> = {
   compress?: boolean,
   doNotInvestigate?: boolean,
   extractHeaders?: boolean,
-  headers?: { [key: string]: string },
+  headers?: T,
   host?: string,
   method?: method,
   params?: string | Object,
@@ -28,6 +28,8 @@ export type RequestOptions = {
   timeout?: number,
   useWebworkerForArrayBuffer?: boolean,
 };
+
+export type RequestOptions = RequestOptionsBase<{ [key: string]: string }>;
 
 export type RequestOptionsWithData<T> = RequestOptions & {
   data: T,
@@ -242,8 +244,8 @@ class Request {
       }
     }
 
-    fetchPromise = fetchPromise.catch(
-      this.handleError.bind(this, url, options.showErrorToast, !options.doNotInvestigate),
+    fetchPromise = fetchPromise.catch(error =>
+      this.handleError(url, options.showErrorToast || false, !options.doNotInvestigate, error),
     );
 
     if (options.timeout != null) {

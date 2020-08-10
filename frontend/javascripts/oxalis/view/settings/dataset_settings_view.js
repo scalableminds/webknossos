@@ -244,7 +244,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
-      <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
+      <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
@@ -281,7 +281,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           elementClass,
         )}
         {isDisabled ? null : (
-          <React.Fragment>
+          <div style={{ marginBottom: 30, marginLeft: 10 }}>
             {isHistogramSupported(elementClass) && layerName != null && isColorLayer
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
@@ -303,7 +303,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               />
             )}
             {isColorLayer ? (
-              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+              <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
                 </Col>
@@ -329,6 +329,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                         position: "absolute",
                         top: 0,
                         right: -9,
+                        marginTop: 0,
                         display: "inline-flex",
                       }}
                     >
@@ -363,7 +364,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
-          </React.Fragment>
+          </div>
         )}
       </div>
     );

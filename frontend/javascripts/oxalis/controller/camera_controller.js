@@ -248,8 +248,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       positionOffset[id][2] + flycamPos[2],
     ];
   }
-  width = datasetExtent.width;
-  height = datasetExtent.height;
   const to: TweenState = {
     xPos: position[0],
     yPos: position[1],

@@ -84,8 +84,8 @@ export const convertCellIdToRGB: ShaderModule = {
       - different angles
       - different densities (see frequencyModulator)
 
-      The features are pseudo-randomly combined using `getElementOfPermutation`.
-      This approach gives us 17 colors  * 2 shapes * 19 angles * 3 densities and therefore
+      The features are pseudo-randomly combined using getElementOfPermutation.
+      This approach gives us 19 colors  * 2 shapes * 17 angles * 3 densities and therefore
       1938 different segment styles.
 
       If custom colors were provided via mappings, the color values are used from there.
@@ -95,8 +95,8 @@ export const convertCellIdToRGB: ShaderModule = {
       float lastEightBits = id.r;
       float significantSegmentIndex = 256.0 * id.g + id.r;
 
-      float colorCount = 17.;
-      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 3.);
+      float colorCount = 19.;
+      float colorIndex = getElementOfPermutation(significantSegmentIndex, colorCount, 2.);
       float colorValueDecimal = 1.0 / colorCount * colorIndex;
       float colorValue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       // For historical reference: the old color generation was: colorValue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
@@ -139,8 +139,8 @@ export const convertCellIdToRGB: ShaderModule = {
       worldCoordUVW.x = worldCoordUVW.x * datasetScaleUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
 
-      float angleCount = 19.;
-      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 2.0);
+      float angleCount = 17.;
+      float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
 
       float stripeValueA = mix(
         worldCoordUVW.x,
@@ -213,17 +213,18 @@ export const getSegmentationId: ShaderModule = {
           vec4(0.0, 0.0, 0.0, 0.0)
         );
 
+      // Depending on the packing degree, the returned volume color contains extra values
+      // which would should be ignored (in the binary search as well as when comparing
+      // a cell id with the hovered cell passed via uniforms, for example).
+
+      <% if (segmentationPackingDegree === "4.0") { %>
+        volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
+      <% } else if (segmentationPackingDegree === "2.0") { %>
+        volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
+      <% } %>
 
       <% if (isMappingSupported) { %>
         if (isMappingEnabled) {
-          // Depending on the packing degree, the returned volume color contains extra values
-          // which would make the binary search fail
-
-          <% if (segmentationPackingDegree === "4.0") { %>
-            volume_color = vec4(volume_color.r, 0.0, 0.0, 0.0);
-          <% } else if (segmentationPackingDegree === "2.0") { %>
-            volume_color = vec4(volume_color.r, volume_color.g, 0.0, 0.0);
-          <% } %>
 
           float index = binarySearchIndex(
             <%= segmentationName %>_mapping_lookup_texture,

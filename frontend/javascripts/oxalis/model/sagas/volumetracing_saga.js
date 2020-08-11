@@ -5,6 +5,7 @@ import {
   type CopySegmentationLayerAction,
   resetContourAction,
   updateDirectionAction,
+  setToolAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
@@ -27,7 +28,7 @@ import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
-  isVolumeTracingDisallowed,
+  isVolumeTraceToolDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -89,12 +90,13 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       contourTracingMode === ContourModeEnum.DRAW_OVERWRITE ||
       contourTracingMode === ContourModeEnum.DRAW;
 
-    // Volume tracing for higher zoomsteps is currently not allowed
-    if (yield* select(state => isVolumeTracingDisallowed(state))) {
+    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
+    // The trace tool is not allowed for too high zoom steps.
+    const isZoomStepTooHighForTraceTool = yield* select(isVolumeTraceToolDisallowed);
+    if (isZoomStepTooHighForTraceTool && activeTool !== VolumeToolEnum.TRACE) {
       continue;
     }
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
-    const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
@@ -255,11 +257,18 @@ export function* finishLayer(
   yield* put(resetContourAction());
 }
 
-export function* disallowVolumeTracingWarning(): Saga<*> {
+export function* ensureNoTraceToolInLowResolutions(): Saga<*> {
+  yield* take("INITIALIZE_VOLUMETRACING");
   while (true) {
-    yield* take(["SET_TOOL", "CYCLE_TOOL"]);
-    if (yield* select(state => isVolumeTracingDisallowed(state))) {
-      Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
+    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
+    const isResolutionToLowForTraceTool = yield* select(state =>
+      isVolumeTraceToolDisallowed(state),
+    );
+    const isTraceToolActive = yield* select(
+      state => enforceVolumeTracing(state.tracing).activeTool === VolumeToolEnum.TRACE,
+    );
+    if (isResolutionToLowForTraceTool && isTraceToolActive) {
+      yield* put(setToolAction(VolumeToolEnum.MOVE));
     }
   }
 }

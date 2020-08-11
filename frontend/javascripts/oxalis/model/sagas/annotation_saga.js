@@ -8,10 +8,6 @@ import {
   take,
   _delay,
 } from "oxalis/model/sagas/effect-generators";
-import {
-  isVolumeTracingDisallowed,
-  isSegmentationMissingForZoomstep,
-} from "oxalis/model/accessors/volumetracing_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -46,23 +42,12 @@ function shouldDisplaySegmentationData(): boolean {
   return !isSegmentationLayerDisabled;
 }
 
-export function* warnAboutSegmentationOpacity(): Saga<void> {
+export function* warnAboutSegmentationZoom(): Saga<void> {
   function* warnMaybe(): Saga<void> {
     const segmentationLayer = Model.getSegmentationLayer();
     if (!segmentationLayer) {
       return;
     }
-    const isDisallowed = yield* select(isVolumeTracingDisallowed);
-    const isSegmentationMissing = yield* select(state =>
-      isSegmentationMissingForZoomstep(state, segmentationLayer.cube.MAX_ZOOM_STEP),
-    );
-
-    if (shouldDisplaySegmentationData() && (isDisallowed || isSegmentationMissing)) {
-      Toast.error(messages["tracing.segmentation_zoom_warning"], { sticky: false, timeout: 3000 });
-    } else {
-      Toast.close(messages["tracing.segmentation_zoom_warning"]);
-    }
-
     const isAgglomerateMappingEnabled = yield* select(
       storeState =>
         storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&

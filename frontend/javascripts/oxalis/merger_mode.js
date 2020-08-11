@@ -97,7 +97,7 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
     api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
   } else {
     await call(action);
-    // We center the create cell manually, as somehow without this call the previous node would be centered.
+    // Center the created cell manually, as somehow without this call the previous node would be centered.
     api.tracing.centerActiveNode();
   }
 }

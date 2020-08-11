@@ -56,6 +56,8 @@ trait VolumeTracingBucketHelper
     with VolumeBucketKeys
     with VolumeBucketCompression {
 
+  protected val cacheTimeout: FiniteDuration = 20 minutes
+
   implicit def volumeDataStore: FossilDBClient
   implicit def volumeDataCache: TemporaryVolumeDataStore
 
@@ -95,7 +97,7 @@ trait VolumeTracingBucketHelper
     if (toCache) {
       // Note that this cache is for temporary volumes only (e.g. compound projects)
       // and cannot be used for download or versioning
-      Fox.successful(volumeDataCache.insert(key, compressedBucket, Some(20 minutes)))
+      Fox.successful(volumeDataCache.insert(key, compressedBucket, Some(cacheTimeout)))
     } else {
       volumeDataStore.put(key, version, compressedBucket)
     }

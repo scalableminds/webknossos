@@ -208,10 +208,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     // The camera has no width and height which might be due to a bug or the camera has not been initialized.
     // Thus we zoom out to show the whole dataset.
     const paddingFactor = 1.1;
-    width =
-      Math.sqrt(
-        datasetExtent.width **2 + datasetExtent.height ** 2,
-      ) * paddingFactor;
+    width = Math.sqrt(datasetExtent.width ** 2 + datasetExtent.height ** 2) * paddingFactor;
     height = width / aspectRatio;
     up = [0, 0, -1];
     // For very tall datasets that have a very low or high z starting coordinate, the planes might not be visible.

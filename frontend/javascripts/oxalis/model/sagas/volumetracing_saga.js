@@ -166,16 +166,16 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
     case ContourModeEnum.DRAW_OVERWRITE:
-      yield* call([cube, cube.labelVoxels], iterator, activeCellId);
+      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, activeCellId);
       break;
     case ContourModeEnum.DRAW:
-      yield* call([cube, cube.labelVoxels], iterator, activeCellId, 0);
+      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, activeCellId, 0);
       break;
     case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
-      yield* call([cube, cube.labelVoxels], iterator, 0, activeCellId);
+      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, 0, activeCellId);
       break;
     case ContourModeEnum.DELETE_FROM_ANY_CELL:
-      yield* call([cube, cube.labelVoxels], iterator, 0);
+      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, 0);
       break;
     default:
       throw new Error("Invalid volume tracing mode.");

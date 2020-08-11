@@ -165,6 +165,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
+  "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":

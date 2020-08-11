@@ -52,6 +52,12 @@ export class VoxelIterator {
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
     this.boundingBox = boundingBox;
+    this.reset();
+  }
+
+  reset() {
+    this.x = 0;
+    this.y = 0;
     if (!this.map || !this.map[0]) {
       this.hasNext = false;
     } else {
@@ -94,9 +100,10 @@ export class VoxelIterator {
           this.x + this.minCoord2d[0],
           this.y + this.minCoord2d[1],
         ]);
-        // check position for beeing in bounds
+        // Check if position is in bounds.
         if (this.isCoordinateInBounds(currentCoordinate)) {
           this.next = currentCoordinate;
+          this.hasNext = true;
           foundNext = true;
         }
       }

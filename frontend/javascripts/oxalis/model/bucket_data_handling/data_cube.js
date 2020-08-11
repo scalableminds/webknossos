@@ -316,7 +316,7 @@ class DataCube {
           if (
             Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
           ) {
-            this.labelVoxel([x, y, z], 5);
+            this.labelVoxelInResolution([x, y, z], 5, 0);
           }
         }
       }
@@ -325,30 +325,42 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  labelVoxels(iterator: VoxelIterator, label: number, activeCellId?: ?number = null): void {
-    while (iterator.hasNext) {
-      const voxel = iterator.getNext();
-      this.labelVoxel(voxel, label, activeCellId);
+  labelVoxelsInAllResolutions(
+    iterator: VoxelIterator,
+    label: number,
+    activeCellId?: ?number = null,
+  ): void {
+    const numberOfResolutions = getResolutions(Store.getState().dataset).length;
+    for (let zoomStep = 0; zoomStep < numberOfResolutions; ++zoomStep) {
+      while (iterator.hasNext) {
+        const voxel = iterator.getNext();
+        this.labelVoxelInResolution(voxel, label, zoomStep, activeCellId);
+      }
+      iterator.reset();
     }
-
     this.pushQueue.push();
     this.trigger("volumeLabeled");
   }
 
-  labelVoxel(voxel: Vector3, label: number, activeCellId: ?number): void {
+  labelVoxelInResolution(
+    voxel: Vector3,
+    label: number,
+    zoomStep: number,
+    activeCellId: ?number,
+  ): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
     }
     if (voxelInCube) {
-      const address = this.positionToBaseAddress(voxel);
+      const address = this.positionToZoomedAddress(voxel, zoomStep);
       const bucket = this.getOrCreateBucket(address);
       if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel);
+        const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
         let shouldUpdateVoxel = true;
         if (activeCellId != null) {
-          const voxelValue = this.getMappedDataValue(voxel);
+          const voxelValue = this.getMappedDataValue(voxel, zoomStep);
           shouldUpdateVoxel = activeCellId === voxelValue;
         }
 
@@ -411,12 +423,12 @@ class DataCube {
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
-  positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
+  positionToZoomedAddress(position: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
       getResolutions(Store.getState().dataset),
-      resolutionIndex,
+      zoomStep,
     );
   }
 

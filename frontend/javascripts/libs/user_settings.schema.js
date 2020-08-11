@@ -32,7 +32,7 @@ export const userSettings = {
   highlightHoveredCellId: { type: "boolean" },
   zoom: { type: "number", minimum: 0.005 },
   renderMissingDataBlack: { type: "boolean" },
-  brushSize: { type: "number", minimum: 1, maximum: 5000 },
+  brushSize: { type: "number", minimum: 1, maximum: 300 },
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },

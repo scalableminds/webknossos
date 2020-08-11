@@ -17,6 +17,7 @@ import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
+import Toast from "libs/toast";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
@@ -145,23 +146,41 @@ export async function requestFromStore(
     createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
   );
 
-  return doWithToken(async token => {
-    const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataUrl}/data?token=${token}`,
-      {
+  try {
+    return await doWithToken(async token => {
+      const {
+        buffer: responseBuffer,
+        headers,
+      } = await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
-      },
-    );
-    const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+        showErrorToast: false,
+      });
+      const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
 
-    let resultBuffer = responseBuffer;
-    if (fourBit) {
-      resultBuffer = await decodeFourBit(resultBuffer);
+      let resultBuffer = responseBuffer;
+      if (fourBit) {
+        resultBuffer = await decodeFourBit(resultBuffer);
+      }
+
+      return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
+    });
+  } catch (errorResponse) {
+    let errorMessage = `Requesting buckets from layer "${layerInfo.name}" failed. `;
+    if (errorResponse.status != null) {
+      errorMessage += `Status code ${errorResponse.status} - "${errorResponse.statusText}".`;
+    } else {
+      errorMessage += errorResponse.message;
     }
-
-    return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
-  });
+    const urlAsString = `URL - ${dataUrl}`;
+    console.error(`${errorMessage} ${urlAsString}`);
+    console.error(errorResponse);
+    Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
+      key: errorMessage,
+      sticky: false,
+    });
+    return batch.map(_val => null);
+  }
 }
 
 function sliceBufferIntoPieces(

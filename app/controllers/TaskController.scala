@@ -72,6 +72,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                                projectDAO: ProjectDAO,
                                taskTypeDAO: TaskTypeDAO,
                                dataSetDAO: DataSetDAO,
+                               userTeamRolesDAO: UserTeamRolesDAO,
                                userService: UserService,
                                dataSetService: DataSetService,
                                tracingStoreService: TracingStoreService,
@@ -529,11 +530,18 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       projects: List[Project] <- Fox.serialCombined(projectNames)(projectDAO.findOneByName(_))
       dataSetTeams <- teamDAO.findAllForDataSet(dataSet._id)
       noAccessTeamIds = projects.map(_._team).diff(dataSetTeams.map(_._id))
-      noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIds)(id => teamDAO.findOne(id))
+      noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
+        filterOutTransitiveSubteam(id, dataSetTeams.map(_._id)))
+      noAccessTeams: List[Team] <- Fox.serialCombined(noAccessTeamIdsTransitive.flatten)(id => teamDAO.findOne(id))
       warnings = noAccessTeams.map(team =>
         s"Project team “${team.name}” has no read permission to dataset “${dataSet.name}”.")
     } yield warnings
   }
+
+  private def filterOutTransitiveSubteam(subteamId: ObjectId, dataSetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
+    for {
+      memberDifference <- userTeamRolesDAO.findMemberDifference(subteamId, dataSetTeams)
+    } yield if (memberDifference.isEmpty) None else Some(subteamId)
 
   private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[WkEnv, _]): Fox[Unit] =
     scriptIdOpt match {

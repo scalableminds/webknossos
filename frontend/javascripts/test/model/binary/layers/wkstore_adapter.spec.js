@@ -45,6 +45,7 @@ const StoreMock = {
 
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
+mockRequire("libs/toast", { renderDetailedErrorMessage: _.noop });
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
 const { requestWithFallback, sendToStore } = mockRequire.reRequire(
@@ -128,6 +129,7 @@ function createExpectedOptions(fourBit: boolean = false) {
       { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit },
     ],
     timeout: 30000,
+    showErrorToast: false,
   };
 }
 

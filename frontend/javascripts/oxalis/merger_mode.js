@@ -97,7 +97,7 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
     api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
   } else {
     await call(action);
-    // We center the create cell manually, as we implicit override the action that centers the new cell automatically.
+    // We center the create cell manually, as we implicitly override the action that centers the new cell automatically.
     api.tracing.centerActiveNode();
   }
 }
@@ -159,11 +159,10 @@ async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTree
   const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
   const segmentId = await api.data.getDataValue(segmentationLayerName, position);
   if (nodeSegmentMap[id] !== segmentId) {
-    // If the segment of the node changed, it is like the node got got deleted and a copy got created somewhere else.
+    // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
     // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
     if (nodeSegmentMap[id] != null) {
       await onDeleteNode(mergerModeState, id, false);
-      // debugger;
     }
     if (segmentId != null && segmentId > 0) {
       await onCreateNode(mergerModeState, id, treeId, position, false);

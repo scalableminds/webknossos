@@ -140,7 +140,7 @@
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
-    "comlinkjs": "^3.0.3",
+    "comlink": "^4.3.0",
     "copy-webpack-plugin": "^4.6.0",
     "cross-fetch": "^3.0.1",
     "data.maybe": "^1.2.2",

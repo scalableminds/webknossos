@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
+import java.io.File
+import java.nio.file.{Files, Path}
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
@@ -10,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -184,5 +186,28 @@ class BinaryDataService(dataBaseDir: Path,
 
     agglomerateService.agglomerateFileCache.clear(matchingAgglomerate)
     cache.clear(matchingPredicate)
+  }
+
+  def deleteOnDisk(organizationName: String, dataSetName: String): Fox[Unit] = {
+    val dataSourcePath = dataBaseDir.resolve(organizationName).resolve(dataSetName)
+    val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(".trash")
+    val targetPath = trashPath.resolve(dataSetName)
+    new File(trashPath.toString).mkdirs()
+
+    logger.info(s"Deleting dataset by moving it from $dataSourcePath to $targetPath...")
+
+    try {
+      val path = Files.move(
+        dataSourcePath,
+        targetPath
+      )
+      if (path == null) {
+        throw new Exception("Deleting dataset failed")
+      }
+      logger.info(s"Successfully moved dataset from $dataSourcePath to $targetPath...")
+      Fox.successful(())
+    } catch {
+      case e: Exception => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
+    }
   }
 }

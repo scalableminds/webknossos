@@ -32,6 +32,7 @@ image.create.failed=Failed to create image
 
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
+auth.token.noUser=Could not determine user for access token
 
 team.created=Team was created
 team.notAllowed=You are not part of this team. Project can’t be created.
@@ -112,6 +113,7 @@ dataSet.noData=Could not get data for the requested dataset
 dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
 dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually?
+dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
 
 dataSource.notFound=Datasource not found on datastore server
 

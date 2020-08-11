@@ -210,7 +210,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const paddingFactor = 1.1;
     width =
       Math.sqrt(
-        datasetExtent.width * datasetExtent.width + datasetExtent.height * datasetExtent.height,
+        datasetExtent.width **2 + datasetExtent.height ** 2,
       ) * paddingFactor;
     height = width / aspectRatio;
     up = [0, 0, -1];

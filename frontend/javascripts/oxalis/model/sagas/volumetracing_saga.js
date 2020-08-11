@@ -93,7 +93,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
     // The trace tool is not allowed for too high zoom steps.
     const isZoomStepTooHighForTraceTool = yield* select(isVolumeTraceToolDisallowed);
-    if (isZoomStepTooHighForTraceTool && activeTool !== VolumeToolEnum.TRACE) {
+    if (isZoomStepTooHighForTraceTool && activeTool === VolumeToolEnum.TRACE) {
       continue;
     }
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);

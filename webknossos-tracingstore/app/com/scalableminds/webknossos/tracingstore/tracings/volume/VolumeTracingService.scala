@@ -13,8 +13,9 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.BinaryDataService
+import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -28,14 +29,15 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.collection.mutable
 
 trait FilterBytes {
   // extracted to here because ambiguous implicits broke the filter method inside of VolumeTracingService
-  protected def filterBytes(bytes: Array[Byte], predicate: Byte => Boolean): Array[Byte] = bytes.filter(predicate)
+  protected def filterBytes[T](bytes: Array[T], predicate: T => Boolean): Array[T] = bytes.filter(predicate)
 
-  protected def mapBytes(data: Array[Byte], map: mutable.Map[Byte, Byte]): Array[Byte] =
+  protected def mapBytes[T](data: Array[T], map: mutable.Map[T, T]): Array[T] =
     data.map { byteValue =>
       if (byteValue != 0) {
         map(byteValue)
@@ -159,7 +161,7 @@ class VolumeTracingService @Inject()(
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
-    val mergedVolume = new MergedVolume
+    val mergedVolume = new MergedVolume(tracing.elementClass)
 
     ZipIO.withUnziped(initialData) {
       case (_, is) =>
@@ -178,7 +180,7 @@ class VolumeTracingService @Inject()(
         mergedVolume.addLabelSet(labelSet)
     }
 
-    var sourceVolumeIndex = 0
+    var sourceVolumeIndex = 0 //order must be deterministic, same as label set order
     ZipIO.withUnziped(initialData) {
       case (_, is) =>
         ZipIO.withUnziped(is) {
@@ -202,44 +204,51 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
   }
 
-  class MergedVolume {
-    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[Byte]]
-    private var labelSets = mutable.ListBuffer[mutable.Set[Byte]]()
-    private var labelMaps = mutable.ListBuffer[mutable.HashMap[Byte, Byte]]()
-    def addLabelSet(labelSet: mutable.Set[Byte]): Unit = labelSets += labelSet
+  class MergedVolume[T >: UByte with UShort with UInt with ULong](elementClass: ElementClass) extends DataConverter {
+    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[T]]
+    private var labelSets = mutable.ListBuffer[mutable.Set[ULong]]()
+    private var labelMaps = mutable.ListBuffer[mutable.HashMap[ULong, ULong]]()
+    def addLabelSet(labelSet: mutable.Set[ULong]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
       if (labelSets.isEmpty || labelMaps.nonEmpty) {
         ()
       } else {
-        var i: Byte = 0x01
+        var i: ULong = ULong(1)
         labelSets.toList.foreach { labelSet =>
-          var labelMap = mutable.HashMap.empty[Byte, Byte]
+          var labelMap = mutable.HashMap.empty[ULong, ULong]
           labelSet.foreach { label =>
             labelMap += ((label, i))
-            i = (i.toInt + 0x01).toByte
+            i = i + ULong(1)
           }
           labelMaps += labelMap
         }
       }
 
     def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
+      val dataTyped: Array[T] = convertData(data, elementClass)
       prepareLabelMaps()
       if (mergedVolume.contains(bucketPosition)) {
         val mutableBucketData = mergedVolume(bucketPosition)
-        data.zipWithIndex.foreach {
+        dataTyped.zipWithIndex.foreach {
           case (byteValue, index) =>
-            if (byteValue != 0) {
-              val byteValueMapped = if (labelMaps.isEmpty) byteValue else labelMaps(sourceVolumeIndex)(byteValue)
+            val valueAsULong: Long = byteValue match {
+              case value: UByte => value.toLong
+              case value: UShort => value.toLong
+              case value: UInt => value.toLong
+              case value: ULong => value.toLong
+            }
+            if (valueAsULong != 0L) {
+              val byteValueMapped = if (labelMaps.isEmpty) byteValue else labelMaps(sourceVolumeIndex)(valueAsULong)
               mutableBucketData(index) = byteValueMapped
             }
         }
         mergedVolume += ((bucketPosition, mutableBucketData))
       } else {
         if (labelMaps.isEmpty) {
-          mergedVolume += ((bucketPosition, data))
+          mergedVolume += ((bucketPosition, dataTyped))
         } else {
-          val dataMapped = mapBytes(data, labelMaps(sourceVolumeIndex))
+          val dataMapped = mapBytes(dataTyped, labelMaps(sourceVolumeIndex))
           mergedVolume += ((bucketPosition, dataMapped))
         }
       }
@@ -249,6 +258,7 @@ class VolumeTracingService @Inject()(
       for {
         _ <- Fox.combined(mergedVolume.map {
           case (bucketPosition, bucketData) =>
+            val bucketDataBytes = bucketData.toBytes
             saveBucket(layer, bucketPosition, bucketData, version, toCache)
         }.toList)
       } yield ()
@@ -411,7 +421,7 @@ class VolumeTracingService @Inject()(
                       newId: String,
                       newTracing: VolumeTracing,
                       toCache: Boolean): Fox[Unit] = {
-    val mergedVolume = new MergedVolume
+    val mergedVolume = new MergedVolume(tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8))
 
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>

@@ -10,14 +10,14 @@ import update from "immutability-helper";
 
 import { type ContourMode, type Vector3, type VolumeTool, VolumeToolEnum } from "oxalis/constants";
 import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+import { isVolumeTraceToolDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing, tool: VolumeTool) {
   if (tool === volumeTracing.activeTool) {
     return state;
   }
-  if (tool !== VolumeToolEnum.MOVE && isVolumeTracingDisallowed(state)) {
+  if (tool === VolumeToolEnum.TRACE && isVolumeTraceToolDisallowed(state)) {
     return state;
   }
 
@@ -101,7 +101,8 @@ export function addToLayerReducer(
   position: Vector3,
 ) {
   const { allowUpdate } = state.tracing.restrictions;
-  if (!allowUpdate || isVolumeTracingDisallowed(state)) {
+  const { activeTool } = volumeTracing;
+  if (!allowUpdate || (activeTool === VolumeToolEnum.TRACE && isVolumeTraceToolDisallowed(state))) {
     return state;
   }
 

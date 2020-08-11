@@ -4,7 +4,7 @@ import { type Saga, _all, _call, _cancel, fork, take } from "oxalis/model/sagas/
 import { alert } from "libs/window";
 import {
   editVolumeLayerAsync,
-  disallowVolumeTracingWarning,
+  ensureNoTraceToolInLowResolutions,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
 import {
@@ -14,7 +14,7 @@ import {
   toggleErrorHighlighting,
 } from "oxalis/model/sagas/save_saga";
 import {
-  warnAboutSegmentationOpacity,
+  warnAboutSegmentationZoom,
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
@@ -38,14 +38,14 @@ export default function* rootSaga(): Saga<void> {
 function* restartableSaga(): Saga<void> {
   try {
     yield _all([
-      _call(warnAboutSegmentationOpacity),
+      _call(warnAboutSegmentationZoom),
       _call(watchPushSettingsAsync),
       _call(watchSkeletonTracingAsync),
       _call(collectUndoStates),
       _call(saveTracingAsync),
       _call(pushAnnotationAsync),
       _call(editVolumeLayerAsync),
-      _call(disallowVolumeTracingWarning),
+      _call(ensureNoTraceToolInLowResolutions),
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(loadHistogramData),

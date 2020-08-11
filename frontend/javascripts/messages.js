@@ -94,8 +94,6 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
-  "tracing.segmentation_zoom_warning":
-    "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
     "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":

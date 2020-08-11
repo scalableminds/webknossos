@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.07.0...HEAD)
 
 ### Added
-- Added the possibility to move nodes. [#4743](https://github.com/scalableminds/webknossos/pull/4743)
+- Added the possibility to move nodes in skeleton tracings. This can be done either by pressing CTRL + arrow key or by dragging while holding CTRL. [#4743](https://github.com/scalableminds/webknossos/pull/4743)
 - Added the possibility to delete datasets on disk from webKnossos. Use with care. [#4696](https://github.com/scalableminds/webknossos/pull/4696)
 - Added error toasts for failing bucket requests. [#4740](https://github.com/scalableminds/webknossos/pull/4740)
 

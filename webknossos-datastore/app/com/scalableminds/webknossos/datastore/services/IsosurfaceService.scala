@@ -52,22 +52,19 @@ class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuratio
   }
 }
 
-class IsosurfaceService @Inject()(
-    actorSystem: ActorSystem,
-    dataServicesHolder: BinaryDataServiceHolder,
-    mappingService: MappingService,
-    config: DataStoreConfig,
-)(implicit ec: ExecutionContext)
+class IsosurfaceService(binaryDataService: BinaryDataService,
+                        mappingService: MappingService,
+                        actorSystem: ActorSystem,
+                        isosurfaceTimeout: FiniteDuration,
+                        isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
   val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
 
-  implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
+  implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 
   val actor = actorSystem.actorOf(
-    RoundRobinPool(config.Braingames.Binary.isosurfaceActorPoolSize)
-      .props(Props(new IsosurfaceActor(this, timeout.duration))))
+    RoundRobinPool(isosurfaceActorPoolSize).props(Props(new IsosurfaceActor(this, timeout.duration))))
 
   def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {

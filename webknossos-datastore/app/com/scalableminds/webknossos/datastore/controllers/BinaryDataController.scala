@@ -40,13 +40,18 @@ class BinaryDataController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
-    isosurfaceService: IsosurfaceService,
+    isosurfaceServiceHolder: IsosurfaceServiceHolder,
     findDataService: FindDataService,
     actorSystem: ActorSystem
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  val binaryDataService = binaryDataServiceHolder.binaryDataService
+  val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
+  isosurfaceServiceHolder.dataStoreIsosurfaceConfig = (binaryDataService,
+                                                       mappingService,
+                                                       config.Braingames.Binary.isosurfaceTimeout,
+                                                       config.Braingames.Binary.isosurfaceActorPoolSize)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.dataStoreIsosurfaceService
 
   /**
     * Handles requests for raw binary data via HTTP POST from webKnossos.

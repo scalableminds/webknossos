@@ -1,31 +1,18 @@
 package com.scalableminds.webknossos.datastore.services
-import scala.reflect.io.Directory
+
 import java.io.File
-import java.nio.{ByteBuffer, ByteOrder, LongBuffer}
-import java.nio.file.{Files, Path, Paths, StandardCopyOption}
+import java.nio.file.{Files, Path}
 
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  DataReadInstruction,
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  MappingReadInstruction
-}
-import com.scalableminds.webknossos.datastore.storage.{
-  CachedAgglomerateFile,
-  CachedAgglomerateKey,
-  CachedCube,
-  DataCubeCache
-}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
+import com.scalableminds.webknossos.datastore.storage.{CachedAgglomerateKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
-import spire.math.UInt
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 

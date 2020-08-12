@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io._
-import java.nio.{ByteBuffer, ByteOrder, IntBuffer, LongBuffer, ShortBuffer}
 import java.nio.file.Paths
 
 import com.google.inject.Inject
@@ -157,7 +156,8 @@ class VolumeTracingService @Inject()(
             WKWFile.read(is) {
               case (header, buckets) =>
                 if (header.numBlocksPerCube == 1) {
-                  val dataTyped = UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
+                  val dataTyped =
+                    UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
                   val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
                   labelSet ++= nonZeroData
                 }
@@ -242,7 +242,11 @@ class VolumeTracingService @Inject()(
       for {
         _ <- Fox.combined(mergedVolume.map {
           case (bucketPosition, bucketData) =>
-            saveBucket(layer, bucketPosition, UnsignedIntegerArray.toByteArray(bucketData, elementClass), version, toCache)
+            saveBucket(layer,
+                       bucketPosition,
+                       UnsignedIntegerArray.toByteArray(bucketData, elementClass),
+                       version,
+                       toCache)
         }.toList)
       } yield ()
   }

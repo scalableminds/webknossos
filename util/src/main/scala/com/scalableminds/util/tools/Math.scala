@@ -1,5 +1,7 @@
 package com.scalableminds.util.tools
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import Numeric.Implicits._
 
 object Math {
@@ -7,11 +9,11 @@ object Math {
 
   val EPSILON = 1e-10
 
-  def square(x: Int) = x * x
+  def square(x: Int): Int = x * x
 
-  def square(d: Double) = d * d
+  def square(d: Double): Double = d * d
 
-  val lnOf2 = scala.math.log(2) // natural log of 2
+  val lnOf2: Double = scala.math.log(2) // natural log of 2
 
   def log2(x: Double): Double = scala.math.log(x) / lnOf2
 

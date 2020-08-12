@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io._
+import java.nio.{ByteBuffer, ByteOrder, IntBuffer, LongBuffer, ShortBuffer}
 import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -29,22 +30,8 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
-import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.collection.mutable
-
-trait FilterBytes {
-  // extracted to here because ambiguous implicits broke the filter method inside of VolumeTracingService
-  protected def filterBytes[T](bytes: Array[T], predicate: T => Boolean): Array[T] = bytes.filter(predicate)
-
-  protected def mapBytes[T](data: Array[T], map: mutable.Map[T, T]): Array[T] =
-    data.map { byteValue =>
-      if (byteValue != 0) {
-        map(byteValue)
-      } else byteValue
-    }
-
-}
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -59,7 +46,6 @@ class VolumeTracingService @Inject()(
     with WKWDataFormatHelper
     with ProtoGeometryImplicits
     with FoxImplicits
-    with FilterBytes
     with LazyLogging {
 
   implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
@@ -165,14 +151,14 @@ class VolumeTracingService @Inject()(
 
     ZipIO.withUnziped(initialData) {
       case (_, is) =>
-        val labelSet: mutable.Set[Byte] = scala.collection.mutable.Set()
+        val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
         ZipIO.withUnziped(is) {
           case (_, is) =>
             WKWFile.read(is) {
               case (header, buckets) =>
                 if (header.numBlocksPerCube == 1) {
-                  val data: Array[Byte] = buckets.next()
-                  val nonZeroData: Array[Byte] = filterBytes(data, byte => byte != 0x00)
+                  val dataTyped = UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
+                  val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
                   labelSet ++= nonZeroData
                 }
             }
@@ -204,42 +190,36 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
   }
 
-  class MergedVolume[T >: UByte with UShort with UInt with ULong](elementClass: ElementClass) extends DataConverter {
-    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[T]]
-    private var labelSets = mutable.ListBuffer[mutable.Set[ULong]]()
-    private var labelMaps = mutable.ListBuffer[mutable.HashMap[ULong, ULong]]()
-    def addLabelSet(labelSet: mutable.Set[ULong]): Unit = labelSets += labelSet
+  class MergedVolume(elementClass: ElementClass) extends DataConverter {
+    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
+    private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
+    private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
+    def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
       if (labelSets.isEmpty || labelMaps.nonEmpty) {
         ()
       } else {
-        var i: ULong = ULong(1)
+        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass).increment
         labelSets.toList.foreach { labelSet =>
-          var labelMap = mutable.HashMap.empty[ULong, ULong]
+          var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
           labelSet.foreach { label =>
             labelMap += ((label, i))
-            i = i + ULong(1)
+            i = i.increment
           }
           labelMaps += labelMap
         }
       }
 
     def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
-      val dataTyped: Array[T] = convertData(data, elementClass)
+      val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
       prepareLabelMaps()
       if (mergedVolume.contains(bucketPosition)) {
         val mutableBucketData = mergedVolume(bucketPosition)
         dataTyped.zipWithIndex.foreach {
-          case (byteValue, index) =>
-            val valueAsULong: Long = byteValue match {
-              case value: UByte => value.toLong
-              case value: UShort => value.toLong
-              case value: UInt => value.toLong
-              case value: ULong => value.toLong
-            }
-            if (valueAsULong != 0L) {
-              val byteValueMapped = if (labelMaps.isEmpty) byteValue else labelMaps(sourceVolumeIndex)(valueAsULong)
+          case (valueTyped, index) =>
+            if (!valueTyped.isZero) {
+              val byteValueMapped = if (labelMaps.isEmpty) valueTyped else labelMaps(sourceVolumeIndex)(valueTyped)
               mutableBucketData(index) = byteValueMapped
             }
         }
@@ -248,7 +228,11 @@ class VolumeTracingService @Inject()(
         if (labelMaps.isEmpty) {
           mergedVolume += ((bucketPosition, dataTyped))
         } else {
-          val dataMapped = mapBytes(dataTyped, labelMaps(sourceVolumeIndex))
+          val dataMapped = dataTyped.map { byteValue =>
+            if (!byteValue.isZero) {
+              labelMaps(sourceVolumeIndex)(byteValue)
+            } else byteValue
+          }
           mergedVolume += ((bucketPosition, dataMapped))
         }
       }
@@ -258,8 +242,7 @@ class VolumeTracingService @Inject()(
       for {
         _ <- Fox.combined(mergedVolume.map {
           case (bucketPosition, bucketData) =>
-            val bucketDataBytes = bucketData.toBytes
-            saveBucket(layer, bucketPosition, bucketData, version, toCache)
+            saveBucket(layer, bucketPosition, UnsignedIntegerArray.toByteArray(bucketData, elementClass), version, toCache)
         }.toList)
       } yield ()
   }
@@ -421,17 +404,19 @@ class VolumeTracingService @Inject()(
                       newId: String,
                       newTracing: VolumeTracing,
                       toCache: Boolean): Fox[Unit] = {
-    val mergedVolume = new MergedVolume(tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8))
+    val elementClass = tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8)
+    val mergedVolume = new MergedVolume(elementClass)
 
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
-        val labelSet: mutable.Set[Byte] = scala.collection.mutable.Set()
+        val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
         val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (_, data) =>
-            val nonZeroData: Array[Byte] = filterBytes(data, byte => byte != 0x00)
+            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
             labelSet ++= nonZeroData
         }
         mergedVolume.addLabelSet(labelSet)

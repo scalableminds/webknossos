@@ -142,6 +142,14 @@ export const convertCellIdToRGB: ShaderModule = {
       float angleCount = 17.;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
 
+      // To produce a stripe or grid pattern, we use the current fragment coordinates
+      // and an angle.
+      // stripeValueA is a value between 0 and 1 which - when rounded - denotes if the current fragment
+      // is in the "bright" or "dark" stripe class.
+      // Similarly, stripeValueB is constructed, with the difference that the angle is orthogonal to
+      // stripeValueA.
+      // When combining both stripe values, a grid can be produced. When only using stripeValueA, a simple
+      // stripe pattern is rendered.
       float stripeValueA = mix(
         worldCoordUVW.x,
         worldCoordUVW.y,
@@ -157,8 +165,10 @@ export const convertCellIdToRGB: ShaderModule = {
       // to ones and zeros. This has the benefit that the periodicity has a prime length.
       float useGridSequenceLength = 13.;
       float useGrid = step(mod(getElementOfPermutation(significantSegmentIndex, useGridSequenceLength, 2.0), 2.0), 0.5);
+      // Cast the continuous stripe values to 0 and 1 + a bit of anti-aliasing.
       float aaStripeValueA = aa_step(stripeValueA);
       float aaStripeValueB = aa_step(stripeValueB);
+      // Combine both stripe values when a grid should be rendered. Otherwise, only use aaStripeValueA
       float aaStripeValue = 1.0 - max(aaStripeValueA, useGrid * aaStripeValueB);
 
       vec4 HSV = vec4(

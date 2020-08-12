@@ -249,6 +249,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                       Tasks
                     </Link>
                     <br />
+                    <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
+                      <Icon type="eye-o" />
+                      Projects
+                    </Link>
+                    <br />
                     <AsyncLink
                       href="#"
                       onClick={() => {

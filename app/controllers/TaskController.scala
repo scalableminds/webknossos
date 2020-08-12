@@ -449,9 +449,12 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
   }
 
   private def filterOutTransitiveSubteam(subteamId: ObjectId, dataSetTeams: List[ObjectId]): Fox[Option[ObjectId]] =
-    for {
-      memberDifference <- userTeamRolesDAO.findMemberDifference(subteamId, dataSetTeams)
-    } yield if (memberDifference.isEmpty) None else Some(subteamId)
+    if (dataSetTeams.isEmpty) Fox.successful(Some(subteamId))
+    else {
+      for {
+        memberDifference <- userTeamRolesDAO.findMemberDifference(subteamId, dataSetTeams)
+      } yield if (memberDifference.isEmpty) None else Some(subteamId)
+    }
 
   private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[WkEnv, _]): Fox[Unit] =
     scriptIdOpt match {

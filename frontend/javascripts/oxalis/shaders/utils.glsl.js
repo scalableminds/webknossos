@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import type { ShaderModule } from "./shader_module_system";
 
 export const hsvToRgb: ShaderModule = {
@@ -28,6 +29,19 @@ export const hsvToRgb: ShaderModule = {
   `,
 };
 
+// From: https://stackoverflow.com/a/54070620/896760
+// Input: r,g,b in [0,1], out: h in [0,360) and s,v in [0,1]
+export function jsRgb2hsv(rgb: [number, number, number]): [number, number, number] {
+  const [r, g, b] = rgb;
+  const v = Math.max(r, g, b);
+  const n = v - Math.min(r, g, b);
+
+  // eslint-disable-next-line no-nested-ternary
+  const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
+  // $FlowIgnore
+  return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
+}
+
 export const colormapJet: ShaderModule = {
   requirements: [],
   code: `
@@ -40,6 +54,16 @@ export const colormapJet: ShaderModule = {
     }
   `,
 };
+
+// Input in [0,1]
+// Output in [0,1] for r, g and b
+export function jsColormapJet(x: number): [number, number, number] {
+  const r = _.clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
+  const g = _.clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
+  const b = _.clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
+
+  return [r, g, b];
+}
 
 export const aaStep: ShaderModule = {
   requirements: [],
@@ -109,6 +133,31 @@ export const getElementOfPermutation: ShaderModule = {
     }
   `,
 };
+
+// See the shader-side implementation of getElementOfPermutation in segmentation.glsl.js
+// for a detailed description.
+export function jsGetElementOfPermutation(
+  index: number,
+  sequenceLength: number,
+  primitiveRoot: number,
+): number {
+  const oneBasedIndex = (index % sequenceLength) + 1.0;
+  const isFirstElement = oneBasedIndex === 1.0;
+
+  // The GLSL implementation of pow is 2**(y * log2(x)) in which
+  // intermediate results can suffer from precision loss. The following
+  // code mimics this behavior to get a consistent coloring in GLSL and
+  // JS.
+  const imprecise = x => new Float32Array([x])[0];
+  function glslPow(x, y) {
+    return Math.floor(imprecise(2 ** (y * imprecise(Math.log2(x)))));
+  }
+  const sequenceValue = glslPow(primitiveRoot, oneBasedIndex) % sequenceLength;
+
+  // Only use sequenceLength if the requested element is the first of the sequence
+  // Otherwise, return the actual sequenceValue
+  return isFirstElement ? sequenceLength : sequenceValue;
+}
 
 export const inverse: ShaderModule = {
   requirements: [],

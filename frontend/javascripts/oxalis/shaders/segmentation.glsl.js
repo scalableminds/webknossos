@@ -2,7 +2,15 @@
 import type { ShaderModule } from "./shader_module_system";
 import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
-import { hsvToRgb, getElementOfPermutation, aaStep, colormapJet } from "./utils.glsl";
+import {
+  hsvToRgb,
+  jsRgb2hsv,
+  getElementOfPermutation,
+  jsGetElementOfPermutation,
+  aaStep,
+  colormapJet,
+  jsColormapJet,
+} from "./utils.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
@@ -113,6 +121,32 @@ export const convertCellIdToRGB: ShaderModule = {
       return hsvToRgb(HSV);
     }
   `,
+};
+
+// This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane.
+// Output is in [0,1] for H, S, L and A
+export const jsConvertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
+  if (id === 0) {
+    // Return white
+    return [1, 1, 1, 1];
+  }
+
+  let hue;
+
+  if (customColors != null) {
+    const last8Bits = id % 2 ** 8;
+    hue = customColors[last8Bits] || 0;
+  } else {
+    const significantSegmentIndex = id % 2 ** 16;
+
+    const colorCount = 19;
+    const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
+    const colorValueDecimal = (1.0 / colorCount) * colorIndex;
+
+    hue = (1 / 360) * jsRgb2hsv(jsColormapJet(colorValueDecimal))[0];
+  }
+
+  return [hue, 1, 0.5, 0.15];
 };
 
 export const getBrushOverlay: ShaderModule = {

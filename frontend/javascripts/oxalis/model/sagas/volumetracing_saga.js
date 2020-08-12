@@ -30,7 +30,11 @@ import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotation,
+  getCurrentResolution,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   type BoundingBoxType,
   type ContourMode,
@@ -101,9 +105,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
     if (activeTool === VolumeToolEnum.BRUSH) {
+      const currentResolution = yield* select(state => getCurrentResolution(state));
       yield* call(
         labelWithIterator,
-        currentLayer.getCircleVoxelIterator(startEditingAction.position, activeViewportBounding),
+        currentLayer.getCircleVoxelIterator(
+          startEditingAction.position,
+          currentResolution,
+          activeViewportBounding,
+        ),
         contourTracingMode,
       );
     }
@@ -131,9 +140,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
         const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
+        const currentResolution = yield* select(state => getCurrentResolution(state));
         yield* call(
           labelWithIterator,
-          currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
+          currentLayer.getCircleVoxelIterator(
+            addToLayerAction.position,
+            currentResolution,
+            currentViewportBounding,
+          ),
           contourTracingMode,
         );
       }
@@ -250,7 +264,12 @@ export function* finishLayer(
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
+    const currentResolution = yield* select(state => getCurrentResolution(state));
+    yield* call(
+      labelWithIterator,
+      layer.getVoxelIterator(activeTool, currentResolution),
+      contourTracingMode,
+    );
   }
 
   yield* put(updateDirectionAction(layer.getCentroid()));

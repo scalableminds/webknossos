@@ -29,11 +29,14 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
+  numberOfSlices: number;
   boundingBox: ?BoundingBoxType;
   next: Vector3;
+  currentSlice = 0;
+  thirdDimensionIndex: number;
 
   static finished(): VoxelIterator {
-    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0]);
+    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0], 0);
     iterator.hasNext = false;
     return iterator;
   }
@@ -44,6 +47,8 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3,
+    thirdDimensionIndex: number,
+    numberOfSlices: number = 1,
     boundingBox?: ?BoundingBoxType,
   ) {
     this.map = map;
@@ -51,17 +56,28 @@ export class VoxelIterator {
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
+    this.thirdDimensionIndex = thirdDimensionIndex;
     this.boundingBox = boundingBox;
+    this.numberOfSlices = numberOfSlices;
     this.reset();
   }
 
-  reset() {
+  get3DCoordinateWithSliceOffset(position: Vector2): Vector3 {
+    const threeDPosition = this.get3DCoordinate(position);
+    threeDPosition[this.thirdDimensionIndex] += this.currentSlice;
+    return threeDPosition;
+  }
+
+  reset(resetSliceCount: boolean = true) {
     this.x = 0;
     this.y = 0;
+    if (resetSliceCount) {
+      this.currentSlice = 0;
+    }
     if (!this.map || !this.map[0]) {
       this.hasNext = false;
     } else {
-      const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
+      const firstCoordinate = this.get3DCoordinateWithSliceOffset(this.minCoord2d);
       if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
         this.next = firstCoordinate;
       } else {
@@ -84,6 +100,15 @@ export class VoxelIterator {
     );
   }
 
+  nextSlice() {
+    ++this.currentSlice;
+    if (this.currentSlice < this.numberOfSlices) {
+      this.reset(false);
+      return true;
+    }
+    return false;
+  }
+
   getNext(): Vector3 {
     const res = this.next;
     let foundNext = false;
@@ -93,10 +118,13 @@ export class VoxelIterator {
         this.y++;
       }
       if (this.y === this.height) {
-        foundNext = true;
-        this.hasNext = false;
+        const hasNextSlice = this.nextSlice();
+        if (!hasNextSlice) {
+          foundNext = true;
+          this.hasNext = false;
+        }
       } else if (this.map[this.x][this.y]) {
-        const currentCoordinate = this.get3DCoordinate([
+        const currentCoordinate = this.get3DCoordinateWithSliceOffset([
           this.x + this.minCoord2d[0],
           this.y + this.minCoord2d[1],
         ]);
@@ -156,7 +184,7 @@ class VolumeLayer {
     return this.getContourList().length === 0;
   }
 
-  getVoxelIterator(mode: VolumeTool): VoxelIterator {
+  getVoxelIterator(mode: VolumeTool, activeResolution: Vector3): VoxelIterator {
     if (this.isEmpty()) {
       return VoxelIterator.finished();
     }
@@ -206,17 +234,26 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
+    const numberOfSlices = this.getNumberOfSlicesForResolution(activeResolution);
+    const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
+
     const iterator = new VoxelIterator(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      thirdDimensionIndex,
+      numberOfSlices,
     );
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
+  getCircleVoxelIterator(
+    position: Vector3,
+    activeResolution: Vector3,
+    boundings?: ?BoundingBoxType,
+  ): VoxelIterator {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
 
@@ -226,10 +263,7 @@ class VolumeLayer {
 
     const map = new Array(width);
     for (let x = 0; x < width; x++) {
-      map[x] = new Array(height);
-      for (let y = 0; y < height; y++) {
-        map[x][y] = false;
-      }
+      map[x] = new Array(height).fill(false);
     }
     const floatingCoord2d = this.get2DCoordinate(position);
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
@@ -245,12 +279,23 @@ class VolumeLayer {
     };
     Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
 
+    const numberOfSlices = this.getNumberOfSlicesForResolution(activeResolution);
+    const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
+    if (
+      boundings != null &&
+      boundings.max[thirdDimensionIndex] - boundings.min[thirdDimensionIndex] < numberOfSlices - 1
+    ) {
+      boundings.max[thirdDimensionIndex] = boundings.min[thirdDimensionIndex] + numberOfSlices - 1;
+    }
+
     const iterator = new VoxelIterator(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      thirdDimensionIndex,
+      numberOfSlices,
       boundings,
     );
     return iterator;
@@ -336,6 +381,12 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
+  }
+
+  getNumberOfSlicesForResolution(activeResolution: Vector3) {
+    const thirdDimenstionIndex = Dimensions.thirdDimensionForPlane(this.plane);
+    const numberOfSlices = activeResolution[thirdDimenstionIndex];
+    return numberOfSlices;
   }
 }
 

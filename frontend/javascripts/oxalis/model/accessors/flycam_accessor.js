@@ -239,6 +239,12 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   return Math.min(zoomStep, maxLogZoomStep);
 }
 
+export function getCurrentResolution(state: OxalisState): Vector3 {
+  const resolutions = getResolutions(state.dataset);
+  const logZoomStep = getRequestLogZoomStep(state);
+  return resolutions[logZoomStep];
+}
+
 export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   const lastZoomStep = _.last(maximumZoomSteps);

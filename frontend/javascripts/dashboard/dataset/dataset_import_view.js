@@ -499,7 +499,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   </Hideable>
                 </TabPane>
 
-                <TabPane tab={<span>Sharing & Permissions</span>} key="sharing" forceRender>
+                <TabPane
+                  tab={
+                    <span>
+                      Sharing & Permissions{" "}
+                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
+                    </span>
+                  }
+                  key="sharing"
+                  forceRender
+                >
                   <Hideable hidden={this.state.activeTabKey !== "sharing"}>
                     <ImportSharingComponent
                       form={form}
@@ -509,15 +518,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   </Hideable>
                 </TabPane>
 
-                <TabPane
-                  tab={
-                    <span>
-                      Metadata {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
-                    </span>
-                  }
-                  key="general"
-                  forceRender
-                >
+                <TabPane tab={<span>Metadata</span>} key="general" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
                     <ImportGeneralComponent form={form} />
                   </Hideable>

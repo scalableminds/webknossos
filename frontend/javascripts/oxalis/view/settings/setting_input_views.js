@@ -1,6 +1,7 @@
 // @flow
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Icon, Select } from "antd";
 import * as React from "react";
+import _ from "lodash";
 
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
@@ -23,13 +24,21 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
   };
 
   _onChange = (_value: number) => {
-    if (this.props.min <= _value && _value <= this.props.max) {
+    if (this.isValueValid(_value)) {
       this.props.onChange(_value);
     }
   };
 
+  isValueValid = (_value: number) =>
+    _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
+
   render() {
-    const { value, label, max, min, step, onChange, disabled } = this.props;
+    const { value: originalValue, label, max, min, step, onChange, disabled } = this.props;
+
+    // Validate the provided value. If it's not valid, fallback to the midpoint between min and max.
+    // This check guards against broken settings which could be introduced before this component
+    // checked more thoroughly against invalid values.
+    const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
 
     return (
       <Row type="flex" align="middle">

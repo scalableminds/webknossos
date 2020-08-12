@@ -252,6 +252,28 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_NODE_POSITION": {
+          const { position, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .map(([tree, node]) => {
+              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
+              const newDiffableMap = diffableMap.set(
+                node.id,
+                update(node, { position: { $set: position } }),
+              );
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
         case "CREATE_BRANCHPOINT": {
           const { timestamp, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)

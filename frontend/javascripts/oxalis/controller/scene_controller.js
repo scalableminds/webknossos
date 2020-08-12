@@ -95,12 +95,14 @@ class SceneController {
     this.rootGroup = new THREE.Object3D();
     this.rootGroup.add(this.getRootNode());
     this.isosurfacesRootGroup = new THREE.Group();
+    this.pointsHelperGroup = new THREE.Group();
 
     // The dimension(s) with the highest resolution will not be distorted
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.isosurfacesRootGroup);
+    this.scene.add(this.pointsHelperGroup);
 
     this.rootGroup.add(new THREE.DirectionalLight());
     this.addLights();
@@ -337,6 +339,27 @@ class SceneController {
       }
     }
   };
+
+  drawPoints = (points) => {
+    this.scene.remove(this.pointsHelperGroup);
+    this.pointsHelperGroup = new THREE.Group();
+
+    for (const point of points) {
+      var dir = new THREE.Vector3( 1, 0, 0 );
+
+      //normalize the direction vector (convert to vector of length 1)
+      dir.normalize();
+
+      var origin = new THREE.Vector3( point[0], point[1], point[2] );
+      var length = 1000;
+      var hex = 0xff1122;
+
+      var arrowHelper = new THREE.ArrowHelper( dir, origin, length, hex );
+
+      this.pointsHelperGroup.add(arrowHelper)
+    }
+    this.scene.add(this.pointsHelperGroup);
+  }
 
   update(optArbitraryPlane?: ArbitraryPlane): void {
     const state = Store.getState();

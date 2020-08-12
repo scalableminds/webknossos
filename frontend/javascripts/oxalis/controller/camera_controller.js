@@ -16,6 +16,7 @@ import {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
+import { V3 } from "libs/mjs";
 import {
   getDatasetExtentInLength,
   getDatasetCenter,
@@ -30,6 +31,7 @@ import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
+import getSceneController from "oxalis/controller/scene_controller_provider";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
@@ -190,7 +192,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const datasetExtent = getDatasetExtentInLength(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
-  const clippingOffsetFactor = 900000;
+  const clippingOffsetFactor = Math.max(datasetExtent.width, datasetExtent.height, datasetExtent.depth);
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
@@ -245,6 +247,52 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       positionOffset[id][2] + flycamPos[2],
     ];
   }
+
+  const currentFlycamPos = voxelToNm(
+    Store.getState().dataset.dataSource.scale,
+    getPosition(Store.getState().flycam),
+  ) || [0, 0, 0];
+
+
+  // const diff = V3.sub(tdCamera.position, position);
+  // const v1 = V3.normalize(diff);
+  // const v2 = V3.normalize(V3.cross(up, v1));
+  // const center = V3.scale(V3.add(tdCamera.position, position), 1/2);
+  // const radius = V3.length(diff) / 2;
+
+  // const diff = V3.sub(tdCamera.position, position);
+  const v1Unnormalized = V3.sub(currentFlycamPos, position);
+  let v2Unnormalized = V3.sub(currentFlycamPos, tdCamera.position);
+  v2Unnormalized = V3.cross(V3.cross(v1Unnormalized, v2Unnormalized), v1Unnormalized);
+  const v1 = V3.normalize(v1Unnormalized);
+  const v2 = V3.normalize(v2Unnormalized);
+
+  const center = currentFlycamPos;
+  const radius = Math.min(V3.length(v1Unnormalized), V3.length(v2Unnormalized));
+
+  const points = [];
+
+  let multiplier = 1;
+  // const posDiff = V3.length(V3.sub(currentFlycamPos, calculateCirclePoint(0.5)))
+  // const negDiff = V3.length(V3.sub(currentFlycamPos, calculateCirclePoint(-0.5)))
+
+  // const usePositiveCircleHalf = posDiff > negDiff;
+  // multiplier = usePositiveCircleHalf ? 1 : -1;
+  // console.log("usePositiveCircleHalf", usePositiveCircleHalf)
+  function calculateCirclePoint(t) {
+    const a = V3.scale(v1, radius * Math.cos(Math.PI * t * multiplier));
+    const b = V3.scale(v2, radius * Math.sin(Math.PI * t * multiplier));
+    const p = V3.add(V3.add(center, a), b);
+    return p;
+  }
+
+  for (let t = 0; t < 1.0; t += 1 / 25) {
+    points.push(calculateCirclePoint(t));
+  }
+
+  getSceneController().drawPoints(points);
+  console.log("drawPoints", points)
+
   const to: TweenState = {
     xPos: position[0],
     yPos: position[1],
@@ -258,12 +306,22 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     bottom: -height / 2,
   };
 
-  const updateCameraTDView = (tweenState: TweenState) => {
+  const updateCameraTDView = (tweenState: TweenState, t) => {
+    let { xPos, yPos, zPos, upX, upY, upZ, left, right, top, bottom } = tweenState;
+
+    const p = calculateCirclePoint(t)
     const currentFlycamPos = voxelToNm(
       Store.getState().dataset.dataSource.scale,
       getPosition(Store.getState().flycam),
     );
-    const { xPos, yPos, zPos, upX, upY, upZ, left, right, top, bottom } = tweenState;
+
+    if (!isNaN(p[0])) {
+      xPos = p[0];
+      yPos = p[1];
+      zPos = p[2];
+    }
+
+
     Store.dispatch(
       setTDCameraAction({
         position: [xPos, yPos, zPos],
@@ -296,11 +354,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
     tween
       .to(to, time)
-      .onUpdate(function updater() {
+      .onUpdate(function updater(t) {
         // TweenJS passes the current state via the `this` object.
         // However, for better type checking, we pass it as an explicit
         // parameter.
-        updateCameraTDView(this);
+        updateCameraTDView(this, t);
       })
       .start();
   } else {

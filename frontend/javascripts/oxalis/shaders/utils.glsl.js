@@ -28,6 +28,88 @@ export const hsvToRgb: ShaderModule = {
   `,
 };
 
+export const colormapJet: ShaderModule = {
+  requirements: [],
+  code: `
+    vec3 colormapJet(float x) {
+      vec3 result;
+      result.r = x < 0.89 ? ((x - 0.35) / 0.31) : (1.0 - (x - 0.89) / 0.11 * 0.5);
+      result.g = x < 0.64 ? ((x - 0.125) * 4.0) : (1.0 - (x - 0.64) / 0.27);
+      result.b = x < 0.34 ? (0.5 + x * 0.5 / 0.11) : (1.0 - (x - 0.34) / 0.31);
+      return clamp(result, 0.0, 1.0);
+    }
+  `
+};
+
+export const aaStep: ShaderModule = {
+  requirements: [],
+  code: `
+    /*
+      Antialiased step function.
+      Parameter x must not be discontinuous
+
+      See: https://www.shadertoy.com/view/wtjGzt
+    */
+    float aaStep(float x) {
+        float w = fwidth(x);    // pixel width
+        return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
+    }
+  `,
+}
+
+export const getElementOfPermutation: ShaderModule = {
+  requirements: [],
+  code: `
+    /*
+      getElementOfPermutation produces a poor-man's permutation of the numbers
+      [1, ..., sequenceLength] and returns the index-th element.
+      The "permutation" is generated using primitive roots.
+      Example:
+        When calling
+          getElementOfPermutation(3, 7, 3)
+        an implicit sequence of
+          7, 2, 6, 4, 5, 1, 3
+        is accessed at index 3 to return a value.
+        Thus, 4 is returned.
+
+      Additional explanation:
+      3 is a primitive root modulo 7. This fact can be used to generate
+      the following pseudo-random sequence by calculating
+      primitiveRoot**index % sequenceLength:
+      3, 2, 6, 4, 5, 1, 3
+      (see https://en.wikipedia.org/wiki/Primitive_root_modulo_n for a more
+      in-depth explanation).
+      Since the above sequence contains 7 elements (as requested), but exactly *one*
+      collision (the first and last elements will always be the same), we swap the
+      first element with 7.
+
+      To achieve a diverse combination with little collisions, multiple, dependent
+      usages of getElementOfPermutation should use unique sequenceLength values
+      which are prime. You can check out this super-dirty code to double-check
+      collisions:
+        https://gist.github.com/philippotto/88487cddcff049c2aac70b69041efacf
+
+      Sample primitiveRoots for different prime sequenceLengths are:
+      sequenceLength=13.0, seed=2
+      sequenceLength=17.0, seed=3
+      sequenceLength=19.0, seed=2
+      More primitive roots for different prime values can be looked up online.
+    */
+    float getElementOfPermutation(float index, float sequenceLength, float primitiveRoot) {
+      float oneBasedIndex = mod(index, sequenceLength) + 1.0;
+      float isFirstElement = float(oneBasedIndex == 1.0);
+
+      float sequenceValue = mod(pow(primitiveRoot, oneBasedIndex), sequenceLength);
+
+      return
+        // Only use sequenceLength if the requested element is the first of the sequence
+        (isFirstElement) * sequenceLength
+        // Otherwise, return the actual sequenceValue
+        + (1. - isFirstElement) * sequenceValue;
+    }
+  `
+}
+
 export const inverse: ShaderModule = {
   requirements: [],
   code: `

@@ -25,7 +25,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val cacheMaxSize = get[Int]("braingames.binary.cacheMaxSize")
       val mappingCacheMaxSize = get[Int]("braingames.binary.mappingCacheMaxSize")
       val agglomerateCacheMaxSize = get[Int]("braingames.binary.agglomerateCacheMaxSize")
+      val agglomerateStandardBlockSize = get[Int]("braingames.binary.agglomerateStandardBlockSize")
       val agglomerateFileCacheMaxSize = get[Int]("braingames.binary.agglomerateFileCacheMaxSize")
+      val agglomerateMaxReaderRange = get[Int]("braingames.binary.agglomerateMaxReaderRange")
       val isosurfaceTimeout = get[Int]("braingames.binary.isosurfaceTimeout") seconds
       val isosurfaceActorPoolSize = get[Int](path = "braingames.binary.isosurfaceActorPoolSize")
 

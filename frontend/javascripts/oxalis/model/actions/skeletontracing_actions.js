@@ -49,9 +49,19 @@ type SetActiveNodeAction = {
   nodeId: number,
   suppressAnimation: boolean,
 };
+type CenterActiveNodeAction = {
+  type: "CENTER_ACTIVE_NODE",
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusAction = {
   type: "SET_NODE_RADIUS",
   radius: number,
+  nodeId: ?number,
+  treeId: ?number,
+};
+type SetNodePositionAction = {
+  type: "SET_NODE_POSITION",
+  position: Vector3,
   nodeId: ?number,
   treeId: ?number,
 };
@@ -114,9 +124,11 @@ export type SkeletonTracingAction =
   | DeleteNodeAction
   | DeleteEdgeAction
   | SetActiveNodeAction
+  | CenterActiveNodeAction
   | SetActiveGroupAction
   | DeselectActiveGroupAction
   | SetNodeRadiusAction
+  | SetNodePositionAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
   | RequestDeleteBranchPointAction
@@ -153,6 +165,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
+  "SET_NODE_POSITION",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
@@ -239,6 +252,10 @@ export const setActiveNodeAction = (
   suppressAnimation,
 });
 
+export const centerActiveNodeAction = (
+  suppressAnimation: boolean = false,
+): CenterActiveNodeAction => ({ type: "CENTER_ACTIVE_NODE", suppressAnimation });
+
 export const setNodeRadiusAction = (
   radius: number,
   nodeId?: number,
@@ -246,6 +263,17 @@ export const setNodeRadiusAction = (
 ): SetNodeRadiusAction => ({
   type: "SET_NODE_RADIUS",
   radius,
+  nodeId,
+  treeId,
+});
+
+export const setNodePositionAction = (
+  position: Vector3,
+  nodeId?: number,
+  treeId?: number,
+): SetNodePositionAction => ({
+  type: "SET_NODE_POSITION",
+  position,
   nodeId,
   treeId,
 });

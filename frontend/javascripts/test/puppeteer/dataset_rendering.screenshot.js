@@ -109,7 +109,7 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
     highlightHoveredCellId: true,
     renderIsosurfaces: false,
     renderMissingDataBlack: false,
-    segmentationPatternOpacity: 0.5,
+    segmentationPatternOpacity: 50,
     loadingStrategy: "BEST_QUALITY_FIRST",
   },
 };

@@ -89,8 +89,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     persistence.persist(this.props.history, nextState);
   }
 
-  componentDidUpdate(preProps){
-    if(preProps.taskTypeId !== this.props.taskTypeId){
+  componentDidUpdate(preProps) {
+    if (preProps.taskTypeId !== this.props.taskTypeId) {
       this.fetchData();
     }
   }

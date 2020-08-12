@@ -38,7 +38,7 @@ export const colormapJet: ShaderModule = {
       result.b = x < 0.34 ? (0.5 + x * 0.5 / 0.11) : (1.0 - (x - 0.34) / 0.31);
       return clamp(result, 0.0, 1.0);
     }
-  `
+  `,
 };
 
 export const aaStep: ShaderModule = {
@@ -55,7 +55,7 @@ export const aaStep: ShaderModule = {
         return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
     }
   `,
-}
+};
 
 export const getElementOfPermutation: ShaderModule = {
   requirements: [],
@@ -107,8 +107,8 @@ export const getElementOfPermutation: ShaderModule = {
         // Otherwise, return the actual sequenceValue
         + (1. - isFirstElement) * sequenceValue;
     }
-  `
-}
+  `,
+};
 
 export const inverse: ShaderModule = {
   requirements: [],

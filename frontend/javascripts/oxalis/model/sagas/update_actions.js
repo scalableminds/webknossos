@@ -138,6 +138,7 @@ export type RevertToVersionUpdateAction = {|
 |};
 export type RemoveFallbackLayerAction = {|
   name: "removeFallbackLayer",
+  value: {},
 |};
 
 export type UpdateAction =
@@ -402,6 +403,7 @@ export function revertToVersion(version: number): RevertToVersionUpdateAction {
 export function removeFallbackLayer(): RemoveFallbackLayerAction {
   return {
     name: "removeFallbackLayer",
+    value: {},
   };
 }
 

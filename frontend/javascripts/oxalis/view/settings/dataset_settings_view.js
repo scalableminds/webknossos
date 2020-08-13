@@ -138,11 +138,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
-  getDeleteButton = () => (
+  getDeleteButton = (layerName: string) => (
     <Tooltip title="Delete this Layer">
       <Icon
         type="minus-square"
-        onClick={() => this.props.onRemoveFallbackLayer()}
+        onClick={() => {
+          this.props.onRemoveFallbackLayer();
+          this.reloadLayerData(layerName);
+        }}
         style={{
           position: "absolute",
           top: 4,
@@ -272,7 +275,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
-          {isFallbackLayer ? this.getDeleteButton() : null}
+          {isFallbackLayer ? this.getDeleteButton(layerName) : null}
         </Col>
       </Row>
     );

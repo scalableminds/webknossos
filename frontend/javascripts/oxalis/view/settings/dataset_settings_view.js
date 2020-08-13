@@ -33,6 +33,7 @@ import {
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { removeFallbackLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
@@ -73,6 +74,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
+  onRemoveFallbackLayer: () => void,
   tracing: Tracing,
 |};
 
@@ -135,6 +137,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       </Tooltip>
     );
   };
+
+  getDeleteButton = () => (
+    <Tooltip title="Delete this Layer">
+      <Icon
+        type="minus-square"
+        onClick={() => this.props.onRemoveFallbackLayer()}
+        style={{
+          position: "absolute",
+          top: 4,
+          right: 26,
+          cursor: "pointer",
+        }}
+      />
+    </Tooltip>
+  );
 
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
     const tooltipText = isInEditMode
@@ -221,6 +238,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isInEditMode: boolean,
     layerName: string,
     elementClass: string,
+    isFallbackLayer: boolean,
   ) => {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
@@ -254,6 +272,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
+          {isFallbackLayer ? this.getDeleteButton() : null}
         </Col>
       </Row>
     );
@@ -270,7 +289,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
-
+    const { volume } = Store.getState().tracing;
+    const isFallbackLayer = volume ? volume.fallbackLayer != null && !isColorLayer : false;
     return (
       <div key={layerName}>
         {this.getLayerSettingsHeader(
@@ -279,6 +299,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           isInEditMode,
           layerName,
           elementClass,
+          isFallbackLayer,
         )}
         {isDisabled ? null : (
           <div style={{ marginBottom: 30, marginLeft: 10 }}>
@@ -545,6 +566,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
+  },
+  onRemoveFallbackLayer() {
+    dispatch(removeFallbackLayerAction());
   },
 });
 

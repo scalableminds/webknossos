@@ -11,6 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
+import messages, { settings } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -50,7 +51,6 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
-import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -292,6 +292,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
+            {!isColorLayer && (
+              <NumberSliderSetting
+                label={settings.segmentationPatternOpacity}
+                min={0}
+                max={100}
+                step={1}
+                value={this.props.datasetConfiguration.segmentationPatternOpacity}
+                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+              />
+            )}
             {isColorLayer ? (
               <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>

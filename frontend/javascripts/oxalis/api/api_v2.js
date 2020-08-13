@@ -404,7 +404,7 @@ class TracingApi {
     rotation?: Vector3,
   ): void {
     // Let the user still manipulate the "third dimension" during animation
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
       skipDimensions && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
@@ -622,7 +622,7 @@ class DataApi {
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const dataset = Store.getState().dataset;
+    const { dataset } = Store.getState();
 
     return doWithToken(token => {
       const downloadUrl =
@@ -656,7 +656,7 @@ class DataApi {
     assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxel(voxel, label);
+      segmentationLayer.cube.labelVoxelInResolution(voxel, label, 0);
     }
 
     segmentationLayer.cube.pushQueue.push();

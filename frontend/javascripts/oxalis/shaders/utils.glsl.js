@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import type { ShaderModule } from "./shader_module_system";
 
 export const hsvToRgb: ShaderModule = {
@@ -13,8 +14,150 @@ export const hsvToRgb: ShaderModule = {
       p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
       return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
     }
+
+    /* https://gist.github.com/983/e170a24ae8eba2cd174f */
+    vec3 rgb2hsv(vec3 c)
+    {
+        vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+        float d = q.x - min(q.w, q.y);
+        float e = 1.0e-10;
+        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+    }
   `,
 };
+
+// From: https://stackoverflow.com/a/54070620/896760
+// Input: r,g,b in [0,1], out: h in [0,360) and s,v in [0,1]
+export function jsRgb2hsv(rgb: [number, number, number]): [number, number, number] {
+  const [r, g, b] = rgb;
+  const v = Math.max(r, g, b);
+  const n = v - Math.min(r, g, b);
+
+  // eslint-disable-next-line no-nested-ternary
+  const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
+  // $FlowIgnore
+  return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
+}
+
+export const colormapJet: ShaderModule = {
+  requirements: [],
+  code: `
+    vec3 colormapJet(float x) {
+      vec3 result;
+      result.r = x < 0.89 ? ((x - 0.35) / 0.31) : (1.0 - (x - 0.89) / 0.11 * 0.5);
+      result.g = x < 0.64 ? ((x - 0.125) * 4.0) : (1.0 - (x - 0.64) / 0.27);
+      result.b = x < 0.34 ? (0.5 + x * 0.5 / 0.11) : (1.0 - (x - 0.34) / 0.31);
+      return clamp(result, 0.0, 1.0);
+    }
+  `,
+};
+
+// Input in [0,1]
+// Output in [0,1] for r, g and b
+export function jsColormapJet(x: number): [number, number, number] {
+  const r = _.clamp(x < 0.89 ? (x - 0.35) / 0.31 : 1.0 - ((x - 0.89) / 0.11) * 0.5, 0, 1);
+  const g = _.clamp(x < 0.64 ? (x - 0.125) * 4.0 : 1.0 - (x - 0.64) / 0.27, 0, 1);
+  const b = _.clamp(x < 0.34 ? 0.5 + (x * 0.5) / 0.11 : 1.0 - (x - 0.34) / 0.31, 0, 1);
+
+  return [r, g, b];
+}
+
+export const aaStep: ShaderModule = {
+  requirements: [],
+  code: `
+    /*
+      Antialiased step function.
+      Parameter x must not be discontinuous
+
+      See: https://www.shadertoy.com/view/wtjGzt
+    */
+    float aaStep(float x) {
+        float w = fwidth(x);    // pixel width
+        return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
+    }
+  `,
+};
+
+export const getElementOfPermutation: ShaderModule = {
+  requirements: [],
+  code: `
+    /*
+      getElementOfPermutation produces a poor-man's permutation of the numbers
+      [1, ..., sequenceLength] and returns the index-th element.
+      The "permutation" is generated using primitive roots.
+      Example:
+        When calling
+          getElementOfPermutation(3, 7, 3)
+        an implicit sequence of
+          7, 2, 6, 4, 5, 1, 3
+        is accessed at index 3 to return a value.
+        Thus, 4 is returned.
+
+      Additional explanation:
+      3 is a primitive root modulo 7. This fact can be used to generate
+      the following pseudo-random sequence by calculating
+      primitiveRoot**index % sequenceLength:
+      3, 2, 6, 4, 5, 1, 3
+      (see https://en.wikipedia.org/wiki/Primitive_root_modulo_n for a more
+      in-depth explanation).
+      Since the above sequence contains 7 elements (as requested), but exactly *one*
+      collision (the first and last elements will always be the same), we swap the
+      first element with 7.
+
+      To achieve a diverse combination with little collisions, multiple, dependent
+      usages of getElementOfPermutation should use unique sequenceLength values
+      which are prime. You can check out this super-dirty code to double-check
+      collisions:
+        https://gist.github.com/philippotto/88487cddcff049c2aac70b69041efacf
+
+      Sample primitiveRoots for different prime sequenceLengths are:
+      sequenceLength=13.0, seed=2
+      sequenceLength=17.0, seed=3
+      sequenceLength=19.0, seed=2
+      More primitive roots for different prime values can be looked up online.
+    */
+    float getElementOfPermutation(float index, float sequenceLength, float primitiveRoot) {
+      float oneBasedIndex = mod(index, sequenceLength) + 1.0;
+      float isFirstElement = float(oneBasedIndex == 1.0);
+
+      float sequenceValue = mod(pow(primitiveRoot, oneBasedIndex), sequenceLength);
+
+      return
+        // Only use sequenceLength if the requested element is the first of the sequence
+        (isFirstElement) * sequenceLength
+        // Otherwise, return the actual sequenceValue
+        + (1. - isFirstElement) * sequenceValue;
+    }
+  `,
+};
+
+// See the shader-side implementation of getElementOfPermutation in segmentation.glsl.js
+// for a detailed description.
+export function jsGetElementOfPermutation(
+  index: number,
+  sequenceLength: number,
+  primitiveRoot: number,
+): number {
+  const oneBasedIndex = (index % sequenceLength) + 1.0;
+  const isFirstElement = oneBasedIndex === 1.0;
+
+  // The GLSL implementation of pow is 2**(y * log2(x)) in which
+  // intermediate results can suffer from precision loss. The following
+  // code mimics this behavior to get a consistent coloring in GLSL and
+  // JS.
+  const imprecise = x => new Float32Array([x])[0];
+  function glslPow(x, y) {
+    return Math.floor(imprecise(2 ** (y * imprecise(Math.log2(x)))));
+  }
+  const sequenceValue = glslPow(primitiveRoot, oneBasedIndex) % sequenceLength;
+
+  // Only use sequenceLength if the requested element is the first of the sequence
+  // Otherwise, return the actual sequenceValue
+  return isFirstElement ? sequenceLength : sequenceValue;
+}
 
 export const inverse: ShaderModule = {
   requirements: [],

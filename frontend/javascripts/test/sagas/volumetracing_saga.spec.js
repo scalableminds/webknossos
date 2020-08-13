@@ -110,6 +110,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(VolumeToolEnum.BRUSH);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -123,10 +124,10 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
-  saga.next(VolumeToolEnum.TRACE);
   saga.next(OrthoViews.PLANE_XY);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
@@ -146,10 +147,10 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
-  saga.next(VolumeToolEnum.TRACE);
   saga.next(OrthoViews.PLANE_XY);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
@@ -169,10 +170,10 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DELETE_FROM_ACTIVE_CELL);
+  saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
-  saga.next(VolumeToolEnum.TRACE);
   saga.next(OrthoViews.PLANE_XY);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
@@ -189,8 +190,8 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   // $FlowFixMe
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
+  saga.next([1, 1, 1]);
   saga.next();
-  const iterator = saga.next();
-  expectValueDeepEqual(t, iterator, put(resetContourAction));
+  expectValueDeepEqual(t, saga.next(), put(resetContourAction));
   t.true(saga.next().done);
 });

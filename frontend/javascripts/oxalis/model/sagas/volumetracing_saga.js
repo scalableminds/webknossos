@@ -5,6 +5,7 @@ import {
   type CopySegmentationLayerAction,
   resetContourAction,
   updateDirectionAction,
+  finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
@@ -253,6 +254,7 @@ export function* finishLayer(
 
   yield* put(updateDirectionAction(layer.getCentroid()));
   yield* put(resetContourAction());
+  yield* put(finishAnnotationStrokeAction());
 }
 
 export function* disallowVolumeTracingWarning(): Saga<*> {

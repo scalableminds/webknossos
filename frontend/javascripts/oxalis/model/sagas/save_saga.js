@@ -14,7 +14,7 @@ import {
   UNDO_HISTORY_SIZE,
   maximumActionCountPerSave,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Tracing, Flycam, SaveQueueEntry } from "oxalis/store";
+import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry } from "oxalis/store";
 import { type UpdateAction } from "oxalis/model/sagas/update_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import {
@@ -52,12 +52,21 @@ import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update
 import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
+import type { Vector4 } from "oxalis/constants";
+import compressStuff from "oxalis/workers/byte_array_to_lz4_base64_temp.worker";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
 
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
+const byteArrayToLz4Array = createWorker(compressStuff);
+
+type UndoBucket = { zoomedBucketAddress: Vector4, data: Uint8Array };
+type VolumeAnnotationBatch = Array<UndoBucket>;
+type UndoState = { type: "skeleton" | "volume", data: SkeletonTracing | VolumeAnnotationBatch };
+
 export function* collectUndoStates(): Saga<void> {
-  const undoStack = [];
-  const redoStack = [];
+  const undoStack: Array<UndoState> = [];
+  const redoStack: Array<UndoState> = [];
   let previousAction: ?Action = null;
 
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -72,7 +81,7 @@ export function* collectUndoStates(): Saga<void> {
     if (userAction) {
       if (curTracing !== prevTracing) {
         if (shouldAddToUndoStack(userAction, previousAction)) {
-          undoStack.push(prevTracing);
+          undoStack.push({ type: "skeleton", data: prevTracing });
         }
         // Clear the redo stack when a new action is executed
         redoStack.splice(0);
@@ -82,8 +91,8 @@ export function* collectUndoStates(): Saga<void> {
     } else if (undo) {
       if (undoStack.length) {
         previousAction = null;
-        redoStack.push(prevTracing);
-        const newTracing = undoStack.pop();
+        redoStack.push({ type: "skeleton", data: prevTracing });
+        const newTracing = undoStack.pop().data;
         yield* put(setTracingAction(newTracing));
         yield* put(centerActiveNodeAction());
       } else {
@@ -91,8 +100,8 @@ export function* collectUndoStates(): Saga<void> {
       }
     } else if (redo) {
       if (redoStack.length) {
-        undoStack.push(prevTracing);
-        const newTracing = redoStack.pop();
+        undoStack.push({ type: "skeleton", data: prevTracing });
+        const newTracing = redoStack.pop().data;
         yield* put(setTracingAction(newTracing));
         yield* put(centerActiveNodeAction());
       } else {
@@ -101,6 +110,35 @@ export function* collectUndoStates(): Saga<void> {
     }
     // We need the updated tracing here
     prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
+  }
+}
+
+function* addAnnotationStrokeToUndoStack(undoStack: Array<UndoState>) {
+  const bucketsOfCurrentStroke: VolumeAnnotationBatch = [];
+  while (true) {
+    const { addBucketToUndoAction, finishAnnotationStrokeAction } = yield* race({
+      addBucketToUndoAction: _take("ADD_BUCKET_TO_UNDO"),
+      finishAnnotationStrokeAction: _take("FINISH_ANNOTATION_STROKE"),
+    });
+    if (addBucketToUndoAction && addBucketToUndoAction.type === "ADD_BUCKET_TO_UNDO") {
+      const { zoomedBucketAddress, bucketData } = addBucketToUndoAction;
+      const bucketDataAsByteArray = new Uint8Array(
+        bucketData.buffer,
+        bucketData.byteOffset,
+        bucketData.byteLength,
+      );
+      // TODO: use fork no not block this saga
+      // TODO: use pure compress and decompress in a worker
+      const compressedBucketData = yield* call(byteArrayToLz4Array, bucketDataAsByteArray);
+      debugger;
+      if (compressedBucketData != null) {
+        bucketsOfCurrentStroke.push({ zoomedBucketAddress, data: compressedBucketData });
+      }
+    }
+    if (finishAnnotationStrokeAction) {
+      break;
+    }
+    undoStack.push({ type: "volume", data: bucketsOfCurrentStroke });
   }
 }
 

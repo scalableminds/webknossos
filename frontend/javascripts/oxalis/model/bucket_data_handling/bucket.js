@@ -186,6 +186,16 @@ export class DataBucket {
     return data;
   }
 
+  setData(newData: Uint8Array) {
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+    this.data = new TypedArrayClass(
+      newData.buffer,
+      newData.byteOffset,
+      newData.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+    );
+    this.trigger("bucketLoaded");
+  }
+
   markAsNeeded(): void {
     this.accessed = true;
   }

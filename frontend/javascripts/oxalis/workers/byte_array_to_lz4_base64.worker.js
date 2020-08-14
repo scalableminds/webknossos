@@ -1,10 +1,9 @@
 // @flow
 import Base64 from "base64-js";
 import lz4 from "lz4js";
-import {compressLz4Block} "./byte_array_to_lz4_base64_temp.worker";
 import { expose } from "./comlink_wrapper";
 
-function compressLz4BlockQ(data: Uint8Array): Uint8Array {
+function compressLz4Block(data: Uint8Array): Uint8Array {
   // Backend expects the frame-less version of lz4,
   // so we need to call lz4.compressBlock rather than compress
   const hashSize = 1 << 16;
@@ -18,7 +17,5 @@ export function byteArrayToLz4Base64(byteArray: Uint8Array): string {
   const compressed = compressLz4Block(byteArray);
   return Base64.fromByteArray(compressed);
 }
-
-export const compressLz4Block = expose<typeof compressLz4BlockQ>(compressLz4BlockQ);
 
 export default expose<typeof byteArrayToLz4Base64>(byteArrayToLz4Base64);

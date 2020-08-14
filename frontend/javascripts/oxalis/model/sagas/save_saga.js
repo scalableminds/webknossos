@@ -16,7 +16,10 @@ import {
 } from "oxalis/model/sagas/save_saga_constants";
 import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry } from "oxalis/store";
 import { type UpdateAction } from "oxalis/model/sagas/update_actions";
-import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
+import {
+  VolumeTracingSaveRelevantActions,
+  VolumeTracingUndoRelevantActions,
+} from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
   _delay,
@@ -27,9 +30,12 @@ import {
   call,
   put,
   select,
+  join,
+  fork,
 } from "oxalis/model/sagas/effect-generators";
 import {
   SkeletonTracingSaveRelevantActions,
+  SkeletonTracingAction,
   setTracingAction,
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -44,6 +50,7 @@ import {
   pushSaveQueueTransaction,
   setVersionNumberAction,
 } from "oxalis/model/actions/save_actions";
+import Model from "oxalis/model";
 import Date from "libs/date";
 import Request, { type RequestOptionsWithData } from "libs/request";
 import Toast from "libs/toast";
@@ -55,52 +62,79 @@ import ErrorHandling from "libs/error_handling";
 import type { Vector4 } from "oxalis/constants";
 import compressStuff from "oxalis/workers/byte_array_to_lz4_base64_temp.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
-
+import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
 const byteArrayToLz4Array = createWorker(compressStuff);
 
 type UndoBucket = { zoomedBucketAddress: Vector4, data: Uint8Array };
 type VolumeAnnotationBatch = Array<UndoBucket>;
-type UndoState = { type: "skeleton" | "volume", data: SkeletonTracing | VolumeAnnotationBatch };
+type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
+type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
+type UndoState = SkeletonUndoState | VolumeUndoState;
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
   let previousAction: ?Action = null;
+  let prevTracingMaybe: ?SkeletonTracing = null;
 
-  yield* take("INITIALIZE_SKELETONTRACING");
-  let prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
+  yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
+  prevTracingMaybe = yield* select(state => state.tracing.skeleton);
   while (true) {
-    const { userAction, undo, redo } = yield* race({
-      userAction: _take(SkeletonTracingSaveRelevantActions),
+    const { skeletonUserAction, startingVolumeAnnotationAction, undo, redo } = yield* race({
+      skeletonUserAction: _take(SkeletonTracingSaveRelevantActions),
+      startingVolumeAnnotationAction: _take(VolumeTracingUndoRelevantActions),
       undo: _take("UNDO"),
       redo: _take("REDO"),
     });
-    const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
-    if (userAction) {
-      if (curTracing !== prevTracing) {
-        if (shouldAddToUndoStack(userAction, previousAction)) {
-          undoStack.push({ type: "skeleton", data: prevTracing });
+    if (skeletonUserAction || startingVolumeAnnotationAction) {
+      if (skeletonUserAction && prevTracingMaybe != null) {
+        const skeletonUndoState = yield* call(
+          getSkeletonTracingToUndoState,
+          skeletonUserAction,
+          prevTracingMaybe,
+          previousAction,
+        );
+        if (skeletonUndoState) {
+          undoStack.push(skeletonUndoState);
         }
-        // Clear the redo stack when a new action is executed
-        redoStack.splice(0);
-        if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
-        previousAction = userAction;
+      } else if (startingVolumeAnnotationAction) {
+        const volumeAnnotationBatch = yield* call(putAnnotatedBucketsIntoUndoBatch);
+        undoStack.push({ type: "volume", data: volumeAnnotationBatch });
       }
+      // Clear the redo stack when a new action is executed
+      redoStack.splice(0);
+      if (undoStack.length > UNDO_HISTORY_SIZE) {
+        undoStack.shift();
+      }
+      previousAction = skeletonUserAction;
     } else if (undo) {
       if (undoStack.length) {
-        previousAction = null;
-        redoStack.push({ type: "skeleton", data: prevTracing });
-        const newTracing = undoStack.pop().data;
-        yield* put(setTracingAction(newTracing));
-        yield* put(centerActiveNodeAction());
+        const lastUndoState = undoStack[undoStack.length - 1];
+        if (lastUndoState.type === "skeleton") {
+          previousAction = null;
+          redoStack.push({ type: "skeleton", data: prevTracingMaybe });
+          const newTracing = undoStack.pop().data;
+          yield* put(setTracingAction(newTracing));
+          yield* put(centerActiveNodeAction());
+        } else if (lastUndoState.type === "volume") {
+          const allZoomedBucketAddresses = lastUndoState.data.map(
+            undoBucket => undoBucket.zoomedBucketAddress,
+          );
+          const redoVolumeAnnotationState = yield* call(
+            getUndoStateFromBucketArray,
+            allZoomedBucketAddresses,
+          );
+          redoStack.push(redoVolumeAnnotationState);
+          yield* call(applyVolumeUndoAnnotationBatch, lastUndoState.data);
+        }
       } else {
         Toast.info(messages["undo.no_undo"]);
       }
     } else if (redo) {
       if (redoStack.length) {
-        undoStack.push({ type: "skeleton", data: prevTracing });
+        undoStack.push({ type: "skeleton", data: prevTracingMaybe });
         const newTracing = redoStack.pop().data;
         yield* put(setTracingAction(newTracing));
         yield* put(centerActiveNodeAction());
@@ -109,12 +143,46 @@ export function* collectUndoStates(): Saga<void> {
       }
     }
     // We need the updated tracing here
-    prevTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
+    prevTracingMaybe = yield* select(state => state.tracing.skeleton);
   }
 }
 
-function* addAnnotationStrokeToUndoStack(undoStack: Array<UndoState>) {
+function* getSkeletonTracingToUndoState(
+  skeletonUserAction: SkeletonTracingAction,
+  prevTracing: SkeletonTracing,
+  previousAction: ?Action,
+): Saga<?SkeletonUndoState> {
+  const curTracing = yield* select(state => enforceSkeletonTracing(state.tracing));
+  if (curTracing !== prevTracing) {
+    if (shouldAddToUndoStack(skeletonUserAction, previousAction)) {
+      return { type: "skeleton", data: prevTracing };
+    }
+  }
+  return null;
+}
+
+function* compressBucketAndAddToUndoBatch(
+  zoomedBucketAddress: Vector4,
+  bucketData: BucketDataArray,
+  undoBatch: VolumeAnnotationBatch,
+) {
+  const bucketDataAsByteArray = new Uint8Array(
+    bucketData.buffer,
+    bucketData.byteOffset,
+    bucketData.byteLength,
+  );
+  console.log("uncompressed length", bucketDataAsByteArray.length);
+  const compressedBucketData = yield* call(byteArrayToLz4Array, bucketDataAsByteArray, true);
+  if (compressedBucketData != null) {
+    console.log("compressed length", compressedBucketData.length);
+    undoBatch.push({ zoomedBucketAddress, data: compressedBucketData });
+  }
+}
+
+function* putAnnotatedBucketsIntoUndoBatch(): Saga<VolumeAnnotationBatch> {
   const bucketsOfCurrentStroke: VolumeAnnotationBatch = [];
+  const pendingCompressions: Array<Saga<void>> = [];
+  const alreadyAddedBuckets: Set<Vector4> = new Set();
   while (true) {
     const { addBucketToUndoAction, finishAnnotationStrokeAction } = yield* race({
       addBucketToUndoAction: _take("ADD_BUCKET_TO_UNDO"),
@@ -122,24 +190,24 @@ function* addAnnotationStrokeToUndoStack(undoStack: Array<UndoState>) {
     });
     if (addBucketToUndoAction && addBucketToUndoAction.type === "ADD_BUCKET_TO_UNDO") {
       const { zoomedBucketAddress, bucketData } = addBucketToUndoAction;
-      const bucketDataAsByteArray = new Uint8Array(
-        bucketData.buffer,
-        bucketData.byteOffset,
-        bucketData.byteLength,
-      );
-      // TODO: use fork no not block this saga
-      // TODO: use pure compress and decompress in a worker
-      const compressedBucketData = yield* call(byteArrayToLz4Array, bucketDataAsByteArray);
-      debugger;
-      if (compressedBucketData != null) {
-        bucketsOfCurrentStroke.push({ zoomedBucketAddress, data: compressedBucketData });
+      if (!alreadyAddedBuckets.has(zoomedBucketAddress)) {
+        alreadyAddedBuckets.add(zoomedBucketAddress);
+        pendingCompressions.push(
+          yield* fork(
+            compressBucketAndAddToUndoBatch,
+            zoomedBucketAddress,
+            bucketData,
+            bucketsOfCurrentStroke,
+          ),
+        );
       }
     }
     if (finishAnnotationStrokeAction) {
       break;
     }
-    undoStack.push({ type: "volume", data: bucketsOfCurrentStroke });
   }
+  yield* join(pendingCompressions);
+  return bucketsOfCurrentStroke;
 }
 
 function shouldAddToUndoStack(currentUserAction: Action, previousAction: ?Action) {
@@ -158,6 +226,37 @@ function shouldAddToUndoStack(currentUserAction: Action, previousAction: ?Action
     }
     default:
       return true;
+  }
+}
+
+function* getUndoStateFromBucketArray(
+  zoomedBucketAddresses: Array<Vector4>,
+): Saga<VolumeUndoState> {
+  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  if (!segmentationLayer) {
+    throw new Error("Undoing a volume annotation but no volume layer exists.");
+  }
+  const { cube } = segmentationLayer;
+  const allCompressedBuckets: VolumeAnnotationBatch = [];
+  for (const address of zoomedBucketAddresses) {
+    const bucket = yield* call([cube, cube.getOrCreateBucket], address);
+    const bucketData = bucket.getData();
+    yield* call(compressBucketAndAddToUndoBatch, address, bucketData, allCompressedBuckets);
+  }
+  return { type: "volume", data: allCompressedBuckets };
+}
+
+function* applyVolumeUndoAnnotationBatch(volumeAnnotationBatch: VolumeAnnotationBatch) {
+  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  if (!segmentationLayer) {
+    throw new Error("Undoing a volume annotation but no volume layer exists.");
+  }
+  const { cube } = segmentationLayer;
+  for (const { zoomedBucketAddress, data: compressedBucketData } of volumeAnnotationBatch) {
+    debugger;
+    const bucket = yield* call([cube, cube.getOrCreateBucket], zoomedBucketAddress);
+    const decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+    bucket.setData(decompressedBucketData);
   }
 }
 

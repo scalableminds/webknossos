@@ -237,6 +237,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+  yield* put(finishAnnotationStrokeAction());
 }
 
 export function* finishLayer(

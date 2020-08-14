@@ -70,6 +70,8 @@ export const VolumeTracingSaveRelevantActions = [
   "ADD_USER_BOUNDING_BOXES",
 ];
 
+export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
+
 export const initializeVolumeTracingAction = (
   tracing: ServerVolumeTracing,
 ): InitializeVolumeTracingAction => ({

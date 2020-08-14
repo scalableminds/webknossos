@@ -250,10 +250,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     isInEditMode: boolean,
     layerName: string,
     elementClass: string,
-    isFallbackLayer: boolean,
   ) => {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
+    const isFallbackLayer = tracing.volume
+      ? tracing.volume.fallbackLayer != null && !isColorLayer
+      : false;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -301,8 +303,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
-    const { volume } = Store.getState().tracing;
-    const isFallbackLayer = volume ? volume.fallbackLayer != null && !isColorLayer : false;
     return (
       <div key={layerName}>
         {this.getLayerSettingsHeader(
@@ -311,7 +311,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           isInEditMode,
           layerName,
           elementClass,
-          isFallbackLayer,
         )}
         {isDisabled ? null : (
           <div style={{ marginBottom: 30, marginLeft: 10 }}>

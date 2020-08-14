@@ -129,6 +129,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no isosurface for the active segment id available to download.",
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
+  "tracing.confirm_remove_fallback_layer": "Are you sure you want to delete this layer?",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

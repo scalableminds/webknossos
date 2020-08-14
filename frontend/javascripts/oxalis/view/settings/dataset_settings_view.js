@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, Modal } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -143,8 +143,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       <Icon
         type="minus-square"
         onClick={() => {
-          this.props.onRemoveFallbackLayer();
-          this.reloadLayerData(layerName);
+          this.removeFallbackLayer(layerName);
         }}
         style={{
           position: "absolute",
@@ -155,6 +154,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       />
     </Tooltip>
   );
+
+  removeFallbackLayer = (layerName: string) => {
+    Modal.confirm({
+      title: messages["tracing.confirm_remove_fallback_layer"],
+      onOk: async () => {
+        this.props.onRemoveFallbackLayer();
+        this.reloadLayerData(layerName);
+      },
+    });
+  };
 
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
     const tooltipText = isInEditMode

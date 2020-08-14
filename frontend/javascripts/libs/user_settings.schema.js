@@ -33,6 +33,7 @@ export const userSettings = {
   zoom: { type: "number", minimum: 0.005 },
   renderMissingDataBlack: { type: "boolean" },
   brushSize: { type: "number", minimum: 1, maximum: 5000 },
+  segmentationPatternOpacity: { type: "number", minimum: 0, maximum: 100 },
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },

@@ -17,6 +17,7 @@ const ButtonGroup = Button.Group;
 
 type Props = {|
   activeTool: VolumeTool,
+  isInMergerMode: boolean,
 |};
 
 class VolumeActionsView extends PureComponent<Props> {
@@ -37,12 +38,18 @@ class VolumeActionsView extends PureComponent<Props> {
       >
         <RadioGroup
           onChange={this.handleSetTool}
-          value={this.props.activeTool}
+          value={
+            this.props.isInMergerMode && this.props.activeTool === VolumeToolEnum.BRUSH
+              ? VolumeToolEnum.TRACE
+              : this.props.activeTool
+          }
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
           <RadioButton value={VolumeToolEnum.TRACE}>Trace</RadioButton>
-          <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
+          <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
+            Brush
+          </RadioButton>
         </RadioGroup>
         <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>
@@ -58,6 +65,7 @@ class VolumeActionsView extends PureComponent<Props> {
 function mapStateToProps(state: OxalisState): Props {
   return {
     activeTool: enforceVolumeTracing(state.tracing).activeTool,
+    isInMergerMode: state.temporaryConfiguration.isMergerModeEnabled,
   };
 }
 

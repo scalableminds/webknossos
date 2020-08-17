@@ -10,15 +10,21 @@ function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
   if (!event.shiftKey) {
     return;
   }
-  const segmentation = Model.getSegmentationLayer();
-  if (!segmentation) {
-    return;
-  }
+  let cellId = 0;
   const position = calculateGlobalPos(pos);
-  const cellId = segmentation.cube.getMappedDataValue(
-    position,
-    getRequestLogZoomStep(Store.getState()),
-  );
+  const volumeTracingMaybe = Store.getState().tracing.volume;
+  if (volumeTracingMaybe) {
+    cellId = volumeTracingMaybe.activeCellId;
+  } else {
+    const segmentation = Model.getSegmentationLayer();
+    if (!segmentation) {
+      return;
+    }
+    cellId = segmentation.cube.getMappedDataValue(
+      position,
+      getRequestLogZoomStep(Store.getState()),
+    );
+  }
   if (cellId > 0) {
     Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
   }

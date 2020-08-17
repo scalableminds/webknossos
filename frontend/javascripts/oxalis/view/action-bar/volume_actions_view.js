@@ -21,6 +21,12 @@ type Props = {|
 |};
 
 class VolumeActionsView extends PureComponent<Props> {
+  componentDidUpdate = (preProps: Props) => {
+    if (!preProps.isInMergerMode && this.props.isInMergerMode) {
+      Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
+    }
+  };
+
   handleSetTool = (event: { target: { value: VolumeTool } }) => {
     Store.dispatch(setToolAction(event.target.value));
   };
@@ -38,11 +44,7 @@ class VolumeActionsView extends PureComponent<Props> {
       >
         <RadioGroup
           onChange={this.handleSetTool}
-          value={
-            this.props.isInMergerMode && this.props.activeTool === VolumeToolEnum.BRUSH
-              ? VolumeToolEnum.TRACE
-              : this.props.activeTool
-          }
+          value={this.props.activeTool}
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>

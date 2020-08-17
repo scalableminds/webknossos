@@ -325,12 +325,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   render() {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const archiveButtonText = this.props.task ? "Finish and go to Dashboard" : "Archive";
-    const { restrictions } = this.props;
+    const {
+      hasTracing,
+      restrictions,
+      task,
+      annotationType,
+      annotationId,
+      activeUser,
+      layoutMenu,
+    } = this.props;
+    const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
 
     const saveButton = restrictions.allowUpdate
       ? [
-          isSkeletonMode
+          hasTracing
             ? [
                 <ButtonComponent
                   className="narrow"
@@ -374,7 +382,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         ];
 
     const finishAndNextTaskButton =
-      restrictions.allowFinish && this.props.task ? (
+      restrictions.allowFinish && task ? (
         <ButtonComponent
           key="next-button"
           icon="verticle-left"
@@ -425,8 +433,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         key="share-modal"
         isVisible={this.state.isShareModalOpen}
         onOk={this.handleShareClose}
-        annotationType={this.props.annotationType}
-        annotationId={this.props.annotationId}
+        annotationType={annotationType}
+        annotationId={annotationId}
       />,
     );
     elements.push(
@@ -449,7 +457,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       />,
     );
 
-    if (isSkeletonMode && this.props.activeUser != null) {
+    if (isSkeletonMode && activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
           <Icon type="folder-open" />
@@ -472,9 +480,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       </Menu.Item>,
     );
 
-    elements.push(this.props.layoutMenu);
+    elements.push(layoutMenu);
 
-    if (restrictions.allowSave && !this.props.task) {
+    if (restrictions.allowSave && !task) {
       elements.push(
         <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
           <Icon type="stop-o" />
@@ -509,6 +517,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     restrictions: state.tracing.restrictions,
     task: state.task,
     activeUser: state.activeUser,
+    hasTracing: (state.tracing.skeleton || state.tracing.volume) != null,
   };
 }
 

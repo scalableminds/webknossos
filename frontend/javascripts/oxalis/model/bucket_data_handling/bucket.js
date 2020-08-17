@@ -164,7 +164,9 @@ export class DataBucket {
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
     if (!this.dirty) {
-      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, bucketData));
+      const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+      const dataClone = new TypedArrayClass(bucketData);
+      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
     }
     labelFunc(bucketData);
     this.dirty = true;

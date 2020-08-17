@@ -37,7 +37,7 @@ type Props = {
   onCameraPositionChanged: () => void,
 };
 
-function getCameraAsQuaternion(_up, position, center) {
+function getQuaternionFromCamera(_up, position, center) {
   const up = V3.normalize(_up);
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
@@ -300,8 +300,8 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   // these orientations, we compute the new camera position by keeping the distance
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
   // surfaces of a sphere with the center at currentFlycamPos.
-  const startQuaternion = getCameraAsQuaternion(tdCamera.up, tdCamera.position, currentFlycamPos);
-  const targetQuaternion = getCameraAsQuaternion(up, position, currentFlycamPos);
+  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
+  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos);
   const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
 
   const to: TweenState = {

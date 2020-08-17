@@ -31,12 +31,55 @@ import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import getSceneController from "oxalis/controller/scene_controller_provider";
 
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
 };
+
+function getCameraAsQuaternion(_up, position, center) {
+  const up = V3.normalize(_up);
+  const forward = V3.normalize(V3.sub(center, position));
+  const right = V3.normalize(V3.cross(up, forward));
+
+  const rotationMatrix = new THREE.Matrix4();
+  rotationMatrix.set(
+    right[0], up[0], forward[0], 0,
+    right[1], up[1], forward[1], 0,
+    right[2], up[2], forward[2], 0,
+    0, 0, 0, 1,
+  );
+
+  const quat = new THREE.Quaternion();
+  quat.setFromRotationMatrix(rotationMatrix);
+
+  return quat;
+}
+
+function getCameraFromQuaternion(quat) {
+  // Derived from: https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
+  const {x, y, z, w} = quat;
+
+  const right = [
+    1.0 - 2.0*y*y - 2.0*z*z,
+    2.0*x*y + 2.0*z*w,
+    2.0*x*z - 2.0*y*w,
+  ]
+
+  const up = [
+    2.0*x*y - 2.0*z*w,
+    1.0 - 2.0*x*x - 2.0*z*z,
+    2.0*y*z + 2.0*x*w,
+  ]
+
+  const forward = [
+    2.0*x*z + 2.0*y*w,
+    2.0*y*z - 2.0*x*w,
+    1.0 - 2.0*x*x - 2.0*y*y,
+  ]
+
+  return {right, up, forward}
+}
 
 class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<Function>;
@@ -172,12 +215,6 @@ class CameraController extends React.PureComponent<Props> {
 }
 
 type TweenState = {
-  upX: number,
-  upY: number,
-  upZ: number,
-  xPos: number,
-  yPos: number,
-  zPos: number,
   left: number,
   right: number,
   top: number,
@@ -256,79 +293,36 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     getPosition(Store.getState().flycam),
   ) || [0, 0, 0];
 
-
-  // const diff = V3.sub(tdCamera.position, position);
-  // const v1 = V3.normalize(diff);
-  // const v2 = V3.normalize(V3.cross(up, v1));
-  // const center = V3.scale(V3.add(tdCamera.position, position), 1/2);
-  // const radius = V3.length(diff) / 2;
-
-  // const diff = V3.sub(tdCamera.position, position);
-  const v1Unnormalized = V3.sub(currentFlycamPos, position);
-  let v2Unnormalized = V3.sub(currentFlycamPos, tdCamera.position);
-  v2Unnormalized = V3.cross(V3.cross(v1Unnormalized, v2Unnormalized), v1Unnormalized);
-  const v1 = V3.normalize(v1Unnormalized);
-  const v2 = V3.normalize(v2Unnormalized);
-
-  const center = currentFlycamPos;
-  const radius = Math.min(V3.length(v1Unnormalized), V3.length(v2Unnormalized));
-
-  const points = [];
-
-  let multiplier = 1;
-  // const posDiff = V3.length(V3.sub(currentFlycamPos, calculateCirclePoint(0.5)))
-  // const negDiff = V3.length(V3.sub(currentFlycamPos, calculateCirclePoint(-0.5)))
-
-  // const usePositiveCircleHalf = posDiff > negDiff;
-  // multiplier = usePositiveCircleHalf ? 1 : -1;
-  // console.log("usePositiveCircleHalf", usePositiveCircleHalf)
-  function calculateCirclePoint(t) {
-    const a = V3.scale(v1, radius * Math.cos(Math.PI * t * multiplier));
-    const b = V3.scale(v2, radius * Math.sin(Math.PI * t * multiplier));
-    const p = V3.add(V3.add(center, a), b);
-    return p;
-  }
-
-  for (let t = 0; t < 1.0; t += 1 / 25) {
-    points.push(calculateCirclePoint(t));
-  }
-
-  getSceneController().drawPoints(points);
-  console.log("drawPoints", points)
+  // Compute current and target orientation as quaternion. When tweening between
+  // these orientations, we compute the new camera position by keeping the distance
+  // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
+  // surfaces of a sphere with the center at currentFlycamPos.
+  const startQuaternion = getCameraAsQuaternion(tdCamera.up, tdCamera.position, currentFlycamPos)
+  const targetQuaternion = getCameraAsQuaternion(up, position, currentFlycamPos)
+  const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
 
   const to: TweenState = {
-    xPos: position[0],
-    yPos: position[1],
-    zPos: position[2],
-    upX: up[0],
-    upY: up[1],
-    upZ: up[2],
     left: -width / 2,
     right: width / 2,
     top: height / 2,
     bottom: -height / 2,
   };
 
-  const updateCameraTDView = (tweenState: TweenState, t) => {
-    let { xPos, yPos, zPos, upX, upY, upZ, left, right, top, bottom } = tweenState;
+  const updateCameraTDView = (tweenState: TweenState, t: number) => {
+    const { left, right, top, bottom } = tweenState;
 
-    const p = calculateCirclePoint(t)
-    const currentFlycamPos = voxelToNm(
-      Store.getState().dataset.dataSource.scale,
-      getPosition(Store.getState().flycam),
-    );
+    const tweenedQuat = new THREE.Quaternion();
+    THREE.Quaternion.slerp(startQuaternion, targetQuaternion, tweenedQuat, t);
+    const tweened = getCameraFromQuaternion(tweenedQuat);
 
-    if (!isNaN(p[0])) {
-      xPos = p[0];
-      yPos = p[1];
-      zPos = p[2];
-    }
-
+    // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
+    // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
+    const newPosition = V3.toArray(V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)));
 
     Store.dispatch(
       setTDCameraAction({
-        position: [xPos, yPos, zPos],
-        up: [upX, upY, upZ],
+        position: newPosition,
+        up: tweened.up,
         left,
         right,
         top,
@@ -340,12 +334,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
   if (animate) {
     const from: TweenState = {
-      upX: tdCamera.up[0],
-      upY: tdCamera.up[1],
-      upZ: tdCamera.up[2],
-      xPos: tdCamera.position[0],
-      yPos: tdCamera.position[1],
-      zPos: tdCamera.position[2],
       left: tdCamera.left,
       right: tdCamera.right,
       top: tdCamera.top,
@@ -365,7 +353,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       })
       .start();
   } else {
-    updateCameraTDView(to);
+    updateCameraTDView(to, 1);
   }
 }
 

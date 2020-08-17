@@ -22,26 +22,23 @@ const Toast = {
         this.success(singleMessage.success);
       }
       if (singleMessage.error != null) {
-        if (errorChainString) {
-          this.renderDetailedErrorMessage(singleMessage.error, errorChainString);
-        } else {
-          this.error(singleMessage.error);
-        }
+        this.error(singleMessage.error, { sticky: true }, errorChainString);
       }
     });
   },
 
-  renderDetailedErrorMessage(
-    errorString: string,
-    errorChain: string,
-    config: ToastConfig = {},
-  ): void {
-    config.sticky = config.sticky != null ? config.sticky : true;
-    this.error(
+  buildContentWithDetails(
+    title: string | React$Element<any>,
+    details: string | React$Element<any> | null,
+  ) {
+    if (!details) {
+      return title;
+    }
+    return (
       <div>
-        {errorString}
+        {title}
         <Collapse
-          className="errorChainCollapse"
+          className="collapsibleToastDetails"
           bordered={false}
           style={{ background: "transparent", marginLeft: -16 }}
         >
@@ -49,15 +46,21 @@ const Toast = {
             header="Show more information"
             style={{ background: "transparent", border: 0, fontSize: 10 }}
           >
-            {errorChain}
+            {details}
           </Panel>
         </Collapse>
-      </div>,
-      config,
+      </div>
     );
   },
 
-  message(type: ToastStyle, message: string | React$Element<any>, config: ToastConfig): void {
+  message(
+    type: ToastStyle,
+    rawMessage: string | React$Element<any>,
+    config: ToastConfig,
+    details?: string,
+  ): void {
+    const message = this.buildContentWithDetails(rawMessage, details);
+
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : null);
     const { sticky, onClose } = config;
@@ -95,20 +98,24 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string | React$Element<any>, config: ToastConfig = {}): void {
-    return this.message("info", message, config);
+  info(message: string | React$Element<any>, config: ToastConfig = {}, details?: ?string): void {
+    return this.message("info", message, config, details);
   },
 
-  warning(message: string, config: ToastConfig = {}): void {
-    return this.message("warning", message, config);
+  warning(message: string, config: ToastConfig = {}, details?: ?string): void {
+    return this.message("warning", message, config, details);
   },
 
-  success(message: string = "Success :-)", config: ToastConfig = {}): void {
-    return this.message("success", message, config);
+  success(message: string = "Success :-)", config: ToastConfig = {}, details?: ?string): void {
+    return this.message("success", message, config, details);
   },
 
-  error(message: string | React$Element<any> = "Error :-/", config: ToastConfig = {}): void {
-    return this.message("error", message, config);
+  error(
+    message: string | React$Element<any> = "Error :-/",
+    config: ToastConfig = {},
+    details?: ?string,
+  ): void {
+    return this.message("error", message, config, details);
   },
 
   close(key: string) {

@@ -1080,6 +1080,7 @@ class DataApi {
      - layers
      - quality
      - highlightHoveredCellId
+     - segmentationPatternOpacity
      - renderMissingDataBlack
    *
    * @example

@@ -274,6 +274,7 @@ export type DatasetConfiguration = {|
   +rotation?: Vector3,
   +renderMissingDataBlack: boolean,
   +loadingStrategy: LoadingStrategy,
+  +segmentationPatternOpacity: number,
 |};
 
 export type UserConfiguration = {|

@@ -29,6 +29,7 @@ export const settings = {
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
+  segmentationPatternOpacity: "Pattern Opacity",
   userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
   loadingStrategyDescription: `You can choose between loading the best quality first
@@ -45,6 +46,8 @@ export default {
   no: "No",
   unknown_error:
     "An unknown error occurred. Please try again or check the console for more details.",
+  offline:
+    "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),

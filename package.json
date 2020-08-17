@@ -101,7 +101,7 @@
     "test-prepare-watch": "tools/test.sh prepare -w --verbose",
     "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-screenshot": "tools/test.sh test-screenshot --timeout=5m",
-    "refresh-screenshots": "rm -rf frontend/javascript/test/screenshots/** && docker-compose up screenshot-tests",
+    "refresh-screenshots": "rm -rf frontend/javascripts/test/screenshots/** && docker-compose up screenshot-tests",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public/test-bundle/test/enzyme/",
     "remove-snapshots-all": "rm -rf frontend/javascripts/test/snapshots/",

@@ -1,8 +1,9 @@
 // @flow
-import { Button, Icon, Tooltip } from "antd";
+import { Button, Tooltip } from "antd";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+import { AsyncButton } from "components/async_clickables";
 
 import api from "oxalis/api/internal_api";
 
@@ -32,9 +33,7 @@ function TDViewControls({ renderIsosurfaces }: Props) {
       </Button>
       {renderIsosurfaces ? (
         <Tooltip title="Reload Isosurfaces to newest version.">
-          <Button size="small" onClick={api.data.refreshIsosurfaces}>
-            <Icon type="reload" />
-          </Button>
+          <AsyncButton size="small" icon="reload" onClick={api.data.refreshIsosurfaces} />
         </Tooltip>
       ) : null}
     </ButtonGroup>

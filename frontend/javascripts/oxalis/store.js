@@ -441,6 +441,7 @@ type UiInformation = {
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
+  +refreshingIsosurfaces: boolean,
 };
 
 export type OxalisState = {|

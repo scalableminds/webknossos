@@ -10,6 +10,7 @@ import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
+  refreshIsosurfacesAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -324,6 +325,7 @@ function* refreshIsosurfaces(): Saga<void> {
     for (const [, position] of isoSurfacePositions) {
       yield* call(ensureSuitableIsosurface, null, position, cellId);
     }
+    yield* put(refreshIsosurfacesAction());
     // Reload the Isosurface.
   }
 }

@@ -202,6 +202,7 @@ const defaultState: OxalisState = {
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,
+    refreshingIsosurfaces: false,
   },
 };
 

@@ -37,6 +37,8 @@ import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -263,7 +265,11 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   const currentId = yield* call(getCurrentCellId);
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(currentId);
-
+  if (geometry == null) {
+    const errorMessages = messages["tracing.not_isosurface_available_to_download"];
+    Toast.renderDetailedErrorMessage(errorMessages[0], errorMessages[1], { sticky: false });
+    return;
+  }
   const stl = exportToStl(geometry);
 
   // Encode isosurface and cell id property

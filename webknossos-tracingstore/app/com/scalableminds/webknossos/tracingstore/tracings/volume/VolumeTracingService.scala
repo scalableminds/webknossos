@@ -5,44 +5,38 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, IsosurfaceRequest, IsosurfaceService}
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataService,
+  IsosurfaceRequest,
+  IsosurfaceService,
+  IsosurfaceServiceHolder
+}
+import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.iteratee.Concurrent.Channel
-
-import scala.concurrent.duration._
-import play.api.libs.iteratee.{Concurrent, Enumerator, Input}
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, Json}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
-import com.scalableminds.webknossos.tracingstore.geometry.{
-  NamedBoundingBox,
-  BoundingBox => ProtoBox,
-  Point3D => ProtoPoint
-}
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
-    isosurfaceService: IsosurfaceService,
+    isosurfaceServiceHolder: IsosurfaceServiceHolder,
     val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     val handledGroupIdStore: RedisTemporaryStore,
     val uncommittedUpdatesStore: RedisTemporaryStore,
@@ -69,6 +63,9 @@ class VolumeTracingService @Inject()(
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
+
+  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))

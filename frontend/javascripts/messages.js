@@ -125,6 +125,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
+  "tracing.not_isosurface_available_to_download": [
+    "There is no isosurface for the active segment id available to download.",
+    'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
+  ],
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

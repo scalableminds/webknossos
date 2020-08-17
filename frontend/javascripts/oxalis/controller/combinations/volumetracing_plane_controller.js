@@ -72,14 +72,13 @@ const simulateTracing = async (): Promise<void> => {
 export function getPlaneMouseControls(_planeId: OrthoView): * {
   return {
     leftDownMove: (delta: Point2, pos: Point2) => {
-      const { tracing } = Store.getState();
+      const { tracing, viewModeData } = Store.getState();
       const volumeTracing = enforceVolumeTracing(tracing);
       const tool = getVolumeTool(volumeTracing);
       const contourTracingMode = getContourTracingMode(volumeTracing);
 
       if (tool === VolumeToolEnum.MOVE) {
-        const state = Store.getState();
-        const { activeViewport } = state.viewModeData.plane;
+        const { activeViewport } = viewModeData.plane;
         const v = [-delta.x, -delta.y, 0];
         Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
       }

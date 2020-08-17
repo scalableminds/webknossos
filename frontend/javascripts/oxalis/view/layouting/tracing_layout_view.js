@@ -162,7 +162,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
-  getTabTitle = () => `${this.props.displayName} ${this.props.organization} webknossos`;
+  getTabTitle = () => {
+    const titleArray: Array<string> = [
+      this.props.displayName,
+      this.props.organization,
+      "webKnossos",
+    ];
+    return titleArray.filter(elem => elem).join(" | ");
+  };
 
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
@@ -350,7 +357,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetName: state.dataset.name,
     displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
-    organization: state.activeUser ? state.activeUser.organization : "",
+    organization: state.dataset.owningOrganization,
   };
 }
 

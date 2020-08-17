@@ -823,8 +823,8 @@ class DataApi {
     return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
-  async refreshIsosurfaces(): Promise<void> {
-    await Store.dispatch(refreshIsosurfacesAction());
+  refreshIsosurfaces(): Promise<void> {
+    Store.dispatch(refreshIsosurfacesAction());
     const isRefreshingComplete = new Promise(resolve => {
       const unsubscribe = listenToStoreProperty(
         state => state.uiInformation.refreshingIsosurfaces,

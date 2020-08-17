@@ -7,7 +7,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 
 function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
-  if (!event.ctrlKey) {
+  if (!event.shiftKey) {
     return;
   }
   const segmentation = Model.getSegmentationLayer();

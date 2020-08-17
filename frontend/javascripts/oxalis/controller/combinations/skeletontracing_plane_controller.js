@@ -232,7 +232,7 @@ function onClick(
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
     }
-  } else if (ctrlPressed && event != null) {
+  } else if (shiftPressed && event != null) {
     isosurfaceLeftClick(position, plane, event);
   }
 }

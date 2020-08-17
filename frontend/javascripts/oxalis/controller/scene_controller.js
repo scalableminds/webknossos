@@ -186,6 +186,7 @@ class SceneController {
       .to({ opacity: 0.95 }, 500)
       .onUpdate(function onUpdate() {
         meshMaterial.opacity = this.opacity;
+        app.vent.trigger("rerender");
       })
       .start();
 

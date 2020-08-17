@@ -169,12 +169,12 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         );
         if (cellId > 0) {
           Store.dispatch(setActiveCellAction(cellId));
+          isosurfaceLeftClick(pos, plane, event);
         }
       } else if (event.ctrlKey) {
         if (isAutomaticBrushEnabled()) {
           Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }
-        isosurfaceLeftClick(pos, plane, event);
       }
     },
 

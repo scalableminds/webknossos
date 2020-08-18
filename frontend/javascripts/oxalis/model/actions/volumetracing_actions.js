@@ -28,14 +28,14 @@ export type CopySegmentationLayerAction = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
 };
-type AddBucketToUndoAction = {
+export type AddBucketToUndoAction = {
   type: "ADD_BUCKET_TO_UNDO",
   zoomedBucketAddress: Vector4,
   bucketData: BucketDataArray,
 };
 type UpdateDirectionAction = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourAction = { type: "RESET_CONTOUR" };
-type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE" };
+export type FinishAnnotationStrokeAction = { type: "FINISH_ANNOTATION_STROKE" };
 type SetMousePositionAction = { type: "SET_MOUSE_POSITION", position: Vector2 };
 type HideBrushAction = { type: "HIDE_BRUSH" };
 type SetContourTracingModeAction = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourMode };

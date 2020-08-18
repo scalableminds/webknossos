@@ -31,7 +31,7 @@ export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
 // This set saves whether a bucket is already added to the current undo volume batch
 // and gets cleared by the save saga after a annotation step has finished.
-export const bucketAlreadyInUndoState = new Set();
+export const bucketAlreadyInUndoState: Set<Vector4> = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU

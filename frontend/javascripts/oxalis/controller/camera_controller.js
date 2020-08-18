@@ -16,6 +16,7 @@ import {
   OrthoViews,
   type Vector3,
 } from "oxalis/constants";
+import { V3 } from "libs/mjs";
 import {
   getDatasetExtentInLength,
   getDatasetCenter,
@@ -35,6 +36,52 @@ type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
 };
+
+function getQuaternionFromCamera(_up, position, center) {
+  const up = V3.normalize(_up);
+  const forward = V3.normalize(V3.sub(center, position));
+  const right = V3.normalize(V3.cross(up, forward));
+
+  const rotationMatrix = new THREE.Matrix4();
+
+  // prettier-ignore
+  rotationMatrix.set(
+    right[0], up[0], forward[0], 0,
+    right[1], up[1], forward[1], 0,
+    right[2], up[2], forward[2], 0,
+    0, 0, 0, 1,
+  );
+
+  const quat = new THREE.Quaternion();
+  quat.setFromRotationMatrix(rotationMatrix);
+
+  return quat;
+}
+
+function getCameraFromQuaternion(quat) {
+  // Derived from: https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
+  const { x, y, z, w } = quat;
+
+  const right = [
+    1.0 - 2.0 * y * y - 2.0 * z * z,
+    2.0 * x * y + 2.0 * z * w,
+    2.0 * x * z - 2.0 * y * w,
+  ];
+
+  const up = [
+    2.0 * x * y - 2.0 * z * w,
+    1.0 - 2.0 * x * x - 2.0 * z * z,
+    2.0 * y * z + 2.0 * x * w,
+  ];
+
+  const forward = [
+    2.0 * x * z + 2.0 * y * w,
+    2.0 * y * z - 2.0 * x * w,
+    1.0 - 2.0 * x * x - 2.0 * y * y,
+  ];
+
+  return { right, up, forward };
+}
 
 class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<Function>;
@@ -170,12 +217,6 @@ class CameraController extends React.PureComponent<Props> {
 }
 
 type TweenState = {
-  upX: number,
-  upY: number,
-  upZ: number,
-  xPos: number,
-  yPos: number,
-  zPos: number,
   left: number,
   right: number,
   top: number,
@@ -190,7 +231,11 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const datasetExtent = getDatasetExtentInLength(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
-  const clippingOffsetFactor = 900000;
+  const clippingOffsetFactor = Math.max(
+    datasetExtent.width,
+    datasetExtent.height,
+    datasetExtent.depth,
+  );
   // Use width and height to keep the same zoom.
   let width = tdCamera.right - tdCamera.left;
   let height = tdCamera.top - tdCamera.bottom;
@@ -245,29 +290,44 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
       positionOffset[id][2] + flycamPos[2],
     ];
   }
+
+  const currentFlycamPos = voxelToNm(
+    Store.getState().dataset.dataSource.scale,
+    getPosition(Store.getState().flycam),
+  ) || [0, 0, 0];
+
+  // Compute current and target orientation as quaternion. When tweening between
+  // these orientations, we compute the new camera position by keeping the distance
+  // (radius) to currentFlycamPos constant. Consequently, the camera moves on the
+  // surfaces of a sphere with the center at currentFlycamPos.
+  const startQuaternion = getQuaternionFromCamera(tdCamera.up, tdCamera.position, currentFlycamPos);
+  const targetQuaternion = getQuaternionFromCamera(up, position, currentFlycamPos);
+  const centerDistance = V3.length(V3.sub(currentFlycamPos, position));
+
   const to: TweenState = {
-    xPos: position[0],
-    yPos: position[1],
-    zPos: position[2],
-    upX: up[0],
-    upY: up[1],
-    upZ: up[2],
     left: -width / 2,
     right: width / 2,
     top: height / 2,
     bottom: -height / 2,
   };
 
-  const updateCameraTDView = (tweenState: TweenState) => {
-    const currentFlycamPos = voxelToNm(
-      Store.getState().dataset.dataSource.scale,
-      getPosition(Store.getState().flycam),
+  const updateCameraTDView = (tweenState: TweenState, t: number) => {
+    const { left, right, top, bottom } = tweenState;
+
+    const tweenedQuat = new THREE.Quaternion();
+    THREE.Quaternion.slerp(startQuaternion, targetQuaternion, tweenedQuat, t);
+    const tweened = getCameraFromQuaternion(tweenedQuat);
+
+    // Use forward vector and currentFlycamPos (lookAt target) to calculate the current
+    // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
+    const newPosition = V3.toArray(
+      V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)),
     );
-    const { xPos, yPos, zPos, upX, upY, upZ, left, right, top, bottom } = tweenState;
+
     Store.dispatch(
       setTDCameraAction({
-        position: [xPos, yPos, zPos],
-        up: [upX, upY, upZ],
+        position: newPosition,
+        up: tweened.up,
         left,
         right,
         top,
@@ -279,12 +339,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
   if (animate) {
     const from: TweenState = {
-      upX: tdCamera.up[0],
-      upY: tdCamera.up[1],
-      upZ: tdCamera.up[2],
-      xPos: tdCamera.position[0],
-      yPos: tdCamera.position[1],
-      zPos: tdCamera.position[2],
       left: tdCamera.left,
       right: tdCamera.right,
       top: tdCamera.top,
@@ -296,15 +350,15 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
 
     tween
       .to(to, time)
-      .onUpdate(function updater() {
+      .onUpdate(function updater(t) {
         // TweenJS passes the current state via the `this` object.
         // However, for better type checking, we pass it as an explicit
         // parameter.
-        updateCameraTDView(this);
+        updateCameraTDView(this, t);
       })
       .start();
   } else {
-    updateCameraTDView(to);
+    updateCameraTDView(to, 1);
   }
 }
 

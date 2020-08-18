@@ -57,7 +57,7 @@ import messages from "messages";
 import window, { alert, document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import type { Vector4 } from "oxalis/constants";
-import compressStuff from "oxalis/workers/byte_array_to_lz4_base64_temp.worker";
+import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import {
   bucketAlreadyInUndoState,
@@ -65,7 +65,7 @@ import {
 } from "oxalis/model/bucket_data_handling/bucket";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 
-const byteArrayToLz4Array = createWorker(compressStuff);
+const byteArrayToLz4Array = createWorker(compressLz4Block);
 
 type UndoBucket = { zoomedBucketAddress: Vector4, data: Uint8Array };
 type VolumeAnnotationBatch = Array<UndoBucket>;

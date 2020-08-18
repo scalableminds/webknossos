@@ -67,6 +67,7 @@ const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], Or
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
+const finishAnnotationStrokeAction = VolumeTracingActions.finishAnnotationStrokeAction();
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");
@@ -190,7 +191,7 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
   saga.next();
-  const iterator = saga.next();
-  expectValueDeepEqual(t, iterator, put(resetContourAction));
+  expectValueDeepEqual(t, saga.next(), put(resetContourAction));
+  expectValueDeepEqual(t, saga.next(), put(finishAnnotationStrokeAction));
   t.true(saga.next().done);
 });

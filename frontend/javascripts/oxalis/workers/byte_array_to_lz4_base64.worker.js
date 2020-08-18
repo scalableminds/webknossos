@@ -1,6 +1,7 @@
 // @flow
 import Base64 from "base64-js";
 import lz4 from "lz4js";
+
 import { expose } from "./comlink_wrapper";
 
 function compressLz4Block(data: Uint8Array): Uint8Array {

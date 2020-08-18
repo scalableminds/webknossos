@@ -3,7 +3,7 @@ import lz4 from "lz4js";
 
 import { expose } from "./comlink_wrapper";
 
-export function compressLz4Block(data: Uint8Array, compress: boolean): Uint8Array {
+function compressLz4Block(data: Uint8Array, compress: boolean): Uint8Array {
   if (compress) {
     return lz4.compress(data);
   }

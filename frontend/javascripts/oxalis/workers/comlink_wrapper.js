@@ -47,7 +47,7 @@ export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
     // $FlowIgnore
     return WorkerClass;
   }
-  debugger;
+
   return wrap(
     // $FlowIgnore
     new WorkerClass(),

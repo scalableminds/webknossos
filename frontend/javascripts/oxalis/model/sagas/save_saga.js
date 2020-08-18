@@ -107,6 +107,7 @@ export function* collectUndoStates(): Saga<void> {
         }
       } else if (addBucketToUndoAction) {
         const { zoomedBucketAddress, bucketData } = addBucketToUndoAction;
+        console.log("adding bucket at address", zoomedBucketAddress);
         pendingCompressions.push(
           yield* fork(
             compressBucketAndAddToUndoBatch,
@@ -117,6 +118,7 @@ export function* collectUndoStates(): Saga<void> {
         );
       } else if (finishAnnotationStrokeAction) {
         yield* join([...pendingCompressions]);
+        window.bucketAddressSet.clear();
         console.log("adding batch of ", currentVolumeAnnotationBatch.length, " buckets");
         undoStack.push({ type: "volume", data: currentVolumeAnnotationBatch });
         currentVolumeAnnotationBatch = [];
@@ -129,6 +131,9 @@ export function* collectUndoStates(): Saga<void> {
       }
       previousAction = skeletonUserAction;
     } else if (undo) {
+      console.log("annotated addresses");
+      console.log(...Array.from(window.bucketAddressSet.keys()));
+      window.bucketAddressSet.clear();
       if (undoStack.length && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
@@ -139,6 +144,13 @@ export function* collectUndoStates(): Saga<void> {
         prevTracingMaybe,
         messages["undo.no_undo"],
       );
+      console.log("updated addresses");
+      console.log(...Array.from(window.setBucketAddressSet.keys()));
+      console.log("limiter");
+      console.log("limiter");
+      console.log("limiter");
+      console.log("limiter");
+      window.setBucketAddressSet.clear();
     } else if (redo) {
       if (redoStack && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
@@ -222,36 +234,46 @@ function* applyStateOfStack(
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
   } else if (stateToRestore.type === "volume") {
-    const allZoomedBucketAddresses = stateToRestore.data.map(
-      undoBucket => undoBucket.zoomedBucketAddress,
-    );
+    console.log("updating", stateToRestore.data.length, "many buckets");
     const currentVolumeState = yield* call(
       getUndoStateFromBucketArray,
-      allZoomedBucketAddresses,
+      stateToRestore.data,
       stackToPushTo,
     );
-    console.log("restoring", allZoomedBucketAddresses);
     stackToPushTo.push(currentVolumeState);
-    const volumeStateToRestore = stateToRestore.data;
-    yield* call(applyVolumeUndoAnnotationBatch, volumeStateToRestore);
+    // const volumeStateToRestore = stateToRestore.data;
+    // yield* call(applyVolumeUndoAnnotationBatch, volumeStateToRestore);
   }
 }
 
 function* getUndoStateFromBucketArray(
-  zoomedBucketAddresses: Array<Vector4>,
+  volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   if (!segmentationLayer) {
     throw new Error("Undoing a volume annotation but no volume layer exists.");
   }
   const { cube } = segmentationLayer;
-  const allCompressedBuckets: VolumeAnnotationBatch = [];
-  for (const address of zoomedBucketAddresses) {
-    const bucket = yield* call([cube, cube.getOrCreateBucket], address);
+  const allCompressedBucketsOfCurrentState: VolumeAnnotationBatch = [];
+  let counter = 0;
+  for (const { zoomedBucketAddress, data: compressedBucketData } of volumeAnnotationBatch) {
+    ++counter;
+    const bucket = yield* call([cube, cube.getOrCreateBucket], zoomedBucketAddress);
     const bucketData = bucket.getData();
-    yield* call(compressBucketAndAddToUndoBatch, address, bucketData, allCompressedBuckets);
+    yield* call(
+      compressBucketAndAddToUndoBatch,
+      zoomedBucketAddress,
+      bucketData,
+      allCompressedBucketsOfCurrentState,
+    );
+    const decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+    yield* call([bucket, bucket.setData], decompressedBucketData);
   }
-  return { type: "volume", data: allCompressedBuckets };
+  console.log("updated", counter, "may buckets for undo");
+  return {
+    type: "volume",
+    data: allCompressedBucketsOfCurrentState,
+  };
 }
 
 function* applyVolumeUndoAnnotationBatch(volumeAnnotationBatch: VolumeAnnotationBatch) {
@@ -262,7 +284,15 @@ function* applyVolumeUndoAnnotationBatch(volumeAnnotationBatch: VolumeAnnotation
   const { cube } = segmentationLayer;
   for (const { zoomedBucketAddress, data: compressedBucketData } of volumeAnnotationBatch) {
     const bucket = yield* call([cube, cube.getOrCreateBucket], zoomedBucketAddress);
+    if (bucket.type === "null") {
+      console.log("got null bucket at", zoomedBucketAddress);
+    }
     const decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
+    let counter = 0;
+    for (let i = 0; i < decompressedBucketData; ++i) {
+      counter += decompressedBucketData[i];
+    }
+    console.log("bucket has counter", counter);
     bucket.setData(decompressedBucketData);
   }
 }

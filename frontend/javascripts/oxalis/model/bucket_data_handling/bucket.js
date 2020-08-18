@@ -29,6 +29,7 @@ export const BucketStateEnum = {
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
+export const bucketAlreadyInUndoState = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -91,8 +92,7 @@ export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 // we have to define it here.
 // eslint-disable-next-line no-use-before-define
 export type Bucket = DataBucket | NullBucket;
-window.bucketAddressSet = new Set();
-window.setBucketAddressSet = new Set();
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -164,12 +164,12 @@ export class DataBucket {
 
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    if (!window.bucketAddressSet.has(this.zoomedAddress)) {
+    if (!bucketAlreadyInUndoState.has(this.zoomedAddress)) {
       const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
       const dataClone = new TypedArrayClass(bucketData);
       Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
     }
-    window.bucketAddressSet.add(this.zoomedAddress);
+    bucketAlreadyInUndoState.add(this.zoomedAddress);
     labelFunc(bucketData);
     this.dirty = true;
     this.throttledTriggerLabeled();
@@ -191,15 +191,13 @@ export class DataBucket {
   }
 
   setData(newData: Uint8Array) {
-    window.setBucketAddressSet.add(this.zoomedAddress);
-    console.log("setting data at", this.zoomedAddress);
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
     this.data = new TypedArrayClass(
       newData.buffer,
       newData.byteOffset,
       newData.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
     );
-    // this.dirty = true;
+    this.dirty = true;
     this.trigger("bucketLabeled");
   }
 

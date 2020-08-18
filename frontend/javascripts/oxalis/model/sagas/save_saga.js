@@ -125,7 +125,7 @@ export function* collectUndoStates(): Saga<void> {
         currentVolumeAnnotationBatch = [];
         pendingCompressions = [];
       }
-      // Clear the redo stack when a new action is executed
+      // Clear the redo stack when a new action is executed.
       redoStack.splice(0);
       if (undoStack.length > UNDO_HISTORY_SIZE) {
         undoStack.shift();
@@ -143,7 +143,7 @@ export function* collectUndoStates(): Saga<void> {
         messages["undo.no_undo"],
       );
     } else if (redo) {
-      if (redoStack && redoStack[redoStack.length - 1].type === "skeleton") {
+      if (redoStack.length && redoStack[redoStack.length - 1].type === "skeleton") {
         previousAction = null;
       }
       yield* call(

@@ -43,6 +43,7 @@ type StateProps = {|
   restrictions: RestrictionsAndSettings,
   task: ?Task,
   activeUser: ?APIUser,
+  hasTracing: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 

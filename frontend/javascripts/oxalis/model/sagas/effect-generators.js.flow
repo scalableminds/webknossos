@@ -461,6 +461,8 @@ export interface IEffect<T, P, C: boolean> {
 }
 export type JoinEffect<T: Task<*> | Array<Task<*>>> = IEffect<"JOIN", T, false>;
 
+declare type JoinFn = <T: Task<*> | Array<Task<*>>>(tasks: T) => Generator<*, T, *>;
+
 declare export var select: SelectFn;
 declare export var call: CallFn;
 declare export var put: PutFn;
@@ -469,13 +471,7 @@ declare export var fork: ForkFn;
 declare export var cancelled: CancelledFn;
 declare export var take: TakeFn;
 declare export var race: RaceFn;
-declare export var join: {
-  // join(task)
-  // join([...tasks])
-  <T: Task<*>>(task: T): JoinEffect<T>,
-  <T: Array<Task<*>>>(tasks: T): JoinEffect<T>,
-  ...,
-};
+declare export var join: JoinFn;
 
 // Export the original saga function prefixed with a _
 declare export var _all: typeof typedAll;

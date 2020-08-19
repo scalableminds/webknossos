@@ -139,9 +139,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   };
 
   getDeleteButton = (layerName: string) => (
-    <Tooltip title="Delete this Layer">
+    <Tooltip title="Unlink dataset's original segmentation layer">
       <Icon
-        type="minus-square"
+        type="stop"
         onClick={() => {
           this.removeFallbackLayer(layerName);
         }}
@@ -157,7 +157,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   removeFallbackLayer = (layerName: string) => {
     Modal.confirm({
-      title: messages["tracing.confirm_remove_fallback_layer"],
+      title: messages["tracing.confirm_remove_fallback_layer.title"],
+      content: messages["tracing.confirm_remove_fallback_layer.content"],
       onOk: async () => {
         this.props.onRemoveFallbackLayer();
         this.reloadLayerData(layerName);

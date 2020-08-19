@@ -129,6 +129,7 @@
     ]
   },
   "dependencies": {
+    "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
     "@scalableminds/saxophone": "^0.5.0",
     "@tensorflow/tfjs": "^1.0.0",

@@ -38,6 +38,7 @@ import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import TabTitle from "../components/tab_title_component";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -58,6 +59,8 @@ type StateProps = {|
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
   datasetName: string,
+  displayName: string,
+  organization: string,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -159,6 +162,15 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
+  getTabTitle = () => {
+    const titleArray: Array<string> = [
+      this.props.displayName,
+      this.props.organization,
+      "webKnossos",
+    ];
+    return titleArray.filter(elem => elem).join(" | ");
+  };
+
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
@@ -190,6 +202,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
         isUpdateAllowed={isUpdateTracingAllowed}
       >
+        <TabTitle title={this.getTabTitle()} />
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
@@ -343,6 +356,8 @@ function mapStateToProps(state: OxalisState): StateProps {
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetName: state.dataset.name,
+    displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
+    organization: state.dataset.owningOrganization,
   };
 }
 

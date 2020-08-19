@@ -50,7 +50,9 @@ class VolumeActionsView extends PureComponent<Props> {
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
           <Tooltip
             title={
-              this.props.isInMergerMode ? "Annotation tools are disabled while in merger mode." : ""
+              this.props.isInMergerMode
+                ? "Volume annotation is disabled while the merger mode is active."
+                : ""
             }
           >
             <RadioButton value={VolumeToolEnum.TRACE} disabled={this.props.isInMergerMode}>

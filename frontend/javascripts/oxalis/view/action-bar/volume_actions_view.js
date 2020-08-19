@@ -1,5 +1,5 @@
 // @flow
-import { Button, Radio } from "antd";
+import { Button, Radio, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 
@@ -48,10 +48,18 @@ class VolumeActionsView extends PureComponent<Props> {
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
-          <RadioButton value={VolumeToolEnum.TRACE}>Trace</RadioButton>
-          <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
-            Brush
-          </RadioButton>
+          <Tooltip
+            title={
+              this.props.isInMergerMode ? "Annotation tools are disabled while in merger mode." : ""
+            }
+          >
+            <RadioButton value={VolumeToolEnum.TRACE} disabled={this.props.isInMergerMode}>
+              Trace
+            </RadioButton>
+            <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
+              Brush
+            </RadioButton>
+          </Tooltip>
         </RadioGroup>
         <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>

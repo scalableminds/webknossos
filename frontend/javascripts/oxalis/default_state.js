@@ -203,6 +203,7 @@ const defaultState: OxalisState = {
     isImportingMesh: false,
     isInAnnotationView: false,
     hasOrganizations: false,
+    is2d: false,
   },
 };
 

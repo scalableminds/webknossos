@@ -58,6 +58,7 @@ type StateProps = {|
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
   datasetName: string,
+  is2d: boolean,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -94,7 +95,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   constructor(props: PropsWithRouter) {
     super(props);
-    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutType = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     let lastActiveLayout;
     if (
       props.storedLayouts.LastActiveLayouts &&
@@ -155,7 +160,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
       return;
     }
-    const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutKey = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
@@ -171,7 +180,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutType = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
@@ -343,6 +356,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetName: state.dataset.name,
+    is2d: true,
   };
 }
 

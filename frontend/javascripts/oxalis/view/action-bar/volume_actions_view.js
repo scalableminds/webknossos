@@ -21,7 +21,7 @@ type Props = {|
 |};
 
 class VolumeActionsView extends PureComponent<Props> {
-  componentDidUpdate = (preProps: Props) => {
+  componentDidUpdate = (prevProps: Props) => {
     if (!preProps.isInMergerMode && this.props.isInMergerMode) {
       Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
     }

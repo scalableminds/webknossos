@@ -57,11 +57,23 @@ function readStoredLayoutConfigs() {
         OrthoLayout: {
           "Custom Layout": layouts.OrthoLayout || defaultLayoutConfig.OrthoLayout,
         },
+        OrthoLayout2D: {
+          "Custom Layout": layouts.OrthoLayout2D || defaultLayoutConfig.OrthoLayout2D,
+        },
+        OrthoLayoutView2D: {
+          "Custom Layout": layouts.OrthoLayoutView2D || defaultLayoutConfig.OrthoLayoutView2D,
+        },
+        VolumeTracingView2D: {
+          "Custom Layout": layouts.VolumeTracingView2D || defaultLayoutConfig.VolumeTracingView2D,
+        },
         LastActiveLayouts: {
           OrthoLayoutView: "Custom Layout",
           VolumeTracingView: "Custom Layout",
           ArbitraryLayout: "Custom Layout",
           OrthoLayout: "Custom Layout",
+          OrthoLayout2D: "Custom Layout",
+          OrthoLayoutView2D: "Custom Layout",
+          VolumeTracingView2D: "Custom Layout",
         },
       };
       return withMulipleLayoutsSchema;
@@ -70,7 +82,10 @@ function readStoredLayoutConfigs() {
       layouts.OrthoLayoutView &&
       layouts.VolumeTracingView &&
       layouts.ArbitraryLayout &&
-      layouts.OrthoLayout
+      layouts.OrthoLayout &&
+      layouts.OrthoLayout2D &&
+      layouts.VolumeTracingView2D &&
+      layouts.OrthoLayoutView2D
     ) {
       return layouts;
     }

@@ -12,14 +12,14 @@ type Rule = {
   type?: string,
 };
 
-export type EditableTextLabelProp = {
+export type EditableTextLabelProp = {|
   value: string,
   onChange: Function,
   rules?: Rule,
   rows?: number,
   markdown?: boolean,
   label: string,
-};
+|};
 
 type State = {
   isEditing: boolean,

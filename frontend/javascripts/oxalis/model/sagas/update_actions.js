@@ -136,6 +136,10 @@ export type RevertToVersionUpdateAction = {|
     sourceVersion: number,
   |},
 |};
+export type RemoveFallbackLayerAction = {|
+  name: "removeFallbackLayer",
+  value: {},
+|};
 
 export type UpdateAction =
   | UpdateTreeUpdateAction
@@ -154,7 +158,8 @@ export type UpdateAction =
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
-  | UpdateTreeGroupsUpdateAction;
+  | UpdateTreeGroupsUpdateAction
+  | RemoveFallbackLayerAction;
 
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {|
@@ -190,7 +195,8 @@ export type ServerUpdateAction =
   | AsServerAction<UpdateTreeGroupVisibilityUpdateAction>
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
-  | AsServerAction<CreateTracingUpdateAction>;
+  | AsServerAction<CreateTracingUpdateAction>
+  | AsServerAction<RemoveFallbackLayerAction>;
 
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
@@ -391,6 +397,13 @@ export function revertToVersion(version: number): RevertToVersionUpdateAction {
     value: {
       sourceVersion: version,
     },
+  };
+}
+
+export function removeFallbackLayer(): RemoveFallbackLayerAction {
+  return {
+    name: "removeFallbackLayer",
+    value: {},
   };
 }
 

@@ -158,11 +158,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   removeFallbackLayer = (layerName: string) => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
-      content: messages["tracing.confirm_remove_fallback_layer.content"],
+      content: (
+        <div>
+          <p>{messages["tracing.confirm_remove_fallback_layer.explanation"]}</p>
+          <p>{messages["tracing.confirm_remove_fallback_layer.notes"]}</p>
+        </div>
+      ),
       onOk: async () => {
         this.props.onRemoveFallbackLayer();
         this.reloadLayerData(layerName);
       },
+      width: 600,
     });
   };
 

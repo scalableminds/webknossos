@@ -368,6 +368,19 @@ class DataCube {
     }
   }
 
+  setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
+    const bucket = this.getOrCreateBucket(zoomedAddress);
+    if (bucket.type === "null") {
+      return;
+    }
+    bucket.setData(data);
+    this.pushQueue.insert(bucket);
+  }
+
+  triggerPushQueue() {
+    this.pushQueue.push();
+  }
+
   hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {
     return this.getBucket(this.positionToZoomedAddress(voxel, zoomStep)).hasData();
   }

@@ -241,6 +241,13 @@ function* applyStateOfStack(
     yield* put(setTracingAction(newTracing));
     yield* put(centerActiveNodeAction());
   } else if (stateToRestore.type === "volume") {
+    const isMergerModeEnabled = yield* select(
+      state => state.temporaryConfiguration.isMergerModeEnabled,
+    );
+    if (isMergerModeEnabled) {
+      Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
+      return;
+    }
     const volumeBatchToApply = stateToRestore.data;
     const currentVolumeState = yield* call(
       applyAndGetRevertingVolumeBatch,
@@ -274,9 +281,11 @@ function* applyAndGetRevertingVolumeBatch(
     );
     const decompressedBucketData = yield* call(byteArrayToLz4Array, compressedBucketData, false);
     if (decompressedBucketData) {
-      bucket.setData(decompressedBucketData);
+      // Set the new bucket data to add the bucket directly to the pushqueue.
+      cube.setBucketData(zoomedBucketAddress, decompressedBucketData);
     }
   }
+  cube.triggerPushQueue();
   return {
     type: "volume",
     data: allCompressedBucketsOfCurrentState,

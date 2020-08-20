@@ -97,6 +97,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "tracing.edit_volume_in_merger_mode":
+    "You are about to edit the volume data while the merger mode is activated. This is not allowed.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":

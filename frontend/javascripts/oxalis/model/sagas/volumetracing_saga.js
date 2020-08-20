@@ -139,6 +139,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* put(finishAnnotationStrokeAction());
   }
 }
 
@@ -255,7 +256,6 @@ export function* finishLayer(
 
   yield* put(updateDirectionAction(layer.getCentroid()));
   yield* put(resetContourAction());
-  yield* put(finishAnnotationStrokeAction());
 }
 
 export function* disallowVolumeTracingWarning(): Saga<*> {

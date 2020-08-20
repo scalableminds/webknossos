@@ -192,6 +192,5 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(), put(resetContourAction));
-  expectValueDeepEqual(t, saga.next(), put(finishAnnotationStrokeAction));
   t.true(saga.next().done);
 });

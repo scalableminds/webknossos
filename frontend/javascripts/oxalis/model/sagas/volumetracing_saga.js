@@ -238,6 +238,35 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 }
 
+function* floodFill() {
+  // get some action;
+  const action = null;
+  const { position, planeId } = action;
+  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  const { cube } = segmentationLayer;
+  const flycamPosition = Dimensions.roundCoordinate(
+    yield* select(state => getPosition(state.flycam)),
+  );
+  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
+  const get3DAddress = (voxel: Vector2) => {
+    let index2d = 0;
+    const res = [0, 0, 0];
+
+    for (let i = 0; i <= 2; i++) {
+      if (i !== thirdDimIndex) {
+        res[i] = voxel[index2d++];
+      } else {
+        res[i] = flycamPosition[thirdDimIndex];
+      }
+    }
+    return res;
+  };
+  const get2DAddress = (voxel: Vector3) => voxel.filter((val, index) => index !== thirdDimIndex);
+
+  cube.floodFill(position, activeCellId, get3DAddress, get2DAddress);
+}
+
 export function* finishLayer(
   layer: VolumeLayer,
   activeTool: VolumeTool,

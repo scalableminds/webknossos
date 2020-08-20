@@ -66,7 +66,7 @@ import type { Vector4 } from "oxalis/constants";
 import compressLz4Block from "oxalis/workers/byte_array_lz4_compression.worker";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import {
-  bucketAlreadyInUndoState,
+  bucketsAlreadyInUndoState,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
@@ -80,23 +80,23 @@ type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
 type UndoState = SkeletonUndoState | VolumeUndoState;
 
 type racedActionsNeededForUndoRedo = {
-  skeletonUserAction: SkeletonTracingAction,
+  skeletonUserAction: ?SkeletonTracingAction,
   addBucketToUndoAction: ?AddBucketToUndoAction,
   finishAnnotationStrokeAction: ?FinishAnnotationStrokeAction,
-  undo: UndoAction,
-  redo: RedoAction,
+  undo: ?UndoAction,
+  redo: ?RedoAction,
 };
 
 export function* collectUndoStates(): Saga<void> {
   const undoStack: Array<UndoState> = [];
   const redoStack: Array<UndoState> = [];
   let previousAction: ?any = null;
-  let prevTracingMaybe: ?SkeletonTracing = null;
+  let prevSkeletonTracingOrNull: ?SkeletonTracing = null;
   let pendingCompressions: Array<Task<void>> = [];
   let currentVolumeAnnotationBatch: VolumeAnnotationBatch = [];
 
   yield* take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
-  prevTracingMaybe = yield* select(state => state.tracing.skeleton);
+  prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
   while (true) {
     const {
       skeletonUserAction,
@@ -112,18 +112,18 @@ export function* collectUndoStates(): Saga<void> {
       redo: _take("REDO"),
     }): any): racedActionsNeededForUndoRedo);
     if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
-      if (skeletonUserAction && prevTracingMaybe != null) {
+      if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
         const skeletonUndoState = yield* call(
           getSkeletonTracingToUndoState,
           ((skeletonUserAction: any): SkeletonTracingAction),
-          prevTracingMaybe,
+          prevSkeletonTracingOrNull,
           previousAction,
         );
         if (skeletonUndoState) {
           undoStack.push(skeletonUndoState);
         }
         previousAction = skeletonUserAction;
-      } else if (addBucketToUndoAction && addBucketToUndoAction.type === "ADD_BUCKET_TO_UNDO") {
+      } else if (addBucketToUndoAction) {
         const { zoomedBucketAddress, bucketData } = addBucketToUndoAction;
         pendingCompressions.push(
           yield* fork(
@@ -135,7 +135,7 @@ export function* collectUndoStates(): Saga<void> {
         );
       } else if (finishAnnotationStrokeAction) {
         yield* join([...pendingCompressions]);
-        bucketAlreadyInUndoState.clear();
+        bucketsAlreadyInUndoState.clear();
         undoStack.push({ type: "volume", data: currentVolumeAnnotationBatch });
         currentVolumeAnnotationBatch = [];
         pendingCompressions = [];
@@ -153,7 +153,7 @@ export function* collectUndoStates(): Saga<void> {
         applyStateOfStack,
         undoStack,
         redoStack,
-        prevTracingMaybe,
+        prevSkeletonTracingOrNull,
         messages["undo.no_undo"],
       );
     } else if (redo) {
@@ -164,12 +164,12 @@ export function* collectUndoStates(): Saga<void> {
         applyStateOfStack,
         redoStack,
         undoStack,
-        prevTracingMaybe,
+        prevSkeletonTracingOrNull,
         messages["undo.no_redo"],
       );
     }
     // We need the updated tracing here
-    prevTracingMaybe = yield* select(state => state.tracing.skeleton);
+    prevSkeletonTracingOrNull = yield* select(state => state.tracing.skeleton);
   }
 }
 
@@ -225,7 +225,7 @@ function shouldAddToUndoStack(currentUserAction: Action, previousAction: ?Action
 function* applyStateOfStack(
   sourceStack: Array<UndoState>,
   stackToPushTo: Array<UndoState>,
-  prevTracingMaybe: ?SkeletonTracing,
+  prevSkeletonTracingOrNull: ?SkeletonTracing,
   warningMessage: string,
 ): Saga<void> {
   if (sourceStack.length <= 0) {
@@ -234,8 +234,8 @@ function* applyStateOfStack(
   }
   const stateToRestore = sourceStack.pop();
   if (stateToRestore.type === "skeleton") {
-    if (prevTracingMaybe != null) {
-      stackToPushTo.push({ type: "skeleton", data: prevTracingMaybe });
+    if (prevSkeletonTracingOrNull != null) {
+      stackToPushTo.push({ type: "skeleton", data: prevSkeletonTracingOrNull });
     }
     const newTracing = stateToRestore.data;
     yield* put(setTracingAction(newTracing));
@@ -243,7 +243,7 @@ function* applyStateOfStack(
   } else if (stateToRestore.type === "volume") {
     const volumeBatchToApply = stateToRestore.data;
     const currentVolumeState = yield* call(
-      applyVolumeAnnotationBatchAndGetMatchingUndo,
+      applyAndGetRevertingVolumeBatch,
       volumeBatchToApply,
       stackToPushTo,
     );
@@ -251,7 +251,7 @@ function* applyStateOfStack(
   }
 }
 
-function* applyVolumeAnnotationBatchAndGetMatchingUndo(
+function* applyAndGetRevertingVolumeBatch(
   volumeAnnotationBatch: VolumeAnnotationBatch,
 ): Saga<VolumeUndoState> {
   const segmentationLayer = Model.getSegmentationLayer();

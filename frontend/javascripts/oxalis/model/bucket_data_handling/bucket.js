@@ -30,8 +30,8 @@ export const BucketStateEnum = {
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
 // This set saves whether a bucket is already added to the current undo volume batch
-// and gets cleared by the save saga after a annotation step has finished.
-export const bucketAlreadyInUndoState: Set<Vector4> = new Set();
+// and gets cleared by the save saga after an annotation step has finished.
+export const bucketsAlreadyInUndoState: Set<string> = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -166,12 +166,15 @@ export class DataBucket {
 
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    if (!bucketAlreadyInUndoState.has(this.zoomedAddress)) {
+    const zoomedAddressAsString = `${this.zoomedAddress[0]},${this.zoomedAddress[1]},${
+      this.zoomedAddress[2]
+    },${this.zoomedAddress[3]}`;
+    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
       const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
       const dataClone = new TypedArrayClass(bucketData);
       Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
+      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
     }
-    bucketAlreadyInUndoState.add(this.zoomedAddress);
     labelFunc(bucketData);
     this.dirty = true;
     this.throttledTriggerLabeled();

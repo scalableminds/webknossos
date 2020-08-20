@@ -67,7 +67,6 @@ const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], Or
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
-const finishAnnotationStrokeAction = VolumeTracingActions.finishAnnotationStrokeAction();
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");

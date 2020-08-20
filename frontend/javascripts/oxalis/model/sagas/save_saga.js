@@ -115,7 +115,7 @@ export function* collectUndoStates(): Saga<void> {
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
         const skeletonUndoState = yield* call(
           getSkeletonTracingToUndoState,
-          ((skeletonUserAction: any): SkeletonTracingAction),
+          skeletonUserAction,
           prevSkeletonTracingOrNull,
           previousAction,
         );

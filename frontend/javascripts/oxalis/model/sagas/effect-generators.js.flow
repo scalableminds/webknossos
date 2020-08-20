@@ -26,7 +26,7 @@ import type { OxalisState } from "oxalis/store";
 
 declare type Context = Object;
 
-// We disable fucntion spreads, as it weakens the typechecks (wrong parameter
+// We disable function spreads, as it weakens the typechecks (wrong parameter
 // won't be noticed count)
 // declare type FnSpread<T, R> = (...args: Array<T>) => Promise<R> | R;
 

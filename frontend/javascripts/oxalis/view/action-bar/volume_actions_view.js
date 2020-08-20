@@ -1,5 +1,5 @@
 // @flow
-import { Button, Radio } from "antd";
+import { Button, Radio, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 
@@ -17,9 +17,16 @@ const ButtonGroup = Button.Group;
 
 type Props = {|
   activeTool: VolumeTool,
+  isInMergerMode: boolean,
 |};
 
 class VolumeActionsView extends PureComponent<Props> {
+  componentDidUpdate = (prevProps: Props) => {
+    if (!prevProps.isInMergerMode && this.props.isInMergerMode) {
+      Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
+    }
+  };
+
   handleSetTool = (event: { target: { value: VolumeTool } }) => {
     Store.dispatch(setToolAction(event.target.value));
   };
@@ -41,8 +48,20 @@ class VolumeActionsView extends PureComponent<Props> {
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
-          <RadioButton value={VolumeToolEnum.TRACE}>Trace</RadioButton>
-          <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
+          <Tooltip
+            title={
+              this.props.isInMergerMode
+                ? "Volume annotation is disabled while the merger mode is active."
+                : ""
+            }
+          >
+            <RadioButton value={VolumeToolEnum.TRACE} disabled={this.props.isInMergerMode}>
+              Trace
+            </RadioButton>
+            <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
+              Brush
+            </RadioButton>
+          </Tooltip>
         </RadioGroup>
         <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>
@@ -58,6 +77,7 @@ class VolumeActionsView extends PureComponent<Props> {
 function mapStateToProps(state: OxalisState): Props {
   return {
     activeTool: enforceVolumeTracing(state.tracing).activeTool,
+    isInMergerMode: state.temporaryConfiguration.isMergerModeEnabled,
   };
 }
 

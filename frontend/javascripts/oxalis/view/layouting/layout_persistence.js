@@ -39,7 +39,7 @@ function readStoredLayoutConfigs() {
   try {
     const version = JSON.parse(storedLayoutVersion);
     const layouts = JSON.parse(layoutString);
-    if (currentLayoutVersion > version) {
+    if (true || currentLayoutVersion > version) {
       if (version !== 5) {
         return defaultLayoutConfig;
       }

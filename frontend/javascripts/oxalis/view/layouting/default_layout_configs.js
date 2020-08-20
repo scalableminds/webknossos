@@ -194,13 +194,13 @@ export const getCurrentDefaultLayoutConfig = () => {
       "Custom Layout": defaultLayouts.OrthoLayout,
     },
     OrthoLayout2d: {
-      "Custom 2D Layout": defaultLayouts.OrthoLayout2d,
+      "Custom Layout": defaultLayouts.OrthoLayout2d,
     },
     OrthoLayoutView2d: {
-      "Custom 2D Layout": defaultLayouts.OrthoLayoutView2d,
+      "Custom Layout": defaultLayouts.OrthoLayoutView2d,
     },
     VolumeTracingView2d: {
-      "Custom 2D Layout": defaultLayouts.VolumeTracingView2d,
+      "Custom Layout": defaultLayouts.VolumeTracingView2d,
     },
     LastActiveLayouts: {
       OrthoLayoutView: "Custom Layout",
@@ -208,9 +208,9 @@ export const getCurrentDefaultLayoutConfig = () => {
       VolumeTracingView: "Custom Layout",
       ArbitraryLayout: "Custom Layout",
       OrthoLayout: "Custom Layout",
-      OrthoLayout2d: "Custom 2D Layout",
-      OrthoLayoutView2d: "Custom 2D Layout",
-      VolumeTracingView2d: "Custom 2D Layout",
+      OrthoLayout2d: "Custom Layout",
+      OrthoLayoutView2d: "Custom Layout",
+      VolumeTracingView2d: "Custom Layout",
     },
   };
 };

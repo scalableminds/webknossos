@@ -38,7 +38,7 @@ import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
-import { getDatasetExtentInVoxel } from "oxalis/model/accessors/dataset_accessor";
+import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -357,7 +357,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetName: state.dataset.name,
-    is2d: getDatasetExtentInVoxel(state.dataset).depth < 2,
+    is2d: is2dDataset(state.dataset),
   };
 }
 

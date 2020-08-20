@@ -1,14 +1,6 @@
 // @flow
 
-import {
-  type Channel,
-  type Effect,
-  type Pattern,
-  type Task,
-  type Saga as _Saga,
-  channel,
-  effects,
-} from "redux-saga";
+import { type Channel, type Effect, type Pattern, type Task, type Saga as _Saga, channel, effects } from "redux-saga";
 import {
   all as typedAll,
   race as typedRace,
@@ -34,27 +26,9 @@ declare type Fn0<R> = () => Promise<R> | Generator<*, R, *> | R;
 declare type Fn1<T1, R> = (t1: T1) => Promise<R> | Generator<*, R, *> | R;
 declare type Fn2<T1, T2, R> = (t1: T1, t2: T2) => Promise<R> | Generator<*, R, *> | R;
 declare type Fn3<T1, T2, T3, R> = (t1: T1, t2: T2, t3: T3) => Promise<R> | Generator<*, R, *> | R;
-declare type Fn4<T1, T2, T3, T4, R> = (
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-) => Promise<R> | Generator<*, R, *> | R;
-declare type Fn5<T1, T2, T3, T4, T5, R> = (
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-) => Promise<R> | Generator<*, R, *> | R;
-declare type Fn6<T1, T2, T3, T4, T5, T6, R> = (
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-  t6: T6,
-) => Promise<R> | Generator<*, R, *> | R;
+declare type Fn4<T1, T2, T3, T4, R> = (t1: T1, t2: T2, t3: T3, t4: T4) => Promise<R> | Generator<*, R, *> | R;
+declare type Fn5<T1, T2, T3, T4, T5, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Promise<R> | Generator<*, R, *> | R;
+declare type Fn6<T1, T2, T3, T4, T5, T6, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Promise<R> | Generator<*, R, *> | R;
 
 /* ------------------ SELECT Stuff ------------------ */
 
@@ -63,35 +37,11 @@ declare type SelectFn0<R> = (state: OxalisState) => R;
 declare type SelectFn1<T1, R> = (state: OxalisState, t1: T1) => R;
 declare type SelectFn2<T1, T2, R> = (state: OxalisState, t1: T1, t2: T2) => R;
 declare type SelectFn3<T1, T2, T3, R> = (state: OxalisState, t1: T1, t2: T2, t3: T3) => R;
-declare type SelectFn4<T1, T2, T3, T4, R> = (
-  state: OxalisState,
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-) => R;
-declare type SelectFn5<T1, T2, T3, T4, T5, R> = (
-  state: OxalisState,
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-) => R;
-declare type SelectFn6<T1, T2, T3, T4, T5, T6, R> = (
-  state: OxalisState,
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-  t6: T6,
-) => R;
+declare type SelectFn4<T1, T2, T3, T4, R> = (state: OxalisState, t1: T1, t2: T2, t3: T3, t4: T4) => R;
+declare type SelectFn5<T1, T2, T3, T4, T5, R> = (state: OxalisState, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => R;
+declare type SelectFn6<T1, T2, T3, T4, T5, T6, R> = (state: OxalisState, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => R;
 
-declare type SelectFn = <R, Fn: SelectFn0<R>>(
-  selector: Fn,
-  ...rest: Array<void>
-) => Generator<*, R, *>;
+declare type SelectFn = <R, Fn: SelectFn0<R>>(selector: Fn, ...rest: Array<void>) => Generator<*, R, *>;
 // We are only using SelectFn0 and the others lead to flow errors
 // & (<T1, R, Fn: SelectFn1<T1, R>>(selector: Fn, t1: T1, ...rest: Array<void>) => Generator<*, R, *>)
 // & (<T1, T2, R, Fn: SelectFn2<T1, T2, R>>(selector: Fn, t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>)
@@ -103,55 +53,13 @@ declare type SelectFn = <R, Fn: SelectFn0<R>>(
 
 /* ------------------ CALL Stuff ------------------ */
 
-declare type ContextCallFn = (<R, C: Context, Fn: Fn0<R>>(
-  cfn: [C, Fn],
-  ...rest: Array<void>
-) => Generator<*, R, *>) &
-  (<T1, R, C: Context, Fn: Fn1<T1, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>);
+declare type ContextCallFn = (<R, C: Context, Fn: Fn0<R>>(cfn: [C, Fn], ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, R, C: Context, Fn: Fn1<T1, R>>(cfn: [C, Fn], t1: T1, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(cfn: [C, Fn], t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>);
 // & (<T, R, C: Context, Fn: FnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, R, *>);
 
 declare type CallFn = ContextCallFn &
@@ -159,30 +67,9 @@ declare type CallFn = ContextCallFn &
   (<R, Fn: Fn0<R>>(fn: Fn) => Generator<*, R, *>) &
   (<T1, T2, R, Fn: Fn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2) => Generator<*, R, *>) &
   (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-  ) => Generator<*, R, *>);
+  (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Generator<*, R, *>);
 // & (<T, R, Fn: FnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
 
 /* ------------------ CPS Stuff ------------------ */
@@ -195,207 +82,47 @@ declare type CpsFn1<T1, R> = (t1: T1, CallbackFn<R>) => any;
 declare type CpsFn2<T1, T2, R> = (t1: T1, t2: T2, cb: CallbackFn<R>) => any;
 declare type CpsFn3<T1, T2, T3, R> = (t1: T1, t2: T2, t3: T3, cb: CallbackFn<R>) => any;
 declare type CpsFn4<T1, T2, T3, T4, R> = (t1: T1, t2: T2, t3: T3, t4: T4, cb: CallbackFn<R>) => any;
-declare type CpsFn5<T1, T2, T3, T4, T5, R> = (
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-  cb: CallbackFn<R>,
-) => any;
-declare type CpsFn6<T1, T2, T3, T4, T5, T6, R> = (
-  t1: T1,
-  t2: T2,
-  t3: T3,
-  t4: T4,
-  t5: T5,
-  t6: T6,
-  cb: CallbackFn<R>,
-) => any;
+declare type CpsFn5<T1, T2, T3, T4, T5, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, cb: CallbackFn<R>) => any;
+declare type CpsFn6<T1, T2, T3, T4, T5, T6, R> = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, cb: CallbackFn<R>) => any;
 
-declare type ContextCpsFn = (<R, C: Context, Fn: CpsFn0<R>>(
-  cfn: [C, Fn],
-  ...rest: Array<void>
-) => Generator<*, R, *>) &
-  (<T1, R, C: Context, Fn: CpsFn1<T1, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, R, C: Context, Fn: CpsFn2<T1, T2, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, R, C: Context, Fn: CpsFn3<T1, T2, T3, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, R, C: Context, Fn: CpsFn4<T1, T2, T3, T4, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, R, C: Context, Fn: CpsFn5<T1, T2, T3, T4, T5, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: CpsFn6<T1, T2, T3, T4, T5, T6, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>);
+declare type ContextCpsFn = (<R, C: Context, Fn: CpsFn0<R>>(cfn: [C, Fn], ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, R, C: Context, Fn: CpsFn1<T1, R>>(cfn: [C, Fn], t1: T1, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, R, C: Context, Fn: CpsFn2<T1, T2, R>>(cfn: [C, Fn], t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, R, C: Context, Fn: CpsFn3<T1, T2, T3, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, R, C: Context, Fn: CpsFn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, R, C: Context, Fn: CpsFn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: CpsFn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>);
 // & (<T, R, C: Context, Fn: CpsFnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, R, *>);
 
 declare type CpsFn = ContextCpsFn &
   (<R, Fn: CpsFn0<R>>(fn: Fn, ...rest: Array<void>) => Generator<*, R, *>) &
   (<T1, R, Fn: CpsFn1<T1, R>>(fn: Fn, t1: T1, ...rest: Array<void>) => Generator<*, R, *>) &
-  (<T1, T2, R, Fn: CpsFn2<T1, T2, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, R, Fn: CpsFn3<T1, T2, T3, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, R, Fn: CpsFn4<T1, T2, T3, T4, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, R, Fn: CpsFn5<T1, T2, T3, T4, T5, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, Fn: CpsFn6<T1, T2, T3, T4, T5, T6, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-    ...rest: Array<void>
-  ) => Generator<*, R, *>);
+  (<T1, T2, R, Fn: CpsFn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, R, Fn: CpsFn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, R, Fn: CpsFn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, R, Fn: CpsFn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, Fn: CpsFn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>);
 // & (<T, R, Fn: CpsFnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
 
 /* ------------------ FORK Stuff ------------------ */
 
-declare type ContextForkFn = (<R, C: Context, Fn: Fn0<R>>(
-  cfn: [C, Fn],
-  ...rest: Array<void>
-) => Generator<*, Task<R>, *>) &
-  (<T1, R, C: Context, Fn: Fn1<T1, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(
-    cfn: [C, Fn],
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-    ...rest: Array<void>
-  ) => Generator<*, Task<R>, *>);
+declare type ContextForkFn = (<R, C: Context, Fn: Fn0<R>>(cfn: [C, Fn], ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, R, C: Context, Fn: Fn1<T1, R>>(cfn: [C, Fn], t1: T1, ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, T2, R, C: Context, Fn: Fn2<T1, T2, R>>(cfn: [C, Fn], t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, R, C: Context, Fn: Fn3<T1, T2, T3, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, R, C: Context, Fn: Fn4<T1, T2, T3, T4, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, T5, R, C: Context, Fn: Fn5<T1, T2, T3, T4, T5, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, C: Context, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(cfn: [C, Fn], t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, Task<R>, *>);
 // & (<T, R, C: Context, Fn: FnSpread<T, R>>(cfn: [C, Fn], t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...args: Array<T>) => Generator<*, Task<R>, *>);
 
 declare type ForkFn = ContextForkFn &
   (<R, Fn: Fn0<R>>(fn: Fn) => Generator<*, Task<R>, *>) &
   (<T1, R, Fn: Fn1<T1, R>>(fn: Fn, t1: T1) => Generator<*, Task<R>, *>) &
   (<T1, T2, R, Fn: Fn2<T1, T2, R>>(fn: Fn, t1: T1, t2: T2) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-  ) => Generator<*, Task<R>, *>) &
-  (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(
-    fn: Fn,
-    t1: T1,
-    t2: T2,
-    t3: T3,
-    t4: T4,
-    t5: T5,
-    t6: T6,
-  ) => Generator<*, Task<R>, *>);
+  (<T1, T2, T3, R, Fn: Fn3<T1, T2, T3, R>>(fn: Fn, t1: T1, t2: T2, t3: T3) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, R, Fn: Fn4<T1, T2, T3, T4, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, T5, R, Fn: Fn5<T1, T2, T3, T4, T5, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => Generator<*, Task<R>, *>) &
+  (<T1, T2, T3, T4, T5, T6, R, Fn: Fn6<T1, T2, T3, T4, T5, T6, R>>(fn: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => Generator<*, Task<R>, *>);
 // & (<T, R, Fn: FnSpread<T, R>>(fn: Fn, ...args: Array<T>) => Generator<*, R, *>);
 
 /* ------------------ Effects without return types ------------------ */
@@ -412,16 +139,7 @@ declare type CancelledFn = () => Generator<*, boolean, *>;
 declare type TakeFn = <P: Pattern>(pattern: P) => Generator<*, Action, *>;
 declare type RaceFnTest = (...args: any) => Generator<*, ReturnType<typeof typedRace>, *>;
 
-declare type RaceFn = <R: { +[name: string]: Effect }>(
-  effects: R,
-) => Generator<*, { +[name: $Keys<R>]: ?Action }, *>;
-
-export interface IEffect<T, P, C: boolean> {
-  +type: T;
-  +payload: P;
-  +combinator: C;
-}
-export type JoinEffect<T: Task<*> | Array<Task<*>>> = IEffect<"JOIN", T, false>;
+declare type RaceFn = <R: { +[name: string]: Effect }>(effects: R) => Generator<*, { +[name: $Keys<R>]: ?Action }, *>;
 
 declare type JoinFn = <T: Task<*> | Array<Task<*>>>(tasks: T) => Generator<*, T, *>;
 

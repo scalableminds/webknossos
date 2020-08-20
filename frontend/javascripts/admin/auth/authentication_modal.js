@@ -4,9 +4,11 @@ import React, { useState } from "react";
 
 import Toast from "libs/toast";
 import messages from "messages";
+import features from "features";
 
-import LoginForm from "./login_form";
+import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
 import RegistrationForm from "./registration_form";
+import LoginForm from "./login_form";
 
 type Props = {
   onLoggedIn: () => void,
@@ -28,17 +30,23 @@ export default function AuthenticationModal({ onLoggedIn, onCancel, visible }: P
     showLogin();
   };
 
+  const registrationForm = features().isDemoInstance ? (
+    <SpotlightRegistrationForm onRegistered={onRegistered} />
+  ) : (
+    <RegistrationForm onRegistered={onRegistered} />
+  );
+
   return (
     <Modal title={step} onCancel={onCancel} visible={visible} footer={null} maskClosable={false}>
       <Alert
-        message="You have to register and/or login to create a tracing."
+        message="You have to register and/or login to create an annotation."
         type="info"
         showIcon
         style={{ marginBottom: 20 }}
       />
       {step === "Register" ? (
         <React.Fragment>
-          <RegistrationForm onRegistered={onRegistered} />
+          {registrationForm}
           <a href="#" onClick={showLogin}>
             Already have an account? Login instead.
           </a>

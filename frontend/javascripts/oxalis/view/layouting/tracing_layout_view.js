@@ -7,8 +7,10 @@ import { Alert, Icon, Layout, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
+import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 
+import Request from "libs/request";
 import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
@@ -23,6 +25,7 @@ import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
+import type { ControllerStatus } from "oxalis/controller";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import SettingsView from "oxalis/view/settings/settings_view";
 import MergerModeController from "oxalis/controller/merger_mode_controller";
@@ -35,6 +38,7 @@ import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import TabTitle from "../components/tab_title_component";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -54,16 +58,21 @@ type StateProps = {|
   storedLayouts: Object,
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
+  datasetName: string,
+  displayName: string,
+  organization: string,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+type PropsWithRouter = {| ...OwnProps, ...StateProps, ...DispatchProps, history: RouterHistory |};
 
 type State = {
   isSettingsCollapsed: boolean,
   activeLayout: string,
   hasError: boolean,
+  status: ControllerStatus,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -76,7 +85,7 @@ const GOLDEN_LAYOUT_ADAPTER_STYLE = {
   overflow: "hidden",
 };
 
-class TracingLayoutView extends React.PureComponent<Props, State> {
+class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   currentLayoutConfig: Object;
   currentLayoutName: string;
 
@@ -86,7 +95,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     return { hasError: true };
   }
 
-  constructor(props: Props) {
+  constructor(props: PropsWithRouter) {
     super(props);
     const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
     let lastActiveLayout;
@@ -104,6 +113,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
       isSettingsCollapsed: true,
       activeLayout: lastActiveLayout,
       hasError: false,
+      status: "loading",
     };
   }
 
@@ -119,7 +129,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const refreshMessage = document.createElement("p");
     refreshMessage.innerHTML = "Reloading webKnossos...";
     refreshMessage.style.position = "absolute";
-    refreshMessage.style.top = 0;
+    refreshMessage.style.top = 30;
+    refreshMessage.style.left = 50;
     document.body.appendChild(refreshMessage);
 
     // Do a complete page refresh to make sure all tracing data is garbage
@@ -151,6 +162,15 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
   };
 
+  getTabTitle = () => {
+    const titleArray: Array<string> = [
+      this.props.displayName,
+      this.props.organization,
+      "webKnossos",
+    ];
+    return titleArray.filter(elem => elem).join(" | ");
+  };
+
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
@@ -167,62 +187,80 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
+    const createNewTracing = async (
+      files: Array<File>,
+      createGroupForEachFile: boolean,
+    ): Promise<void> => {
+      const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
+        data: { nmlFile: files, createGroupForEachFile, datasetName: this.props.datasetName },
+      });
+      this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
+    };
+
     return (
-      <NmlUploadZoneContainer onImport={importTracingFiles} isAllowed={isUpdateTracingAllowed}>
+      <NmlUploadZoneContainer
+        onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
+        isUpdateAllowed={isUpdateTracingAllowed}
+      >
+        <TabTitle title={this.getTabTitle()} />
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
+          controllerStatus={this.state.status}
+          setControllerStatus={(status: ControllerStatus) => this.setState({ status })}
         />
         <CrossOriginApi />
         <Layout className="tracing-layout">
           <RenderToPortal portalId="navbarTracingSlot">
-            <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
-              <ButtonComponent
-                className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
-                onClick={this.handleSettingsCollapse}
-                shape="circle"
-              >
-                <Icon
-                  type="setting"
-                  className="withoutMargin"
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                />
-              </ButtonComponent>
-              <ActionBarView
-                layoutProps={{
-                  storedLayoutNamesForView: currentLayoutNames,
-                  activeLayout: this.state.activeLayout,
-                  layoutKey: layoutType,
-                  setCurrentLayout: layoutName => {
-                    this.setState({ activeLayout: layoutName });
-                    setActiveLayout(layoutType, layoutName);
-                  },
-                  saveCurrentLayout: this.saveCurrentLayout,
-                  setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                  autoSaveLayouts: this.props.autoSaveLayouts,
-                }}
-              />
-              {isDatasetOnScratchVolume ? (
-                <Tooltip title={messages["dataset.is_scratch"]}>
-                  <Alert
-                    className="hide-on-small-screen"
-                    style={{
-                      height: 30,
-                      paddingTop: 4,
-                      backgroundColor: "#f17a27",
-                      color: "white",
-                    }}
-                    message={
-                      <span>
-                        Dataset is on tmpscratch!{" "}
-                        <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
-                      </span>
-                    }
-                    type="error"
+            {this.state.status === "loaded" ? (
+              <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
+                <ButtonComponent
+                  className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
+                  onClick={this.handleSettingsCollapse}
+                  shape="circle"
+                >
+                  <Icon
+                    type="setting"
+                    className="withoutMargin"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
                   />
-                </Tooltip>
-              ) : null}
-            </div>
+                </ButtonComponent>
+                <ActionBarView
+                  layoutProps={{
+                    storedLayoutNamesForView: currentLayoutNames,
+                    activeLayout: this.state.activeLayout,
+                    layoutKey: layoutType,
+                    setCurrentLayout: layoutName => {
+                      this.setState({ activeLayout: layoutName });
+                      setActiveLayout(layoutType, layoutName);
+                    },
+                    saveCurrentLayout: this.saveCurrentLayout,
+                    setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                    autoSaveLayouts: this.props.autoSaveLayouts,
+                  }}
+                />
+                {isDatasetOnScratchVolume ? (
+                  <Tooltip title={messages["dataset.is_scratch"]}>
+                    <Alert
+                      className="hide-on-small-screen"
+                      style={{
+                        height: 30,
+                        paddingTop: 4,
+                        backgroundColor: "#f17a27",
+                        color: "white",
+                      }}
+                      message={
+                        <span>
+                          Dataset is on tmpscratch!{" "}
+                          <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
+                        </span>
+                      }
+                      type="error"
+                    />
+                  </Tooltip>
+                ) : null}
+              </div>
+            ) : null}
           </RenderToPortal>
           <Layout style={{ display: "flex" }}>
             <Sider
@@ -230,7 +268,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               trigger={null}
               collapsed={this.state.isSettingsCollapsed}
               collapsedWidth={0}
-              width={350}
+              width={360}
               style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
             >
               <SettingsView dontRenderContents={this.state.isSettingsCollapsed} />
@@ -317,6 +355,9 @@ function mapStateToProps(state: OxalisState): StateProps {
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
+    datasetName: state.dataset.name,
+    displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
+    organization: state.dataset.owningOrganization,
   };
 }
 

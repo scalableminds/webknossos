@@ -19,7 +19,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | Q                             | Download Screenshot(s) of Viewport(s)       |
 | .                             | Toggle Viewport Maximization                |
 
-## Skeleton Tracings
+## Skeleton Annotation Mode
 
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
@@ -33,22 +33,23 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 
 ### Orthogonal Mode
 
-| Key Binding                   | Operation                                   |
-| ----------------------------- | ------------------------------------------- |
-| Left Mouse Drag or Arrow Keys | Move In-Plane                               |
-| Alt + Mouse Move              | Move In-Plane                               |
-| SPACE                         | Move Forward                                |
-| Scroll Mousewheel (3D View)   | Zoom In And Out                             |
-| Right Click Drag (3D View)    | Rotate 3D View                              |
-| Right Click                   | Create New Node                             |
-| C                             | Create New Tree                             |
-| SHIFT + Left Click            | Select Node (Mark as Active Node)           |
-| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees           |
-| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                   |
-| Del                           | Delete Node / Split Trees                   |
-| B                             | Mark Node as New Branchpoint                |
-| J                             | Jump To Last Branchpoint                    |
-| S                             | Center Camera on Active Node                |
+| Key Binding                           | Operation                                   |
+| ------------------------------------- | ------------------------------------------- |
+| Left Mouse Drag or Arrow Keys         | Move In-Plane                               |
+| Alt + Mouse Move                      | Move In-Plane                               |
+| SPACE                                 | Move Forward                                |
+| Scroll Mousewheel (3D View)           | Zoom In And Out                             |
+| Right Click Drag (3D View)            | Rotate 3D View                              |
+| Right Click                           | Create New Node                             |
+| C                                     | Create New Tree                             |
+| SHIFT + Left Click                    | Select Node (Mark as Active Node)           |
+| CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees                   |
+| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                           |
+| Del                           | Delete Node / Split Trees                           |
+| B                             | Mark Node as New Branchpoint                        |
+| J                             | Jump To Last Branchpoint                            |
+| S                             | Center Camera on Active Node                        |
 
 ### Flight / Oblique Mode
 
@@ -74,7 +75,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | --------------------------------- | ----------------------------------------------------------- |
 | Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Cell (Trace / Brush Mode) |
 | SHIFT + Left Click                | Select Active Cell                                          |
-| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode)    |
+| CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode); i.e., does not overwrite other cells    |
 | Right Mouse Drag                  | Remove Voxels From Current Cell                             |
 | CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
 | Alt + Mouse Move                  | Move                                                        |

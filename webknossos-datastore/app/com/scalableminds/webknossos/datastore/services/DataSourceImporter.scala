@@ -40,7 +40,10 @@ trait DataSourceImporter {
         val previousLayer = previous.flatMap(_.getDataLayer(layerName))
         exploreLayer(layerName, layerDir, previousLayer)(report.withContext(_.resolve(layerName)))
       }
-      GenericDataSource(id, layers, previous.map(_.scale).getOrElse(Scale.default))
+      GenericDataSource(id,
+                        layers,
+                        previous.map(_.scale).getOrElse(Scale.default),
+                        previous.flatMap(_.defaultViewConfiguration))
     }
 
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(
@@ -83,6 +86,6 @@ trait DataSourceImporter {
       case Right(point) => point.maxDim
     }
 
-  protected def exploreMappings(baseDir: Path): Set[String] = MappingProvider.exploreMappings(baseDir)
+  protected def exploreMappings(baseDir: Path): Option[Set[String]] = MappingProvider.exploreMappings(baseDir)
 
 }

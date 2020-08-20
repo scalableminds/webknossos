@@ -26,9 +26,10 @@ import {
   getNmlName,
   parseNml,
   wrapInNewGroup,
+  NmlParseError,
 } from "oxalis/model/helpers/nml_helpers";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   setTreeNameAction,
   createTreeAction,
@@ -48,6 +49,7 @@ import {
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { type Action } from "oxalis/model/actions/actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
@@ -115,53 +117,86 @@ type State = {
 
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
-    const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName) => {
+    const wrappedAddTreesAndGroupsAction = (trees, treeGroups, groupName, userBoundingBoxes) => {
+      const actions =
+        userBoundingBoxes && userBoundingBoxes.length > 0
+          ? [addUserBoundingBoxesAction(userBoundingBoxes)]
+          : [];
       if (createGroupForEachFile) {
         const [wrappedTrees, wrappedTreeGroups] = wrapInNewGroup(trees, treeGroups, groupName);
-        return addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups);
+        return [...actions, addTreesAndGroupsAction(wrappedTrees, wrappedTreeGroups)];
       } else {
-        return addTreesAndGroupsAction(trees, treeGroups);
+        return [...actions, addTreesAndGroupsAction(trees, treeGroups)];
+      }
+    };
+
+    const tryParsingFileAsNml = async file => {
+      try {
+        const nmlString = await readFileAsText(file);
+        const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);
+
+        return {
+          importActions: wrappedAddTreesAndGroupsAction(
+            trees,
+            treeGroups,
+            file.name,
+            userBoundingBoxes,
+          ),
+          datasetName,
+        };
+      } catch (error) {
+        if (error instanceof NmlParseError) {
+          // NmlParseError means the file we're dealing with is an NML-like file, but there was
+          // an error during the validation.
+          // In that case we want to show the validation error instead of the generic one.
+          throw error;
+        }
+        console.error(`Tried parsing file "${file.name}" as NML but failed. ${error.message}`);
+        return undefined;
+      }
+    };
+
+    const tryParsingFileAsProtobuf = async file => {
+      try {
+        const nmlProtoBuffer = await readFileAsArrayBuffer(file);
+        const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
+
+        if (!parsedTracing.trees) {
+          // This check is only for flow to realize that we have a skeleton tracing
+          // on our hands.
+          throw new Error("Skeleton tracing doesn't contain trees");
+        }
+
+        return {
+          importActions: wrappedAddTreesAndGroupsAction(
+            createMutableTreeMapFromTreeArray(parsedTracing.trees),
+            parsedTracing.treeGroups,
+            file.name,
+          ),
+          datasetName: parsedTracing.dataSetName,
+        };
+      } catch (error) {
+        console.error(`Tried parsing file "${file.name}" as protobuf but failed. ${error.message}`);
+        return undefined;
       }
     };
 
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const ext = _.last(file.name.split("."));
-        try {
-          if (ext === "nml") {
-            const nmlString = await readFileAsText(file);
-            const { trees, treeGroups, datasetName } = await parseNml(nmlString);
-
-            return {
-              importAction: wrappedAddTreesAndGroupsAction(trees, treeGroups, file.name),
-              datasetName,
-            };
-          } else {
-            const nmlProtoBuffer = await readFileAsArrayBuffer(file);
-            const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
-
-            if (!parsedTracing.trees) {
-              // This check is only for flow to realize that we have a skeleton tracing
-              // on our hands.
-              throw new Error("Skeleton tracing doesn't contain trees");
-            }
-
-            return {
-              importAction: wrappedAddTreesAndGroupsAction(
-                createTreeMapFromTreeArray(parsedTracing.trees),
-                parsedTracing.treeGroups,
-                file.name,
-              ),
-              datasetName: parsedTracing.dataSetName,
-            };
+        const tryImportFunctions =
+          ext === "nml" || ext === "xml"
+            ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
+            : [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        /* eslint-disable no-await-in-loop */
+        for (const importFunction of tryImportFunctions) {
+          const maybeImportAction = await importFunction(file);
+          if (maybeImportAction) {
+            return maybeImportAction;
           }
-        } catch (e) {
-          throw new Error(
-            `"${file.name}" could not be parsed as ${ext === "nml" ? "NML" : "protobuf"}. ${
-              e.message
-            }`,
-          );
         }
+        /* eslint-enable no-await-in-loop */
+        throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
       }),
     );
 
@@ -173,7 +208,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     // not a single store mutation happens if something above throws
     // an error
     importActionsWithDatasetNames
-      .map(el => el.importAction)
+      .flatMap(el => el.importActions)
       .forEach(action => Store.dispatch(action));
   } catch (e) {
     (Array.isArray(e) ? e : [e]).forEach(err => Toast.error(err.message));
@@ -304,7 +339,15 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   showDeleteGroupModal = (id: number) => {
-    this.setState({ groupToDelete: id });
+    if (!this.props.skeletonTracing) return;
+
+    const { trees, treeGroups } = this.props.skeletonTracing;
+    const treeGroupToDelete = treeGroups.find(el => el.groupId === id);
+    const groupToTreesMap = createGroupToTreesMap(trees);
+
+    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
+      this.deleteGroup(id);
+    else this.setState({ groupToDelete: id });
   };
 
   handleDelete = () => {

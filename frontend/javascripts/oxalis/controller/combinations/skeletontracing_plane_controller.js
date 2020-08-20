@@ -9,13 +9,16 @@ import {
   OrthoViews,
   type Point2,
   type Vector3,
+  VolumeToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { enforce } from "libs/utils";
 import {
   enforceSkeletonTracing,
+  getSkeletonTracing,
   getActiveNode,
+  getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -34,13 +37,19 @@ import {
   mergeTreesAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setNodePositionAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setDirectionAction,
+  movePlaneFlycamOrthoAction,
+} from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import Dimensions from "oxalis/model/dimensions";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -64,10 +73,26 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
 
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
+    leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
+      const { tracing } = Store.getState();
+      const state = Store.getState();
+      if (tracing.skeleton != null && event.ctrlKey) {
+        moveNode(delta.x, delta.y);
+      } else {
+        const { activeViewport } = state.viewModeData.plane;
+        const v = [-delta.x, -delta.y, 0];
+        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+      }
+    },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
-    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) =>
-      setWaypoint(calculateGlobalPos(pos), event.ctrlKey),
+    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      const { volume } = Store.getState().tracing;
+      if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
+        // We avoid creating nodes when in brushing mode.
+        setWaypoint(calculateGlobalPos(pos), event.ctrlKey);
+      }
+    },
   };
 }
 
@@ -88,9 +113,35 @@ export function getTDViewMouseControls(planeView: PlaneView): Object {
 
 function moveAlongDirection(reverse: boolean = false): void {
   const directionInverter = reverse ? -1 : 1;
-  const flycam = Store.getState().flycam;
+  const { flycam } = Store.getState();
   const newPosition = V3.add(getPosition(flycam), V3.scale(flycam.direction, directionInverter));
   api.tracing.centerPositionAnimated(newPosition, false);
+}
+
+export function moveNode(dx: number, dy: number) {
+  // dx and dy are measured in pixel.
+  getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+    getNodeAndTree(skeletonTracing).map(([activeTree, activeNode]) => {
+      const state = Store.getState();
+      const { activeViewport } = state.viewModeData.plane;
+      const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+      const zoomFactor = state.flycam.zoomStep;
+      const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+      const delta = [
+        vector[0] * zoomFactor * scaleFactor[0],
+        vector[1] * zoomFactor * scaleFactor[1],
+        vector[2] * zoomFactor * scaleFactor[2],
+      ];
+      const [x, y, z] = activeNode.position;
+      Store.dispatch(
+        setNodePositionAction(
+          [x + delta[0], y + delta[1], z + delta[2]],
+          activeNode.id,
+          activeTree.treeId,
+        ),
+      );
+    }),
+  );
 }
 
 export function getKeyboardControls() {
@@ -113,6 +164,14 @@ export function getKeyboardControls() {
       api.tracing.centerNode();
       api.tracing.centerTDView();
     },
+  };
+}
+export function getLoopedKeyboardControls() {
+  return {
+    "ctrl + left": () => moveNode(-1, 0),
+    "ctrl + right": () => moveNode(1, 0),
+    "ctrl + up": () => moveNode(0, -1),
+    "ctrl + down": () => moveNode(0, 1),
   };
 }
 

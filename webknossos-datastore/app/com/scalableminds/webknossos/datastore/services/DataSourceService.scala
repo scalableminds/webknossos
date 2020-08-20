@@ -1,29 +1,31 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.File
-import java.nio.file.{AccessDeniedException, Path, Paths}
+import java.io.{File, FileWriter}
+import java.nio.file.{AccessDeniedException, Files, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
-import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
+import org.joda.time.DateTime
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
+import org.joda.time.format.ISODateTimeFormat
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -41,22 +43,28 @@ class DataSourceService @Inject()(
   val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
+  private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  def tick: Unit = checkInbox()
+  var inboxCheckVerboseCounter = 0
 
-  def checkInbox(): Fox[Unit] = {
-    logger.info(s"Scanning inbox at: $dataBaseDir")
+  def tick: Unit = {
+    checkInbox(verbose = inboxCheckVerboseCounter == 0)
+    inboxCheckVerboseCounter += 1
+    if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
+  }
+
+  private def skipTrash(path: Path) = !path.toString.contains(".trash")
+
+  def checkInbox(verbose: Boolean): Fox[Unit] = {
+    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, skipTrash) match {
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())
+            _ = if (verbose) logEmptyDirs(dirs)
             foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-            dataSourceString = foundInboxSources.map { ds =>
-              s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
-            }.mkString(", ")
-
-            _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+            _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
         case e =>
@@ -65,6 +73,40 @@ class DataSourceService @Inject()(
           Fox.failure(errorMsg)
       }
     } yield ()
+  }
+
+  private def logFoundDatasources(foundInboxSources: Seq[InboxDataSource], verbose: Boolean): Unit = {
+    val shortForm =
+      s"Finished scanning inbox ($dataBaseDir): ${foundInboxSources.count(_.isUsable)} active, ${foundInboxSources
+        .count(!_.isUsable)} inactive"
+    val msg = if (verbose) {
+      val byTeam: Map[String, Seq[InboxDataSource]] = foundInboxSources.groupBy(_.id.team)
+      shortForm + ". " + byTeam.keys.map { team =>
+        val byUsable: Map[Boolean, Seq[InboxDataSource]] = byTeam(team).groupBy(_.isUsable)
+        team + ": [" + byUsable.keys.map { usable =>
+          val label = if (usable) "active: [" else "inactive: ["
+          label + byUsable(usable).map { ds =>
+            s"${ds.id.name}"
+          }.mkString(" ") + "]"
+        }.mkString(", ") + "]"
+      }.mkString(", ")
+    } else {
+      shortForm
+    }
+    logger.info(msg)
+  }
+
+  private def logEmptyDirs(paths: List[Path]): Unit = {
+
+    val emptyDirs = paths.flatMap { path =>
+      PathUtils.listDirectories(path) match {
+        case Full(Nil) =>
+          Some(path)
+        case _ => None
+      }
+    }
+
+    if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
@@ -110,7 +152,9 @@ class DataSourceService @Inject()(
   }
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
-    MappingProvider.exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+    MappingProvider
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
     def Check(expression: Boolean, msg: String): Option[String] = if (!expression) Some(msg) else None
@@ -147,21 +191,44 @@ class DataSourceService @Inject()(
   def updateDataSource(dataSource: DataSource): Fox[Unit] =
     for {
       _ <- validateDataSource(dataSource).toFox
-      propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      dataSourcePath = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name)
+      propertiesFile = dataSourcePath.resolve(propertiesFileName)
+      _ <- backupPreviousProperties(dataSourcePath) ?~> "Could not update datasource-properties.json"
       _ <- JsonHelper.jsonToFile(propertiesFile, dataSource) ?~> "Could not update datasource-properties.json"
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
+
+  def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
+    val propertiesFile = dataSourcePath.resolve(propertiesFileName)
+    val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
+      val previousContentSource = Source.fromFile(propertiesFile.toString)
+      val previousContent = previousContentSource.getLines.mkString("\n")
+      previousContentSource.close()
+      previousContent
+    } else {
+      "<empty>"
+    }
+    val timestamp = ISODateTimeFormat.dateTime.print(new DateTime())
+    val outputForLogfile =
+      f"Contents of $propertiesFileName were changed by webKnossos at $timestamp. Old content: \n\n$previousContentOrEmpty\n\n"
+    val logfilePath = dataSourcePath.resolve(logFileName)
+    try {
+      val fileWriter = new FileWriter(logfilePath.toString, true)
+      try {
+        fileWriter.write(outputForLogfile)
+        Full(())
+      } finally fileWriter.close()
+    } catch {
+      case e: Exception => Failure(s"Could not back up old contents: ${e.toString}")
+    }
+  }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
-      case Full(Nil) =>
-        logger.error(s"Failed to read datasets for organization $organization. Empty path: $path")
-        Nil
       case Full(dirs) =>
         val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
-        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ")}")
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")

@@ -12,7 +12,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import org.joda.time.DateTime
 import oxalis.security._
 import play.api.i18n.MessagesApi
@@ -78,6 +78,7 @@ Samplecountry
     userService.createLoginInfo(defaultUserEmail),
     userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
+    isDatasetManager = true,
     isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false,
     lastTaskTypeId = None
@@ -93,6 +94,8 @@ Samplecountry
 
   def insert: Fox[Unit] =
     for {
+      _ <- updateLocalDataStorePublicUri
+      _ <- updateLocalTracingStorePublicUri
       _ <- insertLocalDataStoreIfEnabled
       _ <- insertLocalTracingStoreIfEnabled
       _ <- insertConnectDataStoreIfEnabled
@@ -236,8 +239,36 @@ Samplecountry
           tracingStoreDAO.insertOne(
             TracingStore("localhost",
                          conf.Http.uri,
-                         conf.Datastore.publicUri.getOrElse(conf.Http.uri),
+                         conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
                          conf.Tracingstore.key))
+        }
+      }
+    } else Fox.successful(())
+
+  def updateLocalDataStorePublicUri: Fox[Any] =
+    if (conf.Datastore.enabled) {
+      dataStoreDAO.findOneByName("localhost").futureBox.map { storeOpt: Box[DataStore] =>
+        storeOpt match {
+          case Full(store) =>
+            val newPublicUri = conf.Datastore.publicUri.getOrElse(conf.Http.uri)
+            if (store.url == conf.Http.uri && store.publicUrl == newPublicUri) {
+              Fox.successful(())
+            } else dataStoreDAO.updateOne(store.copy(url = conf.Http.uri, publicUrl = newPublicUri))
+          case _ => Fox.successful(())
+        }
+      }
+    } else Fox.successful(())
+
+  def updateLocalTracingStorePublicUri: Fox[Any] =
+    if (conf.Tracingstore.enabled) {
+      tracingStoreDAO.findOneByName("localhost").futureBox.map { storeOpt: Box[TracingStore] =>
+        storeOpt match {
+          case Full(store) =>
+            val newPublicUri = conf.Tracingstore.publicUri.getOrElse(conf.Http.uri)
+            if (store.url == conf.Http.uri && store.publicUrl == newPublicUri) {
+              Fox.successful(())
+            } else tracingStoreDAO.updateOne(store.copy(url = conf.Http.uri, publicUrl = newPublicUri))
+          case _ => Fox.successful(())
         }
       }
     } else Fox.successful(())

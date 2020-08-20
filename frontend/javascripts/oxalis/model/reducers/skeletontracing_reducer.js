@@ -9,7 +9,10 @@ import update from "immutability-helper";
 
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
-import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
+import {
+  convertServerBoundingBoxToFrontend,
+  convertUserBoundingBoxesFromServerToFrontend,
+} from "oxalis/model/reducers/reducer_helpers";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -82,7 +85,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
-
+      const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(
+        action.tracing.userBoundingBoxes,
+      );
       const skeletonTracing: SkeletonTracing = {
         createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
@@ -95,7 +100,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         tracingId: action.tracing.id,
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
-        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
+        userBoundingBoxes,
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });
@@ -233,6 +238,28 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, { radius: { $set: clampedRadius } }),
+              );
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: { nodes: { $set: newDiffableMap } },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "SET_NODE_POSITION": {
+          const { position, nodeId, treeId } = action;
+          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+            .map(([tree, node]) => {
+              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
+              const newDiffableMap = diffableMap.set(
+                node.id,
+                update(node, { position: { $set: position } }),
               );
               return update(state, {
                 tracing: {

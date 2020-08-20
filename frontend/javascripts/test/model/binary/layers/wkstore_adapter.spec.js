@@ -1,9 +1,9 @@
 // @noflow
-import Base64 from "base64-js";
 import _ from "lodash";
 
 import "test/model/binary/layers/wkstore_adapter.mock.js";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { byteArrayToLz4Base64 } from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -36,6 +36,9 @@ const StoreMock = {
       tracingStore: { name: "localhost", url: "http://localhost:9000" },
     },
     datasetConfiguration: { fourBit: _fourBit },
+    temporaryConfiguration: {
+      activeMapping: {},
+    },
   }),
   dispatch: sinon.stub(),
 };
@@ -124,7 +127,8 @@ function createExpectedOptions(fourBit: boolean = false) {
       { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit },
       { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit },
     ],
-    timeout: 30000,
+    timeout: 60000,
+    showErrorToast: false,
   };
 }
 
@@ -212,7 +216,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [0, 0, 0],
           zoomStep: 0,
           cubeSize: 32,
-          base64Data: Base64.fromByteArray(data),
+          base64Data: byteArrayToLz4Base64(data),
         },
       },
       {
@@ -221,7 +225,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [64, 64, 64],
           zoomStep: 1,
           cubeSize: 32,
-          base64Data: Base64.fromByteArray(data),
+          base64Data: byteArrayToLz4Base64(data),
         },
       },
     ],

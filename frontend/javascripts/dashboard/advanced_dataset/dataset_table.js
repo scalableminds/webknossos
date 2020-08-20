@@ -8,13 +8,13 @@ import dice from "dice-coefficient";
 
 import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
+import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import FormattedDate from "components/formatted_date";
 import { getDatasetExtentAsString } from "oxalis/model/accessors/dataset_accessor";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
-import type { DatasetFilteringMode } from "../dataset_view";
 
 const { Column } = Table;
 
@@ -25,6 +25,8 @@ type Props = {
   datasets: Array<APIMaybeUnimportedDataset>,
   searchQuery: string,
   isUserAdmin: boolean,
+  isUserTeamManager: boolean,
+  isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
 };
 
@@ -84,7 +86,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       );
 
     const filterByHasLayers = datasets =>
-      this.props.isUserAdmin
+      this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
         : datasets.filter(dataset => dataset.dataSource.dataLayers != null);
 
@@ -93,15 +95,25 @@ class DatasetTable extends React.PureComponent<Props, State> {
 
   renderEmptyText() {
     const maybeWarning =
-      this.props.datasetFilteringMode !== "showAllDatasets"
-        ? "Note that datasets are currently filtered according to whether they are available on the datastore. You can change the filtering via the menu next to the search input."
-        : null;
+      this.props.datasetFilteringMode !== "showAllDatasets" ? (
+        <p>
+          Note that datasets are currently filtered according to whether they are available on the
+          datastore.
+          <br />
+          You can change the filtering via the menu next to the search input.
+        </p>
+      ) : null;
 
-    return <span>No Datasets found. {maybeWarning}</span>;
+    return (
+      <>
+        <p>No Datasets found.</p>
+        {maybeWarning}
+      </>
+    );
   }
 
   render() {
-    const { isUserAdmin } = this.props;
+    const { isUserAdmin, isUserTeamManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
@@ -143,7 +155,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           defaultPageSize: 50,
         }}
         expandedRowRender={
-          isUserAdmin ? dataset => <DatasetAccessListView dataset={dataset} /> : null
+          isUserAdmin || isUserTeamManager
+            ? dataset => <DatasetAccessListView dataset={dataset} />
+            : null
         }
         onChange={this.handleChange}
         locale={{ emptyText: this.renderEmptyText() }}
@@ -170,7 +184,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           )}
         />
         <Column
-          title="Scale & Extent"
+          title="Voxel Size & Extent"
           dataIndex="scale"
           key="scale"
           width={230}
@@ -247,7 +261,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView isUserAdmin={isUserAdmin} dataset={dataset} />
+            <DatasetActionView dataset={dataset} />
           )}
         />
       </FixedExpandableTable>

@@ -1,9 +1,14 @@
 // @flow
 import { Modal } from "antd";
-import type { Node, TreeMap } from "oxalis/store";
+import type { TreeMap, SkeletonTracing } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-
-type NodeWithTreeId = Node & { treeId: number };
+import _ from "lodash";
+import type { Vector3 } from "oxalis/constants";
+import messages from "messages";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import Store from "oxalis/throttled_store";
+import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
+import type { NodeWithTreeId } from "oxalis/model/sagas/update_actions";
 
 type MergerModeState = {
   treeColors: Object,
@@ -12,12 +17,11 @@ type MergerModeState = {
   nodes: Array<NodeWithTreeId>,
   segmentationLayerName: string,
   nodeSegmentMap: Object,
-  segmentationOpacity: number,
-  segmentationOn: boolean,
+  prevTracing: SkeletonTracing,
 };
 
 const unregisterKeyHandlers = [];
-const unregisterOverwrites = [];
+const unsubscribeFunctions = [];
 let isCodeActive = false;
 
 function mapSegmentColorToTree(segId: number, treeId: number, mergerModeState: MergerModeState) {
@@ -81,110 +85,132 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   return nodes;
 }
 
-/* Here we intercept calls to the "addNode" method. This allows us to look up the segment id at the specified
-   point and display it in the same color as the rest of the aggregate. */
+// Do not create nodes if they are set outside of segments.
 async function createNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  call(action);
-  const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
-  const pos = action.position;
-  const segmentId = await api.data.getDataValue(segmentationLayerName, pos);
+  const { segmentationLayerName } = mergerModeState;
+  const { position } = action;
+  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
 
-  const activeTreeId = api.tracing.getActiveTreeId();
-  const activeNodeId = api.tracing.getActiveNodeId();
-  // If the node wasn't created. This should never happen.
-  if (activeTreeId == null || activeNodeId == null) {
-    Modal.info({ title: "The created node could not be detected." });
-    return;
-  }
-  // If there is no segment id, the node was set too close to a border between segments.
+  // If there is no segment id, the node was set outside of all segments.
+  // Drop the node creation action in that case.
   if (!segmentId) {
-    Modal.info({ title: "You've set a point too close to grey. The node will be removed now." });
-    api.tracing.deleteNode(activeNodeId, activeTreeId);
+    api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
+  } else {
+    await call(action);
+    // Center the created cell manually, as somehow without this call the previous node would be centered.
+    api.tracing.centerActiveNode();
+  }
+}
+
+/* React to added nodes. Look up the segment id at the node position and
+  display it in the same color as the rest of the aggregate. */
+async function onCreateNode(
+  mergerModeState: MergerModeState,
+  nodeId: number,
+  treeId: number,
+  position: Vector3,
+  updateMapping: boolean = true,
+) {
+  const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  // It can still happen that there are createNode diffing actions for nodes which
+  // are placed outside of a segment, for example when merging trees that were created
+  // outside of merger mode. Ignore those nodes.
+  if (!segmentId) {
     return;
   }
 
   // Set segment id
-  nodeSegmentMap[activeNodeId] = segmentId;
+  nodeSegmentMap[nodeId] = segmentId;
   // Count references
   increaseNodesOfSegment(segmentId, mergerModeState);
-  mapSegmentColorToTree(segmentId, activeTreeId, mergerModeState);
-
-  // Update mapping
-  api.data.setMapping(segmentationLayerName, colorMapping);
+  mapSegmentColorToTree(segmentId, treeId, mergerModeState);
+  if (updateMapping) {
+    // Update mapping
+    await api.data.setMapping(segmentationLayerName, colorMapping);
+  }
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
-  If the count reaches 0, the segment is removed from the mapping and this function returns true.
-  Otherwise the return value will be false. */
-function onNodeDeleted(mergerModeState: MergerModeState, nodeId: number) {
+ * If the count reaches 0, the segment is removed from the mapping and the mapping is updated.
+ */
+async function onDeleteNode(
+  mergerModeState: MergerModeState,
+  nodeId: number,
+  updateMapping: boolean = true,
+) {
   const segmentId = mergerModeState.nodeSegmentMap[nodeId];
   const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
 
   if (numberOfNodesMappedToSegment === 0) {
     // Reset color of all segments that were mapped to this tree
     deleteColorMappingOfSegment(segmentId, mergerModeState);
-    return true;
+    if (updateMapping) {
+      await api.data.setMapping(
+        mergerModeState.segmentationLayerName,
+        mergerModeState.colorMapping,
+      );
+    }
   }
-  return false;
 }
 
-/* Overwrite the "deleteActiveNode" method in such a way that a segment changes back its color as soon as all
-   nodes are deleted from it. */
-function deleteActiveNodeOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  const activeNodeId = api.tracing.getActiveNodeId();
-  if (activeNodeId == null) {
-    return;
-  }
-  const noNodesLeftForTheSegment = onNodeDeleted(mergerModeState, activeNodeId);
-  if (noNodesLeftForTheSegment) {
-    api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
-  }
-  call(action);
-}
-
-/* Overwrite the "deleteActiveTree" method in such a way that all segment changes back its color as soon as all
-   nodes are deleted from it. */
-function deleteTree(store, action, mergerModeState: MergerModeState) {
-  let { treeId } = action;
-  if (treeId == null) {
-    treeId = api.tracing.getActiveTreeId();
-  }
-  if (treeId == null) {
-    return;
-  }
-  const deletedTree = api.tracing.getAllTrees()[treeId];
-  let didMappingChange = false;
-  for (const nodeId of deletedTree.nodes.keys()) {
-    didMappingChange = onNodeDeleted(mergerModeState, nodeId) || didMappingChange;
-  }
-  if (didMappingChange) {
+async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTreeId) {
+  const { position, id, treeId } = node;
+  const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  if (nodeSegmentMap[id] !== segmentId) {
+    // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
+    // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
+    if (nodeSegmentMap[id] != null) {
+      await onDeleteNode(mergerModeState, id, false);
+    }
+    if (segmentId != null && segmentId > 0) {
+      await onCreateNode(mergerModeState, id, treeId, position, false);
+    } else if (nodeSegmentMap[id] != null) {
+      // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
+      delete nodeSegmentMap[id];
+    }
     api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
   }
 }
 
-// Overwrite deleting multiple trees as part of a batched action
-function deleteTreesBatchedOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  for (const subAction of action.payload) {
-    if (subAction.type === "DELETE_TREE") deleteTree(store, subAction, mergerModeState);
+function updateState(mergerModeState: MergerModeState, skeletonTracing: SkeletonTracing) {
+  const diff = cachedDiffTrees(mergerModeState.prevTracing, skeletonTracing);
+
+  for (const action of diff) {
+    switch (action.name) {
+      case "createNode": {
+        const { treeId, id: nodeId, position } = action.value;
+        onCreateNode(mergerModeState, nodeId, treeId, position);
+        break;
+      }
+      case "deleteNode":
+        onDeleteNode(mergerModeState, action.value.nodeId);
+        break;
+      case "updateNode":
+        onUpdateNode(mergerModeState, action.value);
+        break;
+      default:
+        break;
+    }
   }
-  call(action);
+
+  mergerModeState.prevTracing = skeletonTracing;
 }
 
-// Overwrite deleting a single tree
-function deleteTreeOverwrite(store, call, action, mergerModeState: MergerModeState) {
-  deleteTree(store, action, mergerModeState);
-  call(action);
-}
+type WriteableDatasetLayerConfiguration = {
+  [name: string]: { isDisabled: boolean },
+};
 
 // Changes the opacity of the segmentation layer
 function changeOpacity(mergerModeState: MergerModeState) {
-  if (mergerModeState.segmentationOn) {
-    api.data.setConfiguration("segmentationOpacity", 0);
-    mergerModeState.segmentationOn = false;
-  } else {
-    api.data.setConfiguration("segmentationOpacity", mergerModeState.segmentationOpacity);
-    mergerModeState.segmentationOn = true;
-  }
+  const { segmentationLayerName } = mergerModeState;
+  const layerSettings = api.data.getConfiguration("layers");
+  // Invert the visibility of the segmentation layer.
+  const copyOfLayerSettings: WriteableDatasetLayerConfiguration = (_.cloneDeep(layerSettings): any);
+  const isSegmentationDisabled = copyOfLayerSettings[segmentationLayerName].isDisabled;
+  copyOfLayerSettings[segmentationLayerName].isDisabled = !isSegmentationDisabled;
+  api.data.setConfiguration("layers", copyOfLayerSettings);
 }
 
 function shuffleColorOfCurrentTree(mergerModeState: MergerModeState) {
@@ -228,7 +254,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
-  const setSegementationOfNode = async node => {
+  const setSegmentationOfNode = async node => {
     const pos = node.position;
     const { treeId } = node;
     // Skip nodes outside segmentation
@@ -260,11 +286,26 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     onProgressUpdate((cur / numbOfNodes) * 100);
     const nodesMappedPromises = nodes
       .slice(cur, cur + BATCH_SIZE)
-      .map(node => setSegementationOfNode(node));
+      .map(node => setSegmentationOfNode(node));
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(nodesMappedPromises);
   }
   api.data.setMapping(segmentationLayerName, colorMapping);
+}
+
+function resetState(mergerModeState?: MergerModeState = {}) {
+  const segmentationLayerName = api.data.getVolumeTracingLayerName();
+  const defaults = {
+    treeColors: {},
+    colorMapping: {},
+    nodesPerSegment: {},
+    nodes: getAllNodesWithTreeId(),
+    segmentationLayerName,
+    nodeSegmentMap: {},
+    prevTracing: getSkeletonTracing(Store.getState().tracing).get(),
+  };
+  // Keep the object identity when resetting
+  return Object.assign(mergerModeState, defaults);
 }
 
 export async function enableMergerMode(onProgressUpdate: number => void) {
@@ -272,36 +313,25 @@ export async function enableMergerMode(onProgressUpdate: number => void) {
     return;
   }
   isCodeActive = true;
-  // Create an object that store the state of the merger mode.
-  const mergerModeState: MergerModeState = {
-    treeColors: {},
-    colorMapping: {},
-    nodesPerSegment: {},
-    nodes: getAllNodesWithTreeId(),
-    segmentationLayerName: api.data.getVolumeTracingLayerName(),
-    nodeSegmentMap: {},
-    segmentationOpacity: ((api.data.getConfiguration("segmentationOpacity"): any): number),
-    segmentationOn: true,
-  };
-  // Register the overwrites
-  unregisterOverwrites.push(
+  // Create an object that stores the state of the merger mode.
+  const mergerModeState: MergerModeState = resetState();
+  // Register for tracing changes
+  unsubscribeFunctions.push(
+    Store.subscribe(() => {
+      getSkeletonTracing(Store.getState().tracing).map(skeletonTracing => {
+        if (skeletonTracing.tracingId !== mergerModeState.prevTracing.tracingId) {
+          resetState(mergerModeState);
+          api.data.setMappingEnabled(false);
+        } else {
+          updateState(mergerModeState, skeletonTracing);
+        }
+      });
+    }),
+  );
+  // Register for single CREATE_NODE actions to avoid setting nodes outside of segments
+  unsubscribeFunctions.push(
     api.utils.registerOverwrite("CREATE_NODE", (store, next, originalAction) =>
       createNodeOverwrite(store, next, originalAction, mergerModeState),
-    ),
-  );
-  unregisterOverwrites.push(
-    api.utils.registerOverwrite("DELETE_NODE", (store, next, originalAction) =>
-      deleteActiveNodeOverwrite(store, next, originalAction, mergerModeState),
-    ),
-  );
-  unregisterOverwrites.push(
-    api.utils.registerOverwrite("DELETE_TREE", (store, next, originalAction) =>
-      deleteTreeOverwrite(store, next, originalAction, mergerModeState),
-    ),
-  );
-  unregisterOverwrites.push(
-    api.utils.registerOverwrite("DELETE_GROUP_AND_TREES", (store, next, originalAction) =>
-      deleteTreesBatchedOverwrite(store, next, originalAction, mergerModeState),
     ),
   );
   // Register the additional key handlers
@@ -324,6 +354,9 @@ export function disableMergerMode() {
     return;
   }
   isCodeActive = false;
-  unregisterOverwrites.forEach(unregisterFunction => unregisterFunction());
+  unsubscribeFunctions.forEach(unsubscribeFunction => unsubscribeFunction());
   unregisterKeyHandlers.forEach(unregisterObject => unregisterObject.unregister());
+
+  // Disable the custom merger mode mapping
+  api.data.setMappingEnabled(false);
 }

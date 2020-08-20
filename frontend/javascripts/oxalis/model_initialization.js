@@ -10,7 +10,6 @@ import type {
   ServerVolumeTracing,
 } from "admin/api_flow_types";
 import {
-  type DataTextureSizeAndCount,
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
   validateMinimumRequirements,
@@ -84,7 +83,7 @@ export async function initialize(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
 }> {
   Store.dispatch(setControlModeAction(initialCommandType.type));
 
@@ -125,13 +124,24 @@ export async function initialize(
     const { gpuMemoryFactor } = initialUserSettings;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (tracing != null) Store.dispatch(setZoomStepAction(getSomeServerTracing(tracing).zoomLevel));
-    const { smallestCommonBucketCapacity } = initializationInformation;
-    Store.dispatch(initializeGpuSetupAction(smallestCommonBucketCapacity, gpuMemoryFactor));
+    const { smallestCommonBucketCapacity, maximumLayerCountToRender } = initializationInformation;
+    Store.dispatch(
+      initializeGpuSetupAction(
+        smallestCommonBucketCapacity,
+        gpuMemoryFactor,
+        maximumLayerCountToRender,
+      ),
+    );
   }
 
   // There is no need to initialize the tracing if there is no tracing (View mode).
   if (annotation != null && tracing != null) {
     initializeTracing(annotation, tracing);
+  } else {
+    // In view only tracings we need to set the view mode too.
+    const { allowedModes } = determineAllowedModes(dataset);
+    const mode = UrlManager.initialState.mode || allowedModes[0];
+    Store.dispatch(setViewModeAction(mode));
   }
 
   const defaultState = determineDefaultState(UrlManager.initialState, tracing);
@@ -158,24 +168,12 @@ async function fetchParallel(
   ]);
 }
 
-function validateSpecsForLayers(
-  layers: Array<APIDataLayer>,
-  requiredBucketCapacity: number,
-): {
-  textureInformationPerLayer: Map<APIDataLayer, DataTextureSizeAndCount>,
-  isMappingSupported: boolean,
-  smallestCommonBucketCapacity: number,
-} {
+function validateSpecsForLayers(layers: Array<APIDataLayer>, requiredBucketCapacity: number): * {
   const specs = getSupportedTextureSpecs();
   validateMinimumRequirements(specs);
 
   const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
-  const {
-    isMappingSupported,
-    textureInformationPerLayer,
-    isBasicRenderingSupported,
-    smallestCommonBucketCapacity,
-  } = computeDataTexturesSetup(
+  const setupDetails = computeDataTexturesSetup(
     specs,
     layers,
     layer => getBitDepth(layer) >> 3,
@@ -183,20 +181,14 @@ function validateSpecsForLayers(
     requiredBucketCapacity,
   );
 
-  if (!isBasicRenderingSupported) {
-    const message = `Not enough textures available for rendering ${layers.length} layers`;
-    Toast.error(message);
-    throw new Error(message);
-  }
-
-  if (!isMappingSupported) {
+  if (!setupDetails.isMappingSupported) {
     const message = messages["mapping.too_few_textures"];
     console.warn(message);
   }
 
   maybeWarnAboutUnsupportedLayers(layers);
 
-  return { isMappingSupported, textureInformationPerLayer, smallestCommonBucketCapacity };
+  return setupDetails;
 }
 
 function maybeWarnAboutUnsupportedLayers(layers: Array<APIDataLayer>): void {
@@ -263,7 +255,13 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
-    const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
+    const isHybridTracing = tracing.skeleton != null && tracing.volume != null;
+    let maybeUrlViewMode = UrlManager.initialState.mode;
+    if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
+      // Here we avoid going into volume mode in hybrid tracings.
+      maybeUrlViewMode = constants.MODE_PLANE_TRACING;
+    }
+    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
 }
@@ -296,6 +294,24 @@ function initializeDataset(
   ErrorHandling.assertExtendContext({
     dataSet: dataset.dataSource.id.name,
   });
+
+  // Add the originalElementClass property to the segmentation layer if it exists.
+  // Also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
+  const updatedDataLayers = dataset.dataSource.dataLayers.map(dataLayer => {
+    const { elementClass } = dataLayer;
+    if (dataLayer.category === "segmentation") {
+      const adjustedElementClass = elementClass === "uint64" ? "uint32" : elementClass;
+      return {
+        ...dataLayer,
+        originalElementClass: elementClass,
+        elementClass: adjustedElementClass,
+      };
+    } else {
+      return dataLayer;
+    }
+  });
+  // $FlowFixMe assigning the adjusted dataset layers, although this property is not writable.
+  dataset.dataSource.dataLayers = updatedDataLayers;
 
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
@@ -363,8 +379,9 @@ function initializeDataLayerInstances(
   dataLayers: DataLayerCollection,
   connectionInfo: ConnectionInfo,
   isMappingSupported: boolean,
-  maximumDataTextureCountForLayer: number,
+  maximumTextureCountForLayer: number,
   smallestCommonBucketCapacity: number,
+  maximumLayerCountToRender: number,
 } {
   const { dataset } = Store.getState();
   const layers = dataset.dataSource.dataLayers;
@@ -377,10 +394,9 @@ function initializeDataLayerInstances(
     textureInformationPerLayer,
     isMappingSupported,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
+    maximumTextureCountForLayer,
   } = validateSpecsForLayers(layers, requiredBucketCapacity);
-  const maximumDataTextureCountForLayer = _.max(
-    Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
-  );
 
   console.log("Supporting", smallestCommonBucketCapacity, "buckets");
 
@@ -413,8 +429,9 @@ function initializeDataLayerInstances(
     dataLayers,
     connectionInfo,
     isMappingSupported,
-    maximumDataTextureCountForLayer,
+    maximumTextureCountForLayer,
     smallestCommonBucketCapacity,
+    maximumLayerCountToRender,
   };
 }
 

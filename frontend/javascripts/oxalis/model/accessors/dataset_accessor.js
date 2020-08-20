@@ -10,14 +10,14 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "admin/api_flow_types";
-import type { Settings, DataLayerType, DatasetConfiguration } from "oxalis/store";
+import type {
+  Settings,
+  DataLayerType,
+  DatasetConfiguration,
+  BoundingBoxObject,
+} from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, {
-  ViewModeValues,
-  type Vector3,
-  Vector3Indicies,
-  type ViewMode,
-} from "oxalis/constants";
+import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
@@ -112,22 +112,22 @@ export function getDefaultIntensityRangeOfLayer(
   const elementClass = getElementClass(dataset, layerName);
   switch (elementClass) {
     case "uint8":
-      return [0, Math.pow(2, 8) - 1];
-    case "uint16":
-      return [0, Math.pow(2, 16) - 1];
     case "uint24":
-      return [0, Math.pow(2, 24) - 1];
+      // Since uint24 layers are multi-channel, their intensity ranges are equal to uint8
+      return [0, 2 ** 8 - 1];
+    case "uint16":
+      return [0, 2 ** 16 - 1];
     case "uint32":
-      return [0, Math.pow(2, 32) - 1];
+      return [0, 2 ** 32 - 1];
     case "uint64":
-      return [0, Math.pow(2, 64) - 1];
+      return [0, 2 ** 64 - 1];
     // We do not fully support signed int data;
     case "int16":
-      return [0, Math.pow(2, 15) - 1];
+      return [0, 2 ** 15 - 1];
     case "int32":
-      return [0, Math.pow(2, 31) - 1];
+      return [0, 2 ** 31 - 1];
     case "int64":
-      return [0, Math.pow(2, 63) - 1];
+      return [0, 2 ** 63 - 1];
     case "float":
       return [0, maxFloatValue];
     case "double":
@@ -139,6 +139,10 @@ export function getDefaultIntensityRangeOfLayer(
 
 export type Boundary = { lowerBoundary: Vector3, upperBoundary: Vector3 };
 
+/*
+   The returned Boundary denotes a half-open interval. This means that the lowerBoundary
+   is included in the bounding box and the upper boundary is *not* included.
+*/
 export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
   const lowerBoundary = topLeft;
@@ -172,23 +176,28 @@ export function getDatasetCenter(dataset: APIDataset): Vector3 {
   ];
 }
 
-function getDatasetExtentInVoxel(dataset: APIDataset) {
+export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
   const allBoundingBoxes = datasetLayers.map(layer => layer.boundingBox);
   const unifiedBoundingBoxes = aggregateBoundingBox(allBoundingBoxes);
   const { min, max } = unifiedBoundingBoxes;
   const extent = {
+    topLeft: min,
     width: max[0] - min[0],
     height: max[1] - min[1],
     depth: max[2] - min[2],
+    min,
+    max,
   };
   return extent;
 }
 
-function getDatasetExtentInLength(dataset: APIDataset) {
+export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
   const { scale } = dataset.dataSource;
+  const topLeft = ((extentInVoxel.topLeft.map((val, index) => val * scale[index]): any): Vector3);
   const extent = {
+    topLeft,
     width: extentInVoxel.width * scale[0],
     height: extentInVoxel.height * scale[1],
     depth: extentInVoxel.depth * scale[2],
@@ -214,10 +223,12 @@ export function getDatasetExtentAsString(
 
 export function determineAllowedModes(
   dataset: APIDataset,
-  settings: Settings,
+  settings?: Settings,
 ): { preferredMode: ?APIAllowedMode, allowedModes: Array<APIAllowedMode> } {
   // The order of allowedModes should be independent from the server and instead be similar to ViewModeValues
-  let allowedModes = _.intersection(ViewModeValues, settings.allowedModes);
+  let allowedModes = settings
+    ? _.intersection(ViewModeValues, settings.allowedModes)
+    : ViewModeValues;
 
   const colorLayer = _.find(dataset.dataSource.dataLayers, {
     category: "color",
@@ -227,7 +238,7 @@ export function determineAllowedModes(
   }
 
   let preferredMode = null;
-  if (settings.preferredMode != null) {
+  if (settings && settings.preferredMode != null) {
     const modeId = settings.preferredMode;
     if (allowedModes.includes(modeId)) {
       preferredMode = modeId;
@@ -315,6 +326,25 @@ export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
   return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
 }
 
+export function getEnabledLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+  options: { invert?: boolean, onlyColorLayers: boolean } = { onlyColorLayers: false },
+): Array<DataLayerType> {
+  const dataLayers = options.onlyColorLayers
+    ? getColorLayers(dataset)
+    : dataset.dataSource.dataLayers;
+  const layerSettings = datasetConfiguration.layers;
+
+  return dataLayers.filter(layer => {
+    const settings = layerSettings[layer.name];
+    if (settings == null) {
+      return false;
+    }
+    return settings.isDisabled === Boolean(options.invert);
+  });
+}
+
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;
@@ -353,16 +383,9 @@ export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
-  viewMode: ViewMode,
 ): boolean {
-  const isPlaneMode = constants.MODES_PLANE.includes(viewMode);
-  if (isSegmentationLayer(dataset, layerName)) {
-    // Segmentation layers are only displayed in plane mode for now
-    return datasetConfiguration.segmentationOpacity > 0 && isPlaneMode;
-  } else {
-    const layerConfig = datasetConfiguration.layers[layerName];
-    return !layerConfig.isDisabled && layerConfig.alpha > 0;
-  }
+  const layerConfig = datasetConfiguration.layers[layerName];
+  return !layerConfig.isDisabled && layerConfig.alpha > 0;
 }
 
 export default {};

@@ -172,7 +172,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
             type="primary"
             size="large"
             style={{ marginTop: 40, marginRight: 50, marginBottom: 20 }}
-            onClick={() => history.push("/onboarding")}
+            onClick={() => history.push("/")}
           >
             Create a Free Account
           </Button>
@@ -191,7 +191,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
           style={{ display: "flex", alignItems: "center" }}
         >
           <img
-            src="/assets/images/brain_hd.svg"
+            src="/assets/images/brain_white.svg"
             alt="Brain illustration"
             style={{ objectFit: "contain", maxWidth: "100%" }}
           />
@@ -201,7 +201,7 @@ const FeaturesView = ({ history }: { history: RouterHistory }) => (
 
     <div className="container">
       <FeatureHighlight
-        title="High Speed Skeleton Tracing"
+        title="High Speed Skeleton Annotation"
         imageUrl="/assets/images/feature-skeleton.png"
         docsUrl="https://docs.webknossos.org/guides/tracing_ui#skeleton-annotations"
       >

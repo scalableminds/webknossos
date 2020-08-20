@@ -1,10 +1,14 @@
 # API versioning is handled here. Higher-Priority routes first
 
 # example: assume, the features route has changed, introducing v2. The older v1 needs to be provided in the legacyApiController
-->      /v2/                                                                  webknossos.latest.Routes
 
+->       /v3/                                                                 webknossos.latest.Routes
 
-# GET    /v1/features                                                         controllers.LegacyApiController.v1features
+PATCH    /v2/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV2(typ: String, id: String)
+GET      /v2/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV2(typ: String, id: String)
+
+->       /v2/                                                                 webknossos.latest.Routes
+
 #
 PATCH    /v1/annotations/:typ/:id/edit                                        controllers.LegacyApiController.editAnnotation(typ: String, id: String)
 # input needs to change

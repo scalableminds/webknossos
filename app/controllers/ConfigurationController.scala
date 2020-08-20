@@ -3,8 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
-
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserService}
 import oxalis.security.WkEnv
@@ -17,6 +16,7 @@ import play.api.libs.json.Json._
 import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(userService: UserService,
+                                        dataSetService: DataSetService,
                                         dataSetDAO: DataSetDAO,
                                         userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
                                         dataSetConfigurationDefaults: DataSetConfigurationDefaults,
@@ -49,7 +49,7 @@ class ConfigurationController @Inject()(userService: UserService,
     }.orElse(
         for {
           dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          config <- dataSet.defaultConfiguration
+          config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
         } yield config
       )
       .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
@@ -73,7 +73,9 @@ class ConfigurationController @Inject()(userService: UserService,
   def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
       dataSet.defaultConfiguration match {
-        case Some(c) => Fox.successful(Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+        case Some(c) =>
+          Fox.successful(
+            Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
         case _ =>
           dataSetConfigurationDefaults
             .constructInitialDefault(dataSet)
@@ -86,7 +88,7 @@ class ConfigurationController @Inject()(userService: UserService,
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization) ?~> "dataset.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, dataset._organization)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- dataSetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
         _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))

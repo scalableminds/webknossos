@@ -18,6 +18,7 @@ export const settings = {
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   quality: "Quality",
+  segmentationOpacity: "Segmentation Opacity",
   highlightHoveredCellId: "Highlight Hovered Cells",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
@@ -28,7 +29,8 @@ export const settings = {
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
-  userBoundingBox: "Bounding Box",
+  segmentationPatternOpacity: "Pattern Opacity",
+  userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
   loadingStrategyDescription: `You can choose between loading the best quality first
     (will take longer until you see data) or alternatively,
@@ -44,6 +46,8 @@ export default {
   no: "No",
   unknown_error:
     "An unknown error occurred. Please try again or check the console for more details.",
+  offline:
+    "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
@@ -53,9 +57,9 @@ export default {
   "datastore.version.too_old": _.template(
     "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
-  "save.failed_simultaneous_tracing": `The tracing couldn't be processed correctly.
+  "save.failed_simultaneous_tracing": `The annotation couldn't be processed correctly.
 
-This might be caused by editing the tracing simultaneously in different windows.
+This might be caused by editing the annotation simultaneously in different windows.
 Editing should be done in a single window only.
 
 In order to restore the current window, a reload is necessary.`,
@@ -63,21 +67,29 @@ In order to restore the current window, a reload is necessary.`,
     "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
-  "save.failed": "Failed to save tracing. Retrying.",
+  "save.failed": "Failed to save annotation. Retrying.",
   "undo.no_undo":
-    "There is no action that could be undone. However, if you want to restore an earlier version of this tracing, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+    "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
-    "You just enabled the option to render missing data black. Please refresh this page so that the changes can take effect.",
+    "You just enabled the option to render missing data black. All layers will now be reloaded.",
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
-  data black. This means that in case of missing data, data of lower quality is rendered
-  instead. Only enable this option if you understand its effect. Please refresh
-  this page so that the changes can take effect.`,
+data black. This means that in case of missing data, data of lower quality is rendered
+instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "tracing.unhandled_initialization_error":
+    "Initialization error. Please refresh the page to retry. If the error persists, please contact an administrator.",
+  "tracing.out_of_dataset_bounds":
+    "The current position is outside of the dataset's bounding box. No data will be shown here.",
+  "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
+    `This link includes the ${
+      sharingActiveNode ? "active tree node," : ""
+    } current position and zoom value. Consider fine-tuning your current view before copying the URL.`,
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
@@ -86,9 +98,13 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.segmentation_zoom_warning":
-    "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-  "tracing.no_access": "You are not allowed to access this tracing.",
-  "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
+    "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
+  "tracing.uint64_segmentation_warning":
+    "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
+  "tracing.segmentation_zoom_warning_agglomerate":
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
+  "tracing.no_access": "You are not allowed to access this annotation.",
+  "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.delete_initial_node": "Do you really want to delete the initial node?",
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
@@ -109,16 +125,25 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
-    "A corruption in the current skeleton tracing was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+  "tracing.merger_mode_node_outside_segment":
+    "You cannot place nodes outside of a segment in merger mode.",
+  "tracing.not_isosurface_available_to_download": [
+    "There is no isosurface for the active segment id available to download.",
+    'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
+  ],
   "layouting.missing_custom_layout_info":
-    "The tracing views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the tracing in the correct view mode or just add it here manually.",
+    "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
     "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+  "webgl.too_many_active_layers": _.template(
+    "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the sidebar settings.",
+  ),
   "task.user_script_retrieval_error": "Unable to retrieve script",
-  "task.new_description": "You are now tracing a new task with the following description",
-  "task.no_description": "You are now tracing a new task with no description.",
+  "task.new_description": "You are now annotating a new task with the following description",
+  "task.no_description": "You are now annotating a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "task.request_new": "Do you really want another task?",
   "task.peek_next": _.template(
@@ -130,11 +155,20 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.reset_success": "Annotation was successfully reset.",
   "annotation.disable_saving": "Are you sure you want to disable saving?",
   "annotation.disable_saving.content":
-    "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary tracings to save resources.",
+    "This can only be undone by refreshing the page. All unsaved changes will be lost. Only use this for large, temporary annotations to save resources.",
+  "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
+  "annotation.undoFinish.content":
+    "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
-    "Can not parse task specification. It includes at least one invalid task.",
+    "Can not parse task specification. It includes at least one invalid task. (Note that the obsolete “team” column was recently removed, are you still using the old format?)",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
-  "dataset.clear_cache_success": "The dataset was reloaded successfully.",
+  "dataset.clear_cache_success": _.template(
+    "The dataset <%- datasetName %> was reloaded successfully.",
+  ),
+  "dataset.delete_success": _.template(
+    "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
+  ),
+  "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
@@ -155,6 +189,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
+  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
@@ -165,7 +200,7 @@ In order to restore the current window, a reload is necessary.`,
     "This dataset location is marked as 'scratch' and meant for testing only. Please move this dataset to a permanent storage location and reimport it.",
   "dataset.resolution_mismatch":
     "This dataset contains multiple layers which differ in their resolution. Please convert the layers to make their resolutions match. Otherwise, rendering errors cannot be avoided.",
-  "annotation.finish": "Are you sure you want to permanently finish this tracing?",
+  "annotation.finish": "Are you sure you want to permanently finish this annotation?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.no_fallback_data_included":
     "This download does only include the volume data annotated in this annotation. The fallback volume data is excluded.",
@@ -222,6 +257,7 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
+  "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
@@ -236,19 +272,22 @@ In order to restore the current window, a reload is necessary.`,
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
-  "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
+  "nml.incomplete_bounds": "NML contains <userBoundingBox ...> with incomplete bounds properties.",
   "merge.different_dataset":
     "The merge cannot be executed, because the underlying datasets are not the same.",
-  "merge.volume_unsupported": "Merging is not supported for volume tracings.",
-  "users.is_admin":
-    "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
-  "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
-  "users.grant_admin_rights": _.template(
-    "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
+  "merge.volume_unsupported": "Merging is not supported for volume annotations.",
+  "users.needs_admin_rights": "Admin rights are required to change the permissions of users.",
+  "users.multiple_selected_users":
+    "You selected more than one user. To change the organization permissions of users you need to select them individually.",
+  "users.change_permissions_title": "Do you really want to change the permissions of this user?",
+  "users.revoke_all_permissions": _.template(
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
   ),
-  "users.revoke_admin_rights_title": "Do you really want to revoke admin rights?",
-  "users.revoke_admin_rights": _.template(
-    "You are about to revoke admin privileges from <%- numUsers %> user(s). Do you want to proceed?",
+  "users.set_dataset_manager": _.template(
+    "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
+  ),
+  "users.set_admin": _.template(
+    "<%- userName %> is about to become an admin for this organization with full read/write access to all datasets and management capbilities for all users, projects, and tasks.",
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(

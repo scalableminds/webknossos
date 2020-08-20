@@ -28,6 +28,7 @@ case class User(
     loginInfo: LoginInfo,
     passwordInfo: PasswordInfo,
     isAdmin: Boolean,
+    isDatasetManager: Boolean,
     isSuperUser: Boolean,
     isDeactivated: Boolean,
     created: Long = System.currentTimeMillis(),
@@ -36,6 +37,8 @@ case class User(
 ) extends DBAccessContextPayload
     with Identity
     with FoxImplicits {
+
+  def toStringAnonymous: String = s"user ${_id.toString}"
 
   val name: String = firstName + " " + lastName
 
@@ -73,6 +76,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
         r.isadmin,
+        r.isdatasetmanager,
         r.issuperuser,
         r.isdeactivated,
         r.created.getTime,
@@ -142,17 +146,24 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
+  def countAdminsForOrganization(organizationId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(
+        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId} and isAdmin"
+          .as[Int])
+      result <- resultList.headOption
+    } yield result
+
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
-                                            loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isSuperUser, created, isDeleted)
-                                            values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
+                     loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isDatasetManager, isSuperUser, created, isDeleted)
+                     values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
           u.lastActivity)},
-                                                   '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(
-          u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
-                                                   '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isSuperUser},
-                                                   ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                     '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isSuperUser},
+                     ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()
 
@@ -182,6 +193,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    lastName: String,
                    email: String,
                    isAdmin: Boolean,
+                   isDatasetManager: Boolean,
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
@@ -190,11 +202,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
        row.email,
        row.logininfoProviderkey,
        row.isadmin,
+       row.isdatasetmanager,
        row.isdeactivated,
        row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated, lastTaskTypeId))
+      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 
@@ -251,6 +264,19 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
       r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId}")
     } yield ()
 
+  def findMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =
+    for {
+      r <- run(sql"""select #${userDAO.columnsWithPrefix("u.")} from webknossos.users_ u
+                     join webknossos.user_team_roles tr on u._id = tr._user
+                     where not u.isAdmin
+                     and not u.isDeactivated
+                     and tr._team = $potentialSubteam
+                     and u._id not in
+                     (select _user from webknossos.user_team_roles
+                     where _team in #${writeStructTupleWithQuotes(superteams.map(_.id))})
+                     """.as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(userDAO.parse))
+    } yield parsed
 }
 
 class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)

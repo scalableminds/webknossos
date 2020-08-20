@@ -6,11 +6,15 @@ import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 
-import { APIAnnotationTypeEnum, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "admin/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
-import { getAnnotationInformation, getOrganizationForDataset } from "admin/admin_rest_api";
+import {
+  getAnnotationInformation,
+  getOrganizationForDataset,
+  createExplorational,
+} from "admin/admin_rest_api";
 import AdaptViewportMetatag from "components/adapt_viewport_metatag";
 import AsyncRedirect from "components/redirect";
 import AuthTokenView from "admin/auth/auth_token_view";
@@ -49,6 +53,7 @@ import UserListView from "admin/user/user_list_view";
 import * as Utils from "libs/utils";
 import features from "features";
 import window from "libs/window";
+import { trackAction } from "oxalis/model/helpers/analytics";
 
 const { Content } = Layout;
 
@@ -106,7 +111,7 @@ class ReactRouter extends React.Component<Props> {
       );
     }
 
-    return <h3>Invalid tracing URL.</h3>;
+    return <h3>Invalid annotation URL.</h3>;
   };
 
   tracingViewMode = ({ match }: ContextRouter) => (
@@ -135,14 +140,16 @@ class ReactRouter extends React.Component<Props> {
                 exact
                 path="/"
                 render={() => {
-                  if (!this.props.hasOrganizations) return <Redirect to="/onboarding" />;
-                  if (features().isDemoInstance) return <SpotlightView />;
-
-                  return isAuthenticated ? (
-                    <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
-                  ) : (
-                    <Redirect to="/auth/login" />
-                  );
+                  if (!this.props.hasOrganizations && !features().isDemoInstance) {
+                    return <Redirect to="/onboarding" />;
+                  }
+                  if (isAuthenticated) {
+                    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+                  }
+                  if (features().isDemoInstance) {
+                    return <SpotlightView />;
+                  }
+                  return <Redirect to="/auth/login" />;
                 }}
               />
               <SecuredRoute
@@ -348,6 +355,13 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/taskTypes/:taskTypeId/projects"
+                render={({ match }: ContextRouter) => (
+                  <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />
@@ -428,6 +442,46 @@ class ReactRouter extends React.Component<Props> {
                   />
                 )}
               />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/datasets/:organizationName/:dataSetName/createExplorative/:type/:withFallback"
+                render={({ match }: ContextRouter) => (
+                  <AsyncRedirect
+                    pushToHistory={false}
+                    redirectTo={async () => {
+                      if (
+                        !match.params.organizationName ||
+                        !match.params.dataSetName ||
+                        !match.params.type ||
+                        !match.params.withFallback
+                      ) {
+                        // Typehint for flow
+                        throw new Error("Invalid URL");
+                      }
+
+                      const dataset = {
+                        owningOrganization: match.params.organizationName,
+                        name: match.params.dataSetName,
+                      };
+                      const type =
+                        Enum.coalesce(TracingTypeEnum, match.params.type) ||
+                        TracingTypeEnum.skeleton;
+                      const withFallback = match.params.withFallback === "true";
+                      const annotation = await createExplorational(dataset, type, withFallback);
+                      trackAction(`Create ${type} tracing`);
+                      return `/annotations/${annotation.typ}/${annotation.id}`;
+                    }}
+                  />
+                )}
+              />
+              {
+                // Note that this route has to be beneath all others sharing the same prefix,
+                // to avoid url mismatching
+              }
+              <Route
+                path="/datasets/:organizationName/:datasetName"
+                render={this.tracingViewMode}
+              />
               <Route
                 path="/publication/:id"
                 render={({ match }: ContextRouter) => (
@@ -436,7 +490,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
-              <Route path="/onboarding" component={Onboarding} />
+              {!features().isDemoInstance && <Route path="/onboarding" component={Onboarding} />}
               <Route path="/features" component={FeaturesView} />
               <Route path="/pricing" component={PricingView} />
               <Route component={PageNotFoundView} />

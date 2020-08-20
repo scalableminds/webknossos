@@ -7,6 +7,7 @@ import type {
   TemporaryConfiguration,
   Mapping,
   HistogramDataForAllLayers,
+  MappingType,
 } from "oxalis/store";
 
 export type UpdateUserSettingAction = {
@@ -50,6 +51,7 @@ type InitializeGpuSetupAction = {
   type: "INITIALIZE_GPU_SETUP",
   bucketCapacity: number,
   gpuFactor: number,
+  maximumLayerCountToRender: number,
 };
 type SetMappingEnabledAction = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 type SetMappingAction = {
@@ -59,7 +61,14 @@ type SetMappingAction = {
   mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
+  mappingType: MappingType,
 };
+
+type SetHideUnmappedIdsAction = {
+  type: "SET_HIDE_UNMAPPED_IDS",
+  hideUnmappedIds: boolean,
+};
+
 export type SettingAction =
   | UpdateUserSettingAction
   | UpdateDatasetSettingAction
@@ -72,6 +81,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | SetMappingAction
+  | SetHideUnmappedIdsAction
   | SetHistogramDataAction
   | InitializeGpuSetupAction;
 
@@ -162,6 +172,7 @@ export const setMappingAction = (
   mappingKeys: ?Array<number>,
   mappingColors: ?Array<number>,
   hideUnmappedIds: ?boolean,
+  mappingType: MappingType = "JSON",
 ): SetMappingAction => ({
   type: "SET_MAPPING",
   mappingName,
@@ -169,13 +180,21 @@ export const setMappingAction = (
   mappingKeys,
   mappingColors,
   hideUnmappedIds,
+  mappingType,
+});
+
+export const setHideUnmappedIdsAction = (hideUnmappedIds: boolean): SetHideUnmappedIdsAction => ({
+  type: "SET_HIDE_UNMAPPED_IDS",
+  hideUnmappedIds,
 });
 
 export const initializeGpuSetupAction = (
   bucketCapacity: number,
   gpuFactor: number,
+  maximumLayerCountToRender: number,
 ): InitializeGpuSetupAction => ({
   type: "INITIALIZE_GPU_SETUP",
   bucketCapacity,
   gpuFactor,
+  maximumLayerCountToRender,
 });

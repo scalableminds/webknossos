@@ -10,6 +10,7 @@ import {
   InputNumber,
   Icon,
   Tooltip,
+  Spin,
 } from "antd";
 import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
@@ -43,6 +44,7 @@ type Props = {
 type State = {
   teams: Array<APITeam>,
   useRecommendedConfiguration: boolean,
+  isFetchingData: boolean,
 };
 
 function isValidMagnification(rule, value, callback) {
@@ -76,6 +78,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   state = {
     teams: [],
     useRecommendedConfiguration: false,
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -119,7 +122,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    this.setState({ teams: await getEditableTeams() });
+    this.setState({ isFetchingData: true });
+    const editableTeams = await getEditableTeams();
+    this.setState({ teams: editableTeams, isFetchingData: false });
   }
 
   handleSubmit = e => {
@@ -187,6 +192,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   placeholder="Select a Team"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
+                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                 >
                   {this.state.teams.map((team: APITeam) => (
                     <Option key={team.id} value={team.id}>
@@ -218,7 +224,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               })(<TextArea rows={10} />)}
             </FormItem>
 
-            <FormItem label="Tracing Type">
+            <FormItem label="Annotation Type">
               {getFieldDecorator("tracingType", {
                 initialValue: "skeleton",
               })(

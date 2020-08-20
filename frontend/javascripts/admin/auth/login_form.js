@@ -8,17 +8,18 @@ import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
+import features from "features";
 
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type Props = {
+type Props = {|
   layout: "horizontal" | "vertical" | "inline",
   form: Object,
   onLoggedIn?: () => void,
   hideFooter?: boolean,
   style?: Object,
-};
+|};
 
 function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   const { getFieldDecorator } = form;
@@ -31,7 +32,9 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
       if (!err) {
         const user = await loginUser(formValues);
         Store.dispatch(setActiveUserAction(user));
-        if (onLoggedIn) onLoggedIn();
+        if (onLoggedIn) {
+          onLoggedIn();
+        }
       }
     });
   };
@@ -86,12 +89,21 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
         {hideFooter ? null : (
           <FormItem style={{ marginBottom: 4 }}>
             <div style={{ display: "flex" }}>
-              <Link
-                to="/auth/register"
-                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
-              >
-                Register Now
-              </Link>
+              {features().isDemoInstance ? (
+                <Link
+                  to="/"
+                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+                >
+                  Register Now
+                </Link>
+              ) : (
+                <Link
+                  to="/auth/register"
+                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+                >
+                  Register Now
+                </Link>
+              )}
               <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>

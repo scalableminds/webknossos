@@ -1,5 +1,5 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row } from "antd";
+import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -15,6 +15,7 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
 const FormItem = Form.Item;
 
@@ -41,6 +42,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     isUploading: false,
   };
 
+  isDatasetManagerOrAdmin = () =>
+    this.props.activeUser &&
+    (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
+
   normFile = e => {
     if (Array.isArray(e)) {
       return e;
@@ -58,6 +63,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
       formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
+      formValues.initialTeams = formValues.initialTeams.map(team => team.id);
 
       if (!err && activeUser != null) {
         Toast.info("Uploading datasets");
@@ -88,6 +94,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   render() {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
+    const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
@@ -99,9 +106,34 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   <DatasetNameFormItem form={form} activeUser={activeUser} />
                 </Col>
                 <Col span={12}>
-                  <DatastoreFormItem form={form} datastores={datastores} />
+                  <DatastoreFormItem
+                    form={form}
+                    datastores={datastores.filter(datastore => datastore.allowsUpload)}
+                  />
                 </Col>
               </Row>
+              <FormItem label="Teams allowed to access this dataset" hasFeedback>
+                {getFieldDecorator("initialTeams", {
+                  rules: [
+                    {
+                      required: !isDatasetManagerOrAdmin,
+                      message: !isDatasetManagerOrAdmin
+                        ? messages["dataset.import.required.initialTeam"]
+                        : null,
+                    },
+                  ],
+                  initialValue: [],
+                })(
+                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                    <TeamSelectionComponent
+                      mode="multiple"
+                      onChange={selectedTeams =>
+                        form.setFieldsValue({ initialTeams: selectedTeams })
+                      }
+                    />
+                  </Tooltip>,
+                )}
+              </FormItem>
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
@@ -111,6 +143,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   <Upload.Dragger
                     name="files"
                     beforeUpload={file => {
+                      if (!form.getFieldValue("name")) {
+                        const filename = file.name
+                          .split(".")
+                          .slice(0, -1)
+                          .join(".");
+                        form.setFieldsValue({ name: filename });
+                      }
                       form.setFieldsValue({ zipFile: [file] });
                       return false;
                     }}

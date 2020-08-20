@@ -50,7 +50,7 @@ import {
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
 import type { DatasetConfiguration } from "oxalis/store";
-import type { NewTask, TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Vector3 } from "oxalis/constants";
@@ -306,6 +306,15 @@ export async function getProjectsWithOpenAssignments(): Promise<Array<APIProject
   return responses.map(transformProject);
 }
 
+export async function getProjectsForTaskType(
+  taskTypeId: string,
+): Promise<Array<APIProjectWithAssignments>> {
+  const responses = await Request.receiveJSON(`/api/taskTypes/${taskTypeId}/projects`);
+  assertResponseLimit(responses);
+
+  return responses.map(transformProject);
+}
+
 export async function getProject(projectName: string): Promise<APIProject> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
   return transformProject(project);
@@ -408,14 +417,14 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
 }
 
 // TODO fix return types
-export function createTasks(tasks: Array<NewTask>): Promise<Array<TaskCreationResponse>> {
+export function createTasks(tasks: Array<NewTask>): Promise<TaskCreationResponseContainer> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });
 }
 
 // TODO fix return types
-export function createTaskFromNML(task: NewTask): Promise<Array<TaskCreationResponse>> {
+export function createTaskFromNML(task: NewTask): Promise<TaskCreationResponseContainer> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFiles", {
     data: {
       nmlFiles: task.nmlFiles,
@@ -540,9 +549,12 @@ export function finishAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<APIAnnotation> {
-  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`, {
-    method: "PATCH",
-  });
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/finish?timestamp=${Date.now()}`,
+    {
+      method: "PATCH",
+    },
+  );
 }
 
 export function resetAnnotation(
@@ -566,12 +578,15 @@ export function deleteAnnotation(
 export function finishAllAnnotations(
   selectedAnnotationIds: Array<string>,
 ): Promise<{ messages: Array<Message> }> {
-  return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
-    method: "PATCH",
-    data: {
-      annotations: selectedAnnotationIds,
+  return Request.sendJSONReceiveJSON(
+    `/api/annotations/Explorational/finish?timestamp=${Date.now()}`,
+    {
+      method: "PATCH",
+      data: {
+        annotations: selectedAnnotationIds,
+      },
     },
-  });
+  );
 }
 
 export function copyAnnotationToUserAccount(
@@ -587,7 +602,7 @@ export function getAnnotationInformation(
   annotationType: APIAnnotationType,
   options?: RequestOptions = {},
 ): Promise<APIAnnotation> {
-  const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info`;
+  const infoUrl = `/api/annotations/${annotationType}/${annotationId}/info?timestamp=${Date.now()}`;
   return Request.receiveJSON(infoUrl, options);
 }
 
@@ -642,7 +657,7 @@ export async function getTracingForAnnotationType(
   );
 
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
-  // The tracing id is not contained in the server tracing, but in the annotation content
+  // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
   return tracing;
 }
@@ -909,6 +924,23 @@ export async function triggerDatasetClearCache(
   );
 }
 
+export async function deleteDatasetOnDisk(
+  datastoreHost: string,
+  datasetId: APIDatasetId,
+): Promise<void> {
+  await doWithToken(token =>
+    Request.triggerRequest(
+      `/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/deleteOnDisk?token=${token}`,
+      {
+        host: datastoreHost,
+        method: "DELETE",
+      },
+    ),
+  );
+}
+
 export async function triggerDatasetClearThumbnailCache(datasetId: APIDatasetId): Promise<void> {
   await Request.triggerRequest(
     `/api/datasets/${datasetId.owningOrganization}/${datasetId.name}/clearThumbnailCache`,
@@ -987,6 +1019,20 @@ export async function getMappingsForDatasetLayer(
       `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/mappings?token=${token}`,
+    ),
+  );
+}
+
+export async function getAgglomeratesForDatasetLayer(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+): Promise<Array<string>> {
+  return doWithToken(token =>
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates?token=${token}`,
     ),
   );
 }
@@ -1110,13 +1156,17 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export function getOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON("/api/organizations");
+export async function getDefaultOrganization(): Promise<?APIOrganization> {
+  // Only returns an organization if the webKnossos instance only has one organization
+  return Request.receiveJSON("/api/organizations/default");
 }
 
-export async function getOrganizationNames(): Promise<Array<string>> {
-  const organizations = await getOrganizations();
-  return organizations.map(org => org.name);
+export function getOrganization(organizationName: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/${organizationName}`);
+}
+
+export async function checkAnyOrganizationExists(): Promise<boolean> {
+  return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
 // ### BuildInfo webknossos
@@ -1227,6 +1277,7 @@ export function computeIsosurface(
           segmentId,
           // Name of mapping to apply before building isosurface (optional)
           mapping: layer.activeMapping,
+          mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
         },

@@ -6,8 +6,8 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import type { SkeletonTracing, Tree, Node } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
+import type { SkeletonTracing, Tree, Node, Edge } from "oxalis/store";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -117,7 +117,7 @@ class Skeleton {
     this.rootNode.remove(...this.rootNode.children);
     this.pickingNode.remove(...this.pickingNode.children);
 
-    const trees = skeletonTracing.trees;
+    const { trees } = skeletonTracing;
     const nodeCount = _.sum(_.map(trees, tree => tree.nodes.size()));
     const edgeCount = _.sum(_.map(trees, tree => tree.edges.size()));
 
@@ -306,11 +306,15 @@ class Skeleton {
         case "deleteEdge":
           this.deleteEdge(update.value.treeId, update.value.source, update.value.target);
           break;
-        case "updateNode":
-          this.updateNodeRadius(update.value.treeId, update.value.id, update.value.radius);
+        case "updateNode": {
+          const { treeId, id, radius, position } = update.value;
+          this.updateNodeRadius(treeId, id, radius);
+          const tree = skeletonTracing.trees[treeId];
+          this.updateNodePosition(tree, id, position);
           break;
+        }
         case "createTree":
-          this.updateTreeColor(update.value.id, update.value.color);
+          this.updateTreeColor(update.value.id, update.value.color, update.value.isVisible);
           break;
         case "updateTreeVisibility": {
           const { treeId } = update.value;
@@ -371,9 +375,9 @@ class Skeleton {
 
     // Uniforms
     const { particleSize, overrideNodeRadius } = state.userConfiguration;
-    let activeNodeId = skeletonTracing.activeNodeId;
+    let { activeNodeId } = skeletonTracing;
     activeNodeId = activeNodeId == null ? -1 : activeNodeId;
-    let activeTreeId = skeletonTracing.activeTreeId;
+    let { activeTreeId } = skeletonTracing;
     activeTreeId = activeTreeId == null ? -1 : activeTreeId;
 
     const nodeUniforms = this.nodes.material.uniforms;
@@ -450,7 +454,7 @@ class Skeleton {
   createNode(treeId: number, node: Node) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, ({ buffer, index }) => {
-      const attributes = buffer.geometry.attributes;
+      const { attributes } = buffer.geometry;
       attributes.position.set(node.position, index * 3);
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
@@ -483,6 +487,38 @@ class Skeleton {
       attribute.array[index] = radius;
       return [attribute];
     });
+  }
+
+  /**
+   * Updates a node's position and that of its edges in a WebGL buffer.
+   */
+  updateNodePosition(tree: Tree, nodeId: number, position: Vector3) {
+    const { treeId } = tree;
+    const bufferNodeId = this.combineIds(nodeId, treeId);
+    this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
+      const attribute = buffer.geometry.attributes.position;
+      attribute.set(position, index * 3);
+      return [attribute];
+    });
+
+    const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
+      // The changed node is the target node of the edge which is saved
+      // after the source node in the buffer. THus we need an offset.
+      const indexOffset = isIngoingEdge ? 3 : 0;
+      const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
+      this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
+        const positionAttribute = buffer.geometry.attributes.position;
+        positionAttribute.set(position, index * 6 + indexOffset);
+        return [positionAttribute];
+      });
+    };
+
+    for (const edge of tree.edges.getOutgoingEdgesForNode(nodeId)) {
+      edgePositionUpdater(edge, false);
+    }
+    for (const edge of tree.edges.getIngoingEdgesForNode(nodeId)) {
+      edgePositionUpdater(edge, true);
+    }
   }
 
   /**
@@ -546,8 +582,8 @@ class Skeleton {
     this.treeColorTexture.needsUpdate = true;
   }
 
-  getTreeRGBA(color: Vector3, isVisible: boolean) {
-    return color.concat(isVisible ? 1 : 0);
+  getTreeRGBA(color: Vector3, isVisible: boolean): Vector4 {
+    return [...color, isVisible ? 1 : 0];
   }
 }
 

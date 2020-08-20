@@ -37,12 +37,18 @@ object AuthForms {
   val passwordMinLength = 8
 
   // Sign up
-  case class SignUpData(organization: String, email: String, firstName: String, lastName: String, password: String)
+  case class SignUpData(organization: String,
+                        organizationDisplayName: String,
+                        email: String,
+                        firstName: String,
+                        lastName: String,
+                        password: String)
 
   def signUpForm(implicit messages: Messages) =
     Form(
       mapping(
         "organization" -> text,
+        "organizationDisplayName" -> text,
         "email" -> email,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
@@ -50,9 +56,16 @@ object AuthForms {
         ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText
-      )((organization, email, password, firstName, lastName) =>
-        SignUpData(organization, email, firstName, lastName, password._1))(signUpData =>
-        Some((signUpData.organization, signUpData.email, ("", ""), signUpData.firstName, signUpData.lastName))))
+      )((organization, organizationDisplayName, email, password, firstName, lastName) =>
+        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1))(
+        signUpData =>
+          Some(
+            (signUpData.organization,
+             signUpData.organizationDisplayName,
+             signUpData.email,
+             ("", ""),
+             signUpData.firstName,
+             signUpData.lastName))))
 
   // Sign in
   case class SignInData(email: String, password: String)
@@ -205,9 +218,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
-                Mailer ! Send(
-                  defaultMails.registerMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult, organization))
+                if (conf.Features.isDemoInstance) {
+                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, user.email, organization.enableAutoVerify))
+                } else {
+                  Mailer ! Send(
+                    defaultMails.newUserMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
+                }
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, brainDBResult, organization))
                 Ok
               }
             }
@@ -438,7 +455,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    organization <- createOrganization(signUpData.organization) ?~> "organization.create.failed"
+                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
+                    organization <- createOrganization(
+                      Option(signUpData.organization).filter(_.trim.nonEmpty),
+                      signUpData.organizationDisplayName) ?~> "organization.create.failed"
                     user <- userService.insert(organization._id,
                                                email,
                                                firstName,
@@ -448,12 +468,15 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                loginInfo,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
-                    _ <- createOrganizationFolder(organization.name, loginInfo)
+                    _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,
                                                        email.toLowerCase,
-                                                       request.headers.get("Host").headOption.getOrElse("")))
+                                                       request.headers.get("Host").getOrElse("")))
+                    if (conf.Features.isDemoInstance) {
+                      Mailer ! Send(defaultMails.newAdminWKOrgMail(user.firstName, user.email))
+                    }
                     Ok
                   }
                 }
@@ -473,15 +496,17 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }
 
-  private def createOrganization(organizationDisplayName: String) =
+  private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =
     for {
-      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
-      organization = Organization(ObjectId.generate,
-                                  organizationName.replaceAll(" ", "_"),
-                                  "",
-                                  "",
-                                  organizationDisplayName)
-      organizationTeam = Team(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+      normalizedDisplayName <- normalizeName(organizationDisplayName).toFox ?~> "organization.name.invalid"
+      organizationName = organizationNameOpt
+        .flatMap(normalizeName)
+        .getOrElse(normalizedDisplayName)
+        .replaceAll(" ", "_")
+      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
+      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
+      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
+      organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
       _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- initialDataService.insertLocalDataStoreIfEnabled
@@ -500,9 +525,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
-    } yield Full(())
-
+    } yield ()
   }
+
+  private def checkOrganizationFolder(implicit request: RequestHeader) =
+    for {
+      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      _ <- Fox.serialCombined(datastores)(d => rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get)
+    } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

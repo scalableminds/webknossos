@@ -58,6 +58,7 @@ import {
   setActiveNodeAction,
   createCommentAction,
   deleteNodeAction,
+  centerActiveNodeAction,
   deleteTreeAction,
   resetSkeletonTracingAction,
   setNodeRadiusAction,
@@ -73,12 +74,15 @@ import { setPositionAction, setRotationAction } from "oxalis/model/actions/flyca
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
+  updateLayerSettingAction,
   setMappingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
 import Store, {
   type AnnotationType,
+  type MappingType,
   type DatasetConfiguration,
   type Mapping,
   type Node,
@@ -97,6 +101,9 @@ import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
+import UserLocalStorage from "libs/user_local_storage";
+
+type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -106,14 +113,14 @@ function assertExists(value: any, message: string) {
 
 function assertSkeleton(tracing: Tracing): SkeletonTracing {
   if (tracing.skeleton == null) {
-    throw new Error("This api function should only be called in a skeleton tracing.");
+    throw new Error("This api function should only be called in a skeleton annotation.");
   }
   return tracing.skeleton;
 }
 
 function assertVolume(tracing: Tracing): VolumeTracing {
   if (tracing.volume == null) {
-    throw new Error("This api function should only be called in a volume tracing.");
+    throw new Error("This api function should only be called in a volume annotation.");
   }
   return tracing.volume;
 }
@@ -189,6 +196,14 @@ class TracingApi {
   deleteNode(nodeId: number, treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
+  }
+
+  /**
+   * Centers the active node.
+   */
+  centerActiveNode() {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(centerActiveNodeAction());
   }
 
   /**
@@ -432,6 +447,10 @@ class TracingApi {
 
     await Model.ensureSavedState();
     await finishAnnotation(annotationId, annotationType);
+    UserLocalStorage.setItem(
+      "lastFinishedTask",
+      JSON.stringify({ annotationId, finishedTime: Date.now() }),
+    );
     try {
       const annotation = await requestTask();
 
@@ -693,9 +712,11 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     // TODO: Rename method to getSegmentationLayerName() and increase api version
-    const segmentationLayer = this.model.getSegmentationLayer();
-    assertExists(segmentationLayer, "Segmentation layer not found!");
-    return segmentationLayer.name;
+    const segmentationLayerName = this.model.getSegmentationLayerName();
+    if (!segmentationLayerName) {
+      throw new Error("Segmentation layer not found!");
+    }
+    return segmentationLayerName;
   }
 
   /**
@@ -740,7 +761,6 @@ class DataApi {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
-
     // Note: As there is at most one segmentation layer now, the layerName is unneccessary
     // However, we probably want to support multiple segmentation layers in the future
     const segmentationLayerName = this.model.getSegmentationLayer().name;
@@ -758,6 +778,13 @@ class DataApi {
         options.hideUnmappedIds,
       ),
     );
+  }
+
+  /**
+   * Enables/Disables the active mapping.
+   */
+  setMappingEnabled(isEnabled: boolean) {
+    Store.dispatch(setMappingEnabledAction(isEnabled));
   }
 
   /**
@@ -782,8 +809,8 @@ class DataApi {
    * Sets the active mapping for the segmentation layer.
    *
    */
-  activateMapping(mappingName?: string): void {
-    return this.model.getSegmentationLayer().setActiveMapping(mappingName);
+  activateMapping(mappingName?: string, mappingType: MappingType = "JSON"): void {
+    return this.model.getSegmentationLayer().setActiveMapping(mappingName, mappingType);
   }
 
   /**
@@ -1035,13 +1062,40 @@ class DataApi {
      - layers
      - quality
      - highlightHoveredCellId
+     - segmentationPatternOpacity
      - renderMissingDataBlack
    *
    * @example
    * const segmentationOpacity = api.data.getConfiguration("segmentationOpacity");
    */
-  getConfiguration(key: $Keys<DatasetConfiguration>) {
-    return Store.getState().datasetConfiguration[key];
+  getConfiguration(key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys) {
+    const printDeprecationWarning = () =>
+      console.warn(
+        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
+      Instead, they are part of the segmentation layer configuration and can be accessed as follows:
+      "const layerSettings = api.data.getConfiguration('layers');
+      const segmentationOpacity = layerSettings[<segmentationLayerName>].alpha;
+      const isSegmentationDisabled = layerSettings[<segmentationLayerName>].isDisabled;"`,
+      );
+    switch (key) {
+      case "segmentationOpacity": {
+        printDeprecationWarning();
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        return segmentationLayerName
+          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].alpha
+          : undefined;
+      }
+      case "isSegmentationDisabled": {
+        printDeprecationWarning();
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        return segmentationLayerName
+          ? Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled
+          : undefined;
+      }
+      default: {
+        return Store.getState().datasetConfiguration[key];
+      }
+    }
   }
 
   /**
@@ -1051,8 +1105,41 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration>, value) {
-    Store.dispatch(updateDatasetSettingAction(key, value));
+  setConfiguration(
+    key: $Keys<DatasetConfiguration> | OutdatedDatasetConfigurationKeys,
+    value: any,
+  ) {
+    const printDeprecationWarning = () =>
+      console.warn(
+        `The properties segmentationOpacity and isSegmentationDisabled are no longer directly part of the data configuration.
+      Instead, they are part of the segmentation layer configuration and can be set as follows:
+      "const layerSettings = api.data.getConfiguration('layers');
+      const copyOfLayerSettings = _.cloneDeep(layerSettings);
+      copyOfLayerSettings[<segmentationLayerName>].alpha = 40;
+      copyOfLayerSettings[<segmentationLayerName>].isDisabled = false;
+      api.data.setConfiguration('layers', copyOfLayerSettings);"`,
+      );
+    switch (key) {
+      case "segmentationOpacity": {
+        printDeprecationWarning();
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (segmentationLayerName) {
+          Store.dispatch(updateLayerSettingAction(segmentationLayerName, "alpha", value));
+        }
+        break;
+      }
+      case "isSegmentationDisabled": {
+        printDeprecationWarning();
+        const segmentationLayerName = Model.getSegmentationLayerName();
+        if (segmentationLayerName) {
+          Store.dispatch(updateLayerSettingAction(segmentationLayerName, "isDisabled", value));
+        }
+        break;
+      }
+      default: {
+        Store.dispatch(updateDatasetSettingAction(key, value));
+      }
+    }
   }
 }
 
@@ -1106,7 +1193,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value) {
+  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }
@@ -1131,7 +1218,7 @@ class UtilsApi {
    * @example // Wait for 5 seconds
    * await api.utils.sleep(5000);
    */
-  sleep(milliseconds: number) {
+  sleep(milliseconds: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 
@@ -1146,7 +1233,7 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: ToastStyle, message: string, timeout: number): ?Function {
+  showToast(type: ToastStyle, message: string, timeout?: number): ?Function {
     Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }

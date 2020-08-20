@@ -28,6 +28,7 @@ case class WebKnossosDataRequest(
     zoomStep: Int,
     cubeSize: Int,
     fourBit: Option[Boolean],
+    applyAgglomerate: Option[String],
     version: Option[Long]
 ) extends AbstractDataRequest {
 
@@ -37,7 +38,7 @@ case class WebKnossosDataRequest(
            cubeSize,
            cubeSize)
 
-  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), version)
+  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
 }
 
 object WebKnossosDataRequest {
@@ -50,7 +51,8 @@ case class WebKnossosIsosurfaceRequest(
     cubeSize: Point3D,
     segmentId: Long,
     voxelDimensions: Vector3I,
-    mapping: Option[String] = None
+    mapping: Option[String] = None,
+    mappingType: Option[String] = None
 ) {
   def cuboid(dataLayer: DataLayer) =
     Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),

@@ -65,6 +65,7 @@ export const tracing: ServerSkeletonTracing = {
   treeGroups: [],
   dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
+  userBoundingBoxes: [],
   activeNodeId: 3,
   editPosition: { x: 24, y: 32, z: 0 },
   editRotation: { x: 79.99999570976581, y: 73.99999869555745, z: 4.908922051072295e-7 },
@@ -99,6 +100,7 @@ export const annotation: APIAnnotation = {
     isScratch: false,
     isForeign: false,
     isConnector: false,
+    allowsUpload: true,
   },
   tracingStore: { name: "localhost", url: "http://localhost:9000" },
   settings: {

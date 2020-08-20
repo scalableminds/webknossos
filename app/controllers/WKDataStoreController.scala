@@ -4,25 +4,36 @@ import javax.inject.Inject
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import play.api.libs.json.{JsError, JsObject, JsSuccess}
+import play.api.libs.json.{JsError, JsObject, JsSuccess, JsValue}
 import models.annotation.AnnotationState._
-import models.team.OrganizationDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import com.mohiva.play.silhouette.api.Silhouette
+import models.user.UserService
+import play.api.i18n.Messages
+import play.api.mvc.Action
+import utils.ObjectId
 
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreService: DataStoreService,
                                       dataStoreDAO: DataStoreDAO,
+                                      userService: UserService,
                                       organizationDAO: OrganizationDAO,
+                                      dataSetDAO: DataSetDAO,
+                                      teamDAO: TeamDAO,
+                                      dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
+                                      wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                                       sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with LazyLogging {
+
+  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def validateDataSetUpload(name: String) = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
@@ -36,6 +47,21 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       } yield Ok
     }
   }
+
+  def addDataSetInitialTeams(name: String, token: String, dataSetName: String): Action[JsValue] =
+    Action.async(parse.json) { implicit request =>
+      dataStoreService.validateAccess(name) { dataStore =>
+        withJsonBodyAs[List[String]] { teams =>
+          for {
+            user <- bearerTokenService.userForToken(token)(GlobalAccessContext)
+            dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
+              "dataSet.notFound",
+              dataSetName) ~> NOT_FOUND
+            _ <- dataSetService.addInitialTeams(dataSet, user, teams)(AuthorizedAccessContext(user))
+          } yield Ok
+        }
+      }
+    }
 
   def statusUpdate(name: String) = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
@@ -55,6 +81,9 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
           for {
+            _ <- Fox.successful(
+              logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
+                s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
             existingIds <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
             _ <- dataSetService.deactivateUnreportedDataSources(existingIds, dataStore)(GlobalAccessContext)
           } yield {

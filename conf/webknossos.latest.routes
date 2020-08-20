@@ -80,6 +80,7 @@ PUT           /datastores/:name/datasource                                      
 PUT           /datastores/:name/datasources                                     controllers.WKDataStoreController.updateAll(name: String)
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
+POST          /datastores/:name/addInitialTeams                                 controllers.WKDataStoreController.addDataSetInitialTeams(name: String, token: String, dataSetName: String)
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                       controllers.DataStoreController.create
 DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)
@@ -99,13 +100,13 @@ POST          /annotations/upload                                               
 POST          /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 PATCH         /annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)
 
-PATCH         /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
-PATCH         /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
+PATCH         /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String, timestamp: Long)
+PATCH         /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
 PUT           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
+GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
@@ -140,6 +141,7 @@ GET           /taskTypes                                                        
 POST          /taskTypes                                                        controllers.TaskTypeController.create
 DELETE        /taskTypes/:id                                                    controllers.TaskTypeController.delete(id: String)
 GET           /taskTypes/:id/tasks                                              controllers.TaskController.listTasksForType(id: String)
+GET           /taskTypes/:id/projects                                           controllers.ProjectController.projectsForTaskType(id: String)
 GET           /taskTypes/:id                                                    controllers.TaskTypeController.get(id: String)
 PUT           /taskTypes/:id                                                    controllers.TaskTypeController.update(id: String)
 
@@ -169,7 +171,9 @@ GET           /statistics/webknossos                                            
 GET           /statistics/users                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
-GET           /organizations                                                    controllers.OrganizationController.listAllOrganizations
+GET           /organizations/default                                            controllers.OrganizationController.getDefault
+GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
+GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)
 GET           /operatorData                                                     controllers.OrganizationController.getOperatorData
 
 #Timelogging

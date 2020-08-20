@@ -24,6 +24,7 @@ import {
   getByteCount,
   getElementClass,
   getBoundaries,
+  getEnabledLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -40,6 +41,8 @@ type ShaderMaterialOptions = {
   polygonOffsetFactor?: number,
   polygonOffsetUnits?: number,
 };
+
+const RECOMPILATION_THROTTLE_TIME = 500;
 
 export type Uniforms = {
   [key: string]: {
@@ -60,7 +63,7 @@ function sanitizeName(name: ?string): string {
   return `layer_${btoa(name).replace(/=+/g, "")}`;
 }
 
-function getColorLayerNames() {
+function getSanitizedColorLayerNames() {
   return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
 }
 
@@ -82,11 +85,14 @@ class PlaneMaterialFactory {
   attributes: Object;
   shaderId: number;
   storePropertyUnsubscribers: Array<() => void> = [];
+  leastRecentlyVisibleColorLayers: Array<string>;
+  oldShaderCode: ?string;
 
   constructor(planeID: OrthoView, isOrthogonal: boolean, shaderId: number) {
     this.planeID = planeID;
     this.isOrthogonal = isOrthogonal;
     this.shaderId = shaderId;
+    this.leastRecentlyVisibleColorLayers = [];
   }
 
   setup() {
@@ -105,10 +111,6 @@ class PlaneMaterialFactory {
       Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );
     this.uniforms = {
-      alpha: {
-        type: "f",
-        value: 0,
-      },
       highlightHoveredCellId: {
         type: "b",
         value: true,
@@ -157,6 +159,10 @@ class PlaneMaterialFactory {
         type: "f",
         value: 0,
       },
+      segmentationPatternOpacity: {
+        type: "f",
+        value: 40,
+      },
       activeCellId: {
         type: "v4",
         value: new THREE.Vector4(0, 0, 0, 0),
@@ -202,19 +208,19 @@ class PlaneMaterialFactory {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
     };
-
     for (const dataLayer of Model.getAllLayers()) {
-      this.uniforms[`${sanitizeName(dataLayer.name)}_maxZoomStep`] = {
+      const layerName = sanitizeName(dataLayer.name);
+      this.uniforms[`${layerName}_maxZoomStep`] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
       };
-    }
-
-    for (const name of getColorLayerNames()) {
-      this.uniforms[`${name}_alpha`] = {
+      this.uniforms[`${layerName}_alpha`] = {
         type: "f",
         value: 1,
       };
+    }
+
+    for (const name of getSanitizedColorLayerNames()) {
       this.uniforms[`${name}_color`] = {
         type: "v3",
         value: DEFAULT_COLOR,
@@ -243,18 +249,18 @@ class PlaneMaterialFactory {
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
-
-      this.uniforms[`${sanitizeName(name)}_textures`] = {
+      const layerName = sanitizeName(name);
+      this.uniforms[`${layerName}_textures`] = {
         type: "tv",
         value: dataTextures,
       };
 
-      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
+      this.uniforms[`${layerName}_data_texture_width`] = {
         type: "f",
         value: dataLayer.layerRenderingManager.textureWidth,
       };
 
-      this.uniforms[`${sanitizeName(name)}_lookup_texture`] = {
+      this.uniforms[`${layerName}_lookup_texture`] = {
         type: "t",
         value: lookUpTexture,
       };
@@ -262,21 +268,26 @@ class PlaneMaterialFactory {
 
     // Add mapping
     const segmentationLayer = Model.getSegmentationLayer();
-    if (segmentationLayer != null && Model.isMappingSupported) {
+    if (
+      segmentationLayer != null &&
+      segmentationLayer.mappings != null &&
+      Model.isMappingSupported
+    ) {
       const [
         mappingTexture,
         mappingLookupTexture,
         mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_texture`] = {
+      const sanitizedSegmentationLayerName = sanitizeName(segmentationLayer.name);
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_texture`] = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_lookup_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_lookup_texture`] = {
         type: "t",
         value: mappingLookupTexture,
       };
-      this.uniforms[`${sanitizeName(segmentationLayer.name)}_mapping_color_texture`] = {
+      this.uniforms[`${sanitizedSegmentationLayerName}_mapping_color_texture`] = {
         type: "t",
         value: mappingColorTexture,
       };
@@ -291,6 +302,10 @@ class PlaneMaterialFactory {
         fragmentShader: this.getFragmentShader(),
       }),
     );
+    this.material.extensions = {
+      // Necessary for anti-aliasing via fwidth in shader
+      derivatives: true,
+    };
 
     shaderEditor.addMaterial(this.shaderId, this.material);
 
@@ -302,22 +317,8 @@ class PlaneMaterialFactory {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
-    this.material.setSegmentationAlpha = alpha => {
-      this.uniforms.alpha.value = alpha / 100;
-    };
-
-    this.material.setSegmentationVisibility = isVisible => {
-      this.uniforms.alpha.value = isVisible
-        ? Store.getState().datasetConfiguration.segmentationOpacity / 100
-        : 0;
-    };
-
     this.material.setUseBilinearFiltering = isEnabled => {
       this.uniforms.useBilinearFiltering.value = isEnabled;
-    };
-
-    this.material.setIsMappingEnabled = isMappingEnabled => {
-      this.uniforms.isMappingEnabled.value = isMappingEnabled;
     };
 
     this.material.side = THREE.DoubleSide;
@@ -414,15 +415,32 @@ class PlaneMaterialFactory {
       ),
     );
 
+    const oldVisibilityPerLayer = {};
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.datasetConfiguration.layers,
         layerSettings => {
-          for (const colorLayer of getColorLayers(Store.getState().dataset)) {
-            const settings = layerSettings[colorLayer.name];
+          const segmentationLayerName = Model.getSegmentationLayerName();
+          for (const dataLayer of Model.getAllLayers()) {
+            const { elementClass } = dataLayer.cube;
+            const settings = layerSettings[dataLayer.name];
             if (settings != null) {
-              const name = sanitizeName(colorLayer.name);
-              this.updateUniformsForLayer(settings, name, colorLayer.elementClass);
+              const isLayerEnabled = !settings.isDisabled;
+              const isSegmentationLayer = segmentationLayerName === dataLayer.name;
+              if (
+                !isSegmentationLayer &&
+                oldVisibilityPerLayer[dataLayer.name] != null &&
+                oldVisibilityPerLayer[dataLayer.name] !== isLayerEnabled
+              ) {
+                if (settings.isDisabled) {
+                  this.onDisableColorLayer(dataLayer.name);
+                } else {
+                  this.onEnableColorLayer(dataLayer.name);
+                }
+              }
+              oldVisibilityPerLayer[dataLayer.name] = isLayerEnabled;
+              const name = sanitizeName(dataLayer.name);
+              this.updateUniformsForLayer(settings, name, elementClass, isSegmentationLayer);
             }
           }
           // TODO: Needed?
@@ -469,6 +487,16 @@ class PlaneMaterialFactory {
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
+          storeState => storeState.datasetConfiguration.segmentationPatternOpacity,
+          segmentationPatternOpacity => {
+            this.uniforms.segmentationPatternOpacity.value = segmentationPatternOpacity;
+          },
+          true,
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
           storeState => storeState.temporaryConfiguration.hoveredIsosurfaceId,
           hoveredIsosurfaceId => {
             const [a, b, g, r] = Utils.convertDecToBase256(hoveredIsosurfaceId);
@@ -489,6 +517,18 @@ class PlaneMaterialFactory {
         listenToStoreProperty(
           storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
           () => this.updateActiveCellId(),
+        ),
+      );
+
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState =>
+            storeState.temporaryConfiguration.activeMapping.isMappingEnabled &&
+            // The shader should only know about the mapping when a JSON mapping exists
+            storeState.temporaryConfiguration.activeMapping.mappingType === "JSON",
+          isEnabled => {
+            this.uniforms.isMappingEnabled.value = isEnabled;
+          },
         ),
       );
 
@@ -526,54 +566,136 @@ class PlaneMaterialFactory {
     settings: DatasetLayerConfiguration,
     name: string,
     elementClass: ElementClass,
+    isSegmentationLayer: boolean,
   ): void {
     const { alpha, intensityRange, isDisabled, isInverted } = settings;
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
-    const divisor = elementClass === "float" ? 1 : 255;
-    this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
-    this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
-    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
-    this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
-
-    if (settings.color != null) {
-      const color = this.convertColor(settings.color);
-      this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+    if (!isSegmentationLayer) {
+      const divisor = elementClass === "float" ? 1 : 255;
+      this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
+      this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
+      if (settings.color != null) {
+        const color = this.convertColor(settings.color);
+        this.uniforms[`${name}_color`].value = new THREE.Vector3(...color);
+      }
     }
+    this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
   }
 
   getMaterial(): THREE.ShaderMaterial {
     return this.material;
   }
 
+  recomputeFragmentShader = _.throttle(() => {
+    const newShaderCode = this.getFragmentShader();
+    // Comparing to this.material.fragmentShader does not work. The code seems
+    // to be modified by a third party.
+    if (this.oldShaderCode != null && this.oldShaderCode === newShaderCode) {
+      return;
+    }
+    this.oldShaderCode = newShaderCode;
+
+    this.material.fragmentShader = newShaderCode;
+    this.material.needsUpdate = true;
+    window.needsRerender = true;
+  }, RECOMPILATION_THROTTLE_TIME);
+
+  getLayersToRender(maximumLayerCountToRender: number): Array<string> {
+    // This function determines for which layers
+    // the shader code should be compiled. If the GPU supports
+    // all layers, we can simply return all layers here.
+    // Otherwise, we prioritize layers to render by taking
+    // into account (a) which layers are activated and (b) which
+    // layers were least-recently activated (but are now disabled).
+
+    if (maximumLayerCountToRender <= 0) {
+      return [];
+    }
+
+    const colorLayerNames = getSanitizedColorLayerNames();
+    if (maximumLayerCountToRender >= colorLayerNames.length) {
+      // We can simply render all available layers.
+      return colorLayerNames;
+    }
+
+    const state = Store.getState();
+    const enabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+      onlyColorLayers: true,
+    }).map(layer => layer.name);
+    const disabledLayerNames = getEnabledLayers(state.dataset, state.datasetConfiguration, {
+      invert: true,
+      onlyColorLayers: true,
+    }).map(layer => layer.name);
+
+    // In case, this.leastRecentlyVisibleColorLayers does not contain all disabled layers
+    // because they were already disabled on page load), append the disabled layers
+    // which are not already in that array.
+    // Note that the order of this array is important (earlier elements are more "recently used")
+    // which is why it is important how this operation is done.
+    this.leastRecentlyVisibleColorLayers = [
+      ...this.leastRecentlyVisibleColorLayers,
+      ..._.without(disabledLayerNames, ...this.leastRecentlyVisibleColorLayers),
+    ];
+
+    const names = enabledLayerNames
+      .concat(this.leastRecentlyVisibleColorLayers)
+      .slice(0, maximumLayerCountToRender)
+      .sort();
+
+    return names.map(sanitizeName);
+  }
+
+  onDisableColorLayer = (layerName: string) => {
+    this.leastRecentlyVisibleColorLayers = _.without(
+      this.leastRecentlyVisibleColorLayers,
+      layerName,
+    );
+    this.leastRecentlyVisibleColorLayers = [layerName, ...this.leastRecentlyVisibleColorLayers];
+
+    this.recomputeFragmentShader();
+  };
+
+  onEnableColorLayer = (layerName: string) => {
+    this.leastRecentlyVisibleColorLayers = _.without(
+      this.leastRecentlyVisibleColorLayers,
+      layerName,
+    );
+    this.recomputeFragmentShader();
+  };
+
   getFragmentShader(): string {
-    const colorLayerNames = getColorLayerNames();
-    const packingDegreeLookup = getPackingDegreeLookup();
+    const {
+      initializedGpuFactor,
+      maximumLayerCountToRender,
+    } = Store.getState().temporaryConfiguration.gpuSetup;
+
     const segmentationLayer = Model.getSegmentationLayer();
+    const colorLayerNames = this.getLayersToRender(
+      maximumLayerCountToRender - (segmentationLayer ? 1 : 0),
+    );
+    const packingDegreeLookup = getPackingDegreeLookup();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
     // Don't compile code for segmentation in arbitrary mode
     const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
-    const lookupTextureWidth = getLookupBufferSize(
-      Store.getState().temporaryConfiguration.gpuSetup.initializedGpuFactor,
-    );
+    const lookupTextureWidth = getLookupBufferSize(initializedGpuFactor);
 
-    const code = getMainFragmentShader({
+    return getMainFragmentShader({
       colorLayerNames,
       packingDegreeLookup,
       hasSegmentation,
       segmentationName,
       isMappingSupported: Model.isMappingSupported,
       // Todo: this is not computed per layer. See #4018
-      dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
+      dataTextureCountPerLayer: Model.maximumTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,
       isOrthogonal: this.isOrthogonal,
       lookupTextureWidth,
     });
-
-    return code;
   }
 
   getVertexShader(): string {

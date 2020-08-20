@@ -10,7 +10,7 @@ import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rende
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import Store, { type DataLayerType } from "oxalis/store";
+import Store, { type DataLayerType, type MappingType } from "oxalis/store";
 
 // TODO: Non-reactive
 class DataLayer {
@@ -19,8 +19,9 @@ class DataLayer {
   connectionInfo: ConnectionInfo;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
-  mappings: Mappings;
+  mappings: ?Mappings;
   activeMapping: ?string;
+  activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
@@ -57,7 +58,7 @@ class DataLayer {
     this.pushQueue = new PushQueue(this.cube);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     const fallbackLayerName = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
+    if (isSegmentation) this.mappings = new Mappings(layerInfo.name, fallbackLayerName);
     this.layerRenderingManager = new LayerRenderingManager(
       this.name,
       this.pullQueue,
@@ -67,9 +68,17 @@ class DataLayer {
     );
   }
 
-  setActiveMapping(mappingName: ?string, progressCallback?: ProgressCallback): void {
+  setActiveMapping(
+    mappingName: ?string,
+    mappingType: MappingType,
+    progressCallback?: ProgressCallback,
+  ): void {
+    if (this.mappings == null) {
+      throw new Error("Mappings can only be activated for segmentation layers.");
+    }
     this.activeMapping = mappingName;
-    this.mappings.activateMapping(mappingName, progressCallback);
+    this.activeMappingType = mappingType;
+    this.mappings.activateMapping(mappingName, mappingType, progressCallback);
   }
 }
 

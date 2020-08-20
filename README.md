@@ -7,7 +7,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
+[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@scalableminds.com)
 
 [![](	https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -41,13 +41,16 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 
 [Read more about the original publication.](https://publication.webknossos.org)
 
+## Installation
+webKnossos is open-source, so you can install it on your own server.
+
+[Check out the documentation](https://docs.webknossos.org/guides/installation) for a tutorial on how to install webKnossos on your own server.
+
+For installations on localhost, please see below.
 
 ## Development installation
 ### Docker
-This is the fastest way to try webKnossos.
-Docker CE 17+ and Docker Compose 1.18+ is required.
-This is only recommended for testing.
-[For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
+This is only recommended for local testing. Docker 17+ and Docker Compose 1.18+ are required.
 
 ```bash
 git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
@@ -56,18 +59,12 @@ docker-compose pull webknossos
 ./start-docker.sh
 ```
 
-Open your local webknossos instance on [localhost:9000](http://localhost:9000).
+Open your local webknossos instance on [localhost:9000](http://localhost:9000) and complete the onboarding steps in the browser.
+Now, you are ready to use your local webKnossos instance.
 
-See the [wiki](https://github.com/scalableminds/webknossos/wiki/Try-setup) for instructions on updating this try setup.
+See the wiki for [instructions on updating](https://github.com/scalableminds/webknossos/wiki/Development-setup) this development setup.
 
-For non-localhost deployments, make sure to use the `webknossos-public` docker-compose service and set the `PUBLIC_URI` environment variable:
-
-```bash
-git clone -b master --depth=1 git@github.com:scalableminds/webknossos.git
-cd webknossos
-docker-compose pull webknossos
-PUBLIC_URI=http://example.org:9000 docker-compose up webknossos-public
-```
+For non-localhost deployments, check out the [installation guide in the documentation](https://docs.webknossos.org/guides/installation).
 
 ### Dependencies
 
@@ -75,7 +72,7 @@ PUBLIC_URI=http://example.org:9000 docker-compose up webknossos-public
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
 * [Redis 5+](https://redis.io/)
-* [node.js 9+](http://nodejs.org/download/)
+* [node.js 12+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -116,7 +113,7 @@ echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
 echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
 curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
@@ -148,7 +145,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **10+ is required**
+* node version **12+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
@@ -160,7 +157,7 @@ Will fetch all Scala, Java and node dependencies and run the application on Port
 Make sure that the PostgreSQL and Redis services are running before you start the application.
 
 ## Upgrades
-For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
+For upgrades, please check the [changelog](CHANGELOG.released.md) & [migration guide](MIGRATIONS.released.md).
 
 ## Tests
 ```bash

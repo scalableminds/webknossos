@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, Json, Writes}
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
 import scala.concurrent.ExecutionContext
 
@@ -28,12 +29,16 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
 
   val tracingStore = tracingDataStore.skeletons
 
+  val tracingMigrationService = SkeletonTracingMigrationService
+
   implicit val tracingCompanion = SkeletonTracing
 
   implicit val updateActionJsonFormat = SkeletonUpdateAction.skeletonUpdateActionFormat
 
   def currentVersion(tracingId: String): Fox[Long] =
-    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
+    tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  def currentVersion(tracing: SkeletonTracing): Long = tracing.version
 
   def handleUpdateGroup(tracingId: String,
                         updateActionGroup: UpdateActionGroup[SkeletonTracing],
@@ -70,14 +75,21 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
   private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing,
                                                  tracingId: String,
                                                  desiredVersion: Option[Long]): Fox[Long] =
-    (for {
-      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true))
+    /*
+     * Determines the newest saved version from the updates column.
+     * if there are no updates at all, assume tracing is brand new (possibly created from NML,
+     * hence the emptyFallbck tracing.version)
+     */
+    for {
+      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId,
+                                                                         mayBeEmpty = Some(true),
+                                                                         emptyFallback = Some(tracing.version))
     } yield {
       desiredVersion match {
         case None              => newestUpdateVersion
         case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
       }
-    }).getOrElse(tracing.version) //if there are no updates at all, assume tracing is brand new (possibly created from NML)
+    }
 
   private def findPendingUpdates(tracingId: String,
                                  existingVersion: Long,
@@ -125,9 +137,18 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     }
   }
 
-  def duplicate(tracing: SkeletonTracing): Fox[String] = {
-    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
-    save(newTracing, None, newTracing.version)
+  def duplicate(tracing: SkeletonTracing, fromTask: Boolean): Fox[String] = {
+    val taskBoundingBox = if (fromTask) {
+      tracing.boundingBox.map { bb =>
+        val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
+        NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), bb)
+      }
+    } else None
+
+    val newTracing =
+      tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0).addAllUserBoundingBoxes(taskBoundingBox)
+    val finalTracing = if (fromTask) newTracing.clearBoundingBox else newTracing
+    save(finalTracing, None, finalTracing.version)
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
@@ -141,12 +162,20 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     } yield {
       BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
     }
+    val singleBoundingBoxes =
+      (tracingA.userBoundingBox ++ tracingB.userBoundingBox).map(bb => NamedBoundingBox(0, boundingBox = bb))
+    val userBoundingBoxes =
+      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes).zipWithIndex.map(uBB =>
+        uBB._1.copy(id = uBB._2))
 
-    tracingA.copy(trees = mergedTrees,
-                  treeGroups = mergedGroups,
-                  boundingBox = mergedBoundingBox,
-                  version = 0,
-                  userBoundingBox = None)
+    tracingA.copy(
+      trees = mergedTrees,
+      treeGroups = mergedGroups,
+      boundingBox = mergedBoundingBox,
+      version = 0,
+      userBoundingBox = None,
+      userBoundingBoxes = userBoundingBoxes
+    )
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)

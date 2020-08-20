@@ -7,8 +7,9 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
@@ -33,7 +34,8 @@ class DataStoreWkRpcClient @Inject()(
     @Named("webknossos-datastore") val system: ActorSystem
 ) extends WkRpcClient
     with IntervalScheduler
-    with LazyLogging {
+    with LazyLogging
+    with FoxImplicits {
 
   private val dataStoreKey: String = config.Datastore.key
   private val dataStoreName: String = config.Datastore.name
@@ -55,9 +57,27 @@ class DataStoreWkRpcClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
+  def postInitialTeams(dataSourceId: DataSourceId, initialTeams: List[String], userTokenOpt: Option[String]): Fox[_] = {
+    val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
+    for {
+      userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
+      _ <- if (initialTeams.isEmpty) Fox.successful(())
+      else {
+        Fox.successful(Thread.sleep(sleepDuration)).map { _ =>
+          rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/addInitialTeams")
+            .addQueryString("key" -> dataStoreKey)
+            .addQueryString("dataSetName" -> dataSourceId.name)
+            .addQueryString("token" -> userToken)
+            .post(initialTeams)
+        }
+      }
+    } yield ()
+  }
+
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
+      .silent
       .put(dataSources)
 
   def validateDataSourceUpload(id: DataSourceId): Fox[_] =

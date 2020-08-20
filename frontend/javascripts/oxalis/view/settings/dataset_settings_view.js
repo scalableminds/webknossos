@@ -11,6 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
+import messages, { settings } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -23,7 +24,6 @@ import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
-  hasSegmentation,
   getElementClass,
   getLayerBoundaries,
   getDefaultIntensityRangeOfLayer,
@@ -51,7 +51,6 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
-import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -71,7 +70,6 @@ type DatasetSettingsProps = {|
   viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
   controlMode: ControlMode,
-  hasSegmentation: boolean,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -138,12 +136,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
+  getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
+    const tooltipText = isInEditMode
+      ? "Stop editing the possible range of the histogram."
+      : "Manually set the possible range of the histogram.";
+    return (
+      <Tooltip title={tooltipText}>
+        <Icon
+          type="edit"
+          onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 30,
+            cursor: "pointer",
+            color: isInEditMode ? "rgb(24, 144, 255)" : null,
+          }}
+        />
+      </Tooltip>
+    );
+  };
+
   setVisibilityForAllLayers = (isVisible: boolean) => {
     const { layers } = this.props.datasetConfiguration;
     Object.keys(layers).forEach(otherLayerName =>
       this.props.onChangeLayer(otherLayerName, "isDisabled", !isVisible),
     );
-    this.props.onChange("isSegmentationDisabled", !isVisible);
   };
 
   isLayerExclusivelyVisible = (layerName: string): boolean => {
@@ -152,14 +170,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       const { isDisabled } = layers[otherLayerName];
       return layerName === otherLayerName ? !isDisabled : isDisabled;
     });
-    const { isSegmentationDisabled } = this.props.datasetConfiguration;
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (layerName === segmentationLayerName) {
-      return isOnlyGivenLayerVisible && !isSegmentationDisabled;
-    } else {
-      return isOnlyGivenLayerVisible && isSegmentationDisabled;
-    }
+    return isOnlyGivenLayerVisible;
   };
 
   getEnableDisableLayerSwitch = (
@@ -175,9 +186,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   );
 
   getHistogram = (layerName: string, layer: DatasetLayerConfiguration) => {
-    const { intensityRange } = layer;
+    const { intensityRange, min, max, isInEditMode } = layer;
     const defaultIntensityRange = getDefaultIntensityRangeOfLayer(this.props.dataset, layerName);
-    const highestRangeValue = defaultIntensityRange[1];
     let histograms = [];
     if (this.props.histogramData && this.props.histogramData[layerName]) {
       histograms = this.props.histogramData[layerName];
@@ -186,8 +196,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         {
           numberOfElements: 0,
           elementCounts: [],
-          min: 0,
-          max: highestRangeValue,
+          min: defaultIntensityRange[0],
+          max: defaultIntensityRange[1],
         },
       ];
     }
@@ -196,7 +206,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         data={histograms}
         intensityRangeMin={intensityRange[0]}
         intensityRangeMax={intensityRange[1]}
+        min={min}
+        max={max}
+        isInEditMode={isInEditMode}
         layerName={layerName}
+        defaultMinMax={defaultIntensityRange}
       />
     );
   };
@@ -204,17 +218,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getLayerSettingsHeader = (
     isDisabled: boolean,
     isColorLayer: boolean,
+    isInEditMode: boolean,
     layerName: string,
     elementClass: string,
   ) => {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
     const setSingleLayerVisibility = (isVisible: boolean) => {
-      if (isColorLayer) {
-        this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
-      } else {
-        this.props.onChange("isSegmentationDisabled", !isVisible);
-      }
+      this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
     const onChange = (value, event) => {
       if (!event.ctrlKey) {
@@ -230,15 +241,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         setSingleLayerVisibility(true);
       }
     };
+    const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
-      <Row style={{ marginTop: isDisabled ? 0 : 16 }}>
+      <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
             {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
           </span>
-          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass} Layer</Tag>
+          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
+          {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
         </Col>
@@ -248,50 +261,55 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   getLayerSettings = (
     layerName: string,
-    layer: ?DatasetLayerConfiguration,
+    layerConfiguration: ?DatasetLayerConfiguration,
     isColorLayer: boolean = true,
   ) => {
-    // Ensure that a color layer needs a layer.
-    if (isColorLayer && !layer) {
+    // Ensure that every layer needs a layer configuration and that color layers have a color layer.
+    if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
-    const isDisabled =
-      isColorLayer && layer != null
-        ? layer.isDisabled
-        : this.props.datasetConfiguration.isSegmentationDisabled;
+    const { isDisabled, isInEditMode } = layerConfiguration;
 
     return (
       <div key={layerName}>
-        {this.getLayerSettingsHeader(isDisabled, isColorLayer, layerName, elementClass)}
+        {this.getLayerSettingsHeader(
+          isDisabled,
+          isColorLayer,
+          isInEditMode,
+          layerName,
+          elementClass,
+        )}
         {isDisabled ? null : (
-          <React.Fragment>
-            {isHistogramSupported(elementClass) && layerName != null && layer != null
-              ? this.getHistogram(layerName, layer)
+          <div style={{ marginBottom: 30, marginLeft: 10 }}>
+            {isHistogramSupported(elementClass) && layerName != null && isColorLayer
+              ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting
               label="Opacity"
               min={0}
               max={100}
-              value={
-                isColorLayer && layer != null
-                  ? layer.alpha
-                  : this.props.datasetConfiguration.segmentationOpacity
-              }
-              onChange={
-                isColorLayer
-                  ? _.partial(this.props.onChangeLayer, layerName, "alpha")
-                  : _.partial(this.props.onChange, "segmentationOpacity")
-              }
+              value={layerConfiguration.alpha}
+              onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
-            {isColorLayer && layer != null ? (
-              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+            {!isColorLayer && (
+              <NumberSliderSetting
+                label={settings.segmentationPatternOpacity}
+                min={0}
+                max={100}
+                step={1}
+                value={this.props.datasetConfiguration.segmentationPatternOpacity}
+                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+              />
+            )}
+            {isColorLayer ? (
+              <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
                 </Col>
                 <Col span={10}>
                   <ColorSetting
-                    value={Utils.rgbToHex(layer.color)}
+                    value={Utils.rgbToHex(layerConfiguration.color)}
                     onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
                     className="ant-btn"
                     style={{ marginLeft: 6 }}
@@ -304,22 +322,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                         this.props.onChangeLayer(
                           layerName,
                           "isInverted",
-                          layer ? !layer.isInverted : false,
+                          layerConfiguration ? !layerConfiguration.isInverted : false,
                         )
                       }
                       style={{
                         position: "absolute",
                         top: 0,
                         right: -9,
+                        marginTop: 0,
                         display: "inline-flex",
                       }}
                     >
                       <i
-                        className={`fa fa-adjust ${layer.isInverted ? "flip-horizontally" : ""}`}
+                        className={`fa fa-adjust ${
+                          layerConfiguration.isInverted ? "flip-horizontally" : ""
+                        }`}
                         style={{
                           margin: 0,
                           transition: "transform 0.5s ease 0s",
-                          color: layer.isInverted
+                          color: layerConfiguration.isInverted
                             ? "rgba(24, 144, 255, 1.0)"
                             : "rgba(0, 0, 0, 0.65)",
                         }}
@@ -343,7 +364,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
-          </React.Fragment>
+          </div>
         )}
       </div>
     );
@@ -383,29 +404,26 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     await clearCache(this.props.dataset, layerName);
     api.data.reloadBuckets(layerName);
     window.needsRerender = true;
-    Toast.success(
-      `Successfully deleted cached data of layer ${layerName}. Now move a bit around to reload the data.`,
-    );
+    Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
 
-  onChangeRenderMissingDataBlack = (value: boolean): void => {
-    Toast.warning(
+  onChangeRenderMissingDataBlack = async (value: boolean): Promise<void> => {
+    Toast.info(
       value
         ? messages["data.enabled_render_missing_data_black"]
         : messages["data.disabled_render_missing_data_black"],
       { timeout: 8000 },
     );
     this.props.onChange("renderMissingDataBlack", value);
+    const { layers } = this.props.datasetConfiguration;
+    const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
+      await clearCache(this.props.dataset, layerName);
+      api.data.reloadBuckets(layerName);
+    });
+    await Promise.all(reloadAllLayersPromises);
+    window.needsRerender = true;
+    Toast.success("Successfully reloaded data of all layers.");
   };
-
-  getSegmentationPanel() {
-    const segmentation = Model.getSegmentationLayer();
-    const segmentationLayerName = segmentation != null ? segmentation.name : null;
-    if (!segmentationLayerName) {
-      return null;
-    }
-    return this.getLayerSettings(segmentationLayerName, null, false);
-  }
 
   renderPanelHeader = (hasInvisibleLayers: boolean) =>
     hasInvisibleLayers ? (
@@ -421,20 +439,21 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   render() {
     const { layers } = this.props.datasetConfiguration;
-    const colorSettings = Object.entries(layers).map(entry => {
+    const segmentationLayerName = Model.getSegmentationLayerName();
+    const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
+      const isColorLayer = segmentationLayerName !== layerName;
       // $FlowFixMe Object.entries returns mixed for Flow
-      return this.getLayerSettings(layerName, layer, true);
+      return this.getLayerSettings(layerName, layer, isColorLayer);
     });
     const hasInvisibleLayers =
       Object.keys(layers).find(
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
-      ) != null || this.props.datasetConfiguration.isSegmentationDisabled;
+      ) != null;
     return (
       <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
-          {colorSettings}
-          {this.props.hasSegmentation ? this.getSegmentationPanel() : null}
+          {layerSettings}
         </Panel>
         <Panel header="Data Rendering" key="3">
           <DropdownSetting
@@ -516,7 +535,6 @@ const mapStateToProps = (state: OxalisState) => ({
   histogramData: state.temporaryConfiguration.histogramData,
   controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
-  hasSegmentation: hasSegmentation(state.dataset),
   tracing: state.tracing,
 });
 

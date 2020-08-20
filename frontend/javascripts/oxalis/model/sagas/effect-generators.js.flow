@@ -51,12 +51,13 @@ declare type SelectFn6<T1, T2, T3, T4, T5, T6, R> = (state: OxalisState, t1: T1,
 
 declare type SelectFn =
   & (<R, Fn: SelectFn0<R>>(selector: Fn, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, R, Fn: SelectFn1<T1, R>>(selector: Fn, t1: T1, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, T2, R, Fn: SelectFn2<T1, T2, R>>(selector: Fn, t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, T2, T3, R, Fn: SelectFn3<T1, T2, T3, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, T2, T3, T4, R, Fn: SelectFn4<T1, T2, T3, T4, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, T2, T3, T4, T5, R, Fn: SelectFn5<T1, T2, T3, T4, T5, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>)
-  & (<T1, T2, T3, T4, T5, T6, R, Fn: SelectFn6<T1, T2, T3, T4, T5, T6, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>)
+  // We are only using SelectFn0 and the others lead to flow errors
+  // & (<T1, R, Fn: SelectFn1<T1, R>>(selector: Fn, t1: T1, ...rest: Array<void>) => Generator<*, R, *>)
+  // & (<T1, T2, R, Fn: SelectFn2<T1, T2, R>>(selector: Fn, t1: T1, t2: T2, ...rest: Array<void>) => Generator<*, R, *>)
+  // & (<T1, T2, T3, R, Fn: SelectFn3<T1, T2, T3, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, ...rest: Array<void>) => Generator<*, R, *>)
+  // & (<T1, T2, T3, T4, R, Fn: SelectFn4<T1, T2, T3, T4, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, ...rest: Array<void>) => Generator<*, R, *>)
+  // & (<T1, T2, T3, T4, T5, R, Fn: SelectFn5<T1, T2, T3, T4, T5, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, ...rest: Array<void>) => Generator<*, R, *>)
+  // & (<T1, T2, T3, T4, T5, T6, R, Fn: SelectFn6<T1, T2, T3, T4, T5, T6, R>>(selector: Fn, t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, ...rest: Array<void>) => Generator<*, R, *>)
   // & (<T, R, Fn: SelectFnSpread<T, R>>(selector: Fn, t1: T, t2: T, t3: T, t4: T, t5: T, t6: T, ...rest: Array<T>) => Generator<*, R, *>)
 
 /* ------------------ CALL Stuff ------------------ */

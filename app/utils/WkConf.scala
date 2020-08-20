@@ -43,9 +43,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
       val user = get[String]("mail.smtp.user")
       val pass = get[String]("mail.smtp.pass")
     }
-    object Subject {
-      val prefix = get[String]("mail.subject.prefix")
-    }
+    val demoSender = get[String]("mail.demoSender")
+    val defaultSender = get[String]("mail.defaultSender")
   }
 
   object WebKnossos {
@@ -91,6 +90,8 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Features {
     val isDemoInstance = get[Boolean]("features.isDemoInstance")
+    val taskReopenAllowed = get[Int]("features.taskReopenAllowedInSeconds") seconds
+    val allowDeleteDatasets = get[Boolean]("features.allowDeleteDatasets")
   }
 
   val operatorData = get[String]("operatorData")

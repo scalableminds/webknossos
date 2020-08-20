@@ -3,6 +3,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import {
   Row,
   Col,
+  Divider,
   Form,
   Select,
   Button,
@@ -18,9 +19,12 @@ import {
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataset, APITaskType, APIProject, APIScript } from "admin/api_flow_types";
+import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "admin/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type { TaskCreationResponse } from "admin/task/task_create_bulk_view";
+import type {
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
+} from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 import type { Vector6 } from "oxalis/constants";
 import {
@@ -38,12 +42,18 @@ import { tryToAwaitPromise } from "libs/utils";
 import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 import Enum from "Enumjs";
+import { saveAs } from "file-saver";
+import { formatDateInLocalTimeZone } from "components/formatted_date";
 
 const FormItem = Form.Item;
 const { Option } = Select;
 const RadioGroup = Radio.Group;
 
 const fullWidth = { width: "100%" };
+const maxDisplayedTasksCount = 50;
+
+const TASK_CSV_HEADER =
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId";
 
 type Props = {
   form: Object,
@@ -65,44 +75,146 @@ type State = {
   scripts: Array<APIScript>,
   specificationType: Specification,
   isUploading: boolean,
+  isFetchingData: boolean,
 };
 
-export function handleTaskCreationResponse(responses: Array<TaskCreationResponse>) {
+export function taskToShortText(task: APITask) {
+  const { id, creationInfo, editPosition } = task;
+  return `${id},${creationInfo || "null"},(${editPosition.join(",")})`;
+}
+
+export function taskToText(task: APITask) {
+  const {
+    id,
+    dataSet,
+    type,
+    neededExperience,
+    editPosition,
+    editRotation,
+    status,
+    boundingBoxVec6,
+    projectName,
+    script,
+  } = task;
+  const neededExperienceAsString = `${neededExperience.domain},${neededExperience.value}`;
+  const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map(vector3 =>
+    vector3.join(","),
+  );
+  const totalNumberOfInstances = status.open + status.active + status.finished;
+  const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
+  const scriptId = script ? `${script.id}` : "";
+
+  const taskAsString =
+    `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
+    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId}`;
+  return taskAsString;
+}
+
+export function downloadTasksAsCSV(tasks: Array<APITask>) {
+  if (tasks.length < 0) {
+    return;
+  }
+  const maybeTaskPlural = tasks.length > 2 ? "tasks" : "task";
+  const lastCreationTime = Math.max(...tasks.map(task => task.created));
+  const currentDateAsString = formatDateInLocalTimeZone(lastCreationTime);
+  const allTeamNames = _.uniq(tasks.map(task => task.team));
+  const teamName = allTeamNames.length > 1 ? "multiple_teams" : allTeamNames[0];
+  const allTasksAsStrings = tasks.map(task => taskToText(task)).join("\n");
+  const csv = [TASK_CSV_HEADER, allTasksAsStrings].join("\n");
+  const filename = `${teamName}-${maybeTaskPlural}-${currentDateAsString}.csv`;
+  const blob = new Blob([csv], { type: "text/plain;charset=utf-8" });
+  saveAs(blob, filename);
+}
+
+export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
+  const { tasks, warnings } = response;
   const successfulTasks = [];
   const failedTasks = [];
+  let teamName = null;
 
-  responses.forEach((response: TaskCreationResponse, i: number) => {
-    if (response.status === 200 && response.success) {
-      successfulTasks.push(
-        `${response.success.id},${response.success.creationInfo ||
-          "null"},(${response.success.editPosition.join(",")}) \n`,
-      );
-    } else if (response.error) {
-      failedTasks.push(`Line ${i}: ${response.error} \n`);
+  const subHeadingStyle = { fontWeight: "bold" };
+  const displayResultsStyle = { maxHeight: 300, overflow: "auto" };
+
+  const warningsContent =
+    warnings.length > 0 ? (
+      <div>
+        <div style={subHeadingStyle}>There were warnings during task creation:</div>
+        <div>{warnings.join("\n")}</div>
+      </div>
+    ) : null;
+
+  tasks.forEach((taskResponse: TaskCreationResponse, i: number) => {
+    if (taskResponse.status === 200 && taskResponse.success) {
+      if (!teamName) {
+        teamName = taskResponse.success.team;
+      }
+      successfulTasks.push(taskResponse.success);
+    } else if (taskResponse.error) {
+      failedTasks.push(`Line ${i}: ${taskResponse.error} \n`);
     }
   });
-
+  const failedTasksAsString = failedTasks.join("");
+  const successfulTasksContent =
+    successfulTasks.length <= maxDisplayedTasksCount ? (
+      <pre>
+        taskId,filename,position
+        <br />
+        {successfulTasks.map(task => taskToShortText(task)).join("\n")}
+      </pre>
+    ) : (
+      "Too many tasks to show, please use CSV download for a full list."
+    );
+  const failedTasksContent =
+    failedTasks.length <= maxDisplayedTasksCount ? (
+      <pre>{failedTasksAsString}</pre>
+    ) : (
+      "Too many failed tasks to show, please use CSV download for a full list."
+    );
+  const successPlural = successfulTasks.length === 1 ? "" : "s";
+  const warningsPlural = warnings.length === 1 ? "" : "s";
   Modal.info({
-    title: `${successfulTasks.length} tasks were successfully created. ${
+    title: `${successfulTasks.length} task${successPlural} successfully created, ${
       failedTasks.length
-    } tasks failed.`,
+    } failed. ${warnings.length} warning${warningsPlural}.`,
     content: (
       <div>
+        {warningsContent}
         {successfulTasks.length > 0 ? (
           <div>
-            Successful Tasks:
-            <pre>
-              taskId,filename,position
-              <br />
-              {successfulTasks}
-            </pre>
+            <div style={subHeadingStyle}> Successful Tasks: </div>
+            <div style={displayResultsStyle}>{successfulTasksContent}</div>
           </div>
         ) : null}
+        {successfulTasks.length > 0 ? (
+          <React.Fragment>
+            <br />
+            <Button onClick={() => downloadTasksAsCSV(successfulTasks)}>
+              Download task info as CSV
+            </Button>
+            <br />
+          </React.Fragment>
+        ) : null}
         {failedTasks.length > 0 ? (
-          <div>
-            Failed Tasks:
-            <pre>{failedTasks}</pre>
-          </div>
+          <React.Fragment>
+            <Divider />
+            <div>
+              <br />
+              <div style={subHeadingStyle}> Failed Tasks:</div>
+              <div style={displayResultsStyle}> {failedTasksContent}</div>
+              <br />
+              <Button
+                onClick={() => {
+                  const blob = new Blob([failedTasksAsString], {
+                    type: "text/plain;charset=utf-8",
+                  });
+                  saveAs(blob, "failed-tasks.csv");
+                }}
+              >
+                Download failed task info as CSV
+              </Button>
+              <br />
+            </div>
+          </React.Fragment>
         ) : null}
       </div>
     ),
@@ -118,6 +230,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     scripts: [],
     specificationType: SpecificationEnum.Manual,
     isUploading: false,
+    isFetchingData: false,
   };
 
   componentDidMount() {
@@ -126,14 +239,14 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingData: true });
     const [datasets, projects, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
       getScripts(),
       getTaskTypes(),
     ]);
-
-    this.setState({ datasets, projects, scripts, taskTypes });
+    this.setState({ datasets, projects, scripts, taskTypes, isFetchingData: false });
   }
 
   async applyDefaults() {
@@ -324,6 +437,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 disabled={
                   isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
                 }
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
               >
                 {this.state.datasets.map((dataset: APIDataset) => (
                   <Option key={dataset.name} value={dataset.name}>
@@ -375,6 +489,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     autoFocus
                     disabled={isEditingMode}
                     onChange={this.onChangeTaskType}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.taskTypes.map((taskType: APITaskType) => (
                       <Option key={taskType.id} value={taskType.id}>
@@ -427,6 +542,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     style={fullWidth}
                     autoFocus
                     disabled={isEditingMode}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.projects.map((project: APIProject) => (
                       <Option key={project.id} value={project.name}>
@@ -446,6 +562,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     style={fullWidth}
                     autoFocus
                     disabled={isEditingMode}
+                    notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.scripts.map((script: APIScript) => (
                       <Option key={script.id} value={script.id}>
@@ -477,10 +594,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
                     Manual Specification
                   </Radio>
-                  <Radio
-                    value={SpecificationEnum.Nml}
-                    disabled={isEditingMode || this.isVolumeTaskType()}
-                  >
+                  <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
                     Upload NML File
                   </Radio>
                   <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>

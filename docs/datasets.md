@@ -15,11 +15,31 @@ Read more in the [Data Formats documentation](./data_formats.md).
 ### Uploading through the File System
 To efficiently import large datasets, we recommend to place them directly in the file system:
 
-* Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/srv/webknossos/binaryData/Springfield_University/great_dataset`.
+* Place the dataset at `<webKnossos directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
 * Go to the [dataset view on the dashboard](./dashboard.md)
 * Use the refresh button on the dashboard or wait for webKnossos to detect the dataset (up to 10min)
 * Click `Import` for your new dataset
 * Complete the [Import screen](#importing-in-webknossos)
+
+#### Using Symbolic Links
+
+You can also use symbolic links to import your data into webKnossos.
+However, when using Docker, the targets of the link also need to be available to the container through mounts.
+
+For example, you could have a link from `/opt/webknossos/binaryData/sample_organization/awesome_dataset` to `/cluster/path/to/dataset123`.
+In order to make this dataset available to the Docker container, you need to add `/cluster` as another volume mount.
+You can add this directly to the docker-compose.yml:
+
+```yaml
+...
+services:
+  webknossos:
+    ...
+    volumes:
+      - ./data:/srv/webknossos/binaryData
+      - /cluster:/cluster
+...
+```
 
 ### Uploading through the web browser
 To quickly import a dataset, you may use the upload functionality from webKnossos.
@@ -82,7 +102,7 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 ### General
 - `Display Name`: Used as the name of the dataset in the [Gallery view](./sharing.md#public-sharing).
 - `Description`: Contains more information about your datasets including authors, paper reference, descriptions. Supports Markdown formatting. The description will be featured in the [Gallery view](./sharing.md#public-sharing) as well.
-- `Allowed Teams`: Defines which [teams of your organization](./users.md) have access to this dataset. By default no team has access but admins and team managers can see and edit the dataset.
+- `Teams allowed to access this dataset`: Defines which [teams of your organization](./users.md) have access to this dataset. By default no team has access but admins and team managers can see and edit the dataset.
 - `Visibility`: Lets you make the dataset available to the general public and shows it in the public [Gallery view](./sharing.md#public-sharing). This will enable any visitor to your webKnossos instance to view the data, even unregistered users.
 - `Sharing Link`: A special URL which allows any user to view your dataset that uses this link. Because of the included random token, the link cannot be guessed by random visitors. You may also revoke the random token and create a new one when you don't want previous users to access your data anymore. Read more in [the Sharing guide](./sharing.md).
 

@@ -25,6 +25,7 @@ message VolumeTracing {
     required int64 version = 10;
     required double zoomLevel = 11;
     optional BoundingBox userBoundingBox = 12;
+    repeated NamedBoundingBox userBoundingBoxes = 13;
 }
 
 message VolumeTracingOpt {

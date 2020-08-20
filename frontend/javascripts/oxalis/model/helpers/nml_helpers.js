@@ -4,27 +4,34 @@ import Saxophone from "@scalableminds/saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "admin/api_flow_types";
-import type { BoundingBoxType } from "oxalis/constants";
-import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
-import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  getMaximumGroupId,
+  getMaximumTreeId,
+} from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
-import {
-  type NodeMap,
-  type OxalisState,
-  type SkeletonTracing,
-  type TemporaryMutableTreeMap,
-  type Tracing,
-  type Tree,
-  type TreeGroup,
-  type TreeMap,
+import type {
+  UserBoundingBox,
+  NodeMap,
+  OxalisState,
+  SkeletonTracing,
+  MutableTreeMap,
+  Tracing,
+  Tree,
+  MutableTree,
+  TreeGroup,
+  BoundingBoxObject,
 } from "oxalis/store";
+import { findGroup } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import messages from "messages";
+import { computeArrayFromBoundingBox, computeBoundingBoxFromBoundingBoxObject } from "libs/utils";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
+const TASK_BOUNDING_BOX_COLOR = [0, 1, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
 const DEFAULT_BITDEPTH = 0;
@@ -32,6 +39,8 @@ const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
+const DEFAULT_RADIUS = 30;
+const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
 // SERIALIZE NML
 
@@ -54,6 +63,10 @@ function escape(string: string): string {
       .replace(/"/g, "&quot;")
       .replace(/\n/g, "&#xa;")
   );
+}
+
+function mapColorToComponents(color: Vector3) {
+  return { "color.r": color[0], "color.g": color[1], "color.b": color[2], "color.a": 1.0 };
 }
 
 function serializeTagWithChildren(
@@ -162,14 +175,39 @@ function serializeMetaInformation(
   ]);
 }
 
-function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
-  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
-  if (serverBoundingBox != null) {
-    const { topLeft, width, height, depth } = serverBoundingBox;
-    const [topLeftX, topLeftY, topLeftZ] = topLeft;
-    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+function serializeTaskBoundingBox(boundingBox: ?BoundingBoxType, tagName: string): string {
+  if (boundingBox) {
+    const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+    const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+    return serializeTag(tagName, {
+      topLeftX,
+      topLeftY,
+      topLeftZ,
+      width,
+      height,
+      depth,
+    });
   }
   return "";
+}
+
+function serializeUserBoundingBox(bb: UserBoundingBox, tagName: string): string {
+  const { boundingBox, id, name, isVisible } = bb;
+  const boundingBoxArray = computeArrayFromBoundingBox(boundingBox);
+  const [topLeftX, topLeftY, topLeftZ, width, height, depth] = boundingBoxArray;
+  const color = bb.color ? mapColorToComponents(bb.color) : {};
+  return serializeTag(tagName, {
+    topLeftX,
+    topLeftY,
+    topLeftZ,
+    width,
+    height,
+    depth,
+    ...color,
+    id,
+    name,
+    isVisible,
+  });
 }
 
 function serializeParameters(
@@ -179,7 +217,7 @@ function serializeParameters(
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
-  const userBB = skeletonTracing.userBoundingBox;
+  const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
   return [
     "<parameters>",
@@ -212,8 +250,8 @@ function serializeParameters(
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        serializeBoundingBox(userBB, "userBoundingBox"),
-        serializeBoundingBox(taskBB, "taskBoundingBox"),
+        ...userBBoxes.map(userBB => serializeUserBoundingBox(userBB, "userBoundingBox")),
+        serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",
@@ -227,10 +265,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         "thing",
         {
           id: tree.treeId,
-          "color.r": tree.color[0],
-          "color.g": tree.color[1],
-          "color.b": tree.color[2],
-          "color.a": 1.0,
+          ...mapColorToComponents(tree.color),
           name: tree.name,
           groupId: tree.groupId,
         },
@@ -316,11 +351,8 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
 
 // PARSE NML
 
-class NmlParseError extends Error {
-  constructor(...args) {
-    super(...args);
-    this.name = "NmlParseError";
-  }
+export class NmlParseError extends Error {
+  name = "NmlParseError";
 }
 
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {
@@ -345,6 +377,19 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
   return Number.parseFloat(obj[key]);
 }
 
+function _parseTimestamp(obj: Object, key: string, defaultValue?: number): number {
+  const timestamp = _parseInt(obj, key, defaultValue);
+  const isValid = new Date(timestamp).getTime() > 0;
+  if (!isValid) {
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.invalid_timestamp"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
+  }
+  return timestamp;
+}
+
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
@@ -356,45 +401,117 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   return obj[key] === "true";
 }
 
-function _parseEntities(obj: Object, key: string): string {
+function _parseColor(obj: Object, defaultColor: Vector3): Vector3 {
+  const color = [
+    _parseFloat(obj, "color.r", defaultColor[0]),
+    _parseFloat(obj, "color.g", defaultColor[1]),
+    _parseFloat(obj, "color.b", defaultColor[2]),
+  ];
+  return color;
+}
+
+function _parseEntities(obj: Object, key: string, defaultValue?: string): string {
   if (obj[key] == null) {
-    throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
   }
   return Saxophone.parseEntities(obj[key]);
 }
 
-function findTreeByNodeId(trees: TreeMap, nodeId: number): ?Tree {
-  return _.values(trees).find(tree => tree.nodes.has(nodeId));
-}
+function connectedComponentsOfTree(tree: MutableTree): Array<Array<number>> {
+  // Breadth-First Search that finds the connected component of the node with id startNodeId
+  // and marks all visited nodes as true in the visited map
+  const bfs = (startNodeId: number, edges: EdgeCollection, visited: Map<number, boolean>) => {
+    const queue = [startNodeId];
+    const component = [];
+    visited.set(startNodeId, true);
+    while (queue.length > 0) {
+      const nodeId = queue.shift();
+      component.push(nodeId);
+      const curEdges = edges.getEdgesForNode(nodeId);
 
-function isTreeConnected(tree: Tree): boolean {
-  const seenNodes = new Map();
-
-  if (tree.nodes.size() > 0) {
-    // Get the first element from the nodes map
-    const nodeQueue = [Number(tree.nodes.keys().next().value)];
-    // Breadth-First search that marks all reachable nodes as visited
-    while (nodeQueue.length !== 0) {
-      const nodeId = nodeQueue.shift();
-      seenNodes.set(nodeId, true);
-      const edges = tree.edges.getEdgesForNode(nodeId);
-      // If there are no edges for a node, the tree is not connected
-      if (edges == null) break;
-
-      for (const edge of edges) {
-        if (nodeId === edge.target && !seenNodes.get(edge.source)) {
-          nodeQueue.push(edge.source);
-          seenNodes.set(edge.source, true);
-        } else if (!seenNodes.get(edge.target)) {
-          nodeQueue.push(edge.target);
-          seenNodes.set(edge.target, true);
+      for (const edge of curEdges) {
+        if (nodeId === edge.target && !visited.get(edge.source)) {
+          queue.push(edge.source);
+          visited.set(edge.source, true);
+        } else if (!visited.get(edge.target)) {
+          queue.push(edge.target);
+          visited.set(edge.target, true);
         }
       }
     }
+    return component;
+  };
+
+  const components = [];
+  const visited = new Map();
+
+  for (const node of tree.nodes.values()) {
+    if (!visited.get(node.id)) {
+      components.push(bfs(node.id, tree.edges, visited));
+    }
   }
 
-  // If the size of the seenNodes map is the same as the number of nodes, the tree is connected
-  return _.size(seenNodes) === tree.nodes.size();
+  return components;
+}
+
+function splitTreeIntoComponents(
+  tree: MutableTree,
+  treeGroups: Array<TreeGroup>,
+  maxTreeId: number,
+): Array<MutableTree> {
+  const components = connectedComponentsOfTree(tree);
+
+  if (components.length <= 1) return [tree];
+
+  // If there is more than one component, split the tree into its components
+  // and wrap the split trees in a new group
+  const newGroupId = getMaximumGroupId(treeGroups) + 1;
+  const newGroup = {
+    name: tree.name,
+    groupId: newGroupId,
+    children: [],
+  };
+
+  const newTrees = [];
+  for (let i = 0; i < components.length; i++) {
+    const nodeIds = components[i];
+    const nodeIdsSet = new Set(nodeIds);
+
+    // Only consider outgoing edges as otherwise each edge would be collected twice
+    const edges = nodeIds.flatMap(nodeId => tree.edges.getOutgoingEdgesForNode(nodeId));
+
+    const newTree = {
+      treeId: maxTreeId + 1 + i,
+      color: tree.color,
+      name: `${tree.name}_${i}`,
+      comments: tree.comments.filter(comment => nodeIdsSet.has(comment.nodeId)),
+      nodes: new DiffableMap(nodeIds.map(nodeId => [nodeId, tree.nodes.get(nodeId)])),
+      branchPoints: tree.branchPoints.filter(bp => nodeIdsSet.has(bp.nodeId)),
+      timestamp: tree.timestamp,
+      edges: EdgeCollection.loadFromArray(edges),
+      isVisible: tree.isVisible,
+      groupId: newGroupId,
+    };
+
+    newTrees.push(newTree);
+  }
+
+  // If the tree is part of a group, insert the new group into the tree's group,
+  // otherwise insert the new group into the root group
+  if (tree.groupId != null) {
+    const parentGroup = findGroup(treeGroups, tree.groupId);
+    if (parentGroup == null)
+      throw Error("Assertion Error: Tree's group is not part of the group tree.");
+    parentGroup.children.push(newGroup);
+  } else {
+    treeGroups.push(newGroup);
+  }
+
+  return newTrees;
 }
 
 function getEdgeHash(source: number, target: number) {
@@ -402,10 +519,10 @@ function getEdgeHash(source: number, target: number) {
 }
 
 export function wrapInNewGroup(
-  originalTrees: TreeMap,
+  originalTrees: MutableTreeMap,
   _originalTreeGroups: ?Array<TreeGroup>,
   wrappingGroupName: string,
-): [TreeMap, Array<TreeGroup>] {
+): [MutableTreeMap, Array<TreeGroup>] {
   const originalTreeGroups = _originalTreeGroups || [];
   // It does not matter whether the group id is used in the active tracing, since
   // this case will be handled during import, anyway. The group id just shouldn't clash
@@ -428,20 +545,53 @@ export function wrapInNewGroup(
   return [trees, treeGroups];
 }
 
+function getUnusedUserBoundingBoxId(
+  userBoundingBoxes: Array<UserBoundingBox>,
+  proposedId: number = 0,
+): number {
+  const isProposedIdUsed = userBoundingBoxes.some(userBB => userBB.id === proposedId);
+  if (!isProposedIdUsed) {
+    return proposedId;
+  }
+  const maxId = Math.max(...userBoundingBoxes.map(userBB => userBB.id));
+  return maxId + 1;
+}
+
+function parseBoundingBoxObject(attr): BoundingBoxObject {
+  const boundingBoxObject = {
+    topLeft: [
+      _parseInt(attr, "topLeftX"),
+      _parseInt(attr, "topLeftY"),
+      _parseInt(attr, "topLeftZ"),
+    ],
+    width: _parseInt(attr, "width"),
+    height: _parseInt(attr, "height"),
+    depth: _parseInt(attr, "depth"),
+  };
+  return boundingBoxObject;
+}
+
 export function parseNml(
   nmlString: string,
-): Promise<{ trees: TreeMap, treeGroups: Array<TreeGroup>, datasetName: ?string }> {
+): Promise<{
+  trees: MutableTreeMap,
+  treeGroups: Array<TreeGroup>,
+  userBoundingBoxes: Array<UserBoundingBox>,
+  datasetName: ?string,
+}> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
-    const trees: TemporaryMutableTreeMap = {};
+    const trees: MutableTreeMap = {};
     const treeGroups: Array<TreeGroup> = [];
     const existingNodeIds = new Set();
     const existingGroupIds = new Set();
     const existingEdges = new Set();
-    let currentTree: ?Tree = null;
+    let currentTree: ?MutableTree = null;
     let currentGroup: ?TreeGroup = null;
     const groupIdToParent: { [number]: ?TreeGroup } = {};
+    const nodeIdToTreeId = {};
+    const userBoundingBoxes = [];
     let datasetName = null;
     parser
       .on("tagopen", node => {
@@ -455,12 +605,9 @@ export function parseNml(
             const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
-              color: [
-                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
-                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
-                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
-              ],
-              name: _parseEntities(attr, "name"),
+              color: _parseColor(attr, DEFAULT_COLOR),
+              // In Knossos NMLs, there is usually a tree comment instead of a name
+              name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -475,8 +622,9 @@ export function parseNml(
             break;
           }
           case "node": {
+            const nodeId = _parseInt(attr, "id");
             const currentNode = {
-              id: _parseInt(attr, "id"),
+              id: nodeId,
               position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
@@ -487,13 +635,14 @@ export function parseNml(
               bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
               resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius"),
-              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
+              radius: _parseFloat(attr, "radius", DEFAULT_RADIUS),
+              timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
             if (existingNodeIds.has(currentNode.id))
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
+            nodeIdToTreeId[nodeId] = currentTree.treeId;
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
             break;
@@ -534,7 +683,7 @@ export function parseNml(
               nodeId: _parseInt(attr, "node"),
               content: _parseEntities(attr, "content"),
             };
-            const tree = findTreeByNodeId(trees, currentComment.nodeId);
+            const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
@@ -547,7 +696,7 @@ export function parseNml(
               nodeId: _parseInt(attr, "id"),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
-            const tree = findTreeByNodeId(trees, currentBranchpoint.nodeId);
+            const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
               throw new NmlParseError(
                 `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,
@@ -576,6 +725,36 @@ export function parseNml(
             }
             break;
           }
+          case "userBoundingBox": {
+            const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(
+              userBoundingBoxes,
+              parsedUserBoundingBoxId,
+            );
+            const boundingBoxObject = parseBoundingBoxObject(attr);
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              color: _parseColor(attr, DEFAULT_COLOR),
+              id: userBoundingBoxId,
+              isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
+              name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
+          case "taskBoundingBox": {
+            const userBoundingBoxId = getUnusedUserBoundingBoxId(userBoundingBoxes);
+            const boundingBoxObject = parseBoundingBoxObject(attr);
+            const userBoundingBox = {
+              boundingBox: computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
+              color: TASK_BOUNDING_BOX_COLOR,
+              id: userBoundingBoxId,
+              isVisible: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+              name: "task bounding box",
+            };
+            userBoundingBoxes.push(userBoundingBox);
+            break;
+          }
           default:
             break;
         }
@@ -583,10 +762,12 @@ export function parseNml(
       .on("tagclose", node => {
         switch (node.name) {
           case "thing": {
-            if (currentTree != null && !isTreeConnected(currentTree))
-              throw new NmlParseError(
-                `${messages["nml.tree_not_connected"]} ${currentTree.treeId}`,
-              );
+            if (currentTree != null) {
+              if (currentTree.nodes.size() > 0) {
+                const timestamp = _.min(currentTree.nodes.map(n => n.timestamp));
+                trees[currentTree.treeId].timestamp = timestamp;
+              }
+            }
             currentTree = null;
             break;
           }
@@ -611,7 +792,22 @@ export function parseNml(
         }
       })
       .on("end", () => {
-        resolve({ trees, treeGroups, datasetName });
+        // Split potentially unconnected trees
+        const originalTreeIds = Object.keys(trees);
+        let maxTreeId = getMaximumTreeId(trees);
+        for (const treeId of originalTreeIds) {
+          const tree = trees[Number(treeId)];
+          const newTrees = splitTreeIntoComponents(tree, treeGroups, maxTreeId);
+          const newTreesSize = _.size(newTrees);
+          if (newTreesSize > 1) {
+            delete trees[tree.treeId];
+            for (const newTree of newTrees) {
+              trees[newTree.treeId] = newTree;
+            }
+            maxTreeId += newTreesSize;
+          }
+        }
+        resolve({ trees, treeGroups, datasetName, userBoundingBoxes });
       })
       .on("error", reject);
 

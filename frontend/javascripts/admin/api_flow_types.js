@@ -13,7 +13,7 @@ import type {
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6, Point3 } from "oxalis/constants";
+import type { Vector3, Vector6, Point3, ColorObject } from "oxalis/constants";
 
 export type APIMessage = { ["info" | "warning" | "error"]: string };
 
@@ -54,7 +54,9 @@ export type APISegmentationLayer = {|
   ...APIDataLayerBase,
   +category: "segmentation",
   +largestSegmentId: number,
+  +originalElementClass?: ElementClass,
   +mappings?: Array<string>,
+  +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
 |};
 
@@ -77,7 +79,7 @@ type APIDataSourceBase = {
 
 export type APIMaybeUnimportedDataSource = APIDataSourceBase & {
   +dataLayers?: Array<APIDataLayer>,
-  +scale: ?Vector3,
+  +scale?: ?Vector3,
 };
 
 export type APIDataSource = APIDataSourceBase & {
@@ -91,6 +93,7 @@ export type APIDataStore = {
   +isForeign: boolean,
   +isScratch: boolean,
   +isConnector: boolean,
+  +allowsUpload: boolean,
 };
 
 export type APITracingStore = {
@@ -138,6 +141,7 @@ type APIDatasetBase = APIDatasetId & {
   +lastUsedByUser: number,
   +isForeign: boolean,
   +sortingKey: number,
+  +owningOrganization: string,
   +publication: ?APIPublication,
 };
 
@@ -186,6 +190,7 @@ export type APIUser = APIUserBase & {
   +created: number,
   +experiences: ExperienceMap,
   +isAdmin: boolean,
+  +isDatasetManager: boolean,
   +isActive: boolean,
   +isEditable: boolean,
   +lastActivity: number,
@@ -247,7 +252,13 @@ export type APIAnnotationType = $Keys<typeof APIAnnotationTypeEnum>;
 
 export type APIAnnotationVisibility = "Private" | "Internal" | "Public";
 
-export type TracingType = "skeleton" | "volume" | "hybrid";
+export const TracingTypeEnum = Enum.make({
+  skeleton: "skeleton",
+  volume: "volume",
+  hybrid: "hybrid",
+});
+
+export type TracingType = $Keys<typeof TracingTypeEnum>;
 
 export type APITaskType = {
   +id: string,
@@ -509,12 +520,13 @@ export type APIBuildInfo = {
 export type APIFeatureToggles = {
   +discussionBoard: string | false,
   +discussionBoardRequiresAdmin: boolean,
-  +defaultOrganization: string,
   +addForeignDataset: boolean,
   +hideNavbarLogin: boolean,
   +isDemoInstance: boolean,
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
+  +taskReopenAllowedInSeconds: number,
+  +allowDeleteDatasets: boolean,
 };
 
 // Tracing related datatypes
@@ -547,6 +559,14 @@ export type ServerBoundingBox = {
   depth: number,
 };
 
+export type UserBoundingBoxFromServer = {
+  boundingBox: ServerBoundingBox,
+  id: number,
+  name?: string,
+  color?: ColorObject,
+  isVisible?: boolean,
+};
+
 export type ServerBoundingBoxTypeTuple = {
   topLeft: Vector3,
   width: number,
@@ -556,7 +576,7 @@ export type ServerBoundingBoxTypeTuple = {
 
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>,
-  color: ?{ r: number, g: number, b: number },
+  color: ?ColorObject,
   comments: Array<CommentType>,
   edges: Array<Edge>,
   name: string,
@@ -569,6 +589,7 @@ export type ServerSkeletonTracingTree = {
 
 export type ServerTracingBase = {|
   id: string,
+  userBoundingBoxes: Array<UserBoundingBoxFromServer>,
   userBoundingBox?: ServerBoundingBox,
   createdTimestamp: number,
   dataSetName: string,

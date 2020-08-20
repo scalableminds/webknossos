@@ -31,7 +31,7 @@ type State = {
 };
 
 type GoogleCharts = {
-  chart: { getSelection: Function }, // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
+  chartWrapper: { getChart: () => { getSelection: Function } }, // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
 
 class StatisticView extends React.PureComponent<{}, State> {
@@ -88,8 +88,9 @@ class StatisticView extends React.PureComponent<{}, State> {
     });
   }
 
-  selectDataPoint = (chart: GoogleCharts) => {
-    const indicies = chart.chart.getSelection()[0];
+  selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
+    const chart = chartWrapper.getChart();
+    const indicies = chart.getSelection().selection[0];
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
@@ -127,7 +128,7 @@ class StatisticView extends React.PureComponent<{}, State> {
       <div className="statistics container">
         <Row gutter={16}>
           <Col span={16}>
-            <Card title="Overall Weekly Tracing Time">
+            <Card title="Overall Weekly Annotation Time">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
                 {rows.length > 0 ? (
                   <Chart

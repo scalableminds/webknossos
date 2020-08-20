@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(50);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(55);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -93,6 +93,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   inboxSourceHash INT,
+  sourceDefaultConfiguration JSONB,
   defaultConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
@@ -108,6 +109,7 @@ CREATE TABLE webknossos.dataSets(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
+  CONSTRAINT sourceDefaultConfigurationIsJsonObject CHECK(jsonb_typeof(sourceDefaultConfiguration) = 'object'),
   CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
   CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );
@@ -122,7 +124,9 @@ CREATE TABLE webknossos.dataSet_layers(
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
   largestSegmentId BIGINT,
   mappings VARCHAR(256)[],
-  PRIMARY KEY(_dataSet, name)
+  defaultViewConfiguration JSONB,
+  PRIMARY KEY(_dataSet, name),
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(
@@ -153,7 +157,8 @@ CREATE TABLE webknossos.dataStores(
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   isForeign BOOLEAN NOT NULL DEFAULT false,
-  isConnector BOOLEAN NOT NULL DEFAULT false
+  isConnector BOOLEAN NOT NULL DEFAULT false,
+  allowsUpload BOOLEAN NOT NULL DEFAULT true
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -254,7 +259,7 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  name VARCHAR(256) NOT NULL,
+  name VARCHAR(256) NOT NULL UNIQUE,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
@@ -281,6 +286,7 @@ CREATE TABLE webknossos.users(
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,

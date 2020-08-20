@@ -14,7 +14,7 @@ class Persistence<T: Object> {
     this.name = name;
   }
 
-  load(history: RouterHistory): $Shape<T> {
+  load(history: RouterHistory): $Shape<T> | {||} {
     const locationState = history.location.state;
     if (locationState != null && locationState[this.name] != null) {
       console.log(

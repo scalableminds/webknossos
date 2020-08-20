@@ -43,12 +43,12 @@ test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "78135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
-  t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation" });
+  t.snapshot(replaceVolatileValues(finishedAnnotation), { id: "annotations-finishAnnotation" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APIAnnotationTypeEnum.Task);
   t.is(reopenedAnnotation.state, "Active");
 
-  t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation" });
+  t.snapshot(replaceVolatileValues(reopenedAnnotation), { id: "annotations-reOpenAnnotation" });
 });
 
 test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async t => {
@@ -58,7 +58,9 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
     APIAnnotationTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
-  t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation-explorational" });
+  t.snapshot(replaceVolatileValues(finishedAnnotation), {
+    id: "annotations-finishAnnotation-explorational",
+  });
 
   const reopenedAnnotation = await api.reOpenAnnotation(
     annotationId,
@@ -66,7 +68,9 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
   );
   t.is(reopenedAnnotation.state, "Active");
 
-  t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation-explorational" });
+  t.snapshot(replaceVolatileValues(reopenedAnnotation), {
+    id: "annotations-reOpenAnnotation-explorational",
+  });
 });
 
 test.serial("editAnnotation()", async t => {
@@ -182,7 +186,6 @@ async function sendUpdateActions(explorational, queue) {
     `${explorational.tracingStore.url}/tracings/skeleton/${skeletonTracingId}/update?token=`,
     {
       method: "POST",
-      headers: { "X-Date": "123456789" },
       data: queue,
       compress: false,
     },
@@ -192,7 +195,7 @@ async function sendUpdateActions(explorational, queue) {
 test.serial("Send update actions and compare resulting tracing", async t => {
   const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false);
 
-  const initialSkeleton = { activeNodeId: undefined, userBoundingBox: undefined };
+  const initialSkeleton = { activeNodeId: undefined, userBoundingBoxes: [] };
   const saveQueue = addVersionNumbers(
     createSaveQueueFromUpdateActions(
       [

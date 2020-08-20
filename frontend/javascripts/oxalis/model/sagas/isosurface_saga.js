@@ -33,6 +33,8 @@ import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
+import Toast from "libs/toast";
+import messages from "messages";
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -251,7 +253,11 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   const currentId = yield* call(getCurrentCellId);
   const sceneController = getSceneController();
   const geometry = sceneController.getIsosurfaceGeometry(currentId);
-
+  if (geometry == null) {
+    const errorMessages = messages["tracing.not_isosurface_available_to_download"];
+    Toast.error(errorMessages[0], { sticky: false }, errorMessages[1]);
+    return;
+  }
   const stl = exportToStl(geometry);
 
   // Encode isosurface and cell id property

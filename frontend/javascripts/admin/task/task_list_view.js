@@ -14,6 +14,7 @@ import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
 import Persistence from "libs/persistence";
 import TaskAnnotationView from "admin/task/task_annotation_view";
+import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import TaskSearchForm, {
   type QueryObject,
   type TaskFormFieldValues,
@@ -105,6 +106,33 @@ class TaskListView extends React.PureComponent<Props, State> {
     });
   };
 
+  getFilteredTasks = () => {
+    const { searchQuery, tasks } = this.state;
+    return Utils.filterWithSearchQueryAND(
+      tasks,
+      [
+        "team",
+        "projectName",
+        "id",
+        "dataSet",
+        "created",
+        "type",
+        task => task.neededExperience.domain,
+      ],
+      searchQuery,
+    );
+  };
+
+  downloadSettingsFromAllTasks = async (queryObject: QueryObject) => {
+    await this.fetchData(queryObject);
+    const filteredTasks = this.getFilteredTasks();
+    if (filteredTasks.length > 0) {
+      downloadTasksAsCSV(filteredTasks);
+    } else {
+      Toast.warning(messages["task.no_tasks_to_download"]);
+    }
+  };
+
   getAnonymousTaskLinkModal() {
     const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
     if (!this.state.isAnonymousTaskLinkModalVisible) {
@@ -131,7 +159,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
-    const { searchQuery, isLoading, tasks } = this.state;
+    const { searchQuery, isLoading } = this.state;
 
     return (
       <div className="container">
@@ -156,24 +184,13 @@ class TaskListView extends React.PureComponent<Props, State> {
             onChange={queryObject => this.fetchData(queryObject)}
             initialFieldValues={this.props.initialFieldValues}
             isLoading={isLoading}
+            onDownloadAllTasks={this.downloadSettingsFromAllTasks}
           />
         </Card>
 
         <Spin spinning={isLoading} size="large">
           <FixedExpandableTable
-            dataSource={Utils.filterWithSearchQueryAND(
-              tasks,
-              [
-                "team",
-                "projectName",
-                "id",
-                "dataSet",
-                "created",
-                "type",
-                task => task.neededExperience.domain,
-              ],
-              searchQuery,
-            )}
+            dataSource={this.getFilteredTasks()}
             rowKey="id"
             pagination={{
               defaultPageSize: 50,
@@ -271,7 +288,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                     {status.finished}
                   </span>
                   <br />
-                  <span title="Tracing Time">
+                  <span title="Annotation Time">
                     <Icon type="clock-circle-o" />
                     {formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
@@ -281,14 +298,14 @@ class TaskListView extends React.PureComponent<Props, State> {
             <Column
               title="Action"
               key="actions"
-              width={130}
+              width={170}
               fixed="right"
               render={(__, task: APITask) => (
                 <span>
                   {task.status.finished > 0 ? (
                     <a
                       href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Tracings"
+                      title="View all Finished Annotations"
                     >
                       <Icon type="eye-o" />
                       View
@@ -307,7 +324,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                         const includesVolumeData = task.type.tracingType !== "skeleton";
                         return downloadNml(task.id, "CompoundTask", includesVolumeData);
                       }}
-                      title="Download all Finished Tracings"
+                      title="Download all Finished Annotations"
                     >
                       <Icon type="download" />
                       Download

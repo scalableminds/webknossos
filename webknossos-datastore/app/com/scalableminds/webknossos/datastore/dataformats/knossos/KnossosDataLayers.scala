@@ -42,7 +42,8 @@ case class KnossosDataLayer(
     name: String,
     category: Category.Value,
     sections: List[KnossosSection],
-    elementClass: ElementClass.Value
+    elementClass: ElementClass.Value,
+    defaultViewConfiguration: Option[ColorLayerViewConfiguration] = None
 ) extends KnossosLayer
 
 object KnossosDataLayer {
@@ -53,8 +54,9 @@ case class KnossosSegmentationLayer(
     name: String,
     sections: List[KnossosSection],
     elementClass: ElementClass.Value,
-    mappings: Set[String],
-    largestSegmentId: Long
+    mappings: Option[Set[String]],
+    largestSegmentId: Long,
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
 ) extends SegmentationLayer
     with KnossosLayer
 

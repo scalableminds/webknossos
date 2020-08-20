@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Table, Tooltip, Icon } from "antd";
+import { Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
@@ -43,43 +43,87 @@ type DispatchProps = {|
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
-const shortcutColumns = [
-  {
-    title: "Keyboard Shortcut",
-    dataIndex: "keybinding",
-    key: "keybinding",
-  },
-  {
-    title: "Action",
-    dataIndex: "action",
-    key: "action",
-  },
-];
-
 const shortcuts = [
   {
     key: "1",
-    keybinding: "I,O or Alt + Mousewheel",
+    keybinding: [
+      <span key="zoom-1" className="keyboard-key-icon">
+        I
+      </span>,
+      "/",
+      <span key="zoom-2" className="keyboard-key-icon">
+        O
+      </span>,
+      "or",
+      <span key="zoom-3" className="keyboard-key-icon">
+        ALT
+      </span>,
+      "+",
+      <img
+        key="zoom-4"
+        className="keyboard-mouse-icon"
+        src="/assets/images/icon-mousewheel.svg"
+        alt="Mouse Wheel"
+      />,
+    ],
     action: "Zoom in/out",
   },
   {
     key: "2",
-    keybinding: "Mousewheel or D and F",
+    keybinding: [
+      <img
+        key="move-1"
+        className="keyboard-mouse-icon"
+        src="/assets/images/icon-mousewheel.svg"
+        alt="Mouse Wheel"
+      />,
+      "or",
+      <span key="move-2" className="keyboard-key-icon">
+        D
+      </span>,
+      "/",
+      <span key="move-3" className="keyboard-key-icon">
+        F
+      </span>,
+    ],
     action: "Move Along 3rd Axis",
   },
   {
     key: "3",
-    keybinding: "Left Mouse Drag or Arrow Keys",
+    keybinding: [
+      <img
+        key="move"
+        className="keyboard-mouse-icon"
+        src="/assets/images/icon-mouse-left.svg"
+        alt="Left Mouse Button"
+      />,
+    ],
     action: "Move",
   },
   {
     key: "4",
-    keybinding: "Right Click Drag in 3D View",
+    keybinding: [
+      <img
+        key="rotate"
+        className="keyboard-mouse-icon"
+        src="/assets/images/icon-mouse-right.svg"
+        alt="Right Mouse Button"
+      />,
+      "in 3D View",
+    ],
     action: "Rotate 3D View",
   },
   {
     key: "5",
-    keybinding: "K,L",
+    keybinding: [
+      <span key="scale-1" className="keyboard-key-icon">
+        K
+      </span>,
+      "/",
+      <span key="scale-2" className="keyboard-key-icon">
+        L
+      </span>,
+    ],
     action: "Scale Up/Down Viewports",
   },
 ];
@@ -118,13 +162,29 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
     return isDatasetViewMode ? (
-      <Table
-        dataSource={shortcuts}
-        columns={shortcutColumns}
-        pagination={false}
-        style={{ marginRight: 20, marginTop: 25, marginBottom: 25 }}
-        size="small"
-      />
+      <div style={{ marginBottom: 25 }}>
+        <table style={{ marginRight: 20, marginTop: 25, maxWidth: 500, fontSize: 14 }}>
+          <tbody>
+            {shortcuts.map(shortcut => (
+              <tr
+                key={shortcut.key}
+                style={{ borderBottom: "1px solid #e8e8e8", borderTop: "1px solid #e8e8e8" }}
+              >
+                <td style={{ width: 200 }}>{shortcut.keybinding}</td>
+                <td>{shortcut.action}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <a
+          target="_blank"
+          href="https://docs.webknossos.org/reference/keyboard_shortcuts"
+          rel="noopener noreferrer"
+          style={{ fontSize: 14 }}
+        >
+          More shortcuts…
+        </a>
+      </div>
     ) : null;
   }
 
@@ -148,12 +208,16 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isDatasetViewMode) {
       return (
         <div>
-          <p>Dataset: {displayName || datasetName}</p>
+          <p style={{ wordWrap: "break-word" }}>
+            <strong>{displayName || datasetName}</strong>
+          </p>
           {datasetDescription ? (
-            <Markdown
-              source={datasetDescription}
-              options={{ html: false, breaks: true, linkify: true }}
-            />
+            <div style={{ fontSize: 14 }}>
+              <Markdown
+                source={datasetDescription}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
           ) : null}
         </div>
       );
@@ -168,7 +232,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     let annotationTypeLabel;
 
     const { annotationType, name } = this.props.tracing;
-    const tracingName = name || "<untitled>";
+    const tracingName = name || "[untitled]";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -184,7 +248,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       // Or display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
-          Explorational Tracing:
+          Explorational Annotation:
           <EditableTextLabel
             value={tracingName}
             onChange={this.setAnnotationName}
@@ -193,23 +257,38 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         </span>
       );
     }
-    const tracingDescription = this.props.tracing.description || "<no description>";
+    const tracingDescription = this.props.tracing.description || "[no description]";
+
+    let descriptionEditField;
+    if (this.props.tracing.restrictions.allowUpdate) {
+      descriptionEditField = (
+        <span style={{ verticalAlign: "top" }}>
+          Description:
+          <EditableTextLabel
+            value={tracingDescription}
+            onChange={this.setAnnotationDescription}
+            rows={4}
+            markdown
+            label="Annotation Description"
+          />
+        </span>
+      );
+    } else {
+      descriptionEditField = (
+        <span style={{ verticalAlign: "top" }}>
+          Description:
+          <Markdown
+            source={tracingDescription}
+            options={{ html: false, breaks: true, linkify: true }}
+          />
+        </span>
+      );
+    }
 
     return (
       <div className="flex-overflow">
-        <p>{annotationTypeLabel}</p>
-        <p>
-          <span style={{ verticalAlign: "top" }}>
-            Description:
-            <EditableTextLabel
-              value={tracingDescription}
-              onChange={this.setAnnotationDescription}
-              rows={4}
-              markdown
-              label="Annotation Description"
-            />
-          </span>
-        </p>
+        <div>{annotationTypeLabel}</div>
+        <div>{descriptionEditField}</div>
       </div>
     );
   }
@@ -233,7 +312,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     if (isHybrid) {
       return (
         <p>
-          Tracing Type:{" "}
+          Annotation Type:{" "}
           <Tooltip title="Skeleton and Volume">
             Hybrid <Icon type="info-circle-o" />
           </Tooltip>
@@ -242,7 +321,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     } else {
       return (
         <p>
-          Tracing Type: {isVolume ? "Volume" : "Skeleton"}
+          Annotation Type: {isVolume ? "Volume" : "Skeleton"}
           {allowUpdate && isExplorational ? (
             <ButtonComponent
               style={{ marginLeft: 10 }}
@@ -290,28 +369,38 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
     const resolutionInfo =
       activeResolution != null ? (
-        <div className="info-tab-block">
-          Active Resolution: {activeResolution.join("-")}{" "}
-          <Tooltip
-            title={
-              <div>
-                This dataset contains the following resolutions:
-                <ul>
-                  {resolutions.map(r => (
-                    <li key={r.join()}>{r.join("-")}</li>
-                  ))}
-                </ul>
-              </div>
-            }
-            placement="right"
-          >
-            <Icon type="info-circle" />
-          </Tooltip>
-        </div>
+        <Tooltip
+          title={
+            <div>
+              Currently rendered resolution {activeResolution.join("-")}.<br />
+              <br />
+              Available resolutions:
+              <ul>
+                {resolutions.map(r => (
+                  <li key={r.join()}>{r.join("-")}</li>
+                ))}
+              </ul>
+            </div>
+          }
+          placement="left"
+        >
+          <tr>
+            <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+              <img
+                src="/assets/images/icon-downsampling.svg"
+                style={{ width: 24, height: 24 }}
+                alt="Resolution"
+              />
+            </td>
+            <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+              {activeResolution.join("-")}
+            </td>
+          </tr>
+        </Tooltip>
       ) : null;
 
     return (
-      <div className="flex-overflow padded-tab-content">
+      <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
         <div className="info-tab-block">
           {this.getTracingName(isDatasetViewMode)}
           {this.getTracingType(isDatasetViewMode)}
@@ -320,22 +409,39 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         </div>
 
         <div className="info-tab-block">
-          <p>Dataset Scale: {formatScale(this.props.dataset.dataSource.scale)}</p>
-          <table>
+          <table style={{ fontSize: 14 }}>
             <tbody>
-              <tr>
-                <td style={{ paddingRight: 8 }}>Dataset Extent:</td>
-                <td>{extentInVoxel}</td>
-              </tr>
-              <tr>
-                <td />
-                <td>{extentInLength}</td>
-              </tr>
+              <Tooltip title="Dataset voxel size" placement="left">
+                <tr>
+                  <td style={{ paddingRight: 4, verticalAlign: "top" }}>
+                    <img
+                      src="/assets/images/icon-voxelsize.svg"
+                      style={{ width: 24, height: 24 }}
+                      alt="Voxel size"
+                    />
+                  </td>
+                  <td>{formatScale(this.props.dataset.dataSource.scale)}</td>
+                </tr>
+              </Tooltip>
+              <Tooltip title="Dataset extent" placement="left">
+                <tr>
+                  <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
+                    <img
+                      src="/assets/images/icon-extent.svg"
+                      style={{ width: 24, height: 24 }}
+                      alt="Dataset extent"
+                    />
+                  </td>
+                  <td style={{ paddingTop: 10 }}>
+                    {extentInVoxel}
+                    <br /> {extentInLength}
+                  </td>
+                </tr>
+              </Tooltip>
+              {resolutionInfo}
             </tbody>
           </table>
         </div>
-
-        {resolutionInfo}
 
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}

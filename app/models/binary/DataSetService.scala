@@ -50,6 +50,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     with LazyLogging {
 
   val unreportedStatus = "No longer available on datastore."
+  val initialTeamsTimeoutMs: Long = 5 * 60 * 1000
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
@@ -78,6 +79,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           organization._id,
           publication,
           Some(dataSource.hashCode()),
+          dataSource.defaultViewConfiguration,
           None,
           None,
           None,
@@ -117,12 +119,8 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
-    logger.info(
-      s"[${dataStore.name}] Available datasets: " +
-        s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
 
     val groupedByOrga = dataSources.groupBy(_.id.team).toList
-
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
         organizationDAO
@@ -167,13 +165,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     if (foundDataSet.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataSet._id)
     else
-      dataSetDAO
-        .updateDataSourceByNameAndOrganizationName(foundDataSet._id,
-                                                   dataStore.name,
-                                                   dataSource.hashCode,
-                                                   dataSource,
-                                                   dataSource.isUsable)(GlobalAccessContext)
-        .map(_ => foundDataSet._id)
+      for {
+        _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
+                                                                  dataStore.name,
+                                                                  dataSource.hashCode,
+                                                                  dataSource,
+                                                                  dataSource.isUsable)(GlobalAccessContext)
+        _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
+      } yield foundDataSet._id
 
   private def updateDataSourceDifferentDataStore(
       foundDataSet: DataSet,
@@ -183,16 +182,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataSet._dataStore)
     } yield {
-      if (originalDataStore.isScratch && !dataStore.isScratch) {
+      if (originalDataStore.isScratch && !dataStore.isScratch || isUnreported(foundDataSet)) {
         logger.info(
-          s"Replacing dataset ${foundDataSet.name} from scratch datastore ${originalDataStore.name} by the one from ${dataStore.name}")
-        dataSetDAO
-          .updateDataSourceByNameAndOrganizationName(foundDataSet._id,
-                                                     dataStore.name,
-                                                     dataSource.hashCode,
-                                                     dataSource,
-                                                     dataSource.isUsable)(GlobalAccessContext)
-          .map(_ => Some(foundDataSet._id))
+          s"Replacing dataset ${foundDataSet.name} (status: ${foundDataSet.status}) from datastore ${originalDataStore.name} by the one from ${dataStore.name}"
+        )
+        for {
+          _ <- dataSetDAO.updateDataSourceByNameAndOrganizationName(foundDataSet._id,
+                                                                    dataStore.name,
+                                                                    dataSource.hashCode,
+                                                                    dataSource,
+                                                                    dataSource.isUsable)(GlobalAccessContext)
+          _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
+        } yield Some(foundDataSet._id)
       } else {
         logger.info(
           s"Dataset ${foundDataSet.name}, as reported from ${dataStore.name} is already present from datastore ${originalDataStore.name} and will not be replaced.")
@@ -299,12 +300,29 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     userOpt match {
       case Some(user) =>
         for {
-          isTeamManagerInOrg <- userService.isTeamManagerInOrg(user, dataSet._organization, userTeamManagerMemberships)
-        } yield user.isAdminOf(dataSet._organization) || isTeamManagerInOrg
+          dataSetAllowedTeams <- dataSetAllowedTeamsDAO.findAllForDataSet(dataSet._id)
+          teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
+            userService.teamManagerMembershipsFor(user._id))
+        } yield
+          (user.isAdminOf(dataSet._organization)
+            || user.isDatasetManager
+            || teamManagerMemberships.map(_.teamId).intersect(dataSetAllowedTeams).nonEmpty)
       case _ => Fox.successful(false)
     }
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
+
+  def addInitialTeams(dataSet: DataSet, user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
+      previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
+      _ <- bool2Fox(previousDatasetTeams.isEmpty) ?~> "dataSet.initialTeams.teamsNotEmpty"
+      userTeams <- teamDAO.findAllEditable
+      userTeamIds = userTeams.map(_._id)
+      teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
+      _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+    } yield ()
 
   def publicWrites(dataSet: DataSet,
                    requestingUserOpt: Option[User],
@@ -321,13 +339,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       lastUsedByUser <- lastUsedTimeFor(dataSet._id, requestingUserOpt)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       dataSource <- dataSourceFor(dataSet, Some(organization), skipResolutions)
-      dataSourceWith64BitSupport = dataSource.toUsable.map(replaceUint64Layers).getOrElse(dataSource)
       publicationOpt <- Fox.runOptional(dataSet._publication)(publicationDAO.findOne(_))
       publicationJson <- Fox.runOptional(publicationOpt)(publicationService.publicWrites)
     } yield {
       Json.obj(
         "name" -> dataSet.name,
-        "dataSource" -> dataSourceWith64BitSupport,
+        "dataSource" -> dataSource,
         "dataStore" -> dataStoreJs,
         "owningOrganization" -> organization.name,
         "allowedTeams" -> teamsJs,
@@ -346,16 +363,4 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         "isForeign" -> dataStore.isForeign
       )
     }
-
-  private def replaceUint64Layers(dataSource: GenericDataSource[DataLayer]) = {
-    val newLayers = dataSource.dataLayers.map {
-      case l: WKWSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
-      case l: AbstractSegmentationLayer if l.elementClass == ElementClass.uint64 =>
-        l.copy(elementClass = ElementClass.uint32)
-      case l => l
-    }
-
-    dataSource.copy(dataLayers = newLayers)
-  }
 }

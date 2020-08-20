@@ -4,7 +4,7 @@ The following HTTP requests may be used to interact with the backend of webKnoss
 
 ## Authentication
 
-All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly below “logout”.
+All API routes expect the HTTP header `X-Auth-Token` to be set to your personal webKnossos token. You can find this token in the webKnossos menu, directly above “logout”.
 
 ## Versioning
 
@@ -14,9 +14,11 @@ The API is subject to frequent changes. However, older versions will be supporte
 
 New versions will be documented here, detailing the changes. Note, however, that some changes are not considered to be breaking the API and will not lead to new versions. Such changes include new optional parameters as well as new fields in the responses. The same goes for error message wording.
 
-### Current api version is `v2`
+### Current api version is `v3`
 
-In comparison to `v1` the annotation `isPublic` flag was replaced by a `visibility` field. This field can have the following values: `Public, Internal, Private`.
+* New in v3: the info and finish requests of annotations now expect an additional `timestamp` GET parameter that should be set to the time the request is sent (e.g. Date.now()).
+
+* New in v2: in comparison to `v1` the annotation `isPublic` flag was replaced by a `visibility` field. This field can have the following values: `Public, Internal, Private`.
 
 
 ## Routes
@@ -72,8 +74,8 @@ List your own task annotations
  - JSON list of objects containing annotation information about your own task annotations, also including task and task type information
  - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
 
-#### `v1` differences
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 ---
 ### `GET /user/annotations`
@@ -95,8 +97,8 @@ List your own explorative annotations
  - JSON list of objects containing annotation information about your own explorative annotations
  - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
-#### `v1` differences
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 
 
@@ -131,10 +133,10 @@ List the task annotations of a user
  - JSON list of objects containing annotation information about the task annotations of the user, also including task and task type information
  - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
  - total count of task annotations in the HTTP header `X-Total-Count` if parameter is set
- 
- 
-#### `v1` differences
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field 
+
+
+#### Changes Introduced in `v2`
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 ---
 ### `GET /users/:id/annotations`
@@ -157,8 +159,8 @@ List the explorative annotations of a user
  - JSON list of objects containing annotation information about the explorative annotations of the user
  - total count of explorative annotations in the HTTP header `X-Total-Count` if parameter is set
 
-#### `v1` differences
- - The annotation objects int the returned JSON contain the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The annotation objects in the returned JSON contain the `visibility` field instead of the old `isPublic` field
 
 
 ---
@@ -225,14 +227,15 @@ Create a new datastore
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
     - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
-    
+    - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
+
 
 #### Returns
  - JSON object containing information about the newly created datastore
- 
+
 #### Note
  - This route is only accessible for administrators.
- 
+
 ---
 ### `DELETE /datastores/:name`
 
@@ -240,10 +243,10 @@ Deletes a datastore from the wk database
 
 #### Expects
  - In the url: `:name` - the name of the datastore which should be deleted
- 
+
 #### Note
  - This route is only accessible for administrators.
- 
+
 ---
 ### `PUT /datastores/:name`
 
@@ -258,14 +261,15 @@ Update an existing datastore
     - `"isScratch"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is hosted on a scratch/experimental environment
     - `"isForeign"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore belongs to this wk instance or belongs to a foreign wk instance
     - `"isConnector"` `[BOOLEAN]` (optional, default: `false`) whether or not the datastore is a wk-connect instance
-    
+    - `"allowsUpload"` `[BOOLEAN]` (optional, default: `true`) whether or not the datastore supports dataset upload via browser
+
 
 #### Returns
  - JSON object containing information about the updated datastore
- 
+
 #### Note
  - This route is only accessible for administrators.
- 
+
 ---
 ### `PUT /tracingstores/:name`
 
@@ -277,10 +281,10 @@ Update an existing tracingstore
     - `"name"` `[STRING]` name of the tracingstore
     - `"url"` `[STRING]` url from the tracingstore, used for communication with wk
     - `"publicUrl"` `[STRING]` publicly accessible url from the tracingstore, used for user facing links
-    
+
 #### Returns
  - JSON object containing information about the updated tracingstore
- 
+
 #### Note
  - This route is only accessible for administrators.
 
@@ -294,6 +298,7 @@ Update an existing tracingstore
    - for `CompoundTask` `:id` is a task id
    - for `CompoundProject` `:id` is a project id
    - for `CompoundTaskType` `:id` is a task type id
+ - GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
 
 #### Returns
  - JSON object containing annotation information about the selected annotation
@@ -302,8 +307,11 @@ Update an existing tracingstore
 
 The compound annotations are created as merged from the finished annotations associated with the Task/Project/TaskType. This merging is performed before this info request is answered and can be slow for large numbers of annotations. The merged annotations are then stored in a cache for a few minutes, but not on disk. If requested again within this time, the request will be answered more quickly, but newly finished annotations will not be included yet. This cache is shared between this info request and the download request.
 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v3`
+ - Expects additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
+
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `GET /annotations/:typ/:id/download`
@@ -315,9 +323,9 @@ Download an annotation as NML/ZIP
 
 #### Returns
  - As chunked file stream:
-   - In case of an explorative annotation with a volume tracing:
+   - In case of a volume annotation:
      - A ZIP file containing both an NML file and a data.zip file with the volume data
-   - In case of a single explorative or task annotation with no volume tracing:
+   - In case of a single explorative or task annotation with no volume annotation:
      - A single NML file
    - In case of compound downloads (CompoundTask/CompoundProject/CompoundTaskType):
      - A ZIP file containing individual NML files for all associated annotations
@@ -346,9 +354,9 @@ Duplicate an annotation (“copy to my account”)
 
 #### Returns
  - JSON object containing annotation information about the newly created (duplicated) annotation, including the assigned id
- 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 
 ---
@@ -368,8 +376,8 @@ Edit metadata of an annotation
 #### Returns
  - JSON object containing annotation information about the edited annotation
 
-#### `v1` differences
- - The request and returned JSON contain the `isPublic` `[BOOLEAN]` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The request and returned JSON contain the `isPublic` `[BOOLEAN]` flag instead of the `visibility` field
 
 ---
 ### `PATCH /annotations/:typ/:id/finish`
@@ -377,12 +385,16 @@ Edit metadata of an annotation
 #### Expects
  - In the url: `:typ` – one of `Task`, `Explorational`
  - In the url: `:id` an annotation id
+ - GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
 
 #### Returns
  - JSON object containing annotation information about the finished annotation
- 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+
+#### Changes Introduced in `v3`
+ - Expects additional GET parameter `timestamp=[INT]` timestamp in milliseconds (time the request is sent)
+
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 
 ---
@@ -395,8 +407,8 @@ Edit metadata of an annotation
 #### Returns
  - JSON object containing annotation information about the reopened annotation
 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `PUT /annotations/Task/:id/reset`
@@ -409,8 +421,8 @@ Reset a task annotation to its base state
 #### Returns
  - JSON object containing annotation information about the reset task annotation
 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `POST /annotations/:typ/:id/merge/:mergedTyp/:mergedId`
@@ -424,8 +436,8 @@ Merge two annotations, creating a new explorative.
 #### Returns
  - JSON object containing annotation information about the merged annotation
 
-#### `v1` differences
- - The returned JSON contains the `isPublic` flag instead of the `visibility` field 
+#### Changes Introduced in `v2`
+ - The returned JSON contains the `visibility` field instead of the `isPublic` flag
 
 ---
 ### `POST /tasks`
@@ -561,8 +573,8 @@ List annotations of a task
  - JSON list of objects containing annotation information on the annotations of the task
  - Cancelled annotations are not returned
 
-#### `v1` differences
- - The annotation objects in the returned JSON contain the `isPublic` flag instead of the `visibility` field
+#### Changes Introduced in `v2`
+ - The annotation objects in the returned JSON contain the `visibility` flag instead of the `isPublic` field
 
 ---
 ### `GET /projects`

@@ -2,8 +2,9 @@
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs } from "antd";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { PureComponent } from "react";
 import _ from "lodash";
+import * as Utils from "libs/utils";
 
 import type { APIUser } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -11,11 +12,15 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
+import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
+import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
+import { WhatsNextBanner } from "admin/onboarding";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
+import features from "features";
 
 const { TabPane } = Tabs;
 
@@ -33,23 +38,30 @@ type PropsWithRouter = {| ...Props, history: RouterHistory |};
 type State = {
   activeTabKey: string,
   user: ?APIUser,
+  showWhatsNextBanner: boolean,
 };
 
 export const urlTokenToTabKeyMap = {
+  publications: "publications",
   datasets: "datasets",
   tasks: "tasks",
   annotations: "explorativeAnnotations",
   shared: "sharedAnnotations",
 };
 
-class DashboardView extends React.PureComponent<PropsWithRouter, State> {
+class DashboardView extends PureComponent<PropsWithRouter, State> {
   constructor(props: PropsWithRouter) {
     super(props);
 
     const validTabKeys = this.getValidTabKeys();
     const { initialTabKey } = this.props;
     const lastUsedTabKey = UserLocalStorage.getItem("lastUsedDashboardTab");
-    const defaultTabKey = this.props.isAdminView ? "tasks" : "datasets";
+    let defaultTabKey = "datasets";
+    if (this.props.isAdminView) {
+      defaultTabKey = "tasks";
+    } else if (features().isDemoInstance) {
+      defaultTabKey = "publications";
+    }
 
     // Flow doesn't allow validTabKeys[key] where key may be null, so check that first
     const activeTabKey =
@@ -59,6 +71,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     this.state = {
       activeTabKey,
       user: null,
+      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner") === "true",
     };
   }
 
@@ -90,6 +103,7 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
     const { isAdminView } = this.props;
 
     return {
+      publications: features().isDemoInstance,
       datasets: !isAdminView,
       tasks: true,
       explorativeAnnotations: true,
@@ -102,15 +116,20 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       const validTabKeys = this.getValidTabKeys();
 
       return [
+        validTabKeys.publications ? (
+          <TabPane tab="Featured Publications" key="publications">
+            <PublicationViewWithHeader />
+          </TabPane>
+        ) : null,
         validTabKeys.datasets ? (
-          <TabPane tab="Datasets" key="datasets">
+          <TabPane tab="My Datasets" key="datasets">
             <DatasetView user={user} />
           </TabPane>
         ) : null,
-        <TabPane tab="Tasks" key="tasks">
+        <TabPane tab="My Tasks" key="tasks">
           <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
         </TabPane>,
-        <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
+        <TabPane tab="My Annotations" key="explorativeAnnotations">
           <ExplorativeAnnotationsView
             isAdminView={this.props.isAdminView}
             userId={this.props.userId}
@@ -153,13 +172,20 @@ class DashboardView extends React.PureComponent<PropsWithRouter, State> {
       </h3>
     ) : null;
 
+    const whatsNextBanner = this.state.showWhatsNextBanner ? (
+      <WhatsNextBanner activeUser={this.props.activeUser} />
+    ) : null;
+
     return (
-      <NmlUploadZoneContainer onImport={this.uploadNmls} isAllowed>
-        <div className="container">
+      <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
+        <div className="container" style={{ paddingBottom: 50 }}>
+          {whatsNextBanner}
           {userHeader}
-          <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
-            {this.getTabs(user)}
-          </Tabs>
+          <DatasetCacheProvider>
+            <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>
+              {this.getTabs(user)}
+            </Tabs>
+          </DatasetCacheProvider>
         </div>
       </NmlUploadZoneContainer>
     );

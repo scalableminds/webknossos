@@ -29,6 +29,7 @@ import {
   updateTreeVisibility,
   updateNode,
   updateSkeletonTracing,
+  updateUserBoundingBoxes,
   updateTree,
   updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
@@ -181,8 +182,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
       "SELECT_NEXT_TREE",
       "DELETE_TREE",
       "DELETE_GROUP_AND_TREES",
-      "UNDO",
-      "REDO",
+      "CENTER_ACTIVE_NODE",
     ],
     centerActiveNode,
   );
@@ -247,11 +247,7 @@ function updateTracingPredicate(
   prevFlycam: Flycam,
   flycam: Flycam,
 ): boolean {
-  return (
-    !_.isEqual(prevSkeletonTracing.userBoundingBox, skeletonTracing.userBoundingBox) ||
-    prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId ||
-    prevFlycam !== flycam
-  );
+  return prevSkeletonTracing.activeNodeId !== skeletonTracing.activeNodeId || prevFlycam !== flycam;
 }
 
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
@@ -339,5 +335,8 @@ export function* diffSkeletonTracing(
       getRotation(flycam),
       flycam.zoomStep,
     );
+  }
+  if (!_.isEqual(prevSkeletonTracing.userBoundingBoxes, skeletonTracing.userBoundingBoxes)) {
+    yield updateUserBoundingBoxes(skeletonTracing.userBoundingBoxes);
   }
 }

@@ -563,7 +563,9 @@ class DataApi {
   }
 
   /**
-   * Returns the bounding box for a given layer name.
+   * Returns the bounding box for a given layer name. Note that the described interval
+     is half-open, meaning that the lowerBoundary is included and the upperBoundary is not
+     included in the bounding box.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
     const { lowerBoundary, upperBoundary } = getLayerBoundaries(
@@ -670,6 +672,7 @@ class DataApi {
      - layers
      - quality
      - highlightHoveredCellId
+     - segmentationPatternOpacity
      - renderMissingDataBlack
    *
    * @example
@@ -686,7 +689,7 @@ class DataApi {
    * @example
    * api.data.setConfiguration("segmentationOpacity", 20);
    */
-  setConfiguration(key: $Keys<DatasetConfiguration>, value) {
+  setConfiguration(key: $Keys<DatasetConfiguration>, value: any) {
     Store.dispatch(updateDatasetSettingAction(key, value));
   }
 }
@@ -741,7 +744,7 @@ class UserApi {
    * @example
    * api.user.setConfiguration("keyboardDelay", 20);
    */
-  setConfiguration(key: $Keys<UserConfiguration>, value) {
+  setConfiguration(key: $Keys<UserConfiguration>, value: any) {
     Store.dispatch(updateUserSettingAction(key, value));
   }
 }
@@ -766,7 +769,7 @@ class UtilsApi {
    * @example // Wait for 5 seconds
    * await api.utils.sleep(5000);
    */
-  sleep(milliseconds: number) {
+  sleep(milliseconds: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 

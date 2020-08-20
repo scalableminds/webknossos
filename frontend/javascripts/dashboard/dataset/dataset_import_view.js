@@ -4,10 +4,11 @@ import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip, Modal, Input } fr
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
+import { connect } from "react-redux";
 
 import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
-import type { DatasetConfiguration } from "oxalis/store";
-import { datasetCache } from "dashboard/dataset_view";
+import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
@@ -23,11 +24,14 @@ import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
+import features from "features";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
-import { Hideable, confirmAsync, hasFormError, jsonEditStyle } from "./helper_components";
+import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
+import ImportSharingComponent from "./import_sharing_component";
+import ImportDeleteComponent from "./import_delete_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
@@ -35,13 +39,19 @@ const FormItem = Form.Item;
 
 const notImportedYetStatus = "Not imported yet.";
 
-type Props = {
+type OwnProps = {|
   form: Object,
   datasetId: APIDatasetId,
   isEditingMode: boolean,
   onComplete: () => void,
   onCancel: () => void,
-};
+|};
+
+type StateProps = {|
+  isUserAdmin: boolean,
+|};
+
+type Props = {| ...OwnProps, ...StateProps |};
 
 type TabKey = "data" | "general" | "defaultConfig";
 
@@ -148,16 +158,23 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           }),
         ),
       };
+      const layers = datasetDefaultConfiguration.layers || {};
       // Remove unused brightness and contrast config and replace it with intensityRange if needed.
-      const { layers } = datasetDefaultConfiguration;
-      for (const layerConfig of _.values(layers)) {
-        delete layerConfig.brightness;
-        delete layerConfig.contrast;
-        // We want to intentionally manipulate the intensityRange although intensityRange is read-only.
-        const writeableLayerConfig = (layerConfig: any);
-        writeableLayerConfig.intensityRange = layerConfig.intensityRange || [0, 255];
-      }
+      dataSource.dataLayers.forEach(layer => {
+        if (layer.category !== "color") {
+          return;
+        }
+        const currentColorLayerConfig = layers[layer.name];
+        if (currentColorLayerConfig == null) {
+          return;
+        }
 
+        delete currentColorLayerConfig.brightness;
+        delete currentColorLayerConfig.contrast;
+        // We want to intentionally manipulate the intensityRange although intensityRange is read-only.
+        const writeableLayerConfig = (currentColorLayerConfig: any);
+        writeableLayerConfig.intensityRange = currentColorLayerConfig.intensityRange || [0, 255];
+      });
       this.props.form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
         defaultConfigurationLayersJson: JSON.stringify(layers, null, "  "),
@@ -277,23 +294,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
-  async doesUserWantToChangeAllowedTeams(teamIds: Array<string>): Promise<boolean> {
-    if (teamIds.length > 0) {
-      return false;
-    }
-    return !(await confirmAsync({
-      title: "Are you sure?",
-      content: (
-        <p>
-          You did not specify any teams, for which this dataset should be visible. This means that
-          only administrators and team managers will be able to view this dataset.
-          <br /> Please hit &ldquo;Cancel&rdquo; if you would like to review the team permissions in
-          the &ldquo;General&rdquo; tab.
-        </p>
-      ),
-    }));
-  }
-
   handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
     // Ensure that all form fields are in sync
@@ -310,9 +310,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         datasetChangeValues.sortingKey = datasetChangeValues.sortingKey.valueOf();
       }
       const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
-      if (await this.doesUserWantToChangeAllowedTeams(teamIds)) {
-        return;
-      }
 
       await updateDataset(this.props.datasetId, Object.assign({}, dataset, datasetChangeValues));
 
@@ -435,7 +432,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { form } = this.props;
+    const { form, isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
       this.props.isEditingMode ||
@@ -501,22 +498,29 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     />
                   </Hideable>
                 </TabPane>
+
                 <TabPane
                   tab={
                     <span>
-                      {" "}
-                      General {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
+                      Sharing & Permissions{" "}
+                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
                     </span>
                   }
-                  key="general"
+                  key="sharing"
                   forceRender
                 >
-                  <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <ImportGeneralComponent
+                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
+                    <ImportSharingComponent
                       form={form}
                       datasetId={this.props.datasetId}
                       hasNoAllowedTeams={_hasNoAllowedTeams}
                     />
+                  </Hideable>
+                </TabPane>
+
+                <TabPane tab={<span>Metadata</span>} key="general" forceRender>
+                  <Hideable hidden={this.state.activeTabKey !== "general"}>
+                    <ImportGeneralComponent form={form} />
                   </Hideable>
                 </TabPane>
 
@@ -529,6 +533,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     <DefaultConfigComponent form={form} />
                   </Hideable>
                 </TabPane>
+
+                {isUserAdmin && features().allowDeleteDatasets ? (
+                  <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
+                    <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
+                      <DatasetCacheProvider>
+                        <ImportDeleteComponent datasetId={this.props.datasetId} />
+                      </DatasetCacheProvider>
+                    </Hideable>
+                  </TabPane>
+                ) : null}
               </Tabs>
             </Card>
             <FormItem>
@@ -545,4 +559,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(DatasetImportView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
+});
+
+export default Form.create()(
+  connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetImportView),
+);

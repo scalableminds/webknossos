@@ -20,8 +20,8 @@ Try webKnossos on a large selection of published datasets: [https://webknossos.o
 * Exploration of large 3D image datasets
 * Fully browser-based user experience with efficient data streaming
 * Creation/editing of skeleton and volume annotations
-* [Innovative flight mode for fast skeleton tracing](https://www.nature.com/articles/nmeth.4331)
-* Optimized performance for large tracings
+* [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
+* Optimized performance for large annotations
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
@@ -45,9 +45,8 @@ Try webKnossos on a large selection of published datasets: [https://webknossos.o
 
 webKnossos was developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
 
-If you need help with webKnossos, there is a [Community Support forum](https://support.webknososs.org) where members of the community and scalable minds are happy to answer your questions.
-[scalable minds](https://scalableminds.com) also offers commercial support, managed hosting and feature development services.
-[Please contact us](mailto:hello@scalableminds.com) if you want to learn more.
+If you need help with webKnossos, feel free to contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
+scalable minds also offers [commercial support, managed hosting and feature development services](https://webknossos.org/pricing).
 
 <!--
 ## Labs that use webKnossos

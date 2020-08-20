@@ -1,18 +1,16 @@
 // @flow
-import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
+import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
 import React from "react";
 
-import type { APIOrganization } from "admin/api_flow_types";
-import { loginUser, getOrganizations } from "admin/admin_rest_api";
+import { type APIOrganization } from "admin/api_flow_types";
+import { loginUser, getOrganization } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";
 import Store from "oxalis/throttled_store";
 import messages from "messages";
-import features from "features";
 import { setHasOrganizationsAction } from "oxalis/model/actions/ui_actions";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 const { Password } = Input;
 
 type Props = {|
@@ -28,13 +26,13 @@ type Props = {|
 
 type State = {
   confirmDirty: boolean,
-  organizations: Array<APIOrganization>,
+  organization: ?APIOrganization,
 };
 
 class RegistrationForm extends React.PureComponent<Props, State> {
   state = {
     confirmDirty: false,
-    organizations: [],
+    organization: null,
   };
 
   componentDidMount() {
@@ -47,18 +45,17 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       return;
     }
 
-    this.setState({ organizations: await getOrganizations() });
-    this.validateOrganizationName();
+    if (this.props.organizationName != null) {
+      this.setState({ organization: await getOrganization(this.props.organizationName) });
+      this.validateOrganizationName();
+    }
   }
 
   validateOrganizationName() {
-    if (!this.props.organizationName) {
+    if (this.props.organizationName == null) {
       return;
     }
-    if (
-      this.state.organizations.find(org => org.name === this.props.organizationName) == null &&
-      this.props.onOrganizationNameNotFound
-    ) {
+    if (this.state.organization == null && this.props.onOrganizationNameNotFound) {
       this.props.onOrganizationNameNotFound();
     }
   }
@@ -79,9 +76,7 @@ class RegistrationForm extends React.PureComponent<Props, State> {
 
       Store.dispatch(setHasOrganizationsAction(true));
 
-      const organization = this.state.organizations.find(
-        org => org.name === formValues.organization,
-      );
+      const { organization } = this.state;
       const autoVerified = organization != null ? organization.enableAutoVerify : false;
 
       const tryAutoLogin = this.props.tryAutoLogin || autoVerified;
@@ -129,39 +124,40 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       // - the organization is specified via the URL
       // Thus, the organization field is hidden.
       return (
-        <FormItem style={{ display: "none" }}>
-          {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
-            <Input type="text" />,
-          )}
-        </FormItem>
+        <>
+          <FormItem style={{ display: "none" }}>
+            {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
+              <Input type="text" />,
+            )}
+          </FormItem>
+          <FormItem style={{ display: "none" }}>
+            {getFieldDecorator("organizationDisplayName", {
+              initialValue: this.props.organizationName,
+            })(<Input type="text" />)}
+          </FormItem>
+        </>
       );
     }
 
-    const { defaultOrganization } = features();
-    const doesDefaultOrganizationExist =
-      this.state.organizations.find(organization => organization.name === defaultOrganization) !=
-      null;
-
     return (
-      <FormItem hasFeedback>
-        {getFieldDecorator("organization", {
-          rules: [
-            {
-              required: true,
-              message: messages["auth.registration_org_input"],
-            },
-          ],
-          initialValue: doesDefaultOrganizationExist ? defaultOrganization : undefined,
-        })(
-          <Select placeholder="Organization">
-            {this.state.organizations.map(organization => (
-              <Option value={organization.name} key={organization.name}>
-                {organization.displayName}
-              </Option>
-            ))}
-          </Select>,
-        )}
-      </FormItem>
+      <>
+        <FormItem style={{ display: "none" }}>
+          {getFieldDecorator("organizationDisplayName", { initialValue: "" })(
+            <Input type="text" />,
+          )}
+        </FormItem>
+        <FormItem hasFeedback>
+          {getFieldDecorator("organization", {
+            rules: [
+              {
+                required: true,
+                message: messages["auth.registration_org_input"],
+              },
+            ],
+            initialValue: this.props.organizationName,
+          })(<Input type="text" disabled />)}
+        </FormItem>
+      </>
     );
   }
 

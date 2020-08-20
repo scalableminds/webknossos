@@ -50,7 +50,7 @@ jobs:
           command: tools/postgres/assert_unique_evolution_numbers.sh
       - run:
           name: Install frontend dependencies
-          command: docker-compose run base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
       - restore_cache:
           name: Restore webpack-uglifyjs cache
           keys:
@@ -79,11 +79,11 @@ jobs:
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt "project webknossosTracingstore" compile stage
+          command: docker-compose run base sbt "project webknossosTracingstore" copyMessages compile stage
 
       - save_cache:
           name: Save target cache
@@ -173,8 +173,11 @@ jobs:
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            sleep 10
-            curl --fail --retry 3 --max-time 15 -v http://localhost:9090/data/health
+            for i in {1..10}; do # retry
+              sleep 10
+              curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
+            done
+            (exit $s)
       - run:
           name: Stop webknossos-datastore
           command: docker-compose down --volumes --remove-orphans
@@ -186,8 +189,11 @@ jobs:
       - run:
           name: Run webknossos-tracingstore smoke test
           command: |
-            sleep 30
-            curl --fail --retry 3 --max-time 15 -v http://localhost:9050/tracings/health
+            for i in {1..10}; do # retry
+              sleep 10
+              curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
+            done
+            (exit $s)
       - run:
           name: Stop webknossos-tracingstore
           command: docker-compose down --volumes --remove-orphans
@@ -280,7 +286,6 @@ workflows:
           filters:
             tags:
               only: /.*/
-
   circleci_nightly:
     jobs:
       - nightly

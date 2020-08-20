@@ -6,7 +6,7 @@ import CreditsFooter from "components/credits_footer";
 import { SocialMediaBlock } from "pages/frontpage/features_view";
 import { trackAction } from "oxalis/model/helpers/analytics";
 
-export const bgColorLight = "hsl(208, 30%, 88%)";
+export const bgColorLight = "hsl(214, 28%, 95%)";
 export const bgColorDark = "hsl(208, 100%, 46%)";
 
 const PricingColumn = ({
@@ -151,7 +151,7 @@ const PricingView = () => (
             "Suggest new datasets for publication",
             "Community Support",
             "All webKnossos features",
-            <Link to="/onboarding" key="link-to-onboarding">
+            <Link to="/" key="link-to-onboarding">
               <Button
                 size="large"
                 style={{ marginTop: 20 }}
@@ -280,7 +280,7 @@ const PricingView = () => (
         <FAQItem title="How do I get started?">
           <p>
             You can try webKnossos for free with any of public dataset here on webknossos.org.{" "}
-            <Link to="/onboarding" onClick={() => trackAction("[Pricing] CreateFreeAccount")}>
+            <Link to="/" onClick={() => trackAction("[Pricing] CreateFreeAccount")}>
               Create a free account today.
             </Link>
           </p>
@@ -453,6 +453,12 @@ const PricingView = () => (
             </a>
             . webKnossos is methodically proven and published in{" "}
             <a href="https://dx.doi.org/10.1038/nmeth.4331">Nature Methods (2017) 14, 691-694</a>.
+          </p>
+          <p>
+            Check out{" "}
+            <a href="https://github.com/scalableminds/webknossos">the instructions on Github</a> to
+            deploy your own instance of webKnossos. If that is too much trouble, you can find all
+            features here on <a href="https://webknossos.org">webknossos.org</a> as well.
           </p>
           <p>
             All hosting plans on this website are executed and handled exclusively by scalable

@@ -344,12 +344,15 @@ class BinaryDataController @Inject()(
             (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
             segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages(
               "dataLayer.mustBeSegmentation")
-            isosurfaceRequest = IsosurfaceRequest(dataSource,
-                                                  segmentationLayer,
-                                                  request.body.cuboid(dataLayer),
-                                                  request.body.segmentId,
-                                                  request.body.voxelDimensions,
-                                                  request.body.mapping)
+            isosurfaceRequest = IsosurfaceRequest(
+              dataSource,
+              segmentationLayer,
+              request.body.cuboid(dataLayer),
+              request.body.segmentId,
+              request.body.voxelDimensions,
+              request.body.mapping,
+              request.body.mappingType
+            )
             // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
             // consecutive 3D points (i.e., nine floats) form a triangle.
             // There are no shared vertices between triangles.
@@ -408,8 +411,12 @@ class BinaryDataController @Inject()(
         .validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
           AllowRemoteOrigin {
             for {
-              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
-              listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer)
+              (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName) ?~> Messages(
+                "histogram.layerMissing",
+                dataLayerName)
+              listOfHistograms <- findDataService.createHistogram(dataSource, dataLayer) ?~> Messages(
+                "histogram.failed",
+                dataLayerName)
             } yield Ok(Json.toJson(listOfHistograms))
           }
         }

@@ -1,6 +1,6 @@
 // @flow
 import { Avatar, Icon, Layout, Menu, Popover } from "antd";
-import { Link, withRouter } from "react-router-dom";
+import { Link, withRouter, type RouterHistory } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -28,6 +28,10 @@ type StateProps = {|
   hasOrganizations: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
+type PropsWithRouter = {|
+  ...Props,
+  history: RouterHistory,
+|};
 
 export const navbarHeight = 48;
 
@@ -155,7 +159,7 @@ function getTimeTrackingMenu({ collapse }) {
   );
 }
 
-function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
+function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
   return (
     <SubMenu
       title={
@@ -172,7 +176,7 @@ function HelpSubMenu({ isAdmin, version, collapse, ...other }) {
           User Documentation
         </a>
       </Menu.Item>
-      {(!features().discussionBoardRequiresAdmin || isAdmin) &&
+      {(!features().discussionBoardRequiresAdmin || isAdminOrTeamManager) &&
       features().discussionBoard !== false ? (
         <Menu.Item key="discussion-board">
           <a href={features().discussionBoard} target="_blank" rel="noopener noreferrer">
@@ -219,13 +223,13 @@ function DashboardSubMenu({ collapse, ...other }) {
       {...other}
     >
       <Menu.Item key="/dashboard/datasets">
-        <Link to="/dashboard/datasets">Datasets</Link>
+        <Link to="/dashboard/datasets">My Datasets</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/tasks">
         <Link to="/dashboard/tasks">My Tasks</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/annotations">
-        <Link to="/dashboard/annotations">My Explorative Annotations</Link>
+        <Link to="/dashboard/annotations">My Annotations</Link>
       </Menu.Item>
       <Menu.Item key="/dashboard/shared">
         <Link to="/dashboard/shared">Shared Annotations</Link>
@@ -235,7 +239,7 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName } = activeUser;
+  const { firstName, lastName, organization } = activeUser;
   return (
     <NavbarMenuItem>
       <SubMenu
@@ -248,6 +252,7 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="userName">
           {`${firstName} ${lastName}`}
         </Menu.Item>
+        <Menu.Item disabled key="organization">{`${organization}`}</Menu.Item>
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
@@ -268,6 +273,8 @@ function AnonymousAvatar() {
   return (
     <Popover
       placement="bottomRight"
+      // For some reason flow doesn't get that the style prop is optional ...
+      // $FlowFixMe ... without this FixMe flow throws errors for other instantiations of the LoginForm without a style.
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
       style={{ position: "fixed" }}
@@ -284,7 +291,13 @@ async function getAndTrackVersion() {
   return version;
 }
 
-function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasOrganizations }) {
+function Navbar({
+  activeUser,
+  isAuthenticated,
+  history,
+  isInAnnotationView,
+  hasOrganizations,
+}: PropsWithRouter) {
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -307,7 +320,8 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   };
 
   const _isAuthenticated = isAuthenticated && activeUser != null;
-  const isAdmin = activeUser != null ? Utils.isUserAdmin(activeUser) : false;
+  const isAdminOrTeamManager =
+    activeUser != null ? Utils.isUserAdminOrTeamManager(activeUser) : false;
 
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
@@ -316,9 +330,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
+    // $FlowFixMe Flow doesn't check that the activeUser cannot be empty here
+    const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 
-    if (isAdmin) {
+    if (isAdminOrTeamManager) {
       menuItems.push(<AdministrationSubMenu key="admin" collapse={collapseAllNavItems} />);
       menuItems.push(<StatisticsSubMenu key="stats" collapse={collapseAllNavItems} />);
     } else {
@@ -327,7 +343,11 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     }
 
     trailingNavItems.push(
-      <LoggedInAvatar key="logged-in-avatar" activeUser={activeUser} handleLogout={handleLogout} />,
+      <LoggedInAvatar
+        key="logged-in-avatar"
+        activeUser={loggedInUser}
+        handleLogout={handleLogout}
+      />,
     );
   }
 
@@ -354,7 +374,7 @@ function Navbar({ activeUser, isAuthenticated, history, isInAnnotationView, hasO
     <HelpSubMenu
       key="helpMenu"
       version={version}
-      isAdmin={isAdmin}
+      isAdminOrTeamManager={isAdminOrTeamManager}
       collapse={collapseAllNavItems}
     />,
   );
@@ -414,4 +434,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
-export default withRouter(connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));

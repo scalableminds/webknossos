@@ -9,7 +9,7 @@ import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
 import type { APIUser, APITimeTracking } from "admin/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
-import { isUserAdmin } from "libs/utils";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -26,6 +26,7 @@ const { RangePicker } = DatePicker;
 
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
+const hourFormatPrecise = "HH:mm:ss";
 
 type TimeTrackingStats = {
   totalTime: number,
@@ -46,6 +47,7 @@ type State = {
   timeTrackingData: Array<APITimeTracking>,
   stats: TimeTrackingStats,
   isLoading: boolean,
+  isFetchingUsers: boolean,
 };
 
 function compressTimeLogs(logs) {
@@ -89,10 +91,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
       averageTimePerTask: 0,
     },
     isLoading: false,
+    isFetchingUsers: false,
   };
 
   componentDidMount() {
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
     if (isAdminOrTeamManger) {
       this.fetchData();
     } else {
@@ -101,8 +104,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
+    this.setState({ isFetchingUsers: true });
     const users = await getEditableUsers();
-    this.setState({ users });
+    this.setState({ users, isFetchingUsers: false });
   }
 
   async fetchTimeTrackingData() {
@@ -161,9 +165,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
       return;
     }
 
-    // for same day use start and end timestamps
-    const dateRange = dates[0].isSame(dates[1], "day")
-      ? [dates[0].startOf("day"), dates[1].endOf("day")]
+    // Force an interval of at least one minute.
+    const dateRange = dates[0].isSame(dates[1], "minute")
+      ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
 
     await this.setState({ dateRange });
@@ -174,7 +178,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
     const duration = end - start;
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
-    const dayFormatForMomentJs = "DD, MMM, YYYY";
+    const dayFormatForMomentJs = "DD MMM, YYYY";
     const tooltip = (
       <div>
         <div className="highlighted">
@@ -191,7 +195,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
                 ) : (
                   <React.Fragment>
-                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> -{" "}
+                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> –{" "}
                     <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
                   </React.Fragment>
                 )}
@@ -200,8 +204,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
             <tr>
               <td className="highlighted">Time:</td>
               <td>
-                <FormattedDate timestamp={start} format={hourFormat} /> -{" "}
-                <FormattedDate timestamp={end} format={hourFormat} />
+                <FormattedDate timestamp={start} format={hourFormatPrecise} /> –{" "}
+                <FormattedDate timestamp={end} format={hourFormatPrecise} />
               </td>
             </tr>
             <tr>
@@ -258,7 +262,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
 
     const { firstName, lastName, email } = this.props.activeUser;
-    const isAdminOrTeamManger = isUserAdmin(this.props.activeUser);
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
 
     return (
       <div className="container">
@@ -275,6 +279,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={{ width: "100%" }}
                     onChange={this.handleUserChange}
+                    notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
                   >
                     {this.state.users
                       .filter(u => u.isActive)
@@ -299,6 +304,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
                 <RangePicker
+                  showTime={{ format: "HH:mm" }}
+                  format="YYYY-MM-DD HH:mm"
                   allowClear={false}
                   style={{ width: "100%" }}
                   value={dateRange}
@@ -324,7 +331,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 </Col>
               </Row>
               The time tracking information display here only includes data acquired when working on
-              &quot;tasks&quot; and not explorative tracings.
+              &quot;tasks&quot; and not explorative annotations.
             </Col>
           </Row>
         </Card>

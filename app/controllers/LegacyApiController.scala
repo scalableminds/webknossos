@@ -17,6 +17,16 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  /* to provide v2, insert automatic timestamp in finish and info request */
+
+  def annotationFinishV2(typ: String, id: String) =
+    annotationController.finish(typ, id, System.currentTimeMillis)
+
+  def annotationInfoV2(typ: String, id: String) =
+    annotationController.info(typ, id, System.currentTimeMillis)
+
+  /* to provide v1, replace new field “visibility” in annotation json by old boolean field “isPublic” */
+
   def annotationDuplicate(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
       result <- annotationController.duplicate(typ, id)(request)
@@ -25,7 +35,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationFinish(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
-      result <- annotationController.finish(typ, id)(request)
+      result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
     } yield replaceVisibilityInResultJson(result)
   }
 
@@ -49,7 +59,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   def annotationInfo(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
-      result <- annotationController.info(typ, id)(request)
+      result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
     } yield replaceVisibilityInResultJson(result)
   }
 
@@ -150,11 +160,13 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     if (result.header.status == 200) {
       val bodyJsonValue = result.body match {
         case HttpEntity.Strict(data, _) => Json.parse(data.decodeString("utf-8"))
+        case _                          => return BadRequest
       }
 
       val newJson = bodyJsonValue match {
         case JsArray(value)  => Json.toJson(value.map(el => replaceVisibilityInJsObject(el.as[JsObject])))
         case jsObj: JsObject => Json.toJson(replaceVisibilityInJsObject(jsObj))
+        case _               => return BadRequest
       }
 
       Ok(Json.toJson(newJson)).copy(header = result.header)

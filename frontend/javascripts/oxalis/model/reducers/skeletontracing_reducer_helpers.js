@@ -15,9 +15,14 @@ import type {
   SkeletonTracing,
   Edge,
   Node,
+  MutableNode,
   Tree,
+  MutableTree,
   BranchPoint,
+  MutableBranchPoint,
+  MutableCommentType,
   TreeMap,
+  MutableTreeMap,
   CommentType,
   TreeGroup,
   RestrictionsAndSettings,
@@ -61,12 +66,12 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
   return `${prefix}${Utils.zeroPad(treeId, 3)}`;
 }
 
-function getMaximumNodeId(trees: TreeMap): number {
+function getMaximumNodeId(trees: TreeMap | MutableTreeMap): number {
   const newMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
-function getMaximumTreeId(trees: TreeMap): number {
+export function getMaximumTreeId(trees: TreeMap | MutableTreeMap): number {
   const maxTreeId = _.max(_.map(trees, "treeId"));
   return maxTreeId != null ? maxTreeId : Constants.MIN_TREE_ID - 1;
 }
@@ -508,15 +513,30 @@ export function getOrCreateTree(
 
 export function addTreesAndGroups(
   state: OxalisState,
-  trees: TreeMap,
+  trees: MutableTreeMap,
   treeGroups: Array<TreeGroup>,
   restrictions: RestrictionsAndSettings,
-): Maybe<[TreeMap, Array<TreeGroup>, number]> {
+): Maybe<[MutableTreeMap, Array<TreeGroup>, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = restrictions;
 
     if (allowUpdate) {
-      // Check whether any group ids collide and assign new ids
+      // Assign a new tree name for trees without a name
+      for (const treeId of Object.keys(trees)) {
+        const tree = trees[Number(treeId)];
+        if (tree.name === "") {
+          tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
+        }
+      }
+
+      const needsReassignedIds = Object.keys(skeletonTracing.trees).length > 0;
+
+      if (!needsReassignedIds) {
+        // Without reassigning ids, the code is considerably faster.
+        const newMaxNodeId = getMaximumNodeId(trees);
+        return Maybe.Just([trees, treeGroups, newMaxNodeId]);
+      }
+
       const groupIdMap = {};
       let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
 
@@ -527,7 +547,6 @@ export function addTreesAndGroups(
         nextGroupId++;
       });
 
-      const newTrees = {};
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
       let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
@@ -541,50 +560,43 @@ export function addTreesAndGroups(
         }
       }
 
+      const newTrees = {};
       for (const treeId of Object.keys(trees)) {
         const tree = trees[Number(treeId)];
 
         const newNodes = new DiffableMap();
         for (const node of tree.nodes.values()) {
-          newNodes.mutableSet(idMap[node.id], update(node, { id: { $set: idMap[node.id] } }));
+          node.id = idMap[node.id];
+          newNodes.mutableSet(node.id, node);
         }
+        tree.nodes = newNodes;
 
-        const newEdges = EdgeCollection.loadFromArray(
+        tree.edges = EdgeCollection.loadFromArray(
           tree.edges.map(edge => ({
             source: idMap[edge.source],
             target: idMap[edge.target],
           })),
         );
 
-        const newComments = tree.comments.map(comment =>
+        for (const comment of tree.comments) {
           // Comments can reference other nodes, rewrite those references if the referenced id changed
-          update(comment, {
-            nodeId: { $set: idMap[comment.nodeId] },
-            content: {
-              $apply: oldContent =>
-                oldContent.replace(
-                  NODE_ID_REF_REGEX,
-                  (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
-                ),
-            },
-          }),
-        );
+          comment.nodeId = idMap[comment.nodeId];
+          comment.content = comment.content.replace(
+            NODE_ID_REF_REGEX,
+            (__, p1) => `#${idMap[Number(p1)] != null ? idMap[Number(p1)] : p1}`,
+          );
+        }
 
-        const newBranchPoints = tree.branchPoints.map(bp =>
-          update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
-        );
+        for (const bp of tree.branchPoints) {
+          bp.nodeId = idMap[bp.nodeId];
+        }
 
         // Assign the new group id to the tree if the tree belongs to a group
-        const newGroupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
+        tree.groupId = tree.groupId != null ? groupIdMap[tree.groupId] : tree.groupId;
 
-        newTrees[newTreeId] = update(tree, {
-          treeId: { $set: newTreeId },
-          nodes: { $set: newNodes },
-          edges: { $set: newEdges },
-          comments: { $set: newComments },
-          branchPoints: { $set: newBranchPoints },
-          groupId: { $set: newGroupId },
-        });
+        tree.treeId = newTreeId;
+        newTrees[tree.treeId] = tree;
+
         newTreeId++;
       }
       return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
@@ -784,7 +796,7 @@ export function toggleTreeGroupReducer(
   });
 }
 
-function serverNodeToNode(n: ServerNode): Node {
+function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
     position: Utils.point3ToVector3(n.position),
@@ -798,27 +810,31 @@ function serverNodeToNode(n: ServerNode): Node {
   };
 }
 
-function serverBranchPointToBranchPoint(b: ServerBranchPoint): BranchPoint {
+function serverBranchPointToMutableBranchPoint(b: ServerBranchPoint): MutableBranchPoint {
   return {
     timestamp: b.createdTimestamp,
     nodeId: b.nodeId,
   };
 }
 
-export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTree>): TreeMap {
+export function createMutableTreeMapFromTreeArray(
+  trees: Array<ServerSkeletonTracingTree>,
+): MutableTreeMap {
   return _.keyBy(
     trees.map(
-      (tree): Tree => ({
-        comments: tree.comments,
+      (tree): MutableTree => ({
+        comments: ((tree.comments: any): Array<MutableCommentType>),
         edges: EdgeCollection.loadFromArray(tree.edges),
         name: tree.name,
         treeId: tree.treeId,
-        nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
+        nodes: new DiffableMap(
+          tree.nodes.map(serverNodeToMutableNode).map(node => [node.id, node]),
+        ),
         color:
           tree.color != null
-            ? [tree.color.r, tree.color.g, tree.color.b]
+            ? Utils.colorObjectToRGBArray(tree.color)
             : ColorGenerator.distinctColorForId(tree.treeId),
-        branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+        branchPoints: _.map(tree.branchPoints, serverBranchPointToMutableBranchPoint),
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
@@ -826,6 +842,10 @@ export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTre
     ),
     "treeId",
   );
+}
+
+export function createTreeMapFromTreeArray(trees: Array<ServerSkeletonTracingTree>): TreeMap {
+  return ((createMutableTreeMapFromTreeArray(trees): any): TreeMap);
 }
 
 export function removeMissingGroupsFromTrees(

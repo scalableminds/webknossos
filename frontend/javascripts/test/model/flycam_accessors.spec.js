@@ -95,17 +95,17 @@ test.only("Flycam Accessors should calculate appropriate zoom factors for datase
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
   const expectedZoomValues = [
-    1.3310000000000006,
-    2.5937424601000028,
-    4.594972986357223,
-    7.4002499442581735,
-    15.86309297171495,
-    34.00394858615784,
-    66.26407607736664,
-    129.12993816766533,
-    276.80149049219943,
-    539.4077978276367,
-    1051.1531995000591,
+    1.3309999999999997,
+    2.593742460100001,
+    4.177248169415654,
+    7.400249944258169,
+    15.863092971714945,
+    30.912680532870745,
+    60.24006916124236,
+    117.39085287969571,
+    251.63771862927217,
+    490.3707252978515,
+    955.5938177273264,
     2048.400214585478,
     4390.927778387033,
   ];

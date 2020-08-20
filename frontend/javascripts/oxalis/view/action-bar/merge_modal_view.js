@@ -6,12 +6,12 @@ import type { Dispatch } from "redux";
 
 import type { APIAnnotation } from "admin/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import InputComponent from "oxalis/view/components/input_component";
 import Request from "libs/request";
-import Store, { type OxalisState, type TreeMap, type TreeGroup } from "oxalis/store";
+import Store, { type OxalisState, type MutableTreeMap, type TreeGroup } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
@@ -31,7 +31,7 @@ type StateProps = {|
   annotationType: string,
 |};
 type DispatchProps = {|
-  addTreesAndGroupsAction: (TreeMap, ?Array<TreeGroup>) => void,
+  addTreesAndGroupsAction: (MutableTreeMap, ?Array<TreeGroup>) => void,
 |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
@@ -40,6 +40,7 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
+  isFetchingData: boolean,
 };
 
 type ButtonWithCheckboxProps = {
@@ -84,13 +85,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     isUploading: false,
+    isFetchingData: false,
   };
 
   componentWillMount() {
     (async () => {
+      this.setState({ isFetchingData: true });
       const projects = await Request.receiveJSON("/api/projects", { showErrorToast: false });
       this.setState({
-        projects: projects.map(project => ({ id: project.id, label: project.name })),
+        projects: projects.map(project => ({
+          id: project.id,
+          label: project.name,
+        })),
+        isFetchingData: false,
       });
     })();
   }
@@ -167,9 +174,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     }
     const { trees, treeGroups } = tracing;
     this.setState({ isUploading: true });
-    // Wait for an animation frame so that the loading animation is kicked off
-    await Utils.animationFrame();
-    this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups);
+    // Wait for an animation frame (but not longer than a second) so that the loading
+    // animation is kicked off
+    await Utils.animationFrame(1000);
+    this.props.addTreesAndGroupsAction(createMutableTreeMapFromTreeArray(trees), treeGroups);
     this.setState({ isUploading: false });
     Toast.success(messages["tracing.merged"]);
     this.props.onOk();
@@ -178,8 +186,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   render() {
     const mergeIntoActiveTracingCheckbox = (
       <React.Fragment>
-        Merge into active tracing{" "}
-        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account.">
+        Merge into active annotation{" "}
+        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened annotation. If not, a new explorative annotation will be created in your account.">
           <Icon type="info-circle-o" style={{ color: "gray" }} />
         </Tooltip>
       </React.Fragment>
@@ -198,7 +206,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           <Alert
             type="info"
             style={{ marginBottom: 12 }}
-            message="If you would like to import NML files, please drag and drop them into the tracing view."
+            message="If you would like to import NML files, please drag and drop them into the annotation view."
           />
 
           <Form layout="inline">
@@ -207,6 +215,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 value={this.state.selectedProject}
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeProject}
+                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
               >
                 {this.state.projects.map(project => (
                   <Select.Option key={project.id} value={project.id}>
@@ -263,7 +272,7 @@ function mapStateToProps(state: OxalisState): StateProps {
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  addTreesAndGroupsAction(trees: TreeMap, treeGroups: ?Array<TreeGroup>) {
+  addTreesAndGroupsAction(trees: MutableTreeMap, treeGroups: ?Array<TreeGroup>) {
     dispatch(addTreesAndGroupsAction(trees, treeGroups));
   },
 });

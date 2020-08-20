@@ -12,10 +12,11 @@ import javax.inject.Inject
  * The DataStore one is singleton-ized via this holder.
  */
 
-class BinaryDataServiceHolder @Inject()(config: DataStoreConfig) {
+class BinaryDataServiceHolder @Inject()(config: DataStoreConfig, agglomerateService: AgglomerateService) {
 
   val binaryDataService = new BinaryDataService(Paths.get(config.Braingames.Binary.baseFolder),
                                                 config.Braingames.Binary.loadTimeout,
-                                                config.Braingames.Binary.cacheMaxSize)
+                                                config.Braingames.Binary.cacheMaxSize,
+                                                agglomerateService)
 
 }

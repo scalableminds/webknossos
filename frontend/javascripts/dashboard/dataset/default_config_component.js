@@ -16,7 +16,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
   return (
     <div>
       <Alert
-        message="The following settings define the default configuration when viewing or creating an explorational tracing for this dataset. Use them to optimize the first appearance of your dataset."
+        message="The following settings define the default configuration when viewing or creating an explorational annotation for this dataset. Use them to optimize the first appearance of your dataset."
         type="info"
         showIcon
       />
@@ -40,23 +40,6 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
                   validator: syncValidator(
                     value => value == null || value > 0,
                     "The zoom value must be greater than 0.",
-                  ),
-                },
-              ],
-            })(<InputNumber style={{ width: "100%" }} />)}
-          </FormItemWithInfo>
-        </Col>
-        <Col span={6}>
-          <FormItemWithInfo
-            label="Segmentation Opacity"
-            info="The segmentation layer will be overlayed using the specified percentage value (&ldquo;20&rdquo; means &ldquo;20%&rdquo; opacity)."
-          >
-            {getFieldDecorator("defaultConfiguration.segmentationOpacity", {
-              rules: [
-                {
-                  validator: syncValidator(
-                    value => value == null || (value >= 0 && value <= 100),
-                    "The segmentation opacity must be between 0 and 100.",
                   ),
                 },
               ],

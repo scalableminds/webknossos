@@ -45,31 +45,32 @@ export function formatNumberAsGLSLFloat(aNumber: number): string {
 
 export default function getMainFragmentShader(params: Params) {
   const { hasSegmentation } = params;
+
   return _.template(
     `
 precision highp float;
 const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 <% _.each(colorLayerNames, function(name) { %>
-  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
-  uniform float <%= name %>_data_texture_width;
-  uniform sampler2D <%= name %>_lookup_texture;
-  uniform float <%= name %>_maxZoomStep;
   uniform vec3 <%= name %>_color;
-  uniform float <%= name %>_alpha;
   uniform float <%= name %>_min;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
+<% }) %>
+
+<% _.each(layerNamesWithSegmentation, function(name) { %>
+  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
+  uniform sampler2D <%= name %>_lookup_texture;
+  uniform float <%= name %>_data_texture_width;
+  uniform float <%= name %>_maxZoomStep;
+  uniform float <%= name %>_alpha;
 <% }) %>
 
 <% if (hasSegmentation) { %>
   uniform vec4 activeCellId;
   uniform bool isMouseInActiveViewport;
   uniform float activeVolumeToolIndex;
-  uniform sampler2D <%= segmentationName %>_lookup_texture;
-  uniform sampler2D <%= segmentationName %>_textures[dataTextureCountPerLayer];
-  uniform float <%= segmentationName %>_data_texture_width;
-  uniform float <%= segmentationName %>_maxZoomStep;
+  uniform float segmentationPatternOpacity;
 
   <% if (isMappingSupported) { %>
     uniform bool isMappingEnabled;
@@ -200,9 +201,9 @@ void main() {
       float hoverAlphaIncrement =
         // Hover cell only if it's the active one, if the feature is enabled
         // and if segmentation opacity is not zero
-        cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
+        cellIdUnderMouse == id && highlightHoveredCellId && <%= segmentationName%>_alpha > 0.0
           ? 0.2 : 0.0;
-      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
+      gl_FragColor = vec4(mix(data_color, convertCellIdToRGB(id), <%= segmentationName%>_alpha + hoverAlphaIncrement ), 1.0);
     }
 
     vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);

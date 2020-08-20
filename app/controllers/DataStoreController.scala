@@ -27,7 +27,8 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'key).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
       (__ \ 'isForeign).readNullable[Boolean] and
-      (__ \ 'isConnector).readNullable[Boolean])(DataStore.fromForm _)
+      (__ \ 'isConnector).readNullable[Boolean] and
+      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromForm _)
 
   val dataStorePublicReads: Reads[DataStore] =
     ((__ \ 'name).read[String] and
@@ -35,7 +36,8 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       (__ \ 'publicUrl).read[String] and
       (__ \ 'isScratch).readNullable[Boolean] and
       (__ \ 'isForeign).readNullable[Boolean] and
-      (__ \ 'isConnector).readNullable[Boolean])(DataStore.fromUpdateForm _)
+      (__ \ 'isConnector).readNullable[Boolean] and
+      (__ \ 'allowsUpload).readNullable[Boolean])(DataStore.fromUpdateForm _)
 
   def list = sil.UserAwareAction.async { implicit request =>
     for {

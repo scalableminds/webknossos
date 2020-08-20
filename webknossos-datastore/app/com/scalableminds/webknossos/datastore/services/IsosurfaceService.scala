@@ -31,7 +31,8 @@ case class IsosurfaceRequest(
     cuboid: Cuboid,
     segmentId: Long,
     voxelDimensions: Vector3I,
-    mapping: Option[String] = None
+    mapping: Option[String] = None,
+    mappingType: Option[String] = None
 )
 
 case class DataTypeFunctors[T, B](
@@ -59,6 +60,7 @@ class IsosurfaceService @Inject()(
     extends FoxImplicits {
 
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
+  val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
 
   implicit val timeout: Timeout = Timeout(config.Braingames.Binary.isosurfaceTimeout)
 
@@ -95,11 +97,35 @@ class IsosurfaceService @Inject()(
     def applyMapping(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
-          mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
-                                      data,
-                                      dataTypeFunctors.fromLong)
+          request.mappingType match {
+            case Some("JSON") =>
+              mappingService.applyMapping(DataServiceMappingRequest(request.dataSource, request.dataLayer, mappingName),
+                                          data,
+                                          dataTypeFunctors.fromLong)
+            case _ => Fox.successful(data)
+          }
         case _ =>
           Fox.successful(data)
+      }
+
+    def applyAgglomerate(data: Array[Byte]): Array[Byte] =
+      request.mapping match {
+        case Some(_) =>
+          request.mappingType match {
+            case Some("HDF5") =>
+              val dataRequest = DataServiceDataRequest(
+                request.dataSource,
+                request.dataLayer,
+                request.mapping,
+                request.cuboid,
+                DataServiceRequestSettings(halfByte = false, request.mapping, None),
+                Vector3I(1, 1, 1))
+              agglomerateService.applyAgglomerate(dataRequest)(data)
+            case _ =>
+              data
+          }
+        case _ =>
+          data
       }
 
     def convertData(data: Array[Byte]): Array[T] = {
@@ -168,7 +194,8 @@ class IsosurfaceService @Inject()(
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      typedData = convertData(data)
+      agglomerateMappedData = applyAgglomerate(data)
+      typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
       neighbors = findNeighbors(mappedData, dataDimensions, mappedSegmentId)

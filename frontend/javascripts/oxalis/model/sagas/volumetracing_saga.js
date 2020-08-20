@@ -18,7 +18,11 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
-import { type UpdateAction, updateVolumeTracing } from "oxalis/model/sagas/update_actions";
+import {
+  type UpdateAction,
+  updateVolumeTracing,
+  updateUserBoundingBoxes,
+} from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
@@ -55,9 +59,12 @@ function* warnOfTooLowOpacity(): Saga<void> {
   if (yield* select(state => state.tracing.volume == null)) {
     return;
   }
-
+  const segmentationLayerName = yield* call([Model, Model.getSegmentationLayerName]);
+  if (!segmentationLayerName) {
+    return;
+  }
   const isOpacityTooLow = yield* select(
-    state => state.datasetConfiguration.segmentationOpacity < 10,
+    state => state.datasetConfiguration.layers[segmentationLayerName].alpha < 10,
   );
   if (isOpacityTooLow) {
     Toast.warning(
@@ -78,6 +85,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const contourTracingMode = yield* select(
       state => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
+    const isDrawing =
+      contourTracingMode === ContourModeEnum.DRAW_OVERWRITE ||
+      contourTracingMode === ContourModeEnum.DRAW;
 
     // Volume tracing for higher zoomsteps is currently not allowed
     if (yield* select(state => isVolumeTracingDisallowed(state))) {
@@ -111,7 +121,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         // if the current viewport does not match the initial viewport -> dont draw
         continue;
       }
-      if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
+      if (
+        activeTool === VolumeToolEnum.TRACE ||
+        (activeTool === VolumeToolEnum.BRUSH && isDrawing)
+      ) {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
@@ -203,9 +216,15 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
-  const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
-  const dim = Dimensions.getIndices(activeViewport)[2];
-  const direction = spaceDirectionOrtho[dim];
+  let direction = 1;
+  const useDynamicSpaceDirection = yield* select(
+    state => state.userConfiguration.dynamicSpaceDirection,
+  );
+  if (useDynamicSpaceDirection) {
+    const spaceDirectionOrtho = yield* select(state => state.flycam.spaceDirectionOrtho);
+    const dim = Dimensions.getIndices(activeViewport)[2];
+    direction = spaceDirectionOrtho[dim];
+  }
 
   const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
   const z = tz;
@@ -229,11 +248,7 @@ export function* finishLayer(
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    const start = Date.now();
-
     yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
-
-    console.log("Labeling time:", Date.now() - start);
   }
 
   yield* put(updateDirectionAction(layer.getCentroid()));
@@ -256,7 +271,6 @@ function updateTracingPredicate(
   flycam: Flycam,
 ): boolean {
   return (
-    !_.isEqual(prevVolumeTracing.userBoundingBox, volumeTracing.userBoundingBox) ||
     prevVolumeTracing.activeCellId !== volumeTracing.activeCellId ||
     prevVolumeTracing.maxCellId !== volumeTracing.maxCellId ||
     prevFlycam !== flycam
@@ -276,5 +290,8 @@ export function* diffVolumeTracing(
       getRotation(flycam),
       flycam.zoomStep,
     );
+  }
+  if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
+    yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 }

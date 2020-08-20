@@ -14,7 +14,7 @@ import Store, {
   type OxalisState,
   type SkeletonTracing,
   type TreeGroup,
-  type TreeMap,
+  type MutableTreeMap,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -49,9 +49,19 @@ type SetActiveNodeAction = {
   nodeId: number,
   suppressAnimation: boolean,
 };
+type CenterActiveNodeAction = {
+  type: "CENTER_ACTIVE_NODE",
+  suppressAnimation: boolean,
+};
 type SetNodeRadiusAction = {
   type: "SET_NODE_RADIUS",
   radius: number,
+  nodeId: ?number,
+  treeId: ?number,
+};
+type SetNodePositionAction = {
+  type: "SET_NODE_POSITION",
+  position: Vector3,
   nodeId: ?number,
   treeId: ?number,
 };
@@ -75,7 +85,7 @@ type RequestDeleteBranchPointAction = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeAction = { type: "CREATE_TREE", timestamp: number };
 type AddTreesAndGroupsAction = {
   type: "ADD_TREES_AND_GROUPS",
-  trees: TreeMap,
+  trees: MutableTreeMap,
   treeGroups: Array<TreeGroup>,
 };
 type DeleteTreeAction = { type: "DELETE_TREE", treeId?: number };
@@ -114,9 +124,11 @@ export type SkeletonTracingAction =
   | DeleteNodeAction
   | DeleteEdgeAction
   | SetActiveNodeAction
+  | CenterActiveNodeAction
   | SetActiveGroupAction
   | DeselectActiveGroupAction
   | SetNodeRadiusAction
+  | SetNodePositionAction
   | CreateBranchPointAction
   | DeleteBranchPointAction
   | RequestDeleteBranchPointAction
@@ -153,6 +165,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
+  "SET_NODE_POSITION",
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
@@ -167,7 +180,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "SHUFFLE_ALL_TREE_COLORS",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
-  "SET_USER_BOUNDING_BOX",
+  "SET_USER_BOUNDING_BOXES",
+  "ADD_USER_BOUNDING_BOXES",
   "SET_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
@@ -238,6 +252,10 @@ export const setActiveNodeAction = (
   suppressAnimation,
 });
 
+export const centerActiveNodeAction = (
+  suppressAnimation: boolean = false,
+): CenterActiveNodeAction => ({ type: "CENTER_ACTIVE_NODE", suppressAnimation });
+
 export const setNodeRadiusAction = (
   radius: number,
   nodeId?: number,
@@ -245,6 +263,17 @@ export const setNodeRadiusAction = (
 ): SetNodeRadiusAction => ({
   type: "SET_NODE_RADIUS",
   radius,
+  nodeId,
+  treeId,
+});
+
+export const setNodePositionAction = (
+  position: Vector3,
+  nodeId?: number,
+  treeId?: number,
+): SetNodePositionAction => ({
+  type: "SET_NODE_POSITION",
+  position,
   nodeId,
   treeId,
 });
@@ -274,7 +303,7 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
 });
 
 export const addTreesAndGroupsAction = (
-  trees: TreeMap,
+  trees: MutableTreeMap,
   treeGroups: ?Array<TreeGroup>,
 ): AddTreesAndGroupsAction => ({
   type: "ADD_TREES_AND_GROUPS",

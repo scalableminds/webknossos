@@ -13,16 +13,17 @@ import {
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
-import ByteArrayToBase64Worker from "oxalis/workers/byte_array_to_base64.worker";
+import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.worker";
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
+import Toast from "libs/toast";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
-const byteArrayToBase64 = createWorker(ByteArrayToBase64Worker);
+const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
 
-export const REQUEST_TIMEOUT = 30000;
+export const REQUEST_TIMEOUT = 60000;
 
 export type SendBucketInfo = {
   position: Vector3,
@@ -42,10 +43,12 @@ const createRequestBucketInfo = (
   zoomedAddress: Vector4,
   resolutions: Array<Vector3>,
   fourBit: boolean,
+  applyAgglomerate: ?string,
   version: ?number,
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
+  ...(applyAgglomerate != null ? { applyAgglomerate } : {}),
   ...(version != null ? { version } : {}),
 });
 
@@ -101,6 +104,7 @@ export async function requestWithFallback(
     getDataStoreUrl(enforceVolumeTracing(state.tracing).fallbackLayer),
     layerInfo,
     fallbackBatch,
+    true,
   );
 
   return bucketBuffers.map((bucket, idx) => {
@@ -117,34 +121,72 @@ export async function requestFromStore(
   dataUrl: string,
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
+  isVolumeFallback: boolean = false,
 ): Promise<Array<?Uint8Array>> {
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
+
+  const { activeMapping } = state.temporaryConfiguration;
+  const applyAgglomerates =
+    isSegmentation &&
+    activeMapping != null &&
+    activeMapping.isMappingEnabled &&
+    activeMapping.mappingType === "HDF5"
+      ? activeMapping.mappingName
+      : null;
+
   const resolutions = getResolutions(state.dataset);
   const version =
-    isSegmentation && state.tracing.volume != null ? state.tracing.volume.version : null;
+    !isVolumeFallback && isSegmentation && state.tracing.volume != null
+      ? state.tracing.volume.version
+      : null;
+
   const bucketInfo = batch.map(zoomedAddress =>
-    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, version),
+    createRequestBucketInfo(zoomedAddress, resolutions, fourBit, applyAgglomerates, version),
   );
 
-  return doWithToken(async token => {
-    const { buffer: responseBuffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${dataUrl}/data?token=${token}`,
-      {
+  try {
+    return await doWithToken(async token => {
+      const {
+        buffer: responseBuffer,
+        headers,
+      } = await Request.sendJSONReceiveArraybufferWithHeaders(`${dataUrl}/data?token=${token}`, {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
+        showErrorToast: false,
+      });
+      const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
+
+      let resultBuffer = responseBuffer;
+      if (fourBit) {
+        resultBuffer = await decodeFourBit(resultBuffer);
+      }
+
+      return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
+    });
+  } catch (errorResponse) {
+    const errorMessage = `Requesting data from layer "${
+      layerInfo.name
+    }" failed. Some rendered areas might remain empty. Retrying...`;
+    let detailedError =
+      errorResponse.status != null
+        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}".`
+        : errorResponse.message;
+
+    detailedError += `(URL: ${dataUrl})`;
+    console.error(`${errorMessage} ${detailedError}`);
+    console.error(errorResponse);
+    Toast.warning(
+      errorMessage,
+      {
+        key: errorMessage,
+        sticky: false,
       },
+      detailedError,
     );
-    const missingBuckets = parseAsMaybe(headers["missing-buckets"]).getOrElse([]);
-
-    let resultBuffer = responseBuffer;
-    if (fourBit) {
-      resultBuffer = await decodeFourBit(resultBuffer);
-    }
-
-    return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
-  });
+    return batch.map(_val => null);
+  }
 }
 
 function sliceBufferIntoPieces(
@@ -175,8 +217,8 @@ export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
     );
     const byteArray = new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     // eslint-disable-next-line no-await-in-loop
-    const base64 = await byteArrayToBase64(byteArray);
-    items.push(updateBucket(bucketInfo, base64));
+    const compressedBase64 = await byteArrayToLz4Base64(byteArray);
+    items.push(updateBucket(bucketInfo, compressedBase64));
   }
   Store.dispatch(pushSaveQueueTransaction(items, "volume"));
 }

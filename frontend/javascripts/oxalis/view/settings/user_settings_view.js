@@ -49,6 +49,8 @@ import * as Utils from "libs/utils";
 
 const { Panel } = Collapse;
 
+const DEFAULT_NODE_RADIUS = 0;
+
 type UserSettingsViewProps = {
   userConfiguration: UserConfiguration,
   tracing: Tracing,
@@ -73,6 +75,7 @@ type UserSettingsViewProps = {
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   onChangeUser: { [$Keys<UserConfiguration>]: Function };
+  cachedNodeRadius: number = DEFAULT_NODE_RADIUS;
 
   componentWillMount() {
     // cache onChange handler
@@ -265,9 +268,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       const skeletonTracing = enforceSkeletonTracing(this.props.tracing);
       const activeNodeId = skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "";
       const activeTreeId = skeletonTracing.activeTreeId != null ? skeletonTracing.activeTreeId : "";
-      const activeNodeRadius = getActiveNode(skeletonTracing)
+      // We cache the node radius to avoid resetting it to 0 when all nodes got removed.
+      // This avoids triggering a new skeleton action, that would clear the redo stack (unwanted).
+      this.cachedNodeRadius = getActiveNode(skeletonTracing)
         .map(activeNode => activeNode.radius)
-        .getOrElse(0);
+        .getOrElse(this.cachedNodeRadius);
       const isMergerModeSupported = hasSegmentation(this.props.dataset);
       panels.push(
         <Panel header="Nodes & Trees" key="3a">
@@ -286,9 +291,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             min={userSettings.nodeRadius.minimum}
             max={userSettings.nodeRadius.maximum}
             roundTo={0}
-            value={activeNodeRadius}
+            value={this.cachedNodeRadius}
             onChange={this.props.onChangeRadius}
-            disabled={this.props.userConfiguration.overrideNodeRadius || activeNodeRadius === 0}
+            disabled={
+              this.props.userConfiguration.overrideNodeRadius || this.cachedNodeRadius === 0
+            }
           />
           <NumberSliderSetting
             label={

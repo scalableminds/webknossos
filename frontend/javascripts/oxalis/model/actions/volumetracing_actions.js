@@ -62,7 +62,7 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
-  | AddBucketToUndoAction;
+  | AddBucketToUndoAction
   | RemoveFallbackLayerAction;
 
 export const VolumeTracingSaveRelevantActions = [

@@ -4,8 +4,7 @@ import java.util.Base64
 
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D,
@@ -90,6 +89,18 @@ object UpdateUserBoundingBoxVisibility {
   implicit val updateUserBoundingBoxVisibilityFormat = Json.format[UpdateUserBoundingBoxVisibility]
 }
 
+case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None, info: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact =
+    CompactVolumeUpdateAction("removeFallbackLayer", actionTimestamp, Json.obj())
+}
+
+object RemoveFallbackLayer {
+  implicit val removeFallbackLayer = Json.format[RemoveFallbackLayer]
+}
+
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
     extends VolumeUpdateAction
 
@@ -117,6 +128,7 @@ object VolumeUpdateAction {
         case "revertToVersion"                 => (json \ "value").validate[RevertToVersionVolumeAction]
         case "updateUserBoundingBoxes"         => (json \ "value").validate[UpdateUserBoundingBoxes]
         case "updateUserBoundingBoxVisibility" => (json \ "value").validate[UpdateUserBoundingBoxVisibility]
+        case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 
@@ -136,6 +148,8 @@ object VolumeUpdateAction {
       case s: UpdateUserBoundingBoxVisibility =>
         Json.obj("name" -> "updateUserBoundingBoxVisibility",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.updateUserBoundingBoxVisibilityFormat))
+      case s: RemoveFallbackLayer =>
+        Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayer.removeFallbackLayer))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

@@ -134,6 +134,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "There is no isosurface for the active segment id available to download.",
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
+  "tracing.confirm_remove_fallback_layer.title":
+    "Are you sure you want to unlink the dataset's original segmentation layer from this tracing?",
+  "tracing.confirm_remove_fallback_layer.explanation":
+    "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
+  "tracing.confirm_remove_fallback_layer.notes":
+    "Note, that this action cannot be undone. Also note, if you already started with your annotation work based on the original segmentation layer, some small chunks of the segmentation might have already been merged into your annotation for technical reasons.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

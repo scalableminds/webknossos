@@ -30,7 +30,6 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
 };
 
 function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
-  console.log("got action", action.type);
   switch (action.type) {
     case "INITIALIZE_ANNOTATION": {
       const annotationInfo = convertServerAnnotationToFrontendAnnotation(action.annotation);

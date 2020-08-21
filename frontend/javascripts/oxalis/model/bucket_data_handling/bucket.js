@@ -166,9 +166,7 @@ export class DataBucket {
 
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    const zoomedAddressAsString = `${this.zoomedAddress[0]},${this.zoomedAddress[1]},${
-      this.zoomedAddress[2]
-    },${this.zoomedAddress[3]}`;
+    const zoomedAddressAsString = this.zoomedAddress.toString();
     if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
       const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
       const dataClone = new TypedArrayClass(bucketData);

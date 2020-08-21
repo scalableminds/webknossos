@@ -246,14 +246,11 @@ function* applyStateOfStack(
     );
     if (isMergerModeEnabled) {
       Toast.info(messages["tracing.edit_volume_in_merger_mode"]);
+      sourceStack.push(stateToRestore);
       return;
     }
     const volumeBatchToApply = stateToRestore.data;
-    const currentVolumeState = yield* call(
-      applyAndGetRevertingVolumeBatch,
-      volumeBatchToApply,
-      stackToPushTo,
-    );
+    const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
   }
 }

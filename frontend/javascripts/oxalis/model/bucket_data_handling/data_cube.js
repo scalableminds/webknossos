@@ -331,8 +331,7 @@ class DataCube {
       this.labelVoxel(voxel, label, activeCellId);
     }
 
-    this.pushQueue.push();
-    this.trigger("volumeLabeled");
+    this.triggerPushQueue();
   }
 
   labelVoxel(voxel: Vector3, label: number, activeCellId: ?number): void {
@@ -379,6 +378,7 @@ class DataCube {
 
   triggerPushQueue() {
     this.pushQueue.push();
+    this.trigger("volumeLabeled");
   }
 
   hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {

@@ -2,7 +2,7 @@
 
 import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 
 import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "admin/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -33,6 +33,16 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 
+import Clipboard from "clipboard-js";
+import Peer from "peerjs";
+import { getPosition, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { Form, Spin, Input, Divider } from "antd";
+import Toast from "libs/toast";
+
+const FormItem = Form.Item;
+
 type OwnProps = {|
   layoutMenu: React.Node,
   hasVolume: boolean,
@@ -49,6 +59,7 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
+  isLiveSessionModalVisible: boolean,
   isUserScriptsModalOpen: boolean,
   isReopenAllowed: boolean,
 };
@@ -69,6 +80,162 @@ type LayoutMenuProps = LayoutProps & {
   onDeleteLayout: string => void,
   addNewLayout: () => void,
 };
+
+let peer = null;
+let unsubscribeStoreListener = null;
+
+function LiveSessionController({ isVisible, onOk }) {
+  const [peerId, setPeerId] = useState(null);
+  const [peerIdToConnect, setPeerIdToConnect] = useState("");
+  const [connectionState, setConnectionState] = useState("Unconnected");
+  const errorHandler = err => {
+    console.warn("Peer received error:", err);
+  };
+  const closeHandler = () => {
+    setConnectionState("Unconnected");
+    if (unsubscribeStoreListener) {
+      unsubscribeStoreListener();
+    }
+  };
+
+  const createPeer = () => {
+    peer = new Peer();
+    peer.on("error", errorHandler);
+    peer.on("open", function(id) {
+      console.log("My peer ID is: " + id);
+      setPeerId(id);
+    });
+
+    peer.on("connection", conn => {
+      conn.on("data", data => {
+        console.log("Leader received", data);
+        conn.send("Leader: ok, I'll send you my position");
+
+        setConnectionState("Broadcasting");
+
+        if (unsubscribeStoreListener) {
+          unsubscribeStoreListener();
+        }
+        unsubscribeStoreListener = listenToStoreProperty(
+          storeState => storeState.flycam,
+          flycam => {
+            console.log("Sending position and zoom");
+            conn.send(
+              JSON.stringify({ position: getPosition(flycam), zoomValue: getZoomValue(flycam) }),
+            );
+          },
+          true,
+        );
+      });
+      conn.on("open", () => {
+        console.log("Leader: connection was established");
+      });
+
+      conn.on("error", errorHandler);
+      conn.on("close", closeHandler);
+    });
+
+    peer.on("disconnected", closeHandler);
+  };
+
+  useEffect(() => {
+    createPeer();
+
+    return () => {
+      if (unsubscribeStoreListener) {
+        unsubscribeStoreListener();
+      }
+    };
+  }, []);
+
+  const copyPeerIdToClipboard = async () => {
+    await Clipboard.copy(peerId);
+    Toast.success("Session ID copied to clipboard");
+  };
+
+  const onChangePeerIdToConnect = (event: SyntheticInputEvent<>): void => {
+    setPeerIdToConnect(event.target.value);
+  };
+
+  const followSessionFromPeer = () => {
+    if (!peer) {
+      return;
+    }
+    let attempts = 0;
+
+    let conn = null;
+    while (conn == null && attempts < 3) {
+      attempts++;
+      conn = peer.connect(peerIdToConnect);
+      if (!conn) {
+        console.warn("Connection could not be established. Retrying with new peer");
+        createPeer();
+      }
+    }
+    conn.on("open", () => {
+      setConnectionState("Receiving session from broadcast");
+      console.log("follower: syncing with the Leader's current position");
+      conn.send("start-sync");
+    });
+    conn.on("data", dataStr => {
+      try {
+        const data = JSON.parse(dataStr);
+        console.log("follower received:", data);
+        Store.dispatch(setPositionAction(data.position));
+        Store.dispatch(setZoomStepAction(data.zoomValue));
+      } catch (ex) {
+        console.log("could not parse message", dataStr);
+      }
+    });
+    conn.on("error", errorHandler);
+    conn.on("close", closeHandler);
+  };
+
+  const onInitiateDisconnect = () => {
+    if (!peer) {
+      return;
+    }
+    peer.disconnect();
+    setConnectionState("Unconnected");
+  };
+
+  return (
+    <Modal title="Start Live Session for this View" visible={isVisible} onOk={onOk} onCancel={onOk}>
+      <Spin size="large" spinning={peerId == null}>
+        <p>
+          If you want to share your current position and zoom with somebody, copy the following ID
+          and send it to your colleague.
+        </p>
+        <FormItem>
+          <Input.Group compact>
+            <Input value={peerId} style={{ width: "90%" }} readOnly />
+            <Button onClick={copyPeerIdToClipboard} icon="copy" />
+          </Input.Group>
+        </FormItem>
+        <Divider />
+        <p>
+          If somebody shared a session ID with you, you can paste and submit it here to follow your
+          colleague's session.
+        </p>
+        <FormItem>
+          <Input.Group compact>
+            <Input
+              value={peerIdToConnect}
+              style={{ width: "70%" }}
+              onChange={onChangePeerIdToConnect}
+            />
+            <Button onClick={followSessionFromPeer}> Follow Session </Button>
+          </Input.Group>
+        </FormItem>
+        <Divider />
+        <b>Status</b>: {connectionState}{" "}
+        {connectionState !== "Unconnected" ? (
+          <Button onClick={onInitiateDisconnect}>Disconnect</Button>
+        ) : null}
+      </Spin>
+    </Modal>
+  );
+}
 
 export const LayoutMenu = (props: LayoutMenuProps) => {
   const {
@@ -182,6 +349,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
     isReopenAllowed: false,
+    isLiveSessionModalVisible: false,
   };
 
   modalWrapper: ?HTMLDivElement = null;
@@ -273,6 +441,10 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleShareClose = () => {
     this.setState({ isShareModalOpen: false });
+  };
+
+  setLiveSessionModal = (visible: boolean) => {
+    this.setState({ isLiveSessionModalVisible: visible });
   };
 
   handleDownload = async () => {
@@ -420,6 +592,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Share
       </Menu.Item>,
     );
+    elements.push(
+      <Menu.Item key="share-live-button" onClick={() => this.setLiveSessionModal(true)}>
+        <Icon type="share-alt" />
+        Manage Live Session
+      </Menu.Item>,
+    );
     modals.push(
       <ShareModalView
         key="share-modal"
@@ -429,6 +607,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         annotationId={this.props.annotationId}
       />,
     );
+
+    modals.push(
+      <LiveSessionController
+        key="live-session-modal"
+        isVisible={this.state.isLiveSessionModalVisible}
+        onOk={() => this.setLiveSessionModal(false)}
+      />,
+    );
+
     elements.push(
       <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
         <Icon type="camera" />

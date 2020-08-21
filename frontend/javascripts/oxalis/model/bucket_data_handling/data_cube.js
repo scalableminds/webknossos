@@ -25,7 +25,7 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import constants, { type Vector3, type Vector4 } from "oxalis/constants";
+import constants, { type Vector2, type Vector3, type Vector4 } from "oxalis/constants";
 import { type ElementClass } from "admin/api_flow_types";
 
 class CubeEntry {
@@ -371,30 +371,30 @@ class DataCube {
   floodFill(
     initialVoxel: Vector3,
     cellId: number,
-    get3DAddress: Vector2 => Vector3,
+    get3DAddress: (Vector2, Vector3) => Vector3,
     get2DAddress: Vector3 => Vector2,
     zoomStep: number = 0,
   ) {
+    // TODO: just pass in the planeId and handle the coordinate conversion here
     // needed: click position + viewport
     // only above, bottom, left ,right
-    const address = this.positionToBaseAddress(initialVoxel, zoomStep);
+    const address = this.positionToZoomedAddress(initialVoxel, zoomStep);
     const bucket = this.getOrCreateBucket(address);
+    if (bucket.type === "null") {
+      return;
+    }
     const initialVoxelIndex = this.getVoxelIndex(initialVoxel);
     const sourceCellId = bucket.getOrCreateData()[initialVoxelIndex];
     // TODO: The bucket should be able to appear multiple times in the map -> use a different key;
     // -> use an array as a stack
     // Mapping from bucketIndex to bucket and initial voxel for flood fill.
-    const bucketsToFill: Array<[Bucket, Vector3]> = [];
-    const bucketIndex = this.getBucketIndex(initialVoxel);
-    if (bucketIndex == null) {
-      return;
-    }
-    bucketsToFill.push([bucket, initialVoxelIndex]);
-    const floodFillBucket = (currentBucket: Bucket, initialAddress: Vector3) => {
+    const bucketsToFill: Array<[DataBucket, Vector3]> = [];
+    bucketsToFill.push([bucket, this.getVoxelOffset(initialVoxel, zoomStep)]);
+    const floodFillBucket = (currentBucket: DataBucket, initialAddress: Vector3) => {
       const bucketData = currentBucket.getOrCreateData();
       const currentVoxel = this.getVoxelIndex(initialAddress);
       if (bucketData[currentVoxel] !== sourceCellId) {
-        // Ignoring neighbour buckets whose cellId at the initial position do not match the source cell id.
+        // Ignoring neighbour buckets whose cellId at the initial position does not match the source cell id.
         return;
       }
       const currentVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
@@ -403,29 +403,37 @@ class DataCube {
         currentVoxelIterator.step();
         for (let i = 0; i < neighbours.length; ++i) {
           const neighbourVoxel = neighbours[i];
-          const neighbourVoxel3D = get3DAddress(neighbourVoxel);
-          // The zoomed address of the neighbour bucket if the neighbour is in another bucket.
-          let neighbourBucketAddress: ?Vector3 = null;
+          const neighbourVoxel3D = get3DAddress(neighbourVoxel, initialAddress);
+          // If the current neighbour is not in the current bucket, calculate
+          // the bucket's zoomed address and add the bucket to bucketsToFill.
+          let neighbourBucketAddress: ?Vector4 = null;
           for (let dim = 0; dim < 2; ++dim) {
-            if (neighbourBucketAddress[dim] < constants.BUCKET_WIDTH) {
+            if (neighbourVoxel[dim] < 0) {
               neighbourBucketAddress = [
                 bucket.zoomedAddress[0],
                 bucket.zoomedAddress[1],
                 bucket.zoomedAddress[2],
+                zoomStep,
               ];
               neighbourBucketAddress[dim] -= 1;
-            } else if (neighbourBucketAddress[dim] > constants.BUCKET_WIDTH) {
+            } else if (neighbourVoxel[dim] > constants.BUCKET_WIDTH) {
               neighbourBucketAddress = [
                 bucket.zoomedAddress[0],
                 bucket.zoomedAddress[1],
                 bucket.zoomedAddress[2],
+                zoomStep,
               ];
               neighbourBucketAddress[dim] += 1;
             }
           }
           if (neighbourBucketAddress) {
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
-            bucketsToFill.push([neighbourBucket, neighbourVoxel3D]);
+            if (neighbourBucket.type !== "null") {
+              bucketsToFill.push([
+                neighbourBucket,
+                this.getVoxelOffset(neighbourVoxel3D, zoomStep),
+              ]);
+            }
           } else {
             const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
@@ -435,9 +443,10 @@ class DataCube {
           }
         }
       }
+      // TODO: add bucket to push queue and make as dirty and trigger volumelabeled and so on.
     };
-    while (floodFillBucket.length > 0) {
-      const [currentBucket, initialAddress] = floodFillBucket.pop();
+    while (bucketsToFill.length > 0) {
+      const [currentBucket, initialAddress] = bucketsToFill.pop();
       floodFillBucket(currentBucket, initialAddress);
     }
   }
@@ -475,13 +484,18 @@ class DataCube {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 
-  getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
+  getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
     const resolution = getResolutions(Store.getState().dataset)[zoomStep];
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
+    return voxelOffset;
+  }
+
+  getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
+    const voxelOffset = this.getVoxelOffset(voxel, zoomStep);
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 

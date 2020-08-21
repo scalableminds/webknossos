@@ -125,7 +125,10 @@ export class Dynamic2DVoxelIterator {
   }
 
   getNeighbors(): Array<Vector2> {
-    const currentVoxel = this.getCurrentVoxel();
+    if (!this.notEmpty()) {
+      return [];
+    }
+    const currentVoxel = this.stack[this.stack.length - 1];
     return [
       [currentVoxel[0] + 1, currentVoxel[1]],
       [currentVoxel[0] - 1, currentVoxel[1]],

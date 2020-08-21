@@ -12,6 +12,7 @@ type InitializeVolumeTracingAction = {
 type CreateCellAction = { type: "CREATE_CELL", cellId: ?number };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
+type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
 type FinishEditingAction = { type: "FINISH_EDITING" };
 type SetActiveCellAction = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolAction = { type: "SET_TOOL", tool: VolumeTool };
@@ -35,6 +36,7 @@ export type VolumeTracingAction =
   | CreateCellAction
   | StartEditingAction
   | AddToLayerAction
+  | FloodFillAction
   | FinishEditingAction
   | SetActiveCellAction
   | SetToolAction
@@ -52,6 +54,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
+  "FLOOD_FILL",
 ];
 
 export const initializeVolumeTracingAction = (
@@ -75,6 +78,12 @@ export const startEditingAction = (position: Vector3, planeId: OrthoView): Start
 export const addToLayerAction = (position: Vector3): AddToLayerAction => ({
   type: "ADD_TO_LAYER",
   position,
+});
+
+export const floodFillAction = (position: Vector3, planeId: OrthoView): FloodFillAction => ({
+  type: "FLOOD_FILL",
+  position,
+  planeId,
 });
 
 export const finishEditingAction = (): FinishEditingAction => ({

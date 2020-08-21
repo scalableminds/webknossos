@@ -17,6 +17,7 @@ import {
   createCellAction,
   setToolAction,
   startEditingAction,
+  floodFillAction,
   addToLayerAction,
   finishEditingAction,
   hideBrushAction,
@@ -102,6 +103,9 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW));
         } else {
           Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW_OVERWRITE));
+        }
+        if (event.metaKey) {
+          Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
         }
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }

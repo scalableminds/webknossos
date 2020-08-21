@@ -36,6 +36,8 @@ import {
   ContourModeEnum,
   type OrthoView,
   type VolumeTool,
+  type Vector2,
+  type Vector3,
   VolumeToolEnum,
 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
@@ -238,33 +240,47 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 }
 
-function* floodFill() {
-  // get some action;
-  const action = null;
-  const { position, planeId } = action;
-  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
-  const { cube } = segmentationLayer;
-  const flycamPosition = Dimensions.roundCoordinate(
-    yield* select(state => getPosition(state.flycam)),
-  );
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
-  const get3DAddress = (voxel: Vector2) => {
-    let index2d = 0;
-    const res = [0, 0, 0];
+export function* floodFill(): Saga<void> {
+  yield* take("INITIALIZE_VOLUMETRACING");
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
 
-    for (let i = 0; i <= 2; i++) {
-      if (i !== thirdDimIndex) {
-        res[i] = voxel[index2d++];
-      } else {
-        res[i] = flycamPosition[thirdDimIndex];
-      }
+  while (allowUpdate) {
+    const floodFillAction = yield* take("FLOOD_FILL");
+    if (floodFillAction.type !== "FLOOD_FILL") {
+      throw new Error("Unexpected action. Satisfy flow.");
     }
-    return res;
-  };
-  const get2DAddress = (voxel: Vector3) => voxel.filter((val, index) => index !== thirdDimIndex);
+    const { position, planeId } = floodFillAction;
+    const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+    const { cube } = segmentationLayer;
+    const initialVoxel = Dimensions.roundCoordinate(position);
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
+    const get3DAddress = (voxel: Vector2, initialAddress: Vector3) => {
+      let index2d = 0;
+      const res = [0, 0, 0];
 
-  cube.floodFill(position, activeCellId, get3DAddress, get2DAddress);
+      for (let i = 0; i <= 2; i++) {
+        if (i !== thirdDimIndex) {
+          res[i] = voxel[index2d++];
+        } else {
+          res[i] = initialAddress[thirdDimIndex];
+        }
+      }
+      return res;
+    };
+    const get2DAddress = (voxel: Vector3): Vector2 => {
+      const res = [0, 0];
+      let counter = 0;
+      for (let i = 0; i < 3; ++i) {
+        if (i !== thirdDimIndex) {
+          res[counter++] = voxel[i];
+        }
+      }
+      return res;
+    };
+    // just try out.
+    cube.floodFill(initialVoxel, activeCellId, get3DAddress, get2DAddress);
+  }
 }
 
 export function* finishLayer(

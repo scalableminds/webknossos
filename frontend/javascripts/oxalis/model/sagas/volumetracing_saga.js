@@ -22,6 +22,7 @@ import {
   type UpdateAction,
   updateVolumeTracing,
   updateUserBoundingBoxes,
+  removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
@@ -347,5 +348,8 @@ export function* diffVolumeTracing(
   }
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+  }
+  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+    yield removeFallbackLayer();
   }
 }

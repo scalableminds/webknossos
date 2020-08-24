@@ -385,47 +385,50 @@ class DataCube {
     }
     const initialVoxelIndex = this.getVoxelIndex(initialVoxel);
     const sourceCellId = bucket.getOrCreateData()[initialVoxelIndex];
-    // TODO: The bucket should be able to appear multiple times in the map -> use a different key;
-    // -> use an array as a stack
+    // TODO: Work on local addresses
     // Mapping from bucketIndex to bucket and initial voxel for flood fill.
     const bucketsToFill: Array<[DataBucket, Vector3]> = [];
     bucketsToFill.push([bucket, this.getVoxelOffset(initialVoxel, zoomStep)]);
     const floodFillBucket = (currentBucket: DataBucket, initialAddress: Vector3) => {
       const bucketData = currentBucket.getOrCreateData();
-      const currentVoxel = this.getVoxelIndex(initialAddress);
+      const currentVoxel = this.getVoxelIndex(initialAddress, zoomStep);
       if (bucketData[currentVoxel] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial position does not match the source cell id.
         return;
       }
       const currentVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
+      let labeledVoxel = 0;
+      let bucketCounter = 0;
       while (currentVoxelIterator.notEmpty()) {
         const neighbours = currentVoxelIterator.getNeighbors();
         currentVoxelIterator.step();
         for (let i = 0; i < neighbours.length; ++i) {
           const neighbourVoxel = neighbours[i];
-          const neighbourVoxel3D = get3DAddress(neighbourVoxel, initialAddress);
           // If the current neighbour is not in the current bucket, calculate
           // the bucket's zoomed address and add the bucket to bucketsToFill.
           let neighbourBucketAddress: ?Vector4 = null;
           for (let dim = 0; dim < 2; ++dim) {
             if (neighbourVoxel[dim] < 0) {
               neighbourBucketAddress = [
-                bucket.zoomedAddress[0],
-                bucket.zoomedAddress[1],
-                bucket.zoomedAddress[2],
+                currentBucket.zoomedAddress[0],
+                currentBucket.zoomedAddress[1],
+                currentBucket.zoomedAddress[2],
                 zoomStep,
               ];
               neighbourBucketAddress[dim] -= 1;
-            } else if (neighbourVoxel[dim] > constants.BUCKET_WIDTH) {
+              // Add a full bucket width to the coordinate below 0 to avoid error's cause by the modulo operation.
+              neighbourVoxel[dim] += constants.BUCKET_WIDTH;
+            } else if (neighbourVoxel[dim] >= constants.BUCKET_WIDTH) {
               neighbourBucketAddress = [
-                bucket.zoomedAddress[0],
-                bucket.zoomedAddress[1],
-                bucket.zoomedAddress[2],
+                currentBucket.zoomedAddress[0],
+                currentBucket.zoomedAddress[1],
+                currentBucket.zoomedAddress[2],
                 zoomStep,
               ];
               neighbourBucketAddress[dim] += 1;
             }
           }
+          const neighbourVoxel3D = get3DAddress(neighbourVoxel, initialVoxel);
           if (neighbourBucketAddress) {
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
@@ -433,15 +436,25 @@ class DataCube {
                 neighbourBucket,
                 this.getVoxelOffset(neighbourVoxel3D, zoomStep),
               ]);
+              ++bucketCounter;
             }
           } else {
-            const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D);
+            const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
               currentVoxelIterator.add(neighbourVoxel);
+              ++labeledVoxel;
             }
           }
         }
+      }
+      if (labeledVoxel > 0) {
+        console.log("current bucket stats");
+        console.log("zoomed address", currentBucket.zoomedAddress.toString());
+        currentBucket.trigger("bucketLabeled");
+        this.pushQueue.insert(currentBucket);
+        console.log("added voxel", labeledVoxel);
+        console.log("bucketsAdded", bucketCounter);
       }
       // TODO: add bucket to push queue and make as dirty and trigger volumelabeled and so on.
     };
@@ -449,6 +462,8 @@ class DataCube {
       const [currentBucket, initialAddress] = bucketsToFill.pop();
       floodFillBucket(currentBucket, initialAddress);
     }
+    this.pushQueue.push();
+    this.trigger("volumeLabeled");
   }
 
   hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {

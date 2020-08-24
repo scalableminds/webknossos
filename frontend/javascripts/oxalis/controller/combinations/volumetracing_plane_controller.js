@@ -106,8 +106,9 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         }
         if (event.metaKey) {
           Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
+        } else {
+          Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
         }
-        Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
     },
 

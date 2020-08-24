@@ -16,7 +16,7 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector4 } from "oxalis/constants";
+import Constants, { type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
 
@@ -130,6 +130,19 @@ export class DataBucket {
     this.data = null;
   }
 
+  getBoundingBox(): BoundingBoxType {
+    const min = bucketPositionToGlobalAddress(
+      this.zoomedAddress,
+      getResolutions(Store.getState().dataset),
+    );
+    const max = [
+      min[0] + Constants.BUCKET_WIDTH,
+      min[1] + Constants.BUCKET_WIDTH,
+      min[2] + Constants.BUCKET_WIDTH,
+    ];
+    return { min, max };
+  }
+
   shouldCollect(): boolean {
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     return collect;
@@ -173,7 +186,7 @@ export class DataBucket {
   }
 
   getData(): BucketDataArray {
-    const data = this.data;
+    const { data } = this;
     if (data == null) {
       throw new Error("Bucket.getData() called, but data does not exist (anymore).");
     }

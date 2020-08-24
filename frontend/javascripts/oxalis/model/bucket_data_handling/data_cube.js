@@ -25,9 +25,14 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import constants, { type Vector2, type Vector3, type Vector4 } from "oxalis/constants";
+import constants, {
+  type Vector2,
+  type Vector3,
+  type Vector4,
+  type BoundingBoxType,
+} from "oxalis/constants";
 import { type ElementClass } from "admin/api_flow_types";
-
+import { areBoundingBoxesOverlapping } from "libs/utils";
 class CubeEntry {
   data: Map<number, Bucket>;
   boundary: Vector3;
@@ -373,6 +378,8 @@ class DataCube {
     cellId: number,
     get3DAddress: (Vector2, Vector3) => Vector3,
     get2DAddress: Vector3 => Vector2,
+    dimensionsToIterateOver: Vector2,
+    viewportBoundings: BoundingBoxType,
     zoomStep: number = 0,
   ) {
     // TODO: just pass in the planeId and handle the coordinate conversion here
@@ -385,82 +392,82 @@ class DataCube {
     }
     const initialVoxelIndex = this.getVoxelIndex(initialVoxel);
     const sourceCellId = bucket.getOrCreateData()[initialVoxelIndex];
-    // TODO: Work on local addresses
+    // TODO:
     // Mapping from bucketIndex to bucket and initial voxel for flood fill.
     const bucketsToFill: Array<[DataBucket, Vector3]> = [];
     bucketsToFill.push([bucket, this.getVoxelOffset(initialVoxel, zoomStep)]);
-    const floodFillBucket = (currentBucket: DataBucket, initialAddress: Vector3) => {
+    // Iterate over all buckets within the area and flood fill each of them.
+    while (bucketsToFill.length > 0) {
+      const [currentBucket, initialAddress] = bucketsToFill.pop();
+      // Check if the buckets overlaps the active viewport bounds.
+      if (!areBoundingBoxesOverlapping(currentBucket.getBoundingBox(), viewportBoundings)) {
+        continue;
+      }
       const bucketData = currentBucket.getOrCreateData();
       const currentVoxel = this.getVoxelIndex(initialAddress, zoomStep);
       if (bucketData[currentVoxel] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial position does not match the source cell id.
-        return;
+        continue;
       }
-      const currentVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
+      const neighbourVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
       let labeledVoxel = 0;
-      let bucketCounter = 0;
-      while (currentVoxelIterator.notEmpty()) {
-        const neighbours = currentVoxelIterator.getNeighbors();
-        currentVoxelIterator.step();
-        for (let i = 0; i < neighbours.length; ++i) {
-          const neighbourVoxel = neighbours[i];
-          // If the current neighbour is not in the current bucket, calculate
-          // the bucket's zoomed address and add the bucket to bucketsToFill.
+      // Iterating over all neighbours from the initialAddress.
+      while (neighbourVoxelIterator.notEmpty()) {
+        const neighbours = neighbourVoxelIterator.getNeighbors();
+        for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
+          const neighbourVoxel = neighbours[neighbourIndex];
+          let neighbourVoxel3D = get3DAddress(neighbourVoxel, initialVoxel);
+
+          // If the current neighbour is not in the current bucket, calculate its
+          // bucket's zoomed address and add the bucket to bucketsToFill.
           let neighbourBucketAddress: ?Vector4 = null;
-          for (let dim = 0; dim < 2; ++dim) {
-            if (neighbourVoxel[dim] < 0) {
+          for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
+            const dimension = dimensionsToIterateOver[dimensionIndex];
+            if (neighbourVoxel[dimensionIndex] < 0) {
               neighbourBucketAddress = [
                 currentBucket.zoomedAddress[0],
                 currentBucket.zoomedAddress[1],
                 currentBucket.zoomedAddress[2],
                 zoomStep,
               ];
-              neighbourBucketAddress[dim] -= 1;
-              // Add a full bucket width to the coordinate below 0 to avoid error's cause by the modulo operation.
-              neighbourVoxel[dim] += constants.BUCKET_WIDTH;
-            } else if (neighbourVoxel[dim] >= constants.BUCKET_WIDTH) {
+              neighbourBucketAddress[dimension] -= 1;
+              // Add a full bucket width to the coordinate below 0 to avoid error's caused by the modulo operation.
+              neighbourVoxel[dimensionIndex] += constants.BUCKET_WIDTH;
+            } else if (neighbourVoxel[dimensionIndex] >= constants.BUCKET_WIDTH) {
               neighbourBucketAddress = [
                 currentBucket.zoomedAddress[0],
                 currentBucket.zoomedAddress[1],
                 currentBucket.zoomedAddress[2],
                 zoomStep,
               ];
-              neighbourBucketAddress[dim] += 1;
+              neighbourBucketAddress[dimension] += 1;
             }
           }
-          const neighbourVoxel3D = get3DAddress(neighbourVoxel, initialVoxel);
+          neighbourVoxel3D = get3DAddress(neighbourVoxel, initialVoxel);
           if (neighbourBucketAddress) {
+            // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
               bucketsToFill.push([
                 neighbourBucket,
                 this.getVoxelOffset(neighbourVoxel3D, zoomStep),
               ]);
-              ++bucketCounter;
             }
           } else {
+            // Label the current neighbour and add it to the neighbourVoxelIterator to iterate over its neighbours.
             const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
-              currentVoxelIterator.add(neighbourVoxel);
+              neighbourVoxelIterator.add(neighbourVoxel);
               ++labeledVoxel;
             }
           }
         }
       }
       if (labeledVoxel > 0) {
-        console.log("current bucket stats");
-        console.log("zoomed address", currentBucket.zoomedAddress.toString());
         currentBucket.trigger("bucketLabeled");
         this.pushQueue.insert(currentBucket);
-        console.log("added voxel", labeledVoxel);
-        console.log("bucketsAdded", bucketCounter);
       }
-      // TODO: add bucket to push queue and make as dirty and trigger volumelabeled and so on.
-    };
-    while (bucketsToFill.length > 0) {
-      const [currentBucket, initialAddress] = bucketsToFill.pop();
-      floodFillBucket(currentBucket, initialAddress);
     }
     this.pushQueue.push();
     this.trigger("volumeLabeled");

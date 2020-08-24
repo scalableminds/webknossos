@@ -112,10 +112,6 @@ export class Dynamic2DVoxelIterator {
     this.stack = [initialPosition];
   }
 
-  step() {
-    this.stack.pop();
-  }
-
   add(newVoxel: Vector2) {
     return this.stack.push(newVoxel);
   }
@@ -128,7 +124,7 @@ export class Dynamic2DVoxelIterator {
     if (!this.notEmpty()) {
       return [];
     }
-    const currentVoxel = this.stack[this.stack.length - 1];
+    const currentVoxel = this.stack.pop();
     return [
       [currentVoxel[0] + 1, currentVoxel[1]],
       [currentVoxel[0] - 1, currentVoxel[1]],

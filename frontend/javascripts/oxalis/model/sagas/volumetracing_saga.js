@@ -143,7 +143,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
+function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
@@ -253,8 +253,11 @@ export function* floodFill(): Saga<void> {
     const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
     const { cube } = segmentationLayer;
     const initialVoxel = Dimensions.roundCoordinate(position);
+    const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+    const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
+    const dimensionsToIterateOver: Vector2 = ([0, 1, 2].filter(val => val !== thirdDimIndex): any);
     const get3DAddress = (voxel: Vector2, initialAddress: Vector3) => {
       let index2d = 0;
       const res = [0, 0, 0];
@@ -279,7 +282,14 @@ export function* floodFill(): Saga<void> {
       return res;
     };
     // just try out.
-    cube.floodFill(initialVoxel, activeCellId, get3DAddress, get2DAddress);
+    cube.floodFill(
+      initialVoxel,
+      activeCellId,
+      get3DAddress,
+      get2DAddress,
+      dimensionsToIterateOver,
+      currentViewportBounding,
+    );
   }
 }
 

@@ -112,6 +112,8 @@ export function* collectUndoStates(): Saga<void> {
       redo: _take("REDO"),
     }): any): racedActionsNeededForUndoRedo);
     if (skeletonUserAction || addBucketToUndoAction || finishAnnotationStrokeAction) {
+      let shouldClearRedoState =
+        addBucketToUndoAction != null || finishAnnotationStrokeAction != null;
       if (skeletonUserAction && prevSkeletonTracingOrNull != null) {
         const skeletonUndoState = yield* call(
           getSkeletonTracingToUndoState,
@@ -120,6 +122,7 @@ export function* collectUndoStates(): Saga<void> {
           previousAction,
         );
         if (skeletonUndoState) {
+          shouldClearRedoState = true;
           undoStack.push(skeletonUndoState);
         }
         previousAction = skeletonUserAction;
@@ -140,8 +143,10 @@ export function* collectUndoStates(): Saga<void> {
         currentVolumeAnnotationBatch = [];
         pendingCompressions = [];
       }
-      // Clear the redo stack when a new action is executed.
-      redoStack.splice(0);
+      if (shouldClearRedoState) {
+        // Clear the redo stack when a new action is executed.
+        redoStack.splice(0);
+      }
       if (undoStack.length > UNDO_HISTORY_SIZE) {
         undoStack.shift();
       }

@@ -281,7 +281,6 @@ export function* floodFill(): Saga<void> {
       }
       return res;
     };
-    // just try out.
     cube.floodFill(
       initialVoxel,
       activeCellId,

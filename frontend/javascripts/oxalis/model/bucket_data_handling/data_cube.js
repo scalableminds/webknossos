@@ -382,9 +382,15 @@ class DataCube {
     viewportBoundings: BoundingBoxType,
     zoomStep: number = 0,
   ) {
-    // TODO: just pass in the planeId and handle the coordinate conversion here
-    // needed: click position + viewport
-    // only above, bottom, left ,right
+    // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
+    // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
+    // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
+    // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
+    //
+    // Note: It is possible that a bucket is multiple times added to the address. This is intended
+    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter is somewhere else.
+    // If it would not be possible to have the same neighbour bucket in the list multiple times,
+    // not all of the target area in the neighbour bucket might be filled.
     const address = this.positionToZoomedAddress(initialVoxel, zoomStep);
     const bucket = this.getOrCreateBucket(address);
     if (bucket.type === "null") {
@@ -392,10 +398,9 @@ class DataCube {
     }
     const initialVoxelIndex = this.getVoxelIndex(initialVoxel);
     const sourceCellId = bucket.getOrCreateData()[initialVoxelIndex];
-    // TODO:
-    // Mapping from bucketIndex to bucket and initial voxel for flood fill.
-    const bucketsToFill: Array<[DataBucket, Vector3]> = [];
-    bucketsToFill.push([bucket, this.getVoxelOffset(initialVoxel, zoomStep)]);
+    const bucketsToFill: Array<[DataBucket, Vector3]> = [
+      [bucket, this.getVoxelOffset(initialVoxel, zoomStep)],
+    ];
     // Iterate over all buckets within the area and flood fill each of them.
     while (bucketsToFill.length > 0) {
       const [currentBucket, initialAddress] = bucketsToFill.pop();
@@ -409,6 +414,7 @@ class DataCube {
         // Ignoring neighbour buckets whose cellId at the initial position does not match the source cell id.
         continue;
       }
+      // Use a Dynamic2DVoxelIterator to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
       const neighbourVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
       let labeledVoxel = 0;
       // Iterating over all neighbours from the initialAddress.

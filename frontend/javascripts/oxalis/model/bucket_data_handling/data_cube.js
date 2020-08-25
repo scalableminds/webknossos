@@ -59,7 +59,7 @@ class DataCube {
   on: Function;
   off: Function;
 
-  // The cube stores the buckets in a seperate array for each zoomStep. For each
+  // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
   // The bucket-arrays are initialized large enough to hold the whole cube. Thus no
   // expanding is necessary. bucketCount keeps track of how many buckets are currently
@@ -338,8 +338,8 @@ class DataCube {
       }
       iterator.reset();
     }
-    this.pushQueue.push();
-    this.trigger("volumeLabeled");
+
+    this.triggerPushQueue();
   }
 
   labelVoxelInResolution(
@@ -378,6 +378,20 @@ class DataCube {
         }
       }
     }
+  }
+
+  setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
+    const bucket = this.getOrCreateBucket(zoomedAddress);
+    if (bucket.type === "null") {
+      return;
+    }
+    bucket.setData(data);
+    this.pushQueue.insert(bucket);
+  }
+
+  triggerPushQueue() {
+    this.pushQueue.push();
+    this.trigger("volumeLabeled");
   }
 
   hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {

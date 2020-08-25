@@ -23,11 +23,18 @@ type Props = {|
   // This component should be updated when the zoom changes.
   // eslint-disable-next-line react/no-unused-prop-types
   zoomStep: number,
+  isInMergerMode: boolean,
 |};
 
 const isZoomStepTooHighForTraceTool = () => isVolumeTraceToolDisallowed(Store.getState());
 
 class VolumeActionsView extends PureComponent<Props> {
+  componentDidUpdate = (prevProps: Props) => {
+    if (!prevProps.isInMergerMode && this.props.isInMergerMode) {
+      Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
+    }
+  };
+
   handleSetTool = (event: { target: { value: VolumeTool } }) => {
     Store.dispatch(setToolAction(event.target.value));
   };
@@ -41,10 +48,6 @@ class VolumeActionsView extends PureComponent<Props> {
     const traceToolDisabledTooltip = isTraceToolDisabled
       ? "Your zoom is low to use the trace tool. Please zoom in further to use it."
       : "";
-    // TOO unfiy this with the dataset position view.
-    const maybeErrorColorForTraceTool = isTraceToolDisabled
-      ? { color: "rgb(255, 155, 85)", borderColor: "rgb(241, 122, 39)" }
-      : {};
     return (
       <div
         onClick={() => {
@@ -57,16 +60,26 @@ class VolumeActionsView extends PureComponent<Props> {
           style={{ marginRight: 10 }}
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
-          <Tooltip title={traceToolDisabledTooltip}>
-            <RadioButton
-              value={VolumeToolEnum.TRACE}
-              disabled={isTraceToolDisabled}
-              style={maybeErrorColorForTraceTool}
-            >
-              Trace
+
+          <Tooltip
+            title={
+              this.props.isInMergerMode
+                ? "Volume annotation is disabled while the merger mode is active."
+                : ""
+            }
+          >
+            <Tooltip title={traceToolDisabledTooltip}>
+              <RadioButton
+                value={VolumeToolEnum.TRACE}
+                disabled={this.props.isInMergerMode || isTraceToolDisabled}
+              >
+                Trace
+              </RadioButton>
+            </Tooltip>
+            <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
+              Brush
             </RadioButton>
           </Tooltip>
-          <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
         </RadioGroup>
         <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>
@@ -83,6 +96,7 @@ function mapStateToProps(state: OxalisState): Props {
   return {
     activeTool: enforceVolumeTracing(state.tracing).activeTool,
     zoomStep: state.flycam.zoomStep,
+    isInMergerMode: state.temporaryConfiguration.isMergerModeEnabled,
   };
 }
 

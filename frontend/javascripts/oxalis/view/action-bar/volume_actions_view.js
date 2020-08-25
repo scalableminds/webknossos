@@ -3,7 +3,7 @@ import { Button, Radio, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 
-import { type VolumeTool, VolumeToolEnum } from "oxalis/constants";
+import { type VolumeTool, VolumeToolEnum, type Vector3 } from "oxalis/constants";
 import { document } from "libs/window";
 import {
   enforceVolumeTracing,
@@ -11,6 +11,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import Store, { type OxalisState } from "oxalis/store";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
@@ -24,6 +25,7 @@ type Props = {|
   // eslint-disable-next-line react/no-unused-prop-types
   zoomStep: number,
   isInMergerMode: boolean,
+  activeResolution: Vector3,
 |};
 
 const isZoomStepTooHighForTraceTool = () => isVolumeTraceToolDisallowed(Store.getState());
@@ -44,40 +46,42 @@ class VolumeActionsView extends PureComponent<Props> {
   };
 
   render() {
+    const { activeTool, activeResolution, isInMergerMode } = this.props;
+    const hasResolutionWithHigherDimension = activeResolution.some(val => val > 1);
+    const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
+      <Tooltip title="You are annotating in a low resolution. You might be annotating multiple slices in higher resolutions.">
+        place holder
+      </Tooltip>
+    ) : null;
     const isTraceToolDisabled = isZoomStepTooHighForTraceTool();
     const traceToolDisabledTooltip = isTraceToolDisabled
       ? "Your zoom is low to use the trace tool. Please zoom in further to use it."
       : "";
+
     return (
       <div
         onClick={() => {
           if (document.activeElement) document.activeElement.blur();
         }}
       >
-        <RadioGroup
-          onChange={this.handleSetTool}
-          value={this.props.activeTool}
-          style={{ marginRight: 10 }}
-        >
+        <RadioGroup onChange={this.handleSetTool} value={activeTool} style={{ marginRight: 10 }}>
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
 
           <Tooltip
             title={
-              this.props.isInMergerMode
-                ? "Volume annotation is disabled while the merger mode is active."
-                : ""
+              isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : ""
             }
           >
             <Tooltip title={traceToolDisabledTooltip}>
               <RadioButton
                 value={VolumeToolEnum.TRACE}
-                disabled={this.props.isInMergerMode || isTraceToolDisabled}
+                disabled={isInMergerMode || isTraceToolDisabled}
               >
-                Trace
+                Trace {activeTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
               </RadioButton>
             </Tooltip>
-            <RadioButton value={VolumeToolEnum.BRUSH} disabled={this.props.isInMergerMode}>
-              Brush
+            <RadioButton value={VolumeToolEnum.BRUSH} disabled={isInMergerMode}>
+              Brush {activeTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
             </RadioButton>
           </Tooltip>
         </RadioGroup>
@@ -97,6 +101,7 @@ function mapStateToProps(state: OxalisState): Props {
     activeTool: enforceVolumeTracing(state.tracing).activeTool,
     zoomStep: state.flycam.zoomStep,
     isInMergerMode: state.temporaryConfiguration.isMergerModeEnabled,
+    activeResolution: getCurrentResolution(state),
   };
 }
 

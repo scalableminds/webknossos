@@ -177,14 +177,19 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  getCopyOfData(): BucketDataArray {
+    const bucketData = this.getOrCreateData();
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+    const dataClone = new TypedArrayClass(bucketData);
+    return dataClone;
+  }
+
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
     const zoomedAddressAsString = this.zoomedAddress.toString();
     if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
-      const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-      const dataClone = new TypedArrayClass(bucketData);
-      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
       bucketsAlreadyInUndoState.add(zoomedAddressAsString);
+      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
     }
     labelFunc(bucketData);
     this.dirty = true;

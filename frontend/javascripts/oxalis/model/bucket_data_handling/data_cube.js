@@ -13,6 +13,7 @@ import {
   NULL_BUCKET_OUT_OF_BB,
   NullBucket,
   type BucketDataArray,
+  bucketsAlreadyInUndoState,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { type VoxelIterator, Dynamic2DVoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -25,6 +26,10 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import {
+  addBucketToUndoAction,
+  finishAnnotationStrokeAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import constants, {
   type Vector2,
   type Vector3,
@@ -413,6 +418,14 @@ class DataCube {
         // Ignoring neighbour buckets whose cellId at the initial position does not match the source cell id.
         continue;
       }
+      // Add the bucket to the current volume undo batch, if it isn't already part of it.
+      const zoomedAddressAsString = currentBucket.zoomedAddress.toString();
+      if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
+        bucketsAlreadyInUndoState.add(zoomedAddressAsString);
+        Store.dispatch(
+          addBucketToUndoAction(currentBucket.zoomedAddress, currentBucket.getCopyOfData()),
+        );
+      }
       // Use a Dynamic2DVoxelIterator to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
       const neighbourVoxelIterator = new Dynamic2DVoxelIterator(get2DAddress(initialAddress));
       let labeledVoxel = 0;
@@ -474,6 +487,7 @@ class DataCube {
         this.pushQueue.insert(currentBucket);
       }
     }
+    Store.dispatch(finishAnnotationStrokeAction());
     this.triggerPushQueue();
   }
 

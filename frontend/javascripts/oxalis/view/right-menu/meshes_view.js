@@ -145,7 +145,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             <ButtonComponent
               title="Import STL Mesh"
               loading={this.props.isImporting}
-              faIcon="fa-plus"
+              faIcon="fas fa-plus"
             >
               Import
             </ButtonComponent>

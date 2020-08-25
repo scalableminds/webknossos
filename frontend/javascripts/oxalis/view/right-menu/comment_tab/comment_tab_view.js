@@ -318,7 +318,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   renderSortIcon() {
     const sortAsc = this.state.isSortedAscending;
     const sortNumeric = this.state.sortBy === SortByEnum.ID;
-    const iconClass = `fa fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "asc" : "desc"}`;
+    const iconClass = `fas fa-sort-${sortNumeric ? "numeric" : "alpha"}-${sortAsc ? "down" : "up"}`;
     return <i className={iconClass} />;
   }
 

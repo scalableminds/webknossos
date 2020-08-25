@@ -347,7 +347,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   title="Undo (Ctrl+Z)"
                   onClick={this.handleUndo}
                 >
-                  <i className="fa fa-undo" aria-hidden="true" />
+                  <i className="fas fa-undo" aria-hidden="true" />
                 </ButtonComponent>,
                 <ButtonComponent
                   className="narrow hide-on-small-screen"
@@ -355,7 +355,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                   title="Redo (Ctrl+Y)"
                   onClick={this.handleRedo}
                 >
-                  <i className="fa fa-repeat" aria-hidden="true" />
+                  <i className="fas fa-redo" aria-hidden="true" />
                 </ButtonComponent>,
               ]
             : null,

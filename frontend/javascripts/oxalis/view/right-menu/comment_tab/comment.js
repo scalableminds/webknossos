@@ -81,7 +81,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
         <ActiveCommentPopover comment={comment} isActive={isActive}>
           <span style={{ marginLeft: 5 }}>
             <a onClick={handleClick}>
-              <i className="fa fa-commenting-o" />
+              <i className="far fa-comment-dots" />
             </a>
           </span>
         </ActiveCommentPopover>

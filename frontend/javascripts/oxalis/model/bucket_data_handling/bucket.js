@@ -19,6 +19,7 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import Constants, { type Vector4, type BoundingBoxType } from "oxalis/constants";
 import window from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
+import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -28,6 +29,9 @@ export const BucketStateEnum = {
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
+// This set saves whether a bucket is already added to the current undo volume batch
+// and gets cleared by the save saga after an annotation step has finished.
+export const bucketsAlreadyInUndoState: Set<string> = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -174,7 +178,15 @@ export class DataBucket {
   }
 
   label(labelFunc: BucketDataArray => void) {
-    labelFunc(this.getOrCreateData());
+    const bucketData = this.getOrCreateData();
+    const zoomedAddressAsString = this.zoomedAddress.toString();
+    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
+      const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+      const dataClone = new TypedArrayClass(bucketData);
+      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
+      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
+    }
+    labelFunc(bucketData);
     this.dirty = true;
     this.throttledTriggerLabeled();
   }
@@ -192,6 +204,17 @@ export class DataBucket {
     }
 
     return data;
+  }
+
+  setData(newData: Uint8Array) {
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+    this.data = new TypedArrayClass(
+      newData.buffer,
+      newData.byteOffset,
+      newData.byteLength / TypedArrayClass.BYTES_PER_ELEMENT,
+    );
+    this.dirty = true;
+    this.trigger("bucketLabeled");
   }
 
   markAsNeeded(): void {

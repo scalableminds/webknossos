@@ -45,6 +45,7 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
+import type { Edge, NavList, NavListNode } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
@@ -144,6 +145,88 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
+function edgeToOtherNode(edge: Edge, nodeId: number): number {
+  return edge.source === nodeId ? edge.target : edge.source;
+}
+
+function getNextNodeFromTree(tree, node): ?number {
+  if (!tree || !node) {
+    return null;
+  }
+  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
+  const next = Math.max(...nodes);
+  return next;
+}
+function getPrevNodeFromTree(tree, node): ?number {
+  if (!tree || !node) {
+    return null;
+  }
+  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
+  const prev = Math.min(...nodes);
+  return prev;
+}
+
+function createNewPrevListNode(node: NavListNode, nodeId: number): NavListNode {
+  return { nodeId, nextNode: node, prevNode: null };
+}
+// state -> tracing -> skeleton -> activeNodeId / activeTreeId
+// trees
+function toNextNode(): void {
+  let nextNode = null;
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+  const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
+    .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
+    .getOrElse({
+      tree: null,
+      node: null,
+    });
+
+  if (
+    navigationNodeList &&
+    navigationNodeList.currentNode &&
+    navigationNodeList.currentNode.nodeId === activeNodeId &&
+    navigationNodeList.currentNode.nextNode
+  ) {
+    nextNode = navigationNodeList.currentNode.nextNode.nodeId;
+  } else {
+    nextNode = getNextNodeFromTree(tree, node);
+  }
+
+  if (nextNode != null) {
+    Store.dispatch(setActiveNodeAction(nextNode));
+  }
+}
+function toPrevNode(): void {
+  let prevNode = null;
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+  const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
+    .map(([maybeTree, maybeNode]) => ({
+      tree: maybeTree,
+      node: maybeNode,
+    }))
+    .getOrElse({
+      tree: null,
+      node: null,
+    });
+
+  if (
+    navigationNodeList &&
+    navigationNodeList.currentNode &&
+    navigationNodeList.currentNode.nodeId === activeNodeId &&
+    navigationNodeList.currentNode.prevNode
+  ) {
+    prevNode = navigationNodeList.currentNode.prevNode.nodeId;
+  } else {
+    prevNode = getPrevNodeFromTree(tree, node);
+  }
+
+  if (prevNode != null) {
+    Store.dispatch(setActiveNodeAction(prevNode));
+  }
+}
+
 export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
@@ -164,6 +247,10 @@ export function getKeyboardControls() {
       api.tracing.centerNode();
       api.tracing.centerTDView();
     },
+
+    // navigate nodes
+    ",": () => toPrevNode(),
+    "ctrl + .": () => toNextNode(),
   };
 }
 export function getLoopedKeyboardControls() {

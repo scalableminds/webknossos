@@ -15,6 +15,7 @@ import Store, {
   type SkeletonTracing,
   type TreeGroup,
   type MutableTreeMap,
+  type NavList,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -116,6 +117,10 @@ type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
+type UpdateNavigationDequeAction = {
+  type: "UPDATE_NAVIGATION_DEQUE",
+  navigationNodeList: ?NavList,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -156,7 +161,8 @@ export type SkeletonTracingAction =
   | SetTracingAction
   | SetTreeGroupsAction
   | SetTreeGroupAction
-  | SetMergerModeEnabledAction;
+  | SetMergerModeEnabledAction
+  | UpdateNavigationDequeAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -189,6 +195,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
+  "UPDATE_NAVIGATION_DEQUE",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
 ];
@@ -510,3 +517,10 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   // if the user confirms
   return noAction();
 };
+
+export const updateNavigationDequeAction = (
+  navigationNodeList: NavList,
+): UpdateNavigationDequeAction => ({
+  type: "UPDATE_NAVIGATION_DEQUE",
+  navigationNodeList,
+});

@@ -59,6 +59,7 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import rootSaga from "oxalis/model/sagas/root_saga";
+import Deque from "collections/deque";
 
 export type MutableCommentType = {|
   content: string,
@@ -197,6 +198,16 @@ type TracingBase = {|
   +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
+export type NavListNode = {
+  prevNode: ?NavListNode,
+  nextNode: ?NavListNode,
+  nodeId: number,
+};
+export type NavList = {
+  nodeIds: Deque<NavListNode>,
+  currentNode: NavListNode,
+};
+
 export type SkeletonTracing = {|
   ...TracingBase,
   +type: "skeleton",
@@ -206,6 +217,7 @@ export type SkeletonTracing = {|
   +activeNodeId: ?number,
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
+  +navigationNodeList?: ?NavList,
 |};
 
 export type VolumeTracing = {|

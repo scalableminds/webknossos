@@ -1,5 +1,12 @@
 {
   "trailingComma": "all",
   "printWidth": 100,
+  "overrides": [
+    {
+      "files": "effect-generators.js.flow",
+      "options": {
+        "printWidth": 200
+      }
+    }
+  ]
 }
-

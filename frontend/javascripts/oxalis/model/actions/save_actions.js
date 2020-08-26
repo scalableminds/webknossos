@@ -29,8 +29,8 @@ type SetVersionNumberAction = {
   version: number,
   tracingType: Tracing,
 };
-type UndoAction = { type: "UNDO" };
-type RedoAction = { type: "REDO" };
+export type UndoAction = { type: "UNDO" };
+export type RedoAction = { type: "REDO" };
 type DisableSavingAction = { type: "DISABLE_SAVING" };
 export type SaveAction =
   | PushSaveQueueTransaction

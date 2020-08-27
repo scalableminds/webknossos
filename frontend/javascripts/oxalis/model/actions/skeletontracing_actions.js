@@ -16,9 +16,11 @@ import Store, {
   type TreeGroup,
   type MutableTreeMap,
   type NavList,
+  type NavListNode,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
+import Deque from "collections/deque";
 
 type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -117,9 +119,10 @@ type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
-type UpdateNavigationDequeAction = {
-  type: "UPDATE_NAVIGATION_DEQUE",
-  navigationNodeList: ?NavList,
+type UpdateNavigationListAction = {
+  type: "UPDATE_NAVIGATION_LIST",
+  nodes: ?Array<NavListNode>,
+  currentNode: ?NavListNode,
 };
 type NoAction = { type: "NONE" };
 
@@ -162,7 +165,7 @@ export type SkeletonTracingAction =
   | SetTreeGroupsAction
   | SetTreeGroupAction
   | SetMergerModeEnabledAction
-  | UpdateNavigationDequeAction;
+  | UpdateNavigationListAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -195,7 +198,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
-  "UPDATE_NAVIGATION_DEQUE",
+  "UPDATE_NAVIGATION_LIST",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
 ];
@@ -518,9 +521,11 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   return noAction();
 };
 
-export const updateNavigationDequeAction = (
-  navigationNodeList: NavList,
-): UpdateNavigationDequeAction => ({
-  type: "UPDATE_NAVIGATION_DEQUE",
-  navigationNodeList,
+export const updateNavigationListAction = (
+  nodes: ?Array<NavListNode>,
+  currentNode: ?NavListNode,
+): UpdateNavigationListAction => ({
+  type: "UPDATE_NAVIGATION_LIST",
+  nodes,
+  currentNode,
 });

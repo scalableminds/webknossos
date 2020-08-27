@@ -38,6 +38,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setNodePositionAction,
+  updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setDirectionAction,
@@ -45,12 +46,13 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
-import type { Edge, NavList, NavListNode } from "oxalis/store";
+import type { Edge, NavList, NavListNode, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
+import Deque from "collections/deque";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -145,36 +147,54 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
+function resetNavigationList(nodeId: number) {
+  const newNode: NavListNode = { nodeId };
+  Store.dispatch(updateNavigationListAction([newNode], newNode));
+}
 function edgeToOtherNode(edge: Edge, nodeId: number): number {
   return edge.source === nodeId ? edge.target : edge.source;
 }
-
-function getNextNodeFromTree(tree, node): ?number {
-  if (!tree || !node) {
-    return null;
-  }
+function createListNode(
+  nodeId: number,
+  nextNode: ?NavListNode,
+  prevNode: ?NavListNode,
+): NavListNode {
+  return { nodeId, nextNode, prevNode };
+}
+function createNextListNodeFromTree(tree: Tree, node: Node, currentNode: NavListNode): NavListNode {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
   const next = Math.max(...nodes);
-  return next;
+  return { nodeId: next, prevNode: currentNode };
 }
-function getPrevNodeFromTree(tree, node): ?number {
-  if (!tree || !node) {
-    return null;
-  }
+function createPrevListNodeFromTree(tree: Tree, node: Node, currentNode: NavListNode): NavListNode {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
-  const prev = Math.min(...nodes);
-  return prev;
+  const prev = Math.max(...nodes);
+  return { nodeId: prev, nextNode: currentNode };
 }
 
-function createNewPrevListNode(node: NavListNode, nodeId: number): NavListNode {
-  return { nodeId, nextNode: node, prevNode: null };
-}
-// state -> tracing -> skeleton -> activeNodeId / activeTreeId
-// trees
 function toNextNode(): void {
-  let nextNode = null;
+  let nextListNode = null;
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+  console.log(navigationNodeList);
+
+  // stop if no node is active
+  if (activeNodeId == null || activeTreeId == null) {
+    return;
+  }
+
+  // shift to next node if there is one in the list
+  if (
+    navigationNodeList &&
+    navigationNodeList.currentNode &&
+    navigationNodeList.currentNode.nextNode
+  ) {
+    const newCurrentListNode = navigationNodeList.currentNode.nextNode;
+    Store.dispatch(setActiveNodeAction(newCurrentListNode.nodeId));
+    Store.dispatch(updateNavigationListAction(null, newCurrentListNode));
+    return;
+  }
+
   const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
     .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
     .getOrElse({
@@ -182,25 +202,56 @@ function toNextNode(): void {
       node: null,
     });
 
+  if (!tree || !node) {
+    return;
+  }
+
+  // create and incorporate new list node and make it active
+  if (navigationNodeList && navigationNodeList.currentNode) {
+    nextListNode = createNextListNodeFromTree(tree, node, navigationNodeList.currentNode);
+    const deque = [...navigationNodeList.nodes];
+    deque.push(nextListNode);
+    Store.dispatch(updateNavigationListAction(deque, nextListNode));
+    Store.dispatch(setActiveNodeAction(nextListNode.nodeId));
+    return;
+  }
+
+  // only push to nav list if it is empty
+  if (navigationNodeList === []) {
+    const currentNode = createListNode(activeNodeId, null, null);
+    const nextNode = createNextListNodeFromTree(tree, node, currentNode);
+    currentNode.nextNode = nextNode;
+    Store.dispatch(updateNavigationListAction([currentNode, nextNode], nextNode));
+    Store.dispatch(setActiveNodeAction(nextNode.nodeId));
+  }
+}
+
+function toPrevNode(): void {
+  let prevListNode = null;
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+
+  console.log(navigationNodeList);
+
+  // stop if no node is active
+  if (activeNodeId == null || activeTreeId == null) {
+    console.log("No active node");
+    return;
+  }
+
+  // shift to prev node if there is one in the list
   if (
     navigationNodeList &&
     navigationNodeList.currentNode &&
-    navigationNodeList.currentNode.nodeId === activeNodeId &&
-    navigationNodeList.currentNode.nextNode
+    navigationNodeList.currentNode.prevNode
   ) {
-    nextNode = navigationNodeList.currentNode.nextNode.nodeId;
-  } else {
-    nextNode = getNextNodeFromTree(tree, node);
+    console.log("PREV da");
+    const newCurrentListNode = navigationNodeList.currentNode.prevNode;
+    Store.dispatch(setActiveNodeAction(newCurrentListNode.nodeId));
+    Store.dispatch(updateNavigationListAction(null, newCurrentListNode));
+    return;
   }
 
-  if (nextNode != null) {
-    Store.dispatch(setActiveNodeAction(nextNode));
-  }
-}
-function toPrevNode(): void {
-  let prevNode = null;
-  const tracing = enforceSkeletonTracing(Store.getState().tracing);
-  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
   const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
     .map(([maybeTree, maybeNode]) => ({
       tree: maybeTree,
@@ -211,19 +262,35 @@ function toPrevNode(): void {
       node: null,
     });
 
-  if (
-    navigationNodeList &&
-    navigationNodeList.currentNode &&
-    navigationNodeList.currentNode.nodeId === activeNodeId &&
-    navigationNodeList.currentNode.prevNode
-  ) {
-    prevNode = navigationNodeList.currentNode.prevNode.nodeId;
-  } else {
-    prevNode = getPrevNodeFromTree(tree, node);
+  if (!tree || !node) {
+    console.log("Tree or Node empty");
+    console.log("Tree: ", tree);
+    console.log("Node: ", node);
+    return;
+  }
+  // create and incorporate new list node and make it active
+  if (navigationNodeList && navigationNodeList.currentNode) {
+    prevListNode = createPrevListNodeFromTree(tree, node, navigationNodeList.currentNode);
+    const newNode = createListNode(
+      activeNodeId,
+      navigationNodeList.currentNode.nextNode,
+      prevListNode,
+    );
+    console.log("PREV muss");
+    const deque = [...navigationNodeList.nodes];
+    deque.unshift(prevListNode);
+    Store.dispatch(updateNavigationListAction(deque, prevListNode));
+    Store.dispatch(setActiveNodeAction(prevListNode.nodeId));
   }
 
-  if (prevNode != null) {
-    Store.dispatch(setActiveNodeAction(prevNode));
+  // only push to nav list if it is empty
+  if (navigationNodeList === []) {
+    console.log("LIST empty");
+    const currentNode = createListNode(activeNodeId, null, null);
+    const prevNode = createPrevListNodeFromTree(tree, node, currentNode);
+    currentNode.prevNode = prevNode;
+    Store.dispatch(updateNavigationListAction([currentNode, prevNode], prevNode));
+    Store.dispatch(setActiveNodeAction(prevNode.nodeId));
   }
 }
 
@@ -316,6 +383,7 @@ function onClick(
       );
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
+      resetNavigationList(nodeId);
     }
   }
 }

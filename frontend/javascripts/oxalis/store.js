@@ -199,13 +199,13 @@ type TracingBase = {|
 |};
 
 export type NavListNode = {
-  prevNode: ?NavListNode,
-  nextNode: ?NavListNode,
+  prevNode?: ?NavListNode,
+  nextNode?: ?NavListNode,
   nodeId: number,
 };
 export type NavList = {
-  nodeIds: Deque<NavListNode>,
-  currentNode: NavListNode,
+  nodes: Array<NavListNode>,
+  currentNode?: NavListNode,
 };
 
 export type SkeletonTracing = {|

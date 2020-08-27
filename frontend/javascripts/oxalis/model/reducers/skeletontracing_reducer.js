@@ -44,6 +44,7 @@ import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "libs/user_settings.schema";
+import Deque from "collections/deque";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;
@@ -101,7 +102,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
-        navigationNodeList: null,
+        navigationNodeList: { nodes: [] },
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });
@@ -697,17 +698,42 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             },
           });
         }
-        case "UPDATE_NAVIGATION_DEQUE": {
-          const { navigationNodeList } = action;
-          return update(state, {
-            tracing: {
-              skeleton: {
-                navigationNodeList: {
-                  $set: navigationNodeList,
+        case "UPDATE_NAVIGATION_LIST": {
+          const { nodes, currentNode } = action;
+          if (nodes && currentNode) {
+            return update(state, {
+              tracing: {
+                skeleton: {
+                  navigationNodeList: {
+                    nodes: { $set: nodes },
+                    currentNode: { $set: currentNode },
+                  },
                 },
               },
-            },
-          });
+            });
+          } else if (nodes && !currentNode) {
+            return update(state, {
+              tracing: {
+                skeleton: {
+                  navigationNodeList: {
+                    nodes: { $set: nodes },
+                  },
+                },
+              },
+            });
+          } else if (!nodes && currentNode) {
+            return update(state, {
+              tracing: {
+                skeleton: {
+                  navigationNodeList: {
+                    currentNode: { $set: currentNode },
+                  },
+                },
+              },
+            });
+          } else {
+            return state;
+          }
         }
 
         case "SET_TREE_GROUP": {

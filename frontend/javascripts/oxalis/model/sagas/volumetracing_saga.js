@@ -261,7 +261,8 @@ export function* floodFill(): Saga<void> {
     const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
-    const dimensionsToIterateOver: Vector2 = ([0, 1, 2].filter(val => val !== thirdDimIndex): any);
+    const indices = Dimensions.getIndices(activeViewport);
+    const dimensionsToIterateOver: Vector2 = [indices[0], indices[1]];
     const get3DAddress = (voxel: Vector2, initialAddress: Vector3) => {
       let index2d = 0;
       const res = [0, 0, 0];
@@ -275,16 +276,10 @@ export function* floodFill(): Saga<void> {
       }
       return res;
     };
-    const get2DAddress = (voxel: Vector3): Vector2 => {
-      const res = [0, 0];
-      let counter = 0;
-      for (let i = 0; i < 3; ++i) {
-        if (i !== thirdDimIndex) {
-          res[counter++] = voxel[i];
-        }
-      }
-      return res;
-    };
+    const get2DAddress = (voxel: Vector3): Vector2 => [
+      voxel[dimensionsToIterateOver[0]],
+      voxel[dimensionsToIterateOver[1]],
+    ];
     cube.floodFill(
       initialVoxel,
       activeCellId,

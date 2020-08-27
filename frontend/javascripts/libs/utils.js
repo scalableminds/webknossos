@@ -212,9 +212,7 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
 export function areBoundingBoxesOverlapping(firstBB: BoundingBoxType, secondBB: BoundingBoxType) {
   let areOverlapping = true;
   for (let dim = 0; dim < 3 && areOverlapping; ++dim) {
-    areOverlapping =
-      (firstBB.max[dim] >= secondBB.max[dim] && secondBB.max[dim] >= firstBB.min[dim]) ||
-      (secondBB.max[dim] >= firstBB.max[dim] && firstBB.max[dim] >= secondBB.min[dim]);
+    areOverlapping = firstBB.max[dim] > secondBB.min[dim] && secondBB.max[dim] > firstBB.min[dim];
   }
   return areOverlapping;
 }

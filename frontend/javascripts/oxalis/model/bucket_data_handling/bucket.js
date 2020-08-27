@@ -186,17 +186,21 @@ export class DataBucket {
 
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    const zoomedAddressAsString = this.zoomedAddress.toString();
-    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
-      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
-      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
-    }
+    this.markAndAddBucketForUndo();
     labelFunc(bucketData);
     this.dirty = true;
     this.throttledTriggerLabeled();
   }
 
   throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
+
+  markAndAddBucketForUndo() {
+    const zoomedAddressAsString = this.zoomedAddress.toString();
+    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
+      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
+      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
+    }
+  }
 
   hasData(): boolean {
     return this.data != null;

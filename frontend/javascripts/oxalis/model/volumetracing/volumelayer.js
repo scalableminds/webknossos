@@ -105,23 +105,23 @@ export class VoxelIterator {
   }
 }
 
-export class Dynamic2DVoxelIterator {
+export class VoxelNeighborStack2D {
   stack: Array<Vector2>;
 
   constructor(initialPosition: Vector2) {
     this.stack = [initialPosition];
   }
 
-  add(newVoxel: Vector2) {
+  pushVoxel(newVoxel: Vector2) {
     return this.stack.push(newVoxel);
   }
 
-  notEmpty(): boolean {
-    return this.stack.length > 0;
+  isEmpty(): boolean {
+    return this.stack.length === 0;
   }
 
-  getNeighbors(): Array<Vector2> {
-    if (!this.notEmpty()) {
+  popVoxelAndGetNeighbors(): Array<Vector2> {
+    if (this.isEmpty()) {
       return [];
     }
     const currentVoxel = this.stack.pop();

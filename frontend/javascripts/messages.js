@@ -140,6 +140,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
   "tracing.confirm_remove_fallback_layer.notes":
     "Note, that this action cannot be undone. Also note, if you already started with your annotation work based on the original segmentation layer, some small chunks of the segmentation might have already been merged into your annotation for technical reasons.",
+  "tracing.area_to_fill_is_too_big":
+    "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 
-import {
+import Constants, {
   type BoundingBoxType,
   type OrthoView,
   type Vector2,
@@ -14,10 +14,13 @@ import {
   VolumeToolEnum,
   type VolumeTool,
 } from "oxalis/constants";
+import { V3 } from "libs/mjs";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
+import messages from "messages";
+import Toast from "libs/toast";
 import Store from "oxalis/store";
 
 export class VoxelIterator {
@@ -175,6 +178,15 @@ class VolumeLayer {
     this.maxCoord = maxCoord;
   }
 
+  getArea(): number {
+    const [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
+    if (maxCoord == null || minCoord == null) {
+      return 0;
+    }
+    const difference = V3.sub(maxCoord, minCoord);
+    return difference[0] * difference[1] * difference[2];
+  }
+
   getContourList() {
     const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
     return volumeTracing.contourList;
@@ -185,11 +197,7 @@ class VolumeLayer {
   }
 
   getVoxelIterator(mode: VolumeTool, activeResolution: Vector3): VoxelIterator {
-    if (this.isEmpty()) {
-      return VoxelIterator.finished();
-    }
-
-    if (this.minCoord == null) {
+    if (this.isEmpty() || this.minCoord == null) {
       return VoxelIterator.finished();
     }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
@@ -198,6 +206,13 @@ class VolumeLayer {
       return VoxelIterator.finished();
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
+
+    // The maximum area is scaled by 3 as the min and maxCoord will always be three slices apart,
+    // because in lines 171 + 172 a value of 2 is subtracted / added when the values get updated.
+    if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
+      Toast.info(messages["tracing.area_to_fill_is_too_big"]);
+      return VoxelIterator.finished();
+    }
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;

@@ -147,150 +147,81 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
-function resetNavigationList(nodeId: number) {
-  const newNode: NavListNode = { nodeId };
-  Store.dispatch(updateNavigationListAction([newNode], newNode));
-}
 function edgeToOtherNode(edge: Edge, nodeId: number): number {
   return edge.source === nodeId ? edge.target : edge.source;
 }
-function createListNode(
-  nodeId: number,
-  nextNode: ?NavListNode,
-  prevNode: ?NavListNode,
-): NavListNode {
-  return { nodeId, nextNode, prevNode };
-}
-function createNextListNodeFromTree(tree: Tree, node: Node, currentNode: NavListNode): NavListNode {
+function getNextNodeFromTree(tree: Tree, node: Node): number {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
-  const next = Math.max(...nodes);
-  return { nodeId: next, prevNode: currentNode };
+  const next = Math.max(node.id, ...nodes);
+  return next;
 }
-function createPrevListNodeFromTree(tree: Tree, node: Node, currentNode: NavListNode): NavListNode {
+function getPrevNodeFromTree(tree: Tree, node: Node): number {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
-  const prev = Math.max(...nodes);
-  return { nodeId: prev, nextNode: currentNode };
+  const prev = Math.min(node.id, ...nodes);
+  return prev;
 }
 
 function toNextNode(): void {
-  let nextListNode = null;
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+
   console.log(navigationNodeList);
 
-  // stop if no node is active
-  if (activeNodeId == null || activeTreeId == null) {
-    return;
-  }
-
-  // shift to next node if there is one in the list
+  // there is a next node in the list
   if (
     navigationNodeList &&
-    navigationNodeList.currentNode &&
-    navigationNodeList.currentNode.nextNode
+    navigationNodeList.list.length > 1 &&
+    navigationNodeList.activeIndex < navigationNodeList.list.length - 1
   ) {
-    const newCurrentListNode = navigationNodeList.currentNode.nextNode;
-    Store.dispatch(setActiveNodeAction(newCurrentListNode.nodeId));
-    Store.dispatch(updateNavigationListAction(null, newCurrentListNode));
-    return;
-  }
-
-  const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
-    .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
-    .getOrElse({
-      tree: null,
-      node: null,
-    });
-
-  if (!tree || !node) {
-    return;
-  }
-
-  // create and incorporate new list node and make it active
-  if (navigationNodeList && navigationNodeList.currentNode) {
-    nextListNode = createNextListNodeFromTree(tree, node, navigationNodeList.currentNode);
-    const deque = [...navigationNodeList.nodes];
-    deque.push(nextListNode);
-    Store.dispatch(updateNavigationListAction(deque, nextListNode));
-    Store.dispatch(setActiveNodeAction(nextListNode.nodeId));
-    return;
-  }
-
-  // only push to nav list if it is empty
-  if (navigationNodeList === []) {
-    const currentNode = createListNode(activeNodeId, null, null);
-    const nextNode = createNextListNodeFromTree(tree, node, currentNode);
-    currentNode.nextNode = nextNode;
-    Store.dispatch(updateNavigationListAction([currentNode, nextNode], nextNode));
-    Store.dispatch(setActiveNodeAction(nextNode.nodeId));
+    Store.dispatch(
+      setActiveNodeAction(navigationNodeList.list[navigationNodeList.activeIndex + 1]),
+    );
+    Store.dispatch(
+      updateNavigationListAction(navigationNodeList.list, navigationNodeList.activeIndex + 1),
+    );
+  } else {
+    const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
+      .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
+      .getOrElse({
+        tree: null,
+        node: null,
+      });
+    if (!tree || !node) return;
+    const nextNodeId = getNextNodeFromTree(tree, node);
+    const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
+    if (nextNodeId !== activeNodeId) newList.push(nextNodeId);
+    Store.dispatch(setActiveNodeAction(nextNodeId));
+    Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
 
 function toPrevNode(): void {
-  let prevListNode = null;
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
 
   console.log(navigationNodeList);
 
-  // stop if no node is active
-  if (activeNodeId == null || activeTreeId == null) {
-    console.log("No active node");
-    return;
-  }
-
-  // shift to prev node if there is one in the list
-  if (
-    navigationNodeList &&
-    navigationNodeList.currentNode &&
-    navigationNodeList.currentNode.prevNode
-  ) {
-    console.log("PREV da");
-    const newCurrentListNode = navigationNodeList.currentNode.prevNode;
-    Store.dispatch(setActiveNodeAction(newCurrentListNode.nodeId));
-    Store.dispatch(updateNavigationListAction(null, newCurrentListNode));
-    return;
-  }
-
-  const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
-    .map(([maybeTree, maybeNode]) => ({
-      tree: maybeTree,
-      node: maybeNode,
-    }))
-    .getOrElse({
-      tree: null,
-      node: null,
-    });
-
-  if (!tree || !node) {
-    console.log("Tree or Node empty");
-    console.log("Tree: ", tree);
-    console.log("Node: ", node);
-    return;
-  }
-  // create and incorporate new list node and make it active
-  if (navigationNodeList && navigationNodeList.currentNode) {
-    prevListNode = createPrevListNodeFromTree(tree, node, navigationNodeList.currentNode);
-    const newNode = createListNode(
-      activeNodeId,
-      navigationNodeList.currentNode.nextNode,
-      prevListNode,
+  // there is a previous node in the list
+  if (navigationNodeList && navigationNodeList.activeIndex > 0) {
+    Store.dispatch(
+      setActiveNodeAction(navigationNodeList.list[navigationNodeList.activeIndex - 1]),
     );
-    console.log("PREV muss");
-    const deque = [...navigationNodeList.nodes];
-    deque.unshift(prevListNode);
-    Store.dispatch(updateNavigationListAction(deque, prevListNode));
-    Store.dispatch(setActiveNodeAction(prevListNode.nodeId));
-  }
-
-  // only push to nav list if it is empty
-  if (navigationNodeList === []) {
-    console.log("LIST empty");
-    const currentNode = createListNode(activeNodeId, null, null);
-    const prevNode = createPrevListNodeFromTree(tree, node, currentNode);
-    currentNode.prevNode = prevNode;
-    Store.dispatch(updateNavigationListAction([currentNode, prevNode], prevNode));
-    Store.dispatch(setActiveNodeAction(prevNode.nodeId));
+    Store.dispatch(
+      updateNavigationListAction(navigationNodeList.list, navigationNodeList.activeIndex - 1),
+    );
+  } else {
+    const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
+      .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
+      .getOrElse({
+        tree: null,
+        node: null,
+      });
+    if (!tree || !node) return;
+    const nextNodeId = getPrevNodeFromTree(tree, node);
+    const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
+    if (nextNodeId !== activeNodeId) newList.unshift(nextNodeId);
+    Store.dispatch(setActiveNodeAction(nextNodeId));
+    Store.dispatch(updateNavigationListAction(newList, 0));
   }
 }
 
@@ -383,7 +314,7 @@ function onClick(
       );
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
-      resetNavigationList(nodeId);
+      Store.dispatch(updateNavigationListAction([nodeId], 0));
     }
   }
 }
@@ -414,7 +345,10 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
   const { newNodeNewTree } = Store.getState().userConfiguration;
   if (ctrlPressed && !newNodeNewTree) {
     Store.dispatch(createBranchPointAction());
-    activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
+    activeNodeMaybe.map(activeNode => {
+      Store.dispatch(setActiveNodeAction(activeNode.id));
+      Store.dispatch(updateNavigationListAction([activeNode.id], 0));
+    });
   }
 }
 

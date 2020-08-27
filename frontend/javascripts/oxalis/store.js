@@ -198,15 +198,10 @@ type TracingBase = {|
   +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
-export type NavListNode = {
-  prevNode?: ?NavListNode,
-  nextNode?: ?NavListNode,
-  nodeId: number,
-};
-export type NavList = {
-  nodes: Array<NavListNode>,
-  currentNode?: NavListNode,
-};
+export type NavigationList = {|
+  +list: Array<number>,
+  +activeIndex: number,
+|};
 
 export type SkeletonTracing = {|
   ...TracingBase,
@@ -217,7 +212,7 @@ export type SkeletonTracing = {|
   +activeNodeId: ?number,
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
-  +navigationNodeList?: ?NavList,
+  +navigationNodeList: NavigationList,
 |};
 
 export type VolumeTracing = {|

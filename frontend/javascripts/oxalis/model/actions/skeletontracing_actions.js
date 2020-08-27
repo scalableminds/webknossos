@@ -15,12 +15,9 @@ import Store, {
   type SkeletonTracing,
   type TreeGroup,
   type MutableTreeMap,
-  type NavList,
-  type NavListNode,
 } from "oxalis/store";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
-import Deque from "collections/deque";
 
 type InitializeSkeletonTracingAction = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -121,8 +118,8 @@ type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: n
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
 type UpdateNavigationListAction = {
   type: "UPDATE_NAVIGATION_LIST",
-  nodes: ?Array<NavListNode>,
-  currentNode: ?NavListNode,
+  list: Array<number>,
+  activeIndex: number,
 };
 type NoAction = { type: "NONE" };
 
@@ -522,10 +519,10 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
 };
 
 export const updateNavigationListAction = (
-  nodes: ?Array<NavListNode>,
-  currentNode: ?NavListNode,
+  list: Array<number>,
+  activeIndex: number,
 ): UpdateNavigationListAction => ({
   type: "UPDATE_NAVIGATION_LIST",
-  nodes,
-  currentNode,
+  list,
+  activeIndex,
 });

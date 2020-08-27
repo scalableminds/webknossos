@@ -256,32 +256,26 @@ export function* floodFill(): Saga<void> {
     const { position, planeId } = floodFillAction;
     const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
     const { cube } = segmentationLayer;
-    const initialVoxel = Dimensions.roundCoordinate(position);
-    const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
+    const seedVoxel = Dimensions.roundCoordinate(position);
+    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-    const thirdDimIndex = Dimensions.thirdDimensionForPlane(planeId);
-    const indices = Dimensions.getIndices(activeViewport);
-    const dimensionsToIterateOver: Vector2 = [indices[0], indices[1]];
-    const get3DAddress = (voxel: Vector2, initialAddress: Vector3) => {
-      let index2d = 0;
-      const res = [0, 0, 0];
-
-      for (let i = 0; i <= 2; i++) {
-        if (i !== thirdDimIndex) {
-          res[i] = voxel[index2d++];
-        } else {
-          res[i] = initialAddress[thirdDimIndex];
-        }
-      }
-      return res;
+    const indices = Dimensions.getIndices(planeId);
+    const get3DAddress = (voxel: Vector2) => {
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[indices[2]]];
+      const orderedVoxelWithThirdDimension = [
+        unorderedVoxelWithThirdDimension[indices[0]],
+        unorderedVoxelWithThirdDimension[indices[1]],
+        unorderedVoxelWithThirdDimension[indices[2]],
+      ];
+      return orderedVoxelWithThirdDimension;
     };
+    const dimensionsToIterateOver: Vector2 = [indices[0], indices[1]];
     const get2DAddress = (voxel: Vector3): Vector2 => [
       voxel[dimensionsToIterateOver[0]],
       voxel[dimensionsToIterateOver[1]],
     ];
     cube.floodFill(
-      initialVoxel,
+      seedVoxel,
       activeCellId,
       get3DAddress,
       get2DAddress,

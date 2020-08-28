@@ -41,11 +41,6 @@ const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
 
-function isANumber(value: number | string): boolean {
-  // Code from https://stackoverflow.com/questions/175739/built-in-way-in-javascript-to-check-if-a-string-is-a-valid-number
-  return !isNaN(parseFloat(value)) && isFinite(value);
-}
-
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
@@ -211,12 +206,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     } = this.props;
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
-    const formatValue = (newValue: string): number | string => {
-      if (!isANumber(newValue)) {
-        return newValue;
-      }
-      return roundTo(parseFloat(newValue), 2);
-    };
     const tooltipTitleFor = (minimumOrMaximum: string) =>
       `Enter the ${minimumOrMaximum} possible value for layer ${layerName}. Scientific (e.g. 9e+10) notation is supported.`;
 
@@ -256,10 +245,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
-                  formatter={formatValue}
+                  precision={2}
                   onChange={value => {
                     value = parseFloat(value);
-                    if (isANumber(value) && value <= maxRange) {
+                    if (value <= maxRange) {
                       this.setState({ currentMin: value });
                       this.updateMinimumDebounced(value, layerName);
                     }
@@ -281,10 +270,10 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
-                  formatter={formatValue}
+                  precision={2}
                   onChange={value => {
                     value = parseFloat(value);
-                    if (isANumber(value) && value >= minRange) {
+                    if (value >= minRange) {
                       this.setState({ currentMax: value });
                       this.updateMaximumDebounced(value, layerName);
                     }

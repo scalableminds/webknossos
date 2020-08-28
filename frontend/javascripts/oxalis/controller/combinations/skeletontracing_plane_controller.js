@@ -46,13 +46,12 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
-import type { Edge, NavList, NavListNode, Tree, Node } from "oxalis/store";
+import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
-import Deque from "collections/deque";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,

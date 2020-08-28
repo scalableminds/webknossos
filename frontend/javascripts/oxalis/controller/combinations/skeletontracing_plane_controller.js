@@ -164,15 +164,16 @@ function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
 
-  // there is a next node in the list
   if (
     navigationList &&
     navigationList.list.length > 1 &&
     navigationList.activeIndex < navigationList.list.length - 1
   ) {
+    // navigate to subsequent node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
+    // search for subsequent node in tree
     const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
       .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
       .getOrElse({
@@ -192,11 +193,12 @@ function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
 
-  // there is a previous node in the list
   if (navigationList && navigationList.activeIndex > 0) {
+    // navigate to preceding node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
+    // search for preceding node in tree
     const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
       .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
       .getOrElse({

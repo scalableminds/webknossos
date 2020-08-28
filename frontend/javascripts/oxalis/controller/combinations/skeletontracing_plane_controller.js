@@ -162,20 +162,16 @@ function getPrecedingNodeFromTree(tree: Tree, node: Node): number {
 
 function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
-  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
 
   // there is a next node in the list
   if (
-    navigationNodeList &&
-    navigationNodeList.list.length > 1 &&
-    navigationNodeList.activeIndex < navigationNodeList.list.length - 1
+    navigationList &&
+    navigationList.list.length > 1 &&
+    navigationList.activeIndex < navigationList.list.length - 1
   ) {
-    Store.dispatch(
-      setActiveNodeAction(navigationNodeList.list[navigationNodeList.activeIndex + 1]),
-    );
-    Store.dispatch(
-      updateNavigationListAction(navigationNodeList.list, navigationNodeList.activeIndex + 1),
-    );
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
       .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
@@ -185,7 +181,7 @@ function toSubsequentNode(): void {
       });
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(tree, node);
-    const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
+    const newList = navigationList.list ? [...navigationList.list] : [];
     if (nextNodeId !== activeNodeId) newList.push(nextNodeId);
     Store.dispatch(setActiveNodeAction(nextNodeId));
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
@@ -194,16 +190,12 @@ function toSubsequentNode(): void {
 
 function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
-  const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
 
   // there is a previous node in the list
-  if (navigationNodeList && navigationNodeList.activeIndex > 0) {
-    Store.dispatch(
-      setActiveNodeAction(navigationNodeList.list[navigationNodeList.activeIndex - 1]),
-    );
-    Store.dispatch(
-      updateNavigationListAction(navigationNodeList.list, navigationNodeList.activeIndex - 1),
-    );
+  if (navigationList && navigationList.activeIndex > 0) {
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
       .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
@@ -213,7 +205,7 @@ function toPrecedingNode(): void {
       });
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(tree, node);
-    const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
+    const newList = navigationList.list ? [...navigationList.list] : [];
     if (nextNodeId !== activeNodeId) newList.unshift(nextNodeId);
     Store.dispatch(setActiveNodeAction(nextNodeId));
     Store.dispatch(updateNavigationListAction(newList, 0));

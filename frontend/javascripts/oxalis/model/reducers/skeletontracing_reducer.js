@@ -101,7 +101,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         version: action.tracing.version,
         boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
         userBoundingBoxes,
-        navigationNodeList: { list: [], activeIndex: -1 },
+        navigationList: { list: [], activeIndex: -1 },
       };
 
       return update(state, { tracing: { skeleton: { $set: skeletonTracing } } });
@@ -703,7 +703,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           return update(state, {
             tracing: {
               skeleton: {
-                navigationNodeList: {
+                navigationList: {
                   list: {
                     $set: list,
                   },

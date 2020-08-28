@@ -547,14 +547,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
     return (
       <Menu>
         <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
-          <i className="fa fa-adjust" /> Change Color
+          <i className="fas fa-adjust" /> Change Color
         </Menu.Item>
         <Menu.Item
           key="shuffleAllTreeColors"
           onClick={this.shuffleAllTreeColors}
           title="Shuffle All Tree Colors"
         >
-          <i className="fa fa-random" /> Shuffle All Colors
+          <i className="fas fa-random" /> Shuffle All Colors
         </Menu.Item>
         <Menu.Item
           key="handleNmlDownload"
@@ -636,19 +636,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
             </Tooltip>
           </AdvancedSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
-            <i className="fa fa-plus" /> Create
+            <i className="fas fa-plus" /> Create
           </ButtonComponent>
           <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
-            <i className="fa fa-trash-o" /> Delete
+            <i className="far fa-trash-alt" /> Delete
           </ButtonComponent>
           <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
-            <i className="fa fa-toggle-on" /> Toggle All
+            <i className="fas fa-toggle-on" /> Toggle All
           </ButtonComponent>
           <ButtonComponent
             onClick={this.toggleInactiveTrees}
             title="Toggle Visibility of Inactive Trees"
           >
-            <i className="fa fa-toggle-off" /> Toggle Inactive
+            <i className="fas fa-toggle-off" /> Toggle Inactive
           </ButtonComponent>
           <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
             <ButtonComponent>
@@ -659,7 +659,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </ButtonGroup>
         <InputGroup compact>
           <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
-            <i className="fa fa-arrow-left" />
+            <i className="fas fa-arrow-left" />
           </ButtonComponent>
           <InputComponent
             onChange={this.handleChangeTreeName}
@@ -668,11 +668,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
             style={{ width: "60%" }}
           />
           <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
-            <i className="fa fa-arrow-right" />
+            <i className="fas fa-arrow-right" />
           </ButtonComponent>
           <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
             <ButtonComponent title="Sort">
-              <i className="fa fa-sort-alpha-asc" />
+              <i className="fas fa-sort-alpha-down" />
             </ButtonComponent>
           </Dropdown>
         </InputGroup>

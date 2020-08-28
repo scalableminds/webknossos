@@ -146,25 +146,23 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
-function edgeToOtherNode(edge: Edge, nodeId: number): number {
+function otherNodeOfEdge(edge: Edge, nodeId: number): number {
   return edge.source === nodeId ? edge.target : edge.source;
 }
-function getNextNodeFromTree(tree: Tree, node: Node): number {
-  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
+function getSubsequentNodeFromTree(tree: Tree, node: Node): number {
+  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
   const next = Math.max(node.id, ...nodes);
   return next;
 }
-function getPrevNodeFromTree(tree: Tree, node: Node): number {
-  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => edgeToOtherNode(edge, node.id));
+function getPrecedingNodeFromTree(tree: Tree, node: Node): number {
+  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
   const prev = Math.min(node.id, ...nodes);
   return prev;
 }
 
-function toNextNode(): void {
+function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
-
-  console.log(navigationNodeList);
 
   // there is a next node in the list
   if (
@@ -186,7 +184,7 @@ function toNextNode(): void {
         node: null,
       });
     if (!tree || !node) return;
-    const nextNodeId = getNextNodeFromTree(tree, node);
+    const nextNodeId = getSubsequentNodeFromTree(tree, node);
     const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
     if (nextNodeId !== activeNodeId) newList.push(nextNodeId);
     Store.dispatch(setActiveNodeAction(nextNodeId));
@@ -194,11 +192,9 @@ function toNextNode(): void {
   }
 }
 
-function toPrevNode(): void {
+function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationNodeList, activeNodeId, activeTreeId } = tracing;
-
-  console.log(navigationNodeList);
 
   // there is a previous node in the list
   if (navigationNodeList && navigationNodeList.activeIndex > 0) {
@@ -216,7 +212,7 @@ function toPrevNode(): void {
         node: null,
       });
     if (!tree || !node) return;
-    const nextNodeId = getPrevNodeFromTree(tree, node);
+    const nextNodeId = getPrecedingNodeFromTree(tree, node);
     const newList = navigationNodeList.list ? [...navigationNodeList.list] : [];
     if (nextNodeId !== activeNodeId) newList.unshift(nextNodeId);
     Store.dispatch(setActiveNodeAction(nextNodeId));
@@ -246,8 +242,8 @@ export function getKeyboardControls() {
     },
 
     // navigate nodes
-    ",": () => toPrevNode(),
-    "ctrl + .": () => toNextNode(),
+    ",": () => toPrecedingNode(),
+    "ctrl + .": () => toSubsequentNode(),
   };
 }
 export function getLoopedKeyboardControls() {

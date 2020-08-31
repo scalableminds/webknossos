@@ -39,6 +39,8 @@ import com.scalableminds.webknossos.tracingstore.geometry.{
   Point3D => ProtoPoint
 }
 
+import scala.collection.mutable
+
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     config: TracingStoreConfig,

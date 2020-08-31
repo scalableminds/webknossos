@@ -41,9 +41,9 @@ class VoxelPosition(
 }
 
 class BucketPosition(
-    protected val globalX: Int,
-    protected val globalY: Int,
-    protected val globalZ: Int,
+    val globalX: Int,
+    val globalY: Int,
+    val globalZ: Int,
     val resolution: Point3D
 ) extends GenericPosition {
 

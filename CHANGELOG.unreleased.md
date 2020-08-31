@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility to undo and redo volume annotation strokes. [#4771](https://github.com/scalableminds/webknossos/pull/4771)
 
 ### Changed
--
+- The position input when tracing or viewing a dataset now accepts decimal positions as well. [#4777](https://github.com/scalableminds/webknossos/pull/4803)
 
 ### Fixed
 - 

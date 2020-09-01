@@ -149,30 +149,40 @@ export function moveNode(dx: number, dy: number) {
 function otherNodeOfEdge(edge: Edge, nodeId: number): number {
   return edge.source === nodeId ? edge.target : edge.source;
 }
-function getSubsequentNodeFromTree(tree: Tree, node: Node): number {
-  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
-  const next = Math.max(...nodes);
+function getSubsequentNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const next = nodes.length ? Math.max(...nodes) : node.id;
   return next;
 }
-function getPrecedingNodeFromTree(tree: Tree, node: Node): number {
-  const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
-  const prev = Math.min(...nodes);
+function getPrecedingNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const prev = nodes.length ? Math.min(...nodes) : node.id;
   return prev;
 }
 
 function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
-  let isListValid = true;
-
+  let isValidList = true;
   if (activeNodeId == null || activeNodeId === undefined) return;
 
-  if (activeNodeId !== navigationList.list[navigationList.activeIndex]) isListValid = false;
+  if (
+    activeNodeId !== navigationList.list[navigationList.activeIndex] ||
+    !navigationList.list.length
+  ) {
+    isValidList = false;
+  }
 
   if (
     navigationList.list.length > 1 &&
     navigationList.activeIndex < navigationList.list.length - 1 &&
-    isListValid
+    isValidList
   ) {
     // navigate to subsequent node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
@@ -186,10 +196,18 @@ function toSubsequentNode(): void {
         node: null,
       });
     if (!tree || !node) return;
-    const nextNodeId = getSubsequentNodeFromTree(tree, node);
-    const newList = isListValid ? [...navigationList.list] : [activeNodeId];
-    if (nextNodeId !== activeNodeId) newList.push(nextNodeId);
-    Store.dispatch(setActiveNodeAction(nextNodeId));
+    const nextNodeId = getSubsequentNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex - 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.push(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
+
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
   }
 }
@@ -197,8 +215,17 @@ function toSubsequentNode(): void {
 function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
+  let isValidList = true;
 
-  if (navigationList.activeIndex > 0) {
+  if (activeNodeId == null || activeNodeId === undefined) return;
+
+  if (
+    activeNodeId !== navigationList.list[navigationList.activeIndex] ||
+    !navigationList.list.length
+  ) {
+    isValidList = false;
+  }
+  if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
@@ -211,10 +238,17 @@ function toPrecedingNode(): void {
         node: null,
       });
     if (!tree || !node) return;
-    const nextNodeId = getPrecedingNodeFromTree(tree, node);
-    const newList = navigationList.list ? [...navigationList.list] : [];
-    if (nextNodeId !== activeNodeId) newList.unshift(nextNodeId);
-    Store.dispatch(setActiveNodeAction(nextNodeId));
+    const nextNodeId = getPrecedingNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex + 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.unshift(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
     Store.dispatch(updateNavigationListAction(newList, 0));
   }
 }

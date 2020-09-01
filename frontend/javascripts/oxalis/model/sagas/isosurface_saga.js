@@ -322,8 +322,12 @@ function* removeIsosurface(
 }
 
 function* markEditedCellAsDirty(): Saga<void> {
-  const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-  modifiedCells.add(activeCellId);
+  const volumeTracing = yield* select(state => state.tracing.volume);
+  const useTracingStore = volumeTracing != null && volumeTracing.fallbackLayer == null;
+  if (useTracingStore) {
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    modifiedCells.add(activeCellId);
+  }
 }
 
 function* refreshIsosurfaces(): Saga<void> {

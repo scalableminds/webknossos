@@ -103,7 +103,6 @@ import messages from "messages";
 import window, { location } from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
 

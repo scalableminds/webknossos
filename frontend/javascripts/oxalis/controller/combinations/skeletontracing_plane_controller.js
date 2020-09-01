@@ -241,7 +241,7 @@ export function getKeyboardControls() {
     },
 
     // navigate nodes
-    ",": () => toPrecedingNode(),
+    "ctrl + ,": () => toPrecedingNode(),
     "ctrl + .": () => toSubsequentNode(),
   };
 }

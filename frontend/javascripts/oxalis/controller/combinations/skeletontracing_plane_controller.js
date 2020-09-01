@@ -151,23 +151,28 @@ function otherNodeOfEdge(edge: Edge, nodeId: number): number {
 }
 function getSubsequentNodeFromTree(tree: Tree, node: Node): number {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
-  const next = Math.max(node.id, ...nodes);
+  const next = Math.max(...nodes);
   return next;
 }
 function getPrecedingNodeFromTree(tree: Tree, node: Node): number {
   const nodes = tree.edges.getEdgesForNode(node.id).map(edge => otherNodeOfEdge(edge, node.id));
-  const prev = Math.min(node.id, ...nodes);
+  const prev = Math.min(...nodes);
   return prev;
 }
 
 function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
+  let isListValid = true;
+
+  if (activeNodeId == null || activeNodeId === undefined) return;
+
+  if (activeNodeId !== navigationList.list[navigationList.activeIndex]) isListValid = false;
 
   if (
-    navigationList &&
     navigationList.list.length > 1 &&
-    navigationList.activeIndex < navigationList.list.length - 1
+    navigationList.activeIndex < navigationList.list.length - 1 &&
+    isListValid
   ) {
     // navigate to subsequent node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
@@ -182,7 +187,7 @@ function toSubsequentNode(): void {
       });
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(tree, node);
-    const newList = navigationList.list ? [...navigationList.list] : [];
+    const newList = isListValid ? [...navigationList.list] : [activeNodeId];
     if (nextNodeId !== activeNodeId) newList.push(nextNodeId);
     Store.dispatch(setActiveNodeAction(nextNodeId));
     Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
@@ -193,7 +198,7 @@ function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
 
-  if (navigationList && navigationList.activeIndex > 0) {
+  if (navigationList.activeIndex > 0) {
     // navigate to preceding node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
@@ -303,7 +308,6 @@ function onClick(
       );
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
-      Store.dispatch(updateNavigationListAction([nodeId], 0));
     }
   }
 }
@@ -336,7 +340,6 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
     Store.dispatch(createBranchPointAction());
     activeNodeMaybe.map(activeNode => {
       Store.dispatch(setActiveNodeAction(activeNode.id));
-      Store.dispatch(updateNavigationListAction([activeNode.id], 0));
     });
   }
 }

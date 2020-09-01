@@ -823,20 +823,8 @@ class DataApi {
     return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
-  refreshIsosurfaces(): Promise<void> {
+  refreshIsosurfaces() {
     Store.dispatch(refreshIsosurfacesAction());
-    const isRefreshingComplete = new Promise(resolve => {
-      const unsubscribe = listenToStoreProperty(
-        state => state.uiInformation.refreshingIsosurfaces,
-        refreshingIsosurfaces => {
-          if (!refreshingIsosurfaces) {
-            unsubscribe();
-            resolve();
-          }
-        },
-      );
-    });
-    return isRefreshingComplete;
   }
 
   /**

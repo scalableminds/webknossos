@@ -10,7 +10,7 @@ import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
-  finishedRefreshingIsosurfacesAction,
+  finishedisRefreshingIsosurfacesAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -116,7 +116,7 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-
+  debugger;
   yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
 }
 
@@ -146,9 +146,8 @@ function* ensureSuitableIsosurface(
     return;
   }
   const dataset = yield* select(state => state.dataset);
-  const volumeTracing = yield* select(state => state.tracing.volume);
   const layer = Model.getSegmentationLayer();
-  if (!layer || (volumeTracing != null && volumeTracing.fallbackLayer != null)) {
+  if (!layer) {
     return;
   }
   const position =
@@ -355,7 +354,7 @@ function* refreshIsosurfaces(): Saga<void> {
       shouldBeRemoved = false;
     }
   }
-  yield* put(finishedRefreshingIsosurfacesAction());
+  yield* put(finishedisRefreshingIsosurfacesAction());
 }
 
 export default function* isosurfaceSaga(): Saga<void> {

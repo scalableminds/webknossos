@@ -3,7 +3,6 @@ import { Button, Tooltip } from "antd";
 import * as React from "react";
 import { connect } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import { AsyncButton } from "components/async_clickables";
 
 import api from "oxalis/api/internal_api";
 
@@ -11,9 +10,10 @@ const ButtonGroup = Button.Group;
 
 type Props = {|
   renderIsosurfaces: boolean,
+  isRefreshingIsosurfaces: boolean,
 |};
 
-function TDViewControls({ renderIsosurfaces }: Props) {
+function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces }: Props) {
   return (
     <ButtonGroup id="TDViewControls">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
@@ -33,7 +33,12 @@ function TDViewControls({ renderIsosurfaces }: Props) {
       </Button>
       {renderIsosurfaces ? (
         <Tooltip title="Reload Isosurfaces to newest version.">
-          <AsyncButton size="small" icon="reload" onClick={api.data.refreshIsosurfaces} />
+          <Button
+            size="small"
+            icon="reload"
+            loading={isRefreshingIsosurfaces}
+            onClick={api.data.refreshIsosurfaces}
+          />
         </Tooltip>
       ) : null}
     </ButtonGroup>
@@ -43,6 +48,7 @@ function TDViewControls({ renderIsosurfaces }: Props) {
 export function mapStateToProps(state: OxalisState): Props {
   return {
     renderIsosurfaces: state.datasetConfiguration.renderIsosurfaces,
+    isRefreshingIsosurfaces: state.uiInformation.isRefreshingIsosurfaces,
   };
 }
 

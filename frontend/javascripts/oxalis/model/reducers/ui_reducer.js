@@ -32,11 +32,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "REFRESH_ISOSURFACES": {
-      return updateKey(state, "uiInformation", { refreshingIsosurfaces: true });
+      return updateKey(state, "uiInformation", { isRefreshingIsosurfaces: true });
     }
 
     case "FINISHED_REFRESHING_ISOSURFACES": {
-      return updateKey(state, "uiInformation", { refreshingIsosurfaces: false });
+      return updateKey(state, "uiInformation", { isRefreshingIsosurfaces: false });
     }
 
     default:

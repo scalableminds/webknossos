@@ -10,7 +10,7 @@ import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
-  finishedisRefreshingIsosurfacesAction,
+  finishedRefreshingIsosurfacesAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
@@ -116,7 +116,7 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-  debugger;
+
   yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
 }
 
@@ -320,7 +320,7 @@ function* removeIsosurface(
   }
 }
 
-function* noteEveryEditedCell(): Saga<void> {
+function* markEditedCellAsDirty(): Saga<void> {
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   modifiedCells.add(activeCellId);
 }
@@ -340,21 +340,30 @@ function* refreshIsosurfaces(): Saga<void> {
     if (!currentlyModifiedCells.has(cellId)) {
       continue;
     }
-    const isoSurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
-    if (isoSurfacePositions.length <= 0) {
+    const isosurfacePositions = threeDMap.entries().filter(([value, _position]) => value);
+    if (isosurfacePositions.length === 0) {
       continue;
     }
     // Removing Isosurface from cache.
     yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
     // The isosurface should only be removed once after re-fetching the isosurface first position.
     let shouldBeRemoved = true;
-    for (const [, position] of isoSurfacePositions) {
-      // Reload the Isosurface.
+    for (const [, position] of isosurfacePositions) {
+      // Reload the Isosurface at the given position if it isn't already loaded there.
+      // This is done to ensure that every voxel of the isosurface is reloaded.
       yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
       shouldBeRemoved = false;
     }
   }
-  yield* put(finishedisRefreshingIsosurfacesAction());
+  // Also load the Isosurface at the current flycam position.
+  const segmentationLayer = Model.getSegmentationLayer();
+  if (!segmentationLayer) {
+    return;
+  }
+  const position = yield* select(state => getFlooredPosition(state.flycam));
+  const cellIdAtFlycamPosition = segmentationLayer.cube.getDataValue(position);
+  yield* call(ensureSuitableIsosurface, null, position, cellIdAtFlycamPosition);
+  yield* put(finishedRefreshingIsosurfacesAction());
 }
 
 export default function* isosurfaceSaga(): Saga<void> {
@@ -365,5 +374,5 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
-  yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], noteEveryEditedCell);
+  yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

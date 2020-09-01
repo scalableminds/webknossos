@@ -79,7 +79,7 @@ export type RefreshIsosurfacesAction = {
   type: "REFRESH_ISOSURFACES",
 };
 
-export type FinishedisRefreshingIsosurfacesAction = {
+export type FinishedRefreshingIsosurfacesAction = {
   type: "FINISHED_REFRESHING_ISOSURFACES",
 };
 
@@ -108,7 +108,7 @@ export type AnnotationActionTypes =
   | UpdateLocalMeshMetaDataAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
-  | FinishedisRefreshingIsosurfacesAction
+  | FinishedRefreshingIsosurfacesAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction;
 
@@ -206,7 +206,7 @@ export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
   type: "REFRESH_ISOSURFACES",
 });
 
-export const finishedisRefreshingIsosurfacesAction = (): FinishedisRefreshingIsosurfacesAction => ({
+export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurfacesAction => ({
   type: "FINISHED_REFRESHING_ISOSURFACES",
 });
 

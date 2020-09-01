@@ -31,7 +31,11 @@ import {
   enforceVolumeTracing,
   isVolumeTracingDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getFlooredPosition,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   type BoundingBoxType,
   type ContourMode,
@@ -145,7 +149,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 }
 
 function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   return {
@@ -155,7 +159,7 @@ function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBo
 }
 
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
@@ -196,7 +200,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,

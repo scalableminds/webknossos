@@ -32,11 +32,18 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     }
 
-  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
+  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] =
     if (data.length == expectedUncompressedBucketSize) {
       data
     } else {
-      decompressor.decompress(data, expectedUncompressedBucketSize)
+      try {
+        decompressor.decompress(data, expectedUncompressedBucketSize)
+      } catch {
+        case e: Exception =>
+          logger.error(
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize)")
+          throw e
+      }
     }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
@@ -73,9 +80,12 @@ trait VolumeTracingBucketHelper
       .map(
         _.toOption.map { versionedVolumeBucket =>
           if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
-          else
+          else {
+            val debugInfo =
+              s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
             Fox.successful(
-              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
+              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
+          }
         }
       )
       .toFox
@@ -133,7 +143,10 @@ class VersionedBucketIterator(prefix: String,
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
     parseBucketKey(nextRes.key)
-      .map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version))
+      .map(key => {
+        val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
+        (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
+      })
       .get
   }
 

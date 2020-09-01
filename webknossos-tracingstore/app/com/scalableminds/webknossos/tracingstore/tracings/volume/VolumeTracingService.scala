@@ -100,6 +100,7 @@ class VolumeTracingService @Inject()(
                 revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, t)
               case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
               case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
+              case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
               case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>

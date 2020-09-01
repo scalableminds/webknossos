@@ -5,6 +5,7 @@ import {
   type CopySegmentationLayerAction,
   resetContourAction,
   updateDirectionAction,
+  finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
@@ -22,6 +23,7 @@ import {
   type UpdateAction,
   updateVolumeTracing,
   updateUserBoundingBoxes,
+  removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
@@ -138,6 +140,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* put(finishAnnotationStrokeAction());
   }
 }
 
@@ -236,6 +239,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+  yield* put(finishAnnotationStrokeAction());
 }
 
 export function* finishLayer(
@@ -293,5 +297,8 @@ export function* diffVolumeTracing(
   }
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+  }
+  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+    yield removeFallbackLayer();
   }
 }

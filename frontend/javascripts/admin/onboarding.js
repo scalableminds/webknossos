@@ -341,7 +341,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
         </React.Fragment>
       }
-      icon={<i className="fa fa-building icon-big" />}
+      icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
         onComplete={organizationName => {

@@ -237,10 +237,11 @@ function* maybeLoadIsosurface(
   const tracingStoreUrl = `${tracingStoreHost}/tracings/volume/${layer.name}`;
 
   const volumeTracing = yield* select(state => state.tracing.volume);
-
+  // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
+  const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
   const { buffer: responseBuffer, neighbors } = yield* call(
     computeIsosurface,
-    volumeTracing == null ? dataStoreUrl : tracingStoreUrl,
+    useDataStore ? dataStoreUrl : tracingStoreUrl,
     layer,
     {
       position: clippedPosition,

@@ -2,7 +2,7 @@
 import { Button, Tooltip } from "antd";
 import * as React from "react";
 import { connect } from "react-redux";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 
 import api from "oxalis/api/internal_api";
 
@@ -11,9 +11,18 @@ const ButtonGroup = Button.Group;
 type Props = {|
   renderIsosurfaces: boolean,
   isRefreshingIsosurfaces: boolean,
+  volumeTracing: ?VolumeTracing,
 |};
 
-function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces }: Props) {
+function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces, volumeTracing }: Props) {
+  let refreshIsosurfaceTooltip = "Load Isosurface of centered cell from segmentation layer.";
+  if (volumeTracing != null) {
+    if (volumeTracing.fallbackLayer != null) {
+      refreshIsosurfaceTooltip = "Load Isosurface of centered cell from fallback annotation layer";
+    } else {
+      refreshIsosurfaceTooltip = "Reload annotated Isosurfaces to newest version.";
+    }
+  }
   return (
     <ButtonGroup id="TDViewControls">
       <Button size="small" onClick={api.tracing.rotate3DViewToDiagonal}>
@@ -32,7 +41,7 @@ function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces }: Props) {
         XZ
       </Button>
       {renderIsosurfaces ? (
-        <Tooltip title="Reload Isosurfaces to newest version.">
+        <Tooltip title={refreshIsosurfaceTooltip}>
           <Button
             size="small"
             icon="reload"
@@ -49,6 +58,7 @@ export function mapStateToProps(state: OxalisState): Props {
   return {
     renderIsosurfaces: state.datasetConfiguration.renderIsosurfaces,
     isRefreshingIsosurfaces: state.uiInformation.isRefreshingIsosurfaces,
+    volumeTracing: state.tracing.volume,
   };
 }
 

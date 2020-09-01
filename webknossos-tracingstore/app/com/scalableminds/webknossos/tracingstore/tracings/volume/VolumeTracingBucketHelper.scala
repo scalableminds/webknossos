@@ -32,8 +32,11 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     }
 
-  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] =
-    if (data.length == expectedUncompressedBucketSize) {
+  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] = {
+    val isAlreadyDecompressed = data.length == expectedUncompressedBucketSize
+    // revertToVersion overwrites buckets with a single zero to indicate the absence of data without deleting old versions
+    val isRevertedBucket = data.length == 1
+    if (isAlreadyDecompressed || isRevertedBucket) {
       data
     } else {
       try {
@@ -45,6 +48,7 @@ trait VolumeBucketCompression extends LazyLogging {
           throw e
       }
     }
+  }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
     // frontend treats 8-byte segmentations as 4-byte segmentations,

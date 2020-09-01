@@ -465,7 +465,6 @@ class DataCube {
         const neighbours = neighbourVoxelStack.popVoxelAndGetNeighbors();
         for (let neighbourIndex = 0; neighbourIndex < neighbours.length; ++neighbourIndex) {
           const neighbourVoxel = neighbours[neighbourIndex];
-          let neighbourVoxel3D = get3DAddress(neighbourVoxel, seedVoxel);
 
           // If the current neighbour is not in the current bucket, calculate its
           // bucket's zoomed address and add the bucket to bucketsToFill.
@@ -480,7 +479,7 @@ class DataCube {
             dimensionsToIterateOver,
             zoomStep,
           );
-          neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
+          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
           if (neighbourBucketAddress) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);

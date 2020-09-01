@@ -29,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved handling and communication of failures during download of data from datasets. [#4765](https://github.com/scalableminds/webknossos/pull/4765)
 - The volume annotation tools in hybrid tracings are disabled while in merger mode. [#4757](https://github.com/scalableminds/webknossos/pull/4770)
 - The title of a tab now shows the active tracing or dataset as well as the corresponding organization. [#4653](https://github.com/scalableminds/webknossos/pull/4767)
+- When viewing or tracing a dataset with only one slice (2D data) the default layout displays only the XY plane. The other viewports can still be accessed by changing the viewport tab. [#4738](https://github.com/scalableminds/webknossos/pull/4778)
 
 ### Fixed
 - Speed up NML import in existing tracings for NMLs with many trees (20,000+). [#4742](https://github.com/scalableminds/webknossos/pull/4742)

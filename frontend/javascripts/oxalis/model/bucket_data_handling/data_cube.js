@@ -13,6 +13,7 @@ import {
   NULL_BUCKET_OUT_OF_BB,
   NullBucket,
   type BucketDataArray,
+  is2DVoxelInsideBucket,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -26,6 +27,7 @@ import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
+import type { DimensionMap } from "oxalis/model/dimensions";
 import constants, {
   type Vector2,
   type Vector3,
@@ -373,46 +375,12 @@ class DataCube {
     }
   }
 
-  isVoxelInsideBucket(
-    voxel: Vector2,
-    bucket: DataBucket,
-    dimensionsToIterateOver: Vector2,
-    zoomStep: number,
-  ) {
-    let neighbourBucketAddress: ?Vector4 = null;
-    const adjustedVoxel = voxel;
-    for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
-      const dimension = dimensionsToIterateOver[dimensionIndex];
-      if (voxel[dimensionIndex] < 0) {
-        neighbourBucketAddress = [
-          bucket.zoomedAddress[0],
-          bucket.zoomedAddress[1],
-          bucket.zoomedAddress[2],
-          zoomStep,
-        ];
-        neighbourBucketAddress[dimension] -= 1;
-        // Add a full bucket width to the coordinate below 0 to avoid error's
-        // caused by the modulo operation used in getVoxelOffset.
-        adjustedVoxel[dimensionIndex] += constants.BUCKET_WIDTH;
-      } else if (voxel[dimensionIndex] >= constants.BUCKET_WIDTH) {
-        neighbourBucketAddress = [
-          bucket.zoomedAddress[0],
-          bucket.zoomedAddress[1],
-          bucket.zoomedAddress[2],
-          zoomStep,
-        ];
-        neighbourBucketAddress[dimension] += 1;
-      }
-    }
-    return { neighbourBucketAddress, adjustedVoxel };
-  }
-
   floodFill(
     seedVoxel: Vector3,
     cellId: number,
     get3DAddress: (Vector2, Vector3) => Vector3,
     get2DAddress: Vector3 => Vector2,
-    dimensionsToIterateOver: Vector2,
+    dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
     zoomStep: number = 0,
   ) {
@@ -471,16 +439,12 @@ class DataCube {
           // adjustedNeighbourVoxel is a copy of neighbourVoxel whose value are robust
           // against the modulo operation used in getVoxelOffset.
           const {
+            isVoxelOutside,
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
-          } = this.isVoxelInsideBucket(
-            neighbourVoxel,
-            currentBucket,
-            dimensionsToIterateOver,
-            zoomStep,
-          );
+          } = is2DVoxelInsideBucket(neighbourVoxel, currentBucket, dimensionIndices, zoomStep);
           const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
-          if (neighbourBucketAddress) {
+          if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {

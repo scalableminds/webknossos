@@ -16,7 +16,8 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector4, type BoundingBoxType } from "oxalis/constants";
+import Constants, { type Vector2, type Vector4, type BoundingBoxType } from "oxalis/constants";
+import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
@@ -381,3 +382,37 @@ export class DataBucket {
     }
   }
 }
+
+export const is2DVoxelInsideBucket = (
+  voxel: Vector2,
+  bucket: DataBucket,
+  dimensionIndices: DimensionMap,
+  zoomStep: number,
+) => {
+  const neighbourBucketAddress = [
+    bucket.zoomedAddress[0],
+    bucket.zoomedAddress[1],
+    bucket.zoomedAddress[2],
+    zoomStep,
+  ];
+  let isVoxelOutside = false;
+  const adjustedVoxel = voxel;
+  for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
+    const dimension = dimensionIndices[dimensionIndex];
+    if (voxel[dimensionIndex] < 0) {
+      isVoxelOutside = true;
+      neighbourBucketAddress[dimension] -= Math.ceil(
+        -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+      );
+      // Add a full bucket width to the coordinate below 0 to avoid error's
+      // caused by the modulo operation used in getVoxelOffset.
+      adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
+    } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
+      isVoxelOutside = true;
+      neighbourBucketAddress[dimension] += Math.floor(
+        voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+      );
+    }
+  }
+  return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
+};

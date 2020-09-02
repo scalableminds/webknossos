@@ -254,32 +254,31 @@ export function* floodFill(): Saga<void> {
       throw new Error("Unexpected action. Satisfy flow.");
     }
     const { position, planeId } = floodFillAction;
-    const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+    const segmentationLayer = Model.getSegmentationLayer();
     const { cube } = segmentationLayer;
     const seedVoxel = Dimensions.roundCoordinate(position);
     const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
-    const indices = Dimensions.getIndices(planeId);
+    const dimensionIndices = Dimensions.getIndices(planeId);
     const get3DAddress = (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[indices[2]]];
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[dimensionIndices[2]]];
       const orderedVoxelWithThirdDimension = [
-        unorderedVoxelWithThirdDimension[indices[0]],
-        unorderedVoxelWithThirdDimension[indices[1]],
-        unorderedVoxelWithThirdDimension[indices[2]],
+        unorderedVoxelWithThirdDimension[dimensionIndices[0]],
+        unorderedVoxelWithThirdDimension[dimensionIndices[1]],
+        unorderedVoxelWithThirdDimension[dimensionIndices[2]],
       ];
       return orderedVoxelWithThirdDimension;
     };
-    const dimensionsToIterateOver: Vector2 = [indices[0], indices[1]];
     const get2DAddress = (voxel: Vector3): Vector2 => [
-      voxel[dimensionsToIterateOver[0]],
-      voxel[dimensionsToIterateOver[1]],
+      voxel[dimensionIndices[0]],
+      voxel[dimensionIndices[1]],
     ];
     cube.floodFill(
       seedVoxel,
       activeCellId,
       get3DAddress,
       get2DAddress,
-      dimensionsToIterateOver,
+      dimensionIndices,
       currentViewportBounding,
     );
   }

@@ -127,6 +127,19 @@ export function getNodeAndTree(
   return Maybe.Nothing();
 }
 
+export function getNodeAndTreeOrNull(
+  skeletonTracing: SkeletonTracing,
+  nodeId: ?number,
+  treeId: ?number,
+): { tree: Tree | null, node: Node | null } {
+  return getNodeAndTree(skeletonTracing, nodeId, treeId)
+    .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
+    .getOrElse({
+      tree: null,
+      node: null,
+    });
+}
+
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),

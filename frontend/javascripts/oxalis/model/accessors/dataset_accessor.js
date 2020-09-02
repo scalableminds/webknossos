@@ -397,4 +397,8 @@ export function isLayerVisible(
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
 
+export function is2dDataset(dataset: APIDataset): boolean {
+  return getDatasetExtentInVoxel(dataset).depth < 2;
+}
+
 export default {};

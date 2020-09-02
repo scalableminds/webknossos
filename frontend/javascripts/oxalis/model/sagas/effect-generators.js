@@ -34,6 +34,10 @@ export function* race(...args) {
   return yield IOEffects.race(...args);
 }
 
+export function* join(...args) {
+  return yield IOEffects.join(...args);
+}
+
 export const _take = IOEffects.take;
 export const _call = IOEffects.call;
 export const _takeEvery = IOEffects.takeEvery;

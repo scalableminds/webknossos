@@ -78,6 +78,7 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | CTRL + Left Mouse Drag            | Add Empty Voxels To Current Cell (in Trace / Brush Mode); i.e., does not overwrite other cells    |
 | Right Mouse Drag                  | Remove Voxels From Current Cell                             |
 | CTRL + Right Mouse Drag           | Remove Voxels From Any Cell                                 |
+| CTRL + SHIFT + Left Click | Add All Voxels of the Current Area To Current Cell (Bucket Paint Tool) |
 | Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Cell                                             |
 | W, 1                              | Toggle Modes (Move / Trace / Brush)                         |

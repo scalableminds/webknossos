@@ -211,32 +211,33 @@ class VolumeTracingService @Inject()(
         }
       }
 
-    def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
-      val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
-      prepareLabelMaps()
-      if (mergedVolume.contains(bucketPosition)) {
-        val mutableBucketData = mergedVolume(bucketPosition)
-        dataTyped.zipWithIndex.foreach {
-          case (valueTyped, index) =>
-            if (!valueTyped.isZero) {
-              val byteValueMapped = if (labelMaps.isEmpty) valueTyped else labelMaps(sourceVolumeIndex)(valueTyped)
-              mutableBucketData(index) = byteValueMapped
-            }
-        }
-        mergedVolume += ((bucketPosition, mutableBucketData))
-      } else {
-        if (labelMaps.isEmpty) {
-          mergedVolume += ((bucketPosition, dataTyped))
-        } else {
-          val dataMapped = dataTyped.map { byteValue =>
-            if (!byteValue.isZero) {
-              labelMaps(sourceVolumeIndex)(byteValue)
-            } else byteValue
+    def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
+      if (data.length > 1) { // skip reverted buckets
+        val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
+        prepareLabelMaps()
+        if (mergedVolume.contains(bucketPosition)) {
+          val mutableBucketData = mergedVolume(bucketPosition)
+          dataTyped.zipWithIndex.foreach {
+            case (valueTyped, index) =>
+              if (!valueTyped.isZero) {
+                val byteValueMapped = if (labelMaps.isEmpty) valueTyped else labelMaps(sourceVolumeIndex)(valueTyped)
+                mutableBucketData(index) = byteValueMapped
+              }
           }
-          mergedVolume += ((bucketPosition, dataMapped))
+          mergedVolume += ((bucketPosition, mutableBucketData))
+        } else {
+          if (labelMaps.isEmpty) {
+            mergedVolume += ((bucketPosition, dataTyped))
+          } else {
+            val dataMapped = dataTyped.map { byteValue =>
+              if (!byteValue.isZero) {
+                labelMaps(sourceVolumeIndex)(byteValue)
+              } else byteValue
+            }
+            mergedVolume += ((bucketPosition, dataMapped))
+          }
         }
       }
-    }
 
     def saveTo(layer: VolumeTracingLayer, version: Long, toCache: Boolean): Fox[Unit] =
       for {
@@ -419,9 +420,11 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (_, data) =>
-            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-            labelSet ++= nonZeroData
+            if (data.length > 1) { // skip reverted buckets
+              val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+              val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+              labelSet ++= nonZeroData
+            }
         }
         mergedVolume.addLabelSet(labelSet)
     }

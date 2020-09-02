@@ -143,7 +143,7 @@ export default function determineBucketsForFlight(
 
   const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
   // Use a constant priority for the fallback buckets which is higher than the highest non-fallback priority
-  const fallbackPriority = iterStep + 1;
+  const fallbackPriority = 2 * halfWidth + iterStep;
   traversedBucketsWithPriorities = traversedBucketsWithPriorities.concat(
     fallbackBuckets.map(bucket => [bucket, fallbackPriority]),
   );

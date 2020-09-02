@@ -19,6 +19,7 @@ import {
   getSkeletonTracing,
   getActiveNode,
   getNodeAndTree,
+  getNodeAndTreeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -169,15 +170,10 @@ function getPrecedingNodeFromTree(tree: Tree, node: Node, excludedId: ?number): 
 function toSubsequentNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
-  let isValidList = true;
-  if (activeNodeId == null || activeNodeId === undefined) return;
+  if (activeNodeId == null) return;
 
-  if (
-    activeNodeId !== navigationList.list[navigationList.activeIndex] ||
-    !navigationList.list.length
-  ) {
-    isValidList = false;
-  }
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
 
   if (
     navigationList.list.length > 1 &&
@@ -189,12 +185,7 @@ function toSubsequentNode(): void {
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
   } else {
     // search for subsequent node in tree
-    const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
-      .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
-      .getOrElse({
-        tree: null,
-        node: null,
-      });
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getSubsequentNodeFromTree(
       tree,
@@ -215,28 +206,19 @@ function toSubsequentNode(): void {
 function toPrecedingNode(): void {
   const tracing = enforceSkeletonTracing(Store.getState().tracing);
   const { navigationList, activeNodeId, activeTreeId } = tracing;
-  let isValidList = true;
 
-  if (activeNodeId == null || activeNodeId === undefined) return;
+  if (activeNodeId == null) return;
 
-  if (
-    activeNodeId !== navigationList.list[navigationList.activeIndex] ||
-    !navigationList.list.length
-  ) {
-    isValidList = false;
-  }
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
+
   if (navigationList.activeIndex > 0 && isValidList) {
     // navigate to preceding node in list
     Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
     Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
   } else {
     // search for preceding node in tree
-    const { tree, node } = getNodeAndTree(tracing, activeNodeId, activeTreeId)
-      .map(([maybeTree, maybeNode]) => ({ tree: maybeTree, node: maybeNode }))
-      .getOrElse({
-        tree: null,
-        node: null,
-      });
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
     if (!tree || !node) return;
     const nextNodeId = getPrecedingNodeFromTree(
       tree,

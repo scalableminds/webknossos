@@ -96,29 +96,52 @@ export const getGroundTruthLayoutRect = () => {
 const _getDefaultLayouts = () => {
   const isInIframe = getIsInIframe();
   const defaultViewportWidthInPercent = 33;
+  const defaultViewport2dWidthInPercent = 66;
 
   let OrthoLayout;
   let OrthoLayoutView;
   let VolumeTracingView;
+  let OrthoLayout2d;
+  let OrthoLayoutView2d;
+  let VolumeTracingView2d;
 
   if (isInIframe) {
     const getGridWithExtraTabs = tabs => [
       Column(Panes.xy, Panes.xz),
       Column(Panes.yz, Stack(Panes.td, ...tabs)),
     ];
+    const getGridWithExtraTabs2d = tabs => [
+      Column(Panes.xy, Stack(Panes.xz, Panes.yz, Panes.td, ...tabs)),
+    ];
 
     OrthoLayout = createLayout(Row(...getGridWithExtraTabs(SkeletonRightHandColumnItems)));
     OrthoLayoutView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
     VolumeTracingView = createLayout(Row(...getGridWithExtraTabs(NonSkeletonRightHandColumnItems)));
+    OrthoLayout2d = createLayout(Row(...getGridWithExtraTabs2d(SkeletonRightHandColumnItems)));
+    OrthoLayoutView2d = createLayout(
+      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
+    );
+    VolumeTracingView2d = createLayout(
+      Row(...getGridWithExtraTabs2d(NonSkeletonRightHandColumnItems)),
+    );
   } else {
     const OrthoViewsGrid = [
       setGlContainerWidth(Column(Panes.xy, Panes.xz), defaultViewportWidthInPercent),
       setGlContainerWidth(Column(Panes.yz, Panes.td), defaultViewportWidthInPercent),
     ];
+    const OrthoViewsGrid2d = [
+      setGlContainerWidth(
+        Column(Stack(Panes.xy, Panes.xz, Panes.yz, Panes.td)),
+        defaultViewport2dWidthInPercent,
+      ),
+    ];
 
     OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
     OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
     VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+    OrthoLayout2d = createLayout(Row(...OrthoViewsGrid2d, SkeletonRightHandColumn));
+    OrthoLayoutView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
+    VolumeTracingView2d = createLayout(Row(...OrthoViewsGrid2d, NonSkeletonRightHandColumn));
   }
 
   const eventual3DViewportForArbitrary = show3DViewportInArbitrary ? [Panes.td] : [];
@@ -130,8 +153,16 @@ const _getDefaultLayouts = () => {
     eventual3DViewportForArbitrary,
   );
   const ArbitraryLayout = createLayout(Row(...arbitraryPanesWithSkeleton));
-
-  return { OrthoLayout, OrthoLayoutView, ArbitraryLayoutView, VolumeTracingView, ArbitraryLayout };
+  return {
+    OrthoLayout,
+    OrthoLayoutView,
+    ArbitraryLayoutView,
+    VolumeTracingView,
+    ArbitraryLayout,
+    OrthoLayout2d,
+    OrthoLayoutView2d,
+    VolumeTracingView2d,
+  };
 };
 
 const getDefaultLayouts = _.memoize(_getDefaultLayouts);
@@ -162,34 +193,50 @@ export const getCurrentDefaultLayoutConfig = () => {
     OrthoLayout: {
       "Custom Layout": defaultLayouts.OrthoLayout,
     },
+    OrthoLayout2d: {
+      "Custom Layout": defaultLayouts.OrthoLayout2d,
+    },
+    OrthoLayoutView2d: {
+      "Custom Layout": defaultLayouts.OrthoLayoutView2d,
+    },
+    VolumeTracingView2d: {
+      "Custom Layout": defaultLayouts.VolumeTracingView2d,
+    },
     LastActiveLayouts: {
       OrthoLayoutView: "Custom Layout",
       ArbitraryLayoutView: "Custom Layout",
       VolumeTracingView: "Custom Layout",
       ArbitraryLayout: "Custom Layout",
       OrthoLayout: "Custom Layout",
+      OrthoLayout2d: "Custom Layout",
+      OrthoLayoutView2d: "Custom Layout",
+      VolumeTracingView2d: "Custom Layout",
     },
   };
 };
 
-export function determineLayout(controlMode: ControlMode, viewMode: ViewMode): Layout {
+export function determineLayout(
+  controlMode: ControlMode,
+  viewMode: ViewMode,
+  is2d: boolean,
+): Layout {
   const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
   if (controlMode === ControlModeEnum.VIEW) {
     if (isArbitraryMode) {
       return "ArbitraryLayoutView";
     } else {
-      return "OrthoLayoutView";
+      return is2d ? "OrthoLayoutView2d" : "OrthoLayoutView";
     }
   }
 
   if (!Constants.MODES_SKELETON.includes(viewMode)) {
-    return "VolumeTracingView";
+    return is2d ? "VolumeTracingView2d" : "VolumeTracingView";
   }
 
   if (isArbitraryMode) {
     return "ArbitraryLayout";
   } else {
-    return "OrthoLayout";
+    return is2d ? "OrthoLayout2d" : "OrthoLayout";
   }
 }
 
@@ -199,6 +246,9 @@ export const mapLayoutKeysToLanguage = {
   VolumeTracingView: "Volume Mode",
   ArbitraryLayout: "Arbitray Mode",
   OrthoLayout: "Orthogonal Mode",
+  OrthoLayoutView2d: "Orthogonal Mode 2D - View Only",
+  VolumeTracingView2d: "Volume Mode 2D",
+  OrthoLayout2d: "Orthogonal Mode 2D",
 };
 
 export type LayoutKeys = Layout;

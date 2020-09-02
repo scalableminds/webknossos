@@ -40,12 +40,23 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     }
 
-  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int): Array[Byte] =
-    if (data.length == expectedUncompressedBucketSize) {
+  def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] = {
+    val isAlreadyDecompressed = data.length == expectedUncompressedBucketSize
+    // revertToVersion overwrites buckets with a single zero to indicate the absence of data without deleting old versions
+    val isRevertedBucket = data.length == 1
+    if (isAlreadyDecompressed || isRevertedBucket) {
       data
     } else {
-      decompressor.decompress(data, expectedUncompressedBucketSize)
+      try {
+        decompressor.decompress(data, expectedUncompressedBucketSize)
+      } catch {
+        case e: Exception =>
+          logger.error(
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, expected uncompressed size $expectedUncompressedBucketSize)")
+          throw e
+      }
     }
+  }
 
   def expectedUncompressedBucketSizeFor(dataLayer: DataLayer): Int = {
     // frontend treats 8-byte segmentations as 4-byte segmentations,
@@ -90,9 +101,13 @@ trait VolumeTracingBucketHelper
           case Some(versionedVolumeBucket) =>
             if (versionedVolumeBucket.value sameElements Array[Byte](0))
               if (bucket.resolution.maxDim == 1) Fox.empty else loadHigherResBuckets(dataLayer, bucket, version)
-            else
+            else {
+              val debugInfo =
+                s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
               Fox.successful(
-                decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer)))
+                decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo)
+              )
+            }
           case _ =>
             if (bucket.resolution.maxDim == 1 || bucket.resolution.maxDim > 2) Fox.empty
             else loadHigherResBuckets(dataLayer, bucket, version)
@@ -102,7 +117,9 @@ trait VolumeTracingBucketHelper
       .flatten
   }
 
-  def loadHigherResBuckets(dataLayer: VolumeTracingLayer, bucket: BucketPosition, version: Option[Long]) = {
+  private def loadHigherResBuckets(dataLayer: VolumeTracingLayer,
+                                   bucket: BucketPosition,
+                                   version: Option[Long]): Fox[Array[Byte]] = {
     val downScaleFactor = bucket.resolution
     def downscale[T: ClassTag](data: Array[Array[T]])(nullElement: T) = {
       def downscaleImpl(data: Array[T]) = {
@@ -259,7 +276,10 @@ class VersionedBucketIterator(prefix: String,
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
     parseBucketKey(nextRes.key)
-      .map(key => (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize), nextRes.version))
+      .map(key => {
+        val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
+        (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
+      })
       .get
   }
 

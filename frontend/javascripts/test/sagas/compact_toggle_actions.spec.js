@@ -59,6 +59,11 @@ const createState = (trees, _treeGroups): OxalisState => ({
     ...defaultState.tracing,
     skeleton: {
       ...defaultState.tracing.skeleton,
+      createdTimestamp: 0,
+      version: 0,
+      tracingId: "tracingId",
+      boundingBox: null,
+      userBoundingBoxes: [],
       type: "skeleton",
       treeGroups: _treeGroups,
       trees: makeTreesObject(trees),

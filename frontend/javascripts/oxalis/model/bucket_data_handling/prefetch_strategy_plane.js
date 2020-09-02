@@ -6,7 +6,7 @@ import type { Area } from "oxalis/model/accessors/flycam_accessor";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Dimensions from "oxalis/model/dimensions";
+import Dimensions, { type DimensionIndices } from "oxalis/model/dimensions";
 import constants, {
   type OrthoView,
   type OrthoViewMap,
@@ -24,8 +24,8 @@ export class AbstractPrefetchStrategy {
   roundTripTimeRangeEnd: number = 0;
   contentTypes: Array<string> = [];
   name: string = "ABSTRACT";
-  u: number;
-  v: number;
+  u: DimensionIndices;
+  v: DimensionIndices;
 
   forContentType(givenContentTypes: {
     skeleton: boolean,
@@ -73,7 +73,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
   roundTripTimeRangeEnd = Infinity;
   preloadingSlides = 0;
   preloadingPriorityOffset = 0;
-  w: number;
+  w: DimensionIndices;
 
   prefetch(
     cube: DataCube,

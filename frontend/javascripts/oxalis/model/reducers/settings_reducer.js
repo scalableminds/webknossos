@@ -2,7 +2,7 @@
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, DatasetConfiguration } from "oxalis/store";
 import {
   updateKey,
   updateKey2,
@@ -106,9 +106,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         {},
       );
 
-      const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
-        layers: layerSettingsDefaults,
-      });
+      // $FlowFixMe Flow has problems with exactness for empty objects, see https://github.com/facebook/flow/issues/2977
+      const initialDatasetSettingsWithDefaults: DatasetConfiguration = Object.assign(
+        {},
+        action.initialDatasetSettings,
+        {
+          layers: layerSettingsDefaults,
+        },
+      );
 
       return {
         ...state,

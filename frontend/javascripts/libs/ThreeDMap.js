@@ -37,10 +37,11 @@ export default class ThreeDMap<T> {
       this.map.get(x).set(y, new Map());
     }
 
-    // $FlowFixMe
     this.map
       .get(x)
+      // $FlowFixMe
       .get(y)
+      // $FlowFixMe
       .set(z, value);
   }
 

@@ -247,9 +247,8 @@ function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLaye
   return { maximumLayerCountToRender, maximumTextureCountForLayer };
 }
 
-export function computeDataTexturesSetup<Layer>(
+export function computeDataTexturesSetup<Layer: { elementClass: ElementClass }>(
   specs: GpuSpecs,
-  // $FlowFixMe
   layers: Array<Layer>,
   getByteCountForLayer: Layer => number,
   hasSegmentation: boolean,

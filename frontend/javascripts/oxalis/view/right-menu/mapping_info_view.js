@@ -227,7 +227,7 @@ class MappingInfoView extends React.Component<Props, State> {
         unmapped: (
           <span
             style={{
-              background: convertCellIdToCSS(idInfo.unmapped),
+              background: convertCellIdToCSS(idInfo.unmapped || 0),
             }}
           >
             {idInfo.unmapped}
@@ -236,7 +236,7 @@ class MappingInfoView extends React.Component<Props, State> {
         mapped: (
           <span
             style={{
-              background: convertCellIdToCSS(idInfo.mapped, customColors),
+              background: convertCellIdToCSS(idInfo.mapped || 0, customColors),
             }}
           >
             {idInfo.mapped}

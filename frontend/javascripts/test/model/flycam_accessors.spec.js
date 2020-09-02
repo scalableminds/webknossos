@@ -6,33 +6,55 @@ import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
 import constants from "oxalis/constants";
 import test from "ava";
+import defaultState from "oxalis/default_state";
 
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
 const DEFAULT_REQUIRED_BUCKET_CAPACITY = GPU_FACTOR_MULTIPLIER * DEFAULT_GPU_MEMORY_FACTOR;
 
-// $FlowFixMe
+const boundingBox = {
+  topLeft: [0, 0, 0],
+  width: 100,
+  height: 100,
+  depth: 100,
+};
+
 const initialState: OxalisState = {
+  ...defaultState,
+  // $FlowFixMe Flow thinks dataset.isActive is missing but it is in defaultstate.dataset
   dataset: {
+    ...defaultState.dataset,
     dataSource: {
+      ...defaultState.dataset.dataSource,
       scale: [1, 1, 2],
       dataLayers: [
         {
+          name: "layer1",
+          boundingBox,
+          elementClass: "uint8",
           resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
+          category: "color",
         },
         {
+          name: "layer2",
+          boundingBox,
+          elementClass: "uint8",
           resolutions: [[1, 1, 1], [2, 2, 2]],
+          category: "color",
         },
       ],
     },
   },
   datasetConfiguration: {
+    ...defaultState.datasetConfiguration,
     quality: 0,
   },
   userConfiguration: {
+    ...defaultState.userConfiguration,
     sphericalCapRadius: 100,
     dynamicSpaceDirection: true,
   },
   flycam: {
+    ...defaultState.flycam,
     zoomStep: 1.3,
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1223, 3218, 518, 1],
     spaceDirectionOrtho: [1, 1, 1],

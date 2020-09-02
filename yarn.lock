@@ -5209,15 +5209,15 @@ flow-annotation-check@1.8.1:
     glob "7.1.1"
     load-pkg "^3.0.1"
 
-flow-bin@^0.110.0:
-  version "0.110.1"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.110.1.tgz#24ac70bf0871a5d6bc181ba99801ded4d5e3b442"
-  integrity sha512-6FhvNKNvPQ523mx7sqNxTQvI/HgAWa/pbIsQuCst53qRqs387EFfYqgm4I3Zae5HLaVFacBwgWKmjKd92vf19w==
+flow-bin@^0.122.0:
+  version "0.122.0"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.122.0.tgz#c723a2b33b1a70bd10204704ae1dc776d5d89d79"
+  integrity sha512-my8N5jgl/A+UVby9E7NDppHdhLgRbWgKbmFZSx2MSYMRh3d9YGnM2MM+wexpUpl0ftY1IM6ZcUwaAhrypLyvlA==
 
-flow-coverage-report@^0.6.0:
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/flow-coverage-report/-/flow-coverage-report-0.6.1.tgz#b7b3458093dba1aebf48288b251877bb6861fe5b"
-  integrity sha512-AUMuC4rocbGcyhKG8oINN4qKaJ2aYbhZQlyk5ro9/TcQ1+gdcy/O0OM9iilEmL2uJraHkFpwo9dCfiJbvRwQcA==
+flow-coverage-report@^0.7.0:
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/flow-coverage-report/-/flow-coverage-report-0.7.0.tgz#3e6d2279c031f2e1993eecaa3afd000e0dbfdc99"
+  integrity sha512-lVZKME2mRt0O6qLMJPmROekrLRjySGeuyh5/VxmgQpvoACuuSPfgiWkLr+U9Y7Ric1yFtLYKl5PYYyP2R5bDNQ==
   dependencies:
     "@rpl/badge-up" "2.2.0"
     array.prototype.find "2.0.4"
@@ -5225,7 +5225,7 @@ flow-coverage-report@^0.6.0:
     flow-annotation-check "1.8.1"
     glob "7.1.1"
     minimatch "3.0.4"
-    mkdirp "0.5.1"
+    mkdirp "^1.0.4"
     parse-json "2.2.0"
     react "15.5.4"
     react-dom "15.5.4"

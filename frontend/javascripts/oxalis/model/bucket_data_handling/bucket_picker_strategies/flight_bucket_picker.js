@@ -85,7 +85,8 @@ export default function determineBucketsForFlight(
       maybeAddBucket(flooredBucketPos);
 
       const neighbourThreshold = 3;
-      bucketPos.forEach((pos, idx) => {
+      // $FlowFixMe bucketPos is a Vector4, so idx can only be 0 to 3
+      bucketPos.forEach((pos, idx: 0 | 1 | 2 | 3) => {
         // $FlowFixMe
         const newNeighbour: Vector4 = flooredBucketPos.slice();
         const rest = (pos % 1) * constants.BUCKET_WIDTH;

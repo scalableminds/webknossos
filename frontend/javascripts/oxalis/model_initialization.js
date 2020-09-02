@@ -157,12 +157,13 @@ async function fetchParallel(
   datasetId: APIDatasetId,
   versions?: Versions,
 ): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
+  // (Also see https://github.com/facebook/flow/issues/4936)
+  // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
     getDatasetConfiguration(datasetId),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
     annotation ? getTracingForAnnotations(annotation, versions) : null,
   ]);
@@ -233,6 +234,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
       };
     }
 
+    // $FlowFixMe For some reason flow thinks the task property is missing, but it is not
     Store.dispatch(initializeAnnotationAction(annotation));
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {

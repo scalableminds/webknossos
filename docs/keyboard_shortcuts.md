@@ -43,6 +43,8 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 | Right Click                           | Create New Node                             |
 | C                                     | Create New Tree                             |
 | SHIFT + Left Click                    | Select Node (Mark as Active Node)           |
+| CTRL + .                              | Navigate to subsequent Node (Mark as Active)|
+| CTRL + ,                              | Navigate to preceding Node (Mark as Active) |
 | CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
 | SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees                   |
 | SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                           |

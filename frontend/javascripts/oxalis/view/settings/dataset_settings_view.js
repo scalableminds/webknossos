@@ -373,7 +373,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                       }}
                     >
                       <i
-                        className={`fa fa-adjust ${
+                        className={`fas fa-adjust ${
                           layerConfiguration.isInverted ? "flip-horizontally" : ""
                         }`}
                         style={{

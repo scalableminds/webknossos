@@ -17,7 +17,7 @@ const getBBox = buckets => ({
   cornerMax: aggregatePerDimension(Math.max, buckets),
 });
 
-function createDistinctBucketAdder(bucketWithPriorities: Array<[Vector4, number]>) {
+function createDistinctBucketAdder(bucketsWithPriorities: Array<[Vector4, number]>) {
   const bucketLookUp = [];
   const maybeAddBucket = (bucketPos: Vector4, priority: number) => {
     const [x, y, z] = bucketPos;
@@ -28,7 +28,7 @@ function createDistinctBucketAdder(bucketWithPriorities: Array<[Vector4, number]
 
     if (!lookupY[z]) {
       lookupY[z] = true;
-      bucketWithPriorities.push([bucketPos, priority]);
+      bucketsWithPriorities.push([bucketPos, priority]);
     }
   };
 

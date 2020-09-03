@@ -179,6 +179,35 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  is2DVoxelInsideBucket = (voxel: Vector2, dimensionIndices: DimensionMap, zoomStep: number) => {
+    const neighbourBucketAddress = [
+      this.zoomedAddress[0],
+      this.zoomedAddress[1],
+      this.zoomedAddress[2],
+      zoomStep,
+    ];
+    let isVoxelOutside = false;
+    const adjustedVoxel = voxel;
+    for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
+      const dimension = dimensionIndices[dimensionIndex];
+      if (voxel[dimensionIndex] < 0) {
+        isVoxelOutside = true;
+        neighbourBucketAddress[dimension] -= Math.ceil(
+          -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+        );
+        // Add a full bucket width to the coordinate below 0 to avoid error's
+        // caused by the modulo operation used in getVoxelOffset.
+        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
+      } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
+        isVoxelOutside = true;
+        neighbourBucketAddress[dimension] += Math.floor(
+          voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+        );
+      }
+    }
+    return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
+  };
+
   getCopyOfData(): BucketDataArray {
     const bucketData = this.getOrCreateData();
     const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
@@ -382,37 +411,3 @@ export class DataBucket {
     }
   }
 }
-
-export const is2DVoxelInsideBucket = (
-  voxel: Vector2,
-  bucket: DataBucket,
-  dimensionIndices: DimensionMap,
-  zoomStep: number,
-) => {
-  const neighbourBucketAddress = [
-    bucket.zoomedAddress[0],
-    bucket.zoomedAddress[1],
-    bucket.zoomedAddress[2],
-    zoomStep,
-  ];
-  let isVoxelOutside = false;
-  const adjustedVoxel = voxel;
-  for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
-    const dimension = dimensionIndices[dimensionIndex];
-    if (voxel[dimensionIndex] < 0) {
-      isVoxelOutside = true;
-      neighbourBucketAddress[dimension] -= Math.ceil(
-        -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-      );
-      // Add a full bucket width to the coordinate below 0 to avoid error's
-      // caused by the modulo operation used in getVoxelOffset.
-      adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
-    } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
-      isVoxelOutside = true;
-      neighbourBucketAddress[dimension] += Math.floor(
-        voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-      );
-    }
-  }
-  return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
-};

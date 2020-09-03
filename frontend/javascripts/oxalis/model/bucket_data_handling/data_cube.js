@@ -13,7 +13,6 @@ import {
   NULL_BUCKET_OUT_OF_BB,
   NullBucket,
   type BucketDataArray,
-  is2DVoxelInsideBucket,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
@@ -442,7 +441,7 @@ class DataCube {
             isVoxelOutside,
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
-          } = is2DVoxelInsideBucket(neighbourVoxel, currentBucket, dimensionIndices, zoomStep);
+          } = currentBucket.is2DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
           const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.

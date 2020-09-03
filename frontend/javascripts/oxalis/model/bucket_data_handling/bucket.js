@@ -30,9 +30,6 @@ export const BucketStateEnum = {
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
-// This set saves whether a bucket is already added to the current undo volume batch
-// and gets cleared by the save saga after an annotation step has finished.
-export const bucketsAlreadyInUndoState: Set<string> = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -95,6 +92,10 @@ export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 // we have to define it here.
 // eslint-disable-next-line no-use-before-define
 export type Bucket = DataBucket | NullBucket;
+
+// This set saves whether a bucket is already added to the current undo volume batch
+// and gets cleared by the save saga after an annotation step has finished.
+export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 
 export class DataBucket {
   type: "data" = "data";
@@ -196,9 +197,8 @@ export class DataBucket {
   throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
 
   markAndAddBucketForUndo() {
-    const zoomedAddressAsString = this.zoomedAddress.toString();
-    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
-      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
+    if (!bucketsAlreadyInUndoState.has(this)) {
+      bucketsAlreadyInUndoState.add(this);
       Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
     }
   }

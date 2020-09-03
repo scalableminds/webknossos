@@ -393,7 +393,7 @@ class DataCube {
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter is somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
-    const bucketsToAddToPushQueue = new Map();
+    const bucketsToAddToPushQueue = new Set();
     const seedBucketAddress = this.positionToZoomedAddress(seedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
@@ -463,12 +463,12 @@ class DataCube {
           }
         }
       }
-      currentBucket.trigger("bucketLabeled");
-      bucketsToAddToPushQueue.set(currentBucket.zoomedAddress.toString(), currentBucket);
+      bucketsToAddToPushQueue.add(currentBucket);
     }
     Store.dispatch(finishAnnotationStrokeAction());
     for (const bucket of bucketsToAddToPushQueue.values()) {
       this.pushQueue.insert(bucket);
+      bucket.trigger("bucketLabeled");
     }
     this.triggerPushQueue();
   }

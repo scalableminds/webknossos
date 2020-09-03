@@ -29,7 +29,6 @@ const BATCH_SIZE = 3;
 
 class PullQueue {
   cube: DataCube;
-  queue: Array<PullQueueItem>;
   priorityQueue: PriorityQueue<PullQueueItem>;
   batchCount: number;
   layerName: string;

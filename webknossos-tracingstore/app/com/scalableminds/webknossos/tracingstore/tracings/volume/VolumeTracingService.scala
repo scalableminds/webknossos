@@ -413,6 +413,7 @@ class VolumeTracingService @Inject()(
     // - skip if already downsampled
     // - figure out which resolutions to create
     // - list all keys first, before fetching actual data
+    // - update tracing version?
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val elementClass = elementClassFromProto(tracing.elementClass)
 
@@ -437,7 +438,7 @@ class VolumeTracingService @Inject()(
 
     val updatedBuckets = new mutable.HashSet[BucketPosition]()
     requiredMags.foldLeft(originalMag) { (previousMag, requiredMag) =>
-      logger.info(s"downsampling mag $requiredMag from mag $previousMag...")
+      // logger.info(s"downsampling mag $requiredMag from mag $previousMag...")
       val requiredBucketPositions: mutable.HashSet[BucketPosition] = new mutable.HashSet[BucketPosition]()
       originalBucketPositions.foreach { bucketPosition: BucketPosition =>
         val downsampledBucketPosition = BucketPosition(
@@ -450,7 +451,7 @@ class VolumeTracingService @Inject()(
       }
       val downScaleFactor =
         Point3D(requiredMag.x / previousMag.x, requiredMag.y / previousMag.y, requiredMag.z / previousMag.z)
-      logger.info(s"creating buckets $requiredBucketPositions...")
+      // logger.info(s"creating buckets $requiredBucketPositions...")
       requiredBucketPositions.foreach { bucketPosition =>
         val sourceBuckets: Seq[BucketPosition] = for {
           z <- 0 until downScaleFactor.z
@@ -458,12 +459,13 @@ class VolumeTracingService @Inject()(
           x <- 0 until downScaleFactor.x
         } yield {
           BucketPosition(
-            bucketPosition.globalX + x * bucketPosition.bucketLength,
-            bucketPosition.globalY + y * bucketPosition.bucketLength,
-            bucketPosition.globalZ + z * bucketPosition.bucketLength,
+            bucketPosition.globalX + x * bucketPosition.bucketLength * previousMag.x,
+            bucketPosition.globalY + y * bucketPosition.bucketLength * previousMag.y,
+            bucketPosition.globalZ + z * bucketPosition.bucketLength * previousMag.z,
             previousMag
           )
         }
+        // logger.info(s"source buckets: $sourceBuckets")
         val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMap(_))
         val downsampledData: Array[Byte] =
           if (sourceData.forall(_.sameElements(Array[Byte](0))))
@@ -488,11 +490,9 @@ class VolumeTracingService @Inject()(
     }
     for {
       _ <- Fox.serialCombined(updatedBuckets.toList) { bucketPosition: BucketPosition =>
-        saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version + 1L, toCache = true)
+        saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version + 1L)
       }
     } yield ()
-    // TODO: remove toCache
-    // TODO: update tracing version
   }
 
   private def downscale[T: ClassTag](data: Array[Array[T]], downScaleFactor: Point3D): Array[T] = {
@@ -502,17 +502,28 @@ class VolumeTracingService @Inject()(
       y <- 0 until 32
       x <- 0 until 32
     } {
-      val sourceVoxelPosition = Point3D(x * downScaleFactor.x, y * downScaleFactor.y, z * downScaleFactor.z)
-      val sourceBucketPosition =
-        Point3D(sourceVoxelPosition.x / 32, sourceVoxelPosition.y / 32, sourceVoxelPosition.z / 32)
-      val sourceVoxelPositionInSourceBucket =
-        Point3D(sourceVoxelPosition.x % 32, sourceVoxelPosition.y % 32, sourceVoxelPosition.z % 32)
-      val sourceBucketIndex = sourceBucketPosition.x + sourceBucketPosition.y * downScaleFactor.y + sourceBucketPosition.z * downScaleFactor.y * downScaleFactor.z
-      val sourceVoxelIndex = sourceVoxelPositionInSourceBucket.x + sourceVoxelPositionInSourceBucket.y * 32 + sourceVoxelPositionInSourceBucket.z * 32 * 32
-      result(x + y * 32 + z * 32 * 32) = data(sourceBucketIndex)(sourceVoxelIndex)
+      val voxelSourceData: IndexedSeq[T] = for {
+        z_offset <- 0 until downScaleFactor.z
+        y_offset <- 0 until downScaleFactor.y
+        x_offset <- 0 until downScaleFactor.x
+      } yield {
+        val sourceVoxelPosition =
+          Point3D(x * downScaleFactor.x + x_offset, y * downScaleFactor.y + y_offset, z * downScaleFactor.z + z_offset)
+        val sourceBucketPosition =
+          Point3D(sourceVoxelPosition.x / 32, sourceVoxelPosition.y / 32, sourceVoxelPosition.z / 32)
+        val sourceVoxelPositionInSourceBucket =
+          Point3D(sourceVoxelPosition.x % 32, sourceVoxelPosition.y % 32, sourceVoxelPosition.z % 32)
+        val sourceBucketIndex = sourceBucketPosition.x + sourceBucketPosition.y * downScaleFactor.y + sourceBucketPosition.z * downScaleFactor.y * downScaleFactor.z
+        val sourceVoxelIndex = sourceVoxelPositionInSourceBucket.x + sourceVoxelPositionInSourceBucket.y * 32 + sourceVoxelPositionInSourceBucket.z * 32 * 32
+        data(sourceBucketIndex)(sourceVoxelIndex)
+      }
+      result(x + y * 32 + z * 32 * 32) = mode(voxelSourceData)
     }
     result
   }
+
+  private def mode[T](items: Seq[T]): T =
+    items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
 

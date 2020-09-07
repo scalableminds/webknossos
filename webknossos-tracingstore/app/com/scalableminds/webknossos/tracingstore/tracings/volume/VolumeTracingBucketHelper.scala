@@ -109,7 +109,7 @@ trait VolumeTracingBucketHelper
               )
             }
           case _ =>
-            if (bucket.resolution.maxDim == 1 || bucket.resolution.maxDim > 2) Fox.empty
+            if (bucket.resolution.maxDim == 1 || bucket.resolution.maxDim > 4) Fox.empty
             else loadHigherResBuckets(dataLayer, bucket, version)
         }
       )
@@ -121,51 +121,27 @@ trait VolumeTracingBucketHelper
                                    bucket: BucketPosition,
                                    version: Option[Long]): Fox[Array[Byte]] = {
     val downScaleFactor = bucket.resolution
-    def downscale[T: ClassTag](data: Array[Array[T]])(nullElement: T) = {
-      def downscaleImpl(data: Array[T]) = {
-        def mode(a: Array[T]) = {
-          val filtered = a.filterNot(_ == nullElement)
-          if (filtered.isEmpty) nullElement
-          else filtered.groupBy(i => i).mapValues(_.length).maxBy(_._2)._1
-        }
 
-        val factor = bucket.resolution
-        val extensions = (bucket.bucketLength, bucket.bucketLength, bucket.bucketLength)
-
-        val xGrouped = data.grouped(factor.x).toArray
-        val yGroupedMap = xGrouped.zipWithIndex.groupBy(_._2 % (extensions._1 / factor.x))
-        val yGrouped = yGroupedMap.values.map(_.map(_._1).grouped(factor.y).map(_.flatten).toArray)
-        val zGroupedMap = yGrouped.map(_.zipWithIndex.groupBy(_._2 % (extensions._2 / factor.y)))
-        val zGrouped = zGroupedMap.map(_.values.map(_.map(_._1).grouped(factor.z).map(_.flatten).toArray))
-        val downScaled = zGrouped.map(yGrouped => yGrouped.map(xGrouped => xGrouped.map(mode)).toArray).toArray
-
-        val res = mutable.ArrayBuffer[T]()
-        for {
-          z <- 0 until (extensions._3 / factor.z)
-          y <- 0 until (extensions._2 / factor.y)
-          x <- 0 until (extensions._1 / factor.x)
-        } {
-          res += downScaled(x)(y)(z)
-        }
-        res.toArray
-      }
-      val downScaledData = data.map(downscaleImpl)
-      val res = mutable.ArrayBuffer[T]()
+    def downscale[T: ClassTag](data: Array[Array[T]]): Array[T] = {
+      val result = new Array[T](32 * 32 * 32)
       for {
         z <- 0 until 32
         y <- 0 until 32
         x <- 0 until 32
       } {
-        val numBox = x / 16 + y / 16 * 2 + z / 16 * 4
-        val adjustedX = x - (x / 16) * 16
-        val adjustedY = y - (y / 16) * 16
-        val adjustedZ = z - (z / 16) * 16
-        res += downScaledData(numBox)(adjustedX + 16 * adjustedY + 256 * adjustedZ)
+        val sourceVoxelPosition = Point3D(x * downScaleFactor.x, y * downScaleFactor.y, z * downScaleFactor.z)
+        val sourceBucketPosition =
+          Point3D(sourceVoxelPosition.x / 32, sourceVoxelPosition.y / 32, sourceVoxelPosition.z / 32)
+        val sourceVoxelPositionInSourceBucket =
+          Point3D(sourceVoxelPosition.x % 32, sourceVoxelPosition.y % 32, sourceVoxelPosition.z % 32)
+        val sourceBucketIndex = sourceBucketPosition.x + sourceBucketPosition.y * downScaleFactor.y + sourceBucketPosition.z * downScaleFactor.y * downScaleFactor.z
+        val sourceVoxelIndex = sourceVoxelPositionInSourceBucket.x + sourceVoxelPositionInSourceBucket.y * 32 + sourceVoxelPositionInSourceBucket.z * 32 * 32
+        result(x + y * 32 + z * 32 * 32) = data(sourceBucketIndex)(sourceVoxelIndex)
       }
-      res.toArray
+      result
     }
 
-    val buckets = for {
+    val buckets: Seq[BucketPosition] = for {
       z <- 0 until downScaleFactor.z
       y <- 0 until downScaleFactor.y
       x <- 0 until downScaleFactor.x
@@ -175,6 +151,7 @@ trait VolumeTracingBucketHelper
                          bucket.globalZ + z * bucket.bucketLength,
                          Point3D(1, 1, 1))
     }
+    logger.info(s"downsampling bucket from ${buckets.length} buckets...")
     (for {
       dataBoxes <- Fox.serialSequence(buckets.toList)(loadBucket(dataLayer, _, version))
       data = if (dataBoxes.forall(_.isEmpty))
@@ -189,7 +166,7 @@ trait VolumeTracingBucketHelper
       else
         convertData(data, dataLayer.elementClass) match {
           case data: Array[UByte] =>
-            downscale[UByte](data.grouped(bucket.volume).toArray)(UByte(0))
+            downscale[UByte](data.grouped(bucket.volume).toArray)
               .foldLeft(
                 ByteBuffer
                   .allocate(
@@ -197,7 +174,7 @@ trait VolumeTracingBucketHelper
                   .order(ByteOrder.LITTLE_ENDIAN))((buf, el) => buf put el.toByte)
               .array
           case data: Array[UShort] =>
-            downscale[UShort](data.grouped(bucket.volume).toArray)(UShort(0))
+            downscale[UShort](data.grouped(bucket.volume).toArray)
               .foldLeft(
                 ByteBuffer
                   .allocate(
@@ -205,7 +182,7 @@ trait VolumeTracingBucketHelper
                   .order(ByteOrder.LITTLE_ENDIAN))((buf, el) => buf putShort el.toShort)
               .array
           case data: Array[UInt] =>
-            downscale[UInt](data.grouped(bucket.volume).toArray)(UInt(0))
+            downscale[UInt](data.grouped(bucket.volume).toArray)
               .foldLeft(
                 ByteBuffer
                   .allocate(
@@ -213,7 +190,7 @@ trait VolumeTracingBucketHelper
                   .order(ByteOrder.LITTLE_ENDIAN))((buf, el) => buf putInt el.toInt)
               .array
           case data: Array[ULong] =>
-            downscale[ULong](data.grouped(bucket.volume).toArray)(ULong(0))
+            downscale[ULong](data.grouped(bucket.volume).toArray)
               .foldLeft(
                 ByteBuffer
                   .allocate(

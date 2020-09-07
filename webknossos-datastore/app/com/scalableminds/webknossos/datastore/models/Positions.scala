@@ -82,6 +82,9 @@ class BucketPosition(
                     bucketLength * resolution.x,
                     bucketLength * resolution.y,
                     bucketLength * resolution.z)
+
+  override def hashCode(): Int =
+    new HashCodeBuilder(17, 31).append(globalX).append(globalY).append(globalZ).append(resolution).toHashCode
 }
 
 class CubePosition(

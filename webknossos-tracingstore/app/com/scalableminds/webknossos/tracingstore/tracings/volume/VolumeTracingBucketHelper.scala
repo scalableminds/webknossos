@@ -19,7 +19,6 @@ import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common._
 import spire.math.{UByte, UInt, ULong, UShort}
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
@@ -66,28 +65,67 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait VolumeTracingBucketHelper
-    extends WKWMortonHelper
-    with KeyValueStoreImplicits
-    with FoxImplicits
-    with VolumeBucketCompression
-    with DataConverter {
-
-  implicit def volumeDataStore: FossilDBClient
-
-  private def buildKeyPrefix(dataLayerName: String, resolution: Int): String =
-    s"$dataLayerName/$resolution/"
-
-  private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
+trait BucketKeys
+  extends WKWMortonHelper {
+  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
     s"$dataLayerName/${formatResolution(bucket.resolution)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
 
-  private def formatResolution(resolution: Point3D): String =
+  protected def formatResolution(resolution: Point3D): String =
     if (resolution.x == resolution.y && resolution.x == resolution.z)
       s"${resolution.maxDim}"
     else
       s"${resolution.x}-${resolution.y}-${resolution.z}"
+
+  protected def buildKeyPrefix(dataLayerName: String, resolution: Int): String =
+    s"$dataLayerName/$resolution/"
+
+  protected def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
+    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
+
+    key match {
+      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
+        val resolutionOpt = parseResolution(resolutionStr)
+        resolutionOpt match {
+          case Some(resolution) =>
+            val x = xStr.toInt
+            val y = yStr.toInt
+            val z = zStr.toInt
+            val bucket = new BucketPosition(x * resolution.x * DataLayer.bucketLength,
+              y * resolution.y * DataLayer.bucketLength,
+              z * resolution.z * DataLayer.bucketLength,
+              resolution)
+            Some((name, bucket))
+          case _ => None
+        }
+
+      case _ =>
+        None
+    }
+  }
+
+  protected def parseResolution(resolutionStr: String): Option[Point3D] =
+    resolutionStr.toIntOpt match {
+      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
+      case None =>
+        val pattern = """(\d+)-(\d+)-(\d+)""".r
+        resolutionStr match {
+          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
+          case _                => None
+        }
+    }
+
+}
+
+trait VolumeTracingBucketHelper
+    extends KeyValueStoreImplicits
+    with FoxImplicits
+    with VolumeBucketCompression
+    with DataConverter
+    with BucketKeys {
+
+  implicit def volumeDataStore: FossilDBClient
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -227,7 +265,7 @@ class VersionedBucketIterator(prefix: String,
                               expectedUncompressedBucketSize: Int,
                               version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte], Long)]
-    with WKWMortonHelper
+    with BucketKeys
     with KeyValueStoreImplicits
     with VolumeBucketCompression
     with FoxImplicits {
@@ -259,41 +297,6 @@ class VersionedBucketIterator(prefix: String,
       })
       .get
   }
-
-  private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
-    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
-
-    key match {
-      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolutionOpt = parseResolution(resolutionStr)
-        resolutionOpt match {
-          case Some(resolution) =>
-            val x = xStr.toInt
-            val y = yStr.toInt
-            val z = zStr.toInt
-            val bucket = new BucketPosition(x * resolution.x * DataLayer.bucketLength,
-                                            y * resolution.y * DataLayer.bucketLength,
-                                            z * resolution.z * DataLayer.bucketLength,
-                                            resolution)
-            Some((name, bucket))
-          case _ => None
-        }
-
-      case _ =>
-        None
-    }
-  }
-
-  private def parseResolution(resolutionStr: String): Option[Point3D] =
-    resolutionStr.toIntOpt match {
-      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
-      case None =>
-        val pattern = """(\d+)-(\d+)-(\d+)""".r
-        resolutionStr match {
-          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
-          case _                => None
-        }
-    }
 
 }
 

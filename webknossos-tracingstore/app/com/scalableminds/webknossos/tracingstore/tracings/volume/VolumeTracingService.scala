@@ -7,37 +7,30 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
+
+import collection.mutable.HashMap
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-import play.api.libs.iteratee.Concurrent.Channel
 
 import scala.concurrent.duration._
-import play.api.libs.iteratee.{Concurrent, Enumerator, Input}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
-import com.scalableminds.webknossos.tracingstore.geometry.{
-  NamedBoundingBox,
-  BoundingBox => ProtoBox,
-  Point3D => ProtoPoint
-}
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
 import scala.collection.mutable
 
@@ -55,9 +48,9 @@ class VolumeTracingService @Inject()(
     with FoxImplicits
     with LazyLogging {
 
-  implicit val volumeDataStore = tracingDataStore.volumeData
+  implicit val volumeDataStore: FossilDBClient = tracingDataStore.volumeData
 
-  implicit val tracingCompanion = VolumeTracing
+  implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
 
   implicit val updateActionJsonFormat = VolumeUpdateAction.volumeUpdateActionFormat
 
@@ -204,7 +197,7 @@ class VolumeTracingService @Inject()(
       case failure: scala.util.Failure[Unit] =>
         logger.debug(
           s"Failed to send zipped volume data for $tracingId: ${TextUtils.stackTraceAsString(failure.exception)}")
-      case success: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
+      case _: scala.util.Success[Unit] => logger.debug(s"Successfully sent zipped volume data for $tracingId")
     }
     zipResult
   }
@@ -241,7 +234,7 @@ class VolumeTracingService @Inject()(
   def duplicateData(sourceId: String,
                     sourceTracing: VolumeTracing,
                     destinationId: String,
-                    destinationTracing: VolumeTracing) = {
+                    destinationTracing: VolumeTracing): Fox[Unit] = {
     val sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing)
     val destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
     val buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
@@ -277,7 +270,7 @@ class VolumeTracingService @Inject()(
   def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] =
     find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
 
-  def updateActionLog(tracingId: String) = {
+  def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(
         "version" -> tuple._1,
@@ -289,5 +282,47 @@ class VolumeTracingService @Inject()(
         fromJson[List[CompactVolumeUpdateAction]])
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
+  }
+
+  def downsample(tracingId: String, tracing: VolumeTracing): Unit = {
+    //TODO:
+    // - skip if already downsampled
+    // - figure out which resolutions to create
+    // - list all keys first, before fetching actual data
+    val data: List[VersionedKeyValuePair[Array[Byte]]] = tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
+    val keyValueMap = new mutable.HashMap[String,Array[Byte]]()  { override def default(key:String): Array[Byte] = Array[Byte](0) }
+    val keys = data.map(_.key)
+    data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
+      keyValueMap(keyValuePair.key) = keyValuePair.value
+    }
+    val originalBucketPositions: Seq[BucketPosition] = keys.flatMap(parseBucketKey).map(_._2)
+    val originalMag = Point3D(1,1,1)
+    val requiredMags = Seq(Point3D(2,2,1), Point3D(4,4,1), Point3D(8,8,2))
+    requiredMags.foldLeft(originalMag) {
+      (previousMag, requiredMag) =>
+      logger.info(s"downsampling mag $requiredMag from mag $previousMag...")
+      val requiredBucketPositions: mutable.HashSet[BucketPosition] = new mutable.HashSet[BucketPosition]()
+      originalBucketPositions.foreach { bucketPosition: BucketPosition =>
+        val downsampledBucketPosition = new BucketPosition((bucketPosition.globalX / requiredMag.x) * requiredMag.x,
+          (bucketPosition.globalY / requiredMag.y) * requiredMag.y,
+          (bucketPosition.globalZ / requiredMag.z) * requiredMag.z,
+          requiredMag)
+        requiredBucketPositions.add(downsampledBucketPosition)
+      }
+      val downScaleFactor = Point3D(requiredMag.x / previousMag.x, requiredMag.y / previousMag.y, requiredMag.z / previousMag.z)
+      requiredBucketPositions.foreach { bucketPosition =>
+        val sourceBuckets: Seq[BucketPosition] = for {
+          z <- 0 until downScaleFactor.z
+          y <- 0 until downScaleFactor.y
+          x <- 0 until downScaleFactor.x
+        } yield {
+          new BucketPosition(bucketPosition.globalX + x * bucketPosition.bucketLength,
+            bucketPosition.globalY + y * bucketPosition.bucketLength,
+            bucketPosition.globalZ + z * bucketPosition.bucketLength,
+            previousMag)
+        }
+      }
+      requiredMag
+    }
   }
 }

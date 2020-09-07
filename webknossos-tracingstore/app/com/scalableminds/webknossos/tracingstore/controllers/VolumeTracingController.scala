@@ -58,7 +58,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+              _ <- tracingService.initializeWithData(tracingId, tracing, initialData).toFox
+              _ = tracingService.downsample(tracingId: String, tracing: VolumeTracing)
             } yield Ok(Json.toJson(tracingId))
           }
         }

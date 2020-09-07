@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
                                        val handledGroupIdStore: RedisTemporaryStore,
+                                       val temporaryTracingIdStore: RedisTemporaryStore,
                                        val uncommittedUpdatesStore: RedisTemporaryStore)(implicit ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
@@ -151,22 +152,19 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     save(finalTracing, None, finalTracing.version)
   }
 
-  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
+  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing =
+    tracings.reduceLeft(mergeTwo)
+
+  def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
     val mergedGroups = TreeUtils.mergeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
-    val mergedBoundingBox = for {
-      boundinBoxA <- tracingA.boundingBox
-      boundinBoxB <- tracingB.boundingBox
-    } yield {
-      BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
-    }
-    val singleBoundingBoxes =
-      (tracingA.userBoundingBox ++ tracingB.userBoundingBox).map(bb => NamedBoundingBox(0, boundingBox = bb))
-    val userBoundingBoxes =
-      (tracingA.userBoundingBoxes ++ tracingB.userBoundingBoxes ++ singleBoundingBoxes).zipWithIndex.map(uBB =>
-        uBB._1.copy(id = uBB._2))
+    val mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
+    val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                     tracingB.userBoundingBox,
+                                                     tracingA.userBoundingBoxes,
+                                                     tracingB.userBoundingBoxes)
 
     tracingA.copy(
       trees = mergedTrees,
@@ -178,7 +176,11 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     )
   }
 
-  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
+                      tracings: Seq[SkeletonTracing],
+                      newId: String,
+                      newTracing: SkeletonTracing,
+                      toCache: Boolean): Fox[Unit] = Fox.successful(())
 
   def updateActionLog(tracingId: String) = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

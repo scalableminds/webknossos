@@ -18,7 +18,7 @@ class AnnotationStore @Inject()(
     temporaryAnnotationStore: TemporaryStore[String, Annotation])(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  private val cacheTimeout = 5 minutes
+  private val cacheTimeout = 60 minutes
 
   case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 

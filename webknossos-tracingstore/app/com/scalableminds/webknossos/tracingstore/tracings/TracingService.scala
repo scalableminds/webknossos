@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import java.util.UUID
 
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -15,7 +16,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     extends KeyValueStoreImplicits
     with FoxImplicits
     with LazyLogging
-    with ColorGenerator {
+    with ColorGenerator
+    with BoundingBoxMerger {
 
   val handledGroupCacheExpiry: FiniteDuration = 5 minutes
 
@@ -24,6 +26,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
   def tracingStore: FossilDBClient
 
   def temporaryTracingStore: TemporaryTracingStore[T]
+
+  def temporaryTracingIdStore: RedisTemporaryStore
 
   def tracingMigrationService: TracingMigrationService[T]
 
@@ -37,7 +41,11 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
-  private val temporaryStoreTimeout = 10 minutes
+  private val temporaryStoreTimeout = 70 minutes
+
+  // the information that a tracing is/was temporary needs to be stored longer
+  // to provide useful error messages to the user if the temporary tracing is no longer present
+  private val temporaryIdStoreTimeout = 10 days
 
   def currentVersion(tracingId: String): Fox[Long]
 
@@ -48,6 +56,9 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
                           transactionGroupindexOpt: Option[Int],
                           version: Long) =
     s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+
+  protected def temporaryIdKey(tracingId: String) =
+    s"temporaryTracingId___${tracingId}"
 
   def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
     transactionIdOpt match {
@@ -131,10 +142,13 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
       }
     }
 
+  def generateTracingId: String = UUID.randomUUID.toString
+
   def save(tracing: T, tracingId: Option[String], version: Long, toCache: Boolean = false): Fox[String] = {
-    val id = tracingId.getOrElse(UUID.randomUUID.toString)
+    val id = tracingId.getOrElse(generateTracingId)
     if (toCache) {
       temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
+      temporaryTracingIdStore.insert(temporaryIdKey(id), "", Some(temporaryIdStoreTimeout))
       Fox.successful(id)
     } else {
       tracingStore.put(id, version, tracing).map(_ => id)
@@ -157,4 +171,13 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
+
+  def merge(tracings: Seq[T]): T
+
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
+                      tracings: Seq[T],
+                      newId: String,
+                      newTracing: T,
+                      toCache: Boolean): Fox[Unit]
+
 }

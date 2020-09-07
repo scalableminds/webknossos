@@ -11,10 +11,13 @@ import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
+  TemporaryVolumeDataStore,
+  VersionedKey,
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
+import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import net.liftweb.common._
 import spire.math.{UByte, UInt, ULong, UShort}
@@ -92,7 +95,7 @@ trait BucketKeys
             val x = xStr.toInt
             val y = yStr.toInt
             val z = zStr.toInt
-            val bucket = new BucketPosition(x * resolution.x * DataLayer.bucketLength,
+            val bucket = BucketPosition(x * resolution.x * DataLayer.bucketLength,
               y * resolution.y * DataLayer.bucketLength,
               z * resolution.z * DataLayer.bucketLength,
               resolution)
@@ -125,15 +128,23 @@ trait VolumeTracingBucketHelper
     with DataConverter
     with BucketKeys {
 
+  protected val cacheTimeout: FiniteDuration = 20 minutes
+
   implicit def volumeDataStore: FossilDBClient
+  implicit def volumeDataCache: TemporaryVolumeDataStore
+
+  private def loadBucketFromCache(key: String) =
+    volumeDataCache.find(key).map(VersionedKeyValuePair(VersionedKey(key, 0), _))
 
   def loadBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore
-      .get(key, version, mayBeEmpty = Some(true))
-      .futureBox
+    val dataFox = loadBucketFromCache(key) match {
+      case Some(data) => Fox.successful(data)
+      case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
+    }
+    dataFox.futureBox
       .map(
         _.toOption match {
           case Some(versionedVolumeBucket) =>
@@ -184,10 +195,10 @@ trait VolumeTracingBucketHelper
       y <- 0 until downScaleFactor.y
       x <- 0 until downScaleFactor.x
     } yield {
-      new BucketPosition(bucket.globalX + x * bucket.bucketLength,
-                         bucket.globalY + y * bucket.bucketLength,
-                         bucket.globalZ + z * bucket.bucketLength,
-                         Point3D(1, 1, 1))
+      BucketPosition(bucket.globalX + x * bucket.bucketLength,
+                     bucket.globalY + y * bucket.bucketLength,
+                     bucket.globalZ + z * bucket.bucketLength,
+                     Point3D(1, 1, 1))
     }
     logger.info(s"downsampling bucket from ${buckets.length} buckets...")
     (for {
@@ -240,9 +251,20 @@ trait VolumeTracingBucketHelper
     } yield downscaledData).toFox
   }
 
-  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte], version: Long): Fox[Unit] = {
+  def saveBucket(dataLayer: VolumeTracingLayer,
+                 bucket: BucketPosition,
+                 data: Array[Byte],
+                 version: Long,
+                 toCache: Boolean = false): Fox[Unit] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.put(key, version, compressVolumeBucket(data, expectedUncompressedBucketSizeFor(dataLayer)))
+    val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSizeFor(dataLayer))
+    if (toCache) {
+      // Note that this cache is for temporary volumes only (e.g. compound projects)
+      // and cannot be used for download or versioning
+      Fox.successful(volumeDataCache.insert(key, compressedBucket, Some(cacheTimeout)))
+    } else {
+      volumeDataStore.put(key, version, compressedBucket)
+    }
   }
 
   def bucketStream(dataLayer: VolumeTracingLayer,
@@ -257,6 +279,15 @@ trait VolumeTracingBucketHelper
                               version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
     new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
+  }
+
+  def bucketStreamFromCache(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+    val keyPrefix = buildKeyPrefix(dataLayer.name, resolution)
+    val keyValuePairs = volumeDataCache.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
+    keyValuePairs.flatMap {
+      case (bucketKey, data) =>
+        parseBucketKey(bucketKey).map(tuple => (tuple._2, data))
+    }.toIterator
   }
 }
 

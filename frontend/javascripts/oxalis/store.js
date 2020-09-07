@@ -197,6 +197,11 @@ type TracingBase = {|
   +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
+export type NavigationList = {|
+  +list: Array<number>,
+  +activeIndex: number,
+|};
+
 export type SkeletonTracing = {|
   ...TracingBase,
   +type: "skeleton",
@@ -206,6 +211,7 @@ export type SkeletonTracing = {|
   +activeNodeId: ?number,
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
+  +navigationList: NavigationList,
 |};
 
 export type VolumeTracing = {|

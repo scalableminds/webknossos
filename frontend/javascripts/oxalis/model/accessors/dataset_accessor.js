@@ -17,7 +17,12 @@ import type {
   BoundingBoxObject,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import constants, {
+  ViewModeValues,
+  type Vector3,
+  type ViewMode,
+  Vector3Indicies,
+} from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
@@ -383,9 +388,13 @@ export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
+  viewMode: ViewMode,
 ): boolean {
   const layerConfig = datasetConfiguration.layers[layerName];
-  return !layerConfig.isDisabled && layerConfig.alpha > 0;
+  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
+  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
+
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
 
 export function is2dDataset(dataset: APIDataset): boolean {

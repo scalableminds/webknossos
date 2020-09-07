@@ -18,7 +18,7 @@ class VoxelPosition(
   val z: Int = globalZ / resolution.z
 
   def toBucket: BucketPosition =
-    new BucketPosition(globalX, globalY, globalZ, resolution)
+    BucketPosition(globalX, globalY, globalZ, resolution)
 
   def move(dx: Int, dy: Int, dz: Int) =
     new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
@@ -40,14 +40,14 @@ class VoxelPosition(
     new HashCodeBuilder(17, 31).append(globalX).append(globalY).append(globalZ).append(resolution).toHashCode
 }
 
-class BucketPosition(
-    val globalX: Int,
-    val globalY: Int,
-    val globalZ: Int,
-    val resolution: Point3D
+case class BucketPosition(
+    globalX: Int,
+    globalY: Int,
+    globalZ: Int,
+    resolution: Point3D
 ) extends GenericPosition {
 
-  val bucketLength = DataLayer.bucketLength
+  val bucketLength: Int = DataLayer.bucketLength
 
   val x: Int = globalX / bucketLength / resolution.x
 
@@ -55,7 +55,7 @@ class BucketPosition(
 
   val z: Int = globalZ / bucketLength / resolution.z
 
-  def volume = bucketLength * bucketLength * bucketLength
+  def volume: Int = bucketLength * bucketLength * bucketLength
 
   def toCube(cubeLength: Int): CubePosition =
     new CubePosition(globalX, globalY, globalZ, resolution, cubeLength)
@@ -69,13 +69,13 @@ class BucketPosition(
   }
 
   def nextBucketInX: BucketPosition =
-    new BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
+    BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
 
   def nextBucketInY: BucketPosition =
-    new BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
+    BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
 
   def nextBucketInZ: BucketPosition =
-    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
+    BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
 
   def toHighestResBoundingBox: BoundingBox =
     new BoundingBox(Point3D(globalX, globalY, globalZ),
@@ -83,8 +83,8 @@ class BucketPosition(
                     bucketLength * resolution.y,
                     bucketLength * resolution.z)
 
-  override def hashCode(): Int =
-    new HashCodeBuilder(17, 31).append(globalX).append(globalY).append(globalZ).append(resolution).toHashCode
+  override def toString: String =
+    s"BucketPosition($globalX, $globalY, $globalZ, mag$resolution)"
 }
 
 class CubePosition(

@@ -15,6 +15,7 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
+
 import collection.mutable.HashMap
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreConfig}
 import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter}
@@ -35,6 +36,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
@@ -406,46 +408,110 @@ class VolumeTracingService @Inject()(
     } yield Json.toJson(updateActionGroupsJs)
   }
 
-  def downsample(tracingId: String, tracing: VolumeTracing): Unit = {
+  def downsample(tracingId: String, tracing: VolumeTracing): Fox[Unit] = {
     //TODO:
     // - skip if already downsampled
     // - figure out which resolutions to create
     // - list all keys first, before fetching actual data
-    val data: List[VersionedKeyValuePair[Array[Byte]]] = tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
-    val keyValueMap = new mutable.HashMap[String,Array[Byte]]()  { override def default(key:String): Array[Byte] = Array[Byte](0) }
-    val keys = data.map(_.key)
-    data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
-      keyValueMap(keyValuePair.key) = keyValuePair.value
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
+    val elementClass = elementClassFromProto(tracing.elementClass)
+
+    val data: List[VersionedKeyValuePair[Array[Byte]]] =
+      tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
+    val bucketDataMap = new mutable.HashMap[BucketPosition, Array[Byte]]() {
+      override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
     }
-    val originalBucketPositions: Seq[BucketPosition] = keys.flatMap(parseBucketKey).map(_._2)
-    val originalMag = Point3D(1,1,1)
-    val requiredMags = Seq(Point3D(2,2,1), Point3D(4,4,1), Point3D(8,8,2))
-    requiredMags.foldLeft(originalMag) {
-      (previousMag, requiredMag) =>
+    data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
+      val bucketPosition = parseBucketKey(keyValuePair.key).map(_._2)
+      bucketPosition.foreach {
+        bucketDataMap(_) = decompressIfNeeded(keyValuePair.value,
+                                              expectedUncompressedBucketSizeFor(dataLayer),
+                                              s"bucket $bucketPosition during downsampling")
+      }
+    }
+    val originalBucketPositions: Seq[BucketPosition] = bucketDataMap.keys.toList
+
+    val originalMag = Point3D(1, 1, 1)
+    val requiredMags = Seq(Point3D(2, 2, 2), Point3D(4, 4, 4), Point3D(8, 8, 8), Point3D(16, 16, 16))
+    val bucketVolume = 32 * 32 * 32
+
+    val updatedBuckets = new mutable.HashSet[BucketPosition]()
+    requiredMags.foldLeft(originalMag) { (previousMag, requiredMag) =>
       logger.info(s"downsampling mag $requiredMag from mag $previousMag...")
       val requiredBucketPositions: mutable.HashSet[BucketPosition] = new mutable.HashSet[BucketPosition]()
       originalBucketPositions.foreach { bucketPosition: BucketPosition =>
-        val downsampledBucketPosition = new BucketPosition((bucketPosition.globalX / requiredMag.x) * requiredMag.x,
-          (bucketPosition.globalY / requiredMag.y) * requiredMag.y,
-          (bucketPosition.globalZ / requiredMag.z) * requiredMag.z,
-          requiredMag)
+        val downsampledBucketPosition = BucketPosition(
+          (bucketPosition.globalX / requiredMag.x / 32) * requiredMag.x * 32,
+          (bucketPosition.globalY / requiredMag.y / 32) * requiredMag.y * 32,
+          (bucketPosition.globalZ / requiredMag.z / 32) * requiredMag.z * 32,
+          requiredMag
+        )
         requiredBucketPositions.add(downsampledBucketPosition)
       }
-      val downScaleFactor = Point3D(requiredMag.x / previousMag.x, requiredMag.y / previousMag.y, requiredMag.z / previousMag.z)
+      val downScaleFactor =
+        Point3D(requiredMag.x / previousMag.x, requiredMag.y / previousMag.y, requiredMag.z / previousMag.z)
+      logger.info(s"creating buckets $requiredBucketPositions...")
       requiredBucketPositions.foreach { bucketPosition =>
         val sourceBuckets: Seq[BucketPosition] = for {
           z <- 0 until downScaleFactor.z
           y <- 0 until downScaleFactor.y
           x <- 0 until downScaleFactor.x
         } yield {
-          BucketPosition(bucketPosition.globalX + x * bucketPosition.bucketLength,
+          BucketPosition(
+            bucketPosition.globalX + x * bucketPosition.bucketLength,
             bucketPosition.globalY + y * bucketPosition.bucketLength,
             bucketPosition.globalZ + z * bucketPosition.bucketLength,
-            previousMag)
+            previousMag
+          )
         }
+        val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMap(_))
+        val downsampledData: Array[Byte] =
+          if (sourceData.forall(_.sameElements(Array[Byte](0))))
+            Array[Byte](0)
+          else {
+            val sourceDataFilled = sourceData.map { sourceBucketData =>
+              if (sourceBucketData.sameElements(Array[Byte](0))) {
+                Array.fill[Byte](bucketVolume * dataLayer.bytesPerElement)(0)
+              } else sourceBucketData
+            }
+            val sourceDataTyped: Array[UnsignedInteger] =
+              UnsignedIntegerArray.fromByteArray(sourceDataFilled.toArray.flatten, elementClass)
+            val dataDownscaledTyped: Array[UnsignedInteger] =
+              downscale(sourceDataTyped.grouped(bucketVolume).toArray, downScaleFactor)
+            UnsignedIntegerArray.toByteArray(dataDownscaledTyped, elementClass)
+          }
+        bucketDataMap(bucketPosition) = downsampledData
+        updatedBuckets.add(bucketPosition)
+
       }
       requiredMag
     }
+    for {
+      _ <- Fox.serialCombined(updatedBuckets.toList) { bucketPosition: BucketPosition =>
+        saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version + 1L, toCache = true)
+      }
+    } yield ()
+    // TODO: remove toCache
+    // TODO: update tracing version
+  }
+
+  private def downscale[T: ClassTag](data: Array[Array[T]], downScaleFactor: Point3D): Array[T] = {
+    val result = new Array[T](32 * 32 * 32)
+    for {
+      z <- 0 until 32
+      y <- 0 until 32
+      x <- 0 until 32
+    } {
+      val sourceVoxelPosition = Point3D(x * downScaleFactor.x, y * downScaleFactor.y, z * downScaleFactor.z)
+      val sourceBucketPosition =
+        Point3D(sourceVoxelPosition.x / 32, sourceVoxelPosition.y / 32, sourceVoxelPosition.z / 32)
+      val sourceVoxelPositionInSourceBucket =
+        Point3D(sourceVoxelPosition.x % 32, sourceVoxelPosition.y % 32, sourceVoxelPosition.z % 32)
+      val sourceBucketIndex = sourceBucketPosition.x + sourceBucketPosition.y * downScaleFactor.y + sourceBucketPosition.z * downScaleFactor.y * downScaleFactor.z
+      val sourceVoxelIndex = sourceVoxelPositionInSourceBucket.x + sourceVoxelPositionInSourceBucket.y * 32 + sourceVoxelPositionInSourceBucket.z * 32 * 32
+      result(x + y * 32 + z * 32 * 32) = data(sourceBucketIndex)(sourceVoxelIndex)
+    }
+    result
   }
 
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)

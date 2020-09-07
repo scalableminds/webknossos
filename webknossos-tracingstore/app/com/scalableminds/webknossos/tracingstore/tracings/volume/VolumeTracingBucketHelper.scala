@@ -68,8 +68,7 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
-trait BucketKeys
-  extends WKWMortonHelper {
+trait BucketKeys extends WKWMortonHelper {
   protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
     s"$dataLayerName/${formatResolution(bucket.resolution)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
@@ -96,9 +95,9 @@ trait BucketKeys
             val y = yStr.toInt
             val z = zStr.toInt
             val bucket = BucketPosition(x * resolution.x * DataLayer.bucketLength,
-              y * resolution.y * DataLayer.bucketLength,
-              z * resolution.z * DataLayer.bucketLength,
-              resolution)
+                                        y * resolution.y * DataLayer.bucketLength,
+                                        z * resolution.z * DataLayer.bucketLength,
+                                        resolution)
             Some((name, bucket))
           case _ => None
         }
@@ -146,20 +145,15 @@ trait VolumeTracingBucketHelper
     }
     dataFox.futureBox
       .map(
-        _.toOption match {
-          case Some(versionedVolumeBucket) =>
-            if (versionedVolumeBucket.value sameElements Array[Byte](0))
-              if (bucket.resolution.maxDim == 1) Fox.empty else loadHigherResBuckets(dataLayer, bucket, version)
-            else {
-              val debugInfo =
-                s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
-              Fox.successful(
-                decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo)
-              )
-            }
-          case _ =>
-            if (bucket.resolution.maxDim == 1 || bucket.resolution.maxDim > 4) Fox.empty
-            else loadHigherResBuckets(dataLayer, bucket, version)
+        _.toOption.map { versionedVolumeBucket =>
+          if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
+          else {
+            val debugInfo =
+              s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
+            Fox.successful(
+              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo)
+            )
+          }
         }
       )
       .toFox

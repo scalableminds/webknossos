@@ -15,17 +15,34 @@ import Toast from "libs/toast";
 import features from "features";
 import window from "libs/window";
 
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
   datasetId: APIDatasetId,
+  hasNoAllowedTeams: boolean,
 };
 
-export default function ImportSharingComponent({ form, datasetId }: Props) {
+export default function ImportSharingComponent({ form, datasetId, hasNoAllowedTeams }: Props) {
   const { getFieldDecorator } = form;
   const [sharingToken, setSharingToken] = useState("");
   const [dataSet, setDataSet] = useState<?APIDataset>(null);
+  const allowedTeamsComponent = (
+    <FormItemWithInfo
+      label="Teams allowed to access this dataset"
+      info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
+      validateStatus={hasNoAllowedTeams ? "warning" : "success"}
+      help={
+        hasNoAllowedTeams
+          ? "If this field is empty, only administrators and dataset managers will be able to view this dataset."
+          : null
+      }
+    >
+      {getFieldDecorator("dataset.allowedTeams", {})(<TeamSelectionComponent mode="multiple" />)}
+    </FormItemWithInfo>
+  );
 
   async function fetch() {
     const newSharingToken = await getDatasetSharingToken(datasetId);
@@ -84,6 +101,7 @@ export default function ImportSharingComponent({ form, datasetId }: Props) {
           <Checkbox>Make dataset publicly accessible </Checkbox>,
         )}
       </FormItemWithInfo>
+      {allowedTeamsComponent}
       <FormItemWithInfo
         label="Sharing Link"
         info={

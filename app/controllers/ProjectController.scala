@@ -121,6 +121,21 @@ class ProjectController @Inject()(projectService: ProjectService,
       Ok(js)
     }
 
+  def projectsForTaskType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
+      allCounts <- taskDAO.countAllOpenInstancesGroupedByProjects
+      js <- Fox.serialCombined(projects) { project =>
+        for {
+          openTaskInstances <- Fox.successful(allCounts.getOrElse(project._id, 0))
+          r <- projectService.publicWritesWithStatus(project, openTaskInstances)
+        } yield r
+      }
+    } yield {
+      Ok(Json.toJson(js))
+    }
+  }
+
   def tasksForProject(projectName: String,
                       limit: Option[Int] = None,
                       pageNumber: Option[Int] = None,

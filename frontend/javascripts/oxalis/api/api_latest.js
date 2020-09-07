@@ -58,6 +58,7 @@ import {
   setActiveNodeAction,
   createCommentAction,
   deleteNodeAction,
+  centerActiveNodeAction,
   deleteTreeAction,
   resetSkeletonTracingAction,
   setNodeRadiusAction,
@@ -195,6 +196,14 @@ class TracingApi {
   deleteNode(nodeId: number, treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteNodeAction(nodeId, treeId));
+  }
+
+  /**
+   * Centers the active node.
+   */
+  centerActiveNode() {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(centerActiveNodeAction());
   }
 
   /**
@@ -752,7 +761,6 @@ class DataApi {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
-
     // Note: As there is at most one segmentation layer now, the layerName is unneccessary
     // However, we probably want to support multiple segmentation layers in the future
     const segmentationLayerName = this.model.getSegmentationLayer().name;
@@ -1054,6 +1062,7 @@ class DataApi {
      - layers
      - quality
      - highlightHoveredCellId
+     - segmentationPatternOpacity
      - renderMissingDataBlack
    *
    * @example

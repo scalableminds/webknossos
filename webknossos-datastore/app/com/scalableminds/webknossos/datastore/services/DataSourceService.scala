@@ -53,10 +53,12 @@ class DataSourceService @Inject()(
     if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
   }
 
+  private def skipTrash(path: Path) = !path.toString.contains(".trash")
+
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, skipTrash) match {
         case Full(dirs) =>
           for {
             _ <- Fox.successful(())

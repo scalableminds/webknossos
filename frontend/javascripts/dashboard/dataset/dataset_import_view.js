@@ -4,10 +4,11 @@ import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip, Modal, Input } fr
 import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
+import { connect } from "react-redux";
 
 import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
-import type { DatasetConfiguration } from "oxalis/store";
-import { datasetCache } from "dashboard/dataset/dataset_cache_provider";
+import type { DatasetConfiguration, OxalisState } from "oxalis/store";
+import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
@@ -23,12 +24,14 @@ import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
+import features from "features";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 
 import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 import ImportSharingComponent from "./import_sharing_component";
+import ImportDeleteComponent from "./import_delete_component";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 
 const { TabPane } = Tabs;
@@ -36,13 +39,19 @@ const FormItem = Form.Item;
 
 const notImportedYetStatus = "Not imported yet.";
 
-type Props = {
+type OwnProps = {|
   form: Object,
   datasetId: APIDatasetId,
   isEditingMode: boolean,
   onComplete: () => void,
   onCancel: () => void,
-};
+|};
+
+type StateProps = {|
+  isUserAdmin: boolean,
+|};
+
+type Props = {| ...OwnProps, ...StateProps |};
 
 type TabKey = "data" | "general" | "defaultConfig";
 
@@ -423,7 +432,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const { form } = this.props;
+    const { form, isUserAdmin } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const confirmString =
       this.props.isEditingMode ||
@@ -490,23 +499,28 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   </Hideable>
                 </TabPane>
 
-                <TabPane tab={<span>Sharing</span>} key="sharing" forceRender>
-                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
-                    <ImportSharingComponent form={form} datasetId={this.props.datasetId} />
-                  </Hideable>
-                </TabPane>
-
                 <TabPane
                   tab={
                     <span>
-                      Metadata {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
+                      Sharing & Permissions{" "}
+                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
                     </span>
                   }
-                  key="general"
+                  key="sharing"
                   forceRender
                 >
+                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
+                    <ImportSharingComponent
+                      form={form}
+                      datasetId={this.props.datasetId}
+                      hasNoAllowedTeams={_hasNoAllowedTeams}
+                    />
+                  </Hideable>
+                </TabPane>
+
+                <TabPane tab={<span>Metadata</span>} key="general" forceRender>
                   <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <ImportGeneralComponent form={form} hasNoAllowedTeams={_hasNoAllowedTeams} />
+                    <ImportGeneralComponent form={form} />
                   </Hideable>
                 </TabPane>
 
@@ -519,6 +533,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     <DefaultConfigComponent form={form} />
                   </Hideable>
                 </TabPane>
+
+                {isUserAdmin && features().allowDeleteDatasets ? (
+                  <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
+                    <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
+                      <DatasetCacheProvider>
+                        <ImportDeleteComponent datasetId={this.props.datasetId} />
+                      </DatasetCacheProvider>
+                    </Hideable>
+                  </TabPane>
+                ) : null}
               </Tabs>
             </Card>
             <FormItem>
@@ -535,4 +559,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(DatasetImportView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
+});
+
+export default Form.create()(
+  connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(DatasetImportView),
+);

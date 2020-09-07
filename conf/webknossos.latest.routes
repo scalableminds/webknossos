@@ -141,6 +141,7 @@ GET           /taskTypes                                                        
 POST          /taskTypes                                                        controllers.TaskTypeController.create
 DELETE        /taskTypes/:id                                                    controllers.TaskTypeController.delete(id: String)
 GET           /taskTypes/:id/tasks                                              controllers.TaskController.listTasksForType(id: String)
+GET           /taskTypes/:id/projects                                           controllers.ProjectController.projectsForTaskType(id: String)
 GET           /taskTypes/:id                                                    controllers.TaskTypeController.get(id: String)
 PUT           /taskTypes/:id                                                    controllers.TaskTypeController.update(id: String)
 

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, Modal } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -11,6 +11,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
+import messages, { settings } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
@@ -33,6 +34,7 @@ import {
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
+import { removeFallbackLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
@@ -50,7 +52,6 @@ import constants, {
   type ViewMode,
   type Vector3,
 } from "oxalis/constants";
-import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -73,6 +74,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
+  onRemoveFallbackLayer: () => void,
   tracing: Tracing,
 |};
 
@@ -134,6 +136,40 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         />
       </Tooltip>
     );
+  };
+
+  getDeleteButton = (layerName: string) => (
+    <Tooltip title="Unlink dataset's original segmentation layer">
+      <Icon
+        type="stop"
+        onClick={() => {
+          this.removeFallbackLayer(layerName);
+        }}
+        style={{
+          position: "absolute",
+          top: 4,
+          right: 26,
+          cursor: "pointer",
+        }}
+      />
+    </Tooltip>
+  );
+
+  removeFallbackLayer = (layerName: string) => {
+    Modal.confirm({
+      title: messages["tracing.confirm_remove_fallback_layer.title"],
+      content: (
+        <div>
+          <p>{messages["tracing.confirm_remove_fallback_layer.explanation"]}</p>
+          <p>{messages["tracing.confirm_remove_fallback_layer.notes"]}</p>
+        </div>
+      ),
+      onOk: async () => {
+        this.props.onRemoveFallbackLayer();
+        this.reloadLayerData(layerName);
+      },
+      width: 600,
+    });
   };
 
   getEditMinMaxButton = (layerName: string, isInEditMode: boolean) => {
@@ -224,6 +260,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   ) => {
     const { tracing } = this.props;
     const isVolumeTracing = tracing.volume != null;
+    const isFallbackLayer = tracing.volume
+      ? tracing.volume.fallbackLayer != null && !isColorLayer
+      : false;
     const setSingleLayerVisibility = (isVisible: boolean) => {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
@@ -244,7 +283,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const hasHistogram = this.props.histogramData[layerName] != null;
 
     return (
-      <Row style={{ marginBottom: isDisabled ? 0 : 16 }}>
+      <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
@@ -254,6 +293,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
+          {isFallbackLayer ? this.getDeleteButton(layerName) : null}
         </Col>
       </Row>
     );
@@ -270,7 +310,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
-
     return (
       <div key={layerName}>
         {this.getLayerSettingsHeader(
@@ -281,7 +320,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           elementClass,
         )}
         {isDisabled ? null : (
-          <React.Fragment>
+          <div style={{ marginBottom: 30, marginLeft: 10 }}>
             {isHistogramSupported(elementClass) && layerName != null && isColorLayer
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
@@ -292,8 +331,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
               value={layerConfiguration.alpha}
               onChange={_.partial(this.props.onChangeLayer, layerName, "alpha")}
             />
+            {!isColorLayer && (
+              <NumberSliderSetting
+                label={settings.segmentationPatternOpacity}
+                min={0}
+                max={100}
+                step={1}
+                value={this.props.datasetConfiguration.segmentationPatternOpacity}
+                onChange={_.partial(this.props.onChange, "segmentationPatternOpacity")}
+              />
+            )}
             {isColorLayer ? (
-              <Row className="margin-bottom" style={{ marginTop: 4 }}>
+              <Row className="margin-bottom" style={{ marginTop: 6 }}>
                 <Col span={12}>
                   <label className="setting-label">Color</label>
                 </Col>
@@ -319,11 +368,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                         position: "absolute",
                         top: 0,
                         right: -9,
+                        marginTop: 0,
                         display: "inline-flex",
                       }}
                     >
                       <i
-                        className={`fa fa-adjust ${
+                        className={`fas fa-adjust ${
                           layerConfiguration.isInverted ? "flip-horizontally" : ""
                         }`}
                         style={{
@@ -353,7 +403,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "renderIsosurfaces")}
               />
             ) : null}
-          </React.Fragment>
+          </div>
         )}
       </div>
     );
@@ -544,6 +594,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     const targetZoomValue = getMaxZoomValueForResolution(Store.getState(), resolution);
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
+  },
+  onRemoveFallbackLayer() {
+    dispatch(removeFallbackLayerAction());
   },
 });
 

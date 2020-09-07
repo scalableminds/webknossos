@@ -526,6 +526,7 @@ export type APIFeatureToggles = {
   +autoBrushReadyDatasets: Array<string>,
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
+  +allowDeleteDatasets: boolean,
 };
 
 // Tracing related datatypes

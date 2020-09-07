@@ -108,9 +108,9 @@ class IsosurfaceService @Inject()(
           Fox.successful(data)
       }
 
-    def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
+    def applyAgglomerate(data: Array[Byte]): Array[Byte] =
       request.mapping match {
-        case Some(mappingName) =>
+        case Some(_) =>
           request.mappingType match {
             case Some("HDF5") =>
               val dataRequest = DataServiceDataRequest(
@@ -122,10 +122,10 @@ class IsosurfaceService @Inject()(
                 Vector3I(1, 1, 1))
               agglomerateService.applyAgglomerate(dataRequest)(data)
             case _ =>
-              Fox.successful(data)
+              data
           }
         case _ =>
-          Fox.successful(data)
+          data
       }
 
     def convertData(data: Array[Byte]): Array[T] = {
@@ -194,7 +194,7 @@ class IsosurfaceService @Inject()(
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data)
+      agglomerateMappedData = applyAgglomerate(data)
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)

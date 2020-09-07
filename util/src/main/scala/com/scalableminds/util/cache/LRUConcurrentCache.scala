@@ -47,6 +47,14 @@ trait LRUConcurrentCache[K, V] {
       size
     }
 
+  def getOrHandleUncachedKey(key: K, handleUncachedKey: () => V): V =
+    cache.synchronized {
+      Option(cache.get(key)) match {
+        case Some(value) => value
+        case None        => handleUncachedKey()
+      }
+    }
+
   def clear(): Unit =
     cache.clear()
 }

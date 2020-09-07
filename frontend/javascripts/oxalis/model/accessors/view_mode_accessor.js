@@ -56,6 +56,9 @@ export function getViewportExtents(state: OxalisState): OrthoViewExtents {
 
 export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewport): number {
   const { width, height } = getInputCatcherRect(state, viewport);
+  if (width === 0 || height === 0) {
+    return 1;
+  }
   return width / height;
 }
 

@@ -34,7 +34,7 @@ class ButtonComponent extends React.PureComponent<ButtonComponentProp> {
     const { children, faIcon, ...restProps } = this.props;
     return (
       <Button {...restProps} onClick={this.handleClick}>
-        {faIcon != null && !this.props.loading ? <i className={`fa ${faIcon}`} /> : null}
+        {faIcon != null && !this.props.loading ? <i className={faIcon} /> : null}
         {children}
       </Button>
     );

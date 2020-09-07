@@ -182,8 +182,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
       "SELECT_NEXT_TREE",
       "DELETE_TREE",
       "DELETE_GROUP_AND_TREES",
-      "UNDO",
-      "REDO",
+      "CENTER_ACTIVE_NODE",
     ],
     centerActiveNode,
   );

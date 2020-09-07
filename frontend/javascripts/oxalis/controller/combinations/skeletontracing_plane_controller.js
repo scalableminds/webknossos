@@ -16,7 +16,10 @@ import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller
 import { enforce } from "libs/utils";
 import {
   enforceSkeletonTracing,
+  getSkeletonTracing,
   getActiveNode,
+  getNodeAndTree,
+  getNodeAndTreeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -35,13 +38,21 @@ import {
   mergeTreesAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setNodePositionAction,
+  updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setDirectionAction,
+  movePlaneFlycamOrthoAction,
+} from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
+import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import Dimensions from "oxalis/model/dimensions";
 
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -65,6 +76,17 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
 
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
+    leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
+      const { tracing } = Store.getState();
+      const state = Store.getState();
+      if (tracing.skeleton != null && event.ctrlKey) {
+        moveNode(delta.x, delta.y);
+      } else {
+        const { activeViewport } = state.viewModeData.plane;
+        const v = [-delta.x, -delta.y, 0];
+        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+      }
+    },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
@@ -99,6 +121,120 @@ function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 
+export function moveNode(dx: number, dy: number) {
+  // dx and dy are measured in pixel.
+  getSkeletonTracing(Store.getState().tracing).map(skeletonTracing =>
+    getNodeAndTree(skeletonTracing).map(([activeTree, activeNode]) => {
+      const state = Store.getState();
+      const { activeViewport } = state.viewModeData.plane;
+      const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
+      const zoomFactor = state.flycam.zoomStep;
+      const scaleFactor = getBaseVoxelFactors(state.dataset.dataSource.scale);
+      const delta = [
+        vector[0] * zoomFactor * scaleFactor[0],
+        vector[1] * zoomFactor * scaleFactor[1],
+        vector[2] * zoomFactor * scaleFactor[2],
+      ];
+      const [x, y, z] = activeNode.position;
+      Store.dispatch(
+        setNodePositionAction(
+          [x + delta[0], y + delta[1], z + delta[2]],
+          activeNode.id,
+          activeTree.treeId,
+        ),
+      );
+    }),
+  );
+}
+
+function otherNodeOfEdge(edge: Edge, nodeId: number): number {
+  return edge.source === nodeId ? edge.target : edge.source;
+}
+function getSubsequentNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const next = nodes.length ? Math.max(...nodes) : node.id;
+  return next;
+}
+function getPrecedingNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const prev = nodes.length ? Math.min(...nodes) : node.id;
+  return prev;
+}
+
+function toSubsequentNode(): void {
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  if (activeNodeId == null) return;
+
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
+
+  if (
+    navigationList.list.length > 1 &&
+    navigationList.activeIndex < navigationList.list.length - 1 &&
+    isValidList
+  ) {
+    // navigate to subsequent node in list
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
+  } else {
+    // search for subsequent node in tree
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    if (!tree || !node) return;
+    const nextNodeId = getSubsequentNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex - 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.push(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
+
+    Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
+  }
+}
+
+function toPrecedingNode(): void {
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
+
+  if (activeNodeId == null) return;
+
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
+
+  if (navigationList.activeIndex > 0 && isValidList) {
+    // navigate to preceding node in list
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
+  } else {
+    // search for preceding node in tree
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    if (!tree || !node) return;
+    const nextNodeId = getPrecedingNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex + 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.unshift(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
+    Store.dispatch(updateNavigationListAction(newList, 0));
+  }
+}
+
 export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
@@ -119,6 +255,18 @@ export function getKeyboardControls() {
       api.tracing.centerNode();
       api.tracing.centerTDView();
     },
+
+    // navigate nodes
+    "ctrl + ,": () => toPrecedingNode(),
+    "ctrl + .": () => toSubsequentNode(),
+  };
+}
+export function getLoopedKeyboardControls() {
+  return {
+    "ctrl + left": () => moveNode(-1, 0),
+    "ctrl + right": () => moveNode(1, 0),
+    "ctrl + up": () => moveNode(0, -1),
+    "ctrl + down": () => moveNode(0, 1),
   };
 }
 
@@ -206,7 +354,9 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
   const { newNodeNewTree } = Store.getState().userConfiguration;
   if (ctrlPressed && !newNodeNewTree) {
     Store.dispatch(createBranchPointAction());
-    activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
+    activeNodeMaybe.map(activeNode => {
+      Store.dispatch(setActiveNodeAction(activeNode.id));
+    });
   }
 }
 

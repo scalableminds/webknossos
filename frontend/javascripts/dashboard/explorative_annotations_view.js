@@ -426,17 +426,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             annotation.tracing.skeleton != null ? (
               <div>
                 <span title="Trees">
-                  <i className="fa fa-sitemap" />
+                  <i className="fas fa-sitemap" />
                   {annotation.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
-                  <i className="fa fa-bull" />
+                  <i className="fas fa-circle fa-sm" />
                   {annotation.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
-                  <i className="fa fa-arrows-h" />
+                  <i className="fas fa-arrows-alt-h" />
                   {annotation.stats.edgeCount}
                 </span>
               </div>

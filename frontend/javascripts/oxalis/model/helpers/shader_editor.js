@@ -37,7 +37,9 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         top: 0;
         right: 0px;
         z-index: 10000;
-        background: white;`,
+        background: white;
+        font-family: monospace;
+        `,
   );
   input.addEventListener("keydown", evt => {
     if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {

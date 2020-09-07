@@ -3,32 +3,15 @@
 import { Input, Col, Row, DatePicker } from "antd";
 import React from "react";
 
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-
 import { FormItemWithInfo } from "./helper_components";
 
 type Props = {
   form: Object,
-  hasNoAllowedTeams: boolean,
 };
 
-export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Props) {
+export default function ImportGeneralComponent({ form }: Props) {
   const { getFieldDecorator } = form;
 
-  const allowedTeamsComponent = (
-    <FormItemWithInfo
-      label="Teams allowed to access this dataset"
-      info="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset."
-      validateStatus={hasNoAllowedTeams ? "warning" : "success"}
-      help={
-        hasNoAllowedTeams
-          ? "If this field is empty, only administrators and dataset managers will be able to view this dataset."
-          : null
-      }
-    >
-      {getFieldDecorator("dataset.allowedTeams", {})(<TeamSelectionComponent mode="multiple" />)}
-    </FormItemWithInfo>
-  );
   return (
     <div>
       <Row gutter={48}>
@@ -51,7 +34,6 @@ export default function ImportGeneralComponent({ form, hasNoAllowedTeams }: Prop
           </FormItemWithInfo>
         </Col>
       </Row>
-      {allowedTeamsComponent}
       <FormItemWithInfo
         label="Sorting Date"
         info="Datasets are sorted by date. Specify the date (e.g. publication date) in order to influence the sorting order."

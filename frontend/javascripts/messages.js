@@ -29,6 +29,7 @@ export const settings = {
   sphericalCapRadius: "Sphere Radius",
   crosshairSize: "Crosshair Size",
   brushSize: "Brush Size",
+  segmentationPatternOpacity: "Pattern Opacity",
   userBoundingBoxes: "Bounding Boxes",
   loadingStrategy: "Loading Strategy",
   loadingStrategyDescription: `You can choose between loading the best quality first
@@ -45,6 +46,8 @@ export default {
   no: "No",
   unknown_error:
     "An unknown error occurred. Please try again or check the console for more details.",
+  offline:
+    "The communication to the server failed. This can happen when you are offline or when the server is down. Retrying...",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem too be available. Please check back in five minutes.",
   ),
@@ -94,6 +97,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "tracing.edit_volume_in_merger_mode":
+    "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
@@ -125,6 +130,16 @@ instead. Only enable this option if you understand its effect. All layers will n
     "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
+  "tracing.not_isosurface_available_to_download": [
+    "There is no isosurface for the active segment id available to download.",
+    'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
+  ],
+  "tracing.confirm_remove_fallback_layer.title":
+    "Are you sure you want to unlink the dataset's original segmentation layer from this tracing?",
+  "tracing.confirm_remove_fallback_layer.explanation":
+    "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
+  "tracing.confirm_remove_fallback_layer.notes":
+    "Note, that this action cannot be undone. Also note, if you already started with your annotation work based on the original segmentation layer, some small chunks of the segmentation might have already been merged into your annotation for technical reasons.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -157,6 +172,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
+  ),
+  "dataset.delete_success": _.template(
+    "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",

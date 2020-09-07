@@ -7,11 +7,13 @@ import EditableTextLabel, {
   type EditableTextLabelProp,
 } from "oxalis/view/components/editable_text_label";
 
-type Props = {
-  isEditable: boolean,
+type EditableProps = {
+  isEditable: true,
   description: string,
   ...EditableTextLabelProp,
 };
+type NonEditableProps = { isEditable: false, description: string, value: string };
+type Props = EditableProps | NonEditableProps;
 
 class TextWithDescription extends React.PureComponent<Props> {
   render() {
@@ -44,7 +46,7 @@ class TextWithDescription extends React.PureComponent<Props> {
         {hasDescription ? (
           <Tooltip title="Show description" placement="bottom">
             <Popover title="Description" trigger="click" content={markdownDescription}>
-              <i className="fa fa-align-justify" style={{ cursor: "pointer" }} />
+              <i className="fas fa-align-justify" style={{ cursor: "pointer" }} />
             </Popover>
           </Tooltip>
         ) : null}

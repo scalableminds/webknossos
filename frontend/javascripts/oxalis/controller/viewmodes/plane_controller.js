@@ -19,7 +19,7 @@ import {
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -89,6 +89,7 @@ const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) =
 
 type StateProps = {|
   tracing: Tracing,
+  is2d: boolean,
 |};
 type Props = {| ...StateProps |};
 
@@ -161,8 +162,8 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): Object {
+    const defaultDragHandler = (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]);
     const baseControls = {
-      leftDownMove: (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]),
       scroll: this.scrollPlanes.bind(this),
       over: () => {
         Store.dispatch(setViewportAction(planeId));
@@ -177,13 +178,21 @@ class PlaneController extends React.PureComponent<Props> {
       },
     };
     // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = { leftClick: null };
-    const { leftClick: maybeSkeletonLeftClick, ...skeletonControls } =
+    const emptyDefaultHandler = { leftClick: null, leftDownMove: null };
+    const {
+      leftClick: maybeSkeletonLeftClick,
+      leftDownMove: maybeSkeletonLeftDownMove,
+      ...skeletonControls
+    } =
       this.props.tracing.skeleton != null
         ? skeletonController.getPlaneMouseControls(this.planeView)
         : emptyDefaultHandler;
 
-    const { leftClick: maybeVolumeLeftClick, ...volumeControls } =
+    const {
+      leftClick: maybeVolumeLeftClick,
+      leftDownMove: maybeVolumeLeftDownMove,
+      ...volumeControls
+    } =
       this.props.tracing.volume != null
         ? volumeController.getPlaneMouseControls(planeId)
         : emptyDefaultHandler;
@@ -199,6 +208,11 @@ class PlaneController extends React.PureComponent<Props> {
         maybeVolumeLeftClick,
         // The isosurfaceLeftClick handler should only be used in view mode.
         isosurfaceLeftClick,
+      ),
+      leftDownMove: this.createToolDependentHandler(
+        maybeSkeletonLeftDownMove,
+        maybeVolumeLeftDownMove,
+        defaultDragHandler,
       ),
     };
   }
@@ -231,6 +245,10 @@ class PlaneController extends React.PureComponent<Props> {
       down: timeFactor => this.moveY(getMoveValue(timeFactor)),
     });
 
+    const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
+    const loopedKeyboardControls = this.getLoopedKeyboardControls();
+    ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
+
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         // KeyboardJS is sensitive to ordering (complex combos first)
@@ -252,11 +270,12 @@ class PlaneController extends React.PureComponent<Props> {
 
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
+        ...loopedKeyboardControls,
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -271,7 +290,7 @@ class PlaneController extends React.PureComponent<Props> {
     );
   }
 
-  getKeyboardControls(): Object {
+  getNotLoopedKeyboardControls(): Object {
     const baseControls = {
       "ctrl + i": event => {
         const segmentationLayer = Model.getSegmentationLayer();
@@ -320,6 +339,14 @@ class PlaneController extends React.PureComponent<Props> {
       c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
       "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),
     };
+  }
+
+  getLoopedKeyboardControls() {
+    // Note that this code needs to be adapted in case the volumeController also starts to expose
+    // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
+    return this.props.tracing.skeleton != null
+      ? skeletonController.getLoopedKeyboardControls()
+      : {};
   }
 
   init(): void {
@@ -373,6 +400,9 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
+    if (this.props.is2d) {
+      return;
+    }
     const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
@@ -605,6 +635,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
+    is2d: is2dDataset(state.dataset),
   };
 }
 

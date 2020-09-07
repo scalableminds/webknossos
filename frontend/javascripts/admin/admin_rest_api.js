@@ -306,6 +306,15 @@ export async function getProjectsWithOpenAssignments(): Promise<Array<APIProject
   return responses.map(transformProject);
 }
 
+export async function getProjectsForTaskType(
+  taskTypeId: string,
+): Promise<Array<APIProjectWithAssignments>> {
+  const responses = await Request.receiveJSON(`/api/taskTypes/${taskTypeId}/projects`);
+  assertResponseLimit(responses);
+
+  return responses.map(transformProject);
+}
+
 export async function getProject(projectName: string): Promise<APIProject> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
   return transformProject(project);
@@ -910,6 +919,23 @@ export async function triggerDatasetClearCache(
       }`,
       {
         host: datastoreHost,
+      },
+    ),
+  );
+}
+
+export async function deleteDatasetOnDisk(
+  datastoreHost: string,
+  datasetId: APIDatasetId,
+): Promise<void> {
+  await doWithToken(token =>
+    Request.triggerRequest(
+      `/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/deleteOnDisk?token=${token}`,
+      {
+        host: datastoreHost,
+        method: "DELETE",
       },
     ),
   );

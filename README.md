@@ -125,6 +125,10 @@ sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt 
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 ```
 
+If you already have a different Java version installed, set the default version to Java 8: 
+- run `sudo update-alternatives --config java`
+- when prompted, select the desired version
+
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
 ### Manual Installation

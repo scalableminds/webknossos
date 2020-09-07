@@ -75,6 +75,7 @@ class EditMeshModal extends React.PureComponent<
 const mapStateToProps = (state: OxalisState) => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
+  isHybrid: state.tracing.volume != null && state.tracing.skeleton != null,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -110,6 +111,7 @@ type OwnProps = {|
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
+  isHybrid: true,
 |};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
@@ -143,16 +145,18 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             <ButtonComponent
               title="Import STL Mesh"
               loading={this.props.isImporting}
-              faIcon="fa-plus"
+              faIcon="fas fa-plus"
             >
               Import
             </ButtonComponent>
           </Upload>
-          <Tooltip title="Download the isosurface of the currently active cell as STL.">
-            <ButtonComponent icon="download" onClick={this.props.downloadIsosurface}>
-              Download
-            </ButtonComponent>
-          </Tooltip>
+          {this.props.isHybrid ? null : (
+            <Tooltip title="Download the isosurface of the currently active cell as STL.">
+              <ButtonComponent icon="download" onClick={this.props.downloadIsosurface}>
+                Download
+              </ButtonComponent>
+            </Tooltip>
+          )}
         </ButtonGroup>
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal

@@ -29,7 +29,7 @@ object MultiComponentTreeSplitter {
         val newTreeGroup = TreeGroup(tree.name, largestGroupId, List())
         val parentTreeGroupIdOpt: Option[Int] = tree.groupId
         parentTreeGroupIdOpt.foreach { parentTreeGroupId =>
-          treeGroupsMutable = addTreeGroupAsChild(treeGroups, parentTreeGroupId, newTreeGroup)
+          treeGroupsMutable = addTreeGroupAsChild(treeGroupsMutable, parentTreeGroupId, newTreeGroup)
         }
         if (parentTreeGroupIdOpt.isEmpty) {
           treeGroupsMutable = newTreeGroup +: treeGroupsMutable
@@ -42,9 +42,9 @@ object MultiComponentTreeSplitter {
               connectedNodeSet.contains(edge.source) && connectedNodeSet.contains(edge.target))
             val branchPoints = tree.branchPoints.filter(bp => connectedNodeSet.contains(bp.nodeId))
             val comments = tree.comments.filter(comment => connectedNodeSet.contains(comment.nodeId))
+            largestTreeId += 1
             val treeId = largestTreeId
             val name = tree.name + "_" + index
-            largestTreeId += 1
             Tree(treeId,
                  nodes,
                  edges,

@@ -39,6 +39,7 @@ GET         /datasets/sample/:organizationName                                  
 POST        /datasets/sample/:organizationName/:dataSetName/download                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.fetchSampleDataSource(organizationName: String, dataSetName: String)
 POST        /datasets/:organizationName/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.update(organizationName: String, dataSetName: String)
 GET         /datasets/:organizationName/:dataSetName                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.explore(organizationName: String, dataSetName: String)
+DELETE      /datasets/:organizationName/:dataSetName/deleteOnDisk                                                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(organizationName: String, dataSetName: String)
 
 # Actions
 GET         /triggers/checkInbox                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()

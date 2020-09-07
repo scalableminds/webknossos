@@ -100,6 +100,19 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def findAllWithTaskType(taskTypeId: String)(implicit ctx: DBAccessContext): Fox[List[Project]] =
+    for {
+      r <- run(
+        sql"""select distinct #${columnsWithPrefix("p.")}
+              from webknossos.projects_ p
+              join webknossos.tasks_ t on t._project = p._id 
+              join webknossos.taskTypes_ tt on t._taskType = tt._id
+              where tt._id = ${taskTypeId}
+           """.as[ProjectsRow]
+      )
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery

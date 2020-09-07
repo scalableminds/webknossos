@@ -355,6 +355,13 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/taskTypes/:taskTypeId/projects"
+                render={({ match }: ContextRouter) => (
+                  <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
               />

@@ -1,6 +1,6 @@
 // @flow
 import { Modal } from "antd";
-import type { Node, TreeMap, SkeletonTracing } from "oxalis/store";
+import type { TreeMap, SkeletonTracing } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
@@ -8,8 +8,7 @@ import messages from "messages";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/throttled_store";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-
-type NodeWithTreeId = Node & { treeId: number };
+import type { NodeWithTreeId } from "oxalis/model/sagas/update_actions";
 
 type MergerModeState = {
   treeColors: Object,
@@ -97,56 +96,80 @@ async function createNodeOverwrite(store, call, action, mergerModeState: MergerM
   if (!segmentId) {
     api.utils.showToast("warning", messages["tracing.merger_mode_node_outside_segment"]);
   } else {
-    call(action);
+    await call(action);
+    // Center the created cell manually, as somehow without this call the previous node would be centered.
+    api.tracing.centerActiveNode();
   }
 }
 
 /* React to added nodes. Look up the segment id at the node position and
   display it in the same color as the rest of the aggregate. */
-async function createNode(
+async function onCreateNode(
   mergerModeState: MergerModeState,
   nodeId: number,
   treeId: number,
   position: Vector3,
+  updateMapping: boolean = true,
 ) {
   const { colorMapping, segmentationLayerName, nodeSegmentMap } = mergerModeState;
   const segmentId = await api.data.getDataValue(segmentationLayerName, position);
-
   // It can still happen that there are createNode diffing actions for nodes which
   // are placed outside of a segment, for example when merging trees that were created
   // outside of merger mode. Ignore those nodes.
-  if (!segmentId) return;
+  if (!segmentId) {
+    return;
+  }
 
   // Set segment id
   nodeSegmentMap[nodeId] = segmentId;
   // Count references
   increaseNodesOfSegment(segmentId, mergerModeState);
   mapSegmentColorToTree(segmentId, treeId, mergerModeState);
-
-  // Update mapping
-  api.data.setMapping(segmentationLayerName, colorMapping);
+  if (updateMapping) {
+    // Update mapping
+    await api.data.setMapping(segmentationLayerName, colorMapping);
+  }
 }
 
 /* This function decreases the number of nodes associated with the segment the passed node belongs to.
-  If the count reaches 0, the segment is removed from the mapping and this function returns true.
-  Otherwise the return value will be false. */
-function onNodeDeleted(mergerModeState: MergerModeState, nodeId: number) {
+ * If the count reaches 0, the segment is removed from the mapping and the mapping is updated.
+ */
+async function onDeleteNode(
+  mergerModeState: MergerModeState,
+  nodeId: number,
+  updateMapping: boolean = true,
+) {
   const segmentId = mergerModeState.nodeSegmentMap[nodeId];
   const numberOfNodesMappedToSegment = decreaseNodesOfSegment(segmentId, mergerModeState);
 
   if (numberOfNodesMappedToSegment === 0) {
     // Reset color of all segments that were mapped to this tree
     deleteColorMappingOfSegment(segmentId, mergerModeState);
-    return true;
+    if (updateMapping) {
+      await api.data.setMapping(
+        mergerModeState.segmentationLayerName,
+        mergerModeState.colorMapping,
+      );
+    }
   }
-  return false;
 }
 
-/* Make sure that a segment changes back its color as soon as all
-   nodes are deleted from it. */
-function deleteNode(mergerModeState: MergerModeState, nodeId: number) {
-  const noNodesLeftForTheSegment = onNodeDeleted(mergerModeState, nodeId);
-  if (noNodesLeftForTheSegment) {
+async function onUpdateNode(mergerModeState: MergerModeState, node: NodeWithTreeId) {
+  const { position, id, treeId } = node;
+  const { segmentationLayerName, nodeSegmentMap } = mergerModeState;
+  const segmentId = await api.data.getDataValue(segmentationLayerName, position);
+  if (nodeSegmentMap[id] !== segmentId) {
+    // If the segment of the node changed, it is like the node got deleted and a copy got created somewhere else.
+    // Thus we use the onNodeDelete and onNodeCreate method to update the mapping.
+    if (nodeSegmentMap[id] != null) {
+      await onDeleteNode(mergerModeState, id, false);
+    }
+    if (segmentId != null && segmentId > 0) {
+      await onCreateNode(mergerModeState, id, treeId, position, false);
+    } else if (nodeSegmentMap[id] != null) {
+      // The node is not inside a segment anymore. Thus we delete it from the nodeSegmentMap.
+      delete nodeSegmentMap[id];
+    }
     api.data.setMapping(mergerModeState.segmentationLayerName, mergerModeState.colorMapping);
   }
 }
@@ -158,11 +181,14 @@ function updateState(mergerModeState: MergerModeState, skeletonTracing: Skeleton
     switch (action.name) {
       case "createNode": {
         const { treeId, id: nodeId, position } = action.value;
-        createNode(mergerModeState, nodeId, treeId, position);
+        onCreateNode(mergerModeState, nodeId, treeId, position);
         break;
       }
       case "deleteNode":
-        deleteNode(mergerModeState, action.value.nodeId);
+        onDeleteNode(mergerModeState, action.value.nodeId);
+        break;
+      case "updateNode":
+        onUpdateNode(mergerModeState, action.value);
         break;
       default:
         break;
@@ -228,7 +254,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
 
   const [segMinVec, segMaxVec] = api.data.getBoundingBox(segmentationLayerName);
 
-  const setSegementationOfNode = async node => {
+  const setSegmentationOfNode = async node => {
     const pos = node.position;
     const { treeId } = node;
     // Skip nodes outside segmentation
@@ -260,7 +286,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     onProgressUpdate((cur / numbOfNodes) * 100);
     const nodesMappedPromises = nodes
       .slice(cur, cur + BATCH_SIZE)
-      .map(node => setSegementationOfNode(node));
+      .map(node => setSegmentationOfNode(node));
     // eslint-disable-next-line no-await-in-loop
     await Promise.all(nodesMappedPromises);
   }

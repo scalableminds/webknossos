@@ -43,6 +43,7 @@ const defaultState: OxalisState = {
     quality: 0,
     loadingStrategy: "PROGRESSIVE_QUALITY",
     highlightHoveredCellId: true,
+    segmentationPatternOpacity: 40,
     renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },

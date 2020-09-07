@@ -127,7 +127,8 @@ function createExpectedOptions(fourBit: boolean = false) {
       { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit },
       { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit },
     ],
-    timeout: 30000,
+    timeout: 60000,
+    showErrorToast: false,
   };
 }
 

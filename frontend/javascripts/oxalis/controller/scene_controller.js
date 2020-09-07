@@ -40,7 +40,7 @@ import constants, {
 } from "oxalis/constants";
 import window from "libs/window";
 
-import { convertCellIdToHSLA } from "../view/right-menu/mapping_info_view";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl.js";
 import { setSceneController } from "./scene_controller_provider";
 
 const CUBE_COLOR = 0x999999;
@@ -169,7 +169,7 @@ class SceneController {
   }
 
   addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
-    const [hue] = convertCellIdToHSLA(segmentationId);
+    const [hue] = jsConvertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
     const meshMaterial = new THREE.MeshLambertMaterial({ color });

@@ -33,22 +33,25 @@ Find all available keyboard & mouse shortcuts for webKnossos listed below.
 
 ### Orthogonal Mode
 
-| Key Binding                   | Operation                                   |
-| ----------------------------- | ------------------------------------------- |
-| Left Mouse Drag or Arrow Keys | Move In-Plane                               |
-| Alt + Mouse Move              | Move In-Plane                               |
-| SPACE                         | Move Forward                                |
-| Scroll Mousewheel (3D View)   | Zoom In And Out                             |
-| Right Click Drag (3D View)    | Rotate 3D View                              |
-| Right Click                   | Create New Node                             |
-| C                             | Create New Tree                             |
-| SHIFT + Left Click            | Select Node (Mark as Active Node)           |
-| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees           |
-| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                   |
-| Del                           | Delete Node / Split Trees                   |
-| B                             | Mark Node as New Branchpoint                |
-| J                             | Jump To Last Branchpoint                    |
-| S                             | Center Camera on Active Node                |
+| Key Binding                           | Operation                                   |
+| ------------------------------------- | ------------------------------------------- |
+| Left Mouse Drag or Arrow Keys         | Move In-Plane                               |
+| Alt + Mouse Move                      | Move In-Plane                               |
+| SPACE                                 | Move Forward                                |
+| Scroll Mousewheel (3D View)           | Zoom In And Out                             |
+| Right Click Drag (3D View)            | Rotate 3D View                              |
+| Right Click                           | Create New Node                             |
+| C                                     | Create New Tree                             |
+| SHIFT + Left Click                    | Select Node (Mark as Active Node)           |
+| CTRL + .                              | Navigate to subsequent Node (Mark as Active)|
+| CTRL + ,                              | Navigate to preceding Node (Mark as Active) |
+| CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees                   |
+| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                           |
+| Del                           | Delete Node / Split Trees                           |
+| B                             | Mark Node as New Branchpoint                        |
+| J                             | Jump To Last Branchpoint                            |
+| S                             | Center Camera on Active Node                        |
 
 ### Flight / Oblique Mode
 

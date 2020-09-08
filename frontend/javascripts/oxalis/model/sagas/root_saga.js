@@ -4,6 +4,7 @@ import { type Saga, _all, _call, _cancel, fork, take } from "oxalis/model/sagas/
 import { alert } from "libs/window";
 import {
   editVolumeLayerAsync,
+  floodFill,
   disallowVolumeTracingWarning,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
@@ -45,6 +46,7 @@ function* restartableSaga(): Saga<void> {
       _call(saveTracingAsync),
       _call(pushAnnotationAsync),
       _call(editVolumeLayerAsync),
+      _call(floodFill),
       _call(disallowVolumeTracingWarning),
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),

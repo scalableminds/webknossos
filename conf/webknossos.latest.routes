@@ -91,6 +91,7 @@ GET           /tracingstore                                                     
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
 POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 PUT           /tracingstores/:name                                              controllers.TracingStoreController.update(name: String)
+GET           /tracingstores/:name/dataSource/:organizationName/:dataSetName    controllers.WKTracingStoreController.dataSource(name: String, organizationName: String, dataSetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                               controllers.UserTokenController.generateTokenForDataStore

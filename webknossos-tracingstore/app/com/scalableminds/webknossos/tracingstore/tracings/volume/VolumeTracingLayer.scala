@@ -93,6 +93,6 @@ case class VolumeTracingLayer(
 
   val mappings: Option[Set[String]] = None
 
-  val resolutions: List[Point3D] = List(Point3D(1, 1, 1))
+  val resolutions: List[Point3D] = List(Point3D(1, 1, 1)) // unused for volume tracings
   override def containsResolution(resolution: Point3D) = true
 }

@@ -209,6 +209,17 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
   return { min, max };
 }
 
+export function areBoundingBoxesOverlappingOrTouching(
+  firstBB: BoundingBoxType,
+  secondBB: BoundingBoxType,
+) {
+  let areOverlapping = true;
+  for (let dim = 0; dim < 3 && areOverlapping; ++dim) {
+    areOverlapping = firstBB.max[dim] >= secondBB.min[dim] && secondBB.max[dim] >= firstBB.min[dim];
+  }
+  return areOverlapping;
+}
+
 export function compareBy<T>(
   collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: T => number,

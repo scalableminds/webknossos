@@ -5,6 +5,7 @@ import { alert } from "libs/window";
 import {
   editVolumeLayerAsync,
   ensureNoTraceToolInLowResolutions,
+  floodFill,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
 import {
@@ -46,6 +47,7 @@ function* restartableSaga(): Saga<void> {
       _call(pushAnnotationAsync),
       _call(editVolumeLayerAsync),
       _call(ensureNoTraceToolInLowResolutions),
+      _call(floodFill),
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(loadHistogramData),

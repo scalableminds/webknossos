@@ -17,6 +17,7 @@ import {
   createCellAction,
   setToolAction,
   startEditingAction,
+  floodFillAction,
   addToLayerAction,
   finishEditingAction,
   hideBrushAction,
@@ -157,7 +158,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      if (event.shiftKey) {
+      if (event.shiftKey && !event.ctrlKey) {
         const segmentation = Model.getSegmentationLayer();
         if (!segmentation) {
           return;
@@ -169,7 +170,9 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         if (cellId > 0) {
           Store.dispatch(setActiveCellAction(cellId));
         }
-      } else if (event.ctrlKey) {
+      } else if (event.shiftKey && event.ctrlKey) {
+        Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
+      } else if (event.metaKey) {
         if (isAutomaticBrushEnabled()) {
           Store.dispatch(inferSegmentationInViewportAction(calculateGlobalPos(pos)));
         }

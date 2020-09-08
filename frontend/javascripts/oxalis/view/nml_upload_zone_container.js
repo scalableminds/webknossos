@@ -208,7 +208,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
               {newGroupMsg}
             </Checkbox>
             <Button key="submit" type="primary" onClick={this.importTracingFiles}>
-              {this.props.isUpdateAllowed ? "Import" : "Create New Tracing"}
+              {this.props.isUpdateAllowed ? "Import" : "Create New Annotation"}
             </Button>
           </React.Fragment>
         }

@@ -16,7 +16,8 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector4 } from "oxalis/constants";
+import Constants, { type Vector2, type Vector4, type BoundingBoxType } from "oxalis/constants";
+import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
@@ -29,9 +30,6 @@ export const BucketStateEnum = {
 };
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 export type BucketDataArray = Uint8Array | Uint16Array | Uint32Array | Float32Array;
-// This set saves whether a bucket is already added to the current undo volume batch
-// and gets cleared by the save saga after an annotation step has finished.
-export const bucketsAlreadyInUndoState: Set<string> = new Set();
 
 export const bucketDebuggingFlags = {
   // For visualizing buckets which are passed to the GPU
@@ -95,6 +93,10 @@ export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
 // eslint-disable-next-line no-use-before-define
 export type Bucket = DataBucket | NullBucket;
 
+// This set saves whether a bucket is already added to the current undo volume batch
+// and gets cleared by the save saga after an annotation step has finished.
+export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
+
 export class DataBucket {
   type: "data" = "data";
   elementClass: ElementClass;
@@ -134,6 +136,19 @@ export class DataBucket {
     this.data = null;
   }
 
+  getBoundingBox(): BoundingBoxType {
+    const min = bucketPositionToGlobalAddress(
+      this.zoomedAddress,
+      getResolutions(Store.getState().dataset),
+    );
+    const max = [
+      min[0] + Constants.BUCKET_WIDTH,
+      min[1] + Constants.BUCKET_WIDTH,
+      min[2] + Constants.BUCKET_WIDTH,
+    ];
+    return { min, max };
+  }
+
   shouldCollect(): boolean {
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     return collect;
@@ -164,21 +179,58 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  is2DVoxelInsideBucket = (voxel: Vector2, dimensionIndices: DimensionMap, zoomStep: number) => {
+    const neighbourBucketAddress = [
+      this.zoomedAddress[0],
+      this.zoomedAddress[1],
+      this.zoomedAddress[2],
+      zoomStep,
+    ];
+    let isVoxelOutside = false;
+    const adjustedVoxel = voxel;
+    for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
+      const dimension = dimensionIndices[dimensionIndex];
+      if (voxel[dimensionIndex] < 0) {
+        isVoxelOutside = true;
+        neighbourBucketAddress[dimension] -= Math.ceil(
+          -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+        );
+        // Add a full bucket width to the coordinate below 0 to avoid error's
+        // caused by the modulo operation used in getVoxelOffset.
+        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
+      } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
+        isVoxelOutside = true;
+        neighbourBucketAddress[dimension] += Math.floor(
+          voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
+        );
+      }
+    }
+    return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
+  };
+
+  getCopyOfData(): BucketDataArray {
+    const bucketData = this.getOrCreateData();
+    const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
+    const dataClone = new TypedArrayClass(bucketData);
+    return dataClone;
+  }
+
   label(labelFunc: BucketDataArray => void) {
     const bucketData = this.getOrCreateData();
-    const zoomedAddressAsString = this.zoomedAddress.toString();
-    if (!bucketsAlreadyInUndoState.has(zoomedAddressAsString)) {
-      const TypedArrayClass = getConstructorForElementClass(this.elementClass)[0];
-      const dataClone = new TypedArrayClass(bucketData);
-      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, dataClone));
-      bucketsAlreadyInUndoState.add(zoomedAddressAsString);
-    }
+    this.markAndAddBucketForUndo();
     labelFunc(bucketData);
     this.dirty = true;
     this.throttledTriggerLabeled();
   }
 
   throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
+
+  markAndAddBucketForUndo() {
+    if (!bucketsAlreadyInUndoState.has(this)) {
+      bucketsAlreadyInUndoState.add(this);
+      Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));
+    }
+  }
 
   hasData(): boolean {
     return this.data != null;

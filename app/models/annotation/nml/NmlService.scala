@@ -62,7 +62,14 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     ZipParseResult(parseResults, otherFiles)
   }
 
-  def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+  def wrapOrPrefixTrees(parseResults: List[NmlParseResult],
+                        shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
+    if (shouldCreateGroupForEachFile)
+      wrapTreesInGroups(parseResults)
+    else
+      addPrefixesToTreeNames(parseResults)
+
+  private def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
     def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val prefix = name.replaceAll("\\.[^.]*$", "") + "_"
       tracing.copy(trees = tracing.trees.map(tree => tree.copy(name = prefix + tree.name)))
@@ -83,7 +90,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
   }
 
-  def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+  private def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
     def getMaximumGroupId(treeGroups: Seq[TreeGroup]) = if (treeGroups.isEmpty) 0 else treeGroups.map(_.groupId).max
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
@@ -141,10 +148,4 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
       ZipParseResult(List(parseResult), Map.empty)
     }
 
-  def splitVolumeAndSkeletonTracings(tracings: List[(Option[SkeletonTracing], Option[(VolumeTracing, String)])])
-    : (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
-    val skeletons = tracings.flatMap(_._1)
-    val volumes = tracings.flatMap(_._2)
-    (skeletons, volumes)
-  }
 }

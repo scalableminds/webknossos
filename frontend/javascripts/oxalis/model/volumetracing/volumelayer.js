@@ -105,6 +105,35 @@ export class VoxelIterator {
   }
 }
 
+export class VoxelNeighborStack2D {
+  stack: Array<Vector2>;
+
+  constructor(initialPosition: Vector2) {
+    this.stack = [initialPosition];
+  }
+
+  pushVoxel(newVoxel: Vector2) {
+    return this.stack.push(newVoxel);
+  }
+
+  isEmpty(): boolean {
+    return this.stack.length === 0;
+  }
+
+  popVoxelAndGetNeighbors(): Array<Vector2> {
+    if (this.isEmpty()) {
+      return [];
+    }
+    const currentVoxel = this.stack.pop();
+    return [
+      [currentVoxel[0] + 1, currentVoxel[1]],
+      [currentVoxel[0] - 1, currentVoxel[1]],
+      [currentVoxel[0], currentVoxel[1] + 1],
+      [currentVoxel[0], currentVoxel[1] - 1],
+    ];
+  }
+}
+
 class VolumeLayer {
   plane: OrthoView;
   thirdDimensionValue: number;

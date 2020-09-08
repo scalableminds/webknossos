@@ -69,9 +69,10 @@ trait AccessTokenService {
 
   def validateAccess[A](accessRequest: UserAccessRequest)(block: => Future[Result])(implicit request: Request[A],
                                                                                     ec: ExecutionContext): Fox[Result] =
-    hasUserAccess(accessRequest, request).flatMap { userAccessAnswer =>
-      executeBlockOnPositiveAnswer(userAccessAnswer, block)
-    }
+    for {
+      userAccessAnswer <- hasUserAccess(accessRequest, request) ?~> "Failed to check data access, token may be expired, consider reloading."
+      result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
+    } yield result
 
   private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
       implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
@@ -96,9 +97,9 @@ trait AccessTokenService {
       case UserAccessAnswer(true, _) =>
         block
       case UserAccessAnswer(false, Some(msg)) =>
-        Future.successful(Forbidden("Forbidden: " + msg))
+        Future.successful(Forbidden("Token may be expired, consider reloading. Access forbidden: " + msg))
       case _ =>
-        Future.successful(Forbidden("Token authentication failed"))
+        Future.successful(Forbidden("Token may be expired, consider reloading. Token authentication failed."))
     }
 }
 

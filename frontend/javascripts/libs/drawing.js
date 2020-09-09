@@ -122,6 +122,72 @@ class Drawing {
     }
   }
 
+  paintBorder(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    bufX0: Array<number>,
+    bufX1: Array<number>,
+    minX: number,
+    maxX: number,
+  ): void {
+    if (y2 - y1 < 0) {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX0[y] = x;
+      });
+    } else if (y2 - y1 < 0) {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX1[y] = x;
+      });
+    } else {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX0[y] = minX;
+        bufX1[y] = maxX;
+      });
+    }
+  }
+
+  // Source: https://stackoverflow.com/questions/10061146/how-to-rasterize-rotated-rectangle-in-2d-by-setpixel/19078088#19078088
+  drawRectangle(
+    xa: number,
+    ya: number,
+    xb: number,
+    yb: number,
+    xc: number,
+    yc: number,
+    xd: number,
+    yd: number,
+    diffX: number,
+    diffY: number,
+    draw: (number, number) => void,
+  ) {
+    xa = Math.round(xa) - diffX;
+    ya = Math.round(ya) - diffY;
+    xb = Math.round(xb) - diffX;
+    yb = Math.round(yb) - diffY;
+    xc = Math.round(xc) - diffX;
+    yc = Math.round(yc) - diffY;
+    xd = Math.round(xd) - diffX;
+    yd = Math.round(yd) - diffY;
+    const minX = Math.min(xa, xb, xc, xd);
+    const maxX = Math.max(xa, xb, xc, xd);
+    const minY = Math.min(ya, yb, yc, yd);
+    const maxY = Math.max(ya, yb, yc, yd);
+    const bufSize = maxY - minY;
+    const bufX0 = new Array(bufSize);
+    const bufX1 = new Array(bufSize);
+    this.paintBorder(xa, ya, xb, yb, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xb, yb, xc, yc, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xc, yc, xd, yd, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xd, yd, xa, ya, bufX0, bufX1, minX, maxX);
+
+    let y;
+    for (y = Math.min(ya, yb, yc, yd); y <= Math.max(ya, yb, yc, yd); y++) {
+      this.drawLine2d(bufX0[y], y, bufX1[y], y, draw);
+    }
+  }
+
   // Source: http://will.thimbleby.net/scanline-flood-fill/
   fillArea(
     x: number,

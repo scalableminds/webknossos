@@ -225,6 +225,7 @@ export class DataBucket {
   throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
 
   markAndAddBucketForUndo() {
+    this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
       Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));

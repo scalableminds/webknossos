@@ -39,7 +39,8 @@ import {
   getCurrentResolution,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Constants, {
   type BoundingBoxType,
   type ContourMode,
   ContourModeEnum,
@@ -296,8 +297,9 @@ export function* floodFill(): Saga<void> {
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
+    let thirdDimensionValue = seedVoxel[dimensionIndices[2]];
     const get3DAddress = (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[dimensionIndices[2]]];
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
       const orderedVoxelWithThirdDimension = [
         unorderedVoxelWithThirdDimension[dimensionIndices[0]],
         unorderedVoxelWithThirdDimension[dimensionIndices[1]],
@@ -309,10 +311,9 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[0]],
       voxel[dimensionIndices[1]],
     ];
-    const activeResolution = yield* select(state => getCurrentResolution(state));
     const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
-    cube.floodFill(
+    const bucketsWithLabeledVoxelMap = cube.floodFill(
       seedVoxel,
       activeCellId,
       get3DAddress,
@@ -321,6 +322,33 @@ export function* floodFill(): Saga<void> {
       currentViewportBounding,
       activeZoomStep,
     );
+    if (!bucketsWithLabeledVoxelMap) {
+      continue;
+    }
+    const allResolutions = yield* select(state => getResolutions(state.dataset));
+    const activeResolution = allResolutions[activeZoomStep];
+    for (let zoomStep = 0; zoomStep < 2; zoomStep++) {
+      if (zoomStep === activeZoomStep) {
+        continue;
+      }
+      const goalResolution = allResolutions[zoomStep];
+      // After flood filling on the current resolution the labeled voxels are down and upscaled through all resolutions.
+      // For this a get3DAddress function is needed that always has the third dimension within the current bucket ([0,32]).
+      // This depends on the goalResolution.
+      thirdDimensionValue =
+        (seedVoxel[dimensionIndices[2]] / goalResolution[dimensionIndices[2]]) %
+        Constants.BUCKET_WIDTH;
+      cube.applyLabeledVoxelMapToResolution(
+        bucketsWithLabeledVoxelMap,
+        activeResolution,
+        activeZoomStep,
+        goalResolution,
+        zoomStep,
+        activeCellId,
+        dimensionIndices[2],
+        get3DAddress,
+      );
+    }
     yield* put(finishAnnotationStrokeAction());
     cube.triggerPushQueue();
   }

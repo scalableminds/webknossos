@@ -33,7 +33,7 @@ import constants, {
   type BoundingBoxType,
 } from "oxalis/constants";
 import { type ElementClass } from "admin/api_flow_types";
-import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, map3, iterateThroughBounds } from "libs/utils";
 class CubeEntry {
   data: Map<number, Bucket>;
   boundary: Vector3;
@@ -43,6 +43,8 @@ class CubeEntry {
     this.boundary = boundary;
   }
 }
+
+export type LabeledVoxelsMap = Map<DataBucket, Uint8Array>;
 
 class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
@@ -372,6 +374,12 @@ class DataCube {
 
         if (shouldUpdateVoxel) {
           const labelFunc = (data: BucketDataArray): void => {
+            if (address[3] === 1)
+              console.log(
+                `labeled in bucket ${bucket.zoomedAddress.toString()}, voxel ${voxel.toString()}, voxelIndex ${voxelIndex}, with modulo ${voxel.map(
+                  a => Math.floor(a / 2) % 32,
+                )}`,
+              );
             data[voxelIndex] = label;
           };
           bucket.label(labelFunc);
@@ -394,26 +402,27 @@ class DataCube {
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
     zoomStep: number = 0,
-  ) {
+  ): ?LabeledVoxelsMap {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
     // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
     // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
+    // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
-    // Note: It is possible that a bucket is multiple times added to the address. This is intended
+    // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
     // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter is somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
-    const bucketsToAddToPushQueue = new Set();
+    const bucketsWithLabeledVoxelsMap: LabeledVoxelsMap = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(seedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
-      return;
+      return null;
     }
     const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
-      return;
+      return null;
     }
     const bucketsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(seedVoxel, zoomStep)],
@@ -437,8 +446,18 @@ class DataCube {
       currentBucket.markAndAddBucketForUndo();
       // Mark the initial voxel.
       bucketData[initialVoxelIndex] = cellId;
+      // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
+      const currentLabeledVoxelMap =
+        bucketsWithLabeledVoxelsMap.get(currentBucket) ||
+        new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+      const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord]) => {
+        currentLabeledVoxelMap[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
+      };
+
       // Use a VoxelNeighborStack2D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
-      const neighbourVoxelStack = new VoxelNeighborStack2D(get2DAddress(initialVoxelInBucket));
+      const initialVoxelInSlice = get2DAddress(initialVoxelInBucket);
+      markVoxelOfSliceAsLabeled(initialVoxelInSlice);
+      const neighbourVoxelStack = new VoxelNeighborStack2D(initialVoxelInSlice);
       // Iterating over all neighbours from the initialAddress.
       while (!neighbourVoxelStack.isEmpty()) {
         const neighbours = neighbourVoxelStack.popVoxelAndGetNeighbors();
@@ -469,17 +488,154 @@ class DataCube {
             const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
+              markVoxelOfSliceAsLabeled(neighbourVoxel);
               neighbourVoxelStack.pushVoxel(neighbourVoxel);
             }
           }
         }
       }
-      bucketsToAddToPushQueue.add(currentBucket);
+      bucketsWithLabeledVoxelsMap.set(currentBucket, currentLabeledVoxelMap);
     }
-    for (const bucket of bucketsToAddToPushQueue.values()) {
+    for (const bucket of bucketsWithLabeledVoxelsMap.keys()) {
       this.pushQueue.insert(bucket);
       bucket.trigger("bucketLabeled");
     }
+    return bucketsWithLabeledVoxelsMap;
+  }
+
+  applyLabeledVoxelMapToResolution(
+    labeledVoxelMap: LabeledVoxelsMap,
+    sourceResolution: Vector3,
+    sourceZoomStep: number,
+    goalResolution: Vector3,
+    goalZoomStep: number,
+    cellId: number,
+    thirdDimension: number,
+    get3DAddress: Vector2 => Vector3,
+  ) {
+    const labeledBuckets = new Set();
+    const voxelsToLabelInEachDirection = map3(
+      (sourceVal, index) => Math.ceil(sourceVal / goalResolution[index]),
+      sourceResolution,
+    );
+    const voxelToGoalResolution = voxelInBucket =>
+      map3(
+        (value, index) => Math.floor(value * (sourceResolution[index] / goalResolution[index])),
+        voxelInBucket,
+      );
+    for (const [labeledBucket, voxelMap] of labeledVoxelMap) {
+      const bucketsOfGoalResolution = this.getBucketsContainingBucket(
+        labeledBucket,
+        sourceResolution,
+        goalResolution,
+        goalZoomStep,
+      );
+      if (!bucketsOfGoalResolution) {
+        continue;
+      }
+      const labelVoxelInGoalResolution = (x, y, z) => {
+        const xBucket = Math.floor(x / constants.BUCKET_WIDTH);
+        const yBucket = Math.floor(y / constants.BUCKET_WIDTH);
+        const zBucket = Math.floor(z / constants.BUCKET_WIDTH);
+        x %= constants.BUCKET_WIDTH;
+        y %= constants.BUCKET_WIDTH;
+        z %= constants.BUCKET_WIDTH;
+        const voxelIndex = this.getVoxelIndexByVoxelOffset([x, y, z]);
+        const bucket = bucketsOfGoalResolution[xBucket][yBucket][zBucket];
+        const bucketData = bucket.getOrCreateData();
+        bucketData[voxelIndex] = cellId;
+        labeledBuckets.add(bucket);
+        console.log(
+          `labeled in bucket ${bucket.zoomedAddress.toString()}, voxel ${[
+            x,
+            y,
+            z,
+          ].toString()}, voxelIndex ${voxelIndex}`,
+        );
+        bucket.markAndAddBucketForUndo();
+      };
+      for (let x = 0; x < constants.BUCKET_WIDTH; x++) {
+        for (let y = 0; y < constants.BUCKET_WIDTH; y++) {
+          if (voxelMap[x * constants.BUCKET_WIDTH + y] === 1) {
+            // TODO: Label the other buckets
+            const voxelInBucket = get3DAddress([x, y]);
+            debugger;
+            const voxelInGoalResolution = voxelToGoalResolution(voxelInBucket);
+            // The value of the third dimension was already adjusted by the get3DAddress call. Thus we rewrite this value.
+            voxelInGoalResolution[thirdDimension] = voxelInBucket[thirdDimension];
+            const maxVoxelBoundingInGoalResolution = [
+              voxelInGoalResolution[0] + voxelsToLabelInEachDirection[0],
+              voxelInGoalResolution[1] + voxelsToLabelInEachDirection[1],
+              voxelInGoalResolution[2] + voxelsToLabelInEachDirection[2],
+            ];
+            iterateThroughBounds(
+              voxelInGoalResolution,
+              maxVoxelBoundingInGoalResolution,
+              labelVoxelInGoalResolution,
+            );
+          }
+        }
+      }
+    }
+    for (const bucket of labeledBuckets.keys()) {
+      console.log(`labeled in bucket ${bucket.zoomedAddress.toString()}`);
+      this.pushQueue.insert(bucket);
+      bucket.trigger("bucketLabeled");
+    }
+  }
+
+  getBucketsContainingBucket(
+    bucket: DataBucket,
+    bucketResolution: Vector3,
+    goalResolution: Vector3,
+    zoomStep: number,
+  ): ?Array<Array<Array<DataBucket>>> {
+    const mapToGoalResolution = (value, index) =>
+      Math.floor(value * (bucketResolution[index] / goalResolution[index]));
+    const bucketMin = [bucket.zoomedAddress[0], bucket.zoomedAddress[1], bucket.zoomedAddress[2]];
+    const bucketMax = [bucketMin[0] + 1, bucketMin[1] + 1, bucketMin[2] + 1];
+    // If the buckets zoomStep is smaller than the wanted zoom step,
+    // then the bucket is completely contained by a bucket of the higher goalResolution.
+    const bucketMinInOtherResolution = map3(mapToGoalResolution, bucketMin);
+    const bucketMaxInOtherResolution = map3(mapToGoalResolution, bucketMax);
+    const bucketsInGoalResolution = [];
+    // Iteration over all three dimensions until all buckets of the goal resolution
+    // that overlap with the given bucket are added to bucketsInGoalResolution.
+    // Note: The bucketsInGoalResolution.length === 0 check ensures that the bucket containing the given bucket
+    // will be added to the array when the goalResolution is lower than the buckets resolution.
+    for (
+      let x = bucketMinInOtherResolution[0];
+      x < bucketMaxInOtherResolution[0] || bucketsInGoalResolution.length === 0;
+      x++
+    ) {
+      const bucketsInYDirection = [];
+      for (
+        let y = bucketMinInOtherResolution[1];
+        y < bucketMaxInOtherResolution[1] || bucketsInYDirection.length === 0;
+        y++
+      ) {
+        const bucketsInZDirection = [];
+        for (
+          let z = bucketMinInOtherResolution[2];
+          z < bucketMaxInOtherResolution[2] || bucketsInZDirection.length === 0;
+          z++
+        ) {
+          const bucketsZoomedAddress = [x, y, z, zoomStep];
+          const currentBucketInGoalResolution = this.getOrCreateBucket(bucketsZoomedAddress);
+          if (currentBucketInGoalResolution.type === "null") {
+            console.warn(
+              `The bucket at ${bucket.zoomedAddress.toString()} has not matching bucket` +
+                ` in resolution ${goalResolution.toString()}. The buckets address is ${bucketsZoomedAddress.toString()}`,
+            );
+            return null;
+          }
+          bucketsInZDirection.push(currentBucketInGoalResolution);
+        }
+        bucketsInYDirection.push(bucketsInZDirection);
+      }
+      bucketsInGoalResolution.push(bucketsInYDirection);
+    }
+    return bucketsInGoalResolution;
   }
 
   setBucketData(zoomedAddress: Vector4, data: Uint8Array) {

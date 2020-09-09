@@ -31,11 +31,13 @@ import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
+  getNumberOfSlicesForResolution,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
   getRotation,
   getCurrentResolution,
+  getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   type BoundingBoxType,
@@ -107,7 +109,13 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    const activeViewportBounding = yield* call(getBoundingsFromPosition, initialViewport);
+    let activeResolution = yield* select(state => getCurrentResolution(state));
+    let numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
+    const activeViewportBounding = yield* call(
+      getBoundingsFromPosition,
+      initialViewport,
+      numberOfSlices,
+    );
     if (activeTool === VolumeToolEnum.BRUSH) {
       const currentResolution = yield* select(state => getCurrentResolution(state));
       yield* call(
@@ -143,7 +151,13 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
-        const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
+        activeResolution = yield* select(state => getCurrentResolution(state));
+        numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
+        const currentViewportBounding = yield* call(
+          getBoundingsFromPosition,
+          activeViewport,
+          numberOfSlices,
+        );
         const currentResolution = yield* select(state => getCurrentResolution(state));
         yield* call(
           labelWithIterator,
@@ -162,14 +176,21 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
+function* getBoundingsFromPosition(
+  currentViewport: OrthoView,
+  numberOfSlices: number,
+): Saga<BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
-  return {
+  const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
+  const currentViewportBounding = {
     min: V3.sub(position, halfViewportExtentsUVW),
     max: V3.add(position, halfViewportExtentsUVW),
   };
+  currentViewportBounding.max[thirdDimension] =
+    currentViewportBounding.min[thirdDimension] + numberOfSlices;
+  return currentViewportBounding;
 }
 
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
@@ -273,7 +294,6 @@ export function* floodFill(): Saga<void> {
     const segmentationLayer = Model.getSegmentationLayer();
     const { cube } = segmentationLayer;
     const seedVoxel = Dimensions.roundCoordinate(position);
-    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const get3DAddress = (voxel: Vector2) => {
@@ -289,6 +309,9 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[0]],
       voxel[dimensionIndices[1]],
     ];
+    const activeResolution = yield* select(state => getCurrentResolution(state));
+    const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
     cube.floodFill(
       seedVoxel,
       activeCellId,
@@ -296,7 +319,10 @@ export function* floodFill(): Saga<void> {
       get2DAddress,
       dimensionIndices,
       currentViewportBounding,
+      activeZoomStep,
     );
+    yield* put(finishAnnotationStrokeAction());
+    cube.triggerPushQueue();
   }
 }
 

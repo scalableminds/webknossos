@@ -5,7 +5,8 @@
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
-import type { VolumeTool, ContourMode } from "oxalis/constants";
+import Dimensions from "oxalis/model/dimensions";
+import type { VolumeTool, ContourMode, Vector3, OrthoView } from "oxalis/constants";
 import type { HybridServerTracing, ServerVolumeTracing } from "admin/api_flow_types";
 
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
@@ -59,4 +60,10 @@ export function isSegmentationMissingForZoomstep(
   maxZoomStepForSegmentation: number,
 ): boolean {
   return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
+}
+
+export function getNumberOfSlicesForResolution(activeResolution: Vector3, activePlane: OrthoView) {
+  const thirdDimenstionIndex = Dimensions.thirdDimensionForPlane(activePlane);
+  const numberOfSlices = activeResolution[thirdDimenstionIndex];
+  return numberOfSlices;
 }

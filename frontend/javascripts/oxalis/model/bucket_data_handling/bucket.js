@@ -137,14 +137,13 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(
-      this.zoomedAddress,
-      getResolutions(Store.getState().dataset),
-    );
+    const resolutions = getResolutions(Store.getState().dataset);
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    const bucketResolution = resolutions[this.zoomedAddress[3]];
     const max = [
-      min[0] + Constants.BUCKET_WIDTH,
-      min[1] + Constants.BUCKET_WIDTH,
-      min[2] + Constants.BUCKET_WIDTH,
+      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
     ];
     return { min, max };
   }

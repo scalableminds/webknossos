@@ -25,7 +25,6 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import constants, {
   type Vector2,
@@ -411,7 +410,7 @@ class DataCube {
     if (seedBucket.type === "null") {
       return;
     }
-    const seedVoxelIndex = this.getVoxelIndex(seedVoxel);
+    const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
       return;
@@ -477,12 +476,10 @@ class DataCube {
       }
       bucketsToAddToPushQueue.add(currentBucket);
     }
-    Store.dispatch(finishAnnotationStrokeAction());
     for (const bucket of bucketsToAddToPushQueue.values()) {
       this.pushQueue.insert(bucket);
       bucket.trigger("bucketLabeled");
     }
-    this.triggerPushQueue();
   }
 
   setBucketData(zoomedAddress: Vector4, data: Uint8Array) {

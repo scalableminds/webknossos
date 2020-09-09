@@ -15,7 +15,10 @@ import Constants, {
   type VolumeTool,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  enforceVolumeTracing,
+  getNumberOfSlicesForResolution,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
@@ -278,7 +281,7 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
-    const numberOfSlices = this.getNumberOfSlicesForResolution(activeResolution);
+    const numberOfSlices = getNumberOfSlicesForResolution(activeResolution, this.plane);
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
@@ -323,14 +326,8 @@ class VolumeLayer {
     };
     Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
 
-    const numberOfSlices = this.getNumberOfSlicesForResolution(activeResolution);
+    const numberOfSlices = getNumberOfSlicesForResolution(activeResolution, this.plane);
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
-    if (
-      boundings != null &&
-      boundings.max[thirdDimensionIndex] - boundings.min[thirdDimensionIndex] < numberOfSlices - 1
-    ) {
-      boundings.max[thirdDimensionIndex] = boundings.min[thirdDimensionIndex] + numberOfSlices - 1;
-    }
 
     const iterator = new VoxelIterator(
       map,
@@ -425,12 +422,6 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
-  }
-
-  getNumberOfSlicesForResolution(activeResolution: Vector3) {
-    const thirdDimenstionIndex = Dimensions.thirdDimensionForPlane(this.plane);
-    const numberOfSlices = activeResolution[thirdDimenstionIndex];
-    return numberOfSlices;
   }
 }
 

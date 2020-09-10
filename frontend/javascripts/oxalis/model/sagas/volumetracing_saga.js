@@ -110,7 +110,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       );
     }
 
-    let lastPosition = null;
+    let lastPosition = startEditingAction.position;
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield* race({
         addToLayerAction: _take("ADD_TO_LAYER"),

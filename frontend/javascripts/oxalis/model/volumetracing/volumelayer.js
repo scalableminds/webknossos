@@ -239,21 +239,21 @@ class VolumeLayer {
     return iterator;
   }
 
-  getVector2XY(pos1: Vector2, pos2: Vector2): Vector2 {
+  perpendicularVector2(pos1: Vector2, pos2: Vector2): Vector2 {
     const dx = pos2[0] - pos1[0];
     let perpendicularVector;
     if (dx === 0) {
       perpendicularVector = [1, 0];
     } else {
-      const anstieg = (pos2[1] - pos1[1]) / dx;
-      perpendicularVector = [anstieg, -1]; // [-1.0 / anstieg, -1];
-      const norm = this.getNormOfVector2(perpendicularVector);
-      perpendicularVector = this.getSkalarproduct(perpendicularVector, 1 / norm);
+      const gradient = (pos2[1] - pos1[1]) / dx;
+      perpendicularVector = [gradient, -1];
+      const norm = this.normOfVector2(perpendicularVector);
+      perpendicularVector = this.scalarMultiplication(perpendicularVector, 1 / norm);
     }
     return perpendicularVector;
   }
 
-  getNormOfVector2(vector: Vector2): number {
+  normOfVector2(vector: Vector2): number {
     let norm = 0;
     let i;
     for (i of Vector2Indicies) {
@@ -262,7 +262,7 @@ class VolumeLayer {
     return Math.sqrt(norm);
   }
 
-  getVector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
+  vector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
     const sum = [0, 0];
     let i;
     for (i of Vector2Indicies) {
@@ -271,16 +271,16 @@ class VolumeLayer {
     return sum;
   }
 
-  getSkalarproduct(vector: Vector2, skalar: number): Vector2 {
+  scalarMultiplication(vector: Vector2, scalar: number): Vector2 {
     const product = [0, 0];
     let i;
     for (i of Vector2Indicies) {
-      product[i] = vector[i] * skalar;
+      product[i] = vector[i] * scalar;
     }
     return product;
   }
 
-  getVector2Distance(pos1: Vector2, pos2: Vector2): number {
+  vector2Distance(pos1: Vector2, pos2: Vector2): number {
     let distance = 0;
     let i;
     for (i of Vector2Indicies) {
@@ -289,13 +289,24 @@ class VolumeLayer {
     return Math.sqrt(distance);
   }
 
-  getVectorWithScale(vector: Vector2, scale: Vector2): Vector2 {
+  vectorWithScale(vector: Vector2, scale: Vector2): Vector2 {
     const result = [0, 0];
     let i;
     for (i of Vector2Indicies) {
       result[i] = vector[i] * scale[i];
     }
     return result;
+  }
+
+  createMap(width: number, height: number): Array<Array<boolean>> {
+    const map = new Array<Array<boolean>>(width);
+    for (let x = 0; x < width; x++) {
+      map[x] = new Array<boolean>(height);
+      for (let y = 0; y < height; y++) {
+        map[x][y] = false;
+      }
+    }
+    return map;
   }
 
   getRectangleVoxelIterator(
@@ -305,60 +316,42 @@ class VolumeLayer {
   ): ?VoxelIterator {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
+
     const radius = Math.round(brushSize / 2);
     const floatingCoord2dLastPosition = this.get2DCoordinate(lastPosition);
     const floatingCoord2dPosition = this.get2DCoordinate(position);
 
-    if (this.getVector2Distance(floatingCoord2dLastPosition, floatingCoord2dPosition) < radius)
+    if (this.vector2Distance(floatingCoord2dLastPosition, floatingCoord2dPosition) < radius)
       return null;
 
-    const normedPerpendicularVector = this.getVector2XY(
+    const normedPerpendicularVector = this.perpendicularVector2(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
     );
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
     const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
-    const perpendicularVector = this.getVectorWithScale(
-      this.getSkalarproduct(normedPerpendicularVector, radius),
+    const shiftVector = this.vectorWithScale(
+      this.scalarMultiplication(normedPerpendicularVector, radius),
       scale,
     );
-    const negPerpendicularVector = this.getVectorWithScale(
-      this.getSkalarproduct(normedPerpendicularVector, -radius),
-      scale,
-    );
+    const negShiftVector = this.scalarMultiplication(shiftVector, -1);
 
-    const [ax, ay] = this.getVector2Sum(floatingCoord2dPosition, negPerpendicularVector);
-    const [bx, by] = this.getVector2Sum(floatingCoord2dPosition, perpendicularVector);
-    const [cx, cy] = this.getVector2Sum(floatingCoord2dLastPosition, perpendicularVector);
-    const [dx, dy] = this.getVector2Sum(floatingCoord2dLastPosition, negPerpendicularVector);
-
-    const a = [ax, ay];
-    const b = [bx, by];
-    const c = [cx, cy];
-    const d = [dx, dy];
-    console.log(
-      "DISTANCES",
-      this.getVector2Distance(a, b),
-      this.getVector2Distance(b, c),
-      this.getVector2Distance(c, d),
-      this.getVector2Distance(d, a),
-    );
+    // calculate the rectangle's corners
+    const [ax, ay] = this.vector2Sum(floatingCoord2dPosition, negShiftVector);
+    const [bx, by] = this.vector2Sum(floatingCoord2dPosition, shiftVector);
+    const [cx, cy] = this.vector2Sum(floatingCoord2dLastPosition, shiftVector);
+    const [dx, dy] = this.vector2Sum(floatingCoord2dLastPosition, negShiftVector);
 
     const minCoord2d = [Math.floor(Math.min(ax, bx, cx, dx)), Math.floor(Math.min(ay, by, cy, dy))];
     const maxCoord2d = [Math.ceil(Math.max(ax, bx, cx, dx)), Math.ceil(Math.max(ay, by, cy, dy))];
-    const width = maxCoord2d[0];
-    const height = maxCoord2d[1];
-    const map = new Array(width + 1);
-    for (let x = 0; x <= width; x++) {
-      map[x] = new Array(height);
-      for (let y = 0; y <= height; y++) {
-        map[x][y] = false;
-      }
-    }
+    const [width, height] = maxCoord2d;
+    const map = this.createMap(width, height);
+
     const setMap = (x, y) => {
       map[x][y] = true;
     };
-    Drawing.drawRectangle(ax, ay, bx, by, cx, cy, dx, dy, minCoord2d[0], minCoord2d[1], setMap);
+    Drawing.fillRectangle(ax, ay, bx, by, cx, cy, dx, dy, setMap);
+
     const iterator = new VoxelIterator(
       map,
       width,
@@ -378,13 +371,7 @@ class VolumeLayer {
     const width = 2 * radius;
     const height = 2 * radius;
 
-    const map = new Array(width);
-    for (let x = 0; x < width; x++) {
-      map[x] = new Array(height);
-      for (let y = 0; y < height; y++) {
-        map[x][y] = false;
-      }
-    }
+    const map = this.createMap(width, height);
     const floatingCoord2d = this.get2DCoordinate(position);
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
     const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];

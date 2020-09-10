@@ -163,61 +163,40 @@ class Drawing {
     }
   }
 
-  getVector2Distance(pos1: Vector2, pos2: Vector2): number {
-    let distance = 0;
-    let i;
-    for (i of Vector2Indicies) {
-      distance += Math.pow(pos2[i] - pos1[i], 2);
-    }
-    return Math.sqrt(distance);
-  }
-
   // Source: https://stackoverflow.com/questions/10061146/how-to-rasterize-rotated-rectangle-in-2d-by-setpixel/19078088#19078088
-  drawRectangle(
-    xai: number,
-    yai: number,
-    xbi: number,
-    ybi: number,
-    xci: number,
-    yci: number,
-    xdi: number,
-    ydi: number,
-    diffX: number,
-    diffY: number,
+  fillRectangle(
+    xa: number,
+    ya: number,
+    xb: number,
+    yb: number,
+    xc: number,
+    yc: number,
+    xd: number,
+    yd: number,
     draw: (number, number) => void,
   ) {
-    const xa = Math.round(xai - diffX);
-    const ya = Math.round(yai - diffY);
-    const xb = Math.round(xbi - diffX);
-    const yb = Math.round(ybi - diffY);
-    const xc = Math.round(xci - diffX);
-    const yc = Math.round(yci - diffY);
-    const xd = Math.round(xdi - diffX);
-    const yd = Math.round(ydi - diffY);
-    this.drawLine2d(xa, ya, xb, yb, draw);
-    this.drawLine2d(xb, yb, xc, yc, draw);
-    this.drawLine2d(xc, yc, xd, yd, draw);
-    this.drawLine2d(xd, yd, xa, ya, draw);
-    // console.log(xa, ya, xb, yb, xc, yc, xd, yd);
-    // console.log(xai, yai, xbi, ybi, xci, yci, xdi, ydi);
-    /* console.log(
-      "DISTANCES draw",
-      this.getVector2Distance([xa, ya], [xb, yb]),
-      this.getVector2Distance([xb, yb], [xc, yc]),
-      this.getVector2Distance([xc, yc], [xd, yd]),
-      this.getVector2Distance([xd, yd], [xa, ya]),
-    ); */
-    const minX = Math.min(xa, xb, xc, xd);
-    const maxX = Math.max(xa, xb, xc, xd);
-    const minY = Math.min(ya, yb, yc, yd);
-    const maxY = Math.max(ya, yb, yc, yd);
+    const [diffX, diffY] = [
+      Math.floor(Math.min(xa, xb, xc, xd)),
+      Math.floor(Math.min(ya, yb, yc, yd)),
+    ];
+    xa = Math.round(xa - diffX);
+    ya = Math.round(ya - diffY);
+    xb = Math.round(xb - diffX);
+    yb = Math.round(yb - diffY);
+    xc = Math.round(xc - diffX);
+    yc = Math.round(yc - diffY);
+    xd = Math.round(xd - diffX);
+    yd = Math.round(yd - diffY);
+
+    const [minX, maxX] = [Math.min(xa, xb, xc, xd), Math.max(xa, xb, xc, xd)];
+    const [minY, maxY] = [Math.min(ya, yb, yc, yd), Math.max(ya, yb, yc, yd)];
     const bufX0 = new Array(maxY);
     const bufX1 = new Array(maxY);
+
     this.paintBorder(xa, ya, xb, yb, bufX0, bufX1, minX, maxX);
     this.paintBorder(xb, yb, xc, yc, bufX0, bufX1, minX, maxX);
     this.paintBorder(xc, yc, xd, yd, bufX0, bufX1, minX, maxX);
     this.paintBorder(xd, yd, xa, ya, bufX0, bufX1, minX, maxX);
-    // console.log(bufX0, bufX1);
 
     let y;
     for (y = minY; y <= maxY; y++) {

@@ -16,6 +16,9 @@ const MAX_NUM_ERRORS = 50;
 const BLACKLISTED_ERROR_MESSAGES = [
   "ResizeObserver loop limit exceeded",
   "Invariant Violation: Cannot call hover while not dragging.",
+  // Errors from the sortable-tree when dragging an element onto itself
+  "Uncaught Invariant Violation: Expected to find a valid target.",
+  "Uncaught TypeError: Cannot read property 'path' of null",
 ];
 
 type ErrorHandlingOptions = {

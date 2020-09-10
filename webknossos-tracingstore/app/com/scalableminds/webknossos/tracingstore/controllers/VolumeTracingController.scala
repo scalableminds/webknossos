@@ -151,9 +151,6 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
-  /**
-    * Handles isosurface requests.
-    */
   def requestIsosurface(tracingId: String) =
     Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {

@@ -119,6 +119,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       0,
       VolumeTracingDefaults.zoomLevel
     )
+    //TODO: add mag list
 
   def createTracings(
       dataSet: DataSet,

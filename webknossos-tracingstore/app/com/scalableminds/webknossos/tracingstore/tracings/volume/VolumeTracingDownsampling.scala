@@ -184,6 +184,7 @@ trait VolumeTracingDownsampling
     items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
   private def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
+  // TODO: if tracing has fallback layer, use only mags present in that fallback layer
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
       mags = dataSource.dataLayers.flatMap(_.resolutions).distinct.sortBy(_.maxDim).filterNot(_.maxDim == 1)

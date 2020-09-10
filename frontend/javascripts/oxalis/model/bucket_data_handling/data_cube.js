@@ -493,7 +493,6 @@ class DataCube {
               neighbourVoxelStack.pushVoxel(neighbourVoxel);
             }
           }
-          debugger;
         }
       }
       bucketsWithLabeledVoxelsMap.set(currentBucket, currentLabeledVoxelMap);

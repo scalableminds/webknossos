@@ -297,8 +297,14 @@ export function* floodFill(): Saga<void> {
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
-    // The flood fill method of the cube iterates within the bucket. Thus thirdDimensionValue must also be within a bucket.
-    let thirdDimensionValue = seedVoxel[dimensionIndices[2]] % Constants.BUCKET_WIDTH;
+    const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    const allResolutions = yield* select(state => getResolutions(state.dataset));
+    const activeResolution = allResolutions[activeZoomStep];
+    // The flood fill and the applyLabeledVoxelMapToResolution method of the cube iterates within the bucket.
+    // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
+    const thirdDimensionValue =
+      Math.floor(seedVoxel[dimensionIndices[2]] / activeResolution[dimensionIndices[2]]) %
+      Constants.BUCKET_WIDTH;
     const get3DAddress = (voxel: Vector2) => {
       const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
       const orderedVoxelWithThirdDimension = [
@@ -312,7 +318,6 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[0]],
       voxel[dimensionIndices[1]],
     ];
-    const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
     const bucketsWithLabeledVoxelMap = cube.floodFill(
       seedVoxel,
@@ -326,11 +331,6 @@ export function* floodFill(): Saga<void> {
     if (!bucketsWithLabeledVoxelMap) {
       continue;
     }
-    const allResolutions = yield* select(state => getResolutions(state.dataset));
-    const activeResolution = allResolutions[activeZoomStep];
-    // The applyLabeledVoxelMapToResolution method of calculates the thirdDimensionValue in the bucket of the goalResolution itself.
-    // Thus reset the thirdDimensionValue value.
-    thirdDimensionValue = seedVoxel[dimensionIndices[2]];
     for (let zoomStep = 0; zoomStep < allResolutions.length; zoomStep++) {
       if (zoomStep === activeZoomStep) {
         continue;

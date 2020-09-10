@@ -116,6 +116,11 @@ type SetTracingAction = { type: "SET_TRACING", tracing: SkeletonTracing };
 type SetTreeGroupsAction = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroup> };
 type SetTreeGroupAction = { type: "SET_TREE_GROUP", groupId: ?number, treeId?: number };
 type SetMergerModeEnabledAction = { type: "SET_MERGER_MODE_ENABLED", active: boolean };
+type UpdateNavigationListAction = {
+  type: "UPDATE_NAVIGATION_LIST",
+  list: Array<number>,
+  activeIndex: number,
+};
 type NoAction = { type: "NONE" };
 
 export type SkeletonTracingAction =
@@ -156,7 +161,8 @@ export type SkeletonTracingAction =
   | SetTracingAction
   | SetTreeGroupsAction
   | SetTreeGroupAction
-  | SetMergerModeEnabledAction;
+  | SetMergerModeEnabledAction
+  | UpdateNavigationListAction;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -510,3 +516,12 @@ export const deleteTreeAsUserAction = (treeId?: number): NoAction => {
   // if the user confirms
   return noAction();
 };
+
+export const updateNavigationListAction = (
+  list: Array<number>,
+  activeIndex: number,
+): UpdateNavigationListAction => ({
+  type: "UPDATE_NAVIGATION_LIST",
+  list,
+  activeIndex,
+});

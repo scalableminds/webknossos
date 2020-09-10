@@ -239,13 +239,18 @@ class VolumeLayer {
     return iterator;
   }
 
-  getNormedPerpendicularVector2(pos1: Vector2, pos2: Vector2): Vector2 {
-    const anstieg = (pos2[1] - pos1[1]) / (pos2[0] - pos1[0]);
-    const perpendicularVector = [anstieg, -1]; // [-1.0 / anstieg, -1];
-    const norm = this.getNormOfVector2(perpendicularVector);
-
-    console.log(anstieg, norm, perpendicularVector);
-    return this.getSkalarproduct(perpendicularVector, 1 / norm);
+  getVector2XY(pos1: Vector2, pos2: Vector2): Vector2 {
+    const dx = pos2[0] - pos1[0];
+    let perpendicularVector;
+    if (dx === 0) {
+      perpendicularVector = [1, 0];
+    } else {
+      const anstieg = (pos2[1] - pos1[1]) / dx;
+      perpendicularVector = [anstieg, -1]; // [-1.0 / anstieg, -1];
+      const norm = this.getNormOfVector2(perpendicularVector);
+      perpendicularVector = this.getSkalarproduct(perpendicularVector, 1 / norm);
+    }
+    return perpendicularVector;
   }
 
   getNormOfVector2(vector: Vector2): number {
@@ -284,6 +289,15 @@ class VolumeLayer {
     return Math.sqrt(distance);
   }
 
+  getVectorWithScale(vector: Vector2, scale: Vector2): Vector2 {
+    const result = [0, 0];
+    let i;
+    for (i of Vector2Indicies) {
+      result[i] = vector[i] * scale[i];
+    }
+    return result;
+  }
+
   getRectangleVoxelIterator(
     lastPosition: Vector3,
     position: Vector3,
@@ -298,30 +312,37 @@ class VolumeLayer {
     if (this.getVector2Distance(floatingCoord2dLastPosition, floatingCoord2dPosition) < radius)
       return null;
 
-    const normedPerpendicularVector = this.getNormedPerpendicularVector2(
+    const normedPerpendicularVector = this.getVector2XY(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
     );
-    console.log(normedPerpendicularVector);
-    const perpendicularVector = this.getSkalarproduct(normedPerpendicularVector, radius);
-    const negPerpendicularVector = this.getSkalarproduct(normedPerpendicularVector, -radius);
+    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
+    const perpendicularVector = this.getVectorWithScale(
+      this.getSkalarproduct(normedPerpendicularVector, radius),
+      scale,
+    );
+    const negPerpendicularVector = this.getVectorWithScale(
+      this.getSkalarproduct(normedPerpendicularVector, -radius),
+      scale,
+    );
 
     const [ax, ay] = this.getVector2Sum(floatingCoord2dPosition, negPerpendicularVector);
     const [bx, by] = this.getVector2Sum(floatingCoord2dPosition, perpendicularVector);
     const [cx, cy] = this.getVector2Sum(floatingCoord2dLastPosition, perpendicularVector);
     const [dx, dy] = this.getVector2Sum(floatingCoord2dLastPosition, negPerpendicularVector);
-    /*     const a = [ax, ay];
+
+    const a = [ax, ay];
     const b = [bx, by];
     const c = [cx, cy];
     const d = [dx, dy];
-
     console.log(
       "DISTANCES",
       this.getVector2Distance(a, b),
       this.getVector2Distance(b, c),
       this.getVector2Distance(c, d),
       this.getVector2Distance(d, a),
-    ); */
+    );
 
     const minCoord2d = [Math.floor(Math.min(ax, bx, cx, dx)), Math.floor(Math.min(ay, by, cy, dy))];
     const maxCoord2d = [Math.ceil(Math.max(ax, bx, cx, dx)), Math.ceil(Math.max(ay, by, cy, dy))];

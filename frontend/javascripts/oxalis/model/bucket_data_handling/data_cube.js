@@ -397,7 +397,7 @@ class DataCube {
   floodFill(
     seedVoxel: Vector3,
     cellId: number,
-    get3DAddress: (Vector2, Vector3) => Vector3,
+    get3DAddress: Vector2 => Vector3,
     get2DAddress: Vector3 => Vector2,
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
@@ -437,7 +437,8 @@ class DataCube {
         continue;
       }
       const bucketData = currentBucket.getOrCreateData();
-      const initialVoxelIndex = this.getVoxelIndex(initialVoxelInBucket, zoomStep);
+      // initialVoxelInBucket
+      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
@@ -451,11 +452,6 @@ class DataCube {
         bucketsWithLabeledVoxelsMap.get(currentBucket) ||
         new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
       const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord]) => {
-        console.log(
-          `Flood filled ${currentBucket.zoomedAddress.toString()} at ${firstCoord},${secondCoord}, index ${firstCoord *
-            constants.BUCKET_WIDTH +
-            secondCoord}`,
-        );
         currentLabeledVoxelMap[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
       };
 
@@ -478,25 +474,26 @@ class DataCube {
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
           } = currentBucket.is2DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
-          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
+          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
-              bucketsToFill.push([
-                neighbourBucket,
-                this.getVoxelOffset(neighbourVoxel3D, zoomStep),
-              ]);
+              bucketsToFill.push([neighbourBucket, neighbourVoxel3D]);
             }
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStack to iterate over its neighbours.
-            const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
+            const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxel3D);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
+              console.log(
+                `labeled in bucket ${currentBucket.zoomedAddress.toString()}, voxel ${neighbourVoxel3D.toString()}, voxelIndex ${neighbourVoxelIndex}`,
+              );
               markVoxelOfSliceAsLabeled(neighbourVoxel);
               neighbourVoxelStack.pushVoxel(neighbourVoxel);
             }
           }
+          debugger;
         }
       }
       bucketsWithLabeledVoxelsMap.set(currentBucket, currentLabeledVoxelMap);
@@ -545,7 +542,7 @@ class DataCube {
             // Scaling the zoomed address of the bucket up to the source resolution and calculate the offset.
             const upscaledZoomAddressPart = bucket.zoomedAddress[index] * scaleToSource[index];
             offset[index] = labeledBucket.zoomedAddress[index] - upscaledZoomAddressPart;
-            offset[index] = offset[index] * constants.BUCKET_WIDTH * scaleToGoal[index];
+            offset[index] = Math.round(offset[index] * constants.BUCKET_WIDTH * scaleToGoal[index]);
           }
           x += offset[0];
           y += offset[1];
@@ -561,6 +558,7 @@ class DataCube {
           y %= constants.BUCKET_WIDTH;
           z %= constants.BUCKET_WIDTH;
         }
+        bucket.markAndAddBucketForUndo();
         const voxelIndex = this.getVoxelIndexByVoxelOffset([x, y, z]);
         const bucketData = bucket.getOrCreateData();
         bucketData[voxelIndex] = cellId;
@@ -572,13 +570,10 @@ class DataCube {
             z,
           ].toString()}, voxelIndex ${voxelIndex}`,
         );
-        bucket.markAndAddBucketForUndo();
       };
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-            // TODO: Label the other buckets
-            debugger;
             const voxelInBucket = get3DAddress([firstDim, secondDim]);
             // As the iteration is only over the first two dimensions the third dimension is not within the labeledBucket.
             // Here we adjust the third dimension to be with the source labeledBucket.

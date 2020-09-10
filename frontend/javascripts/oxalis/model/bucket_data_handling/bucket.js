@@ -191,17 +191,16 @@ export class DataBucket {
       const dimension = dimensionIndices[dimensionIndex];
       if (voxel[dimensionIndex] < 0) {
         isVoxelOutside = true;
-        neighbourBucketAddress[dimension] -= Math.ceil(
-          -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-        );
+        const offset = Math.ceil(-voxel[dimensionIndex] / Constants.BUCKET_WIDTH);
+        neighbourBucketAddress[dimension] -= offset;
         // Add a full bucket width to the coordinate below 0 to avoid error's
         // caused by the modulo operation used in getVoxelOffset.
-        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
+        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH * offset;
       } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
         isVoxelOutside = true;
-        neighbourBucketAddress[dimension] += Math.floor(
-          voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-        );
+        const offset = Math.floor(voxel[dimensionIndex] / Constants.BUCKET_WIDTH);
+        neighbourBucketAddress[dimension] += offset;
+        adjustedVoxel[dimensionIndex] -= Constants.BUCKET_WIDTH * offset;
       }
     }
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };

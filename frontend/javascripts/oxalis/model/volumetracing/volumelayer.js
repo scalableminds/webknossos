@@ -211,8 +211,21 @@ class VolumeLayer {
   }
 
   getNormedPerpendicularVector2(pos1: Vector2, pos2: Vector2): Vector2 {
-    const mPerpendicular = (pos1[0] - pos2[0]) / (pos2[1] - pos1[1]);
-    return [mPerpendicular, -1];
+    const anstieg = (pos2[1] - pos1[1]) / (pos2[0] - pos1[0]);
+    const perpendicularVector = [anstieg, -1]; // [-1.0 / anstieg, -1];
+    const norm = this.getNormOfVector2(perpendicularVector);
+
+    console.log(anstieg, norm, perpendicularVector);
+    return this.getSkalarproduct(perpendicularVector, 1 / norm);
+  }
+
+  getNormOfVector2(vector: Vector2): number {
+    let norm = 0;
+    let i;
+    for (i of Vector2Indicies) {
+      norm += Math.pow(vector[i], 2);
+    }
+    return Math.sqrt(norm);
   }
 
   getVector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
@@ -228,7 +241,7 @@ class VolumeLayer {
     const product = [0, 0];
     let i;
     for (i of Vector2Indicies) {
-      product[i] = vector[i] + skalar;
+      product[i] = vector[i] * skalar;
     }
     return product;
   }
@@ -260,35 +273,27 @@ class VolumeLayer {
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
     );
-
+    console.log(normedPerpendicularVector);
     const perpendicularVector = this.getSkalarproduct(normedPerpendicularVector, radius);
     const negPerpendicularVector = this.getSkalarproduct(normedPerpendicularVector, -radius);
 
-    let ax;
-    let ay;
-    let bx;
-    let by;
-    let cx;
-    let cy;
-    let dx;
-    let dy;
-    if (
-      floatingCoord2dPosition[0] < floatingCoord2dLastPosition[0] &&
-      floatingCoord2dPosition[1] < floatingCoord2dLastPosition[1]
-    ) {
-      // von rechts unten nach links oben
-      [ax, ay] = this.getVector2Sum(floatingCoord2dLastPosition, negPerpendicularVector);
-      [bx, by] = this.getVector2Sum(floatingCoord2dPosition, negPerpendicularVector);
-      [cx, cy] = this.getVector2Sum(floatingCoord2dPosition, perpendicularVector);
-      [dx, dy] = this.getVector2Sum(floatingCoord2dLastPosition, perpendicularVector);
-      const a = [ax, ay];
-      const b = [bx, by];
-      const c = [cx, cy];
-      const d = [dx, dy];
-      console.log(a, b, c, d);
-    } else {
-      return null;
-    }
+    const [ax, ay] = this.getVector2Sum(floatingCoord2dPosition, negPerpendicularVector);
+    const [bx, by] = this.getVector2Sum(floatingCoord2dPosition, perpendicularVector);
+    const [cx, cy] = this.getVector2Sum(floatingCoord2dLastPosition, perpendicularVector);
+    const [dx, dy] = this.getVector2Sum(floatingCoord2dLastPosition, negPerpendicularVector);
+    /*     const a = [ax, ay];
+    const b = [bx, by];
+    const c = [cx, cy];
+    const d = [dx, dy];
+
+    console.log(
+      "DISTANCES",
+      this.getVector2Distance(a, b),
+      this.getVector2Distance(b, c),
+      this.getVector2Distance(c, d),
+      this.getVector2Distance(d, a),
+    ); */
+
     const minCoord2d = [Math.floor(Math.min(ax, bx, cx, dx)), Math.floor(Math.min(ay, by, cy, dy))];
     const maxCoord2d = [Math.ceil(Math.max(ax, bx, cx, dx)), Math.ceil(Math.max(ay, by, cy, dy))];
     const width = maxCoord2d[0];

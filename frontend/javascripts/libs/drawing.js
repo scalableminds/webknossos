@@ -3,7 +3,8 @@
  * @flow
  */
 
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector2 } from "oxalis/constants";
+import { Vector2Indicies } from "oxalis/constants";
 
 type RangeItem = [number, number, number, boolean | null, boolean, boolean];
 
@@ -18,6 +19,19 @@ const SMOOTH_ALPHA = 0.2;
 class Drawing {
   alpha: number = SMOOTH_ALPHA;
   smoothLength: number = SMOOTH_LENGTH;
+
+  drawHorizontalLine2d(y: number, x1: number, x2: number, draw: (number, number) => void) {
+    let i;
+    if (x1 < x2) {
+      for (i = x1; i <= x2; i++) {
+        draw(i, y);
+      }
+    } else {
+      for (i = x2; i <= x1; i++) {
+        draw(i, y);
+      }
+    }
+  }
 
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d(x: number, y: number, x1: number, y1: number, draw: (number, number) => void) {
@@ -132,11 +146,12 @@ class Drawing {
     minX: number,
     maxX: number,
   ): void {
+    // console.log("BORDER", x1, y1, x2, y2);
     if (y2 - y1 < 0) {
       this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
         bufX0[y] = x;
       });
-    } else if (y2 - y1 < 0) {
+    } else if (y2 - y1 > 0) {
       this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
         bufX1[y] = x;
       });
@@ -148,43 +163,65 @@ class Drawing {
     }
   }
 
+  getVector2Distance(pos1: Vector2, pos2: Vector2): number {
+    let distance = 0;
+    let i;
+    for (i of Vector2Indicies) {
+      distance += Math.pow(pos2[i] - pos1[i], 2);
+    }
+    return Math.sqrt(distance);
+  }
+
   // Source: https://stackoverflow.com/questions/10061146/how-to-rasterize-rotated-rectangle-in-2d-by-setpixel/19078088#19078088
   drawRectangle(
-    xa: number,
-    ya: number,
-    xb: number,
-    yb: number,
-    xc: number,
-    yc: number,
-    xd: number,
-    yd: number,
+    xai: number,
+    yai: number,
+    xbi: number,
+    ybi: number,
+    xci: number,
+    yci: number,
+    xdi: number,
+    ydi: number,
     diffX: number,
     diffY: number,
     draw: (number, number) => void,
   ) {
-    xa = Math.round(xa) - diffX;
-    ya = Math.round(ya) - diffY;
-    xb = Math.round(xb) - diffX;
-    yb = Math.round(yb) - diffY;
-    xc = Math.round(xc) - diffX;
-    yc = Math.round(yc) - diffY;
-    xd = Math.round(xd) - diffX;
-    yd = Math.round(yd) - diffY;
+    const xa = Math.round(xai - diffX);
+    const ya = Math.round(yai - diffY);
+    const xb = Math.round(xbi - diffX);
+    const yb = Math.round(ybi - diffY);
+    const xc = Math.round(xci - diffX);
+    const yc = Math.round(yci - diffY);
+    const xd = Math.round(xdi - diffX);
+    const yd = Math.round(ydi - diffY);
+    this.drawLine2d(xa, ya, xb, yb, draw);
+    this.drawLine2d(xb, yb, xc, yc, draw);
+    this.drawLine2d(xc, yc, xd, yd, draw);
+    this.drawLine2d(xd, yd, xa, ya, draw);
+    // console.log(xa, ya, xb, yb, xc, yc, xd, yd);
+    // console.log(xai, yai, xbi, ybi, xci, yci, xdi, ydi);
+    /* console.log(
+      "DISTANCES draw",
+      this.getVector2Distance([xa, ya], [xb, yb]),
+      this.getVector2Distance([xb, yb], [xc, yc]),
+      this.getVector2Distance([xc, yc], [xd, yd]),
+      this.getVector2Distance([xd, yd], [xa, ya]),
+    ); */
     const minX = Math.min(xa, xb, xc, xd);
     const maxX = Math.max(xa, xb, xc, xd);
     const minY = Math.min(ya, yb, yc, yd);
     const maxY = Math.max(ya, yb, yc, yd);
-    const bufSize = maxY - minY;
-    const bufX0 = new Array(bufSize);
-    const bufX1 = new Array(bufSize);
+    const bufX0 = new Array(maxY);
+    const bufX1 = new Array(maxY);
     this.paintBorder(xa, ya, xb, yb, bufX0, bufX1, minX, maxX);
     this.paintBorder(xb, yb, xc, yc, bufX0, bufX1, minX, maxX);
     this.paintBorder(xc, yc, xd, yd, bufX0, bufX1, minX, maxX);
     this.paintBorder(xd, yd, xa, ya, bufX0, bufX1, minX, maxX);
+    // console.log(bufX0, bufX1);
 
     let y;
-    for (y = Math.min(ya, yb, yc, yd); y <= Math.max(ya, yb, yc, yd); y++) {
-      this.drawLine2d(bufX0[y], y, bufX1[y], y, draw);
+    for (y = minY; y <= maxY; y++) {
+      this.drawHorizontalLine2d(y, bufX0[y], bufX1[y], draw);
     }
   }
 

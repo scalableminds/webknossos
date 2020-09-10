@@ -50,6 +50,7 @@ import {
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   setPositionAction,
   setZoomStepAction,
@@ -442,9 +443,11 @@ function setupLayerForVolumeTracing(
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
   let layers = _.clone(dataset.dataSource.dataLayers);
   const segmentationLayer = layers.find(layer => layer.category === "segmentation");
-  if (!segmentationLayer) {
-    Toast.error(messages["dataset.segmentationlayer_not_existing"]);
-    throw HANDLED_ERROR;
+  let resolutions;
+  if (segmentationLayer) {
+    resolutions = segmentationLayer.resolutions
+  } else {
+    resolutions = getResolutions(dataset);
   }
   // The tracing always contains the layer information for the user segmentation.
   // Two possible cases:
@@ -463,7 +466,7 @@ function setupLayerForVolumeTracing(
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),
     // volume tracing can only be done for the first resolution
-    resolutions: segmentationLayer.resolutions,
+    resolutions,
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,

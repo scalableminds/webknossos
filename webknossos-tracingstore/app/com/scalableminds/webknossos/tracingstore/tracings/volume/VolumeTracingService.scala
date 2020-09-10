@@ -193,6 +193,8 @@ class VolumeTracingService @Inject()(
 
     val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
     mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
+
+    //TODO: save mag list to tracing
   }
 
   class MergedVolume(elementClass: ElementClass) extends DataConverter {
@@ -280,6 +282,8 @@ class VolumeTracingService @Inject()(
             }
         }
     }
+
+    //TODO: save mag list to tracing
   }
 
   private def isAllZero(data: Array[Byte]): Boolean =

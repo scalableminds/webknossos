@@ -297,9 +297,8 @@ export function* floodFill(): Saga<void> {
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
-    let thirdDimensionValue = seedVoxel[dimensionIndices[2]];
     const get3DAddress = (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[dimensionIndices[2]]];
       const orderedVoxelWithThirdDimension = [
         unorderedVoxelWithThirdDimension[dimensionIndices[0]],
         unorderedVoxelWithThirdDimension[dimensionIndices[1]],
@@ -327,17 +326,11 @@ export function* floodFill(): Saga<void> {
     }
     const allResolutions = yield* select(state => getResolutions(state.dataset));
     const activeResolution = allResolutions[activeZoomStep];
-    for (let zoomStep = 0; zoomStep < 2; zoomStep++) {
+    for (let zoomStep = 0; zoomStep < allResolutions.length; zoomStep++) {
       if (zoomStep === activeZoomStep) {
         continue;
       }
       const goalResolution = allResolutions[zoomStep];
-      // After flood filling on the current resolution the labeled voxels are down and upscaled through all resolutions.
-      // For this a get3DAddress function is needed that always has the third dimension within the current bucket ([0,32]).
-      // This depends on the goalResolution.
-      thirdDimensionValue =
-        (seedVoxel[dimensionIndices[2]] / goalResolution[dimensionIndices[2]]) %
-        Constants.BUCKET_WIDTH;
       cube.applyLabeledVoxelMapToResolution(
         bucketsWithLabeledVoxelMap,
         activeResolution,

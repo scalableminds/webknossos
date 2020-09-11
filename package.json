@@ -60,7 +60,7 @@
     "lint-staged": "^7.3.0",
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
-    "node-fetch": "^2.1.2",
+    "node-fetch": "^2.6.1",
     "nyc": "^13.3.0",
     "pg": "^7.4.1",
     "pixelmatch": "^4.0.2",

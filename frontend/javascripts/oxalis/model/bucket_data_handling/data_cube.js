@@ -376,9 +376,9 @@ class DataCube {
           const labelFunc = (data: BucketDataArray): void => {
             if (address[3] === 1)
               console.log(
-                `labeled in bucket ${bucket.zoomedAddress.toString()}, voxel ${voxel.toString()}, voxelIndex ${voxelIndex}, with modulo ${voxel.map(
-                  a => Math.floor(a / 2) % 32,
-                )}`,
+                `labeled in bucket ${bucket.zoomedAddress.toString()}, voxel ${voxel.toString()}, voxelIndex ${voxelIndex}, with modulo ${voxel
+                  .map(a => Math.floor(a / 2) % 32)
+                  .toString()}`,
               );
             data[voxelIndex] = label;
           };
@@ -397,7 +397,7 @@ class DataCube {
   floodFill(
     seedVoxel: Vector3,
     cellId: number,
-    get3DAddress: (Vector2, Vector3) => Vector3,
+    get3DAddress: Vector2 => Vector3,
     get2DAddress: Vector3 => Vector2,
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
@@ -437,7 +437,8 @@ class DataCube {
         continue;
       }
       const bucketData = currentBucket.getOrCreateData();
-      const initialVoxelIndex = this.getVoxelIndex(initialVoxelInBucket, zoomStep);
+      // initialVoxelInBucket
+      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
@@ -473,21 +474,21 @@ class DataCube {
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
           } = currentBucket.is2DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
-          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
+          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
-              bucketsToFill.push([
-                neighbourBucket,
-                this.getVoxelOffset(neighbourVoxel3D, zoomStep),
-              ]);
+              bucketsToFill.push([neighbourBucket, neighbourVoxel3D]);
             }
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStack to iterate over its neighbours.
-            const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
+            const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxel3D);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
+              console.log(
+                `labeled in bucket ${currentBucket.zoomedAddress.toString()}, voxel ${neighbourVoxel3D.toString()}, voxelIndex ${neighbourVoxelIndex}`,
+              );
               markVoxelOfSliceAsLabeled(neighbourVoxel);
               neighbourVoxelStack.pushVoxel(neighbourVoxel);
             }
@@ -514,15 +515,12 @@ class DataCube {
     get3DAddress: Vector2 => Vector3,
   ) {
     const labeledBuckets = new Set();
-    const voxelsToLabelInEachDirection = map3(
-      (sourceVal, index) => Math.ceil(sourceVal / goalResolution[index]),
-      sourceResolution,
-    );
+    const isDownsampling = goalZoomStep > sourceZoomStep;
+    const scaleToSource = map3((val, index) => val / sourceResolution[index], goalResolution);
+    const scaleToGoal = map3((val, index) => val / goalResolution[index], sourceResolution);
+    const voxelsToLabelInEachDirection = map3(scaleValue => Math.ceil(scaleValue), scaleToGoal);
     const voxelToGoalResolution = voxelInBucket =>
-      map3(
-        (value, index) => Math.floor(value * (sourceResolution[index] / goalResolution[index])),
-        voxelInBucket,
-      );
+      map3((value, index) => Math.floor(value * scaleToGoal[index]), voxelInBucket);
     for (const [labeledBucket, voxelMap] of labeledVoxelMap) {
       const bucketsOfGoalResolution = this.getBucketsContainingBucket(
         labeledBucket,
@@ -534,14 +532,33 @@ class DataCube {
         continue;
       }
       const labelVoxelInGoalResolution = (x, y, z) => {
-        const xBucket = Math.floor(x / constants.BUCKET_WIDTH);
-        const yBucket = Math.floor(y / constants.BUCKET_WIDTH);
-        const zBucket = Math.floor(z / constants.BUCKET_WIDTH);
-        x %= constants.BUCKET_WIDTH;
-        y %= constants.BUCKET_WIDTH;
-        z %= constants.BUCKET_WIDTH;
+        let bucket = bucketsOfGoalResolution[0][0][0];
+        if (isDownsampling) {
+          // If the annotation given by the voxelMap will be downsampled, the labeledBucket can only be within one bucket in the lower resolution.
+          // It is possible that the labeledBucket is does not have the same global origin as the bucket of the lower resolution. Thus an additional offset is needed.
+          const offset = [0, 0, 0];
+          for (let index = 0; index < 3; index++) {
+            // Scaling the zoomed address of the bucket up to the source resolution and calculate the offset.
+            const upscaledZoomAddressPart = bucket.zoomedAddress[index] * scaleToSource[index];
+            offset[index] = labeledBucket.zoomedAddress[index] - upscaledZoomAddressPart;
+            offset[index] = Math.round(offset[index] * constants.BUCKET_WIDTH * scaleToGoal[index]);
+          }
+          x += offset[0];
+          y += offset[1];
+          z += offset[2];
+        } else {
+          // If this method upsamples the labeled voxels, the voxel can be within one out of many buckets.
+          // As the x, y, z values are already scaled up, the bucket the belong to is calculated and x, y, z get shrinked to be within that  bucket.
+          const xBucket = Math.floor(x / constants.BUCKET_WIDTH);
+          const yBucket = Math.floor(y / constants.BUCKET_WIDTH);
+          const zBucket = Math.floor(z / constants.BUCKET_WIDTH);
+          bucket = bucketsOfGoalResolution[xBucket][yBucket][zBucket];
+          x %= constants.BUCKET_WIDTH;
+          y %= constants.BUCKET_WIDTH;
+          z %= constants.BUCKET_WIDTH;
+        }
+        bucket.markAndAddBucketForUndo();
         const voxelIndex = this.getVoxelIndexByVoxelOffset([x, y, z]);
-        const bucket = bucketsOfGoalResolution[xBucket][yBucket][zBucket];
         const bucketData = bucket.getOrCreateData();
         bucketData[voxelIndex] = cellId;
         labeledBuckets.add(bucket);
@@ -552,25 +569,23 @@ class DataCube {
             z,
           ].toString()}, voxelIndex ${voxelIndex}`,
         );
-        bucket.markAndAddBucketForUndo();
       };
-      for (let x = 0; x < constants.BUCKET_WIDTH; x++) {
-        for (let y = 0; y < constants.BUCKET_WIDTH; y++) {
-          if (voxelMap[x * constants.BUCKET_WIDTH + y] === 1) {
-            // TODO: Label the other buckets
-            const voxelInBucket = get3DAddress([x, y]);
-            debugger;
+      for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
+        for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
+          if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
+            const voxelInBucket = get3DAddress([firstDim, secondDim]);
+            // As the iteration is only over the first two dimensions the third dimension is not within the labeledBucket.
+            // Here we adjust the third dimension to be with the source labeledBucket.
+            voxelInBucket[thirdDimension] %= constants.BUCKET_WIDTH;
             const voxelInGoalResolution = voxelToGoalResolution(voxelInBucket);
-            // The value of the third dimension was already adjusted by the get3DAddress call. Thus we rewrite this value.
-            voxelInGoalResolution[thirdDimension] = voxelInBucket[thirdDimension];
-            const maxVoxelBoundingInGoalResolution = [
+            const maxVoxelBoundingsInGoalResolution = [
               voxelInGoalResolution[0] + voxelsToLabelInEachDirection[0],
               voxelInGoalResolution[1] + voxelsToLabelInEachDirection[1],
               voxelInGoalResolution[2] + voxelsToLabelInEachDirection[2],
             ];
             iterateThroughBounds(
               voxelInGoalResolution,
-              maxVoxelBoundingInGoalResolution,
+              maxVoxelBoundingsInGoalResolution,
               labelVoxelInGoalResolution,
             );
           }

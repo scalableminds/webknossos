@@ -1,5 +1,6 @@
 // @flow
 import _ from "lodash";
+import type { Vector4 } from "oxalis/constants";
 
 export const settings = {
   clippingDistance: "Clipping Distance",
@@ -79,6 +80,8 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
+    `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":
     "Initialization error. Please refresh the page to retry. If the error persists, please contact an administrator.",
   "tracing.out_of_dataset_bounds":

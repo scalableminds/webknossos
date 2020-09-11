@@ -16,7 +16,12 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector2, type Vector4, type BoundingBoxType } from "oxalis/constants";
+import Constants, {
+  type Vector2,
+  type Vector3,
+  type Vector4,
+  type BoundingBoxType,
+} from "oxalis/constants";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
 import { type ElementClass } from "admin/api_flow_types";
@@ -176,6 +181,10 @@ export class DataBucket {
 
   isMissing(): boolean {
     return this.state === BucketStateEnum.MISSING;
+  }
+
+  getAddress(): Vector3 {
+    return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
   is2DVoxelInsideBucket = (voxel: Vector2, dimensionIndices: DimensionMap, zoomStep: number) => {

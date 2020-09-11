@@ -44,8 +44,6 @@ class CubeEntry {
   }
 }
 
-export type LabeledVoxelsMap = Map<DataBucket, Uint8Array>;
-
 class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
   ZOOM_STEP_COUNT: number;

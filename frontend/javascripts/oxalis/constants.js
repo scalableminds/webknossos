@@ -127,6 +127,8 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 
+export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 

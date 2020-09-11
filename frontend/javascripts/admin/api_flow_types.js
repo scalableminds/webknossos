@@ -615,6 +615,7 @@ export type ServerVolumeTracing = {|
   elementClass: ElementClass,
   fallbackLayer?: string,
   largestSegmentId: number,
+  resolutions?: Array<Point3>,
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

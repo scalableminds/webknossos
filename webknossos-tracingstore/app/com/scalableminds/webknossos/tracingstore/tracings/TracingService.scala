@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import java.util.UUID
 
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -58,11 +58,11 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
     s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
 
   protected def temporaryIdKey(tracingId: String) =
-    s"temporaryTracingId___${tracingId}"
+    s"temporaryTracingId___$tracingId"
 
   def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
     transactionIdOpt match {
-      case Some(transactionId) =>
+      case Some(_) =>
         for {
           keys <- uncommittedUpdatesStore.keys(s"transactionBatch___${tracingId}___${transactionIdOpt}___*")
         } yield if (keys.isEmpty) None else Some(keys.flatMap(versionFromTransactionBatchKey).max)
@@ -160,13 +160,11 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
     transactionIdOpt match {
-      case Some(transactionId) => {
+      case Some(transactionId) =>
         val key = handledGroupKey(tracingId, transactionId, version)
         handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
-      }
-      case _ => {
+      case _ =>
         Fox.successful(())
-      }
     }
 
   def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
@@ -174,10 +172,10 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def merge(tracings: Seq[T]): T
 
-  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
-                      tracings: Seq[T],
-                      newId: String,
-                      newTracing: T,
-                      toCache: Boolean): Fox[Unit]
+  def mergeVolumeDataWithDownsampling(tracingSelectors: Seq[TracingSelector],
+                                      tracings: Seq[T],
+                                      newId: String,
+                                      newTracing: T,
+                                      toCache: Boolean): Fox[Unit]
 
 }

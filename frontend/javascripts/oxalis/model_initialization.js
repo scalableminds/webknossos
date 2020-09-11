@@ -25,6 +25,7 @@ import {
   getMostExtensiveResolutions,
   getSegmentationLayer,
   isElementClassSupported,
+  getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -50,7 +51,6 @@ import {
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import {
   setPositionAction,
   setZoomStepAction,
@@ -442,13 +442,7 @@ function setupLayerForVolumeTracing(
 ): Array<APIDataLayer> {
   // This method adds/merges the segmentation layers of the tracing into the dataset layers
   let layers = _.clone(dataset.dataSource.dataLayers);
-  const segmentationLayer = layers.find(layer => layer.category === "segmentation");
-  let resolutions;
-  if (segmentationLayer) {
-    resolutions = segmentationLayer.resolutions
-  } else {
-    resolutions = getResolutions(dataset);
-  }
+
   // The tracing always contains the layer information for the user segmentation.
   // Two possible cases:
   // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer - it needs
@@ -459,6 +453,35 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
+  console.log(tracing.resolutions);
+
+  const tracingResolutions = tracing.resolutions
+    ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
+    : [[1, 1, 1]];
+
+  console.log(tracingResolutions);
+  const targetResolutions =
+    fallbackLayer != null ? fallbackLayer.resolutions : getResolutions(dataset);
+
+  const resolutionsAreSubset = (resAs, resBs) =>
+    resAs.every(resA => resBs.some(resB => _.isEqual(resA, resB)));
+  const doResolutionsMatch =
+    resolutionsAreSubset(targetResolutions, tracingResolutions) &&
+    resolutionsAreSubset(tracingResolutions, targetResolutions);
+
+  if (!doResolutionsMatch) {
+    if (tracing.resolutions) {
+      Toast.warning(
+        messages["tracing.volume_resolution_mismatch"],
+        {},
+        `Tracing resolutions ${tracingResolutions.toString()} vs dataset resolutions ${targetResolutions.toString()}`,
+      );
+      throw HANDLED_ERROR;
+    } else {
+      console.log("Detected legacy tracing with no resolution pyramid.");
+    }
+  }
+
   const tracingLayer = {
     name: tracing.id,
     elementClass: tracing.elementClass,
@@ -466,7 +489,7 @@ function setupLayerForVolumeTracing(
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),
     // volume tracing can only be done for the first resolution
-    resolutions,
+    resolutions: tracingResolutions,
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,

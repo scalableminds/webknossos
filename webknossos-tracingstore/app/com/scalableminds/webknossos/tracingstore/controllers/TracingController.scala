@@ -224,12 +224,12 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
             tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
             newId = tracingService.generateTracingId
             mergedTracing = tracingService.merge(tracings.flatten)
-            _ <- tracingService.mergeVolumeData(request.body.flatten,
-                                                tracings.flatten,
-                                                newId,
-                                                mergedTracing,
-                                                toCache = !persist)
             _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
+            _ <- tracingService.mergeVolumeDataWithDownsampling(request.body.flatten,
+                                                                tracings.flatten,
+                                                                newId,
+                                                                mergedTracing,
+                                                                toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))
           }

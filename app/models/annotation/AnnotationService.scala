@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, V
 import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeTracingDefaults, VolumeTracingDownsampling}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationState._
@@ -117,9 +117,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       fallbackLayer.map(_.name),
       fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
       0,
-      VolumeTracingDefaults.zoomLevel
+      VolumeTracingDefaults.zoomLevel,
+      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer).map(point3DToProto)
     )
-    //TODO: add mag list
 
   def createTracings(
       dataSet: DataSet,

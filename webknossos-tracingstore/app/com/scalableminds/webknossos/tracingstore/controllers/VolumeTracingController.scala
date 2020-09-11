@@ -59,8 +59,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              _ <- tracingService.initializeWithData(tracingId, tracing, initialData).toFox
-              _ = tracingService.downsample(tracingId: String, tracing: VolumeTracing)
+              originalResolutions <- tracingService.initializeWithData(tracingId, tracing, initialData).toFox
+              filledResolutions <- tracingService.downsample(tracingId: String,
+                                                             tracing: VolumeTracing,
+                                                             originalResolutions)
+              _ <- tracingService.updateResolutionList(tracingId, tracing, filledResolutions)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -90,8 +93,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              _ <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
-              - <- tracingService.downsample(tracingId, tracing)
+              originalResolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+              filledResolutions <- tracingService.downsample(tracingId: String,
+                                                             tracing: VolumeTracing,
+                                                             originalResolutions)
+              _ <- tracingService.updateResolutionList(tracingId, tracing, filledResolutions)
             } yield Ok(Json.toJson(tracingId))
           }
         }

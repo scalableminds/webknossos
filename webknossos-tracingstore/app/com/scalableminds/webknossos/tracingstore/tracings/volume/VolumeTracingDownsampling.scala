@@ -3,7 +3,13 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayerLike,
+  DataSource,
+  DataSourceLike,
+  ElementClass,
+  SegmentationLayerLike
+}
 import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -12,10 +18,25 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingDataStore,
   VersionedKeyValuePair
 }
+import com.scalableminds.webknossos.tracingstore.geometry.{Point3D => ProtoPoint3D}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
+
+object VolumeTracingDownsampling {
+  def resolutionsForVolumeTracingByLayerName(dataSource: DataSourceLike,
+                                             fallbackLayerName: Option[String]): List[Point3D] = {
+    val fallbackLayer: Option[DataLayerLike] =
+      fallbackLayerName.flatMap(name => dataSource.dataLayers.find(_.name == name))
+    resolutionsForVolumeTracing(dataSource, fallbackLayer)
+  }
+
+  def resolutionsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Point3D] = {
+    val fallBackLayerMags = fallbackLayer.map(_.resolutions)
+    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct)
+  }
+}
 
 trait VolumeTracingDownsampling
     extends BucketKeys
@@ -47,11 +68,9 @@ trait VolumeTracingDownsampling
   }
 
   def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+      implicit ec: ExecutionContext): Fox[Set[Point3D]] = {
     //TODO:
-    // - skip if already downsampled
     // - list all keys first, before fetching actual data
-    // - update tracing version? can the user restore not-downsampled old versions, what happens?
     val bucketVolume = 32 * 32 * 32
     val originalMag = Point3D(1, 1, 1)
     for {
@@ -79,7 +98,7 @@ trait VolumeTracingDownsampling
         //logger.info(s"saving bucket $bucketPosition")
         saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version)
       }
-    } yield ()
+    } yield (requiredMags.toSet + originalMag)
   }
 
   private def downsampleMagFromMag(previousMag: Point3D,
@@ -184,10 +203,19 @@ trait VolumeTracingDownsampling
     items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
   private def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
-  // TODO: if tracing has fallback layer, use only mags present in that fallback layer
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
-      mags = dataSource.dataLayers.flatMap(_.resolutions).distinct.sortBy(_.maxDim).filterNot(_.maxDim == 1)
-    } yield mags
+      magsForTracing = VolumeTracingDownsampling.resolutionsForVolumeTracingByLayerName(dataSource,
+                                                                                        tracing.fallbackLayer)
+      magsToCreate = magsForTracing.filterNot(_.maxDim == 1).sortBy(_.maxDim)
+    } yield magsToCreate
 
+  def resolutionsMatch(tracings: Seq[VolumeTracing]): Boolean =
+    tracings.headOption.forall { firstTracing =>
+      tracings.forall(t =>
+        resolveLegacyResolutionList(t.resolutions).toSet == resolveLegacyResolutionList(firstTracing.resolutions).toSet)
+    }
+
+  private def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]) =
+    if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
 }

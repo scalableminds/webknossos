@@ -102,6 +102,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.edit_volume_in_merger_mode":
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
+  "tracing.volume_resolution_mismatch":
+    "The volume annotation resolutions do not match the dataset resolutions. Was the dataset edited after creating the annotation? Consider downloading and re-uploading resolution 1 only to adapt the annotation.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":

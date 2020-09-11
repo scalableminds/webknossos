@@ -27,7 +27,7 @@ message VolumeTracing {
     optional BoundingBox userBoundingBox = 12;
     repeated NamedBoundingBox userBoundingBoxes = 13;
     optional string organizationName = 14;
-    repeated Point3D mags = 15;
+    repeated Point3D resolutions = 15;
 }
 
 message VolumeTracingOpt {

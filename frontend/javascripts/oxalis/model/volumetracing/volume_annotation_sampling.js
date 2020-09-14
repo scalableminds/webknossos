@@ -14,6 +14,7 @@ function upsampleVoxelMap(
   goalResolution: Vector3,
   goalZoomStep: number,
   dimensionIndices: DimensionMap,
+  thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
   // TODO: Add comment
   if (sourceZoomStep <= goalZoomStep) {
@@ -23,11 +24,15 @@ function upsampleVoxelMap(
   const scaleToSource = map3((val, index) => val / sourceResolution[index], goalResolution);
   // This array serves multiple purposes. It has a name / variable for each purpose.
   const scaleToGoal = map3((val, index) => val / goalResolution[index], sourceResolution);
-  const numberOfBucketWithSourceBucket = scaleToGoal;
+  const numberOfBucketWithinSourceBucket = scaleToGoal;
   const singleVoxelBoundsInGoalResolution = scaleToGoal;
   const boundsOfGoalBucketWithinSourceBucket = map3(
     value => Math.ceil(value * constants.BUCKET_WIDTH),
     scaleToSource,
+  );
+  // This is the buckets zoomed address part of the third dimension.
+  const thirdDimensionBucketValue = Math.floor(
+    thirdDimensionVoxelValue / goalResolution[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
@@ -39,14 +44,15 @@ function upsampleVoxelMap(
       (value, index) => Math.floor(value * scaleToGoal[index]),
       labeledBucket.getAddress(),
     );
+    goalBaseBucketAddress[dimensionIndices[2]] = thirdDimensionBucketValue;
     for (
       let firstDimBucketOffset = 0;
-      firstDimBucketOffset < numberOfBucketWithSourceBucket[dimensionIndices[0]];
+      firstDimBucketOffset < numberOfBucketWithinSourceBucket[dimensionIndices[0]];
       firstDimBucketOffset++
     ) {
       for (
         let secondDimBucketOffset = 0;
-        secondDimBucketOffset < numberOfBucketWithSourceBucket[dimensionIndices[1]];
+        secondDimBucketOffset < numberOfBucketWithinSourceBucket[dimensionIndices[1]];
         secondDimBucketOffset++
       ) {
         const currentGoalBucketAddress = [...goalBaseBucketAddress];
@@ -231,6 +237,7 @@ export default function sampleVoxelMapToResolution(
   goalResolution: Vector3,
   goalZoomStep: number,
   dimensionIndices: DimensionMap,
+  thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
   if (sourceZoomStep < goalZoomStep) {
     return downsampleVoxelMap(
@@ -251,6 +258,7 @@ export default function sampleVoxelMapToResolution(
       goalResolution,
       goalZoomStep,
       dimensionIndices,
+      thirdDimensionVoxelValue,
     );
   } else {
     return labeledVoxelMap;
@@ -275,11 +283,13 @@ export function applyVoxelMap(
       for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
         if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
           const voxelToLabel = get3DAddress([firstDim, secondDim]);
-          const voxelAddress = dataCube.getVoxelIndex(voxelToLabel, zoomedStep);
-          data[voxelAddress] = cellId;
+          // The voxelToLabel is already within the bucket and in the correct resolution.
+          const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
+          if (zoomedStep === 0) data[voxelAddress] = cellId;
         }
       }
     }
+    dataCube.pushQueue.insert(bucket);
     bucket.trigger("bucketLabeled");
   }
 }

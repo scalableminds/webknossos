@@ -46,7 +46,7 @@ test.beforeEach(t => {
   const mockedLayer = {
     resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
   };
-  const cube = new Cube([100, 100, 100], 3, "uint32", mockedLayer);
+  const cube = new Cube([1024, 1024, 1024], 3, "uint32", mockedLayer);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -97,6 +97,7 @@ test("Upsampling an annotation should work in the top left part of a bucket", t 
     [1, 1, 1],
     0,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -140,6 +141,7 @@ test("Upsampling an annotation should work in the top right part of a bucket", t
     [1, 1, 1],
     0,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -183,6 +185,7 @@ test("Upsampling an annotation should work in the bottom left part of a bucket",
     [1, 1, 1],
     0,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -226,6 +229,7 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
     [1, 1, 1],
     0,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -233,6 +237,50 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
   t.deepEqual(
     bucketZoomedAddress,
     [1, 1, 0, 0],
+    "The bucket of the upsampled map should be correct.",
+  );
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+      t.is(
+        getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
+        getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
+        "The labeled voxels of the upsampled voxel map should match the expected labels",
+      );
+    }
+  }
+});
+
+test("Upsampling an annotation where the annotation slice is in the lower part of the bucket should upsample to the correct bucket", t => {
+  const { cube } = t.context;
+  const sourceVoxelMap = getEmptyVoxelMap();
+  [[5, 5], [5, 6], [6, 5], [6, 6]].forEach(([firstDim, secondDim]) =>
+    labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap),
+  );
+  const goalVoxelMap = getEmptyVoxelMap();
+  [[10, 10], [10, 11], [10, 12], [10, 13], [11, 10], [11, 11], [11, 12], [11, 13]].forEach(
+    ([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap),
+  );
+  [[12, 10], [12, 11], [12, 12], [12, 13], [13, 10], [13, 11], [13, 12], [13, 13]].forEach(
+    ([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap),
+  );
+  const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
+  const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
+    labeledVoxelsMap,
+    cube,
+    [2, 2, 2],
+    1,
+    [1, 1, 1],
+    0,
+    [0, 1, 2],
+    40,
+  );
+  const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
+  const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
+  const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
+  t.deepEqual(
+    bucketZoomedAddress,
+    [0, 0, 1, 0],
     "The bucket of the upsampled map should be correct.",
   );
   for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
@@ -269,6 +317,7 @@ test("Upsampling an annotation should work across more than one resolution", t =
     [1, 1, 1],
     0,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -317,6 +366,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
     [2, 2, 2],
     1,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];
@@ -369,6 +419,7 @@ test("Downsampling annotation should work across more than one resolution", t =>
     [4, 4, 4],
     2,
     [0, 1, 2],
+    5,
   );
   const upsampledVoxelMapAsArray: LabeledVoxelsMapAsArray = Array.from(upsampledVoxelMapPerBucket);
   const bucketZoomedAddress = upsampledVoxelMapAsArray[0][0];

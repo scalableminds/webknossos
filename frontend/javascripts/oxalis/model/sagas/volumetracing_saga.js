@@ -20,6 +20,9 @@ import {
   select,
   take,
 } from "oxalis/model/sagas/effect-generators";
+import sampleVoxelMapToResolution, {
+  applyVoxelMap,
+} from "oxalis/model/volumetracing/volume_annotation_sampling";
 import {
   type UpdateAction,
   updateVolumeTracing,
@@ -49,6 +52,7 @@ import Constants, {
   type Vector2,
   type Vector3,
   VolumeToolEnum,
+  type LabeledVoxelsMap,
 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
@@ -159,12 +163,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           activeViewport,
           numberOfSlices,
         );
-        const currentResolution = yield* select(state => getCurrentResolution(state));
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(
             addToLayerAction.position,
-            currentResolution,
+            activeResolution,
             currentViewportBounding,
           ),
           contourTracingMode,
@@ -300,9 +303,9 @@ export function* floodFill(): Saga<void> {
     const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const allResolutions = yield* select(state => getResolutions(state.dataset));
     const activeResolution = allResolutions[activeZoomStep];
-    // The flood fill and the applyLabeledVoxelMapToResolution method of the cube iterates within the bucket.
+    // The floodfill and applyVoxelMap methods of iterates within the bucket.
     // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
-    const thirdDimensionValue =
+    let thirdDimensionValue =
       Math.floor(seedVoxel[dimensionIndices[2]] / activeResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
     const get3DAddress = (voxel: Vector2) => {
@@ -319,7 +322,7 @@ export function* floodFill(): Saga<void> {
       voxel[dimensionIndices[1]],
     ];
     const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId, 1);
-    const bucketsWithLabeledVoxelMap = cube.floodFill(
+    const labeledVoxelMapFromFloodFill = cube.floodFill(
       seedVoxel,
       activeCellId,
       get3DAddress,
@@ -328,24 +331,53 @@ export function* floodFill(): Saga<void> {
       currentViewportBounding,
       activeZoomStep,
     );
-    if (!bucketsWithLabeledVoxelMap) {
+    if (labeledVoxelMapFromFloodFill == null) {
       continue;
     }
-    for (let zoomStep = 0; zoomStep < allResolutions.length; zoomStep++) {
-      if (zoomStep === activeZoomStep) {
-        continue;
-      }
+    let currentLabeledVoxelMapFromFloodFill: LabeledVoxelsMap = labeledVoxelMapFromFloodFill;
+    // debugger;
+    // First upscale the voxel map and apply it to all higher resolutions.
+    for (let zoomStep = activeZoomStep - 1; zoomStep >= 0; zoomStep--) {
       const goalResolution = allResolutions[zoomStep];
-      cube.applyLabeledVoxelMapToResolution(
-        bucketsWithLabeledVoxelMap,
-        activeResolution,
-        activeZoomStep,
+      const sourceResolution = allResolutions[zoomStep + 1];
+      currentLabeledVoxelMapFromFloodFill = sampleVoxelMapToResolution(
+        currentLabeledVoxelMapFromFloodFill,
+        cube,
+        sourceResolution,
+        zoomStep + 1,
         goalResolution,
         zoomStep,
-        activeCellId,
-        dimensionIndices[2],
-        get3DAddress,
+        dimensionIndices,
+        seedVoxel[dimensionIndices[2]],
       );
+      // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
+      // in the goal resolution to apply the voxelMap correctly.
+      thirdDimensionValue =
+        Math.floor(seedVoxel[dimensionIndices[2]] / goalResolution[dimensionIndices[2]]) %
+        Constants.BUCKET_WIDTH;
+      applyVoxelMap(currentLabeledVoxelMapFromFloodFill, cube, activeCellId, get3DAddress);
+    }
+    currentLabeledVoxelMapFromFloodFill = labeledVoxelMapFromFloodFill;
+    // Next we downscale the annotation and apply it.
+    for (let zoomStep = activeZoomStep + 1; zoomStep < allResolutions.length; zoomStep++) {
+      const goalResolution = allResolutions[zoomStep];
+      const sourceResolution = allResolutions[zoomStep - 1];
+      currentLabeledVoxelMapFromFloodFill = sampleVoxelMapToResolution(
+        currentLabeledVoxelMapFromFloodFill,
+        cube,
+        sourceResolution,
+        zoomStep - 1,
+        goalResolution,
+        zoomStep,
+        dimensionIndices,
+        seedVoxel[dimensionIndices[2]],
+      );
+      // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
+      // in the goal resolution to apply the voxelMap correctly.
+      thirdDimensionValue =
+        Math.floor(seedVoxel[dimensionIndices[2]] / goalResolution[dimensionIndices[2]]) %
+        Constants.BUCKET_WIDTH;
+      applyVoxelMap(currentLabeledVoxelMapFromFloodFill, cube, activeCellId, get3DAddress);
     }
     yield* put(finishAnnotationStrokeAction());
     cube.triggerPushQueue();

@@ -5,8 +5,10 @@
 import _ from "lodash";
 
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
-import sampleVoxelMapToResolution from "oxalis/model/volumetracing/volume_annotation_sampling";
-import Constants, { type Vector4 } from "oxalis/constants";
+import sampleVoxelMapToResolution, {
+  applyVoxelMap,
+} from "oxalis/model/volumetracing/volume_annotation_sampling";
+import Constants, { type Vector2, type Vector4 } from "oxalis/constants";
 import anyTest, { type TestInterface } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
@@ -104,8 +106,8 @@ test("Upsampling an annotation should work in the top left part of a bucket", t 
     [0, 0, 0, 0],
     "The bucket of the upsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -147,8 +149,8 @@ test("Upsampling an annotation should work in the top right part of a bucket", t
     [1, 0, 0, 0],
     "The bucket of the upsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -190,8 +192,8 @@ test("Upsampling an annotation should work in the bottom left part of a bucket",
     [0, 1, 0, 0],
     "The bucket of the upsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -233,8 +235,8 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
     [1, 1, 0, 0],
     "The bucket of the upsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -251,7 +253,7 @@ test("Upsampling an annotation should work across more than one resolution", t =
     labelVoxelInVoxelMap(firstDim, secondDim, sourceVoxelMap),
   );
   const goalVoxelMap = getEmptyVoxelMap();
-  // scaling [10,10],[11,11] up: 10 ->  20 -> 40 (mod 32) -> 8; 11 -> 23 -> 47 (mod 32) -> 15;
+  // scaling [10,10],[11,11] up: 10 ->  20 -> 40 (mod Constants.BUCKET_WIDTH) -> 8; 11 -> 23 -> 47 (mod Constants.BUCKET_WIDTH) -> 15;
   for (let firstDim = 8; firstDim <= 15; firstDim++) {
     for (let secondDim = 8; secondDim <= 15; secondDim++) {
       labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap);
@@ -276,8 +278,8 @@ test("Upsampling an annotation should work across more than one resolution", t =
     [1, 1, 0, 0],
     "The bucket of the upsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -324,8 +326,8 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
     [0, 0, 0, 1],
     "The bucket of the downsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -376,8 +378,8 @@ test("Downsampling annotation should work across more than one resolution", t =>
     [0, 0, 0, 2],
     "The bucket of the downsampled map should be correct.",
   );
-  for (let firstDim = 0; firstDim < 32; firstDim++) {
-    for (let secondDim = 0; secondDim < 32; secondDim++) {
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
       t.is(
         getVoxelMapEntry(firstDim, secondDim, upsampledVoxelMap),
         getVoxelMapEntry(firstDim, secondDim, goalVoxelMap),
@@ -386,6 +388,45 @@ test("Downsampling annotation should work across more than one resolution", t =>
           secondDim,
           upsampledVoxelMap,
         )} , expected ${getVoxelMapEntry(firstDim, secondDim, goalVoxelMap)}.`,
+      );
+    }
+  }
+});
+
+test("A labeledVoxelMap should be applied correctly", t => {
+  const { cube } = t.context;
+  const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+  const labeledVoxelsMap = new Map();
+  const voxelMap = getEmptyVoxelMap();
+  const voxelsToLabel = [
+    [10, 10],
+    [10, 11],
+    [10, 12],
+    [10, 13],
+    [11, 10],
+    [11, 11],
+    [11, 12],
+    [11, 13],
+  ];
+  voxelsToLabel.forEach(([firstDim, secondDim]) =>
+    labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
+  );
+  labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
+  const get3DAddress = (voxel2D: Vector2) => [...voxel2D, 5];
+  const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
+  voxelsToLabel.forEach(([firstDim, secondDim]) => {
+    const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
+    expectedBucketData[addr] = 1;
+  });
+  applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress);
+  const labeledBucketData = bucket.getOrCreateData();
+  for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
+    for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {
+      const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
+      t.is(
+        labeledBucketData[addr],
+        expectedBucketData[addr],
+        `Did not apply voxel map at ${[firstDim, secondDim, 5, 1].toString()} correctly.`,
       );
     }
   }

@@ -1,6 +1,6 @@
 // @flow
 
-import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
+import constants, { type Vector2, type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import messages from "messages";
@@ -254,5 +254,32 @@ export default function sampleVoxelMapToResolution(
     );
   } else {
     return labeledVoxelMap;
+  }
+}
+
+export function applyVoxelMap(
+  labeledVoxelMap: LabeledVoxelsMap,
+  dataCube: DataCube,
+  cellId: number,
+  get3DAddress: Vector2 => Vector3,
+) {
+  for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
+    const bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
+    if (bucket.type === "null") {
+      continue;
+    }
+    bucket.markAndAddBucketForUndo();
+    const zoomedStep = bucket.zoomedAddress[3];
+    const data = bucket.getOrCreateData();
+    for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
+      for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
+        if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
+          const voxelToLabel = get3DAddress([firstDim, secondDim]);
+          const voxelAddress = dataCube.getVoxelIndex(voxelToLabel, zoomedStep);
+          data[voxelAddress] = cellId;
+        }
+      }
+    }
+    bucket.trigger("bucketLabeled");
   }
 }

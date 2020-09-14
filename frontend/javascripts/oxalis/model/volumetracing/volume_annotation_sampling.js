@@ -277,22 +277,41 @@ export function applyVoxelMap(
   dataCube: DataCube,
   cellId: number,
   get3DAddress: Vector2 => Vector3,
+  numberOfSlicesToApply: number,
+  thirdDimensionIndex: 0 | 1 | 2,
+  shouldOverwrite: boolean = true,
 ) {
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
-    const bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
+    let bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (bucket.type === "null") {
       continue;
     }
     bucket.markAndAddBucketForUndo();
-    const zoomedStep = bucket.zoomedAddress[3];
-    const data = bucket.getOrCreateData();
-    for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
-      for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
-        if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-          const voxelToLabel = get3DAddress([firstDim, secondDim]);
-          // The voxelToLabel is already within the bucket and in the correct resolution.
-          const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-          if (zoomedStep === 0) data[voxelAddress] = cellId;
+    let data = bucket.getOrCreateData();
+    const thirdDimensionValueInBucket = get3DAddress([0, 0])[2];
+    for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
+      if (thirdDimensionValueInBucket + sliceCount === constants.BUCKET_WIDTH) {
+        // The current slice is in the next bucket in the third direction.
+        const nextBucketZoomedAddress = [...labeledBucketZoomedAddress];
+        nextBucketZoomedAddress[thirdDimensionIndex]++;
+        bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
+        if (bucket.type === "null") {
+          continue;
+        }
+        data = bucket.getOrCreateData();
+      }
+      for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
+        for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
+          if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
+            const voxelToLabel = get3DAddress([firstDim, secondDim]);
+            voxelToLabel[thirdDimensionIndex] =
+              (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
+            // The voxelToLabel is already within the bucket and in the correct resolution.
+            const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
+            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === 0)) {
+              data[voxelAddress] = cellId;
+            }
+          }
         }
       }
     }

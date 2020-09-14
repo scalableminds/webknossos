@@ -314,6 +314,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     cube,
     activeCellId,
     z,
+    false,
   );
   yield* put(finishAnnotationStrokeAction());
 }
@@ -375,6 +376,7 @@ export function* floodFill(): Saga<void> {
       cube,
       activeCellId,
       seedVoxel[dimensionIndices[2]],
+      true,
     );
     yield* put(finishAnnotationStrokeAction());
     cube.triggerPushQueue();
@@ -389,6 +391,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number,
+  shouldOverwrite: boolean,
 ): void {
   let currentLabeledVoxelMap: LabeledVoxelsMap = labeledVoxelMapToApply;
   let thirdDimensionValue = thirdDimensionOfSlice;
@@ -421,7 +424,18 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     thirdDimensionValue =
       Math.floor(thirdDimensionOfSlice / goalResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
-    applyVoxelMap(currentLabeledVoxelMap, segmentationCube, cellId, get3DAddress);
+    const numberOfSlices = Math.ceil(
+      allResolutions[activeZoomStep][dimensionIndices[2]] / goalResolution[dimensionIndices[2]],
+    );
+    applyVoxelMap(
+      currentLabeledVoxelMap,
+      segmentationCube,
+      cellId,
+      get3DAddress,
+      numberOfSlices,
+      dimensionIndices[2],
+      shouldOverwrite,
+    );
   }
   currentLabeledVoxelMap = labeledVoxelMapToApply;
   // Next we downscale the annotation and apply it.
@@ -443,7 +457,15 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     thirdDimensionValue =
       Math.floor(thirdDimensionOfSlice / goalResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
-    applyVoxelMap(currentLabeledVoxelMap, segmentationCube, cellId, get3DAddress);
+    applyVoxelMap(
+      currentLabeledVoxelMap,
+      segmentationCube,
+      cellId,
+      get3DAddress,
+      1,
+      dimensionIndices[2],
+      shouldOverwrite,
+    );
   }
 }
 

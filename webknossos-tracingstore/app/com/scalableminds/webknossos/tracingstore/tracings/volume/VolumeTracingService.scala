@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
@@ -361,6 +361,15 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
+  def unlinkFallback(tracing: VolumeTracing, dataSource: DataSourceLike): VolumeTracing =
+    tracing.copy(
+      activeSegmentId = None,
+      largestSegmentId = 0L,
+      fallbackLayer = None,
+      version = 0L,
+      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(point3DToProto)
+    )
+
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   def duplicate(tracingId: String,
                 tracing: VolumeTracing,
@@ -404,27 +413,6 @@ class VolumeTracingService @Inject()(
                        tracing.elementClass,
                        tracing.largestSegmentId,
                        isTemporaryTracing)
-
-  private def volumeTracingLayerWithFallback(tracingId: String,
-                                             tracing: VolumeTracing,
-                                             dataSource: DataSource): SegmentationLayer = {
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-    tracing.fallbackLayer
-      .flatMap(dataSource.getDataLayer)
-      .map {
-        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
-          new FallbackLayerAdapter(dataLayer, layer)
-        case _ =>
-          logger.error(
-            s"Fallback layer is not a segmentation layer and thus being ignored. " +
-              s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
-          dataLayer
-      }
-      .getOrElse(dataLayer)
-  }
-
-  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] =
-    find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =

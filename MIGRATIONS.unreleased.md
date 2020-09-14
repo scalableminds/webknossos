@@ -6,7 +6,7 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
--
+- To convert individual legacy volume annotations to multi-resolution volume annotations, download and re-upload them (upload may take a while).
 
 ### Postgres Evolutions:
-- 
+-

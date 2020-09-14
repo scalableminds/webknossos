@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import play.api.http.HttpEntity
@@ -165,6 +166,24 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
               newId <- tracingService.duplicate(tracingId, tracing, fromTask.getOrElse(false), dataSetBoundingBox)
+            } yield {
+              Ok(Json.toJson(newId))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def unlinkFallback(tracingId: String) = Action.async(validateJson[DataSourceLike]) { implicit request =>
+    log {
+      logTime(slackNotificationService.reportUnusalRequest) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              updatedTracing = tracingService.unlinkFallback(tracing, request.body)
+              newId <- tracingService.save(updatedTracing, None, 0L)
             } yield {
               Ok(Json.toJson(newId))
             }

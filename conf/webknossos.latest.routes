@@ -180,3 +180,8 @@ GET           /operatorData                                                     
 GET           /time/allusers/:year/:month                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /time/userlist/:year/:month                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /time/user/:userId                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+
+# Long-Running Jobs
+GET           /jobs                                                             controllers.JobsController.list
+GET           /jobs/:id/status                                                  controllers.JobsController.status(id: String)
+GET           /jobs/run/cubing                                                  controllers.JobsController.runCubingJob

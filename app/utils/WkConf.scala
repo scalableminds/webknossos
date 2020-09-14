@@ -132,6 +132,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(Analytics)
   }
 
+  object Jobs {
+    object Flower {
+      val uri = get[String]("jobs.flower.uri")
+      val username = get[String]("jobs.flower.username")
+      val password = get[String]("jobs.flower.password")
+    }
+    val children = List(Flower)
+  }
+
   val children =
     List(Application,
          Http,
@@ -144,5 +153,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
          Features,
          Silhouette,
          Airbrake,
-         Google)
+         Google,
+         Jobs)
 }

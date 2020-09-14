@@ -414,27 +414,6 @@ class VolumeTracingService @Inject()(
                        tracing.largestSegmentId,
                        isTemporaryTracing)
 
-  private def volumeTracingLayerWithFallback(tracingId: String,
-                                             tracing: VolumeTracing,
-                                             dataSource: DataSource): SegmentationLayer = {
-    val dataLayer = volumeTracingLayer(tracingId, tracing)
-    tracing.fallbackLayer
-      .flatMap(dataSource.getDataLayer)
-      .map {
-        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
-          new FallbackLayerAdapter(dataLayer, layer)
-        case _ =>
-          logger.error(
-            s"Fallback layer is not a segmentation layer and thus being ignored. " +
-              s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
-          dataLayer
-      }
-      .getOrElse(dataLayer)
-  }
-
-  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] =
-    find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
-
   def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
       Json.obj(

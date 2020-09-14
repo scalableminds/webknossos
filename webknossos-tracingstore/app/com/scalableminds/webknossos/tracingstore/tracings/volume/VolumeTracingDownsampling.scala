@@ -3,13 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerLike,
-  DataSource,
-  DataSourceLike,
-  ElementClass,
-  SegmentationLayerLike
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -69,8 +63,6 @@ trait VolumeTracingDownsampling
 
   def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
       implicit ec: ExecutionContext): Fox[Set[Point3D]] = {
-    //TODO:
-    // - list all keys first, before fetching actual data
     val bucketVolume = 32 * 32 * 32
     val originalMag = Point3D(1, 1, 1)
     for {
@@ -91,14 +83,12 @@ trait VolumeTracingDownsampling
                              bucketVolume,
                              elementClass,
                              dataLayer)
-        //logger.info(s"bucketDataMap keys: ${bucketDataMap.keys.toList}")
         requiredMag
       }
       _ <- Fox.serialCombined(updatedBuckets.toList) { bucketPosition: BucketPosition =>
-        //logger.info(s"saving bucket $bucketPosition")
         saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version)
       }
-    } yield (requiredMags.toSet + originalMag)
+    } yield requiredMags.toSet + originalMag
   }
 
   private def downsampleMagFromMag(previousMag: Point3D,
@@ -109,13 +99,11 @@ trait VolumeTracingDownsampling
                                    bucketVolume: Int,
                                    elementClass: ElementClass.Value,
                                    dataLayer: VolumeTracingLayer): Unit = {
-    //logger.info(s"downsampling volume tracing mag $requiredMag from mag $previousMag...")
     val downScaleFactor =
       Point3D(requiredMag.x / previousMag.x, requiredMag.y / previousMag.y, requiredMag.z / previousMag.z)
     downsampledBucketPositions(originalBucketPositions, requiredMag).foreach { downsampledBucketPosition =>
       val sourceBuckets: Seq[BucketPosition] =
         sourceBucketPositionsFor(downsampledBucketPosition, downScaleFactor, previousMag)
-      //logger.info(s"source buckets for bucket $downsampledBucketPosition: ${sourceBuckets}")
       val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMap(_))
       val downsampledData: Array[Byte] =
         if (sourceData.forall(_.sameElements(Array[Byte](0))))
@@ -162,7 +150,7 @@ trait VolumeTracingDownsampling
   private def fillZeroedIfNeeded(sourceData: Seq[Array[Byte]],
                                  bucketVolume: Int,
                                  bytesPerElement: Int): Seq[Array[Byte]] =
-    // Reverted buckets and missing buckets arer epresented by a single zero-byte.
+    // Reverted buckets and missing buckets are represented by a single zero-byte.
     // For downsampling, those need to be replaced with the full bucket volume of zero-bytes.
     sourceData.map { sourceBucketData =>
       if (sourceBucketData.sameElements(Array[Byte](0))) {

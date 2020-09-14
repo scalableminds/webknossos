@@ -1,18 +1,19 @@
 // @flow
 
-import constants, { type Vector2, type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
+import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import messages from "messages";
+import type { DimensionMap } from "oxalis/model/dimensions";
 
-export function upsampleVoxelMap(
+function upsampleVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
   sourceResolution: Vector3,
   sourceZoomStep: number,
   goalResolution: Vector3,
   goalZoomStep: number,
-  dimensionIndices: Vector2,
+  dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
   // TODO: Add comment
   if (sourceZoomStep <= goalZoomStep) {
@@ -52,6 +53,7 @@ export function upsampleVoxelMap(
         currentGoalBucketAddress[dimensionIndices[0]] += firstDimBucketOffset;
         currentGoalBucketAddress[dimensionIndices[1]] += secondDimBucketOffset;
         // The inner bucket of whose the voxelMap will be created.
+        let annotatedAtleastOneVoxel = false;
         const currentGoalBucket = dataCube.getOrCreateBucket([
           ...currentGoalBucketAddress,
           goalZoomStep,
@@ -111,27 +113,30 @@ export function upsampleVoxelMap(
                   ] = 1;
                 }
               }
+              annotatedAtleastOneVoxel = true;
             }
           }
         }
-        labeledVoxelMapInGoalResolution.set(currentGoalBucket.zoomedAddress, currentGoalVoxelMap);
+        if (annotatedAtleastOneVoxel) {
+          labeledVoxelMapInGoalResolution.set(currentGoalBucket.zoomedAddress, currentGoalVoxelMap);
+        }
       }
     }
   }
   return labeledVoxelMapInGoalResolution;
 }
 
-export function downsampleVoxelMap(
+function downsampleVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
   sourceResolution: Vector3,
   sourceZoomStep: number,
   goalResolution: Vector3,
   goalZoomStep: number,
-  dimensionIndices: Vector2,
+  dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
   if (goalZoomStep <= sourceZoomStep) {
-    throw new Error("Trying to downsample a LabeledVoxelMap with the down sample function.");
+    throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }
   const labeledVoxelMapInGoalResolution: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceResolution[index], goalResolution);
@@ -164,12 +169,15 @@ export function downsampleVoxelMap(
     );
     // Calculate the offset in voxel the source bucket has to the goal bucket.
     const voxelOffset = map3(
-      (value, index) => value * constants.BUCKET_WIDTH * scaleToGoal[index],
+      (value, index) => Math.floor(value * constants.BUCKET_WIDTH * scaleToGoal[index]),
       bucketOffset,
     );
-    const goalVoxelMap = new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+    const goalVoxelMap =
+      labeledVoxelMapInGoalResolution.get(goalBucket.zoomedAddress) ||
+      new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
     // Iterate over the voxelMap in the goal resolution and search in each voxel for a labeled voxel (kernel-wise iteration).
-    const kernelSize = map3(scaleValue => Math.ceil(scaleValue), scaleToGoal);
+    const kernelSize = map3(scaleValue => Math.ceil(scaleValue), scaleToSource);
+    // The next two for loops move the kernel.
     for (
       let firstVoxelDim = 0;
       firstVoxelDim < constants.BUCKET_WIDTH;
@@ -180,6 +188,7 @@ export function downsampleVoxelMap(
         secondVoxelDim < constants.BUCKET_WIDTH;
         secondVoxelDim += kernelSize[dimensionIndices[1]]
       ) {
+        // The next two for loops iterate within the kernel.
         let foundVoxel = false;
         for (
           let firstKernelDim = 0;
@@ -191,12 +200,17 @@ export function downsampleVoxelMap(
             secondKernelDim < kernelSize[dimensionIndices[1]] && !foundVoxel;
             secondKernelDim++
           ) {
-            const firstDim = firstVoxelDim + firstKernelDim + voxelOffset[dimensionIndices[0]];
-            const secondDim = secondVoxelDim + secondKernelDim + voxelOffset[dimensionIndices[1]];
+            const firstDim = firstVoxelDim + firstKernelDim;
+            const secondDim = secondVoxelDim + secondKernelDim;
             if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
+              const firstDimInGoalBucket =
+                Math.floor(firstDim * scaleToGoal[dimensionIndices[0]]) +
+                voxelOffset[dimensionIndices[0]];
+              const secondDimInGoalBucket =
+                Math.floor(secondDim * scaleToGoal[dimensionIndices[1]]) +
+                voxelOffset[dimensionIndices[1]];
               goalVoxelMap[
-                firstDim * scaleToGoal[dimensionIndices[0]] * constants.BUCKET_WIDTH +
-                  secondDim * scaleToGoal[dimensionIndices[1]]
+                firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket
               ] = 1;
               foundVoxel = true;
             }
@@ -207,4 +221,38 @@ export function downsampleVoxelMap(
     labeledVoxelMapInGoalResolution.set(goalBucket.zoomedAddress, goalVoxelMap);
   }
   return labeledVoxelMapInGoalResolution;
+}
+
+export default function sampleVoxelMapToResolution(
+  labeledVoxelMap: LabeledVoxelsMap,
+  dataCube: DataCube,
+  sourceResolution: Vector3,
+  sourceZoomStep: number,
+  goalResolution: Vector3,
+  goalZoomStep: number,
+  dimensionIndices: DimensionMap,
+): LabeledVoxelsMap {
+  if (sourceZoomStep < goalZoomStep) {
+    return downsampleVoxelMap(
+      labeledVoxelMap,
+      dataCube,
+      sourceResolution,
+      sourceZoomStep,
+      goalResolution,
+      goalZoomStep,
+      dimensionIndices,
+    );
+  } else if (goalZoomStep < sourceZoomStep) {
+    return upsampleVoxelMap(
+      labeledVoxelMap,
+      dataCube,
+      sourceResolution,
+      sourceZoomStep,
+      goalResolution,
+      goalZoomStep,
+      dimensionIndices,
+    );
+  } else {
+    return labeledVoxelMap;
+  }
 }

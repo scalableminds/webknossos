@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
@@ -360,6 +360,15 @@ class VolumeTracingService @Inject()(
       requests = dataRequests.map(r => DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
+
+  def unlinkFallback(tracing: VolumeTracing, dataSource: DataSourceLike): VolumeTracing =
+    tracing.copy(
+      activeSegmentId = None,
+      largestSegmentId = 0L,
+      fallbackLayer = None,
+      version = 0L,
+      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(point3DToProto)
+    )
 
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   def duplicate(tracingId: String,

@@ -1,11 +1,11 @@
 package models.annotation
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.io.File
 
-import akka.stream.scaladsl.{Source, StreamConverters}
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
@@ -13,11 +13,10 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike}
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
 import net.liftweb.common.Box
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.JsObject
 
 import scala.concurrent.ExecutionContext
 
@@ -196,6 +195,15 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         .addQueryStringOptional("version", version.map(_.toString))
         .getWithBytesResponse
     } yield data
+  }
+
+  def unlinkFallback(tracingId: String, dataSource: DataSourceLike): Fox[String] = {
+    logger.debug(s"Called to unlink fallback segmentation for tracing $tracingId." + baseInfo)
+    for {
+      newId: String <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/unlinkFallback")
+        .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .postWithJsonResponse[DataSourceLike, String](dataSource)
+    } yield newId
   }
 
 }

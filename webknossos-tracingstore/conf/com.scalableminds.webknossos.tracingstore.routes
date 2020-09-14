@@ -16,6 +16,7 @@ GET         /volume/:tracingId/allData                          @com.scalablemin
 GET         /volume/:tracingId/allDataBlocking                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataBlocking(tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String)
 POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, fromTask: Option[Boolean])
+POST        /volume/:tracingId/unlinkFallback                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.unlinkFallback(tracingId: String)
 GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(tracingId: String)
 POST        /volume/getMultiple                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
 POST        /volume/mergedFromIds                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromIds(persist: Boolean)

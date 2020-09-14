@@ -50,22 +50,6 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
   }
 
-  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
-    log {
-      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-        AllowRemoteOrigin {
-          for {
-            tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
-            mergedTracing = tracingService.merge(tracings.flatten)
-            newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
-          } yield {
-            Ok(Json.toJson(newId))
-          }
-        }
-      }
-    }
-  }
-
   def duplicate(tracingId: String, version: Option[Long], fromTask: Option[Boolean]) = Action.async {
     implicit request =>
       log {

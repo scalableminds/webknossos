@@ -18,7 +18,7 @@ import {
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -71,6 +71,7 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
 
 type StateProps = {|
   tracing: Tracing,
+  is2d: boolean,
 |};
 type Props = {| ...StateProps |};
 
@@ -381,6 +382,9 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
+    if (this.props.is2d) {
+      return;
+    }
     const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
@@ -613,6 +617,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
+    is2d: is2dDataset(state.dataset),
   };
 }
 

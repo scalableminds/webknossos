@@ -3,26 +3,14 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, IsosurfaceRequest, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt}
-import com.scalableminds.webknossos.tracingstore.{
-  TracingStoreAccessTokenService,
-  TracingStoreConfig,
-  TracingStoreWkRpcClient
-}
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.JsonHelper.optionFormat
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
@@ -34,14 +22,12 @@ import scala.concurrent.ExecutionContext
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val webKnossosServer: TracingStoreWkRpcClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
-                                        config: TracingStoreConfig,
-                                        tracingDataStore: TracingDataStore,
                                         val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
-  implicit val tracingsCompanion = VolumeTracings
+  implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
   implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings =
     VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
@@ -61,6 +47,36 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+            } yield Ok(Json.toJson(tracingId))
+          }
+        }
+      }
+    }
+  }
+
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[VolumeTracings]) { implicit request =>
+    log {
+      accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+        AllowRemoteOrigin {
+          val tracings: List[Option[VolumeTracing]] = request.body
+          val mergedTracing = tracingService.merge(tracings.flatten)
+          tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
+            Ok(Json.toJson(newId))
+          }
+        }
+      }
+    }
+  }
+
+  def initialDataMultiple(tracingId: String) = Action.async { implicit request =>
+    log {
+      logTime(slackNotificationService.reportUnusalRequest) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              _ <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -113,8 +129,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
   private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)),
-         ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"

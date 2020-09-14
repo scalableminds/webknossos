@@ -19,6 +19,7 @@ import {
   getSkeletonTracing,
   getActiveNode,
   getNodeAndTree,
+  getNodeAndTreeOrNull,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -38,6 +39,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
   setNodePositionAction,
+  updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setDirectionAction,
@@ -45,6 +47,7 @@ import {
 } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
+import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
@@ -145,6 +148,94 @@ export function moveNode(dx: number, dy: number) {
   );
 }
 
+function otherNodeOfEdge(edge: Edge, nodeId: number): number {
+  return edge.source === nodeId ? edge.target : edge.source;
+}
+function getSubsequentNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const next = nodes.length ? Math.max(...nodes) : node.id;
+  return next;
+}
+function getPrecedingNodeFromTree(tree: Tree, node: Node, excludedId: ?number): number {
+  const nodes = tree.edges
+    .getEdgesForNode(node.id)
+    .map(edge => otherNodeOfEdge(edge, node.id))
+    .filter(id => id !== excludedId);
+  const prev = nodes.length ? Math.min(...nodes) : node.id;
+  return prev;
+}
+
+function toSubsequentNode(): void {
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
+  if (activeNodeId == null) return;
+
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
+
+  if (
+    navigationList.list.length > 1 &&
+    navigationList.activeIndex < navigationList.list.length - 1 &&
+    isValidList
+  ) {
+    // navigate to subsequent node in list
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex + 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex + 1));
+  } else {
+    // search for subsequent node in tree
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    if (!tree || !node) return;
+    const nextNodeId = getSubsequentNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex - 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.push(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
+
+    Store.dispatch(updateNavigationListAction(newList, newList.length - 1));
+  }
+}
+
+function toPrecedingNode(): void {
+  const tracing = enforceSkeletonTracing(Store.getState().tracing);
+  const { navigationList, activeNodeId, activeTreeId } = tracing;
+
+  if (activeNodeId == null) return;
+
+  const isValidList =
+    activeNodeId === navigationList.list[navigationList.activeIndex] && navigationList.list.length;
+
+  if (navigationList.activeIndex > 0 && isValidList) {
+    // navigate to preceding node in list
+    Store.dispatch(setActiveNodeAction(navigationList.list[navigationList.activeIndex - 1]));
+    Store.dispatch(updateNavigationListAction(navigationList.list, navigationList.activeIndex - 1));
+  } else {
+    // search for preceding node in tree
+    const { tree, node } = getNodeAndTreeOrNull(tracing, activeNodeId, activeTreeId);
+    if (!tree || !node) return;
+    const nextNodeId = getPrecedingNodeFromTree(
+      tree,
+      node,
+      navigationList.list[navigationList.activeIndex + 1],
+    );
+
+    const newList = isValidList ? [...navigationList.list] : [activeNodeId];
+    if (nextNodeId !== activeNodeId) {
+      newList.unshift(nextNodeId);
+      Store.dispatch(setActiveNodeAction(nextNodeId));
+    }
+    Store.dispatch(updateNavigationListAction(newList, 0));
+  }
+}
+
 export function getKeyboardControls() {
   return {
     "1": () => Store.dispatch(toggleAllTreesAction()),
@@ -165,6 +256,10 @@ export function getKeyboardControls() {
       api.tracing.centerNode();
       api.tracing.centerTDView();
     },
+
+    // navigate nodes
+    "ctrl + ,": () => toPrecedingNode(),
+    "ctrl + .": () => toSubsequentNode(),
   };
 }
 export function getLoopedKeyboardControls() {
@@ -263,7 +358,9 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
   const { newNodeNewTree } = Store.getState().userConfiguration;
   if (ctrlPressed && !newNodeNewTree) {
     Store.dispatch(createBranchPointAction());
-    activeNodeMaybe.map(activeNode => Store.dispatch(setActiveNodeAction(activeNode.id)));
+    activeNodeMaybe.map(activeNode => {
+      Store.dispatch(setActiveNodeAction(activeNode.id));
+    });
   }
 }
 

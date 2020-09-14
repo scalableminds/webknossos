@@ -16,7 +16,10 @@ function upsampleVoxelMap(
   dimensionIndices: DimensionMap,
   thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
-  // TODO: Add comment
+  // This method upsamples a given LabeledVoxelsMap. For each bucket in the LabeledVoxelsMap this function
+  // iterating over the buckets in the higher resolution that are covered by the bucket.
+  // For each covered bucket all labeled voxel entries are upsampled with a kernel an marked in an array for the covered bucket.
+  // Therefore all covered buckets with their marked array build the upsampled version of the given LabeledVoxelsMap.
   if (sourceZoomStep <= goalZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }
@@ -100,7 +103,7 @@ function upsampleVoxelMap(
                 kernelLeft * singleVoxelBoundsInGoalResolution[dimensionIndices[0]],
                 kernelTop * singleVoxelBoundsInGoalResolution[dimensionIndices[1]],
               ];
-              // The labeled voxel is upscaled.
+              // The labeled voxel is upscaled using a kernel.
               for (
                 let firstKernelOffset = 0;
                 firstKernelOffset < singleVoxelBoundsInGoalResolution[dimensionIndices[0]];
@@ -141,6 +144,10 @@ function downsampleVoxelMap(
   goalZoomStep: number,
   dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
+  // This method downsamples a LabeledVoxelsMap. For each bucket of the LabeledVoxelsMap
+  // the matching bucket the lower resolution is determined and all the labeledVoxels
+  // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
+  // checking whether to label a downsampled voxels if already one labeled voxel matching the downsampled voxel is found.
   if (goalZoomStep <= sourceZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }

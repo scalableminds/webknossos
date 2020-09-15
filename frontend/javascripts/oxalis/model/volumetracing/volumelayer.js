@@ -318,11 +318,11 @@ class VolumeLayer {
     const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
 
     // calculate the rectangle's corners
-    const [ax, ay] = this.vector2Sum(centre2, negShiftVector);
-    const [bx, by] = this.vector2Sum(centre2, shiftVector);
-    const [cx, cy] = this.vector2Sum(centre1, shiftVector);
-    const [dx, dy] = this.vector2Sum(centre1, negShiftVector);
-    return [ax, ay, bx, by, cx, cy, dx, dy];
+    const [xa, ya] = this.vector2Sum(centre2, negShiftVector);
+    const [xb, yb] = this.vector2Sum(centre2, shiftVector);
+    const [xc, yc] = this.vector2Sum(centre1, shiftVector);
+    const [xd, yd] = this.vector2Sum(centre1, negShiftVector);
+    return [xa, ya, xb, yb, xc, yc, xd, yd];
   }
 
   getRectangleVoxelIterator(
@@ -345,21 +345,35 @@ class VolumeLayer {
     ) {
       return null;
     }
-    const [ax, ay, bx, by, cx, cy, dx, dy] = this.rectangleToCircles(
+    let [xa, ya, xb, yb, xc, yc, xd, yd] = this.rectangleToCircles(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
       radius,
       scale,
     );
-    const minCoord2d = [Math.floor(Math.min(ax, bx, cx, dx)), Math.floor(Math.min(ay, by, cy, dy))];
-    const maxCoord2d = [Math.ceil(Math.max(ax, bx, cx, dx)), Math.ceil(Math.max(ay, by, cy, dy))];
+    const minCoord2d = [Math.floor(Math.min(xa, xb, xc, xd)), Math.floor(Math.min(ya, yb, yc, yd))];
+    const maxCoord2d = [Math.ceil(Math.max(xa, xb, xc, xd)), Math.ceil(Math.max(ya, yb, yc, yd))];
     const [width, height] = maxCoord2d;
     const map = this.createMap(width, height);
 
     const setMap = (x, y) => {
       map[x][y] = true;
     };
-    Drawing.fillRectangle(ax, ay, bx, by, cx, cy, dx, dy, setMap);
+
+    const [diffX, diffY] = [
+      Math.floor(Math.min(xa, xb, xc, xd)),
+      Math.floor(Math.min(ya, yb, yc, yd)),
+    ];
+    xa -= diffX;
+    ya -= diffY;
+    xb -= diffX;
+    yb -= diffY;
+    xc -= diffX;
+    yc -= diffY;
+    xd -= diffX;
+    yd -= diffY;
+
+    Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
 
     const iterator = new VoxelIterator(
       map,

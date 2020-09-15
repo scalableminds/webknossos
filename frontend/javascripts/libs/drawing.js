@@ -172,18 +172,14 @@ class Drawing {
     yd: number,
     draw: (number, number) => void,
   ) {
-    const [diffX, diffY] = [
-      Math.floor(Math.min(xa, xb, xc, xd)),
-      Math.floor(Math.min(ya, yb, yc, yd)),
-    ];
-    xa = Math.round(xa - diffX);
-    ya = Math.round(ya - diffY);
-    xb = Math.round(xb - diffX);
-    yb = Math.round(yb - diffY);
-    xc = Math.round(xc - diffX);
-    yc = Math.round(yc - diffY);
-    xd = Math.round(xd - diffX);
-    yd = Math.round(yd - diffY);
+    xa = Math.round(xa);
+    ya = Math.round(ya);
+    xb = Math.round(xb);
+    yb = Math.round(yb);
+    xc = Math.round(xc);
+    yc = Math.round(yc);
+    xd = Math.round(xd);
+    yd = Math.round(yd);
 
     const [minX, maxX] = [Math.min(xa, xb, xc, xd), Math.max(xa, xb, xc, xd)];
     const [minY, maxY] = [Math.min(ya, yb, yc, yd), Math.max(ya, yb, yc, yd)];

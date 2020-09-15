@@ -236,7 +236,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                     Volume
                   </Radio>
                   <Radio value="hybrid" disabled={isEditingMode}>
-                    Hybrid
+                    Skeleton and Volume
                   </Radio>
                 </RadioGroup>,
               )}

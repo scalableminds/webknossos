@@ -335,6 +335,7 @@ export function* floodFill(): Saga<void> {
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    // use getResolutionMapOfSegmentationLayer
     const allResolutions = yield* select(state => getResolutions(state.dataset));
     const activeResolution = allResolutions[activeZoomStep];
     // The floodfill and applyVoxelMap methods of iterates within the bucket.
@@ -383,6 +384,8 @@ export function* floodFill(): Saga<void> {
   }
 }
 
+// TODO: Iterate over all resolutions of the segmentation layer, not the resolutions of the color layers.
+// To get all segmentation layer resolutions, use: getResolutionMapOfSegmentationLayer
 function applyLabeledVoxelMapToAllMissingResolutions(
   labeledVoxelMapToApply: LabeledVoxelsMap,
   activeZoomStep: number,

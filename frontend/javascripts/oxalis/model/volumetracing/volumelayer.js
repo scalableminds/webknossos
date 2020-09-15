@@ -304,6 +304,27 @@ class VolumeLayer {
     return map;
   }
 
+  rectangleToCircles(
+    centre1: Vector2,
+    centre2: Vector2,
+    radius: number,
+    scale: Vector2,
+  ): [number, number, number, number, number, number, number, number] {
+    const normedPerpendicularVector = this.vector2PerpendicularVector(centre1, centre2);
+    const shiftVector = this.vector2WithScale(
+      this.vector2ScalarMultiplication(normedPerpendicularVector, radius),
+      scale,
+    );
+    const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
+
+    // calculate the rectangle's corners
+    const [ax, ay] = this.vector2Sum(centre2, negShiftVector);
+    const [bx, by] = this.vector2Sum(centre2, shiftVector);
+    const [cx, cy] = this.vector2Sum(centre1, shiftVector);
+    const [dx, dy] = this.vector2Sum(centre1, negShiftVector);
+    return [ax, ay, bx, by, cx, cy, dx, dy];
+  }
+
   getRectangleVoxelIterator(
     lastPosition: Vector3,
     position: Vector3,
@@ -324,23 +345,12 @@ class VolumeLayer {
     ) {
       return null;
     }
-
-    const normedPerpendicularVector = this.vector2PerpendicularVector(
+    const [ax, ay, bx, by, cx, cy, dx, dy] = this.rectangleToCircles(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
-    );
-    const shiftVector = this.vector2WithScale(
-      this.vector2ScalarMultiplication(normedPerpendicularVector, radius),
+      radius,
       scale,
     );
-    const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
-
-    // calculate the rectangle's corners
-    const [ax, ay] = this.vector2Sum(floatingCoord2dPosition, negShiftVector);
-    const [bx, by] = this.vector2Sum(floatingCoord2dPosition, shiftVector);
-    const [cx, cy] = this.vector2Sum(floatingCoord2dLastPosition, shiftVector);
-    const [dx, dy] = this.vector2Sum(floatingCoord2dLastPosition, negShiftVector);
-
     const minCoord2d = [Math.floor(Math.min(ax, bx, cx, dx)), Math.floor(Math.min(ay, by, cy, dy))];
     const maxCoord2d = [Math.ceil(Math.max(ax, bx, cx, dx)), Math.ceil(Math.max(ay, by, cy, dy))];
     const [width, height] = maxCoord2d;

@@ -1,7 +1,7 @@
 // @flow
 import { Card, Button, Tooltip, Icon } from "antd";
 import Markdown from "react-remarkable";
-import * as React from "react";
+import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
 
@@ -142,104 +142,94 @@ function PublishedDatasetsOverlay({ datasets, activeDataset, setActiveDataset })
 const typeHint: Array<APIDataset> = [];
 
 type Props = { datasets: Array<APIDataset>, showDetailedLink: boolean };
-type State = { activeDataset: APIDataset };
 
-class PublicationCard extends React.PureComponent<Props, State> {
-  state = {
-    activeDataset: this.props.datasets[0],
-  };
+function PublicationCard({ datasets, showDetailedLink }: Props){
+  const sortedDatasets = datasets.sort(compareBy(typeHint, dataset => dataset.sortingKey));
+  const [activeDataset, setActiveDataset] = useState<APIDataset>(sortedDatasets[0]);
 
-  render() {
-    const { datasets, showDetailedLink } = this.props;
-    const { activeDataset } = this.state;
-    const { publication } = activeDataset;
-    // This method will only be called for datasets with a publication, but Flow doesn't know that
-    if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
+  const { publication } = activeDataset;
+  // This method will only be called for datasets with a publication, but Flow doesn't know that
+  if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
 
-    const sortedDatasets = datasets.sort(compareBy(typeHint, dataset => dataset.sortingKey));
+  const thumbnailURL = getThumbnailURL(activeDataset);
+  const segmentationThumbnailURL = hasSegmentation(activeDataset)
+    ? getSegmentationThumbnailURL(activeDataset)
+    : null;
+  const details = getDetails(activeDataset);
 
-    const setActiveDataset = dataset => this.setState({ activeDataset: dataset });
-
-    const thumbnailURL = getThumbnailURL(activeDataset);
-    const segmentationThumbnailURL = hasSegmentation(activeDataset)
-      ? getSegmentationThumbnailURL(activeDataset)
-      : null;
-    const details = getDetails(activeDataset);
-
-    return (
-      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
-        <div style={{ display: "flex", height: "100%" }}>
-          <div className="publication-description">
-            <h3 className="container-with-hidden-icon">
-              {publication.title}
-              {showDetailedLink ? (
-                <Link to={`/publication/${publication.id}`}>
-                  <Tooltip title="Open permalink">
-                    <Icon
-                      type="link"
-                      style={{
-                        fontSize: 16,
-                        color: "#555",
-                        marginBottom: 18,
-                        marginLeft: 8,
-                      }}
-                      className="hidden-icon"
-                    />
-                  </Tooltip>
-                </Link>
-              ) : null}
-            </h3>
-            <div className="publication-description-body nice-scrollbar">
-              <Markdown
-                source={publication.description}
-                options={{ html: false, breaks: true, linkify: true }}
-              />
-            </div>
-          </div>
-          <div className="dataset-thumbnail">
-            <div
-              style={{
-                position: "relative",
-                height: "100%",
-                display: "flex",
-                alignItems: "flex-end",
-              }}
-            >
-              <Link
-                to={`/datasets/${activeDataset.owningOrganization}/${activeDataset.name}/view`}
-                className="absolute"
-              >
-                <div className="dataset-click-hint absolute">Click To View</div>
+  return (
+    <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card" bordered={false}>
+      <div style={{ display: "flex", height: "100%" }}>
+        <div className="publication-description">
+          <h3 className="container-with-hidden-icon">
+            {publication.title}
+            {showDetailedLink ? (
+              <Link to={`/publication/${publication.id}`}>
+                <Tooltip title="Open permalink">
+                  <Icon
+                    type="link"
+                    style={{
+                      fontSize: 16,
+                      color: "#555",
+                      marginBottom: 18,
+                      marginLeft: 8,
+                    }}
+                    className="hidden-icon"
+                  />
+                </Tooltip>
               </Link>
-              <div
-                className="dataset-thumbnail-image absolute"
-                style={{
-                  backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-                }}
-              />
-              {!blacklistedSegmentationNames.includes(activeDataset.name) &&
-              segmentationThumbnailURL ? (
-                <div
-                  className="dataset-thumbnail-image absolute segmentation"
-                  style={{
-                    backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-                  }}
-                />
-              ) : null}
-              <ThumbnailOverlay details={details} />
-              {sortedDatasets.length > 1 && (
-                <PublishedDatasetsOverlay
-                  datasets={sortedDatasets}
-                  activeDataset={activeDataset}
-                  setActiveDataset={setActiveDataset}
-                />
-              )}
-            </div>
+            ) : null}
+          </h3>
+          <div className="publication-description-body nice-scrollbar">
+            <Markdown
+              source={publication.description}
+              options={{ html: false, breaks: true, linkify: true }}
+            />
           </div>
         </div>
-      </Card>
-    );
-  }
+        <div className="dataset-thumbnail">
+          <div
+            style={{
+              position: "relative",
+              height: "100%",
+              display: "flex",
+              alignItems: "flex-end",
+            }}
+          >
+            <Link
+              to={`/datasets/${activeDataset.owningOrganization}/${activeDataset.name}/view`}
+              className="absolute"
+            >
+              <div className="dataset-click-hint absolute">Click To View</div>
+            </Link>
+            <div
+              className="dataset-thumbnail-image absolute"
+              style={{
+                backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+              }}
+            />
+            {!blacklistedSegmentationNames.includes(activeDataset.name) &&
+            segmentationThumbnailURL ? (
+              <div
+                className="dataset-thumbnail-image absolute segmentation"
+                style={{
+                  backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+                }}
+              />
+            ) : null}
+            <ThumbnailOverlay details={details} />
+            {sortedDatasets.length > 1 && (
+              <PublishedDatasetsOverlay
+                datasets={sortedDatasets}
+                activeDataset={activeDataset}
+                setActiveDataset={setActiveDataset}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
 }
 
 export default PublicationCard;

@@ -143,7 +143,7 @@ const typeHint: Array<APIDataset> = [];
 
 type Props = { datasets: Array<APIDataset>, showDetailedLink: boolean };
 
-function PublicationCard({ datasets, showDetailedLink }: Props){
+function PublicationCard({ datasets, showDetailedLink }: Props) {
   const sortedDatasets = datasets.sort(compareBy(typeHint, dataset => dataset.sortingKey));
   const [activeDataset, setActiveDataset] = useState<APIDataset>(sortedDatasets[0]);
 

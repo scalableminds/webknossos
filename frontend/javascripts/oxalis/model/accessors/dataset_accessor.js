@@ -27,6 +27,8 @@ import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 
+export type ResolutionsMap = Map<number, Vector3>;
+
 export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
   return _.chain(dataset.dataSource.dataLayers)
     .map(dataLayer => dataLayer.resolutions)
@@ -72,6 +74,27 @@ export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
+
+function _getResolutionMapOfSegmentationLayer(dataset: APIDataset): ResolutionsMap {
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (!segmentationLayer) {
+    return new Map();
+  }
+  const resolutionsObject = new Map();
+  const colorLayerResolutions = getResolutions(dataset);
+  colorLayerResolutions.forEach((resolution, zoomStep) => {
+    if (
+      segmentationLayer.resolutions.some(segmentationLayerResolution =>
+        _.isEqual(resolution, segmentationLayerResolution),
+      )
+    ) {
+      resolutionsObject.set(zoomStep, [...resolution]);
+    }
+  });
+  return resolutionsObject;
+}
+
+export const getResolutionMapOfSegmentationLayer = memoizeOne(_getResolutionMapOfSegmentationLayer);
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);

@@ -239,7 +239,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  perpendicularVector2(pos1: Vector2, pos2: Vector2): Vector2 {
+  vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
     const dx = pos2[0] - pos1[0];
     let perpendicularVector;
     if (dx === 0) {
@@ -247,16 +247,15 @@ class VolumeLayer {
     } else {
       const gradient = (pos2[1] - pos1[1]) / dx;
       perpendicularVector = [gradient, -1];
-      const norm = this.normOfVector2(perpendicularVector);
-      perpendicularVector = this.scalarMultiplication(perpendicularVector, 1 / norm);
+      const norm = this.vector2Norm(perpendicularVector);
+      perpendicularVector = this.vector2ScalarMultiplication(perpendicularVector, 1 / norm);
     }
     return perpendicularVector;
   }
 
-  normOfVector2(vector: Vector2): number {
+  vector2Norm(vector: Vector2): number {
     let norm = 0;
-    let i;
-    for (i of Vector2Indicies) {
+    for (const i of Vector2Indicies) {
       norm += Math.pow(vector[i], 2);
     }
     return Math.sqrt(norm);
@@ -264,35 +263,31 @@ class VolumeLayer {
 
   vector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
     const sum = [0, 0];
-    let i;
-    for (i of Vector2Indicies) {
+    for (const i of Vector2Indicies) {
       sum[i] = vector1[i] + vector2[i];
     }
     return sum;
   }
 
-  scalarMultiplication(vector: Vector2, scalar: number): Vector2 {
+  vector2ScalarMultiplication(vector: Vector2, scalar: number): Vector2 {
     const product = [0, 0];
-    let i;
-    for (i of Vector2Indicies) {
+    for (const i of Vector2Indicies) {
       product[i] = vector[i] * scalar;
     }
     return product;
   }
 
-  vector2Distance(pos1: Vector2, pos2: Vector2): number {
+  vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
     let distance = 0;
-    let i;
-    for (i of Vector2Indicies) {
-      distance += Math.pow(pos2[i] - pos1[i], 2);
+    for (const i of Vector2Indicies) {
+      distance += Math.pow((pos2[i] - pos1[i]) / scale[i], 2);
     }
     return Math.sqrt(distance);
   }
 
-  vectorWithScale(vector: Vector2, scale: Vector2): Vector2 {
+  vector2WithScale(vector: Vector2, scale: Vector2): Vector2 {
     const result = [0, 0];
-    let i;
-    for (i of Vector2Indicies) {
+    for (const i of Vector2Indicies) {
       result[i] = vector[i] * scale[i];
     }
     return result;
@@ -318,23 +313,27 @@ class VolumeLayer {
     const { brushSize } = state.userConfiguration;
 
     const radius = Math.round(brushSize / 2);
+    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
     const floatingCoord2dLastPosition = this.get2DCoordinate(lastPosition);
     const floatingCoord2dPosition = this.get2DCoordinate(position);
 
-    if (this.vector2Distance(floatingCoord2dLastPosition, floatingCoord2dPosition) < radius)
+    if (
+      this.vector2DistanceWithScale(floatingCoord2dLastPosition, floatingCoord2dPosition, scale) <
+      1.5 * radius
+    ) {
       return null;
+    }
 
-    const normedPerpendicularVector = this.perpendicularVector2(
+    const normedPerpendicularVector = this.vector2PerpendicularVector(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
     );
-    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
-    const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
-    const shiftVector = this.vectorWithScale(
-      this.scalarMultiplication(normedPerpendicularVector, radius),
+    const shiftVector = this.vector2WithScale(
+      this.vector2ScalarMultiplication(normedPerpendicularVector, radius),
       scale,
     );
-    const negShiftVector = this.scalarMultiplication(shiftVector, -1);
+    const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
 
     // calculate the rectangle's corners
     const [ax, ay] = this.vector2Sum(floatingCoord2dPosition, negShiftVector);

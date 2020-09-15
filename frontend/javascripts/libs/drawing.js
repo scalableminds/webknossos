@@ -20,13 +20,12 @@ class Drawing {
   smoothLength: number = SMOOTH_LENGTH;
 
   drawHorizontalLine2d(y: number, x1: number, x2: number, draw: (number, number) => void) {
-    let i;
     if (x1 < x2) {
-      for (i = x1; i <= x2; i++) {
+      for (let i = x1; i <= x2; i++) {
         draw(i, y);
       }
     } else {
-      for (i = x2; i <= x1; i++) {
+      for (let i = x2; i <= x1; i++) {
         draw(i, y);
       }
     }
@@ -145,7 +144,6 @@ class Drawing {
     minX: number,
     maxX: number,
   ): void {
-    // console.log("BORDER", x1, y1, x2, y2);
     if (y2 - y1 < 0) {
       this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
         bufX0[y] = x;

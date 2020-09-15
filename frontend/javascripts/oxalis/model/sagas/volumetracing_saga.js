@@ -141,8 +141,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
     }
 
-    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
     yield* put(finishAnnotationStrokeAction());
+    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
   }
 }
 

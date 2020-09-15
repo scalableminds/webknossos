@@ -360,6 +360,7 @@ class VolumeLayer {
       map[x][y] = true;
     };
 
+    // translate the coordinates so the containing box originates in (0|0)
     const [diffX, diffY] = [
       Math.floor(Math.min(xa, xb, xc, xd)),
       Math.floor(Math.min(ya, yb, yc, yd)),
@@ -432,11 +433,17 @@ class VolumeLayer {
     let p2;
     for (let i = 0; i < contourList.length; i++) {
       p1 = this.get2DCoordinate(contourList[i]);
-
+      p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
       if (mode === VolumeToolEnum.TRACE) {
-        p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
         Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
       } else if (mode === VolumeToolEnum.BRUSH) {
+        const [xa, ya, xb, yb, xc, yc, xd, yd] = this.rectangleToCircles(p1, p2, radius, [
+          scaleX,
+          scaleY,
+        ]);
+        if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
+          Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
+        }
         Drawing.fillCircle(p1[0], p1[1], radius, scaleX, scaleY, setMap);
       }
     }

@@ -337,6 +337,11 @@ class DataCube {
     label: number,
     activeCellId?: ?number = null,
   ): void {
+    // TODO: use segmentation layer resolutions.
+    // TODO: Do not label voxel in higher resolutions multiple times.
+    // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
+    // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
+    // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
     const numberOfResolutions = getResolutions(Store.getState().dataset).length;
     for (let zoomStep = 0; zoomStep < numberOfResolutions; ++zoomStep) {
       while (iterator.hasNext) {

@@ -287,4 +287,6 @@ serialization.failed=Failed to serialize data.
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
 initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 
+job.notFound = Job with id {0} could not be found.
+
 unexpectedReturn=Unexpected return of parameters

@@ -18,7 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility to navigate to the preceding/subsequent node by pressing "ctrl + ," or "ctrl + ." in a skeleton tracing. [#4147](https://github.com/scalableminds/webknossos/pull/4784)
 
 ### Changed
--
+- The position input when tracing or viewing a dataset now accepts decimal positions as well. [#4777](https://github.com/scalableminds/webknossos/pull/4803)
 
 ### Fixed
 - Improved the data loading behavior for flight and oblique mode. [#4800](https://github.com/scalableminds/webknossos/pull/4800)

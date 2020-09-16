@@ -295,6 +295,7 @@ export function* finishLayer(
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
     yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
+    yield* put(finishAnnotationStrokeAction());
   }
 
   yield* put(updateDirectionAction(layer.getCentroid()));

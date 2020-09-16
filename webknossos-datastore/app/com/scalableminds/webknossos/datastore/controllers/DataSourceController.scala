@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
-import play.api.data.Forms.{nonEmptyText, tuple}
+import play.api.data.Forms.{nonEmptyText, tuple, boolean}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
@@ -83,8 +83,9 @@ class DataSourceController @Inject()(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
         "organization" -> nonEmptyText,
-        "initialTeams" -> play.api.data.Forms.list(nonEmptyText)
-      )).fill(("", "", List()))
+        "initialTeams" -> play.api.data.Forms.list(nonEmptyText),
+        "needsConversion" -> boolean,
+      )).fill(("", "", List(), false))
 
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -93,12 +94,14 @@ class DataSourceController @Inject()(
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
-              case (name, organization, initialTeams) =>
+              case (name, organization, initialTeams, needsConversion) =>
                 val id = DataSourceId(name, organization)
                 for {
                   _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
                   zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
-                  _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
+                  _ <- dataSourceService.handleUpload(id,
+                                                      new File(zipFile.ref.path.toAbsolutePath.toString),
+                                                      needsConversion)
                   userTokenOpt = accessTokenService.tokenFromRequest(request)
                   _ <- webKnossosServer.postInitialTeams(id, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
                 } yield {

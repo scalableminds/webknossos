@@ -28,12 +28,10 @@ class JobsController @Inject()(wkConf: WkConf, sil: Silhouette[WkEnv], rpc: RPC)
     } yield Ok(Json.toJson(result))
   }
 
-  def runCubingJob = sil.SecuredAction.async { implicit request =>
+  def runCubingJob(organizationName: String, datasetName: String) = sil.SecuredAction.async { implicit request =>
     val commandJson = Json.obj(
-      "kwargs" -> Json.obj("input_path" -> "data/input/tiff",
-                           "output_path" -> "data/output/tiff",
-                           "name" -> "sample_tiff",
-                           "scale" -> "11.24,11.24,25"))
+      "kwargs" -> Json
+        .obj("organization_name" -> organizationName, "dataset_name" -> datasetName, "scale" -> "11.24,11.24,25"))
     for {
       result <- rpc(s"${wkConf.Jobs.Flower.uri}/api/task/async-apply/tasks.tiff_cubing")
         .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)

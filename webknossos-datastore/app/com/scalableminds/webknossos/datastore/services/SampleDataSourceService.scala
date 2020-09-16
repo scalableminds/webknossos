@@ -70,7 +70,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           val stream = new BufferedOutputStream(new FileOutputStream(tmpfile))
           stream.write(bytes.toArray)
           stream.close()
-          dataSourceService.handleUpload(id, tmpfile).map { _ =>
+          dataSourceService.handleUpload(id, tmpfile, needsConversion = false).map { _ =>
             runningDownloads.remove(id)
           }
         }

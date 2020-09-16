@@ -64,6 +64,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       // This is most likely not intentional and may change in a future Antd version
       formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
       formValues.initialTeams = formValues.initialTeams.map(team => team.id);
+      formValues.needsConversion = true;
 
       if (!err && activeUser != null) {
         Toast.info("Uploading datasets");

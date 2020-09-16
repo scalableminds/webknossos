@@ -40,10 +40,13 @@ class DataSourceService @Inject()(
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 50
-  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  val dataBaseDir: Path = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
+
+  private val forConversionPrefix = "__for_conversion_"
+  private val currentlyConvertingPrefix = "__converting_"
 
   var inboxCheckVerboseCounter = 0
 
@@ -53,17 +56,15 @@ class DataSourceService @Inject()(
     if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
   }
 
-  private def skipTrash(path: Path) = !path.toString.contains(".trash")
-
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir, skipTrash) match {
-        case Full(dirs) =>
+      _ <- PathUtils.listDirectories(dataBaseDir) match {
+        case Full(organizationDirs) =>
           for {
             _ <- Fox.successful(())
-            _ = if (verbose) logEmptyDirs(dirs)
-            foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+            _ = if (verbose) logEmptyDirs(organizationDirs)
+            foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
             _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
@@ -109,16 +110,18 @@ class DataSourceService @Inject()(
     if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
   }
 
-  def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
+  def handleUpload(id: DataSourceId, dataSetZip: File, needsConversion: Boolean): Fox[Unit] = {
 
     def ensureDirectory(dir: Path) =
       try {
         Fox.successful(PathUtils.ensureDirectory(dir))
       } catch {
-        case e: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
+        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
       }
 
-    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
+    val conversionPrefix = if (needsConversion) forConversionPrefix else ""
+
+    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(s"$conversionPrefix${id.name}")
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
@@ -130,12 +133,15 @@ class DataSourceService @Inject()(
                                         truncateCommonPrefix = true,
                                         Some(Category.values.map(_.toString).toList))
       _ <- unzipResult match {
-        case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        case e => {
+        case Full(_) =>
+          if (needsConversion)
+            Fox.successful(())
+          else
+            dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
+        case e =>
           val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
-        }
       }
     } yield ()
   }
@@ -223,12 +229,16 @@ class DataSourceService @Inject()(
     }
   }
 
+  private def skipTrash(path: Path) = !path.toString.contains(".trash")
+  private def skipDatasetsForConversion(path: Path) = !path.toString.contains(forConversionPrefix)
+  private def skipCurrentlyConvertingDatasets(path: Path) = !path.toString.contains(currentlyConvertingPrefix)
+
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
-    PathUtils.listDirectories(path) match {
-      case Full(dirs) =>
-        val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
+    PathUtils.listDirectories(path, skipTrash, skipDatasetsForConversion, skipCurrentlyConvertingDatasets) match {
+      case Full(dataSourceDirs) =>
+        val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")

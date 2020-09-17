@@ -5,7 +5,7 @@
     {
       "files": "effect-generators.js.flow",
       "options": {
-        "printWidth": 200
+        "printWidth": 240
       }
     }
   ]

@@ -5,35 +5,39 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter}
+import com.scalableminds.webknossos.datastore.models.{
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebKnossosIsosurfaceRequest
+}
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-
-import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
-
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
+    isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: RedisTemporaryStore,
@@ -63,6 +67,9 @@ class VolumeTracingService @Inject()(
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
+
+  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -380,6 +387,23 @@ class VolumeTracingService @Inject()(
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
+
+  def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+    for {
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      segmentationLayer = volumeTracingLayer(tracingId, tracing)
+      isosurfaceRequest = IsosurfaceRequest(
+        None,
+        segmentationLayer,
+        request.cuboid(segmentationLayer),
+        request.segmentId,
+        request.voxelDimensions,
+        request.scale,
+        request.mapping,
+        request.mappingType
+      )
+      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+    } yield result
 
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
 

@@ -15,7 +15,7 @@ object DataServiceRequestSettings {
 }
 
 case class DataServiceDataRequest(
-    dataSource: DataSource,
+    dataSource: DataSource, // null in VolumeTracings
     dataLayer: DataLayer,
     dataLayerMapping: Option[String],
     cuboid: Cuboid,

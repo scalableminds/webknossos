@@ -122,7 +122,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
         timeSpan.addTime(duration, timestamp)
       } else {
-        logger.info(
+        logger.warn(
           s"Not updating previous timespan due to negative duration ${duration} for user ${timeSpan._id}, last timespan id ${timeSpan._id}, this=${this}")
         timeSpan
       }

@@ -27,6 +27,7 @@ import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import Model from "oxalis/model";
 import message from "messages";
 import * as Utils from "libs/utils";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 
 const { Option, OptGroup } = Select;
 
@@ -66,24 +67,9 @@ type State = {
   didRefreshMappingList: boolean,
 };
 
-// This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
-export const convertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
-  if (id === 0) {
-    // Return white
-    return [1, 1, 1, 1];
-  }
-
-  const goldenRatio = 0.618033988749895;
-  const lastEightBits = id & (2 ** 8 - 1);
-  const computedColor = (lastEightBits * goldenRatio) % 1.0;
-  const value = customColors != null ? customColors[lastEightBits] || 0 : computedColor;
-
-  return [value, 1, 0.5, 0.15];
-};
-
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 const convertCellIdToCSS = (id, customColors) =>
-  convertHSLAToCSSString(convertCellIdToHSLA(id, customColors));
+  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 

@@ -84,6 +84,11 @@
 
 .ant-notification-notice-message {
   white-space: pre-wrap;
+
+  .ant-notification-notice-message-single-line-auto-margin {
+    // This fixes a too large margin-top for the notification content in Firefox
+    float: left;
+  }
 }
 
 .ant-table-small > .ant-table-content > .ant-table-body > table > .ant-table-tbody > tr > td {

@@ -12,14 +12,14 @@ type Rule = {
   type?: string,
 };
 
-export type EditableTextLabelProp = {
+export type EditableTextLabelProp = {|
   value: string,
   onChange: Function,
   rules?: Rule,
   rows?: number,
   markdown?: boolean,
   label: string,
-};
+|};
 
 type State = {
   isEditing: boolean,
@@ -86,7 +86,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} />
-              <Tooltip title={`Save ${this.props.label}`} placement="bottom">
+              <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <Icon
                   type="check"
                   style={iconStyle}
@@ -122,7 +122,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
               this.props.value
             )}
           </span>
-          <Tooltip title={`Edit ${this.props.label}`} placement="bottom">
+          <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
             <Icon
               type="edit"
               style={iconStyle}

@@ -23,7 +23,7 @@ import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 const decodeFourBit = createWorker(DecodeFourBitWorker);
 const byteArrayToLz4Base64 = createWorker(ByteArrayToLz4Base64Worker);
 
-export const REQUEST_TIMEOUT = 30000;
+export const REQUEST_TIMEOUT = 60000;
 
 export type SendBucketInfo = {
   position: Vector3,
@@ -166,19 +166,25 @@ export async function requestFromStore(
       return sliceBufferIntoPieces(layerInfo, batch, missingBuckets, new Uint8Array(resultBuffer));
     });
   } catch (errorResponse) {
-    let errorMessage = `Requesting buckets from layer "${layerInfo.name}" failed. `;
-    if (errorResponse.status != null) {
-      errorMessage += `Status code ${errorResponse.status} - "${errorResponse.statusText}".`;
-    } else {
-      errorMessage += errorResponse.message;
-    }
-    const urlAsString = `URL - ${dataUrl}`;
-    console.error(`${errorMessage} ${urlAsString}`);
+    const errorMessage = `Requesting data from layer "${
+      layerInfo.name
+    }" failed. Some rendered areas might remain empty. Retrying...`;
+    let detailedError =
+      errorResponse.status != null
+        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}".`
+        : errorResponse.message;
+
+    detailedError += `(URL: ${dataUrl})`;
+    console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
-    Toast.renderDetailedErrorMessage(errorMessage, urlAsString, {
-      key: errorMessage,
-      sticky: false,
-    });
+    Toast.warning(
+      errorMessage,
+      {
+        key: errorMessage,
+        sticky: false,
+      },
+      detailedError,
+    );
     return batch.map(_val => null);
   }
 }

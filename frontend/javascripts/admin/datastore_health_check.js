@@ -25,7 +25,12 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     RestAPI.getDataStoresCached(),
     RestAPI.getTracingStoreCached(),
     RestAPI.isInMaintenance(),
-  ]);
+  ]).catch(() => [null, null, null]);
+  if (datastores == null || tracingstore == null || isInMaintenance == null) {
+    Toast.warning(messages.offline);
+    return;
+  }
+
   const stores = datastores
     .map(datastore => ({ ...datastore, path: "data" }))
     .concat({ ...tracingstore, path: "tracings" });

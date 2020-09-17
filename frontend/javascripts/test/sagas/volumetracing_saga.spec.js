@@ -190,7 +190,6 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
   saga.next();
-  const iterator = saga.next();
-  expectValueDeepEqual(t, iterator, put(resetContourAction));
+  expectValueDeepEqual(t, saga.next(), put(resetContourAction));
   t.true(saga.next().done);
 });

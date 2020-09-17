@@ -5,6 +5,7 @@ import {
   type CopySegmentationLayerAction,
   resetContourAction,
   updateDirectionAction,
+  finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   type Saga,
@@ -22,6 +23,7 @@ import {
   type UpdateAction,
   updateVolumeTracing,
   updateUserBoundingBoxes,
+  removeFallbackLayer,
 } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
@@ -36,6 +38,8 @@ import {
   ContourModeEnum,
   type OrthoView,
   type VolumeTool,
+  type Vector2,
+  type Vector3,
   VolumeToolEnum,
 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
@@ -138,10 +142,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     }
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* put(finishAnnotationStrokeAction());
   }
 }
 
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<?BoundingBoxType> {
+function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
@@ -236,6 +241,47 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       );
     }
   }
+  yield* put(finishAnnotationStrokeAction());
+}
+
+export function* floodFill(): Saga<void> {
+  yield* take("INITIALIZE_VOLUMETRACING");
+  const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+
+  while (allowUpdate) {
+    const floodFillAction = yield* take("FLOOD_FILL");
+    if (floodFillAction.type !== "FLOOD_FILL") {
+      throw new Error("Unexpected action. Satisfy flow.");
+    }
+    const { position, planeId } = floodFillAction;
+    const segmentationLayer = Model.getSegmentationLayer();
+    const { cube } = segmentationLayer;
+    const seedVoxel = Dimensions.roundCoordinate(position);
+    const currentViewportBounding = yield* call(getBoundingsFromPosition, planeId);
+    const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
+    const dimensionIndices = Dimensions.getIndices(planeId);
+    const get3DAddress = (voxel: Vector2) => {
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], seedVoxel[dimensionIndices[2]]];
+      const orderedVoxelWithThirdDimension = [
+        unorderedVoxelWithThirdDimension[dimensionIndices[0]],
+        unorderedVoxelWithThirdDimension[dimensionIndices[1]],
+        unorderedVoxelWithThirdDimension[dimensionIndices[2]],
+      ];
+      return orderedVoxelWithThirdDimension;
+    };
+    const get2DAddress = (voxel: Vector3): Vector2 => [
+      voxel[dimensionIndices[0]],
+      voxel[dimensionIndices[1]],
+    ];
+    cube.floodFill(
+      seedVoxel,
+      activeCellId,
+      get3DAddress,
+      get2DAddress,
+      dimensionIndices,
+      currentViewportBounding,
+    );
+  }
 }
 
 export function* finishLayer(
@@ -293,5 +339,8 @@ export function* diffVolumeTracing(
   }
   if (!_.isEqual(prevVolumeTracing.userBoundingBoxes, volumeTracing.userBoundingBoxes)) {
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
+  }
+  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+    yield removeFallbackLayer();
   }
 }

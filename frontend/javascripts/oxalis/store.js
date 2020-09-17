@@ -197,6 +197,11 @@ type TracingBase = {|
   +userBoundingBoxes: Array<UserBoundingBox>,
 |};
 
+export type NavigationList = {|
+  +list: Array<number>,
+  +activeIndex: number,
+|};
+
 export type SkeletonTracing = {|
   ...TracingBase,
   +type: "skeleton",
@@ -206,6 +211,7 @@ export type SkeletonTracing = {|
   +activeNodeId: ?number,
   +activeGroupId: ?number,
   +cachedMaxNodeId: number,
+  +navigationList: NavigationList,
 |};
 
 export type VolumeTracing = {|
@@ -247,8 +253,8 @@ export type TraceOrViewCommand =
 
 export type DatasetLayerConfiguration = {|
   +color: Vector3,
-  +brightness: number,
-  +contrast: number,
+  brightness?: number,
+  contrast?: number,
   +alpha: number,
   +intensityRange: Vector2,
   +min?: number,
@@ -274,6 +280,7 @@ export type DatasetConfiguration = {|
   +rotation?: Vector3,
   +renderMissingDataBlack: boolean,
   +loadingStrategy: LoadingStrategy,
+  +segmentationPatternOpacity: number,
 |};
 
 export type UserConfiguration = {|

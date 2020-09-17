@@ -38,6 +38,8 @@ import messages from "messages";
 import window, { document, location } from "libs/window";
 import ErrorHandling from "libs/error_handling";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
+import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import TabTitle from "../components/tab_title_component";
 
 import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { determineLayout } from "./default_layout_configs";
@@ -58,6 +60,9 @@ type StateProps = {|
   isDatasetOnScratchVolume: boolean,
   autoSaveLayouts: boolean,
   datasetName: string,
+  is2d: boolean,
+  displayName: string,
+  organization: string,
 |};
 type DispatchProps = {|
   setAutoSaveLayouts: boolean => void,
@@ -94,7 +99,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
   constructor(props: PropsWithRouter) {
     super(props);
-    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutType = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     let lastActiveLayout;
     if (
       props.storedLayouts.LastActiveLayouts &&
@@ -155,8 +164,21 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     if (this.currentLayoutConfig == null || this.currentLayoutName == null) {
       return;
     }
-    const layoutKey = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutKey = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     storeLayoutConfig(this.currentLayoutConfig, layoutKey, this.currentLayoutName);
+  };
+
+  getTabTitle = () => {
+    const titleArray: Array<string> = [
+      this.props.displayName,
+      this.props.organization,
+      "webKnossos",
+    ];
+    return titleArray.filter(elem => elem).join(" | ");
   };
 
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
@@ -171,7 +193,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const layoutType = determineLayout(this.props.initialCommandType.type, this.props.viewMode);
+    const layoutType = determineLayout(
+      this.props.initialCommandType.type,
+      this.props.viewMode,
+      this.props.is2d,
+    );
     const currentLayoutNames = this.getLayoutNamesFromCurrentView(layoutType);
     const { displayScalebars, isDatasetOnScratchVolume, isUpdateTracingAllowed } = this.props;
 
@@ -190,6 +216,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
         isUpdateAllowed={isUpdateTracingAllowed}
       >
+        <TabTitle title={this.getTabTitle()} />
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
@@ -343,6 +370,9 @@ function mapStateToProps(state: OxalisState): StateProps {
     storedLayouts: state.uiInformation.storedLayouts,
     isDatasetOnScratchVolume: state.dataset.dataStore.isScratch,
     datasetName: state.dataset.name,
+    is2d: is2dDataset(state.dataset),
+    displayName: state.tracing.name ? state.tracing.name : state.dataset.name,
+    organization: state.dataset.owningOrganization,
   };
 }
 

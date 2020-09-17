@@ -194,6 +194,14 @@
     &:hover {
       border-color: @hover-border;
     }
+
+    &.ant-btn-disabled,
+    &.ant-input-disabled,
+    &.ant-radio-button-wrapper-disabled,
+    &.ant-select-selection-disabled {
+      color: fade(@dark-fg, 50%);
+      border-color: @dark-border;
+    }
   }
 
   .ant-select-arrow {

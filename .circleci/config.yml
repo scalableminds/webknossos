@@ -249,7 +249,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/remove/webknossos/dev/master?user=CI+%28nightly%29
+            https://kube.scm.io/hooks/remove/webknossos/dev/consideremptylayerasd?user=CI+%28nightly%29
       - run:
           name: Wait 3min
           command: sleep 180
@@ -259,7 +259,7 @@ jobs:
             curl
             -X POST
             -H "X-Auth-Token: $RELEASE_API_TOKEN"
-            https://kube.scm.io/hooks/install/webknossos/dev/master?user=CI+%28nightly%29
+            https://kube.scm.io/hooks/install/webknossos/dev/consideremptylayerasd?user=CI+%28nightly%29
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
@@ -268,11 +268,11 @@ jobs:
             wait
       - run:
           name: Refresh datasets
-          command: curl https://master.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
+          command: curl https://consideremptylayerasd.webknossos.xyz/data/triggers/checkInboxBlocking?token=secretScmBoyToken
       - run:
           name: Run screenshot-tests
           command: |
-            URL=https://master.webknossos.xyz/ \
+            URL=https://consideremptylayerasd.webknossos.xyz/ \
             yarn test-screenshot
 
       - store_artifacts:
@@ -283,6 +283,10 @@ workflows:
   circleci_build:
     jobs:
       - build_test_deploy:
+          filters:
+            tags:
+              only: /.*/
+      - nightly:
           filters:
             tags:
               only: /.*/

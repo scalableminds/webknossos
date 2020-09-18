@@ -398,7 +398,11 @@ export function isLayerVisible(
 }
 
 export function is2dDataset(dataset: APIDataset): boolean {
-  return getDatasetExtentInVoxel(dataset).depth < 2;
+  // An empty dataset (e.g., depth == 0), should not be considered as 2D.
+  // This avoids that the empty dummy dataset is rendered with a 2D layout
+  // which is usually switched to the 3D layout after the proper dataset has
+  // been loaded.
+  return getDatasetExtentInVoxel(dataset).depth === 1;
 }
 
 export default {};

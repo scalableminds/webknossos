@@ -44,9 +44,11 @@ trait DataConverter extends FoxImplicits {
           .map(ULong(_))
           .filter(!filterZeroes || _ != ULong(0))
       case ElementClass.float =>
-        convertDataImpl[Float, FloatBuffer](
-          data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)).filter(!filterZeroes || _ != 0f)
+        convertDataImpl[Float, FloatBuffer](data,
+                                            DataTypeFunctors[Float, FloatBuffer](
+                                              _.asFloatBuffer(),
+                                              _.get(_),
+                                              _.toFloat)).filter(!_.isNaN).filter(!filterZeroes || _ != 0f)
     }
 
   private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],

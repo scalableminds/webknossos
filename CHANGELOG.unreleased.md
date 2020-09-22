@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Fixed
--
+- Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)
 
 ### Removed
 -

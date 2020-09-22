@@ -122,8 +122,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
         timeSpan.addTime(duration, timestamp)
       } else {
-        logger.warn(
-          s"Not updating previous timespan due to negative duration ${duration} for user ${timeSpan._id}, last timespan id ${timeSpan._id}, this=${this}")
+        logger.info(
+          s"Not updating previous timespan due to negative duration ${duration} ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=${this})")
         timeSpan
       }
     }
@@ -160,7 +160,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private def isNotInterrupted(current: Long, last: TimeSpan) = {
     val duration = current - last.lastUpdate
     if (duration < 0) {
-      logger.warn(s"Negative timespan duration to previous entry.")
+      logger.info(
+        s"Negative timespan duration ${duration} ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=${this})")
     }
     duration < MaxTracingPause
   }

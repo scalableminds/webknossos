@@ -711,6 +711,15 @@ export async function downloadNml(
   saveAs(blob, filename);
 }
 
+export async function unlinkFallbackSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/unlinkFallback`, {
+    method: "PATCH",
+  });
+}
+
 // ### Datasets
 export async function getDatasets(
   isUnreported: ?boolean,

@@ -254,18 +254,18 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
-    const templateLabelValue = segmentationLayer.cube.getDataValue(voxelTemplateAddress);
+    const templateLabelValue = cube.getDataValue(voxelTemplateAddress);
 
     // Only copy voxels from the previous layer which belong to the current cell
     if (templateLabelValue === activeCellId) {
-      const currentLabelValue = segmentationLayer.cube.getDataValue(voxelTargetAddress);
+      const currentLabelValue = cube.getDataValue(voxelTargetAddress);
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
         console.log(
           `labeling at ${voxelTargetAddress.toString()} with ${templateLabelValue} in zoomStep ${activeZoomStep}`,
         );
-        api.data.labelVoxels([voxelTargetAddress], templateLabelValue, activeZoomStep);
+        cube.labelVoxelInResolution([voxelTargetAddress], templateLabelValue, activeZoomStep);
         const bucket = cube.getBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, activeZoomStep),
         );

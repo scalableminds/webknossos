@@ -44,7 +44,6 @@ export type InferSegmentationInViewportAction = {
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position: Vector3,
 };
-export type RemoveFallbackLayerAction = { type: "REMOVE_FALLBACK_LAYER" };
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -64,15 +63,13 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
-  | AddBucketToUndoAction
-  | RemoveFallbackLayerAction;
+  | AddBucketToUndoAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
-  "REMOVE_FALLBACK_LAYER",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -166,8 +163,4 @@ export const inferSegmentationInViewportAction = (
 ): InferSegmentationInViewportAction => ({
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position,
-});
-
-export const removeFallbackLayerAction = (): RemoveFallbackLayerAction => ({
-  type: "REMOVE_FALLBACK_LAYER",
 });

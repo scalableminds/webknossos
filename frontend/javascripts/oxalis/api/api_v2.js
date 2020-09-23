@@ -324,6 +324,17 @@ class TracingApi {
     UrlManager.updateUnthrottled();
   }
 
+  /**
+   * Reload tracing
+   *
+   * @example
+   * api.tracing.hardReload().then(() => ... );
+   */
+  async hardReload() {
+    await Model.ensureSavedState();
+    location.reload();
+  }
+
   //  SKELETONTRACING API
 
   /**

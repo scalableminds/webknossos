@@ -140,11 +140,11 @@ instead. Only enable this option if you understand its effect. All layers will n
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
   "tracing.confirm_remove_fallback_layer.title":
-    "Are you sure you want to unlink the dataset's original segmentation layer from this tracing?",
+    "Are you sure you want to unlink the dataset's original segmentation layer?",
   "tracing.confirm_remove_fallback_layer.explanation":
     "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
   "tracing.confirm_remove_fallback_layer.notes":
-    "Note, that this action cannot be undone. Also note, if you already started with your annotation work based on the original segmentation layer, some small chunks of the segmentation might have already been merged into your annotation for technical reasons.",
+    "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "layouting.missing_custom_layout_info":

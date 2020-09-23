@@ -136,6 +136,9 @@ export type RevertToVersionUpdateAction = {|
     sourceVersion: number,
   |},
 |};
+
+// This action is not dispatched by our code, anymore,
+// but we still need to keep it for backwards compatibility.
 export type RemoveFallbackLayerAction = {|
   name: "removeFallbackLayer",
   value: {},

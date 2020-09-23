@@ -20,7 +20,11 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
+import {
+  findDataPositionForLayer,
+  clearCache,
+  unlinkFallbackSegmentation,
+} from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -34,7 +38,6 @@ import {
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { removeFallbackLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
@@ -74,7 +77,7 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
-  onRemoveFallbackLayer: () => void,
+  onUnlinkFallbackLayer: Tracing => Promise<void>,
   tracing: Tracing,
 |};
 
@@ -161,12 +164,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       content: (
         <div>
           <p>{messages["tracing.confirm_remove_fallback_layer.explanation"]}</p>
-          <p>{messages["tracing.confirm_remove_fallback_layer.notes"]}</p>
+          <p>
+            <b>{messages["tracing.confirm_remove_fallback_layer.notes"]}</b>
+          </p>
         </div>
       ),
       onOk: async () => {
-        this.props.onRemoveFallbackLayer();
-        this.reloadLayerData(layerName);
+        this.props.onUnlinkFallbackLayer(this.props.tracing);
       },
       width: 600,
     });
@@ -595,8 +599,10 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },
-  onRemoveFallbackLayer() {
-    dispatch(removeFallbackLayerAction());
+  async onUnlinkFallbackLayer(tracing: Tracing) {
+    const { annotationId, annotationType } = tracing;
+    await unlinkFallbackSegmentation(annotationId, annotationType);
+    await api.tracing.hardReload();
   },
 });
 

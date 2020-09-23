@@ -140,13 +140,3 @@ export function setContourTracingModeReducer(state: OxalisState, mode: ContourMo
     },
   });
 }
-
-export function removeFallbackLayerReducer(state: OxalisState) {
-  return update(state, {
-    tracing: {
-      volume: {
-        $unset: ["fallbackLayer"],
-      },
-    },
-  });
-}

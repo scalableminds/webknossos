@@ -21,7 +21,6 @@ import {
   resetContourReducer,
   hideBrushReducer,
   setContourTracingModeReducer,
-  removeFallbackLayerReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
@@ -104,10 +103,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
 
         case "SET_CONTOUR_TRACING_MODE": {
           return setContourTracingModeReducer(state, action.mode);
-        }
-
-        case "REMOVE_FALLBACK_LAYER": {
-          return removeFallbackLayerReducer(state);
         }
 
         default:

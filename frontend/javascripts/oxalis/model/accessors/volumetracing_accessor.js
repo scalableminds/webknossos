@@ -51,7 +51,7 @@ export function isVolumeTraceToolDisallowed(state: OxalisState) {
   }
   // The current resolution is to high for allowing the trace tool
   // because to many voxel could be annotated at the same time.
-  const isZoomStepTooHigh = getRequestLogZoomStep(state) > 1.5;
+  const isZoomStepTooHigh = getRequestLogZoomStep(state) > 1;
   return isZoomStepTooHigh;
 }
 

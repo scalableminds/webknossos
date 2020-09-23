@@ -656,7 +656,7 @@ class DataApi {
     assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxelInResolution(voxel, label, 0);
+      segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
     }
 
     segmentationLayer.cube.pushQueue.push();

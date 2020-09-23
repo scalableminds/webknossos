@@ -1040,13 +1040,13 @@ class DataApi {
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  labelVoxels(voxels: Array<Vector3>, label: number, zoomStep: number = 0): void {
+  labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
     const segmentationLayer = this.model.getSegmentationLayer();
     assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxelInResolution(voxel, label, zoomStep);
+      segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
     }
 
     segmentationLayer.cube.pushQueue.push();

@@ -455,6 +455,9 @@ function setupLayerForVolumeTracing(
 
   console.log(tracing.resolutions);
 
+  // Legacy tracings don't have the `tracing.resolutions` property
+  // since they were created before WK started to maintain multiple resolution
+  // in volume annotations. Therefore, this code falls back to mag1
   const tracingResolutions = tracing.resolutions
     ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];

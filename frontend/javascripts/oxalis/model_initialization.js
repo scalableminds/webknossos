@@ -320,28 +320,32 @@ function initializeDataset(
     dataset.dataSource.dataLayers = newDataLayers;
   });
 
-  ensureDenseLayerResolutions(dataset);
-  ensureMatchingLayerResolutions(dataset);
+  // ensureDenseLayerResolutions(dataset);
+  // ensureMatchingLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
 }
 
-export function ensureDenseLayerResolutions(dataset: APIDataset) {
-  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
-  for (const layer of dataset.dataSource.dataLayers) {
-    layer.resolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
-  }
-}
+// export function ensureDenseLayerResolutions(dataset: APIDataset) {
+//   const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
+//   for (const layer of dataset.dataSource.dataLayers) {
+//     // For segmentation layer
+//     if (layer.category === "color") {
+//       layer.resolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
+//     }
+//   }
+// }
 
-export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
-  for (const layer of dataset.dataSource.dataLayers) {
-    for (const resolution of layer.resolutions) {
-      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
-        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
-      }
-    }
-  }
-}
+// TODO: (1) restore ensureMatchingLayerResolutions
+// export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+//   const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
+//   for (const layer of dataset.dataSource.dataLayers) {
+//     for (const resolution of layer.resolutions) {
+//       if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
+//         Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
+//       }
+//     }
+//   }
+// }
 
 export function convertToDenseResolution(
   resolutions: Array<Vector3>,
@@ -453,18 +457,19 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
-  console.log(tracing.resolutions);
+  console.log(tracing.new_resolutions);
 
-  // Legacy tracings don't have the `tracing.resolutions` property
+  // Legacy tracings don't have the `tracing.new_resolutions` property
   // since they were created before WK started to maintain multiple resolution
-  // in volume annotations. Therefore, this code falls back to mag1
-  const tracingResolutions = tracing.resolutions
-    ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
+  // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
+  // that case.
+  const tracingResolutions = tracing.new_resolutions
+    ? tracing.new_resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];
 
   console.log(tracingResolutions);
   const targetResolutions =
-    fallbackLayer != null ? fallbackLayer.resolutions : getResolutions(dataset);
+    fallbackLayer != null ? fallbackLayer.new_resolutions : getResolutions(dataset);
 
   const resolutionsAreSubset = (resAs, resBs) =>
     resAs.every(resA => resBs.some(resB => _.isEqual(resA, resB)));
@@ -473,11 +478,11 @@ function setupLayerForVolumeTracing(
     resolutionsAreSubset(tracingResolutions, targetResolutions);
 
   if (!doResolutionsMatch) {
-    if (tracing.resolutions) {
+    if (tracing.new_resolutions) {
       Toast.warning(
         messages["tracing.volume_resolution_mismatch"],
         {},
-        `Tracing resolutions ${tracingResolutions.toString()} vs dataset resolutions ${targetResolutions.toString()}`,
+        `The magnifications of the volume tracing (${tracingResolutions.toString()}) don't match the dataset's magnifications (${targetResolutions.toString()}). This can happen when the magnification of the dataset was changed after this tracing was created. Note that there might be rendering issues for this reason.`,
       );
       throw HANDLED_ERROR;
     } else {
@@ -491,15 +496,14 @@ function setupLayerForVolumeTracing(
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),
-    // volume tracing can only be done for the first resolution
-    resolutions: tracingResolutions,
+    new_resolutions: tracingResolutions,
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,
   };
 
   if (fallbackLayer != null) {
-    // Replace the orginal tracing layer
+    // Replace the original tracing layer
     layers[fallbackLayerIndex] = tracingLayer;
   } else {
     // Remove other segmentation layers, since we are adding a new one.

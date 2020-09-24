@@ -2,7 +2,7 @@
 
 import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -23,7 +23,7 @@ class DataLayer {
   activeMapping: ?string;
   activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
-  resolutions: Array<Vector3>;
+  new_resolutions: Array<Vector3>;
   fallbackLayer: ?string;
 
   constructor(
@@ -35,16 +35,16 @@ class DataLayer {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    this.resolutions = layerInfo.resolutions;
+    this.new_resolutions = layerInfo.new_resolutions;
 
     const { dataset } = Store.getState();
     const isSegmentation = layerInfo.category === "segmentation";
 
-    ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
+    ErrorHandling.assert(this.new_resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
-      this.resolutions.length,
+      getResolutionInfo(this.new_resolutions),
       layerInfo.elementClass,
       isSegmentation,
     );

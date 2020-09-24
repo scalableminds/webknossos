@@ -17,7 +17,8 @@ import {
 import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
 import {
   getResolutions,
-  getResolutionMapOfSegmentationLayer,
+  getResolutionInfoOfSegmentationLayer,
+  ResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -50,7 +51,6 @@ class CubeEntry {
 
 class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
-  ZOOM_STEP_COUNT: number;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
@@ -85,7 +85,7 @@ class DataCube {
 
   constructor(
     upperBoundary: Vector3,
-    resolutionsLength: number,
+    resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
   ) {
@@ -93,9 +93,7 @@ class DataCube {
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
 
-    this.ZOOM_STEP_COUNT = resolutionsLength;
-
-    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
+    this.MAX_ZOOM_STEP = resolutionInfo.getHighestResolutionIndex();
 
     _.extend(this, BackboneEvents);
 
@@ -110,28 +108,24 @@ class DataCube {
     ];
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
-    // TODO: for segmentation add special case
     const { dataset } = Store.getState();
-    const colorLayerResolutionsArray = getResolutions(dataset);
-    let segmentationLayer = new Map();
-    if (isSegmentation) {
-      segmentationLayer = getResolutionMapOfSegmentationLayer(dataset);
-    }
-    let numberOfSkippedResolutions = 0;
-    for (let i = 0; i < this.ZOOM_STEP_COUNT + numberOfSkippedResolutions; i++) {
-      const resolution = isSegmentation ? segmentationLayer.get(i) : colorLayerResolutionsArray[i];
-      if (resolution == null) {
-        // As segmentation layer might be sparse, not all resolutions might exist.
-        // Skipping zoomStep
-        numberOfSkippedResolutions++;
-        continue;
-      }
+
+    // let resolutionInfo;
+    // if (isSegmentation) {
+    //   // TODO (1): check this could simply use the resolution info of the layer.
+    //   // Then, the cube map would be sparse, though. Is this a problem?
+    //   resolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
+    // } else {
+    //   resolutionInfo = getDatasetResolutionInfo(dataset);
+    // }
+
+    for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
         Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
-      this.cubes[i] = new CubeEntry(zoomedCubeBoundary);
+      this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
     }
 
     const shouldBeRestrictedByTracingBoundingBox = () => {
@@ -208,7 +202,7 @@ class DataCube {
   }
 
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
-    if (zoomStep >= this.ZOOM_STEP_COUNT) {
+    if (zoomStep >= this.MAX_ZOOM_STEP + 1) {
       return false;
     }
 
@@ -352,16 +346,15 @@ class DataCube {
     label: number,
     activeCellId?: ?number = null,
   ): void {
-    // TODO: use segmentation layer resolutions.
     // TODO: Do not label voxel in higher resolutions multiple times.
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-    const resolutions = getResolutionMapOfSegmentationLayer(Store.getState().dataset);
-    for (const zoomStep of resolutions.keys()) {
+    const resolutionInfo = getResolutionInfoOfSegmentationLayer(Store.getState().dataset);
+    for (const [resolutionIndex, _resolution] of resolutionInfo.getResolutionsWithIndices()) {
       while (iterator.hasNext) {
         const voxel = iterator.getNext();
-        this.labelVoxelInResolution(voxel, label, zoomStep, activeCellId);
+        this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
       }
       iterator.reset();
     }
@@ -371,14 +364,13 @@ class DataCube {
 
   labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
     // Also see labelVoxelsInAllResolutions
-    // TODO: use segmentation layer resolutions.
     // TODO: Do not label voxel in higher resolutions multiple times.
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-    const resolutions = getResolutionMapOfSegmentationLayer(Store.getState().dataset);
-    for (const zoomStep of resolutions.keys()) {
-      this.labelVoxelInResolution(voxel, label, zoomStep, activeCellId);
+    const resolutionInfo = getResolutionInfoOfSegmentationLayer(Store.getState().dataset);
+    for (const [resolutionIndex, _resolution] of resolutionInfo.getResolutionsWithIndices()) {
+      this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
     }
 
     this.triggerPushQueue();

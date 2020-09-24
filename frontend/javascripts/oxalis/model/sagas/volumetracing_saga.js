@@ -207,6 +207,7 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
 
 function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
+  // todo: labelWithIterator (1)
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
@@ -385,7 +386,7 @@ export function* floodFill(): Saga<void> {
   }
 }
 
-// TODO: Iterate over all resolutions of the segmentation layer, not the resolutions of the color layers.
+// TODO: (1) Iterate over all resolutions of the segmentation layer, not the resolutions of the color layers.
 // To get all segmentation layer resolutions, use: getResolutionMapOfSegmentationLayer
 function applyLabeledVoxelMapToAllMissingResolutions(
   labeledVoxelMapToApply: LabeledVoxelsMap,

@@ -29,6 +29,103 @@ import messages from "messages";
 
 export type ResolutionsMap = Map<number, Vector3>;
 
+export class ResolutionInfo {
+  resolutions: Array<Vector3>;
+  resolutionMap: Map<number, Vector3>;
+
+  constructor(resolutions: Array<Vector3>) {
+    this.resolutions = resolutions;
+    this._buildResolutionMap();
+  }
+
+  _buildResolutionMap() {
+    // Each resolution entry can be characterized by it's greatest resolution dimension.
+    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
+    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
+
+    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
+
+    const resolutions = this.resolutions;
+
+    if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+      throw new Error("Max dimension in resolutions is not unique.");
+    }
+
+    this.resolutionMap = new Map();
+    for (const resolution of resolutions) {
+      this.resolutionMap.set(_.max(resolution), resolution);
+    }
+  }
+
+  getResolutionsWithIndices(): Array<[number, Vector3]> {
+    return Array.from(this.resolutionMap.entries()).map(entry => {
+      const [powerOfTwo, resolution] = entry;
+      const resolutionIndex = Math.log2(powerOfTwo);
+      return [resolutionIndex, resolution];
+    });
+  }
+
+  indexToPowerOf2(index: number): number {
+    return 2 ** index;
+  }
+
+  hasIndex(index: number): boolean {
+    const powerOfTwo = this.indexToPowerOf2(index);
+    return this.resolutionMap.has(powerOfTwo);
+  }
+
+  getResolutionByIndex(index: number): ?Vector3 {
+    const powerOfTwo = this.indexToPowerOf2(index);
+    return this.getResolutionByPowerOf2(powerOfTwo);
+  }
+
+  getResolutionByIndexWithFallback(index: number): Vector3 {
+    const resolutionMaybe = this.getResolutionByIndex(index);
+    if (resolutionMaybe) {
+      return resolutionMaybe;
+    } else {
+      const powerOf2 = this.indexToPowerOf2(index);
+      return [powerOf2, powerOf2, powerOf2];
+    }
+  }
+
+  getResolutionByPowerOf2(powerOfTwo: number): ?Vector3 {
+    return this.resolutionMap.get(powerOfTwo);
+  }
+
+  getHighestResolutionIndex(): number {
+    return Math.log2(this.getHighestResolutionPowerOf2());
+  }
+
+  getHighestResolutionPowerOf2(): number {
+    return _.max(Array.from(this.resolutionMap.keys()));
+  }
+
+  getClosestExistingIndex(index: number): number {
+    if (this.hasIndex(index)) {
+      return index;
+    }
+
+    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    const indicesWithDistances = indices.map(_index => {
+      const distance = Math.abs(index - _index);
+      return [_index, distance];
+    });
+
+    const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
+    return bestIndexWithDistance[0];
+  }
+}
+
+function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
+  return new ResolutionInfo(resolutions);
+}
+
+// Don't use memoizeOne here, since we want to cache the resolutions for all layers
+// (which are not that many).
+export const getResolutionInfo = _.memoize(_getResolutionInfo);
+
 export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
   return _.chain(dataset.dataSource.dataLayers)
     .map(dataLayer => dataLayer.resolutions)
@@ -56,6 +153,12 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 // we memoize _getResolutions, as well.
 export const getResolutions = memoizeOne(_getResolutions);
 
+function _getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
+  return new ResolutionInfo(getResolutions(dataset));
+}
+
+export const getDatasetResolutionInfo = memoizeOne(_getDatasetResolutionInfo);
+
 function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;
   const maxZoomstep = Maybe.fromNullable(maybeDataset)
@@ -75,26 +178,17 @@ export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
 
-function _getResolutionMapOfSegmentationLayer(dataset: APIDataset): ResolutionsMap {
+function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionInfo {
   const segmentationLayer = getSegmentationLayer(dataset);
   if (!segmentationLayer) {
-    return new Map();
+    return new ResolutionInfo([]);
   }
-  const resolutionsObject = new Map();
-  const colorLayerResolutions = getResolutions(dataset);
-  colorLayerResolutions.forEach((resolution, zoomStep) => {
-    if (
-      segmentationLayer.resolutions.some(segmentationLayerResolution =>
-        _.isEqual(resolution, segmentationLayerResolution),
-      )
-    ) {
-      resolutionsObject.set(zoomStep, [...resolution]);
-    }
-  });
-  return resolutionsObject;
+  return getResolutionInfo(segmentationLayer.new_resolutions);
 }
 
-export const getResolutionMapOfSegmentationLayer = memoizeOne(_getResolutionMapOfSegmentationLayer);
+export const getResolutionInfoOfSegmentationLayer = memoizeOne(
+  _getResolutionInfoOfSegmentationLayer,
+);
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);

@@ -226,7 +226,6 @@ export class DataBucket {
     const bucketData = this.getOrCreateData();
     this.markAndAddBucketForUndo();
     labelFunc(bucketData);
-    this.dirty = true;
     this.throttledTriggerLabeled();
   }
 

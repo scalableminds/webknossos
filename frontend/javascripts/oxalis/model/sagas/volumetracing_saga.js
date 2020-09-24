@@ -1,6 +1,7 @@
 // @flow
 import _ from "lodash";
 
+import DataLayer from "oxalis/model/data_layer";
 import {
   type CopySegmentationLayerAction,
   resetContourAction,
@@ -239,7 +240,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
+  const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const allResolutions = yield* select(state => getResolutions(state.dataset));
@@ -262,10 +263,10 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
-        console.log(
-          `labeling at ${voxelTargetAddress.toString()} with ${templateLabelValue} in zoomStep ${activeZoomStep}`,
-        );
-        cube.labelVoxelInResolution([voxelTargetAddress], templateLabelValue, activeZoomStep);
+        // console.log(
+        //   `labeling at ${voxelTargetAddress.toString()} with ${templateLabelValue} in zoomStep ${activeZoomStep}`,
+        // );
+        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, activeZoomStep);
         const bucket = cube.getBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, activeZoomStep),
         );

@@ -67,6 +67,7 @@ import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import JSZip from "jszip";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
@@ -181,13 +182,32 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    const tryParsingFileAsZip = async file => {
+      try {
+        const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
+        const nmlFileName = Object.keys(zipFile.files).find(key => _.last(key.split(".")) === "nml");
+        const nmlFile = await zipFile.file(nmlFileName).async("blob");
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+        
+        const dataFileName = Object.keys(zipFile.files).find(key => _.last(key.split(".")) === "nml");
+        const dataFile = await zipFile.file(nmlFileName).async("blob");
+
+        // TODO: upload dataFile
+
+        return null; // nmlImportActions;
+      } catch (error) {
+        console.error(`Tried parsing file "${file.name}" as zip but failed. ${error.message}`);
+        return undefined;
+      }
+    };
+
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const ext = _.last(file.name.split("."));
         const tryImportFunctions =
           ext === "nml" || ext === "xml"
             ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
-            : [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+            : [tryParsingFileAsZip];// , tryParsingFileAsProtobuf, tryParsingFileAsNml];
         /* eslint-disable no-await-in-loop */
         for (const importFunction of tryImportFunctions) {
           const maybeImportAction = await importFunction(file);

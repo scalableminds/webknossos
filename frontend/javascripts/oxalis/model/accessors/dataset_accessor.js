@@ -183,7 +183,7 @@ function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionI
   if (!segmentationLayer) {
     return new ResolutionInfo([]);
   }
-  return getResolutionInfo(segmentationLayer.new_resolutions);
+  return getResolutionInfo(segmentationLayer.resolutions);
 }
 
 export const getResolutionInfoOfSegmentationLayer = memoizeOne(

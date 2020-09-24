@@ -23,7 +23,7 @@ class DataLayer {
   activeMapping: ?string;
   activeMappingType: MappingType = "JSON";
   layerRenderingManager: LayerRenderingManager;
-  new_resolutions: Array<Vector3>;
+  resolutions: Array<Vector3>;
   fallbackLayer: ?string;
 
   constructor(
@@ -35,16 +35,16 @@ class DataLayer {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
-    this.new_resolutions = layerInfo.new_resolutions;
+    this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
     const isSegmentation = layerInfo.category === "segmentation";
 
-    ErrorHandling.assert(this.new_resolutions.length > 0, "Resolutions for layer cannot be empty");
+    ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
-      getResolutionInfo(this.new_resolutions),
+      getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       isSegmentation,
     );

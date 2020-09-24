@@ -154,7 +154,7 @@ function* ensureSuitableIsosurface(
   }
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
-  const resolutionInfo = getResolutionInfo(layer.new_resolutions);
+  const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);

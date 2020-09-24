@@ -457,19 +457,19 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
-  console.log(tracing.new_resolutions);
+  console.log(tracing.resolutions);
 
-  // Legacy tracings don't have the `tracing.new_resolutions` property
+  // Legacy tracings don't have the `tracing.resolutions` property
   // since they were created before WK started to maintain multiple resolution
   // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
   // that case.
-  const tracingResolutions = tracing.new_resolutions
-    ? tracing.new_resolutions.map(({ x, y, z }) => [x, y, z])
+  const tracingResolutions = tracing.resolutions
+    ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];
 
   console.log(tracingResolutions);
   const targetResolutions =
-    fallbackLayer != null ? fallbackLayer.new_resolutions : getResolutions(dataset);
+    fallbackLayer != null ? fallbackLayer.resolutions : getResolutions(dataset);
 
   const resolutionsAreSubset = (resAs, resBs) =>
     resAs.every(resA => resBs.some(resB => _.isEqual(resA, resB)));
@@ -478,7 +478,7 @@ function setupLayerForVolumeTracing(
     resolutionsAreSubset(tracingResolutions, targetResolutions);
 
   if (!doResolutionsMatch) {
-    if (tracing.new_resolutions) {
+    if (tracing.resolutions) {
       Toast.warning(
         messages["tracing.volume_resolution_mismatch"],
         {},
@@ -496,7 +496,7 @@ function setupLayerForVolumeTracing(
     category: "segmentation",
     largestSegmentId: tracing.largestSegmentId,
     boundingBox: convertBoundariesToBoundingBox(boundaries),
-    new_resolutions: tracingResolutions,
+    resolutions: tracingResolutions,
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,

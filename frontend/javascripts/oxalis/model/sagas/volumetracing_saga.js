@@ -207,7 +207,6 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
 
 function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
-  // todo: labelWithIterator (1)
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);

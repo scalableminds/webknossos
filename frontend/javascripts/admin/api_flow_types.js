@@ -41,7 +41,7 @@ export type APIMapping = {
 type APIDataLayerBase = {|
   +name: string,
   +boundingBox: BoundingBoxObject,
-  +new_resolutions: Array<Vector3>,
+  +resolutions: Array<Vector3>,
   +elementClass: ElementClass,
 |};
 
@@ -619,7 +619,7 @@ export type ServerVolumeTracing = {|
   // which were created before the multi-resolution capabilities
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
-  new_resolutions?: Array<Point3>,
+  resolutions?: Array<Point3>,
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

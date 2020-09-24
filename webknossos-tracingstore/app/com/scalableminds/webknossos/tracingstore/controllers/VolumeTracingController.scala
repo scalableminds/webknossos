@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -12,10 +14,11 @@ import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import play.api.i18n.Messages
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
@@ -190,4 +193,20 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
+
+  def importTracing(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+    Action.async(parse.multipartFormData) { implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId)
+              currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
+              zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
+              _ <- tracingService.importTracing(tracingId, tracing, zipFile, currentVersion)
+            } yield Ok("ok")
+          }
+        }
+      }
+    }
 }

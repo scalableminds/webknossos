@@ -468,4 +468,59 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
   }
 
+  def importTracing(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Unit] = {
+    // if(currentVersion != tracing.version) return Fox.failure("version.mismatch")
+
+    val volumeLayer = volumeTracingLayer(tracingId, tracing)
+    val mergedVolume = new MergedVolume(tracing.elementClass)
+
+    val originalLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
+    volumeLayer.bucketProvider.bucketStream(1).foreach {
+      case (_, bytes) =>
+        val dataTyped = UnsignedIntegerArray.fromByteArray(bytes, elementClassFromProto(tracing.elementClass))
+        val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+        originalLabelSet ++= nonZeroData
+    }
+    mergedVolume.addLabelSet(originalLabelSet)
+
+    val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
+    ZipIO.withUnziped(zipFile) {
+      case (_, is) =>
+        WKWFile.read(is) {
+          case (header, buckets) =>
+            if (header.numBlocksPerCube == 1) {
+              val dataTyped =
+                UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
+              val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+              importLabelSet ++= nonZeroData
+            }
+        }
+    }
+    mergedVolume.addLabelSet(importLabelSet)
+
+    volumeLayer.bucketProvider.bucketStream(1).foreach {
+      case (position, bytes) =>
+        if (!isAllZero(bytes)) {
+          mergedVolume.add(0, position, bytes)
+        }
+    }
+
+    ZipIO.withUnziped(zipFile) {
+      case (fileName, is) =>
+        WKWFile.read(is) {
+          case (header, buckets) =>
+            if (header.numBlocksPerCube == 1) {
+              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                val data = buckets.next()
+                if (!isAllZero(data)) {
+                  mergedVolume.add(1, bucketPosition, data)
+                }
+              }
+            }
+        }
+    }
+
+    mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+  }
+
 }

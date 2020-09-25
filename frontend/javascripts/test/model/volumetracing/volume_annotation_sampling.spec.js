@@ -1,7 +1,5 @@
-/*
- * cube.spec.js
- * @flow
- */
+// @flow
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
@@ -44,7 +42,9 @@ test.beforeEach(t => {
   const mockedLayer = {
     resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
   };
-  const cube = new Cube([1024, 1024, 1024], 3, "uint32", mockedLayer);
+  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+
+  const cube = new Cube([1024, 1024, 1024], resolutionInfo, "uint32", false);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -467,7 +467,7 @@ test("A labeledVoxelMap should be applied correctly", t => {
     const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);
     expectedBucketData[addr] = 1;
   });
-  applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress);
+  applyVoxelMap(labeledVoxelsMap, cube, 1, get3DAddress, 1, 2, true);
   const labeledBucketData = bucket.getOrCreateData();
   for (let firstDim = 0; firstDim < Constants.BUCKET_WIDTH; firstDim++) {
     for (let secondDim = 0; secondDim < Constants.BUCKET_WIDTH; secondDim++) {

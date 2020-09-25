@@ -188,12 +188,12 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
   // In the long term, getResolutions should not be used anymore.
   // Instead, all the code should use the ResolutionInfo class which represents
   // exactly which resolutions exist.
-  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
+  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
   if (!mostExtensiveResolutions) {
     return [];
   }
 
-  return mostExtensiveResolutions;
+  return convertToDenseResolution(mostExtensiveResolutions);
 }
 
 // _getResolutions itself is not very performance intensive, but other functions which rely

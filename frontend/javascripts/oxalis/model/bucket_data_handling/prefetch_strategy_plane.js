@@ -3,6 +3,7 @@
 import _ from "lodash";
 
 import type { Area } from "oxalis/model/accessors/flycam_accessor";
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -83,8 +84,9 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     activePlane: OrthoView,
     areas: OrthoViewMap<Area>,
     resolutions: Vector3[],
+    resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
-    const zoomStep = Math.min(currentZoomStep, cube.MAX_ZOOM_STEP);
+    const zoomStep = resolutionInfo.getClosestExistingIndex(currentZoomStep);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
     const queueItemsForCurrentZoomStep = this.prefetchImpl(

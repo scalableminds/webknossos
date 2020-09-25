@@ -202,7 +202,7 @@ class DataCube {
   }
 
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
-    if (zoomStep >= this.MAX_ZOOM_STEP + 1) {
+    if (this.cubes[zoomStep] == null) {
       return false;
     }
 

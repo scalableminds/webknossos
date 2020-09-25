@@ -19,6 +19,8 @@ import {
   getByteCount,
   getElementClass,
   isLayerVisible,
+  getLayerByName,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -163,7 +165,11 @@ export default class LayerRenderingManager {
     const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
 
-    if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
+    const layer = getLayerByName(dataset, this.name);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const maximumResolutionIndex = resolutionInfo.getHighestResolutionIndex();
+
+    if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high
       this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
       return this.cachedAnchorPoint;
@@ -244,7 +250,7 @@ export default class LayerRenderingManager {
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
-            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_ZOOM_STEP)
+            .filter(({ bucket }) => resolutionInfo.hasIndex(bucket.zoomedAddress[3]))
             .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
 
           this.pullQueue.addAll(missingBuckets);

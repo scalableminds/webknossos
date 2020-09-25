@@ -26,6 +26,7 @@ import {
   getSegmentationLayer,
   isElementClassSupported,
   getResolutions,
+  convertToDenseResolution,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -65,7 +66,7 @@ import Store, { type TraceOrViewCommand, type AnnotationType } from "oxalis/stor
 import Toast from "libs/toast";
 import UrlManager, { type UrlManagerState } from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
 
@@ -320,58 +321,21 @@ function initializeDataset(
     dataset.dataSource.dataLayers = newDataLayers;
   });
 
-  // ensureDenseLayerResolutions(dataset);
-  // ensureMatchingLayerResolutions(dataset);
+  ensureMatchingLayerResolutions(dataset);
   Store.dispatch(setDatasetAction(dataset));
 }
 
-// export function ensureDenseLayerResolutions(dataset: APIDataset) {
-//   const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
-//   for (const layer of dataset.dataSource.dataLayers) {
-//     // For segmentation layer
-//     if (layer.category === "color") {
-//       layer.resolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
-//     }
-//   }
-// }
+export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
+  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
 
-// TODO: (1) restore ensureMatchingLayerResolutions
-// export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-//   const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
-//   for (const layer of dataset.dataSource.dataLayers) {
-//     for (const resolution of layer.resolutions) {
-//       if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
-//         Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
-//       }
-//     }
-//   }
-// }
-
-export function convertToDenseResolution(
-  resolutions: Array<Vector3>,
-  fallbackDenseResolutions?: Array<Vector3>,
-): Array<Vector3> {
-  // Each resolution entry can be characterized by it's greatest resolution dimension.
-  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-
-  // This function returns an array of resolutions, for which each index will
-  // hold a resolution with highest_dim === 2**index.
-
-  if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
-    throw new Error("Max dimension in resolutions is not unique.");
+  for (const layer of dataset.dataSource.dataLayers) {
+    const denseResolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
+    for (const resolution of denseResolutions) {
+      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
+        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
+      }
+    }
   }
-  const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
-  const resolutionsLookUp = _.keyBy(resolutions, _.max);
-  const fallbackResolutionsLookUp = _.keyBy(fallbackDenseResolutions || [], _.max);
-
-  return _.range(0, paddedResolutionCount).map(exp => {
-    const resPower = 2 ** exp;
-    // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
-    const fallback = fallbackResolutionsLookUp[resPower] || [resPower, resPower, resPower];
-    return resolutionsLookUp[resPower] || fallback;
-  });
 }
 
 function initializeSettings(initialUserSettings: Object, initialDatasetSettings: Object): void {

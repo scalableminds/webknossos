@@ -15,11 +15,7 @@ import {
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
 import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
-import {
-  getResolutions,
-  getResolutionInfoOfSegmentationLayer,
-  ResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getResolutions, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -56,7 +52,6 @@ class DataCube {
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   bucketCount: number = 0;
-  MAX_ZOOM_STEP: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
@@ -68,6 +63,7 @@ class DataCube {
   trigger: Function;
   on: Function;
   off: Function;
+  resolutionInfo: ResolutionInfo;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -92,8 +88,7 @@ class DataCube {
     this.upperBoundary = upperBoundary;
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
-
-    this.MAX_ZOOM_STEP = resolutionInfo.getHighestResolutionIndex();
+    this.resolutionInfo = resolutionInfo;
 
     _.extend(this, BackboneEvents);
 
@@ -108,16 +103,6 @@ class DataCube {
     ];
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
-    const { dataset } = Store.getState();
-
-    // let resolutionInfo;
-    // if (isSegmentation) {
-    //   // TODO (1): check this could simply use the resolution info of the layer.
-    //   // Then, the cube map would be sparse, though. Is this a problem?
-    //   resolutionInfo = getResolutionInfoOfSegmentationLayer(dataset);
-    // } else {
-    //   resolutionInfo = getDatasetResolutionInfo(dataset);
-    // }
 
     for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
       const zoomedCubeBoundary = [
@@ -350,8 +335,8 @@ class DataCube {
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-    const resolutionInfo = getResolutionInfoOfSegmentationLayer(Store.getState().dataset);
-    for (const [resolutionIndex, _resolution] of resolutionInfo.getResolutionsWithIndices()) {
+
+    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       while (iterator.hasNext) {
         const voxel = iterator.getNext();
         this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
@@ -368,8 +353,8 @@ class DataCube {
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-    const resolutionInfo = getResolutionInfoOfSegmentationLayer(Store.getState().dataset);
-    for (const [resolutionIndex, _resolution] of resolutionInfo.getResolutionsWithIndices()) {
+
+    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
     }
 
@@ -575,7 +560,7 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
+    const resolution = this.resolutionInfo.getResolutionByIndexWithFallback(zoomStep);
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }

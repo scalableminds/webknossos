@@ -212,7 +212,7 @@ class PlaneMaterialFactory {
       const layerName = sanitizeName(dataLayer.name);
       this.uniforms[`${layerName}_maxZoomStep`] = {
         type: "f",
-        value: dataLayer.cube.MAX_ZOOM_STEP,
+        value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
       };
       this.uniforms[`${layerName}_alpha`] = {
         type: "f",

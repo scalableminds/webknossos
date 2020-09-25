@@ -176,7 +176,10 @@ export default class LayerRenderingManager {
     }
 
     const resolutions = getResolutions(dataset);
-    const subBucketLocality = getSubBucketLocality(position, resolutions[logZoomStep]);
+    const subBucketLocality = getSubBucketLocality(
+      position,
+      resolutionInfo.getResolutionByIndexWithFallback(logZoomStep),
+    );
     const areas = getAreasFromState(state);
 
     const matrix = getZoomedMatrix(state.flycam);
@@ -269,8 +272,9 @@ export default class LayerRenderingManager {
 
   maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
     const state = Store.getState();
-    const resolutions = getResolutions(state.dataset);
-    const resolution = resolutions[logZoomStep];
+    const layer = getLayerByName(state.dataset, this.name);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolution = resolutionInfo.getResolutionByIndexWithFallback(logZoomStep);
     const addressSpaceDimensions = getAddressSpaceDimensions(
       state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );

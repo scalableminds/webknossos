@@ -141,12 +141,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
-  getDeleteButton = (layerName: string) => (
+  getDeleteButton = () => (
     <Tooltip title="Unlink dataset's original segmentation layer">
       <Icon
         type="stop"
         onClick={() => {
-          this.removeFallbackLayer(layerName);
+          this.removeFallbackLayer();
         }}
         style={{
           position: "absolute",
@@ -158,7 +158,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     </Tooltip>
   );
 
-  removeFallbackLayer = (layerName: string) => {
+  removeFallbackLayer = () => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
       content: (
@@ -297,7 +297,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
-          {isFallbackLayer ? this.getDeleteButton(layerName) : null}
+          {isFallbackLayer ? this.getDeleteButton() : null}
         </Col>
       </Row>
     );

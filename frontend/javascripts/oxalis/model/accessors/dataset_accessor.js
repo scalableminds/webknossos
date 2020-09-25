@@ -83,7 +83,7 @@ export class ResolutionInfo {
   getResolutionByIndexOrThrow(index: number): Vector3 {
     const resolution = this.getResolutionByIndex(index);
     if (!resolution) {
-      throw new Error(`Resolution with in index {index} does not exist`);
+      throw new Error(`Resolution with in index ${index} does not exist`);
     }
     return resolution;
   }
@@ -152,13 +152,43 @@ export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3>
     .valueOf();
 }
 
+export function convertToDenseResolution(
+  resolutions: Array<Vector3>,
+  fallbackDenseResolutions?: Array<Vector3>,
+): Array<Vector3> {
+  // Each resolution entry can be characterized by it's greatest resolution dimension.
+  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
+  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
+
+  // This function returns an array of resolutions, for which each index will
+  // hold a resolution with highest_dim === 2**index.
+
+  if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+    throw new Error("Max dimension in resolutions is not unique.");
+  }
+  const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
+  const resolutionsLookUp = _.keyBy(resolutions, _.max);
+  const fallbackResolutionsLookUp = _.keyBy(fallbackDenseResolutions || [], _.max);
+
+  return _.range(0, paddedResolutionCount).map(exp => {
+    const resPower = 2 ** exp;
+    // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
+    const fallback = fallbackResolutionsLookUp[resPower] || [resPower, resPower, resPower];
+    return resolutionsLookUp[resPower] || fallback;
+  });
+}
+
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
   // unequal resolutions will result in undefined behavior.
   // However, if resolutions are subset of each other, everything should be fine.
   // For that case, returning the longest resolutions array should suffice
 
-  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
+  // In the long term, getResolutions should not be used anymore.
+  // Instead, all the code should use the ResolutionInfo class which represents
+  // exactly which resolutions exist.
+  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
   if (!mostExtensiveResolutions) {
     return [];
   }

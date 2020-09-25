@@ -87,6 +87,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
     const zoomStep = resolutionInfo.getClosestExistingIndex(currentZoomStep);
+    const maxZoomStep = resolutionInfo.getHighestResolutionIndex();
     const zoomStepDiff = currentZoomStep - zoomStep;
 
     const queueItemsForCurrentZoomStep = this.prefetchImpl(
@@ -102,7 +103,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     );
 
     let queueItemsForFallbackZoomStep = [];
-    const fallbackZoomStep = Math.min(cube.MAX_ZOOM_STEP, currentZoomStep + 1);
+    const fallbackZoomStep = Math.min(maxZoomStep, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
       queueItemsForFallbackZoomStep = this.prefetchImpl(
         cube,

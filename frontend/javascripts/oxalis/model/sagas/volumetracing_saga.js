@@ -63,7 +63,6 @@ import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
-import api from "oxalis/api/internal_api";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
@@ -426,9 +425,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
   // The pivotIndex is the index within allResolutionsWithIndices which refers to
   // the labeled resolution.
-  const pivotIndex = allResolutionsWithIndices.findIndex(
-    ([index, resolution]) => index === labeledZoomStep,
-  );
+  const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
   // `downsampleSequence` contains the current mag and all higher mags (to which
   // should be downsampled)
   const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);

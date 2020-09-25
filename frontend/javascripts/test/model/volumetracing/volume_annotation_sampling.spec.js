@@ -2,8 +2,6 @@
  * cube.spec.js
  * @flow
  */
-import _ from "lodash";
-
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,

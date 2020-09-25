@@ -11,8 +11,8 @@ function upsampleVoxelMap(
   dataCube: DataCube,
   sourceResolution: Vector3,
   sourceZoomStep: number,
-  goalResolution: Vector3,
-  goalZoomStep: number,
+  targetResolution: Vector3,
+  targetZoomStep: number,
   dimensionIndices: DimensionMap,
   thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
@@ -20,22 +20,22 @@ function upsampleVoxelMap(
   // iterating over the buckets in the higher resolution that are covered by the bucket.
   // For each covered bucket all labeled voxel entries are upsampled with a kernel an marked in an array for the covered bucket.
   // Therefore all covered buckets with their marked array build the upsampled version of the given LabeledVoxelsMap.
-  if (sourceZoomStep <= goalZoomStep) {
+  if (sourceZoomStep <= targetZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }
-  const labeledVoxelMapInGoalResolution: LabeledVoxelsMap = new Map();
-  const scaleToSource = map3((val, index) => val / sourceResolution[index], goalResolution);
+  const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
+  const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
   // This array serves multiple purposes. It has a name / variable for each purpose.
-  const scaleToGoal = map3((val, index) => val / goalResolution[index], sourceResolution);
+  const scaleToGoal = map3((val, index) => val / targetResolution[index], sourceResolution);
   const numberOfBucketWithinSourceBucket = scaleToGoal;
-  const singleVoxelBoundsInGoalResolution = scaleToGoal;
+  const singleVoxelBoundsInTargetResolution = scaleToGoal;
   const boundsOfGoalBucketWithinSourceBucket = map3(
     value => Math.ceil(value * constants.BUCKET_WIDTH),
     scaleToSource,
   );
   // This is the buckets zoomed address part of the third dimension.
   const thirdDimensionBucketValue = Math.floor(
-    thirdDimensionVoxelValue / goalResolution[dimensionIndices[2]] / constants.BUCKET_WIDTH,
+    thirdDimensionVoxelValue / targetResolution[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
@@ -65,13 +65,13 @@ function upsampleVoxelMap(
         let annotatedAtleastOneVoxel = false;
         const currentGoalBucket = dataCube.getOrCreateBucket([
           ...currentGoalBucketAddress,
-          goalZoomStep,
+          targetZoomStep,
         ]);
         if (currentGoalBucket.type === "null") {
           console.warn(
             messages["sampling.could_not_get_or_create_bucket"]([
               ...currentGoalBucketAddress,
-              goalZoomStep,
+              targetZoomStep,
             ]),
           );
           continue;
@@ -99,25 +99,25 @@ function upsampleVoxelMap(
                   secondDimVoxelOffset
               ] === 1
             ) {
-              const kernelTopLeftVoxelInGoalResolution = [
-                kernelLeft * singleVoxelBoundsInGoalResolution[dimensionIndices[0]],
-                kernelTop * singleVoxelBoundsInGoalResolution[dimensionIndices[1]],
+              const kernelTopLeftVoxelInTargetResolution = [
+                kernelLeft * singleVoxelBoundsInTargetResolution[dimensionIndices[0]],
+                kernelTop * singleVoxelBoundsInTargetResolution[dimensionIndices[1]],
               ];
               // The labeled voxel is upscaled using a kernel.
               for (
                 let firstKernelOffset = 0;
-                firstKernelOffset < singleVoxelBoundsInGoalResolution[dimensionIndices[0]];
+                firstKernelOffset < singleVoxelBoundsInTargetResolution[dimensionIndices[0]];
                 firstKernelOffset++
               ) {
                 for (
                   let secondKernelOffset = 0;
-                  secondKernelOffset < singleVoxelBoundsInGoalResolution[dimensionIndices[1]];
+                  secondKernelOffset < singleVoxelBoundsInTargetResolution[dimensionIndices[1]];
                   secondKernelOffset++
                 ) {
                   currentGoalVoxelMap[
-                    (kernelTopLeftVoxelInGoalResolution[0] + firstKernelOffset) *
+                    (kernelTopLeftVoxelInTargetResolution[0] + firstKernelOffset) *
                       constants.BUCKET_WIDTH +
-                      kernelTopLeftVoxelInGoalResolution[1] +
+                      kernelTopLeftVoxelInTargetResolution[1] +
                       secondKernelOffset
                   ] = 1;
                 }
@@ -127,12 +127,15 @@ function upsampleVoxelMap(
           }
         }
         if (annotatedAtleastOneVoxel) {
-          labeledVoxelMapInGoalResolution.set(currentGoalBucket.zoomedAddress, currentGoalVoxelMap);
+          labeledVoxelMapInTargetResolution.set(
+            currentGoalBucket.zoomedAddress,
+            currentGoalVoxelMap,
+          );
         }
       }
     }
   }
-  return labeledVoxelMapInGoalResolution;
+  return labeledVoxelMapInTargetResolution;
 }
 
 function downsampleVoxelMap(
@@ -140,20 +143,20 @@ function downsampleVoxelMap(
   dataCube: DataCube,
   sourceResolution: Vector3,
   sourceZoomStep: number,
-  goalResolution: Vector3,
-  goalZoomStep: number,
+  targetResolution: Vector3,
+  targetZoomStep: number,
   dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
   // This method downsamples a LabeledVoxelsMap. For each bucket of the LabeledVoxelsMap
   // the matching bucket the lower resolution is determined and all the labeledVoxels
   // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
   // checking whether to label a downsampled voxels if already one labeled voxel matching the downsampled voxel is found.
-  if (goalZoomStep <= sourceZoomStep) {
+  if (targetZoomStep <= sourceZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }
-  const labeledVoxelMapInGoalResolution: LabeledVoxelsMap = new Map();
-  const scaleToSource = map3((val, index) => val / sourceResolution[index], goalResolution);
-  const scaleToGoal = map3((val, index) => val / goalResolution[index], sourceResolution);
+  const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
+  const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
+  const scaleToGoal = map3((val, index) => val / targetResolution[index], sourceResolution);
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (labeledBucket.type === "null") {
@@ -164,10 +167,10 @@ function downsampleVoxelMap(
       (value, index) => Math.floor(value * scaleToGoal[index]),
       labeledBucket.getAddress(),
     );
-    const goalBucket = dataCube.getOrCreateBucket([...goalBucketAddress, goalZoomStep]);
+    const goalBucket = dataCube.getOrCreateBucket([...goalBucketAddress, targetZoomStep]);
     if (goalBucket.type === "null") {
       console.warn(
-        messages["sampling.could_not_get_or_create_bucket"]([...goalBucketAddress, goalZoomStep]),
+        messages["sampling.could_not_get_or_create_bucket"]([...goalBucketAddress, targetZoomStep]),
       );
       continue;
     }
@@ -186,7 +189,7 @@ function downsampleVoxelMap(
       bucketOffset,
     );
     const goalVoxelMap =
-      labeledVoxelMapInGoalResolution.get(goalBucket.zoomedAddress) ||
+      labeledVoxelMapInTargetResolution.get(goalBucket.zoomedAddress) ||
       new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
     // Iterate over the voxelMap in the goal resolution and search in each voxel for a labeled voxel (kernel-wise iteration).
     const kernelSize = map3(scaleValue => Math.ceil(scaleValue), scaleToSource);
@@ -231,9 +234,9 @@ function downsampleVoxelMap(
         }
       }
     }
-    labeledVoxelMapInGoalResolution.set(goalBucket.zoomedAddress, goalVoxelMap);
+    labeledVoxelMapInTargetResolution.set(goalBucket.zoomedAddress, goalVoxelMap);
   }
-  return labeledVoxelMapInGoalResolution;
+  return labeledVoxelMapInTargetResolution;
 }
 
 export default function sampleVoxelMapToResolution(
@@ -241,29 +244,29 @@ export default function sampleVoxelMapToResolution(
   dataCube: DataCube,
   sourceResolution: Vector3,
   sourceZoomStep: number,
-  goalResolution: Vector3,
-  goalZoomStep: number,
+  targetResolution: Vector3,
+  targetZoomStep: number,
   dimensionIndices: DimensionMap,
   thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
-  if (sourceZoomStep < goalZoomStep) {
+  if (sourceZoomStep < targetZoomStep) {
     return downsampleVoxelMap(
       labeledVoxelMap,
       dataCube,
       sourceResolution,
       sourceZoomStep,
-      goalResolution,
-      goalZoomStep,
+      targetResolution,
+      targetZoomStep,
       dimensionIndices,
     );
-  } else if (goalZoomStep < sourceZoomStep) {
+  } else if (targetZoomStep < sourceZoomStep) {
     return upsampleVoxelMap(
       labeledVoxelMap,
       dataCube,
       sourceResolution,
       sourceZoomStep,
-      goalResolution,
-      goalZoomStep,
+      targetResolution,
+      targetZoomStep,
       dimensionIndices,
       thirdDimensionVoxelValue,
     );

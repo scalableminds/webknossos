@@ -44,7 +44,10 @@ import {
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutionInfoOfSegmentationLayer,
+  ResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import Constants, {
   type BoundingBoxType,
   type ContourMode,
@@ -243,7 +246,12 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const allResolutions = yield* select(state => getResolutions(state.dataset));
+  const resolutionInfo = yield* select(state =>
+    getResolutionInfoOfSegmentationLayer(state.dataset),
+  );
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+  console.log("labeledZoomStep", labeledZoomStep);
+
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
@@ -255,25 +263,22 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   const labeledVoxelMapOfCopiedVoxel: LabeledVoxelsMap = new Map();
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
-    const templateLabelValue = cube.getDataValue(voxelTemplateAddress);
+    const templateLabelValue = cube.getDataValue(voxelTemplateAddress, null, labeledZoomStep);
 
     // Only copy voxels from the previous layer which belong to the current cell
     if (templateLabelValue === activeCellId) {
-      const currentLabelValue = cube.getDataValue(voxelTargetAddress);
+      const currentLabelValue = cube.getDataValue(voxelTargetAddress, null, labeledZoomStep);
 
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
-        // console.log(
-        //   `labeling at ${voxelTargetAddress.toString()} with ${templateLabelValue} in zoomStep ${activeZoomStep}`,
-        // );
-        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, activeZoomStep);
+        cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, labeledZoomStep);
         const bucket = cube.getBucket(
-          cube.positionToZoomedAddress(voxelTargetAddress, activeZoomStep),
+          cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
         );
         if (bucket.type === "null") {
           return;
         }
-        const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, activeZoomStep);
+        const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
         const labelMapOfBucket =
           labeledVoxelMapOfCopiedVoxel.get(bucket.zoomedAddress) ||
           new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(0);
@@ -309,9 +314,9 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
   applyLabeledVoxelMapToAllMissingResolutions(
     labeledVoxelMapOfCopiedVoxel,
-    activeZoomStep,
+    labeledZoomStep,
     dimensionIndices,
-    allResolutions,
+    resolutionInfo,
     cube,
     activeCellId,
     z,
@@ -336,13 +341,16 @@ export function* floodFill(): Saga<void> {
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
     const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
-    // use getResolutionMapOfSegmentationLayer
-    const allResolutions = yield* select(state => getResolutions(state.dataset));
-    const activeResolution = allResolutions[activeZoomStep];
+    const resolutionInfo = yield* select(state =>
+      getResolutionInfoOfSegmentationLayer(state.dataset),
+    );
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+
+    const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
     // The floodfill and applyVoxelMap methods of iterates within the bucket.
     // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
     const thirdDimensionValue =
-      Math.floor(seedVoxel[dimensionIndices[2]] / activeResolution[dimensionIndices[2]]) %
+      Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
     const get3DAddress = (voxel: Vector2) => {
       const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
@@ -365,16 +373,16 @@ export function* floodFill(): Saga<void> {
       get2DAddress,
       dimensionIndices,
       currentViewportBounding,
-      activeZoomStep,
+      labeledZoomStep,
     );
     if (labeledVoxelMapFromFloodFill == null) {
       continue;
     }
     applyLabeledVoxelMapToAllMissingResolutions(
       labeledVoxelMapFromFloodFill,
-      activeZoomStep,
+      labeledZoomStep,
       dimensionIndices,
-      allResolutions,
+      resolutionInfo,
       cube,
       activeCellId,
       seedVoxel[dimensionIndices[2]],
@@ -385,13 +393,17 @@ export function* floodFill(): Saga<void> {
   }
 }
 
-// TODO: (1) Iterate over all resolutions of the segmentation layer, not the resolutions of the color layers.
-// To get all segmentation layer resolutions, use: getResolutionMapOfSegmentationLayer
+function* pairwise<T>(arr: Array<T>): Generator<[T, T], *, *> {
+  for (let i = 0; i < arr.length - 1; i++) {
+    yield [arr[i], arr[i + 1]];
+  }
+}
+
 function applyLabeledVoxelMapToAllMissingResolutions(
   labeledVoxelMapToApply: LabeledVoxelsMap,
-  activeZoomStep: number,
+  labeledZoomStep: number,
   dimensionIndices: DimensionMap,
-  allResolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number,
@@ -408,28 +420,45 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     ];
     return orderedVoxelWithThirdDimension;
   };
-  // debugger;
-  // First upscale the voxel map and apply it to all higher resolutions.
-  for (let zoomStep = activeZoomStep - 1; zoomStep >= 0; zoomStep--) {
-    const goalResolution = allResolutions[zoomStep];
-    const sourceResolution = allResolutions[zoomStep + 1];
+
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  // Get all available resolutions and divide the list into two parts.
+  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  // The pivotIndex is the index within allResolutionsWithIndices which refers to
+  // the labeled resolution.
+  const pivotIndex = allResolutionsWithIndices.findIndex(
+    ([index, resolution]) => index === labeledZoomStep,
+  );
+  // `downsampleSequence` contains the current mag and all higher mags (to which
+  // should be downsampled)
+  const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
+  // `upsampleSequence` contains the current mag and all lower mags (to which
+  // should be downsampled)
+  const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
+
+  // First upsample the voxel map and apply it to all better resolutions.
+  // sourceZoomStep will be higher than targetZoomStep
+  for (const [source, target] of pairwise(upsampleSequence)) {
+    const [sourceZoomStep, sourceResolution] = source;
+    const [targetZoomStep, targetResolution] = target;
+
     currentLabeledVoxelMap = sampleVoxelMapToResolution(
       currentLabeledVoxelMap,
       segmentationCube,
       sourceResolution,
-      zoomStep + 1,
-      goalResolution,
-      zoomStep,
+      sourceZoomStep,
+      targetResolution,
+      targetZoomStep,
       dimensionIndices,
       thirdDimensionOfSlice,
     );
     // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
-    // in the goal resolution to apply the voxelMap correctly.
+    // in the target resolution to apply the voxelMap correctly.
     thirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / goalResolution[dimensionIndices[2]]) %
+      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
     const numberOfSlices = Math.ceil(
-      allResolutions[activeZoomStep][dimensionIndices[2]] / goalResolution[dimensionIndices[2]],
+      labeledResolution[dimensionIndices[2]] / targetResolution[dimensionIndices[2]],
     );
     applyVoxelMap(
       currentLabeledVoxelMap,
@@ -442,24 +471,27 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     );
   }
   currentLabeledVoxelMap = labeledVoxelMapToApply;
-  // Next we downscale the annotation and apply it.
-  for (let zoomStep = activeZoomStep + 1; zoomStep < allResolutions.length; zoomStep++) {
-    const goalResolution = allResolutions[zoomStep];
-    const sourceResolution = allResolutions[zoomStep - 1];
+
+  // Next we downsamplesample the annotation and apply it.
+  // sourceZoomStep will be lower than targetZoomStep
+  for (const [source, target] of pairwise(downsampleSequence)) {
+    const [sourceZoomStep, sourceResolution] = source;
+    const [targetZoomStep, targetResolution] = target;
+
     currentLabeledVoxelMap = sampleVoxelMapToResolution(
       currentLabeledVoxelMap,
       segmentationCube,
       sourceResolution,
-      zoomStep - 1,
-      goalResolution,
-      zoomStep,
+      sourceZoomStep,
+      targetResolution,
+      targetZoomStep,
       dimensionIndices,
       thirdDimensionOfSlice,
     );
     // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
-    // in the goal resolution to apply the voxelMap correctly.
+    // in the target resolution to apply the voxelMap correctly.
     thirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / goalResolution[dimensionIndices[2]]) %
+      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
       Constants.BUCKET_WIDTH;
     applyVoxelMap(
       currentLabeledVoxelMap,

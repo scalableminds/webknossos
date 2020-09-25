@@ -80,6 +80,14 @@ export class ResolutionInfo {
     return this.getResolutionByPowerOf2(powerOfTwo);
   }
 
+  getResolutionByIndexOrThrow(index: number): Vector3 {
+    const resolution = this.getResolutionByIndex(index);
+    if (!resolution) {
+      throw new Error(`Resolution with in index {index} does not exist`);
+    }
+    return resolution;
+  }
+
   getResolutionByIndexWithFallback(index: number): Vector3 {
     const resolutionMaybe = this.getResolutionByIndex(index);
     if (resolutionMaybe) {
@@ -109,8 +117,17 @@ export class ResolutionInfo {
 
     const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
     const indicesWithDistances = indices.map(_index => {
-      const distance = Math.abs(index - _index);
-      return [_index, distance];
+      const distance = index - _index;
+      if (distance >= 0) {
+        // The candidate _index is smaller than the requested index.
+        // Since webKnossos only supports rendering from higher mags,
+        // when a mag is missing, we want to prioritize "higher" mags
+        // when looking for a substitute. Therefore, we artificially
+        // downrank the smaller mag _index.
+        return [_index, distance + 0.5];
+      } else {
+        return [_index, Math.abs(distance)];
+      }
     });
 
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));

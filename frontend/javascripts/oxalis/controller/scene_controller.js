@@ -339,6 +339,11 @@ class SceneController {
   };
 
   update(optArbitraryPlane?: ArbitraryPlane): void {
+    // todo: only do this when we know that it's not necessary (e.g., when merely the mouse position has updated)
+    window.dontUpdate = true;
+    if (window.dontUpdate) {
+      return;
+    }
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);

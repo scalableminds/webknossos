@@ -33,7 +33,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Dimensions from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import PlaneView from "oxalis/view/plane_view";
-import Store, { type OxalisState, type Tracing } from "oxalis/store";
+import Store, { mousePositionProvider, type OxalisState, type Tracing } from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -173,7 +173,8 @@ class PlaneController extends React.PureComponent<Props> {
         if (event.altKey && !event.shiftKey) {
           this.movePlane([-delta.x, -delta.y, 0]);
         } else {
-          Store.dispatch(setMousePositionAction([position.x, position.y]));
+          // Store.dispatch(setMousePositionAction([position.x, position.y]));
+          mousePositionProvider.set(position.x, position.y);
         }
       },
     };

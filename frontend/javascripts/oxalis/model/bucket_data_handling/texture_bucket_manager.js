@@ -171,9 +171,10 @@ export default class TextureBucketManager {
     if (this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
     }
-    window.requestAnimationFrame(() => {
+    setTimeout(() => {
+      // window.requestAnimationFrame(() => {
       this.keepLookUpBufferUpToDate();
-    });
+    }, 50);
   }
 
   // Commit "active" buckets by writing these to the dataTexture.
@@ -231,9 +232,10 @@ export default class TextureBucketManager {
       this.isRefreshBufferOutOfDate = true;
     }
 
-    window.requestAnimationFrame(() => {
+    // window.requestAnimationFrame(() => {
+    setTimeout(() => {
       this.processWriterQueue();
-    });
+    }, 50);
   }
 
   getTextures(): Array<THREE.DataTexture | UpdatableTexture> {

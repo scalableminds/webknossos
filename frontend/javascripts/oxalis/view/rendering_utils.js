@@ -24,14 +24,42 @@ export const setupRenderArea = (
   // In WebGLRenderer.setViewport() and WebGLRenderer.setScissor()
   // (x, y) is the coordinate of the lower left corner of the rectangular region.
   const overallHeight = renderer.domElement.height;
-  renderer.setViewport(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
-  renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
+
+  const factor = window.PIXEL_RATIO_FACTOR || 1;
+
+  let { __f1, __f2, __f3, __f4 } = window;
+  __f1 = __f1 || 1;
+  __f2 = __f2 || 1;
+  __f3 = __f3 || 1;
+  __f4 = __f4 || 1;
+
+  renderer.setViewport(
+    x / factor,
+    overallHeight / factor - y - __f2 * viewportHeight,
+    __f3 * viewportWidth,
+    __f4 * viewportHeight,
+  );
+  renderer.setScissor(
+    x / factor,
+    overallHeight / factor - y - __f2 * viewportHeight,
+    __f3 * viewportWidth,
+    __f4 * viewportHeight,
+  );
+  // renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissorTest(true);
   renderer.setClearColor(color, 1);
 };
 
 export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
+  const factor = window.PIXEL_RATIO_FACTOR || 1;
+  setupRenderArea(
+    renderer,
+    0,
+    0,
+    renderer.domElement.width / factor,
+    renderer.domElement.height / factor,
+    0xffffff,
+  );
   renderer.clear();
 };
 

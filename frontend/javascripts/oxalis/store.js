@@ -489,4 +489,39 @@ const store = createStore<OxalisState, Action, Dispatch<*>>(
 );
 sagaMiddleware.run(rootSaga);
 
+class MousePositionProvider {
+  x: number;
+  y: number;
+  callbacks: Array<(number, number) => void>;
+  constructor() {
+    this.x = 0;
+    this.y = 0;
+
+    this.callbacks = [];
+  }
+
+  get(): [number, number] {
+    return [this.x, this.y];
+  }
+
+  set(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+
+    for (const callback of this.callbacks) {
+      callback(x, y);
+    }
+  }
+
+  listen(callback: (number, number) => void) {
+    this.callbacks.push(callback);
+  }
+
+  unlisten(callback: (number, number) => void) {
+    // TODO
+  }
+}
+
+export const mousePositionProvider = new MousePositionProvider();
+
 export default store;

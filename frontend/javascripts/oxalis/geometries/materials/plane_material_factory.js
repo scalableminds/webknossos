@@ -29,7 +29,7 @@ import {
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
-import Store, { type DatasetLayerConfiguration } from "oxalis/store";
+import Store, { mousePositionProvider, type DatasetLayerConfiguration } from "oxalis/store";
 import * as Utils from "libs/utils";
 import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
@@ -452,28 +452,60 @@ class PlaneMaterialFactory {
 
     const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
-      this.storePropertyUnsubscribers.push(
-        listenToStoreProperty(
-          storeState => storeState.temporaryConfiguration.mousePosition,
-          globalMousePosition => {
-            if (!globalMousePosition) {
-              this.uniforms.isMouseInCanvas.value = false;
-              return;
-            }
-            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
-              return;
-            }
+      let counter = 0;
+      mousePositionProvider.listen((_x, _y) => {
+        if (this.planeID !== OrthoViews.PLANE_XY) {
+          return;
+        }
+        counter++;
+        // if (counter % 2 !== 0) {
+        //   // only render on every 5th update
+        //   return;
+        // }
+        if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+          return;
+        }
 
-            const [x, y, z] = calculateGlobalPos({
-              x: globalMousePosition[0],
-              y: globalMousePosition[1],
-            });
-            this.uniforms.globalMousePosition.value.set(x, y, z);
-            this.uniforms.isMouseInCanvas.value = true;
-          },
-          true,
-        ),
-      );
+        let [x, y, z] = calculateGlobalPos({
+          x: _x,
+          y: _y,
+        });
+        x = Math.floor(x);
+        y = Math.floor(y);
+        z = Math.floor(z);
+
+        const oldValue = this.uniforms.globalMousePosition.value;
+
+        if (oldValue.x != x || oldValue.y !== y || oldValue.z !== z) {
+          this.uniforms.globalMousePosition.value.set(x, y, z);
+          this.uniforms.isMouseInCanvas.value = true;
+
+          window.rerenderNow(OrthoViews.PLANE_XY);
+        }
+      });
+
+      // this.storePropertyUnsubscribers.push(
+      //   listenToStoreProperty(
+      //     storeState => storeState.temporaryConfiguration.mousePosition,
+      //     globalMousePosition => {
+      //       if (!globalMousePosition) {
+      //         this.uniforms.isMouseInCanvas.value = false;
+      //         return;
+      //       }
+      //       if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+      //         return;
+      //       }
+
+      //       const [x, y, z] = calculateGlobalPos({
+      //         x: globalMousePosition[0],
+      //         y: globalMousePosition[1],
+      //       });
+      //       this.uniforms.globalMousePosition.value.set(x, y, z);
+      //       this.uniforms.isMouseInCanvas.value = true;
+      //     },
+      //     true,
+      //   ),
+      // );
 
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(

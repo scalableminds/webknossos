@@ -20,6 +20,8 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
 
+window.PIXEL_RATIO_FACTOR = 0.5;
+
 const createDirLight = (position, target, intensity, parent) => {
   const dirLight = new THREE.DirectionalLight(0xffffff, intensity);
   dirLight.color.setHSL(0.1, 1, 0.95);
@@ -105,7 +107,7 @@ class PlaneView {
     window.requestAnimationFrame(() => this.animate());
   }
 
-  renderFunction(forceRender: boolean = false): void {
+  renderFunction(forceRender: boolean = false, targetPlaneId = null): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
 
@@ -133,11 +135,14 @@ class PlaneView {
 
       renderer.autoClear = true;
 
-      clearCanvas(renderer);
+      // clearCanvas(renderer);
 
       this.throttledPerformIsosurfaceHitTest();
 
       for (const plane of OrthoViewValues) {
+        // if (targetPlaneId != null && plane != targetPlaneId) {
+        //   continue;
+        // }
         SceneController.updateSceneForCam(plane);
         const { left, top, width, height } = viewport[plane];
         if (width > 0 && height > 0) {
@@ -226,7 +231,11 @@ class PlaneView {
 
   resize = (): void => {
     const { width, height } = getDesiredLayoutRect();
-    getSceneController().renderer.setSize(width, height);
+    const { renderer } = getSceneController();
+
+    renderer.setPixelRatio(window.PIXEL_RATIO_FACTOR);
+    renderer.setSize(width * window.PIXEL_RATIO_FACTOR, height * window.PIXEL_RATIO_FACTOR);
+
     this.draw();
   };
 
@@ -248,6 +257,8 @@ class PlaneView {
     this.running = true;
     this.resize();
     this.animate();
+
+    window.rerenderNow = targetPlaneId => this.renderFunction(true, targetPlaneId);
 
     window.addEventListener("resize", this.resizeThrottled);
     this.unbindChangedScaleListener = listenToStoreProperty(

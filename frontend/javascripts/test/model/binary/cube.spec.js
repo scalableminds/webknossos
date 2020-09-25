@@ -10,6 +10,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -54,7 +55,8 @@ test.beforeEach(t => {
   const mockedLayer = {
     resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
   };
-  const cube = new Cube([100, 100, 100], 3, "uint32", mockedLayer);
+  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+  const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),

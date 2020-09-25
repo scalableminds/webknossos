@@ -129,6 +129,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
+  saga.next([1, 1, 1]);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
@@ -152,6 +153,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
+  saga.next([1, 1, 1]);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
@@ -175,6 +177,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
+  saga.next([1, 1, 1]);
   saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);

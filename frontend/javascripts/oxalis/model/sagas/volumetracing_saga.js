@@ -126,12 +126,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       numberOfSlices,
     );
     if (activeTool === VolumeToolEnum.BRUSH) {
-      const currentResolution = yield* select(state => getCurrentResolution(state));
       yield* call(
         labelWithIterator,
         currentLayer.getCircleVoxelIterator(
           startEditingAction.position,
-          currentResolution,
+          activeResolution,
           activeViewportBounding,
         ),
         contourTracingMode,

@@ -49,7 +49,7 @@ import {
   type TracingType,
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
-import type { DatasetConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
@@ -670,6 +670,25 @@ export function getUpdateActionLog(
   return doWithToken(token =>
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+    ),
+  );
+}
+
+export async function importTracing(tracing: Tracing, dataFile: File): Promise<void> {
+  if (!tracing.volume) {
+    return;
+  }
+  const { tracingId } = tracing.volume;
+
+  await doWithToken(token =>
+    Request.sendMultipartFormReceiveJSON(
+      `${tracing.tracingStore.url}/tracings/volume/${tracingId}/importTracing?token=${token}`,
+      {
+        data: {
+          dataFile,
+          currentVersion: tracing.volume ? tracing.volume.version : 0,
+        },
+      },
     ),
   );
 }

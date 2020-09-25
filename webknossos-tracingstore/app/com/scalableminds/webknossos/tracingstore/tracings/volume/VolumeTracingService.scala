@@ -469,7 +469,7 @@ class VolumeTracingService @Inject()(
   }
 
   def importTracing(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Unit] = {
-    // if(currentVersion != tracing.version) return Fox.failure("version.mismatch")
+    if (currentVersion != tracing.version) return Fox.failure("version.mismatch")
 
     val volumeLayer = volumeTracingLayer(tracingId, tracing)
     val mergedVolume = new MergedVolume(tracing.elementClass)

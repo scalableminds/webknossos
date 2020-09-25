@@ -19,7 +19,7 @@ import {
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import { getBuildInfo } from "admin/admin_rest_api";
+import { getBuildInfo, importTracing } from "admin/admin_rest_api";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
   serializeToNml,
@@ -185,16 +185,24 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const tryParsingFileAsZip = async file => {
       try {
         const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
-        const nmlFileName = Object.keys(zipFile.files).find(key => _.last(key.split(".")) === "nml");
+        const nmlFileName = Object.keys(zipFile.files).find(
+          key => _.last(key.split(".")) === "nml",
+        );
         const nmlFile = await zipFile.file(nmlFileName).async("blob");
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
-        
-        const dataFileName = Object.keys(zipFile.files).find(key => _.last(key.split(".")) === "nml");
-        const dataFile = await zipFile.file(nmlFileName).async("blob");
 
-        // TODO: upload dataFile
+        const dataFileName = Object.keys(zipFile.files).find(
+          key => _.last(key.split(".")) === "zip",
+        );
+        if (dataFileName) {
+          const dataBlob = await zipFile.file(dataFileName).async("blob");
+          const dataFile = new File([dataBlob], dataFileName);
 
-        return null; // nmlImportActions;
+          const state = Store.getState();
+          await importTracing(state.tracing, dataFile);
+        }
+
+        return nmlImportActions;
       } catch (error) {
         console.error(`Tried parsing file "${file.name}" as zip but failed. ${error.message}`);
         return undefined;
@@ -207,7 +215,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const tryImportFunctions =
           ext === "nml" || ext === "xml"
             ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
-            : [tryParsingFileAsZip];// , tryParsingFileAsProtobuf, tryParsingFileAsNml];
+            : [tryParsingFileAsZip]; // , tryParsingFileAsProtobuf, tryParsingFileAsNml];
         /* eslint-disable no-await-in-loop */
         for (const importFunction of tryImportFunctions) {
           const maybeImportAction = await importFunction(file);

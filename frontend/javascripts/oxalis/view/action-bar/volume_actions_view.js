@@ -49,7 +49,7 @@ class VolumeActionsView extends PureComponent<Props> {
     const { activeTool, activeResolution, isInMergerMode } = this.props;
     const hasResolutionWithHigherDimension = activeResolution.some(val => val > 1);
     const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
-      <Tooltip title="You are annotating in a low resolution. You might be annotating multiple slices at once.">
+      <Tooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
         <i className="fas fa-layer-group" />
       </Tooltip>
     ) : null;

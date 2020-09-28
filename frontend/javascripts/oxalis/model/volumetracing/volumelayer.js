@@ -304,7 +304,7 @@ class VolumeLayer {
     return map;
   }
 
-  rectangleToCircles(
+  getRectangleBetweenCircles(
     centre1: Vector2,
     centre2: Vector2,
     radius: number,
@@ -345,7 +345,7 @@ class VolumeLayer {
     ) {
       return null;
     }
-    let [xa, ya, xb, yb, xc, yc, xd, yd] = this.rectangleToCircles(
+    let [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(
       floatingCoord2dLastPosition,
       floatingCoord2dPosition,
       radius,
@@ -361,10 +361,7 @@ class VolumeLayer {
     };
 
     // translate the coordinates so the containing box originates in (0|0)
-    const [diffX, diffY] = [
-      Math.floor(Math.min(xa, xb, xc, xd)),
-      Math.floor(Math.min(ya, yb, yc, yd)),
-    ];
+    const [diffX, diffY] = minCoord2d;
     xa -= diffX;
     ya -= diffY;
     xb -= diffX;
@@ -437,12 +434,15 @@ class VolumeLayer {
       if (mode === VolumeToolEnum.TRACE) {
         Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
       } else if (mode === VolumeToolEnum.BRUSH) {
-        const [xa, ya, xb, yb, xc, yc, xd, yd] = this.rectangleToCircles(p1, p2, radius, [
-          scaleX,
-          scaleY,
-        ]);
-        if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
-          Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
+        // we don't want to connect the last and the first circle with a rectangle
+        if (i !== contourList.length - 1) {
+          const [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(p1, p2, radius, [
+            scaleX,
+            scaleY,
+          ]);
+          if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
+            Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
+          }
         }
         Drawing.fillCircle(p1[0], p1[1], radius, scaleX, scaleY, setMap);
       }

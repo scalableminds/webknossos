@@ -43,7 +43,11 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getLayerBoundaries,
+  getLayerByName,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
@@ -845,7 +849,11 @@ class DataApi {
   }
 
   /**
-   * Returns raw binary data for a given layer, position and zoom level.
+   * Returns raw binary data for a given layer, position and zoom level. If the zoom
+   * level is not provided, the first magnification will be used. If this
+   * magnification does not exist, the next existing magnification will be used.
+   * If the zoom level is provided and points to a not existent magnification,
+   * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket
    * const position = [123, 123, 123];
@@ -857,7 +865,20 @@ class DataApi {
    * @example // Get the segmentation id for a segmentation layer
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
-  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+  async getDataValue(
+    layerName: string,
+    position: Vector3,
+    _zoomStep: ?number = null,
+  ): Promise<number> {
+    let zoomStep;
+    if (_zoomStep != null) {
+      zoomStep = _zoomStep;
+    } else {
+      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+    }
+
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
     const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);

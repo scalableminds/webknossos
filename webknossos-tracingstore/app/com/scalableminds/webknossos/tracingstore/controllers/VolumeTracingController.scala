@@ -1,46 +1,33 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import java.nio.{ByteBuffer, ByteOrder}
+
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
-import com.scalableminds.webknossos.tracingstore.{
-  TracingStoreAccessTokenService,
-  TracingStoreConfig,
-  TracingStoreWkRpcClient
-}
-import com.scalableminds.webknossos.tracingstore.tracings._
+import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.JsonHelper.optionFormat
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import play.api.http.HttpEntity
 import play.api.i18n.Messages
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.{PlayBodyParsers, Result}
+import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
 class VolumeTracingController @Inject()(val tracingService: VolumeTracingService,
                                         val webKnossosServer: TracingStoreWkRpcClient,
                                         val accessTokenService: TracingStoreAccessTokenService,
-                                        config: TracingStoreConfig,
-                                        tracingDataStore: TracingDataStore,
                                         val slackNotificationService: SlackNotificationService)(
     implicit val ec: ExecutionContext,
     val bodyParsers: PlayBodyParsers)
     extends TracingController[VolumeTracing, VolumeTracings] {
 
-  implicit val tracingsCompanion = VolumeTracings
+  implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
   implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings =
     VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
@@ -142,8 +129,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   }
 
   private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(("MISSING-BUCKETS" -> formatMissingBucketList(indices)),
-         ("Access-Control-Expose-Headers" -> "MISSING-BUCKETS"))
+    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
 
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
@@ -179,4 +165,29 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
       }
     }
   }
+
+  def requestIsosurface(tracingId: String) =
+    Action.async(validateJson[WebKnossosIsosurfaceRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+        AllowRemoteOrigin {
+          for {
+            // The client expects the isosurface as a flat float-array. Three consecutive floats form a 3D point, three
+            // consecutive 3D points (i.e., nine floats) form a triangle.
+            // There are no shared vertices between triangles.
+            (vertices, neighbors) <- tracingService.createIsosurface(tracingId, request.body)
+          } yield {
+            // We need four bytes for each float
+            val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+            responseBuffer.asFloatBuffer().put(vertices)
+            Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          }
+        }
+      }
+    }
+
+  private def getNeighborIndices(neighbors: List[Int]) =
+    List(("NEIGHBORS" -> formatNeighborList(neighbors)), ("Access-Control-Expose-Headers" -> "NEIGHBORS"))
+
+  private def formatNeighborList(neighbors: List[Int]): String =
+    "[" + neighbors.mkString(", ") + "]"
 }

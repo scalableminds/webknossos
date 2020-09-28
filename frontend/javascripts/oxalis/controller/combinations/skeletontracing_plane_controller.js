@@ -51,6 +51,7 @@ import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
+import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -88,7 +89,7 @@ export function getPlaneMouseControls(planeView: PlaneView) {
       }
     },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
-      onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
+      onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const { volume } = Store.getState().tracing;
       if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
@@ -278,8 +279,9 @@ function onClick(
   ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
+  event?: MouseEvent,
 ): void {
-  if (!shiftPressed && !isTouch) {
+  if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
     // do nothing
     return;
   }
@@ -325,6 +327,8 @@ function onClick(
     } else {
       Store.dispatch(setActiveNodeAction(nodeId));
     }
+  } else if (shiftPressed && event != null) {
+    isosurfaceLeftClick(position, plane, event);
   }
 }
 

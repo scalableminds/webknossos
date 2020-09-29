@@ -678,7 +678,9 @@ export function getUpdateActionLog(
 export async function importTracing(tracing: Tracing, dataFile: File): Promise<number> {
   return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${tracing.volume ? tracing.volume.tracingId  : "0"}/importTracing?token=${token}`,
+      `${tracing.tracingStore.url}/tracings/volume/${
+        tracing.volume ? tracing.volume.tracingId : "0"
+      }/importTracing?token=${token}`,
       {
         data: {
           dataFile,

@@ -71,7 +71,8 @@ In order to restore the current window, a reload is necessary.`,
   "undo.no_undo":
     "There is no action that could be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "undo.no_redo": "There is no action that could be redone.",
-  "undo.import_tracing": "Importing a volume tracing cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
+  "undo.import_tracing":
+    "Importing a volume tracing cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",

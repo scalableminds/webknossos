@@ -148,9 +148,9 @@ function downsampleVoxelMap(
   dimensionIndices: DimensionMap,
 ): LabeledVoxelsMap {
   // This method downsamples a LabeledVoxelsMap. For each bucket of the LabeledVoxelsMap
-  // the matching bucket the lower resolution is determined and all the labeledVoxels
+  // the matching bucket of the lower resolution is determined and all the labeledVoxels
   // are downsampled to the lower resolution bucket. The downsampling uses a kernel to skip
-  // checking whether to label a downsampled voxels if already one labeled voxel matching the downsampled voxel is found.
+  // checking whether to label a downsampled voxel if already one labeled voxel matching the downsampled voxel is found.
   if (targetZoomStep <= sourceZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");
   }

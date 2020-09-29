@@ -75,7 +75,8 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
   ];
 }
 
-// TODO (1): zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
+// TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
+// See: https://github.com/scalableminds/webknossos/issues/4838
 export function zoomedAddressToAnotherZoomStep(
   [x, y, z, resolutionIndex]: Vector4,
   resolutions: Array<Vector3>,

@@ -114,7 +114,6 @@ export class ResolutionInfo {
     return _.max(Array.from(this.resolutionMap.keys()));
   }
 
-  // todo: consider to only go upwards instead of both directions.
   getClosestExistingIndex(index: number): number {
     if (this.hasIndex(index)) {
       return index;

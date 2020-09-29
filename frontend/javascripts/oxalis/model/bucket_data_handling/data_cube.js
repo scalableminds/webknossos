@@ -331,7 +331,7 @@ class DataCube {
     label: number,
     activeCellId?: ?number = null,
   ): void {
-    // TODO: Do not label voxel in higher resolutions multiple times.
+    // TODO: Do not label voxel in higher resolutions multiple times (also see https://github.com/scalableminds/webknossos/issues/4838)
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
@@ -349,7 +349,7 @@ class DataCube {
 
   labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
     // Also see labelVoxelsInAllResolutions
-    // TODO: Do not label voxel in higher resolutions multiple times.
+    // TODO: Do not label voxel in higher resolutions multiple times (also see https://github.com/scalableminds/webknossos/issues/4838)
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
     // to apply the annotation to all needed resolutions, without labeling voxels multiple times.

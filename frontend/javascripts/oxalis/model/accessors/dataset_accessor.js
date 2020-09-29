@@ -3,6 +3,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
   APIAllowedMode,
   APIDataset,
@@ -518,21 +519,39 @@ export function getEnabledLayers(
   });
 }
 
-function _getMissingLayersNames(state: OxalisState) {
+function _getMissingLayersForCurrentZoom(state: OxalisState) {
   const { dataset } = state;
   const zoomStep = getRequestLogZoomStep(state);
 
-  const missingLayerNames = getEnabledLayers(dataset, state.datasetConfiguration)
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+
+  const missingLayers = getEnabledLayers(dataset, state.datasetConfiguration)
     .map((layer: DataLayerType) => ({
-      name: layer.category === "segmentation" ? "segmentation" : layer.name,
+      layer,
       resolutionInfo: getResolutionInfo(layer.resolutions),
     }))
-    .filter(({ resolutionInfo }) => !resolutionInfo.hasIndex(zoomStep))
-    .map<string>(({ name }) => name);
-  return missingLayerNames;
+    .filter(({ resolutionInfo }) => {
+      const isMissing = !resolutionInfo.hasIndex(zoomStep);
+      if (!isMissing || renderMissingDataBlack) {
+        return isMissing;
+      }
+
+      // The current magnification is missing and fallback rendering
+      // is activated. Thus, check whether one of the fallback
+      // zoomSteps can be rendered.
+      return !_.range(1, maxZoomStepDiff + 1).some(diff => {
+        const fallbackZoomstep = zoomStep + diff;
+        return resolutionInfo.hasIndex(fallbackZoomstep);
+      });
+    })
+    .map<DataLayerType>(({ layer }) => layer);
+  return missingLayers;
 }
 
-export const getMissingLayersNames = reuseInstanceOnEquality(_getMissingLayersNames);
+export const getMissingLayersForCurrentZoom = reuseInstanceOnEquality(
+  _getMissingLayersForCurrentZoom,
+);
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;

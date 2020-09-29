@@ -25,6 +25,7 @@ import {
   getElementClass,
   getBoundaries,
   getEnabledLayers,
+  getMissingLayersForCurrentZoom,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -218,6 +219,13 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1,
       };
+      // If the `_missing` uniform is true, the layer
+      // cannot (and should not) be rendered in the
+      // current mag.
+      this.uniforms[`${layerName}_missing`] = {
+        type: "f",
+        value: 0,
+      };
     }
 
     for (const name of getSanitizedColorLayerNames()) {
@@ -328,6 +336,22 @@ class PlaneMaterialFactory {
         storeState => getRequestLogZoomStep(storeState),
         zoomStep => {
           this.uniforms.zoomStep.value = zoomStep;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getMissingLayersForCurrentZoom(storeState),
+        missingLayers => {
+          const missingLayerNames = missingLayers.map(l => l.name);
+          for (const dataLayer of Model.getAllLayers()) {
+            const sanitizedName = sanitizeName(dataLayer.name);
+            this.uniforms[`${sanitizedName}_missing`].value = missingLayerNames.includes(
+              dataLayer.name,
+            );
+          }
         },
         true,
       ),

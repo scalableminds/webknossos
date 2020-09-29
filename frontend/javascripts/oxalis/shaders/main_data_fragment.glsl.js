@@ -64,6 +64,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
+  uniform float <%= name %>_missing;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -148,47 +149,58 @@ void main() {
   }
 
   <% if (hasSegmentation) { %>
-    vec4 id = getSegmentationId(worldCoordUVW);
+    vec4 id = vec4(0.);
+    vec4 cellIdUnderMouse = vec4(0.);
+    float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_missing);
 
-    vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
+    if (<%= segmentationName%>_effective_alpha > 0.) {
+      id = getSegmentationId(worldCoordUVW);
 
-    // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
-    // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
-    // Passing the mouse position from the 3D viewport is not an option here, since that position
-    // isn't on the orthogonal planes necessarily.
-    vec4 cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
+      vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
+
+      // When hovering an isosurface in the 3D viewport, the hoveredIsosurfaceId contains
+      // the hovered cell id. Otherwise, we use the mouse position to look up the active cell id.
+      // Passing the mouse position from the 3D viewport is not an option here, since that position
+      // isn't on the orthogonal planes necessarily.
+      cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
+    } else {
+
+    }
+
   <% } %>
 
   // Get Color Value(s)
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
+    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_missing);
+    if (<%= name %>_effective_alpha > 0.) {
+      // Get grayscale value for <%= name %>
+      color_value =
+        getMaybeFilteredColorOrFallback(
+          <%= name %>_lookup_texture,
+          <%= formatNumberAsGLSLFloat(layerIndex) %>,
+          <%= name %>_data_texture_width,
+          <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
+          worldCoordUVW,
+          false,
+          fallbackGray
+        ).xyz;
 
-    // Get grayscale value for <%= name %>
-    color_value =
-      getMaybeFilteredColorOrFallback(
-        <%= name %>_lookup_texture,
-        <%= formatNumberAsGLSLFloat(layerIndex) %>,
-        <%= name %>_data_texture_width,
-        <%= formatNumberAsGLSLFloat(packingDegreeLookup[name]) %>,
-        worldCoordUVW,
-        false,
-        fallbackGray
-      ).xyz;
+      <% if (packingDegreeLookup[name] === 2.0) { %>
+        // Workaround for 16-bit color layers
+        color_value = vec3(color_value.g * 256.0 + color_value.r);
+      <% } %>
+      // Keep the color in bounds of min and max
+      color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
+      // Scale the color value according to the histogram settings
+      color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
 
-    <% if (packingDegreeLookup[name] === 2.0) { %>
-      // Workaround for 16-bit color layers
-      color_value = vec3(color_value.g * 256.0 + color_value.r);
-    <% } %>
-    // Keep the color in bounds of min and max
-    color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
-    // Scale the color value according to the histogram settings
-    color_value = (color_value - <%= name %>_min) / (<%= name %>_max - <%= name %>_min);
-
-    // Maybe invert the color using the inverting_factor
-    color_value = abs(color_value - <%= name %>_is_inverted);
-    // Multiply with color and alpha for <%= name %>
-    data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+      // Maybe invert the color using the inverting_factor
+      color_value = abs(color_value - <%= name %>_is_inverted);
+      // Multiply with color and alpha for <%= name %>
+      data_color += color_value * <%= name %>_alpha * <%= name %>_color;
+    }
   <% }) %>
   data_color = clamp(data_color, 0.0, 1.0);
 

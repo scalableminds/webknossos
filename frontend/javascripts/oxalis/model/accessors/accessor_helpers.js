@@ -17,6 +17,9 @@ import _ from "lodash";
 
   As a rule of thumb, this wrapper should be used for selectors which need
   the entire store state.
+
+  Note that this function isn't of any use if the return type of the passed
+  function is a primitive value.
  */
 export function reuseInstanceOnEquality<R, F: (...args: Array<any>) => R>(
   fn: F,

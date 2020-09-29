@@ -19,7 +19,7 @@ import {
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import { getBuildInfo, importTracing } from "admin/admin_rest_api";
+import { getBuildInfo, importTracing, clearCache } from "admin/admin_rest_api";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
   serializeToNml,
@@ -48,9 +48,11 @@ import {
   setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { importTracingAction, setMaxCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { type Action } from "oxalis/model/actions/actions";
+import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
 import Store, {
@@ -198,13 +200,24 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const dataBlob = await zipFile.file(dataFileName).async("blob");
           const dataFile = new File([dataBlob], dataFileName);
 
-          const state = Store.getState();
-          await importTracing(state.tracing, dataFile);
+          const { tracing, dataset } = Store.getState();
+          const newLargestSegmentId = await importTracing(tracing, dataFile);
+
+          if (tracing && tracing.volume) {
+            Store.dispatch(importTracingAction()); // TODO put all in one Action, which gets consumed twice (volume tracing reducer + undo save saga)
+            Store.dispatch(
+              setVersionNumberAction(tracing.volume ? tracing.volume.version + 1 : 1, "volume"),
+            );
+            Store.dispatch(setMaxCellAction(newLargestSegmentId));
+            await clearCache(dataset, tracing.volume ? tracing.volume.tracingId : "whyFlow");
+            api.data.reloadBuckets(tracing.volume ? tracing.volume.tracingId : "whyFlow");
+            window.needsRerender = true;
+          }
         }
 
         return nmlImportActions;
       } catch (error) {
-        console.error(`Tried parsing file "${file.name}" as zip but failed. ${error.message}`);
+        console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;
       }
     };
@@ -212,10 +225,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
         const ext = _.last(file.name.split("."));
-        const tryImportFunctions =
-          ext === "nml" || ext === "xml"
-            ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
-            : [tryParsingFileAsZip]; // , tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        let tryImportFunctions;
+        if (ext === "nml" || ext === "xml")
+          tryImportFunctions = [tryParsingFileAsNml, tryParsingFileAsProtobuf, tryParsingFileAsZip];
+        else if (ext === "zip")
+          tryImportFunctions = [tryParsingFileAsZip, tryParsingFileAsNml, tryParsingFileAsProtobuf];
+        else
+          tryImportFunctions = [tryParsingFileAsProtobuf, tryParsingFileAsNml, tryParsingFileAsZip];
         /* eslint-disable no-await-in-loop */
         for (const importFunction of tryImportFunctions) {
           const maybeImportAction = await importFunction(file);
@@ -224,7 +240,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
         }
         /* eslint-enable no-await-in-loop */
-        throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
+        throw new Error(`"${file.name}" could not be parsed as NML, protobuf or ZIP.`);
       }),
     );
 

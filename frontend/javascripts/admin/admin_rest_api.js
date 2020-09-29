@@ -659,6 +659,7 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+
   return tracing;
 }
 
@@ -674,15 +675,10 @@ export function getUpdateActionLog(
   );
 }
 
-export async function importTracing(tracing: Tracing, dataFile: File): Promise<void> {
-  if (!tracing.volume) {
-    return;
-  }
-  const { tracingId } = tracing.volume;
-
-  await doWithToken(token =>
+export async function importTracing(tracing: Tracing, dataFile: File): Promise<number> {
+  return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(
-      `${tracing.tracingStore.url}/tracings/volume/${tracingId}/importTracing?token=${token}`,
+      `${tracing.tracingStore.url}/tracings/volume/${tracing.volume ? tracing.volume.tracingId  : "0"}/importTracing?token=${token}`,
       {
         data: {
           dataFile,

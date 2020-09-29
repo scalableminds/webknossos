@@ -20,6 +20,7 @@ import {
   VolumeTracingSaveRelevantActions,
   type AddBucketToUndoAction,
   type FinishAnnotationStrokeAction,
+  type ImportTracingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   _all,
@@ -77,12 +78,14 @@ type UndoBucket = { zoomedBucketAddress: Vector4, data: Uint8Array };
 type VolumeAnnotationBatch = Array<UndoBucket>;
 type SkeletonUndoState = { type: "skeleton", data: SkeletonTracing };
 type VolumeUndoState = { type: "volume", data: VolumeAnnotationBatch };
-type UndoState = SkeletonUndoState | VolumeUndoState;
+type WarnUndoState = { type: "warn", reason: string };
+type UndoState = SkeletonUndoState | VolumeUndoState | WarnUndoState;
 
 type racedActionsNeededForUndoRedo = {
   skeletonUserAction: ?SkeletonTracingAction,
   addBucketToUndoAction: ?AddBucketToUndoAction,
   finishAnnotationStrokeAction: ?FinishAnnotationStrokeAction,
+  importTracingAction: ?ImportTracingAction,
   undo: ?UndoAction,
   redo: ?RedoAction,
 };
@@ -102,12 +105,14 @@ export function* collectUndoStates(): Saga<void> {
       skeletonUserAction,
       addBucketToUndoAction,
       finishAnnotationStrokeAction,
+      importTracingAction,
       undo,
       redo,
     } = ((yield* race({
       skeletonUserAction: _take(SkeletonTracingSaveRelevantActions),
       addBucketToUndoAction: _take("ADD_BUCKET_TO_UNDO"),
       finishAnnotationStrokeAction: _take("FINISH_ANNOTATION_STROKE"),
+      importTracingAction: _take("IMPORT_TRACING"),
       undo: _take("UNDO"),
       redo: _take("REDO"),
     }): any): racedActionsNeededForUndoRedo);
@@ -150,6 +155,10 @@ export function* collectUndoStates(): Saga<void> {
       if (undoStack.length > UNDO_HISTORY_SIZE) {
         undoStack.shift();
       }
+    } else if (importTracingAction) {
+      redoStack.splice(0);
+      undoStack.splice(0);
+      undoStack.push(({ type: "warn", reason: messages["undo.import_tracing"] }: WarnUndoState));
     } else if (undo) {
       if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;
@@ -257,6 +266,8 @@ function* applyStateOfStack(
     const volumeBatchToApply = stateToRestore.data;
     const currentVolumeState = yield* call(applyAndGetRevertingVolumeBatch, volumeBatchToApply);
     stackToPushTo.push(currentVolumeState);
+  } else if (stateToRestore.type === "warn") {
+    Toast.info(stateToRestore.reason);
   }
 }
 

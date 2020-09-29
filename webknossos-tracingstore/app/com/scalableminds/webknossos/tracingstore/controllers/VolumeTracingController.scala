@@ -203,8 +203,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               tracing <- tracingService.find(tracingId)
               currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
               zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-              _ <- tracingService.importTracing(tracingId, tracing, zipFile, currentVersion)
-            } yield Ok(Json.toJson(tracingId))
+              largestSegmentId <- tracingService.importTracing(tracingId, tracing, zipFile, currentVersion)
+            } yield Ok(Json.toJson(largestSegmentId))
           }
         }
       }

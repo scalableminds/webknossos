@@ -103,6 +103,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
               case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
               case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
+              case a: ImportTracing                   => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
               case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>
@@ -198,25 +199,31 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
   }
 
-  class MergedVolume(elementClass: ElementClass) extends DataConverter {
+  class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0) extends DataConverter {
     private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
     private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
     private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
+    var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
     def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
       if (labelSets.isEmpty || labelMaps.nonEmpty) {
         ()
       } else {
-        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass).increment
+        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
+        if (initialLargestSegmentId > 0) {
+          labelMaps += mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
+          i = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
+        }
         labelSets.toList.foreach { labelSet =>
           var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
           labelSet.foreach { label =>
-            labelMap += ((label, i))
             i = i.increment
+            labelMap += ((label, i))
           }
           labelMaps += labelMap
         }
+        largestSegmentId = i
       }
 
     def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
@@ -228,7 +235,9 @@ class VolumeTracingService @Inject()(
           dataTyped.zipWithIndex.foreach {
             case (valueTyped, index) =>
               if (!valueTyped.isZero) {
-                val byteValueMapped = if (labelMaps.isEmpty) valueTyped else labelMaps(sourceVolumeIndex)(valueTyped)
+                val byteValueMapped =
+                  if (labelMaps.isEmpty || initialLargestSegmentId > 0 && sourceVolumeIndex == 0) valueTyped
+                  else labelMaps(sourceVolumeIndex)(valueTyped)
                 mutableBucketData(index) = byteValueMapped
               }
           }
@@ -238,9 +247,10 @@ class VolumeTracingService @Inject()(
             mergedVolume += ((bucketPosition, dataTyped))
           } else {
             val dataMapped = dataTyped.map { byteValue =>
-              if (!byteValue.isZero) {
+              if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+                byteValue
+              else
                 labelMaps(sourceVolumeIndex)(byteValue)
-              } else byteValue
             }
             mergedVolume += ((bucketPosition, dataMapped))
           }
@@ -468,20 +478,11 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
   }
 
-  def importTracing(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Unit] = {
+  def importTracing(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] = {
     if (currentVersion != tracing.version) return Fox.failure("version.mismatch")
 
     val volumeLayer = volumeTracingLayer(tracingId, tracing)
-    val mergedVolume = new MergedVolume(tracing.elementClass)
-
-    val originalLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-    volumeLayer.bucketProvider.bucketStream(1).foreach {
-      case (_, bytes) =>
-        val dataTyped = UnsignedIntegerArray.fromByteArray(bytes, elementClassFromProto(tracing.elementClass))
-        val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-        originalLabelSet ++= nonZeroData
-    }
-    mergedVolume.addLabelSet(originalLabelSet)
+    val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
 
     val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     ZipIO.withUnziped(zipFile) {
@@ -520,7 +521,19 @@ class VolumeTracingService @Inject()(
         }
     }
 
-    mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+    val updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
+                                                       System.currentTimeMillis(),
+                                                       List(ImportTracing(mergedVolume.largestSegmentId.toSignedLong)),
+                                                       None,
+                                                       None,
+                                                       None,
+                                                       None,
+                                                       None)
+
+    for {
+      _ <- mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+      _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
+    } yield mergedVolume.largestSegmentId.toSignedLong
   }
 
 }

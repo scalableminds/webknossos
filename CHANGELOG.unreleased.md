@@ -11,7 +11,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.10.0...HEAD)
 
 ### Added
-- 
+- Hybrid tracings can now be imported directly in the tracing view via drag'n'dropp. [#4837](https://github.com/scalableminds/webknossos/pull/4837)
+
 
 ### Changed
 -

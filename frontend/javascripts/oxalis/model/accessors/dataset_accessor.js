@@ -10,11 +10,13 @@ import type {
   APISegmentationLayer,
   ElementClass,
 } from "admin/api_flow_types";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type {
   Settings,
   DataLayerType,
   DatasetConfiguration,
   BoundingBoxObject,
+  OxalisState,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, {
@@ -26,6 +28,7 @@ import constants, {
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
 export type ResolutionsMap = Map<number, Vector3>;
 
@@ -514,6 +517,22 @@ export function getEnabledLayers(
     return settings.isDisabled === Boolean(options.invert);
   });
 }
+
+function _getMissingLayersNames(state: OxalisState) {
+  const { dataset } = state;
+  const zoomStep = getRequestLogZoomStep(state);
+
+  const missingLayerNames = getEnabledLayers(dataset, state.datasetConfiguration)
+    .map((layer: DataLayerType) => ({
+      name: layer.category === "segmentation" ? "segmentation" : layer.name,
+      resolutionInfo: getResolutionInfo(layer.resolutions),
+    }))
+    .filter(({ resolutionInfo }) => !resolutionInfo.hasIndex(zoomStep))
+    .map<string>(({ name }) => name);
+  return missingLayerNames;
+}
+
+export const getMissingLayersNames = reuseInstanceOnEquality(_getMissingLayersNames);
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;

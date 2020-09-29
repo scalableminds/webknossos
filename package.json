@@ -140,6 +140,7 @@
     "autodll-webpack-plugin": "^0.4.2",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
+    "beautiful-react-hooks": "^0.30.5",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
     "comlink": "^4.3.0",

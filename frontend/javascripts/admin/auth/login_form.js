@@ -13,12 +13,16 @@ import features from "features";
 const FormItem = Form.Item;
 const { Password } = Input;
 
-type Props = {|
+type PropsWithoutForm = {|
   layout: "horizontal" | "vertical" | "inline",
-  form: Object,
   onLoggedIn?: () => void,
   hideFooter?: boolean,
   style?: Object,
+|};
+
+type Props = {|
+  ...PropsWithoutForm,
+  form: Object,
 |};
 
 function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
@@ -115,4 +119,7 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
   );
 }
 
-export default Form.create({ fieldNameProp: "name" })(LoginForm);
+const LoginFormWithForm: React$ComponentType<PropsWithoutForm> = Form.create({
+  fieldNameProp: "name",
+})(LoginForm);
+export default LoginFormWithForm;

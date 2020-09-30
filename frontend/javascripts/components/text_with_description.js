@@ -29,6 +29,7 @@ class TextWithDescription extends React.PureComponent<Props> {
     return (
       <React.Fragment>
         {isEditable ? (
+          // $FlowIssue[incompatible-type]
           <EditableTextLabel {...editableProps} />
         ) : (
           <span style={{ margin: "0 10px", display: "inline-block" }}>

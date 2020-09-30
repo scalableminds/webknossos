@@ -61,7 +61,12 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
     const pullQueue = [];
-    const zoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
+    if (zoomStep == null) {
+      // The layer cannot be rendered at this zoom step, as necessary magnifications
+      // are missing. Don't prefetch anything.
+      return pullQueue;
+    }
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);

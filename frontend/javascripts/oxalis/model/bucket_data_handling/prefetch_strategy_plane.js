@@ -86,7 +86,12 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     resolutions: Vector3[],
     resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
-    const zoomStep = resolutionInfo.getClosestExistingIndex(currentZoomStep);
+    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(currentZoomStep);
+    if (zoomStep == null) {
+      // The layer cannot be rendered at this zoom step, as necessary magnifications
+      // are missing. Don't prefetch anything.
+      return [];
+    }
     const maxZoomStep = resolutionInfo.getHighestResolutionIndex();
     const zoomStepDiff = currentZoomStep - zoomStep;
 

@@ -137,6 +137,21 @@ export class ResolutionInfo {
     const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
     return bestIndexWithDistance[0];
   }
+
+  getIndexOrClosestHigherIndex(requestedIndex: number): ?number {
+    if (this.hasIndex(requestedIndex)) {
+      return requestedIndex;
+    }
+
+    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    for (const index of indices) {
+      if (index > requestedIndex) {
+        // Return the first existing index which is higher than the requestedIndex
+        return index;
+      }
+    }
+    return null;
+  }
 }
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {

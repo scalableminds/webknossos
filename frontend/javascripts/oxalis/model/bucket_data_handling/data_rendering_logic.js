@@ -254,6 +254,7 @@ export function computeDataTexturesSetup<Layer: { elementClass: ElementClass }>(
   hasSegmentation: boolean,
   requiredBucketCapacity: number,
 ): * {
+  // $FlowFixMe[incompatible-call] Cannot call buildTextureInformationMap because the expected type is not parametric in Layer
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,

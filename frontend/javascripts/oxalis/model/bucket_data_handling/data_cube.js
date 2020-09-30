@@ -317,7 +317,7 @@ class DataCube {
           if (
             Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
           ) {
-            this.labelVoxelInResolution([x, y, z], 5, 0);
+            this.labelVoxelInResolution([x, y, z], 0, 5);
           }
         }
       }
@@ -415,7 +415,7 @@ class DataCube {
     // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
     // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
-    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter is somewhere else.
+    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
     const bucketsWithLabeledVoxelsMap: LabeledVoxelsMap = new Map();

@@ -55,7 +55,7 @@ class VolumeActionsView extends PureComponent<Props> {
     ) : null;
     const isTraceToolDisabled = isZoomStepTooHighForTraceTool();
     const traceToolDisabledTooltip = isTraceToolDisabled
-      ? "Your zoom is low to use the trace tool. Please zoom in further to use it."
+      ? "Your zoom is too low to use the trace tool. Please zoom in further to use it."
       : "";
 
     return (

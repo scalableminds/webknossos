@@ -566,6 +566,11 @@ class DataCube {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 
+  /*
+    Given a global coordinate `voxel`, this method returns the coordinate
+    within the bucket to which `voxel` belongs.
+    So, the returned value for x, y and z will be between 0 and 32.
+   */
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];

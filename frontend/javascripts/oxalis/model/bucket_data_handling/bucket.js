@@ -7,6 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
 
+import { mod } from "libs/utils";
 import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
@@ -195,22 +196,18 @@ export class DataBucket {
       zoomStep,
     ];
     let isVoxelOutside = false;
-    const adjustedVoxel = voxel;
+    const adjustedVoxel = [voxel[0], voxel[1]];
     for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
       const dimension = dimensionIndices[dimensionIndex];
-      if (voxel[dimensionIndex] < 0) {
+      if (voxel[dimensionIndex] < 0 || voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
         isVoxelOutside = true;
-        const offset = Math.ceil(-voxel[dimensionIndex] / Constants.BUCKET_WIDTH);
-        neighbourBucketAddress[dimension] -= offset;
-        // Add a full bucket width to the coordinate below 0 to avoid error's
-        // caused by the modulo operation used in getVoxelOffset.
-        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH * offset;
-      } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
-        isVoxelOutside = true;
-        const offset = Math.floor(voxel[dimensionIndex] / Constants.BUCKET_WIDTH);
-        neighbourBucketAddress[dimension] += offset;
-        adjustedVoxel[dimensionIndex] -= Constants.BUCKET_WIDTH * offset;
+        const sign = Math.sign(voxel[dimensionIndex]);
+        const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
+        // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
+        // bucket address
+        neighbourBucketAddress[dimension] += sign * offset;
       }
+      adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);
     }
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };

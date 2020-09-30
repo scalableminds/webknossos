@@ -194,7 +194,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
 
-  def importTracing(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+  def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>
       log {
         accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
@@ -203,7 +203,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               tracing <- tracingService.find(tracingId)
               currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
               zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
-              largestSegmentId <- tracingService.importTracing(tracingId, tracing, zipFile, currentVersion)
+              largestSegmentId <- tracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
             } yield Ok(Json.toJson(largestSegmentId))
           }
         }

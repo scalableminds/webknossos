@@ -675,16 +675,19 @@ export function getUpdateActionLog(
   );
 }
 
-export async function importTracing(tracing: Tracing, dataFile: File): Promise<number> {
+export async function importVolumeTracing(tracing: Tracing, dataFile: File): Promise<number> {
+  const volumeTracing = tracing.volume;
+  if (!volumeTracing) throw new Error("Volume Tracing must exist when importing Volume Tracing.");
+
   return doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(
       `${tracing.tracingStore.url}/tracings/volume/${
-        tracing.volume ? tracing.volume.tracingId : "0"
-      }/importTracing?token=${token}`,
+        volumeTracing.tracingId
+      }/importVolumeData?token=${token}`,
       {
         data: {
           dataFile,
-          currentVersion: tracing.volume ? tracing.volume.version : 0,
+          currentVersion: volumeTracing.version,
         },
       },
     ),

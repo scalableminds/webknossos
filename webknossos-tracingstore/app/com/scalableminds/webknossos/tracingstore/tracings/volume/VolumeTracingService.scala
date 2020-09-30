@@ -103,7 +103,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
               case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
               case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
-              case a: ImportTracing                   => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
+              case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
               case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>
@@ -478,7 +478,7 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
   }
 
-  def importTracing(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] = {
+  def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] = {
     if (currentVersion != tracing.version) return Fox.failure("version.mismatch")
 
     val volumeLayer = volumeTracingLayer(tracingId, tracing)
@@ -521,14 +521,15 @@ class VolumeTracingService @Inject()(
         }
     }
 
-    val updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                                       System.currentTimeMillis(),
-                                                       List(ImportTracing(mergedVolume.largestSegmentId.toSignedLong)),
-                                                       None,
-                                                       None,
-                                                       None,
-                                                       None,
-                                                       None)
+    val updateGroup = UpdateActionGroup[VolumeTracing](
+      tracing.version + 1,
+      System.currentTimeMillis(),
+      List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
+      None,
+      None,
+      None,
+      None,
+      None)
 
     for {
       _ <- mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)

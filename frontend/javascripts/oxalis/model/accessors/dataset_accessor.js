@@ -92,14 +92,27 @@ export class ResolutionInfo {
     return resolution;
   }
 
-  getResolutionByIndexWithFallback(index: number): Vector3 {
-    const resolutionMaybe = this.getResolutionByIndex(index);
+  getResolutionByIndexWithFallback(
+    index: number,
+    fallbackResolutionInfo: ?ResolutionInfo,
+  ): Vector3 {
+    let resolutionMaybe = this.getResolutionByIndex(index);
     if (resolutionMaybe) {
       return resolutionMaybe;
-    } else {
-      const powerOf2 = this.indexToPowerOf2(index);
-      return [powerOf2, powerOf2, powerOf2];
     }
+
+    resolutionMaybe =
+      fallbackResolutionInfo != null ? fallbackResolutionInfo.getResolutionByIndex(index) : null;
+    if (resolutionMaybe) {
+      return resolutionMaybe;
+    }
+
+    if (index === 0) {
+      // If the index is 0, only mag 1-1-1 can be meant.
+      return [1, 1, 1];
+    }
+
+    throw new Error("");
   }
 
   getResolutionByPowerOf2(powerOfTwo: number): ?Vector3 {

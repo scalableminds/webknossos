@@ -21,6 +21,7 @@ import {
   isLayerVisible,
   getLayerByName,
   getResolutionInfo,
+  getDatasetResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -167,6 +168,7 @@ export default class LayerRenderingManager {
 
     const layer = getLayerByName(dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
     const maximumResolutionIndex = resolutionInfo.getHighestResolutionIndex();
 
     if (logZoomStep > maximumResolutionIndex) {
@@ -178,7 +180,7 @@ export default class LayerRenderingManager {
     const resolutions = getResolutions(dataset);
     const subBucketLocality = getSubBucketLocality(
       position,
-      resolutionInfo.getResolutionByIndexWithFallback(logZoomStep),
+      resolutionInfo.getResolutionByIndexWithFallback(logZoomStep, datasetResolutionInfo),
     );
     const areas = getAreasFromState(state);
 
@@ -274,7 +276,12 @@ export default class LayerRenderingManager {
     const state = Store.getState();
     const layer = getLayerByName(state.dataset, this.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const resolution = resolutionInfo.getResolutionByIndexWithFallback(logZoomStep);
+    const datasetResolutionInfo = getDatasetResolutionInfo(state.dataset);
+
+    const resolution = resolutionInfo.getResolutionByIndexWithFallback(
+      logZoomStep,
+      datasetResolutionInfo,
+    );
     const addressSpaceDimensions = getAddressSpaceDimensions(
       state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );

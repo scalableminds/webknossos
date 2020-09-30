@@ -424,6 +424,11 @@ class DataCube {
     if (seedBucket.type === "null") {
       return null;
     }
+    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+      throw new Error(
+        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current magnification.`,
+      );
+    }
     const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
@@ -528,6 +533,11 @@ class DataCube {
   }
 
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
+    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+      throw new Error(
+        `DataCube.getDataValue was called with a zoomStep of ${zoomStep} which does not exist for the current layer.`,
+      );
+    }
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
@@ -559,7 +569,7 @@ class DataCube {
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = this.resolutionInfo.getResolutionByIndexWithFallback(zoomStep);
+    const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }

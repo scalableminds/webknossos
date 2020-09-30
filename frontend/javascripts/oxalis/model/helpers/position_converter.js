@@ -76,6 +76,8 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
 }
 
 // TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
+// Note that this is not trivial since zoomedAddressToAnotherZoomStepWithInfo will throw on not existing
+// resolution indices (in contrast to zoomedAddressToAnotherZoomStep).
 // See: https://github.com/scalableminds/webknossos/issues/4838
 export function zoomedAddressToAnotherZoomStep(
   [x, y, z, resolutionIndex]: Vector4,
@@ -94,13 +96,20 @@ export function zoomedAddressToAnotherZoomStep(
   ];
 }
 
+/*
+  Please note that this function will fail if the passed resolutionIndex or
+  targetResolutionIndex don't exist in the resolutionInfo.
+ */
 export function zoomedAddressToAnotherZoomStepWithInfo(
   [x, y, z, resolutionIndex]: Vector4,
   resolutionInfo: ResolutionInfo,
   targetResolutionIndex: number,
 ): Vector4 {
-  const currentResolution = resolutionInfo.getResolutionByIndexWithFallback(resolutionIndex);
-  const targetResolution = resolutionInfo.getResolutionByIndexWithFallback(targetResolutionIndex);
+  const currentResolution = resolutionInfo.getResolutionByIndexWithFallback(resolutionIndex, null);
+  const targetResolution = resolutionInfo.getResolutionByIndexWithFallback(
+    targetResolutionIndex,
+    null,
+  );
   const factors = getResolutionsFactors(currentResolution, targetResolution);
 
   return [

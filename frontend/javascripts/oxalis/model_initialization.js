@@ -421,8 +421,6 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
-  console.log(tracing.resolutions);
-
   // Legacy tracings don't have the `tracing.resolutions` property
   // since they were created before WK started to maintain multiple resolution
   // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
@@ -431,7 +429,7 @@ function setupLayerForVolumeTracing(
     ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];
 
-  console.log(tracingResolutions);
+  console.log("Volume tracing resolutions:", tracingResolutions);
   const targetResolutions =
     fallbackLayer != null ? fallbackLayer.resolutions : getResolutions(dataset);
 

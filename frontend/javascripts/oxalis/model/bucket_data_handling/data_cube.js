@@ -442,7 +442,6 @@ class DataCube {
         continue;
       }
       const bucketData = currentBucket.getOrCreateData();
-      // initialVoxelInBucket
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.

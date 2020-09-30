@@ -204,11 +204,9 @@ function _getResolutions(dataset: APIDataset): Vector3[] {
 // we memoize _getResolutions, as well.
 export const getResolutions = memoizeOne(_getResolutions);
 
-function _getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
-  return new ResolutionInfo(getResolutions(dataset));
+export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
+  return getResolutionInfo(getResolutions(dataset));
 }
-
-export const getDatasetResolutionInfo = memoizeOne(_getDatasetResolutionInfo);
 
 function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;

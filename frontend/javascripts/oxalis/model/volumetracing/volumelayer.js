@@ -240,7 +240,7 @@ class VolumeLayer {
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
     // The maximum area is scaled by 3 as the min and maxCoord will always be three slices apart,
-    // because in lines 171 + 172 a value of 2 is subtracted / added when the values get updated.
+    // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
     if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
       Toast.info(messages["tracing.area_to_fill_is_too_big"]);
       return VoxelIterator.finished();

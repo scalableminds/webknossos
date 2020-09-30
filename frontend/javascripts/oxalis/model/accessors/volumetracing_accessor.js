@@ -47,7 +47,7 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 
 export function isVolumeTraceToolDisallowed(state: OxalisState) {
   if (state.tracing.volume == null) {
-    return false;
+    return true;
   }
   // The current resolution is too high to allow the trace tool
   // because too many voxels could be annotated at the same time.

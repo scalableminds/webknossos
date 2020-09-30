@@ -87,7 +87,7 @@ export class ResolutionInfo {
   getResolutionByIndexOrThrow(index: number): Vector3 {
     const resolution = this.getResolutionByIndex(index);
     if (!resolution) {
-      throw new Error(`Resolution with in index ${index} does not exist`);
+      throw new Error(`Resolution with index ${index} does not exist.`);
     }
     return resolution;
   }

@@ -49,8 +49,8 @@ export function isVolumeTraceToolDisallowed(state: OxalisState) {
   if (state.tracing.volume == null) {
     return false;
   }
-  // The current resolution is to high for allowing the trace tool
-  // because to many voxel could be annotated at the same time.
+  // The current resolution is too high to allow the trace tool
+  // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh = getRequestLogZoomStep(state) > 1;
   return isZoomStepTooHigh;
 }
@@ -63,7 +63,7 @@ export function isSegmentationMissingForZoomstep(
 }
 
 export function getNumberOfSlicesForResolution(activeResolution: Vector3, activePlane: OrthoView) {
-  const thirdDimenstionIndex = Dimensions.thirdDimensionForPlane(activePlane);
-  const numberOfSlices = activeResolution[thirdDimenstionIndex];
+  const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(activePlane);
+  const numberOfSlices = activeResolution[thirdDimensionIndex];
   return numberOfSlices;
 }

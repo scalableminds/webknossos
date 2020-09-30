@@ -529,6 +529,13 @@ export type APIFeatureToggles = {
   +allowDeleteDatasets: boolean,
 };
 
+export type APIJob = {
+  +datasetName: string,
+  +organization: string,
+  +id: string,
+  +state: string,
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number,

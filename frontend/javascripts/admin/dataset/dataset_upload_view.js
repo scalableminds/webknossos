@@ -1,5 +1,5 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
+import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
@@ -35,11 +35,13 @@ type PropsWithForm = {|
 
 type State = {
   isUploading: boolean,
+  needsCubing: boolean,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
     isUploading: false,
+    needsCubing: false,
   };
 
   isDatasetManagerOrAdmin = () =>
@@ -51,6 +53,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       return e;
     }
     return e && e.fileList;
+  };
+
+  handleCheckboxChange = evt => {
+    this.setState({ needsCubing: evt.target.checked });
   };
 
   handleSubmit = evt => {
@@ -77,17 +83,22 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           organization: activeUser.organization,
         };
 
-        addDataset(datasetConfig).then(
-          async () => {
-            Toast.success(messages["dataset.upload_success"]);
-            trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-            this.props.onUploaded(activeUser.organization, formValues.name);
-          },
-          () => {
-            this.setState({ isUploading: false });
-          },
-        );
+        // TODO: differentiate properly between checked and not checked
+        if (!this.state.needsCubing) {
+          addDataset(datasetConfig).then(
+            async () => {
+              Toast.success(messages["dataset.upload_success"]);
+              trackAction("Upload dataset");
+              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              this.props.onUploaded(activeUser.organization, formValues.name);
+            },
+            () => {
+              this.setState({ isUploading: false });
+            },
+          );
+        } else {
+          this.setState({ isUploading: false });
+        }
       }
     });
   };
@@ -135,6 +146,9 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
+              <Checkbox checked={this.state.needsCubing} onChange={this.handleCheckboxChange}>
+                Needs Cubing
+              </Checkbox>
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],

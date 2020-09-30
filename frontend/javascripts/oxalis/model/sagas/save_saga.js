@@ -158,7 +158,9 @@ export function* collectUndoStates(): Saga<void> {
     } else if (importVolumeTracingAction) {
       redoStack.splice(0);
       undoStack.splice(0);
-      undoStack.push(({ type: "warning", reason: messages["undo.import_volume_tracing"] }: WarnUndoState));
+      undoStack.push(
+        ({ type: "warning", reason: messages["undo.import_volume_tracing"] }: WarnUndoState),
+      );
     } else if (undo) {
       if (undoStack.length > 0 && undoStack[undoStack.length - 1].type === "skeleton") {
         previousAction = null;

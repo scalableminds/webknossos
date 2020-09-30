@@ -72,6 +72,7 @@ function setInputCatcherRect(state: OxalisState, viewport: Viewport, rect: Rect)
       viewModeData: {
         plane: {
           inputCatcherRects: {
+            // $FlowFixMe See https://github.com/facebook/flow/issues/8299
             [viewport]: {
               $set: rect,
             },

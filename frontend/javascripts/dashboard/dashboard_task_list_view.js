@@ -131,6 +131,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         ...prevState[showFinishedTasks ? "finishedModeState" : "unfinishedModeState"],
         ...modeShape,
       };
+      // $FlowFixMe See https://github.com/facebook/flow/issues/8299
       return { [showFinishedTasks ? "finishedModeState" : "unfinishedModeState"]: newSubState };
     });
   };

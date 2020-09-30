@@ -110,11 +110,13 @@ class VersionList extends React.Component<Props, State> {
       const { annotationType, annotationId, volume } = Store.getState().tracing;
       const includesVolumeData = volume != null;
       downloadNml(annotationId, annotationType, includesVolumeData, {
+        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
         [this.props.tracingType]: version,
       });
     }
   };
 
+  // $FlowFixMe See https://github.com/facebook/flow/issues/8299
   handlePreviewVersion = (version: number) => previewVersion({ [this.props.tracingType]: version });
 
   // eslint-disable-next-line react/sort-comp

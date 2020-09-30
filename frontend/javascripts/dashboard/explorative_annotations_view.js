@@ -125,6 +125,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ...modeShape,
       };
       return {
+        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
         [shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"]: newSubState,
       };
     });
@@ -138,6 +139,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ...modeShape,
       };
       return {
+        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
         [shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"]: newSubState,
       };
     });

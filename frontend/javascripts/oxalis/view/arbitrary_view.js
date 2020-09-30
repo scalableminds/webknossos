@@ -24,7 +24,7 @@ class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   unbindChangedScaleListener: () => void;
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
+  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
   plane: ArbitraryPlane;
 
   animate: () => void;
@@ -36,11 +36,11 @@ class ArbitraryView {
   animationRequestId: ?number = null;
 
   camDistance: number;
-  camera: THREE.PerspectiveCamera = null;
-  tdCamera: THREE.OrthographicCamera = null;
+  camera: typeof THREE.PerspectiveCamera = null;
+  tdCamera: typeof THREE.OrthographicCamera = null;
 
-  geometries: Array<THREE.Geometry> = [];
-  group: THREE.Object3D;
+  geometries: Array<typeof THREE.Geometry> = [];
+  group: typeof THREE.Object3D;
   cameraPosition: Array<number>;
 
   constructor() {
@@ -92,7 +92,7 @@ class ArbitraryView {
     });
   }
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<typeof THREE.OrthographicCamera> {
     return this.cameras;
   }
 
@@ -266,7 +266,7 @@ class ArbitraryView {
     return usedBuckets;
   };
 
-  addGeometry(geometry: THREE.Geometry): void {
+  addGeometry(geometry: typeof THREE.Geometry): void {
     // Adds a new Three.js geometry to the scene.
     // This provides the public interface to the GeometryFactory.
 

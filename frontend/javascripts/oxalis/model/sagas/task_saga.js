@@ -91,7 +91,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
-          // $FlowIgnore
+          // $FlowFixMe
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }

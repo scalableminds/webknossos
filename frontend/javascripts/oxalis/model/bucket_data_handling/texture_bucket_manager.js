@@ -41,9 +41,9 @@ import type { ElementClass } from "admin/api_flow_types";
 export const channelCountForLookupBuffer = 2;
 
 export default class TextureBucketManager {
-  dataTextures: Array<UpdatableTexture>;
+  dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;
-  lookUpTexture: THREE.DataTexture;
+  lookUpTexture: typeof THREE.DataTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
@@ -236,7 +236,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+  getTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
     return [this.lookUpTexture].concat(this.dataTextures);
   }
 

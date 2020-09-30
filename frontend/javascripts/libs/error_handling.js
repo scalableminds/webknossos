@@ -52,7 +52,7 @@ class ErrorHandling {
   throwAssertions: boolean;
   sendLocalErrors: boolean;
   commitHash: ?string;
-  airbrake: AirbrakeClient;
+  airbrake: typeof AirbrakeClient;
   numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {

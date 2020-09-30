@@ -72,7 +72,7 @@ function setInputCatcherRect(state: OxalisState, viewport: Viewport, rect: Rect)
       viewModeData: {
         plane: {
           inputCatcherRects: {
-            // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+            // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
             [viewport]: {
               $set: rect,
             },
@@ -123,7 +123,7 @@ function centerTDViewReducer(state: OxalisState): OxalisState {
 function zoomTDView(
   state: OxalisState,
   value: number,
-  targetPosition: THREE.Vector3,
+  targetPosition: typeof THREE.Vector3,
   curWidth: number,
   curHeight: number,
 ): OxalisState {

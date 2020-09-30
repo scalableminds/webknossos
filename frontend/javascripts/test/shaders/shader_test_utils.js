@@ -7,7 +7,7 @@ import GL from "gl";
 import compileShader, { type ShaderModule } from "oxalis/shaders/shader_module_system";
 import fs from "fs";
 
-export const dumpToPng = (gl: GL, width: number, height: number) => {
+export const dumpToPng = (gl: typeof GL, width: number, height: number) => {
   const path = "out.png";
   const png = new PNG({
     width,

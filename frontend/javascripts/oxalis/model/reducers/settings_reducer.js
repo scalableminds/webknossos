@@ -57,27 +57,27 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
 
     case "UPDATE_DATASET_SETTING": {
       const { propertyName, value } = action;
-      // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateDatasetConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
-      // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "TOGGLE_TEMPORARY_SETTING": {
       const { propertyName } = action;
       const value: any = !state.temporaryConfiguration[propertyName];
-      // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
       return updateKey3(state, "datasetConfiguration", "layers", layerName, {
-        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [propertyName]: value,
       });
     }

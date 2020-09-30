@@ -34,7 +34,7 @@ import * as Utils from "libs/utils";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
 
-export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
+export function threeCameraToCameraData(camera: typeof THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
   const objToArr = ({ x, y, z }) => [x, y, z];
   return {
@@ -53,7 +53,7 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
 const INVALID_ACTIVE_NODE_ID = -1;
 
 type OwnProps = {|
-  cameras: OrthoViewMap<THREE.OrthographicCamera>,
+  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>,
   planeView?: PlaneView,
   tracing?: Tracing,
 |};
@@ -70,7 +70,7 @@ function maybeGetActiveNodeFromProps(props: Props) {
 }
 
 class TDController extends React.PureComponent<Props> {
-  controls: TrackballControls;
+  controls: typeof TrackballControls;
   mouseController: InputMouse;
   oldNmPos: Vector3;
   isStarted: boolean;

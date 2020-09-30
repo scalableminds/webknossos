@@ -25,12 +25,12 @@ class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
 
-  plane: THREE.Mesh;
+  plane: typeof THREE.Mesh;
   planeID: OrthoView;
   displayCrosshair: boolean;
-  baseScaleVector: THREE.Vector3;
-  crosshair: Array<THREE.LineSegments>;
-  TDViewBorders: THREE.Line;
+  baseScaleVector: typeof THREE.Vector3;
+  crosshair: Array<typeof THREE.LineSegments>;
+  TDViewBorders: typeof THREE.Line;
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
@@ -148,7 +148,7 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: THREE.Vector3): void => {
+  setPosition = (posVec: typeof THREE.Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);

@@ -49,7 +49,7 @@ const createRequestBucketInfo = (
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
-  // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+  // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
   ...(applyAgglomerate != null ? { applyAgglomerate } : {}),
   ...(version != null ? { version } : {}),
 });

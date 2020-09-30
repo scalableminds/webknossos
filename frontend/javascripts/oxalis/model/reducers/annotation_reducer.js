@@ -23,7 +23,7 @@ const updateUserBoundingBoxes = (state: OxalisState, userBoundingBoxes: Array<Us
   return update(state, {
     tracing: {
       ...maybeSkeletonUpdater,
-      // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...maybeVolumeUpdater,
       ...maybeReadOnlyUpdater,
     },

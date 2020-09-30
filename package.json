@@ -44,7 +44,7 @@
     "eslint-plugin-react-hooks": "^1.0.1",
     "espree": "^3.5.4",
     "file-loader": "^1.1.5",
-    "flow-bin": "^0.122.0",
+    "flow-bin": "^0.132.0",
     "flow-coverage-report": "^0.7.0",
     "git-revision-webpack-plugin": "^3.0.3",
     "glob": "^7.1.3",

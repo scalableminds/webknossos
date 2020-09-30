@@ -46,7 +46,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         return update(state, {
           save: {
             queue: {
-              // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+              // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
               [action.tracingType]: {
                 $set: newQueue,
               },
@@ -73,7 +73,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         const resetCounter = remainingQueue.length === 0 && otherQueue.length === 0;
         return update(state, {
           save: {
-            // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+            // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
             queue: { [action.tracingType]: { $set: remainingQueue } },
             progressInfo: {
               // Reset progress counters if the queue is empty. Otherwise,
@@ -103,21 +103,21 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_SAVE_BUSY": {
       return update(state, {
-        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         save: { isBusyInfo: { [action.tracingType]: { $set: action.isBusy } } },
       });
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
       return update(state, {
-        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         save: { lastSaveTimestamp: { [action.tracingType]: { $set: action.timestamp } } },
       });
     }
 
     case "SET_VERSION_NUMBER": {
       return update(state, {
-        // $FlowFixMe See https://github.com/facebook/flow/issues/8299
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         tracing: { [action.tracingType]: { version: { $set: action.version } } },
       });
     }

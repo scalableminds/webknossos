@@ -304,7 +304,7 @@ let isDragging = false;
 
 export class InputMouse {
   targetId: string;
-  hammerManager: Hammer;
+  hammerManager: typeof Hammer;
   id: ?string;
 
   leftMouseButton: InputMouseButton;

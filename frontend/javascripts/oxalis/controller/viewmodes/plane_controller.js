@@ -201,6 +201,7 @@ class PlaneController extends React.PureComponent<Props> {
     return {
       ...baseControls,
       ...skeletonControls,
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
       leftClick: this.createToolDependentHandler(
         maybeSkeletonLeftClick,
@@ -334,6 +335,7 @@ class PlaneController extends React.PureComponent<Props> {
     return {
       ...baseControls,
       ...skeletonControls,
+      // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
       c: this.createToolDependentHandler(skeletonCHandler, volumeCHandler),
       "1": this.createToolDependentHandler(skeletonOneHandler, volumeOneHandler),

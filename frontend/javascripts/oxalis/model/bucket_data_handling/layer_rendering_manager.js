@@ -52,7 +52,7 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
     return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
   };
 
-  // $FlowFixMe
+  // $FlowIssue[invalid-tuple-arity]
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 

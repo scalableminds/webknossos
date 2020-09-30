@@ -51,7 +51,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         value = clamp(min, value, max);
       }
 
-      // $FlowFixMe Flow doesn't check that only numbers will be clamped and https://github.com/facebook/flow/issues/8299
+      // $FlowIssue[invalid-computed-prop] Flow doesn't check that only numbers will be clamped and https://github.com/facebook/flow/issues/8299
       return updateUserConfig(state, { [propertyName]: value });
     }
 
@@ -110,7 +110,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         {},
       );
 
-      // $FlowFixMe Flow has problems with exactness for empty objects, see https://github.com/facebook/flow/issues/2977
+      // $FlowIssue[incompatible-exact] Flow has problems with exactness for empty objects, see https://github.com/facebook/flow/issues/2977
       const initialDatasetSettingsWithDefaults: DatasetConfiguration = Object.assign(
         {},
         action.initialDatasetSettings,

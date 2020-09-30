@@ -129,7 +129,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onCheck = (evt: SyntheticMouseEvent<*>) => {
-    // $FlowFixMe .node is unknown to flow
+    // $FlowIssue[prop-missing] .node is unknown to flow
     const { id, type } = evt.target.node;
     if (type === TYPE_TREE) {
       this.props.onToggleTree(parseInt(id, 10));
@@ -141,7 +141,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectTree = (evt: SyntheticMouseEvent<*>) => {
-    // $FlowFixMe .dataset is unknown to flow
+    // $FlowIssue[prop-missing] .dataset is unknown to flow
     const treeId = parseInt(evt.target.dataset.id, 10);
     if (evt.ctrlKey || evt.metaKey) {
       this.props.onSelectTree(treeId);
@@ -157,7 +157,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onSelectGroup = (evt: SyntheticMouseEvent<*>) => {
-    // $FlowFixMe .dataset is unknown to flow
+    // $FlowIssue[prop-missing] .dataset is unknown to flow
     const groupId = parseInt(evt.target.dataset.id, 10);
     const numberOfSelectedTrees = this.props.selectedTrees.length;
     if (numberOfSelectedTrees > 0) {
@@ -253,7 +253,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   handleDropdownClick = (params: { domEvent: SyntheticMouseEvent<*>, key: string }) => {
     const { domEvent, key } = params;
-    // $FlowFixMe .dataset is unknown to flow
+    // $FlowIssue[prop-missing] .dataset is unknown to flow
     const groupId = parseInt(domEvent.target.dataset.groupId, 10);
     if (key === "create") {
       this.createGroup(groupId);

@@ -31,17 +31,17 @@ export default class ThreeDMap<T> {
     }
     // Flow doesn't understand that the access to X
     // is guaranteed to be not null due to the above code.
-    // $FlowFixMe
+    // $FlowIssue[incompatible-use]
     if (this.map.get(x).get(y) == null) {
-      // $FlowFixMe
+      // $FlowIssue[incompatible-use]
       this.map.get(x).set(y, new Map());
     }
 
     this.map
       .get(x)
-      // $FlowFixMe
+      // $FlowIssue[incompatible-use]
       .get(y)
-      // $FlowFixMe
+      // $FlowIssue[incompatible-use]
       .set(z, value);
   }
 

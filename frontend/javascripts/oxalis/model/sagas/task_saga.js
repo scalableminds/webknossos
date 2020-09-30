@@ -47,7 +47,7 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   const segmentationOpacity =
     segmentationLayerName != null ? datasetConfiguration.layers[segmentationLayerName].alpha : 0;
 
-  // $FlowFixMe Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
+  // $FlowFixMe[incompatible-call] Cannot call `_.find` because number [1] is incompatible with boolean [2] in property `brushSize` of type argument `T`.
   const configurationDifference = _.find(recommendedConfiguration, (value, key: string) => {
     if (key === "zoom" && zoomStep !== value) {
       return true;
@@ -84,14 +84,14 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
           updateLayerSettingAction(segmentationLayerName, "alpha", recommendedConfiguration[key]),
         );
       } else if (key in userConfiguration) {
-        // $FlowFixMe Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
+        // $FlowFixMe[prop-missing] Cannot call updateUserSettingAction with key bound to propertyName because an indexer property is missing in UserConfiguration
         yield* put(updateUserSettingAction(key, recommendedConfiguration[key]));
       } else if (key in datasetConfiguration) {
-        // $FlowFixMe Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
+        // $FlowFixMe[prop-missing] Cannot call updateDatasetSettingAction with key bound to propertyName because an indexer property is missing in DatasetConfiguration
         yield* put(updateDatasetSettingAction(key, recommendedConfiguration[key]));
       } else {
         console.warn(
-          // $FlowFixMe
+          // $FlowFixMe[incompatible-type]
           `Cannot apply recommended default for key/value: ${key}/${recommendedConfiguration[key]}`,
         );
       }

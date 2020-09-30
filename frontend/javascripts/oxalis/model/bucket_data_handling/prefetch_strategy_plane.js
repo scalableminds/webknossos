@@ -61,7 +61,7 @@ export class AbstractPrefetchStrategy {
         }
       }
     }
-    // $FlowFixMe flow does not understand that slicing a Vector3 returns another Vector3
+    // $FlowIssue[invalid-tuple-arity] flow does not understand that slicing a Vector3 returns another Vector3
     return buckets;
   }
 }

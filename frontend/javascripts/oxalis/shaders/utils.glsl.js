@@ -38,7 +38,9 @@ export function jsRgb2hsv(rgb: [number, number, number]): [number, number, numbe
 
   // eslint-disable-next-line no-nested-ternary
   const h = n !== 0 && (v === r ? (g - b) / n : v === g ? 2 + (b - r) / n : 4 + (r - g) / n);
-  // $FlowIgnore
+  // $FlowIgnore[invalid-compare]
+  // $FlowIgnore[sketchy-number-and]
+  // $FlowIgnore[unsafe-addition]
   return [60 * (h < 0 ? h + 6 : h), v && n / v, v];
 }
 

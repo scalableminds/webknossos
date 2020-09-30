@@ -60,9 +60,9 @@ function getRecursiveValuesUnflat(obj: {} | Array<*> | string): Array<*> {
 }
 
 function cheapSort<T: string | number>(valueA: T, valueB: T): -1 | 0 | 1 {
-  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  // $FlowFixMe[invalid-compare] It is not possible to express that valueA and valueB have the very same type
   if (valueA < valueB) return -1;
-  // $FlowFixMe It is not possible to express that valueA and valueB have the very same type
+  // $FlowFixMe[invalid-compare] It is not possible to express that valueA and valueB have the very same type
   if (valueA > valueB) return 1;
   return 0;
 }
@@ -508,7 +508,7 @@ const areEventListenerOptionsSupported = _.once(() => {
 
   try {
     const options = {
-      // $FlowIgnore
+      // $FlowExpectedError[unsafe-getters-setters]
       get passive() {
         // This function will be called when the browser
         //   attempts to access the passive property.
@@ -534,9 +534,9 @@ export function addEventListenerWithDelegation(
   options: Object = {},
 ) {
   const wrapperFunc = function(event: Event) {
-    // $FlowFixMe Flow doesn't know native InputEvents
+    // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
     for (let { target } = event; target && target !== this; target = target.parentNode) {
-      // $FlowFixMe Flow doesn't know native InputEvents
+      // $FlowIssue[prop-missing] Flow doesn't know native InputEvents
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
         break;

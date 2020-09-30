@@ -37,12 +37,12 @@ class DiffableMap<K: number, V> {
   }
 
   getId() {
-    // $FlowFixMe
+    // $FlowFixMe[prop-missing]
     return this[idSymbol];
   }
 
   setId(id: number) {
-    // $FlowFixMe
+    // $FlowFixMe[prop-missing]
     this[idSymbol] = id;
   }
 

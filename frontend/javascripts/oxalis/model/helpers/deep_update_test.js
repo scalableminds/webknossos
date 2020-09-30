@@ -7,13 +7,13 @@ import type { OxalisState } from "oxalis/store";
 import { updateKey, updateKey2, updateKey3 } from "oxalis/model/helpers/deep_update";
 
 export function test1(state: OxalisState) {
-  // $FlowExpectedError notExisting does not exist in state
+  // $FlowExpectedError[prop-missing] notExisting does not exist in state
   updateKey(state, "notExisting", { someKey: true });
 
-  // $FlowExpectedError tracing exists in state, but the key is wrong
+  // $FlowExpectedError[prop-missing] tracing exists in state, but the key is wrong
   updateKey(state, "tracing", { notExisting: true });
 
-  // $FlowExpectedError tracing exists in state, but the value is wrong
+  // $FlowExpectedError[incompatible-call] tracing exists in state, but the value is wrong
   updateKey(state, "tracing", { visibility: "wrong type" });
 
   // No error
@@ -21,16 +21,16 @@ export function test1(state: OxalisState) {
 }
 
 export function test2(state: OxalisState) {
-  // $FlowExpectedError notExisting, notExisting does not exist in state
+  // $FlowExpectedError[prop-missing] notExisting, notExisting does not exist in state
   updateKey2(state, "notExisting", "notExisting", { someKey: true });
 
-  // $FlowExpectedError tracing, notExisting does not exist in state
+  // $FlowExpectedError[prop-missing] tracing, notExisting does not exist in state
   updateKey2(state, "tracing", "notExisting", { notExisting: true });
 
-  // $FlowExpectedError shape is wrong
+  // $FlowExpectedError[prop-missing] shape is wrong
   updateKey2(state, "viewModeData", "plane", { notExisting: true });
 
-  // $FlowExpectedError value is wrong
+  // $FlowExpectedError[incompatible-call] value is wrong
   updateKey2(state, "viewModeData", "plane", { activeViewport: true });
 
   // No error
@@ -38,13 +38,13 @@ export function test2(state: OxalisState) {
 }
 
 export function test3(state: OxalisState) {
-  // $FlowExpectedError notExisting, notExisting, notExisting does not exist in state
+  // $FlowExpectedError[prop-missing] notExisting, notExisting, notExisting does not exist in state
   updateKey3(state, "notExisting", "notExisting", "notExisting", { someKey: true });
 
-  // $FlowExpectedError wrong shape
+  // $FlowExpectedError[prop-missing] wrong shape
   updateKey3(state, "viewModeData", "plane", "tdCamera", { notExisting: true });
 
-  // $FlowExpectedError wrong value
+  // $FlowExpectedError[incompatible-call] wrong value
   updateKey3(state, "viewModeData", "plane", "tdCamera", { near: true });
 
   // No error

@@ -158,13 +158,13 @@ async function fetchParallel(
   versions?: Versions,
 ): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
   // (Also see https://github.com/facebook/flow/issues/4936)
-  // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
+  // $FlowIssue[incompatible-return] Type inference with Promise.all seems to be a bit broken in flow
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
     getDatasetConfiguration(datasetId),
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
-    // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
+    // $FlowIssue[incompatible-call] Type inference with Promise.all seems to be a bit broken in flow
     annotation ? getTracingForAnnotations(annotation, versions) : null,
   ]);
 }
@@ -234,7 +234,7 @@ function initializeTracing(_annotation: APIAnnotation, tracing: HybridServerTrac
       };
     }
 
-    // $FlowFixMe For some reason flow thinks the task property is missing, but it is not
+    // $FlowIssue[prop-missing] For some reason flow thinks the task property is missing, but it is not
     Store.dispatch(initializeAnnotationAction(annotation));
 
     serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
@@ -312,12 +312,12 @@ function initializeDataset(
       return dataLayer;
     }
   });
-  // $FlowFixMe assigning the adjusted dataset layers, although this property is not writable.
+  // $FlowExpectedError[incompatible-use] assigning the adjusted dataset layers, although this property is not writable.
   dataset.dataSource.dataLayers = updatedDataLayers;
 
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
-    // $FlowFixMe We mutate the dataset here to avoid that an outdated version is used somewhere else
+    // $FlowExpectedError[incompatible-use] We mutate the dataset here to avoid that an outdated version is used somewhere else
     dataset.dataSource.dataLayers = newDataLayers;
   });
 

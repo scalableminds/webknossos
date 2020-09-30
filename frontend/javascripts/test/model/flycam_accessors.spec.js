@@ -20,7 +20,7 @@ const boundingBox = {
 
 const initialState: OxalisState = {
   ...defaultState,
-  // $FlowFixMe Flow thinks dataset.isActive is missing but it is in defaultstate.dataset
+  // $FlowIssue[prop-missing] Flow thinks dataset.isActive is missing but it is in defaultstate.dataset
   dataset: {
     ...defaultState.dataset,
     dataSource: {
@@ -71,7 +71,7 @@ test("Flycam Accessors should calculate the request log zoom step (1/2)", t => {
 
 test("Flycam Accessors should calculate the request log zoom step (2/2)", t => {
   const state = _.cloneDeep(initialState);
-  // $FlowFixMe
+  // $FlowFixMe[cannot-write]
   state.flycam.zoomStep = 8;
   t.is(accessors.getRequestLogZoomStep(state), 3);
 });

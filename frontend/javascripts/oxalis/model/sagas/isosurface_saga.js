@@ -172,14 +172,8 @@ function* ensureSuitableIsosurface(
     segmentId,
     clippedPosition,
     zoomStep,
-<<<<<<< HEAD
     resolutionInfo,
-||||||| 983a4d2e7
-    resolutions,
-=======
-    resolutions,
     removeExistingIsosurface,
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
   );
 }
 
@@ -189,14 +183,8 @@ function* loadIsosurfaceWithNeighbors(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-<<<<<<< HEAD
   resolutionInfo: ResolutionInfo,
-||||||| 983a4d2e7
-  resolutions: Array<Vector3>,
-=======
-  resolutions: Array<Vector3>,
   removeExistingIsosurface: boolean,
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
 ): Saga<void> {
   let isInitialRequest = true;
   let positionsToRequest = [clippedPosition];
@@ -209,14 +197,8 @@ function* loadIsosurfaceWithNeighbors(
       segmentId,
       position,
       zoomStep,
-<<<<<<< HEAD
       resolutionInfo,
-||||||| 983a4d2e7
-      resolutions,
-=======
-      resolutions,
       removeExistingIsosurface && isInitialRequest,
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
     );
     isInitialRequest = false;
     positionsToRequest = positionsToRequest.concat(neighbors);
@@ -235,14 +217,8 @@ function* maybeLoadIsosurface(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-<<<<<<< HEAD
   resolutionInfo: ResolutionInfo,
-||||||| 983a4d2e7
-  resolutions: Array<Vector3>,
-=======
-  resolutions: Array<Vector3>,
   removeExistingIsosurface: boolean,
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
 ): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
 

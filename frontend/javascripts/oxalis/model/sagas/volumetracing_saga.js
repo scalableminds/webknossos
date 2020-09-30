@@ -37,18 +37,9 @@ import {
   isVolumeTraceToolDisallowed,
   getNumberOfSlicesForResolution,
 } from "oxalis/model/accessors/volumetracing_accessor";
-<<<<<<< HEAD
-||||||| 983a4d2e7
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-=======
 import {
   getPosition,
   getFlooredPosition,
-  getRotation,
-} from "oxalis/model/accessors/flycam_accessor";
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
-import {
-  getPosition,
   getRotation,
   getCurrentResolution,
   getRequestLogZoomStep,
@@ -193,19 +184,11 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
   }
 }
 
-<<<<<<< HEAD
 function* getBoundingsFromPosition(
   currentViewport: OrthoView,
   numberOfSlices: number,
 ): Saga<BoundingBoxType> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-||||||| 983a4d2e7
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-=======
-function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
@@ -259,7 +242,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
-<<<<<<< HEAD
   const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
@@ -270,14 +252,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   console.log("labeledZoomStep", labeledZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-||||||| 983a4d2e7
-  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
-=======
-  const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const position = yield* select(state => getFlooredPosition(state.flycam));
->>>>>>> ffc659b255cff6929cd7666b297e6a452caa8db5
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,

@@ -204,6 +204,13 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+  if (boundingBoxes.length === 0) {
+    return {
+      min: [0, 0, 0],
+      max: [0, 0, 0],
+    };
+  }
+
   const allCoordinates = [0, 1, 2].map(index =>
     boundingBoxes
       .map(box => box.topLeft[index])

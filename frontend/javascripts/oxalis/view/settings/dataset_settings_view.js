@@ -49,12 +49,7 @@ import Store, {
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  type Vector3,
-} from "oxalis/constants";
+import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -73,7 +68,6 @@ type DatasetSettingsProps = {|
   ) => void,
   viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
-  controlMode: ControlMode,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -399,8 +393,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
               />
             )}
-            {!isColorLayer &&
-            (this.props.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces) ? (
+            {!isColorLayer ? (
               <SwitchSetting
                 label="Render Isosurfaces (Beta)"
                 value={this.props.datasetConfiguration.renderIsosurfaces}
@@ -576,7 +569,6 @@ const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
   histogramData: state.temporaryConfiguration.histogramData,
-  controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   tracing: state.tracing,
 });

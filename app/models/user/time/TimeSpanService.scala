@@ -117,11 +117,15 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
     def updateTimeSpan(timeSpan: TimeSpan, timestamp: Long) = {
-      timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
-
       val duration = timestamp - timeSpan.lastUpdate
-      val updated = timeSpan.addTime(duration, timestamp)
-      updated
+      if (duration >= 0) {
+        timeSpansToUpdate = (timeSpan, timestamp) :: timeSpansToUpdate
+        timeSpan.addTime(duration, timestamp)
+      } else {
+        logger.info(
+          s"Not updating previous timespan due to negative duration ${duration} ms. (user ${timeSpan._user}, last timespan id ${timeSpan._id}, this=${this})")
+        timeSpan
+      }
     }
 
     var current = lastUserActivities
@@ -155,7 +159,11 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   private def isNotInterrupted(current: Long, last: TimeSpan) = {
     val duration = current - last.lastUpdate
-    duration >= 0 && duration < MaxTracingPause
+    if (duration < 0) {
+      logger.info(
+        s"Negative timespan duration ${duration} ms to previous entry. (user ${last._user}, last timespan id ${last._id}, this=${this})")
+    }
+    duration < MaxTracingPause
   }
 
   private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =

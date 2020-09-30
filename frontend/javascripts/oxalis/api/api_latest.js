@@ -75,6 +75,7 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -834,6 +835,10 @@ class DataApi {
    */
   isMappingEnabled(): boolean {
     return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
+  }
+
+  refreshIsosurfaces() {
+    Store.dispatch(refreshIsosurfacesAction());
   }
 
   /**

@@ -39,6 +39,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
+  getFlooredPosition,
   getRotation,
   getCurrentResolution,
   getRequestLogZoomStep,
@@ -187,7 +188,7 @@ function* getBoundingsFromPosition(
   currentViewport: OrthoView,
   numberOfSlices: number,
 ): Saga<BoundingBoxType> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   const thirdDimension = Dimensions.thirdDimensionForPlane(currentViewport);
@@ -201,7 +202,7 @@ function* getBoundingsFromPosition(
 }
 
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
@@ -251,7 +252,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   console.log("labeledZoomStep", labeledZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,

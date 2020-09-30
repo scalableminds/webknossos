@@ -143,8 +143,11 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
-  // About the area the brush reaches at maximum radius (pi * 300 ^ 2).
-  AUTO_FILL_AREA_LIMIT: 200000,
+  // The area of the maximum radius (pi * 300 ^ 2) is 282690.
+  // We multiply this with 5, since the labeling is not done
+  // during mouse movement, but afterwards. So, a bit of a
+  // waiting time should be acceptable.
+  AUTO_FILL_AREA_LIMIT: 5 * 282690,
 
   // The amount of buckets which is required per layer can be customized
   // via the settings. The value which we expose for customization is a factor

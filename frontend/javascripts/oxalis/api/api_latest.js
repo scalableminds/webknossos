@@ -514,10 +514,10 @@ class TracingApi {
   }
 
   /**
-   * Reload tracing
+   * Reload tracing by reloading the entire page.
    *
    * @example
-   * api.tracing.hardReload().then(() => ... );
+   * api.tracing.hardReload()
    */
   async hardReload() {
     await Model.ensureSavedState();

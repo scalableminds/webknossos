@@ -8,6 +8,7 @@ import {
   type APIAnnotationWithTask,
   type APIAnnotationVisibility,
   type APIBuildInfo,
+  type APIDataLayer,
   type APIDataSource,
   type APIDataSourceWithMessages,
   type APIDataStore,
@@ -23,6 +24,7 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
+  type APIReducedDataLayer,
   type APISampleDataset,
   type APIScript,
   type APIScriptCreator,
@@ -783,10 +785,20 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object> {
-  return Request.receiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+export function getDatasetConfiguration(dataset: APIDataset): Promise<Object> {
+  const layers = dataset.dataSource.dataLayers;
+  return Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    {
+      data: layers.map(layer => transformLayer(layer)),
+      method: "POST",
+    },
   );
+}
+
+function transformLayer(layer: APIDataLayer): APIReducedDataLayer {
+  const isSegmentationLayer = layer.category !== "color";
+  return { name: layer.name, isSegmentationLayer };
 }
 
 export function updateDatasetConfiguration(

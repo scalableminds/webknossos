@@ -109,11 +109,13 @@ export async function initialize(
     datasetId = { name, owningOrganization };
   }
 
-  const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
+  const [dataset, initialUserSettings, tracing] = await fetchParallel(
     annotation,
     datasetId,
     versions,
   );
+
+  const initialDatasetSettings = await Promise.all([getDatasetConfiguration(dataset)]);
 
   initializeDataset(initialFetch, dataset, tracing);
   initializeSettings(initialUserSettings, initialDatasetSettings);
@@ -160,7 +162,8 @@ async function fetchParallel(
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-    getDatasetConfiguration(datasetId),
+    // getDatasetConfiguration(datasetId),
+
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)
     // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow

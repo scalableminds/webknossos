@@ -28,6 +28,7 @@ class UserService @Inject()(conf: WkConf,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -146,15 +147,24 @@ class UserService @Inject()(conf: WkConf,
       user: User,
       dataSetName: String,
       organizationName: String,
-      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext, m: MessagesProvider) =
+      dataSetConfiguration: DataSetConfiguration,
+      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",
         dataSetName)
+      layerMap = layerConfiguration.map(_.validate[Map[String, JsValue]].getOrElse(Map.empty)).getOrElse(Map.empty)
+      _ <- Fox.serialCombined(layerMap.toList) {
+        case (name, config) =>
+          userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+                                                                                               dataSet._id,
+                                                                                               name,
+                                                                                               config)
+      }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
-                                                                                   configuration.configuration)
-      _ = userCache.invalidateUser(user._id)
+                                                                                   dataSetConfiguration.configuration)
+      _ = userCache.invalidateUser(user._id) // TODO Why do we need to invalidate the user here?
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =

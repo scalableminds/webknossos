@@ -316,6 +316,17 @@ CREATE TABLE webknossos.user_dataSetConfigurations(
   CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
 );
 
+CREATE TABLE webknossos.user_dataSetLayerConfigurations(
+  _user CHAR(24) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  configuration JSONB NOT NULL,
+  PRIMARY KEY (_user, _dataSet, layerName),
+  CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
+);
+
+
+
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TABLE webknossos.tokens(
   _id CHAR(24) PRIMARY KEY DEFAULT '',

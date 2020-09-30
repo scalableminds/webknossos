@@ -7,6 +7,9 @@ import javax.inject.Inject
 import models.binary.{DataSet, DataSetService}
 import play.api.libs.json._
 
+case class DataSetLayerId(name: String, isSegmentationLayer: Boolean)
+object DataSetLayerId { implicit val dataSetLayerId = Json.format[DataSetLayerId] }
+
 case class DataSetConfiguration(configuration: Map[String, JsValue])
 
 object DataSetConfiguration { implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration] }
@@ -40,7 +43,6 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
     DataSetConfiguration(
       Map(
         "fourBit" -> JsBoolean(false),
-        "quality" -> JsNumber(0),
         "interpolation" -> JsBoolean(true),
         "highlightHoveredCellId" -> JsBoolean(true),
         "renderMissingDataBlack" -> JsBoolean(true),
@@ -54,6 +56,33 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
     constructInitialDefault(List()).configuration ++
       sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty) ++
       configuration.configuration
+
+  def layerConfigurationOrDefaults(requestedLayer: List[DataSetLayerId],
+                                   existingLayerConfiguration: Map[String, JsValue],
+                                   sourceDefaultConfiguration: Map[String, JsValue]) =
+    requestedLayer.map {
+      case DataSetLayerId(name, isSegmentationLayer) =>
+        (name,
+         existingLayerConfiguration.getOrElse(
+           name,
+           sourceDefaultConfiguration.getOrElse(name,
+                                                Json.toJson(
+                                                  if (isSegmentationLayer) initialDefaultPerSegmentationLayer
+                                                  else initialDefaultPerColorLayer))))
+    }.toMap
+
+  def buildCompleteConfig(initialConfiguration: Map[String, JsValue], layerConfigurations: Map[String, JsValue]) =
+    DataSetConfiguration(initialConfiguration + ("layers" -> Json.toJson(layerConfigurations)))
+
+  def getAllLayerSourceDefaultViewConfigForDataSet(dataSet: DataSet)(
+      implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] =
+    for {
+
+      dataSource <- dataSetService.dataSourceFor(dataSet)
+      dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
+      layerSourceDefaultViewConfig = dataLayers.flatMap(dl =>
+        dl.defaultViewConfiguration.map(c => (dl.name, Json.toJson(c.toMap))))
+    } yield layerSourceDefaultViewConfig.toMap
 
   val initialDefaultPerColorLayer: Map[String, JsValue] = Map(
     "brightness" -> JsNumber(0),

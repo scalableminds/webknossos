@@ -4,23 +4,26 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO, DataSetService}
-import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, UserConfiguration}
-import models.user.{UserDataSetConfigurationDAO, UserService}
+import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, DataSetLayerId, UserConfiguration}
+import models.user.{UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO, UserService}
 import oxalis.security.WkEnv
 import com.mohiva.play.silhouette.api.Silhouette
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsObject, JsValue}
 import play.api.libs.json.Json._
+import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
 
-class ConfigurationController @Inject()(userService: UserService,
-                                        dataSetService: DataSetService,
-                                        dataSetDAO: DataSetDAO,
-                                        userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
-                                        dataSetConfigurationDefaults: DataSetConfigurationDefaults,
-                                        sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class ConfigurationController @Inject()(
+    userService: UserService,
+    dataSetService: DataSetService,
+    dataSetDAO: DataSetDAO,
+    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+    userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
+    dataSetConfigurationDefaults: DataSetConfigurationDefaults,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read = sil.UserAwareAction.async { implicit request =>
@@ -41,30 +44,45 @@ class ConfigurationController @Inject()(userService: UserService,
     }
   }
 
-  def readDataSet(organizationName: String, dataSetName: String) = sil.UserAwareAction.async { implicit request =>
-    request.identity.toFox.flatMap { user =>
-      for {
-        configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
-      } yield DataSetConfiguration(configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty))
-    }.orElse(
+  def readDataSet(organizationName: String, dataSetName: String) =
+    sil.UserAwareAction.async(validateJson[List[DataSetLayerId]]) { implicit request =>
+      request.identity.toFox.flatMap { user =>
         for {
+          configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
+          initialConfigurationMap = configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty)
+          layerConfigJson <- userDataSetLayerConfigurationDAO.findAllByLayerNameForUserAndDataset(
+            request.body.map(_.name),
+            user._id,
+            dataSetName)
           dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
-        } yield config
-      )
-      .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
-      .map(configuration => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(configuration))))
-  }
+          layerSourceDefaultViewConfigs <- dataSetConfigurationDefaults.getAllLayerSourceDefaultViewConfigForDataSet(
+            dataSet)
+          layerSettings = dataSetConfigurationDefaults.layerConfigurationOrDefaults(request.body,
+                                                                                    layerConfigJson,
+                                                                                    layerSourceDefaultViewConfigs)
+        } yield dataSetConfigurationDefaults.buildCompleteConfig(initialConfigurationMap, layerSettings)
+      }.orElse(
+          for {
+            dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
+            config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
+          } yield config
+        )
+        .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
+        .map(configuration => Ok(toJson(configuration)))
+    }
 
   def updateDataSet(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
+        dataSetConf = conf - "layers"
+        layerConf = conf.get("layers")
         _ <- userService.updateDataSetConfiguration(request.identity,
                                                     dataSetName,
                                                     organizationName,
-                                                    DataSetConfiguration(conf))
+                                                    DataSetConfiguration(dataSetConf),
+                                                    layerConf)
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }
@@ -77,9 +95,7 @@ class ConfigurationController @Inject()(userService: UserService,
           Fox.successful(
             Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
         case _ =>
-          dataSetConfigurationDefaults
-            .constructInitialDefault(dataSet)
-            .map(c => Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c))))
+          dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configuration)))
       }
     }
   }

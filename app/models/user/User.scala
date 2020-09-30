@@ -323,7 +323,7 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
               where d.name = ${dataSetName}
               and c._user = ${userId}
           """.as[String])
-      parsed = rows.map(Json.parse(_))
+      parsed = rows.map(Json.parse)
       result <- parsed.headOption.toFox
     } yield result
 
@@ -369,4 +369,38 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
                values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")
     } yield ()
 
+}
+
+class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+
+  def findAllByLayerNameForUserAndDataset(layerNames: List[String], userId: ObjectId, dataSetName: String)(
+      implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] =
+    for {
+      rows <- run(sql"""select layerName, configuration
+              from webknossos.user_dataSetLayerConfigurations
+              where _dataset in (select _id from webknossos.dataSets_ where name = $dataSetName)
+              and _user = $userId
+              and layerName in #${writeStructTupleWithQuotes(layerNames)}
+          """.as[(String, String)])
+      parsed = rows.map(t => (t._1, Json.parse(t._2)))
+    } yield parsed.toMap
+
+  def updateDatasetConfigurationForUserAndDatasetAndLayer(
+      userId: ObjectId,
+      dataSetId: ObjectId,
+      layerName: String,
+      configuration: JsValue)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- userDAO.assertUpdateAccess(userId)
+      deleteQuery = sqlu"""delete from webknossos.user_dataSetLayerConfigurations
+               where _user = $userId and _dataSet = $dataSetId and layerName = $layerName"""
+      insertQuery = sqlu"""insert into webknossos.user_dataSetLayerConfigurations(_user, _dataSet, layerName, configuration)
+               values($userId, $dataSetId, $layerName, '#${sanitize(configuration.toString)}')"""
+      _ <- run(
+        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
+    } yield ()
 }

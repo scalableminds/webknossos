@@ -30,7 +30,7 @@ export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rec
   if (viewport === ArbitraryViewport) {
     return state.viewModeData.arbitrary.inputCatcherRect;
   } else {
-    // $FlowFixMe Flow does not understand that viewport cannot be ArbitraryViewport at this point
+    // $FlowIssue[prop-missing] Flow does not understand that viewport cannot be ArbitraryViewport at this point
     return state.viewModeData.plane.inputCatcherRects[viewport];
   }
 }

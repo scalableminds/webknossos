@@ -3,7 +3,7 @@ import { PNG } from "pngjs";
 import fs from "fs";
 import pixelmatch from "pixelmatch";
 
-function openScreenshot(path: string, name: string): Promise<PNG> {
+function openScreenshot(path: string, name: string): Promise<typeof PNG> {
   return new Promise(resolve => {
     fs.createReadStream(`${path}/${name}.png`)
       .on("error", error => {
@@ -20,7 +20,7 @@ function openScreenshot(path: string, name: string): Promise<PNG> {
   });
 }
 
-function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
+function saveScreenshot(png: typeof PNG, path: string, name: string): Promise<void> {
   return new Promise(resolve => {
     png
       .pack()
@@ -29,7 +29,7 @@ function saveScreenshot(png: PNG, path: string, name: string): Promise<void> {
   });
 }
 
-function bufferToPng(buffer: Buffer, width: number, height: number): Promise<PNG> {
+function bufferToPng(buffer: Buffer, width: number, height: number): Promise<typeof PNG> {
   return new Promise(resolve => {
     const png = new PNG({ width, height });
     png.parse(buffer, () => resolve(png));

@@ -14,7 +14,7 @@ import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { convertBufferToImage } from "libs/utils";
 
 export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
+  renderer: typeof THREE.WebGLRenderer,
   x: number,
   y: number,
   viewportWidth: number,
@@ -30,15 +30,15 @@ export const setupRenderArea = (
   renderer.setClearColor(color, 1);
 };
 
-export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
+export const clearCanvas = (renderer: typeof THREE.WebGLRenderer) => {
   setupRenderArea(renderer, 0, 0, renderer.domElement.width, renderer.domElement.height, 0xffffff);
   renderer.clear();
 };
 
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
-  scene?: THREE.Scene,
-  camera?: THREE.Camera,
+  scene?: typeof THREE.Scene,
+  camera?: typeof THREE.Camera,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
@@ -58,7 +58,7 @@ export function renderToTexture(
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {
-    // $FlowFixMe plane cannot be arbitraryViewport
+    // $FlowIssue[prop-missing] plane cannot be arbitraryViewport
     SceneController.updateSceneForCam(plane);
   }
   renderer.setRenderTarget(renderTarget);

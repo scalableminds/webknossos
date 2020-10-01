@@ -102,6 +102,7 @@ class DatasetPositionView extends PureComponent<Props> {
             onChange={this.handleChangePosition}
             autosize
             style={{ textAlign: "center", ...maybeErrorColor }}
+            allowDecimals
           />
         </Input.Group>
         {isArbitraryMode ? (

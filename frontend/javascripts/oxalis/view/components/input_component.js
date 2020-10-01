@@ -66,10 +66,11 @@ class InputComponent extends React.PureComponent<InputComponentProp, InputCompon
   };
 
   handleBlur = (e: SyntheticInputEvent<>) => {
-    this.setState({ isFocused: false });
-    if (this.props.onBlur) {
-      this.props.onBlur(e);
-    }
+    this.setState({ isFocused: false }, () => {
+      if (this.props.onBlur) {
+        this.props.onBlur(e);
+      }
+    });
   };
 
   blurYourself = () => (document.activeElement ? document.activeElement.blur() : null);

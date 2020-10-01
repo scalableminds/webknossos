@@ -52,7 +52,7 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
     return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
   };
 
-  // $FlowFixMe
+  // $FlowIssue[invalid-tuple-arity]
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
@@ -100,7 +100,7 @@ export default class LayerRenderingManager {
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
   lastAreas: OrthoViewMap<Area>;
-  lastZoomedMatrix: M4x4;
+  lastZoomedMatrix: typeof M4x4;
   lastViewMode: ViewMode;
   lastIsVisible: boolean;
   textureBucketManager: TextureBucketManager;
@@ -149,7 +149,7 @@ export default class LayerRenderingManager {
     shaderEditor.addBucketManagers(this.textureBucketManager);
   }
 
-  getDataTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+  getDataTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();

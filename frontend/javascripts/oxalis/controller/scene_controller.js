@@ -51,21 +51,21 @@ class SceneController {
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   datasetBoundingBox: Cube;
-  userBoundingBoxGroup: THREE.Group;
+  userBoundingBoxGroup: typeof THREE.Group;
   userBoundingBoxes: Array<Cube>;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMap<Plane>;
-  rootNode: THREE.Object3D;
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  rootGroup: THREE.Object3D;
-  stlMeshes: { [key: string]: THREE.Mesh } = {};
+  rootNode: typeof THREE.Object3D;
+  renderer: typeof THREE.WebGLRenderer;
+  scene: typeof THREE.Scene;
+  rootGroup: typeof THREE.Object3D;
+  stlMeshes: { [key: string]: typeof THREE.Mesh } = {};
 
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
-  isosurfacesRootGroup: THREE.Group;
-  isosurfacesGroupsPerSegmentationId: { [key: number]: THREE.Group } = {};
+  isosurfacesRootGroup: typeof THREE.Group;
+  isosurfacesGroupsPerSegmentationId: { [key: number]: typeof THREE.Group } = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -128,14 +128,14 @@ class SceneController {
       return cube;
     };
 
-    window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
+    window.removeBucketMesh = (mesh: typeof THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
+  getIsosurfaceGeometry(cellId: number): typeof THREE.Geometry {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
+  addSTL(meshMetaData: MeshMetaData, geometry: typeof THREE.Geometry): void {
     const { id, position } = meshMetaData;
     if (this.stlMeshes[id] != null) {
       console.warn(`Mesh with id ${id} has already been added to the scene.`);
@@ -168,7 +168,7 @@ class SceneController {
     this.addIsosurfaceFromGeometry(geometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
+  addIsosurfaceFromGeometry(geometry: typeof THREE.Geometry, segmentationId: number): void {
     const [hue] = jsConvertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
@@ -186,6 +186,7 @@ class SceneController {
       .to({ opacity: 0.95 }, 500)
       .onUpdate(function onUpdate() {
         meshMaterial.opacity = this.opacity;
+        app.vent.trigger("rerender");
       })
       .start();
 
@@ -399,7 +400,7 @@ class SceneController {
     app.vent.trigger("rerender");
   }
 
-  getRootNode(): THREE.Object3D {
+  getRootNode(): typeof THREE.Object3D {
     return this.rootNode;
   }
 

@@ -310,16 +310,14 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
 }
 
 export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
-  const segmentationLayers = dataset.dataSource.dataLayers.filter(dataLayer =>
-    isSegmentationLayer(dataset, dataLayer.name),
+  // $FlowIssue[incompatible-type]
+  // $FlowIssue[prop-missing]
+  const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
+    dataLayer => isSegmentationLayer(dataset, dataLayer.name),
   );
   if (segmentationLayers.length === 0) {
     return null;
   }
-  // Currently, only one segmentationLayer at a time is supported
-  // Flow does not understand that this is a segmentation layer (since
-  // we checked via `isSegmentationLayer`).
-  // $FlowFixMe
   return segmentationLayers[0];
 }
 
@@ -398,7 +396,11 @@ export function isLayerVisible(
 }
 
 export function is2dDataset(dataset: APIDataset): boolean {
-  return getDatasetExtentInVoxel(dataset).depth < 2;
+  // An empty dataset (e.g., depth == 0), should not be considered as 2D.
+  // This avoids that the empty dummy dataset is rendered with a 2D layout
+  // which is usually switched to the 3D layout after the proper dataset has
+  // been loaded.
+  return getDatasetExtentInVoxel(dataset).depth === 1;
 }
 
 export default {};

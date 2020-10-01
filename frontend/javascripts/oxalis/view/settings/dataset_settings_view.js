@@ -46,12 +46,7 @@ import Store, {
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import constants, {
-  type ControlMode,
-  ControlModeEnum,
-  type ViewMode,
-  type Vector3,
-} from "oxalis/constants";
+import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -70,7 +65,6 @@ type DatasetSettingsProps = {|
   ) => void,
   viewMode: ViewMode,
   histogramData: HistogramDataForAllLayers,
-  controlMode: ControlMode,
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
@@ -395,8 +389,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
                 onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
               />
             )}
-            {!isColorLayer &&
-            (this.props.controlMode === ControlModeEnum.VIEW || window.allowIsosurfaces) ? (
+            {!isColorLayer ? (
               <SwitchSetting
                 label="Render Isosurfaces (Beta)"
                 value={this.props.datasetConfiguration.renderIsosurfaces}
@@ -482,7 +475,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
       const isColorLayer = segmentationLayerName !== layerName;
-      // $FlowFixMe Object.entries returns mixed for Flow
+      // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });
     const hasInvisibleLayers =
@@ -572,7 +565,6 @@ const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
   viewMode: state.temporaryConfiguration.viewMode,
   histogramData: state.temporaryConfiguration.histogramData,
-  controlMode: state.temporaryConfiguration.controlMode,
   dataset: state.dataset,
   tracing: state.tracing,
 });

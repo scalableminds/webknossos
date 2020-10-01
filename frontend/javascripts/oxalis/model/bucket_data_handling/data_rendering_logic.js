@@ -247,14 +247,14 @@ function getRenderSupportedLayerCount(specs: GpuSpecs, textureInformationPerLaye
   return { maximumLayerCountToRender, maximumTextureCountForLayer };
 }
 
-export function computeDataTexturesSetup<Layer>(
+export function computeDataTexturesSetup<Layer: { elementClass: ElementClass }>(
   specs: GpuSpecs,
-  // $FlowFixMe
   layers: Array<Layer>,
   getByteCountForLayer: Layer => number,
   hasSegmentation: boolean,
   requiredBucketCapacity: number,
 ): * {
+  // $FlowFixMe[incompatible-call] Cannot call buildTextureInformationMap because the expected type is not parametric in Layer
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,

@@ -503,7 +503,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     const tracing = yield* select(state => state.tracing);
     const flycam = yield* select(state => state.flycam);
     const items = compactUpdateActions(
-      // $FlowFixMe: Should be resolved when we improve the typing of sagas in general
+      // $FlowFixMe[incompatible-call] Should be resolved when we improve the typing of sagas in general
       Array.from(
         yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
       ),

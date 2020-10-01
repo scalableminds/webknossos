@@ -31,17 +31,36 @@ export default class ThreeDMap<T> {
     }
     // Flow doesn't understand that the access to X
     // is guaranteed to be not null due to the above code.
-    // $FlowFixMe
+    // $FlowIssue[incompatible-use]
     if (this.map.get(x).get(y) == null) {
-      // $FlowFixMe
+      // $FlowIssue[incompatible-use]
       this.map.get(x).set(y, new Map());
     }
 
-    // $FlowFixMe
     this.map
       .get(x)
+      // $FlowIssue[incompatible-use]
       .get(y)
+      // $FlowIssue[incompatible-use]
       .set(z, value);
+  }
+
+  entries(): Array<[T, Vector3]> {
+    const entries: Array<[T, Vector3]> = [];
+    this.map.forEach((atX, x) => {
+      if (!atX) {
+        return;
+      }
+      atX.forEach((atY, y) => {
+        if (!atY) {
+          return;
+        }
+        atY.forEach((value, z) => {
+          entries.push([value, [x, y, z]]);
+        });
+      });
+    });
+    return entries;
   }
 
   // This could be extended so the key is a Vector1 | Vector2

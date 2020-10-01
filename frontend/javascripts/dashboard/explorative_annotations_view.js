@@ -121,10 +121,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
+        // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
         ...prevState[shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"],
         ...modeShape,
       };
       return {
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [shouldShowArchivedTracings ? "archivedModeState" : "unarchivedModeState"]: newSubState,
       };
     });
@@ -134,10 +136,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const { shouldShowArchivedTracings } = this.state;
     this.setState(prevState => {
       const newSubState = {
+        // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
         ...prevState[shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"],
         ...modeShape,
       };
       return {
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [shouldShowArchivedTracings ? "unarchivedModeState" : "archivedModeState"]: newSubState,
       };
     });

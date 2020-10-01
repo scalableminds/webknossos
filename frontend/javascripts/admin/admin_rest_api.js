@@ -687,7 +687,7 @@ export async function downloadNml(
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
-    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
+    // $FlowIssue[incompatible-type] Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
   if (showVolumeDownloadWarning) {
@@ -1251,20 +1251,18 @@ type IsosurfaceRequest = {
   segmentId: number,
   voxelDimensions: Vector3,
   cubeSize: Vector3,
+  scale: Vector3,
 };
 
 export function computeIsosurface(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
+  requestUrl: string,
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-      }/isosurface?token=${token}`,
+      `${requestUrl}/isosurface?token=${token}`,
       {
         data: {
           // The back-end needs a small padding at the border of the
@@ -1280,6 +1278,7 @@ export function computeIsosurface(
           mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
+          scale,
         },
       },
     );

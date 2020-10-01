@@ -8,7 +8,6 @@ import {
   type APIAnnotationWithTask,
   type APIAnnotationVisibility,
   type APIBuildInfo,
-  type APIDataLayer,
   type APIDataSource,
   type APIDataSourceWithMessages,
   type APIDataStore,
@@ -785,15 +784,11 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetConfiguration(dataset: APIDataset): Promise<Object> {
-  const layers = dataset.dataSource.dataLayers;
+export function getDatasetViewConfiguration(dataset: APIDataset, displayedLayers: Array<APIReducedDataLayer>): Promise<Object> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
     {
-      data: layers.map(layer => ({
-        name: layer.name,
-        isSegmentationLayer: layer.category !== "color",
-      })),
+      data: displayedLayers,
       method: "POST",
     },
   );

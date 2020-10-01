@@ -33,7 +33,7 @@ import {
   getDataset,
   getSharingToken,
   getUserConfiguration,
-  getDatasetConfiguration,
+  getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -115,7 +115,17 @@ export async function initialize(
     versions,
   );
 
-  const initialDatasetSettings = await getDatasetConfiguration(dataset);
+  // TODO Can we know here if the fallback layer is needed?
+  const displayedLayers = dataset.dataSource.dataLayers.map(layer => ({
+    name: layer.name,
+    isSegmentationLayer: layer.category !== "color",
+  }));
+
+  if (annotation != null && annotation.tracing.volume != null) {
+    displayedLayers.push({ name: annotation.tracing.volume, isSegmentationLayer: true });
+  }
+
+  const initialDatasetSettings = await getDatasetViewConfiguration(dataset, displayedLayers);
 
   initializeDataset(initialFetch, dataset, tracing);
   initializeSettings(initialUserSettings, initialDatasetSettings);
@@ -158,7 +168,7 @@ async function fetchParallel(
   annotation: ?APIAnnotation,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
+): Promise<[APIDataset, *, ?HybridServerTracing]> {
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),

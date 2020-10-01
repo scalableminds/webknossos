@@ -68,7 +68,7 @@ class ConfigurationController @Inject()(
           } yield config
         )
         .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
-        .map(configuration => Ok(toJson(configuration)))
+        .map(configuration => Ok(toJson(configuration.configuration)))
     }
 
   def updateDataSet(organizationName: String, dataSetName: String) =

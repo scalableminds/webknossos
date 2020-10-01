@@ -8,17 +8,16 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/20.07.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/20.10.0...HEAD)
 
 ### Added
-- Added the possibility to remove the fallback segmentation layer from a hybrid/volume tracing. Accessible by a minus button next to the layer's settings. [#4741](https://github.com/scalableminds/webknossos/pull/4766)
-- Added the possibility to undo and redo volume annotation strokes. [#4771](https://github.com/scalableminds/webknossos/pull/4771)
+- 
 
 ### Changed
--
+- The position input of tracings now accepts decimal input. When losing focus the values are cut off at the comma. [#4777](https://github.com/scalableminds/webknossos/pull/4803)
 
 ### Fixed
-- 
+- Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)
 
 ### Removed
 -

@@ -17,9 +17,9 @@ const getBBox = buckets => ({
   cornerMax: aggregatePerDimension(Math.max, buckets),
 });
 
-function createDistinctBucketAdder(buckets: Array<Vector4>) {
+function createDistinctBucketAdder(bucketsWithPriorities: Array<[Vector4, number]>) {
   const bucketLookUp = [];
-  const maybeAddBucket = (bucketPos: Vector4) => {
+  const maybeAddBucket = (bucketPos: Vector4, priority: number) => {
     const [x, y, z] = bucketPos;
     bucketLookUp[x] = bucketLookUp[x] || [];
     const lookupX = bucketLookUp[x];
@@ -28,7 +28,7 @@ function createDistinctBucketAdder(buckets: Array<Vector4>) {
 
     if (!lookupY[z]) {
       lookupY[z] = true;
-      buckets.push(bucketPos);
+      bucketsWithPriorities.push([bucketPos, priority]);
     }
   };
 
@@ -60,8 +60,8 @@ export default function determineBucketsForFlight(
   const transformAndApplyMatrix = vec =>
     M4x4.transformPointsAffine(queryMatrix, transformToSphereCap(vec));
 
-  let traversedBuckets = [];
-  const maybeAddBucket = createDistinctBucketAdder(traversedBuckets);
+  let traversedBucketsWithPriorities = [];
+  const maybeAddBucket = createDistinctBucketAdder(traversedBucketsWithPriorities);
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
   const cameraDirection = V3.sub(centerPosition, cameraPosition);
@@ -82,7 +82,9 @@ export default function determineBucketsForFlight(
 
       // $FlowIssue[invalid-tuple-arity]
       const flooredBucketPos: Vector4 = bucketPos.map(Math.floor);
-      maybeAddBucket(flooredBucketPos);
+
+      const priority = Math.abs(x) + Math.abs(y);
+      maybeAddBucket(flooredBucketPos, priority);
 
       const neighbourThreshold = 3;
       // $FlowIssue[incompatible-call] bucketPos is a Vector4, so idx can only be 0 to 3
@@ -93,11 +95,11 @@ export default function determineBucketsForFlight(
         if (rest < neighbourThreshold) {
           // Pick the previous neighbor
           newNeighbour[idx]--;
-          maybeAddBucket(newNeighbour);
+          maybeAddBucket(newNeighbour, priority);
         } else if (rest > constants.BUCKET_WIDTH - neighbourThreshold) {
           // Pick the next neighbor
           newNeighbour[idx]++;
-          maybeAddBucket(newNeighbour);
+          maybeAddBucket(newNeighbour, priority);
         }
       });
     }
@@ -141,11 +143,14 @@ export default function determineBucketsForFlight(
   };
 
   const fallbackBuckets = isFallbackAvailable ? traverseFallbackBBox(getBBox(planeBuckets)) : [];
-  traversedBuckets = traversedBuckets.concat(fallbackBuckets);
+  // Use a constant priority for the fallback buckets which is higher than the highest non-fallback priority
+  const fallbackPriority = 2 * halfWidth + iterStep;
+  traversedBucketsWithPriorities = traversedBucketsWithPriorities.concat(
+    fallbackBuckets.map(bucket => [bucket, fallbackPriority]),
+  );
 
   let currentCount = 0;
-  for (const bucketAddress of traversedBuckets) {
-    const priority = 0;
+  for (const [bucketAddress, priority] of traversedBucketsWithPriorities) {
     enqueueFunction(bucketAddress, priority);
     currentCount++;
     if (abortLimit != null && currentCount > abortLimit) {

@@ -165,7 +165,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         title: "Do you really want to select this group?",
         content: `You have ${numberOfSelectedTrees} selected Trees. Do you really want to select this group?
         This will deselect all selected trees.`,
-        onOk() {
+        onOk: () => {
           this.selectGroupById(groupId);
         },
         onCancel() {},
@@ -411,7 +411,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}
               searchFocusOffset={this.state.searchFocusOffset}
-              reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
+              reactVirtualizedListProps={{
+                scrollToAlignment: "auto",
+                tabIndex: null,
+                height,
+                width,
+              }}
             />
           </div>
         )}

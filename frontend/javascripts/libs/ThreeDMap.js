@@ -45,6 +45,24 @@ export default class ThreeDMap<T> {
       .set(z, value);
   }
 
+  entries(): Array<[T, Vector3]> {
+    const entries: Array<[T, Vector3]> = [];
+    this.map.forEach((atX, x) => {
+      if (!atX) {
+        return;
+      }
+      atX.forEach((atY, y) => {
+        if (!atY) {
+          return;
+        }
+        atY.forEach((value, z) => {
+          entries.push([value, [x, y, z]]);
+        });
+      });
+    });
+    return entries;
+  }
+
   // This could be extended so the key is a Vector1 | Vector2
   // if needed in the future
   delete(key: number): boolean {

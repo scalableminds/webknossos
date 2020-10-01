@@ -190,6 +190,13 @@ export function computeArrayFromBoundingBox(bb: BoundingBoxType): Vector6 {
 }
 
 export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): BoundingBoxType {
+  if (boundingBoxes.length === 0) {
+    return {
+      min: [0, 0, 0],
+      max: [0, 0, 0],
+    };
+  }
+
   const allCoordinates = [0, 1, 2].map(index =>
     boundingBoxes
       .map(box => box.topLeft[index])
@@ -207,6 +214,17 @@ export function aggregateBoundingBox(boundingBoxes: Array<BoundingBoxObject>): B
   const min = (([0, 1, 2].map(index => Math.min(...allCoordinates[index])): any): Vector3);
   const max = (([0, 1, 2].map(index => Math.max(...allCoordinates[index])): any): Vector3);
   return { min, max };
+}
+
+export function areBoundingBoxesOverlappingOrTouching(
+  firstBB: BoundingBoxType,
+  secondBB: BoundingBoxType,
+) {
+  let areOverlapping = true;
+  for (let dim = 0; dim < 3 && areOverlapping; ++dim) {
+    areOverlapping = firstBB.max[dim] >= secondBB.min[dim] && secondBB.max[dim] >= firstBB.min[dim];
+  }
+  return areOverlapping;
 }
 
 export function compareBy<T>(

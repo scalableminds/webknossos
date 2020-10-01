@@ -10,7 +10,6 @@ import * as React from "react";
 import _ from "lodash";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
-import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { document } from "libs/window";
 import { getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
@@ -19,7 +18,7 @@ import {
   getRequestLogZoomStep,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutions, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
@@ -51,6 +50,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;
@@ -69,26 +69,9 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
-const isosurfaceLeftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-  if (!event.shiftKey) {
-    return;
-  }
-  const segmentation = Model.getSegmentationLayer();
-  if (!segmentation) {
-    return;
-  }
-  const position = calculateGlobalPos(pos);
-  const cellId = segmentation.cube.getMappedDataValue(
-    position,
-    getRequestLogZoomStep(Store.getState()),
-  );
-  if (cellId > 0) {
-    Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
-  }
-};
-
 type StateProps = {|
   tracing: Tracing,
+  is2d: boolean,
 |};
 type Props = {| ...StateProps |};
 
@@ -401,6 +384,9 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
+    if (this.props.is2d) {
+      return;
+    }
     const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
@@ -633,6 +619,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracing: state.tracing,
+    is2d: is2dDataset(state.dataset),
   };
 }
 

@@ -41,7 +41,12 @@ export function* watchDataRelevantChanges(): Saga<void> {
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
   // There is no need to prefetch data for layers that are not visible
   return yield* select(state =>
-    isLayerVisible(state.dataset, dataLayer.name, state.datasetConfiguration),
+    isLayerVisible(
+      state.dataset,
+      dataLayer.name,
+      state.datasetConfiguration,
+      state.temporaryConfiguration.viewMode,
+    ),
   );
 }
 

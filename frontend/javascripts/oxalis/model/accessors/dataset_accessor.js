@@ -17,7 +17,12 @@ import type {
   BoundingBoxObject,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import constants, { ViewModeValues, type Vector3, Vector3Indicies } from "oxalis/constants";
+import constants, {
+  ViewModeValues,
+  type Vector3,
+  type ViewMode,
+  Vector3Indicies,
+} from "oxalis/constants";
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
@@ -381,9 +386,21 @@ export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
   datasetConfiguration: DatasetConfiguration,
+  viewMode: ViewMode,
 ): boolean {
   const layerConfig = datasetConfiguration.layers[layerName];
-  return !layerConfig.isDisabled && layerConfig.alpha > 0;
+  const isArbitraryMode = constants.MODES_ARBITRARY.includes(viewMode);
+  const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
+
+  return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
+}
+
+export function is2dDataset(dataset: APIDataset): boolean {
+  // An empty dataset (e.g., depth == 0), should not be considered as 2D.
+  // This avoids that the empty dummy dataset is rendered with a 2D layout
+  // which is usually switched to the 3D layout after the proper dataset has
+  // been loaded.
+  return getDatasetExtentInVoxel(dataset).depth === 1;
 }
 
 export default {};

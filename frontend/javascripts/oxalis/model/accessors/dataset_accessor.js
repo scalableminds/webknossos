@@ -310,16 +310,14 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
 }
 
 export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
-  const segmentationLayers = dataset.dataSource.dataLayers.filter(dataLayer =>
-    isSegmentationLayer(dataset, dataLayer.name),
+  // $FlowIssue[incompatible-type]
+  // $FlowIssue[prop-missing]
+  const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
+    dataLayer => isSegmentationLayer(dataset, dataLayer.name),
   );
   if (segmentationLayers.length === 0) {
     return null;
   }
-  // Currently, only one segmentationLayer at a time is supported
-  // Flow does not understand that this is a segmentation layer (since
-  // we checked via `isSegmentationLayer`).
-  // $FlowFixMe
   return segmentationLayers[0];
 }
 

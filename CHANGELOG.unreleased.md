@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - 
 
 ### Changed
--
+- The position input of tracings now accepts decimal input. When losing focus the values are cut off at the comma. [#4777](https://github.com/scalableminds/webknossos/pull/4803)
 
 ### Fixed
 - Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)

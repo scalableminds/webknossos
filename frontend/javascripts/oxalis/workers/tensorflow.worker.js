@@ -3,7 +3,7 @@ import { expose } from "./comlink_wrapper";
 import predict from "./tensorflow.impl.js";
 
 // Taken from https://github.com/tensorflow/tfjs/issues/102#issuecomment-465952614
-// $FlowIgnore
+// $FlowIssue[cannot-resolve-name]
 if (typeof OffscreenCanvas !== "undefined") {
   self.document = {
     createElement: () => new OffscreenCanvas(640, 480),

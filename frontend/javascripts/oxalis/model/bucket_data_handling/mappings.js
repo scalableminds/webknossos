@@ -59,9 +59,9 @@ const noopProgressCallback = async (_a, _b): Promise<void> => {};
 class Mappings {
   baseUrl: string;
   layerName: string;
-  mappingTexture: UpdatableTexture;
-  mappingLookupTexture: UpdatableTexture;
-  mappingColorTexture: UpdatableTexture;
+  mappingTexture: typeof UpdatableTexture;
+  mappingLookupTexture: typeof UpdatableTexture;
+  mappingColorTexture: typeof UpdatableTexture;
   progressCallback: ProgressCallback;
 
   constructor(layerName: string, fallbackLayerName: ?string) {

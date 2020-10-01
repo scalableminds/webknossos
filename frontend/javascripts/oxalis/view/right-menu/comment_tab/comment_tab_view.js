@@ -127,7 +127,7 @@ const memoizedDeriveData = memoizeOne(
 );
 
 class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState> {
-  listRef: ?List;
+  listRef: ?typeof List;
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {

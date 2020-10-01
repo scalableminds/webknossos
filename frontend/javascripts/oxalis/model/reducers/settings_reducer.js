@@ -2,7 +2,7 @@
 import _ from "lodash";
 
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, DatasetConfiguration } from "oxalis/store";
 import {
   updateKey,
   updateKey2,
@@ -51,29 +51,33 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         value = clamp(min, value, max);
       }
 
-      // $FlowFixMe Flow doesn't check that only numbers will be clamped
+      // $FlowIssue[invalid-computed-prop] Flow doesn't check that only numbers will be clamped and https://github.com/facebook/flow/issues/8299
       return updateUserConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_DATASET_SETTING": {
       const { propertyName, value } = action;
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateDatasetConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_TEMPORARY_SETTING": {
       const { propertyName, value } = action;
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "TOGGLE_TEMPORARY_SETTING": {
       const { propertyName } = action;
       const value: any = !state.temporaryConfiguration[propertyName];
+      // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
       return updateTemporaryConfig(state, { [propertyName]: value });
     }
 
     case "UPDATE_LAYER_SETTING": {
       const { layerName, propertyName, value } = action;
       return updateKey3(state, "datasetConfiguration", "layers", layerName, {
+        // $FlowIssue[invalid-computed-prop] See https://github.com/facebook/flow/issues/8299
         [propertyName]: value,
       });
     }
@@ -106,9 +110,14 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         {},
       );
 
-      const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
-        layers: layerSettingsDefaults,
-      });
+      // $FlowIssue[incompatible-exact] Flow has problems with exactness for empty objects, see https://github.com/facebook/flow/issues/2977
+      const initialDatasetSettingsWithDefaults: DatasetConfiguration = Object.assign(
+        {},
+        action.initialDatasetSettings,
+        {
+          layers: layerSettingsDefaults,
+        },
+      );
 
       return {
         ...state,

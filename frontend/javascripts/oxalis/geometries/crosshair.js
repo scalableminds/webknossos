@@ -9,7 +9,7 @@ import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 
 class Crosshair {
-  mesh: THREE.Mesh;
+  mesh: typeof THREE.Mesh;
   WIDTH: number;
   COLOR: string;
   SCALE_MIN: number;
@@ -76,7 +76,7 @@ class Crosshair {
     }
   }
 
-  addToScene(scene: THREE.Scene) {
+  addToScene(scene: typeof THREE.Scene) {
     scene.add(this.mesh);
   }
 

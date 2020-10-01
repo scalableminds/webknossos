@@ -1511,7 +1511,7 @@ const rawRgbs = [
 ];
 
 export const rgbs: Array<Vector3> = chunk3(rawRgbs).map(rgb =>
-  // $FlowFixMe Flow has troubles with understanding that mapping a tuple, returns another tuple
+  // $FlowIssue[invalid-tuple-arity] Flow has troubles with understanding that mapping a tuple, returns another tuple
   rgb.map(el => el / 255),
 );
 

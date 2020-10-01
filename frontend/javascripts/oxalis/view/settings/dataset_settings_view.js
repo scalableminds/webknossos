@@ -475,7 +475,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const layerSettings = Object.entries(layers).map(entry => {
       const [layerName, layer] = entry;
       const isColorLayer = segmentationLayerName !== layerName;
-      // $FlowFixMe Object.entries returns mixed for Flow
+      // $FlowIssue[incompatible-call] Object.entries returns mixed for Flow
       return this.getLayerSettings(layerName, layer, isColorLayer);
     });
     const hasInvisibleLayers =

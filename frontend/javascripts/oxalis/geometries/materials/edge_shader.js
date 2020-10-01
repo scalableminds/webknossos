@@ -6,10 +6,10 @@ import { COLOR_TEXTURE_WIDTH_FIXED } from "oxalis/geometries/materials/node_shad
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
 
 class EdgeShader {
-  material: THREE.RawShaderMaterial;
+  material: typeof THREE.RawShaderMaterial;
   uniforms: Uniforms;
 
-  constructor(treeColorTexture: THREE.DataTexture) {
+  constructor(treeColorTexture: typeof THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
 
     this.material = new THREE.RawShaderMaterial({
@@ -19,7 +19,7 @@ class EdgeShader {
     });
   }
 
-  setupUniforms(treeColorTexture: THREE.DataTexture): void {
+  setupUniforms(treeColorTexture: typeof THREE.DataTexture): void {
     this.uniforms = {
       activeTreeId: {
         type: "f",
@@ -32,7 +32,7 @@ class EdgeShader {
     };
   }
 
-  getMaterial(): THREE.RawShaderMaterial {
+  getMaterial(): typeof THREE.RawShaderMaterial {
     return this.material;
   }
 

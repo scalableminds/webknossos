@@ -44,7 +44,7 @@ const configureTensorFlow = (useWebworker, useGPU) => {
   console.log("useWebworker set to", useWebworker, "and useGPU set to", useGPU);
 };
 
-// $FlowIgnore
+// $FlowIssue[cannot-resolve-name]
 const isOffscreenCanvasSupported = typeof OffscreenCanvas !== "undefined";
 configureTensorFlow(isOffscreenCanvasSupported, true);
 window.configureTensorFlow = configureTensorFlow;

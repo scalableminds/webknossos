@@ -50,7 +50,7 @@ test("createScript(), updateScript(), and deleteScript()", async t => {
 
   // Update Script
   const newData = Object.assign({}, createdScript, { name: "MegaScript", owner: activeUser.id });
-  // $FlowFixMe Flow doesn't check that owner was replaced with a string
+  // $FlowIssue[incompatible-call] Flow doesn't check that owner was replaced with a string
   const updatedScript = await api.updateScript(createdScript.id, newData);
 
   const updatedScriptWithFixedId = Object.assign({}, updatedScript, { id: "fixed-script-id" });

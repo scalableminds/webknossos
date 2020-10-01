@@ -48,7 +48,7 @@ function pick(
   resolutions: Array<Vector3>,
   position: Vector3,
   sphericalCapRadius: number,
-  matrix: M4x4,
+  matrix: typeof M4x4,
   logZoomStep: number,
   loadingStrategy: LoadingStrategy,
   anchorPoint: Vector4,

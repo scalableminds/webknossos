@@ -33,7 +33,7 @@ import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
 type Props = {
-  cameras: OrthoViewMap<THREE.OrthographicCamera>,
+  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
 };
 

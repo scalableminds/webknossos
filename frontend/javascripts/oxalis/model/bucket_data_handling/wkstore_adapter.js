@@ -34,7 +34,8 @@ export type SendBucketInfo = {
 type RequestBucketInfo = {
   ...SendBucketInfo,
   fourBit: boolean,
-  version: ?number,
+  applyAgglomerate?: string,
+  version?: number,
 };
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
@@ -48,6 +49,7 @@ const createRequestBucketInfo = (
 ): RequestBucketInfo => ({
   ...createSendBucketInfo(zoomedAddress, resolutions),
   fourBit,
+  // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
   ...(applyAgglomerate != null ? { applyAgglomerate } : {}),
   ...(version != null ? { version } : {}),
 });

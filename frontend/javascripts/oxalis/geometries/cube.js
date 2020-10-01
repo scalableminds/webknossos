@@ -28,8 +28,8 @@ type Properties = {
 };
 
 class Cube {
-  crossSections: OrthoViewMap<THREE.Line>;
-  cube: THREE.Line;
+  crossSections: OrthoViewMap<typeof THREE.Line>;
+  cube: typeof THREE.Line;
   min: Vector3;
   max: Vector3;
   showCrossSections: boolean;

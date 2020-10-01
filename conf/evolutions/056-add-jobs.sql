@@ -5,6 +5,8 @@ START TRANSACTION;
 CREATE TABLE webknossos.jobs(
   _id CHAR(36) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
+  command TEXT NOT NULL,
+  commandArgs JSONB NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

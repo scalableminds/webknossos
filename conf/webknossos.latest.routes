@@ -183,5 +183,5 @@ GET           /time/user/:userId                                                
 
 # Long-Running Jobs
 GET           /jobs                                                             controllers.JobsController.list
-GET           /jobs/:id/status                                                  controllers.JobsController.status(id: String)
+GET           /jobs/:id                                                         controllers.JobsController.get(id: String)
 GET           /jobs/run/cubing/:organizationName/:dataSetName                   controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String)

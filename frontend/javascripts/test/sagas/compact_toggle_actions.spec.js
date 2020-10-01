@@ -71,6 +71,7 @@ const createState = (trees, _treeGroups): OxalisState => ({
       activeNodeId: null,
       cachedMaxNodeId: 0,
       activeGroupId: null,
+      navigationList: { list: [], activeIndex: -1 },
     },
     volume: null,
   },

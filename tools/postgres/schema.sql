@@ -336,10 +336,11 @@ CREATE TABLE webknossos.maintenance(
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
 CREATE TABLE webknossos.jobs(
-  _id CHAR(36) PRIMARY KEY DEFAULT '',
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
   _owner CHAR(24) NOT NULL,
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
+  celeryJobId CHAR(36) NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

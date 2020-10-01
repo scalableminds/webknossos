@@ -19,10 +19,11 @@ import slick.jdbc.PostgresProfile.api._
 import scala.concurrent.ExecutionContext
 
 case class Job(
-    _id: String,
+    _id: ObjectId,
     _owner: ObjectId,
     command: String,
     commandArgs: JsObject = Json.obj(),
+    celeryJobId: String,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -36,7 +37,13 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def parse(r: JobsRow): Fox[Job] =
     Fox.successful(
-      Job(r._Id, ObjectId(r._Owner), r.command, Json.parse(r.commandargs).as[JsObject], r.created.getTime, r.isdeleted)
+      Job(ObjectId(r._Id),
+          ObjectId(r._Owner),
+          r.command,
+          Json.parse(r.commandargs).as[JsObject],
+          r.celeryjobid,
+          r.created.getTime,
+          r.isdeleted)
     )
 
   override def readAccessQ(requestingUserId: ObjectId) =
@@ -50,8 +57,8 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(j: Job)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}', ${new java.sql.Timestamp(
+      _ <- run(sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, celeryJobId, created, isDeleted)
+                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}', ${j.celeryJobId}, ${new java.sql.Timestamp(
         j.created)}, ${j.isDeleted})""")
     } yield ()
 
@@ -67,16 +74,17 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
         case _       => Json.obj()
       }
       json = Json.obj(
-        "id" -> job._id,
+        "id" -> job._id.id,
         "command" -> job.command,
         "commandArgs" -> job.commandArgs,
+        "celeryJobId" -> job.celeryJobId,
         "created" -> job.created,
         "celeryInfo" -> celeryInfoJson
       )
     } yield json
 
   def getCeleryInfo(job: Job): Fox[JsObject] =
-    rpc(s"${wkConf.Jobs.Flower.uri}/api/task/info/${job._id}")
+    rpc(s"${wkConf.Jobs.Flower.uri}/api/task/info/${job.celeryJobId}")
       .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
       .getWithJsonResponse[JsObject]
 
@@ -85,12 +93,13 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
       result <- rpc(s"${wkConf.Jobs.Flower.uri}/api/task/async-apply/tasks.$command")
         .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
         .postWithJsonResponse[JsValue, Map[String, JsValue]](commandArgs)
-      jobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
-      job = Job(jobId, owner._id, command, commandArgs)
+      celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
+      job = Job(ObjectId.generate, owner._id, command, commandArgs, celeryJobId)
       _ <- jobDAO.insertOne(job)
     } yield job
 
 }
+
 class JobsController @Inject()(jobDAO: JobDAO,
                                sil: Silhouette[WkEnv],
                                jobService: JobService,

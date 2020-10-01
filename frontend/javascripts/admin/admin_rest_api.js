@@ -790,15 +790,13 @@ export function getDatasetConfiguration(dataset: APIDataset): Promise<Object> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
     {
-      data: layers.map(layer => transformLayer(layer)),
+      data: layers.map(layer => ({
+        name: layer.name,
+        isSegmentationLayer: layer.category !== "color",
+      })),
       method: "POST",
     },
   );
-}
-
-function transformLayer(layer: APIDataLayer): APIReducedDataLayer {
-  const isSegmentationLayer = layer.category !== "color";
-  return { name: layer.name, isSegmentationLayer };
 }
 
 export function updateDatasetConfiguration(

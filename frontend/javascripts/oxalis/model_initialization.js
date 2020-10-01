@@ -115,7 +115,7 @@ export async function initialize(
     versions,
   );
 
-  const initialDatasetSettings = await Promise.all([getDatasetConfiguration(dataset)]);
+  const initialDatasetSettings = await getDatasetConfiguration(dataset);
 
   initializeDataset(initialFetch, dataset, tracing);
   initializeSettings(initialUserSettings, initialDatasetSettings);
@@ -162,7 +162,6 @@ async function fetchParallel(
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-    // getDatasetConfiguration(datasetId),
 
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // (Also see https://github.com/facebook/flow/issues/4936)

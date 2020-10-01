@@ -784,9 +784,12 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetViewConfiguration(dataset: APIDataset, displayedLayers: Array<APIReducedDataLayer>): Promise<Object> {
+export function getDatasetViewConfiguration(
+  datasetId: APIDatasetId,
+  displayedLayers: Array<APIReducedDataLayer>,
+): Promise<Object> {
   return Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       data: displayedLayers,
       method: "POST",

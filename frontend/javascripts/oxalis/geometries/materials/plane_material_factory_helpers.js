@@ -14,9 +14,9 @@ export const channelCountToFormat = {
 export function createUpdatableTexture(
   width: number,
   channelCount: number,
-  type: THREE.FloatType | THREE.UnsignedByteType | THREE.Uint32BufferAttribute,
-  renderer: THREE.WebGLRenderer,
-): UpdatableTexture {
+  type: typeof THREE.FloatType | typeof THREE.UnsignedByteType | typeof THREE.Uint32BufferAttribute,
+  renderer: typeof THREE.WebGLRenderer,
+): typeof UpdatableTexture {
   const format = channelCountToFormat[channelCount];
   if (!format) {
     throw new Error(`Unhandled byte count: ${channelCount}`);

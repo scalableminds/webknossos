@@ -1,7 +1,9 @@
 // @flow
 /* eslint no-await-in-loop: 0 */
+import type { Action } from "oxalis/model/actions/actions";
+import { type Dispatch, type Store as StoreType } from "redux";
 import Deferred from "libs/deferred";
-import Store from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import * as Utils from "libs/utils";
 
 const MAXIMUM_STORE_UPDATE_DELAY = 10000;
@@ -31,7 +33,7 @@ async function go() {
 
 go();
 
-export default Object.assign({}, Store, {
+const ThrottledStore: StoreType<OxalisState, Action, Dispatch<*>> = Object.assign({}, Store, {
   subscribe(listener: () => void): () => void {
     listeners.push(listener);
     return function unsubscribe() {
@@ -42,3 +44,5 @@ export default Object.assign({}, Store, {
     };
   },
 });
+
+export default ThrottledStore;

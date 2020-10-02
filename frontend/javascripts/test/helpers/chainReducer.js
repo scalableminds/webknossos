@@ -8,7 +8,7 @@ class ChainReducerClass<S, A> {
   }
 
   apply(reducer: (S, A) => S, actionGetter: A | (S => A)): ChainReducerClass<S, A> {
-    // $FlowFixMe Cannot call actionGetter because the parameter types of an unknown function are unknown.
+    // $FlowFixMe[incompatible-use] Cannot call actionGetter because the parameter types of an unknown function are unknown.
     const action = typeof actionGetter === "function" ? actionGetter(this.state) : actionGetter;
     return new ChainReducerClass(reducer(this.state, action));
   }

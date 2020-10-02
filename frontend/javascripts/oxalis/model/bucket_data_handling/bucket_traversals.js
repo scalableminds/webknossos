@@ -169,7 +169,7 @@ function initializeTMax(
     voxelSize[2] - (u[2] % voxelSize[2]),
   ];
 
-  // $FlowFixMe Flow does not understand that mapping a tuple returns a tuple
+  // $FlowIssue[invalid-tuple-arity] Flow does not understand that mapping a tuple returns a tuple
   return [
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),

@@ -106,25 +106,27 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
   updateAllUsers = async () => {
     const relevantEntries = this.state.tableEntries.filter(entry => entry.changed);
-    const newUserPromises: Array<Promise<APIUser>> = this.props.selectedUsers.map(user => {
-      const newExperiences = {
-        ...user.experiences,
-        ..._.fromPairs(relevantEntries.map(entry => [entry.domain, entry.value])),
-      };
-      this.state.removedDomains.forEach(domain => {
-        if (domain in newExperiences) {
-          delete newExperiences[domain];
-        }
-      });
-      const orderedExperiences = {};
-      Object.keys(newExperiences)
-        .sort(Utils.localeCompareBy(([]: Array<string>), domain => domain.toLowerCase()))
-        .forEach(key => {
-          orderedExperiences[key] = newExperiences[key];
+    const newUserPromises: Array<Promise<APIUser>> = this.props.selectedUsers.map(
+      (user: APIUser) => {
+        const newExperiences = {
+          ...user.experiences,
+          ..._.fromPairs(relevantEntries.map(entry => [entry.domain, entry.value])),
+        };
+        this.state.removedDomains.forEach(domain => {
+          if (domain in newExperiences) {
+            delete newExperiences[domain];
+          }
         });
-      const newUser = { ...user, experiences: orderedExperiences };
-      return this.sendUserToServer(newUser, user);
-    });
+        const orderedExperiences = {};
+        Object.keys(newExperiences)
+          .sort(Utils.localeCompareBy(([]: Array<string>), domain => domain.toLowerCase()))
+          .forEach(key => {
+            orderedExperiences[key] = newExperiences[key];
+          });
+        const newUser = { ...user, experiences: orderedExperiences };
+        return this.sendUserToServer(newUser, user);
+      },
+    );
     this.resolvePromisesAndCloseModal(newUserPromises);
   };
 

@@ -116,6 +116,7 @@ class DatasetPositionView extends PureComponent<Props> {
             onChange={this.handleChangePosition}
             autosize
             style={positionInputStyle}
+            allowDecimals
           />
         </Input.Group>
         {isArbitraryMode ? (

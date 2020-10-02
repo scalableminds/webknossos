@@ -197,7 +197,7 @@ export class DataBucket {
     ];
     let isVoxelOutside = false;
     const adjustedVoxel = [voxel[0], voxel[1]];
-    for (let dimensionIndex = 0; dimensionIndex < 2; ++dimensionIndex) {
+    for (const dimensionIndex of [0, 1]) {
       const dimension = dimensionIndices[dimensionIndex];
       if (voxel[dimensionIndex] < 0 || voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
         isVoxelOutside = true;

@@ -176,7 +176,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   async readCSVFile(csvFile: File): Promise<Array<NewTask>> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      // $FlowFixMe reader.result is wrongfully typed as ArrayBuffer
+      // $FlowIssue[incompatible-call] reader.result is wrongfully typed as ArrayBuffer
       reader.onload = () => resolve(this.parseText(reader.result));
       reader.onerror = reject;
       reader.readAsText(csvFile);

@@ -9,7 +9,7 @@ import {
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const aggregatePerDimension = (aggregateFn, buckets): Vector3 =>
-  // $FlowFixMe
+  // $FlowIssue[invalid-tuple-arity]
   [0, 1, 2].map(dim => aggregateFn(...buckets.map(pos => pos[dim])));
 
 const getBBox = buckets => ({
@@ -80,15 +80,16 @@ export default function determineBucketsForFlight(
         logZoomStep,
       );
 
-      // $FlowFixMe
+      // $FlowIssue[invalid-tuple-arity]
       const flooredBucketPos: Vector4 = bucketPos.map(Math.floor);
 
       const priority = Math.abs(x) + Math.abs(y);
       maybeAddBucket(flooredBucketPos, priority);
 
       const neighbourThreshold = 3;
-      bucketPos.forEach((pos, idx) => {
-        // $FlowFixMe
+      // $FlowIssue[incompatible-call] bucketPos is a Vector4, so idx can only be 0 to 3
+      bucketPos.forEach((pos, idx: 0 | 1 | 2 | 3) => {
+        // $FlowIssue[invalid-tuple-arity]
         const newNeighbour: Vector4 = flooredBucketPos.slice();
         const rest = (pos % 1) * constants.BUCKET_WIDTH;
         if (rest < neighbourThreshold) {

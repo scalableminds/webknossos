@@ -586,7 +586,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   value={this.state.specificationType}
                   onChange={(evt: SyntheticInputEvent<*>) =>
                     this.setState({
-                      // $FlowFixMe Inference for enum.coalesce does not work properly anymore? Flow update might help
+                      // $FlowIssue[incompatible-call] Inference for enum.coalesce does not work properly anymore? Flow update might help
                       specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
                     })
                   }

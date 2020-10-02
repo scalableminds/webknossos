@@ -81,7 +81,7 @@ function getPackingDegreeLookup(): { [string]: number } {
 class PlaneMaterialFactory {
   planeID: OrthoView;
   isOrthogonal: boolean;
-  material: THREE.ShaderMaterial;
+  material: typeof THREE.ShaderMaterial;
   uniforms: Uniforms;
   attributes: Object;
   shaderId: number;
@@ -607,7 +607,7 @@ class PlaneMaterialFactory {
     this.uniforms[`${name}_alpha`].value = isDisabled ? 0 : alpha / 100;
   }
 
-  getMaterial(): THREE.ShaderMaterial {
+  getMaterial(): typeof THREE.ShaderMaterial {
     return this.material;
   }
 

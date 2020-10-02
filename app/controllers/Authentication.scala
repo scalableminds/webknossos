@@ -15,7 +15,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Empty, EmptyBox, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
@@ -27,6 +27,7 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
+import play.api.libs.ws.WSResponse
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -517,9 +518,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(
       implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) =
-      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-        .addQueryString("token" -> token, "organizationName" -> organizationName)
-        .get
+      future2Fox(
+        rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+          .addQueryString("token" -> token, "organizationName" -> organizationName)
+          .get
+          .futureBox)
 
     for {
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
@@ -531,7 +534,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def checkOrganizationFolder(implicit request: RequestHeader) =
     for {
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Fox.serialCombined(datastores)(d => rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get)
+      _ <- Fox.serialCombined(datastores)(d =>
+        rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get.futureBox.map {
+          case Full(_) => Fox.successful(())
+          // This failure exists if the datastore is down. We still want to be able to create organizations, therefore we ignore this error.
+          case Failure(errorMsg, _, _) if errorMsg.contains("Connection refused") => Fox.successful(())
+          case box: EmptyBox                                                      => box.toFox
+      })
     } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {

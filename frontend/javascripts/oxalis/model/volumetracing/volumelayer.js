@@ -20,7 +20,7 @@ import {
   getNumberOfSlicesForResolution,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import Dimensions from "oxalis/model/dimensions";
+import Dimensions, { type DimensionIndices } from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -39,7 +39,7 @@ export class VoxelIterator {
   boundingBox: ?BoundingBoxType;
   next: Vector3;
   currentSlice = 0;
-  thirdDimensionIndex: number;
+  thirdDimensionIndex: DimensionIndices;
 
   static finished(): VoxelIterator {
     const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0], 0);
@@ -53,7 +53,7 @@ export class VoxelIterator {
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3,
-    thirdDimensionIndex: number,
+    thirdDimensionIndex: DimensionIndices,
     numberOfSlices: number = 1,
     boundingBox?: ?BoundingBoxType,
   ) {

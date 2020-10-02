@@ -27,7 +27,7 @@ export function reuseInstanceOnEquality<R, F: (...args: Array<any>) => R>(
 ): F {
   let lastResult: R;
 
-  // $FlowIgnore This function has the same interface as F.
+  // $FlowFixMe[incompatible-return] This function has the same interface as F.
   return (...args: Array<any>): R => {
     const result = fn(...args);
     if (result === lastResult || equalityFunction(result, lastResult)) {

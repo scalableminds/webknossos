@@ -35,7 +35,7 @@ const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube"
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
 const test: TestInterface<{
-  cube: Cube,
+  cube: typeof Cube,
 }> = (anyTest: any);
 
 test.beforeEach(t => {

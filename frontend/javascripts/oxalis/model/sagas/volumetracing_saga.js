@@ -398,25 +398,28 @@ function* pairwise<T>(arr: Array<T>): Generator<[T, T], *, *> {
 }
 
 function applyLabeledVoxelMapToAllMissingResolutions(
-  labeledVoxelMapToApply: LabeledVoxelsMap,
+  inputLabeledVoxelMap: LabeledVoxelsMap,
   labeledZoomStep: number,
   dimensionIndices: DimensionMap,
   resolutionInfo: ResolutionInfo,
   segmentationCube: DataCube,
   cellId: number,
-  thirdDimensionOfSlice: number,
+  thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   shouldOverwrite: boolean,
 ): void {
-  let currentLabeledVoxelMap: LabeledVoxelsMap = labeledVoxelMapToApply;
-  let thirdDimensionValue = thirdDimensionOfSlice;
-  const get3DAddress = (voxel: Vector2) => {
-    const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], thirdDimensionValue];
-    const orderedVoxelWithThirdDimension = [
-      unorderedVoxelWithThirdDimension[dimensionIndices[0]],
-      unorderedVoxelWithThirdDimension[dimensionIndices[1]],
-      unorderedVoxelWithThirdDimension[dimensionIndices[2]],
-    ];
-    return orderedVoxelWithThirdDimension;
+  const get3DAddressCreator = (targetResolution: Vector3) => {
+    const sampledThirdDimensionValue =
+      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
+      Constants.BUCKET_WIDTH;
+
+    return (voxel: Vector2) => {
+      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], sampledThirdDimensionValue];
+      const orderedVoxelWithThirdDimension = Dimensions.transDimWithIndices(
+        unorderedVoxelWithThirdDimension,
+        dimensionIndices,
+      );
+      return orderedVoxelWithThirdDimension;
+    };
   };
 
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
@@ -432,6 +435,9 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   // should be upsampled)
   const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
 
+  // On each sampling step, a new LabeledVoxelMap is acquired
+  // which is used as the input for the next down-/upsampling
+  let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
   // First upsample the voxel map and apply it to all better resolutions.
   // sourceZoomStep will be higher than targetZoomStep
   for (const [source, target] of pairwise(upsampleSequence)) {
@@ -448,11 +454,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
       dimensionIndices,
       thirdDimensionOfSlice,
     );
-    // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
-    // in the target resolution to apply the voxelMap correctly.
-    thirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
-      Constants.BUCKET_WIDTH;
+
     const numberOfSlices = Math.ceil(
       labeledResolution[dimensionIndices[2]] / targetResolution[dimensionIndices[2]],
     );
@@ -460,13 +462,16 @@ function applyLabeledVoxelMapToAllMissingResolutions(
       currentLabeledVoxelMap,
       segmentationCube,
       cellId,
-      get3DAddress,
+      get3DAddressCreator(targetResolution),
       numberOfSlices,
       dimensionIndices[2],
       shouldOverwrite,
     );
   }
-  currentLabeledVoxelMap = labeledVoxelMapToApply;
+
+  // Reset currentLabeledVoxelMap to start downsampling
+  // from the input LabeledVoxelsMap
+  currentLabeledVoxelMap = inputLabeledVoxelMap;
 
   // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
@@ -484,17 +489,15 @@ function applyLabeledVoxelMapToAllMissingResolutions(
       dimensionIndices,
       thirdDimensionOfSlice,
     );
-    // Adjust thirdDimensionValue so get3DAddress returns the third dimension value
-    // in the target resolution to apply the voxelMap correctly.
-    thirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
-      Constants.BUCKET_WIDTH;
+
+    const numberOfSlices = 1;
+
     applyVoxelMap(
       currentLabeledVoxelMap,
       segmentationCube,
       cellId,
-      get3DAddress,
-      1,
+      get3DAddressCreator(targetResolution),
+      numberOfSlices,
       dimensionIndices[2],
       shouldOverwrite,
     );

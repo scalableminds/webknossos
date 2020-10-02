@@ -127,8 +127,10 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 
-// Maps from a bucket address to a Buffer which contains
-// the labeled voxels
+// A LabeledVoxelsMap maps from a bucket address
+// to a 2D slice of labeled voxels. These labeled voxels
+// are stored in a Uint8Array in a binary way (which cell
+// id the voxels should be changed to is not encoded).
 export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
 
 const Constants = {

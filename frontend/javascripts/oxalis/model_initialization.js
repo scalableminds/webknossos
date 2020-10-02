@@ -125,7 +125,7 @@ export async function initialize(
 
   if (tracing != null && tracing.volume != null) {
     if (tracing.volume.fallbackLayer == null) {
-      displayedLayers = displayedLayers.filter(layer => !layer.isSegmentationLayer)
+      displayedLayers = displayedLayers.filter(layer => !layer.isSegmentationLayer);
     }
     displayedLayers.push({ name: tracing.volume.id, isSegmentationLayer: true });
   }

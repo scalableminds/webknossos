@@ -534,9 +534,7 @@ class DataCube {
 
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
-      throw new Error(
-        `DataCube.getDataValue was called with a zoomStep of ${zoomStep} which does not exist for the current layer.`,
-      );
+      return 0;
     }
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);

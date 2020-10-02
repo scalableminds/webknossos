@@ -17,8 +17,8 @@ function upsampleVoxelMap(
   thirdDimensionVoxelValue: number,
 ): LabeledVoxelsMap {
   // This method upsamples a given LabeledVoxelsMap. For each bucket in the LabeledVoxelsMap this function
-  // iterating over the buckets in the higher resolution that are covered by the bucket.
-  // For each covered bucket all labeled voxel entries are upsampled with a kernel an marked in an array for the covered bucket.
+  // iterates over the buckets in the higher resolution that are covered by the bucket.
+  // For each covered bucket all labeled voxel entries are upsampled with a kernel and marked in an array for the covered bucket.
   // Therefore all covered buckets with their marked array build the upsampled version of the given LabeledVoxelsMap.
   if (sourceZoomStep <= targetZoomStep) {
     throw new Error("Trying to upsample a LabeledVoxelMap with the down sample function.");

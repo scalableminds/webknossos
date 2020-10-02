@@ -407,10 +407,15 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   shouldOverwrite: boolean,
 ): void {
+  const thirdDim = dimensionIndices[2];
+
+  // This function creates a `get3DAddress` function which maps from
+  // a 2D vector address to the corresponding 3D vector address.
+  // The input address is local to a slice in the LabeledVoxelsMap (that's
+  // why it's 2D). The output address is local to the corresponding bucket.
   const get3DAddressCreator = (targetResolution: Vector3) => {
     const sampledThirdDimensionValue =
-      Math.floor(thirdDimensionOfSlice / targetResolution[dimensionIndices[2]]) %
-      Constants.BUCKET_WIDTH;
+      Math.floor(thirdDimensionOfSlice / targetResolution[thirdDim]) % Constants.BUCKET_WIDTH;
 
     return (voxel: Vector2) => {
       const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], sampledThirdDimensionValue];
@@ -422,86 +427,63 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     };
   };
 
-  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   // Get all available resolutions and divide the list into two parts.
-  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
   // The pivotIndex is the index within allResolutionsWithIndices which refers to
   // the labeled resolution.
-  const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
   // `downsampleSequence` contains the current mag and all higher mags (to which
   // should be downsampled)
-  const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
   // `upsampleSequence` contains the current mag and all lower mags (to which
   // should be upsampled)
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const allResolutionsWithIndices = resolutionInfo.getResolutionsWithIndices();
+  const pivotIndex = allResolutionsWithIndices.findIndex(([index]) => index === labeledZoomStep);
+  const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
   const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
 
-  // On each sampling step, a new LabeledVoxelMap is acquired
-  // which is used as the input for the next down-/upsampling
-  let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
-  // First upsample the voxel map and apply it to all better resolutions.
-  // sourceZoomStep will be higher than targetZoomStep
-  for (const [source, target] of pairwise(upsampleSequence)) {
-    const [sourceZoomStep, sourceResolution] = source;
-    const [targetZoomStep, targetResolution] = target;
+  // Given a sequence of resolutions, the inputLabeledVoxelMap is applied
+  // over all these resolutions.
+  function processSamplingSequence(samplingSequence, getNumberOfSlices) {
+    // On each sampling step, a new LabeledVoxelMap is acquired
+    // which is used as the input for the next down-/upsampling
+    let currentLabeledVoxelMap: LabeledVoxelsMap = inputLabeledVoxelMap;
 
-    currentLabeledVoxelMap = sampleVoxelMapToResolution(
-      currentLabeledVoxelMap,
-      segmentationCube,
-      sourceResolution,
-      sourceZoomStep,
-      targetResolution,
-      targetZoomStep,
-      dimensionIndices,
-      thirdDimensionOfSlice,
-    );
+    for (const [source, target] of pairwise(samplingSequence)) {
+      const [sourceZoomStep, sourceResolution] = source;
+      const [targetZoomStep, targetResolution] = target;
 
-    const numberOfSlices = Math.ceil(
-      labeledResolution[dimensionIndices[2]] / targetResolution[dimensionIndices[2]],
-    );
-    applyVoxelMap(
-      currentLabeledVoxelMap,
-      segmentationCube,
-      cellId,
-      get3DAddressCreator(targetResolution),
-      numberOfSlices,
-      dimensionIndices[2],
-      shouldOverwrite,
-    );
+      currentLabeledVoxelMap = sampleVoxelMapToResolution(
+        currentLabeledVoxelMap,
+        segmentationCube,
+        sourceResolution,
+        sourceZoomStep,
+        targetResolution,
+        targetZoomStep,
+        dimensionIndices,
+        thirdDimensionOfSlice,
+      );
+
+      const numberOfSlices = getNumberOfSlices(targetResolution);
+      applyVoxelMap(
+        currentLabeledVoxelMap,
+        segmentationCube,
+        cellId,
+        get3DAddressCreator(targetResolution),
+        numberOfSlices,
+        thirdDim,
+        shouldOverwrite,
+      );
+    }
   }
 
-  // Reset currentLabeledVoxelMap to start downsampling
-  // from the input LabeledVoxelsMap
-  currentLabeledVoxelMap = inputLabeledVoxelMap;
+  // First upsample the voxel map and apply it to all better resolutions.
+  // sourceZoomStep will be higher than targetZoomStep
+  processSamplingSequence(upsampleSequence, targetResolution =>
+    Math.ceil(labeledResolution[thirdDim] / targetResolution[thirdDim]),
+  );
 
   // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
-  for (const [source, target] of pairwise(downsampleSequence)) {
-    const [sourceZoomStep, sourceResolution] = source;
-    const [targetZoomStep, targetResolution] = target;
-
-    currentLabeledVoxelMap = sampleVoxelMapToResolution(
-      currentLabeledVoxelMap,
-      segmentationCube,
-      sourceResolution,
-      sourceZoomStep,
-      targetResolution,
-      targetZoomStep,
-      dimensionIndices,
-      thirdDimensionOfSlice,
-    );
-
-    const numberOfSlices = 1;
-
-    applyVoxelMap(
-      currentLabeledVoxelMap,
-      segmentationCube,
-      cellId,
-      get3DAddressCreator(targetResolution),
-      numberOfSlices,
-      dimensionIndices[2],
-      shouldOverwrite,
-    );
-  }
+  processSamplingSequence(downsampleSequence, _targetResolution => 1);
 }
 
 export function* finishLayer(

@@ -112,7 +112,7 @@ export class ResolutionInfo {
       return [1, 1, 1];
     }
 
-    throw new Error("");
+    throw new Error(`Resolution could not be determined for index ${index}`);
   }
 
   getResolutionByPowerOf2(powerOfTwo: number): ?Vector3 {
@@ -544,22 +544,36 @@ export function getEnabledLayers(
   });
 }
 
-function _getMissingLayersForCurrentZoom(state: OxalisState) {
+/*
+  This function returns layers which cannot be rendered (since
+  the current magnification is missing), even though they should
+  be rendered (since they are enabled). The function takes fallback
+  magnifications into account if renderMissingDataBlack is disabled.
+ */
+function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
   const { dataset } = state;
   const zoomStep = getRequestLogZoomStep(state);
 
   const { renderMissingDataBlack } = state.datasetConfiguration;
   const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
 
-  const missingLayers = getEnabledLayers(dataset, state.datasetConfiguration)
+  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
     .map((layer: DataLayerType) => ({
       layer,
       resolutionInfo: getResolutionInfo(layer.resolutions),
     }))
     .filter(({ resolutionInfo }) => {
       const isMissing = !resolutionInfo.hasIndex(zoomStep);
-      if (!isMissing || renderMissingDataBlack) {
-        return isMissing;
+      if (!isMissing) {
+        // The layer exists. Thus, it is not unrenderable.
+        return false;
+      }
+
+      if (renderMissingDataBlack) {
+        // We already know that the layer is missing. Since `renderMissingDataBlack`
+        // is enabled, the fallback magnifications don't matter. The layer cannot be
+        // rendered.
+        return true;
       }
 
       // The current magnification is missing and fallback rendering
@@ -571,11 +585,11 @@ function _getMissingLayersForCurrentZoom(state: OxalisState) {
       });
     })
     .map<DataLayerType>(({ layer }) => layer);
-  return missingLayers;
+  return unrenderableLayers;
 }
 
-export const getMissingLayersForCurrentZoom = reuseInstanceOnEquality(
-  _getMissingLayersForCurrentZoom,
+export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayersForCurrentZoom,
 );
 
 export function getThumbnailURL(dataset: APIDataset): string {

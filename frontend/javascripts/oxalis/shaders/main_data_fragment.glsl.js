@@ -64,7 +64,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   uniform float <%= name %>_data_texture_width;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_alpha;
-  uniform float <%= name %>_missing;
+  uniform float <%= name %>_unrenderable;
 <% }) %>
 
 <% if (hasSegmentation) { %>
@@ -151,7 +151,7 @@ void main() {
   <% if (hasSegmentation) { %>
     vec4 id = vec4(0.);
     vec4 cellIdUnderMouse = vec4(0.);
-    float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_missing);
+    float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
     if (<%= segmentationName%>_effective_alpha > 0.) {
       id = getSegmentationId(worldCoordUVW);
@@ -163,8 +163,6 @@ void main() {
       // Passing the mouse position from the 3D viewport is not an option here, since that position
       // isn't on the orthogonal planes necessarily.
       cellIdUnderMouse = length(hoveredIsosurfaceId) > 0.1 ? hoveredIsosurfaceId : getSegmentationId(flooredMousePosUVW);
-    } else {
-
     }
 
   <% } %>
@@ -173,7 +171,7 @@ void main() {
   vec3 data_color = vec3(0.0);
   vec3 color_value  = vec3(0.0);
   <% _.each(colorLayerNames, function(name, layerIndex){ %>
-    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_missing);
+    float <%= name %>_effective_alpha = <%= name %>_alpha * (1. - <%= name %>_unrenderable);
     if (<%= name %>_effective_alpha > 0.) {
       // Get grayscale value for <%= name %>
       color_value =

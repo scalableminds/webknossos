@@ -181,7 +181,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          <Icon type="warning" />
           {!isReadOnly && hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
           {isArbitrarySupported ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}

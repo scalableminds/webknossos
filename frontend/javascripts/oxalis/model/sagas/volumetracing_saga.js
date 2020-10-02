@@ -249,7 +249,6 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     getResolutionInfoOfSegmentationLayer(state.dataset),
   );
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
-  console.log("labeledZoomStep", labeledZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = yield* select(state => getFlooredPosition(state.flycam));

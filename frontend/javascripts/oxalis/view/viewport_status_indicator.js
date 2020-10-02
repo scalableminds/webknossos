@@ -3,34 +3,34 @@
 import * as React from "react";
 
 import { Icon, Tooltip } from "antd";
-import { getMissingLayersForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
+import { getUnrenderableLayersForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
 import { usePolledState } from "libs/react_helpers";
 
 const { useState } = React;
 
 export default function ViewportStatusIndicator() {
-  const [missingLayerNames, setMissingLayerNames] = useState([]);
+  const [unrenderableLayerNames, setUnrenderableLayerNames] = useState([]);
 
   usePolledState(state => {
-    const newMissingLayersNames = getMissingLayersForCurrentZoom(state);
-    setMissingLayerNames(
+    const newMissingLayersNames = getUnrenderableLayersForCurrentZoom(state);
+    setUnrenderableLayerNames(
       newMissingLayersNames.map(layer =>
         layer.category === "segmentation" ? "Segmentation" : layer.name,
       ),
     );
   });
 
-  if (missingLayerNames.length === 0) {
+  if (unrenderableLayerNames.length === 0) {
     return null;
   }
-  const pluralS = missingLayerNames.length > 1 ? "s" : "";
-  const pronounAndVerb = missingLayerNames.length > 1 ? "they don't" : "it doesn't";
+  const pluralS = unrenderableLayerNames.length > 1 ? "s" : "";
+  const pronounAndVerb = unrenderableLayerNames.length > 1 ? "they don't" : "it doesn't";
 
   return (
     <Tooltip
       title={
         <div>
-          The layer{pluralS} {missingLayerNames.map(name => `"${name}"`).join(", ")} cannot be
+          The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")} cannot be
           rendered because {pronounAndVerb} exist in the current magnification. Please adjust the
           zoom level to change the active magnification. Also consider disabling the option
           &ldquo;Render Missing Data Black&rdquo; if this is not already the case.

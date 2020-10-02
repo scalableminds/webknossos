@@ -69,7 +69,7 @@ const updateSizeForGl = gl => {
 };
 
 export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
-  gl: GoldenLayout;
+  gl: typeof GoldenLayout;
   maximizedItem: ?Object = null;
   unbindListeners: Array<() => void> = [];
 

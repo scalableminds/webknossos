@@ -20,10 +20,10 @@ export const COLOR_TEXTURE_WIDTH = 1024.0;
 export const COLOR_TEXTURE_WIDTH_FIXED = COLOR_TEXTURE_WIDTH.toFixed(1);
 
 class NodeShader {
-  material: THREE.RawShaderMaterial;
+  material: typeof THREE.RawShaderMaterial;
   uniforms: Uniforms;
 
-  constructor(treeColorTexture: THREE.DataTexture) {
+  constructor(treeColorTexture: typeof THREE.DataTexture) {
     this.setupUniforms(treeColorTexture);
 
     this.material = new THREE.RawShaderMaterial({
@@ -36,7 +36,7 @@ class NodeShader {
     shaderEditor.addMaterial("nodeFragment", this.material);
   }
 
-  setupUniforms(treeColorTexture: THREE.DataTexture): void {
+  setupUniforms(treeColorTexture: typeof THREE.DataTexture): void {
     const state = Store.getState();
 
     this.uniforms = {
@@ -110,7 +110,7 @@ class NodeShader {
     );
   }
 
-  getMaterial(): THREE.RawShaderMaterial {
+  getMaterial(): typeof THREE.RawShaderMaterial {
     return this.material;
   }
 

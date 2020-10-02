@@ -53,9 +53,9 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     if (tooltip != null) {
       const { target } = event;
       const isTargetNotATimeEntry =
-        // $FlowIgnore
+        // $FlowIssue[prop-missing]
         (target != null && target.tagName != null && target.tagName !== "rect") ||
-        // $FlowIgnore
+        // $FlowIssue[prop-missing]
         target.getAttribute("stroke") !== "none";
       if (isTargetNotATimeEntry) {
         if (tooltip.parentElement) {

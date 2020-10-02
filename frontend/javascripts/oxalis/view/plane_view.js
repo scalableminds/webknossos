@@ -41,8 +41,8 @@ class PlaneView {
   listenTo: Function;
   unbindChangedScaleListener: () => void;
 
-  cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: () => ?THREE.Vector3;
+  cameras: OrthoViewMap<typeof THREE.OrthographicCamera>;
+  throttledPerformIsosurfaceHitTest: () => ?typeof THREE.Vector3;
 
   running: boolean;
   needsRerender: boolean;
@@ -150,7 +150,7 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(): ?THREE.Vector3 {
+  performIsosurfaceHitTest(): ?typeof THREE.Vector3 {
     const storeState = Store.getState();
     const SceneController = getSceneController();
     const { isosurfacesRootGroup } = SceneController;
@@ -230,7 +230,7 @@ class PlaneView {
     this.draw();
   };
 
-  getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
+  getCameras(): OrthoViewMap<typeof THREE.OrthographicCamera> {
     return this.cameras;
   }
 

@@ -27,8 +27,8 @@ type BufferHelper = typeof NodeBufferHelperType | typeof EdgeBufferHelperType;
 type Buffer = {
   capacity: number,
   nextIndex: number,
-  geometry: THREE.BufferGeometry,
-  mesh: THREE.Mesh,
+  geometry: typeof THREE.BufferGeometry,
+  mesh: typeof THREE.Mesh,
 };
 
 type BufferPosition = {
@@ -41,13 +41,13 @@ type BufferCollection = {
   idToBufferPosition: Map<number, BufferPosition>,
   freeList: Array<BufferPosition>,
   helper: BufferHelper,
-  material: THREE.Material,
+  material: typeof THREE.Material,
 };
 
-type BufferOperation = (position: BufferPosition) => Array<THREE.BufferAttribute>;
+type BufferOperation = (position: BufferPosition) => Array<typeof THREE.BufferAttribute>;
 
 const NodeBufferHelperType = {
-  addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
+  addAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
     geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
@@ -56,7 +56,10 @@ const NodeBufferHelperType = {
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.RawShaderMaterial): THREE.Mesh {
+  buildMesh(
+    geometry: typeof THREE.BufferGeometry,
+    material: typeof THREE.RawShaderMaterial,
+  ): typeof THREE.Mesh {
     return new THREE.Points(geometry, material);
   },
 
@@ -64,12 +67,15 @@ const NodeBufferHelperType = {
 };
 
 const EdgeBufferHelperType = {
-  addAttributes(geometry: THREE.BufferGeometry, capacity: number): void {
+  addAttributes(geometry: typeof THREE.BufferGeometry, capacity: number): void {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 6), 3));
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity * 2), 1));
   },
 
-  buildMesh(geometry: THREE.BufferGeometry, material: THREE.LineBasicMaterial): THREE.Mesh {
+  buildMesh(
+    geometry: typeof THREE.BufferGeometry,
+    material: typeof THREE.LineBasicMaterial,
+  ): typeof THREE.Mesh {
     return new THREE.LineSegments(geometry, material);
   },
 
@@ -86,12 +92,12 @@ const EdgeBufferHelperType = {
  * @class
  */
 class Skeleton {
-  rootNode: THREE.Object3D;
-  pickingNode: THREE.Object3D;
+  rootNode: typeof THREE.Object3D;
+  pickingNode: typeof THREE.Object3D;
   prevTracing: SkeletonTracing;
   nodes: BufferCollection;
   edges: BufferCollection;
-  treeColorTexture: THREE.DataTexture;
+  treeColorTexture: typeof THREE.DataTexture;
 
   constructor() {
     this.rootNode = new THREE.Object3D();
@@ -165,7 +171,7 @@ class Skeleton {
 
   initializeBufferCollection(
     initialCapacity: number,
-    material: THREE.Material,
+    material: typeof THREE.Material,
     helper: BufferHelper,
   ): BufferCollection {
     const initialBuffer = this.initializeBuffer(
@@ -183,7 +189,11 @@ class Skeleton {
     };
   }
 
-  initializeBuffer(capacity: number, material: THREE.Material, helper: BufferHelper): Buffer {
+  initializeBuffer(
+    capacity: number,
+    material: typeof THREE.Material,
+    helper: BufferHelper,
+  ): Buffer {
     const geometry = new THREE.BufferGeometry();
     helper.addAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
@@ -394,15 +404,15 @@ class Skeleton {
     this.prevTracing = skeletonTracing;
   }
 
-  getAllNodes(): Array<THREE.Mesh> {
+  getAllNodes(): Array<typeof THREE.Mesh> {
     return this.nodes.buffers.map(buffer => buffer.mesh);
   }
 
-  getRootNode(): THREE.Object3D {
+  getRootNode(): typeof THREE.Object3D {
     return this.rootNode;
   }
 
-  startPicking(isTouch: boolean): THREE.Object3D {
+  startPicking(isTouch: boolean): typeof THREE.Object3D {
     this.pickingNode.matrixAutoUpdate = false;
     this.pickingNode.matrix.copy(this.rootNode.matrixWorld);
     this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;

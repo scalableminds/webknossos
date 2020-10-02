@@ -219,10 +219,10 @@ class PlaneMaterialFactory {
         type: "f",
         value: 1,
       };
-      // If the `_missing` uniform is true, the layer
+      // If the `_unrenderable` uniform is true, the layer
       // cannot (and should not) be rendered in the
       // current mag.
-      this.uniforms[`${layerName}_missing`] = {
+      this.uniforms[`${layerName}_unrenderable`] = {
         type: "f",
         value: 0,
       };

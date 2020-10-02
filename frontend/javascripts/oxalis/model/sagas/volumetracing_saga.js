@@ -346,7 +346,7 @@ export function* floodFill(): Saga<void> {
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
 
     const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-    // The floodfill and applyVoxelMap methods of iterates within the bucket.
+    // The floodfill and applyVoxelMap methods iterate within the bucket.
     // Thus thirdDimensionValue must also be within the initial bucket in the correct resolution.
     const thirdDimensionValue =
       Math.floor(seedVoxel[dimensionIndices[2]] / labeledResolution[dimensionIndices[2]]) %
@@ -430,7 +430,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   // should be downsampled)
   const downsampleSequence = allResolutionsWithIndices.slice(pivotIndex);
   // `upsampleSequence` contains the current mag and all lower mags (to which
-  // should be downsampled)
+  // should be upsampled)
   const upsampleSequence = allResolutionsWithIndices.slice(0, pivotIndex + 1).reverse();
 
   // First upsample the voxel map and apply it to all better resolutions.
@@ -469,7 +469,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   }
   currentLabeledVoxelMap = labeledVoxelMapToApply;
 
-  // Next we downsamplesample the annotation and apply it.
+  // Next we downsample the annotation and apply it.
   // sourceZoomStep will be lower than targetZoomStep
   for (const [source, target] of pairwise(downsampleSequence)) {
     const [sourceZoomStep, sourceResolution] = source;
@@ -528,13 +528,13 @@ export function* ensureNoTraceToolInLowResolutions(): Saga<*> {
   yield* take("INITIALIZE_VOLUMETRACING");
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isResolutionToLowForTraceTool = yield* select(state =>
+    const isResolutionTooLowForTraceTool = yield* select(state =>
       isVolumeTraceToolDisallowed(state),
     );
     const isTraceToolActive = yield* select(
       state => enforceVolumeTracing(state.tracing).activeTool === VolumeToolEnum.TRACE,
     );
-    if (isResolutionToLowForTraceTool && isTraceToolActive) {
+    if (isResolutionTooLowForTraceTool && isTraceToolActive) {
       yield* put(setToolAction(VolumeToolEnum.MOVE));
     }
   }

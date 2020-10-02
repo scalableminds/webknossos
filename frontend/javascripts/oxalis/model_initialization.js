@@ -115,14 +115,19 @@ export async function initialize(
     versions,
   );
 
-  // TODO Can we know here if the fallback layer is needed?
-  const displayedLayers = dataset.dataSource.dataLayers.map(layer => ({
-    name: layer.name,
-    isSegmentationLayer: layer.category !== "color",
-  }));
+  let displayedLayers = [];
+  if (dataset.dataSource.dataLayers != null) {
+    displayedLayers = dataset.dataSource.dataLayers.map(layer => ({
+      name: layer.name,
+      isSegmentationLayer: layer.category !== "color",
+    }));
+  }
 
-  if (annotation != null && annotation.tracing.volume != null) {
-    displayedLayers.push({ name: annotation.tracing.volume, isSegmentationLayer: true });
+  if (tracing != null && tracing.volume != null) {
+    if (tracing.volume.fallbackLayer == null) {
+      displayedLayers = displayedLayers.filter(layer => !layer.isSegmentationLayer)
+    }
+    displayedLayers.push({ name: tracing.volume.id, isSegmentationLayer: true });
   }
 
   const initialDatasetSettings = await getDatasetViewConfiguration(dataset, displayedLayers);

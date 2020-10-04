@@ -122,14 +122,14 @@ class DataCube {
       shouldBeRestrictedByTracingBoundingBox()
         ? getSomeTracing(Store.getState().tracing).boundingBox
         : null,
-      this,
+      this.upperBoundary,
     );
 
     listenToStoreProperty(
       state => getSomeTracing(state.tracing).boundingBox,
       boundingBox => {
         if (shouldBeRestrictedByTracingBoundingBox()) {
-          this.boundingBox = new BoundingBox(boundingBox, this);
+          this.boundingBox = new BoundingBox(boundingBox, this.upperBoundary);
         }
       },
     );

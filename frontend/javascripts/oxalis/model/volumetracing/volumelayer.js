@@ -28,7 +28,7 @@ import Store from "oxalis/store";
 
 export class VoxelIterator {
   hasNext: boolean = true;
-  map: boolean[][];
+  map: Uint8Array;
   x = 0;
   y = 0;
   width: number;
@@ -42,13 +42,13 @@ export class VoxelIterator {
   thirdDimensionIndex: DimensionIndices;
 
   static finished(): VoxelIterator {
-    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0], 0);
+    const iterator = new VoxelIterator(new Uint8Array(1), 0, 0, [0, 0], () => [0, 0, 0], 0);
     iterator.hasNext = false;
     return iterator;
   }
 
   constructor(
-    map: boolean[][],
+    map: Uint8Array,
     width: number,
     height: number,
     minCoord2d: Vector2,
@@ -68,6 +68,10 @@ export class VoxelIterator {
     this.reset();
   }
 
+  linearizeIndex(x: number, y: number): number {
+    return x * this.height + y;
+  }
+
   get3DCoordinateWithSliceOffset(position: Vector2): Vector3 {
     const threeDPosition = this.get3DCoordinate(position);
     threeDPosition[this.thirdDimensionIndex] += this.currentSlice;
@@ -80,15 +84,12 @@ export class VoxelIterator {
     if (resetSliceCount) {
       this.currentSlice = 0;
     }
-    if (!this.map || !this.map[0]) {
-      this.hasNext = false;
+
+    const firstCoordinate = this.get3DCoordinateWithSliceOffset(this.minCoord2d);
+    if (this.map[0] != 0 && this.isCoordinateInBounds(firstCoordinate)) {
+      this.next = firstCoordinate;
     } else {
-      const firstCoordinate = this.get3DCoordinateWithSliceOffset(this.minCoord2d);
-      if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
-        this.next = firstCoordinate;
-      } else {
-        this.getNext();
-      }
+      this.getNext();
     }
   }
 
@@ -129,7 +130,7 @@ export class VoxelIterator {
           foundNext = true;
           this.hasNext = false;
         }
-      } else if (this.map[this.x][this.y]) {
+      } else if (this.map[this.linearizeIndex(this.x, this.y)]) {
         const currentCoordinate = this.get3DCoordinateWithSliceOffset([
           this.x + this.minCoord2d[0],
           this.y + this.minCoord2d[1],
@@ -249,20 +250,14 @@ class VolumeLayer {
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;
 
-    const map = new Array(width);
-    for (let x = 0; x < width; x++) {
-      map[x] = new Array(height);
-      for (let y = 0; y < height; y++) {
-        map[x][y] = true;
-      }
-    }
+    const map = new Uint8Array(width * height).fill(1);
 
-    const setMap = (x: number, y: number, value = true) => {
+    const setMap = (x: number, y: number, value: number = 1) => {
       x = Math.floor(x);
       y = Math.floor(y);
       // Leave a 1px border in order for fillOutsideArea to work
       if (x > minCoord2d[0] && x < maxCoord2d[0] && y > minCoord2d[1] && y < maxCoord2d[1]) {
-        map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+        map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
       }
     };
 
@@ -277,7 +272,7 @@ class VolumeLayer {
     // area if you consider narrow shapes.
     // Also, it will be very clear where to start the filling
     // algorithm.
-    this.drawOutlineVoxels((x, y) => setMap(x, y, false), mode);
+    this.drawOutlineVoxels((x, y) => setMap(x, y, 0), mode);
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
@@ -308,10 +303,8 @@ class VolumeLayer {
     const width = 2 * radius;
     const height = 2 * radius;
 
-    const map = new Array(width);
-    for (let x = 0; x < width; x++) {
-      map[x] = new Array(height).fill(false);
-    }
+    const map = new Uint8Array(width * height).fill(0);
+
     const floatingCoord2d = this.get2DCoordinate(position);
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
     const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
@@ -322,7 +315,7 @@ class VolumeLayer {
     );
 
     const setMap = (x, y) => {
-      map[x][y] = true;
+      map[x * height + y] = 1;
     };
     Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
 
@@ -364,11 +357,11 @@ class VolumeLayer {
     }
   }
 
-  fillOutsideArea(map: boolean[][], width: number, height: number): void {
+  fillOutsideArea(map: Uint8Array, width: number, height: number): void {
     const setMap = (x, y) => {
-      map[x][y] = false;
+      map[x * height + y] = 0;
     };
-    const isEmpty = (x, y) => map[x][y] === true;
+    const isEmpty = (x, y) => map[x * height + y] === 1;
 
     // Fill everything BUT the cell
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
@@ -376,13 +369,8 @@ class VolumeLayer {
 
   get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
-    const result = [];
-    for (let i = 0; i <= 2; i++) {
-      if (i !== Dimensions.thirdDimensionForPlane(this.plane)) {
-        result.push(coord3d[i]);
-      }
-    }
-    return [result[0], result[1]];
+    const [firstDim, secondDim] = Dimensions.getIndices(this.plane);
+    return [coord3d[firstDim], coord3d[secondDim]];
   }
 
   get3DCoordinate(coord2d: Vector2): Vector3 {
@@ -391,6 +379,7 @@ class VolumeLayer {
     let index2d = 0;
     const res = [0, 0, 0];
 
+    // todo: dont iterate
     for (let i = 0; i <= 2; i++) {
       if (i !== index) {
         res[i] = coord2d[index2d++];

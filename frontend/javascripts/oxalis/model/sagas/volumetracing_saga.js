@@ -60,6 +60,7 @@ import Constants, {
   VolumeToolEnum,
   type LabeledVoxelsMap,
 } from "oxalis/constants";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
@@ -67,6 +68,8 @@ import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
+
+window.USE_VOXEL_MAP = true;
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -214,6 +217,121 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
+
+  const USE_VOXEL_MAP = window.USE_VOXEL_MAP;
+  console.log("USE_VOXEL_MAP", USE_VOXEL_MAP);
+  console.time("Labeling");
+
+  if (USE_VOXEL_MAP) {
+    const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
+    const dimensionIndices = [0, 1, 2];
+    const defaultValue = 0;
+
+    const resolutionInfo = yield* select(state =>
+      getResolutionInfoOfSegmentationLayer(state.dataset),
+    );
+
+    // iterator has following properties
+    // map: boolean[][];
+    // x = 0;
+    // y = 0;
+    // width: number;
+    // height: number;
+    // minCoord2d: Vector2;
+    // get3DCoordinate: Vector2 => Vector3;
+    // numberOfSlices: number;
+
+    const get3DCoordinateFromLocal2D = ([x, y]) => {
+      return iterator.get3DCoordinate([x + iterator.minCoord2d[0], y + iterator.minCoord2d[1]]);
+    };
+
+    const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
+    const bottomRight3DCoord = get3DCoordinateFromLocal2D([iterator.width, iterator.height]);
+    // todo: make this prettier
+    bottomRight3DCoord[2]++;
+
+    // const topLeftBucket = cube.positionToZoomedAddress(topLeft3DCoord);
+
+    const outerBoundingBox = new BoundingBox({
+      min: topLeft3DCoord,
+      max: bottomRight3DCoord,
+    });
+
+    const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
+
+    for (const boundingBoxChunk of bucketBoundingBoxes) {
+      const { min, max } = boundingBoxChunk;
+      const bucketZoomedAddress = cube.positionToZoomedAddress(min);
+
+      if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
+        throw new Error(
+          "When iterating over the buckets, we shouldn't visit the same bucket twice",
+        );
+      }
+
+      const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2).fill(defaultValue);
+      currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
+
+      // let hadLabelingEffect = false;
+      for (let bx = min[0]; bx < max[0]; bx++) {
+        for (let by = min[1]; by < max[1]; by++) {
+          if (
+            iterator.map[
+              iterator.linearizeIndex(bx - iterator.minCoord2d[0], by - iterator.minCoord2d[1])
+            ]
+          ) {
+            // hadLabelingEffect =
+            //   hadLabelingEffect || labelMapOfBucket[bx * Constants.BUCKET_WIDTH + by] == 0;
+            labelMapOfBucket[
+              (bx % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH + (by % Constants.BUCKET_WIDTH)
+            ] = 1;
+          }
+        }
+      }
+
+      // if (!hadLabelingEffect) {
+      //   console.log("avoid labeling a bucket");
+      //   currentLabeledVoxelMap.delete(bucketZoomedAddress);
+      // }
+    }
+
+    const labeledZoomStep = 0;
+    // const labeledVoxelInBucket = cube.getVoxelOffset(voxelTargetAddress, labeledZoomStep);
+    // const labeledVoxel2D = [
+    //   labeledVoxelInBucket[dimensionIndices[0]],
+    //   labeledVoxelInBucket[dimensionIndices[1]],
+    // ];
+
+    const shouldOverwrite = true;
+    const numberOfSlices = 1;
+    const thirdDim = dimensionIndices[2];
+
+    applyVoxelMap(
+      currentLabeledVoxelMap,
+      cube,
+      activeCellId,
+      iterator.get3DCoordinate,
+      numberOfSlices,
+      thirdDim,
+      shouldOverwrite,
+    );
+
+    const thirdDimensionOfSlice = topLeft3DCoord[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingResolutions(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      activeCellId,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+    );
+
+    console.timeEnd("Labeling");
+    return;
+  }
+
   switch (contourTracingMode) {
     case ContourModeEnum.DRAW_OVERWRITE:
       yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, activeCellId);
@@ -230,6 +348,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     default:
       throw new Error("Invalid volume tracing mode.");
   }
+  console.timeEnd("Labeling");
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {

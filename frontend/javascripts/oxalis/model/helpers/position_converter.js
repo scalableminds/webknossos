@@ -25,6 +25,24 @@ export function globalPositionToBucketPosition(
   ];
 }
 
+export function scaleGlobalPositionWithResolution(
+  [x, y, z]: Vector3,
+  resolution: Vector3,
+): Vector3 {
+  return [
+    Math.floor(x / resolution[0]),
+    Math.floor(y / resolution[1]),
+    Math.floor(z / resolution[2]),
+  ];
+}
+
+export function scaleGlobalPositionWithResolutionFloat(
+  [x, y, z]: Vector3,
+  resolution: Vector3,
+): Vector3 {
+  return [x / resolution[0], y / resolution[1], z / resolution[2]];
+}
+
 export function globalPositionToBucketPositionFloat(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,
@@ -72,6 +90,18 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
     resolutionA[0] / resolutionB[0],
     resolutionA[1] / resolutionB[1],
     resolutionA[2] / resolutionB[2],
+  ];
+}
+
+export function zoomedPositionToZoomedAddress(
+  [x, y, z]: Vector3,
+  resolutionIndex: number,
+): Vector4 {
+  return [
+    Math.floor(x / constants.BUCKET_WIDTH),
+    Math.floor(y / constants.BUCKET_WIDTH),
+    Math.floor(z / constants.BUCKET_WIDTH),
+    resolutionIndex,
   ];
 }
 

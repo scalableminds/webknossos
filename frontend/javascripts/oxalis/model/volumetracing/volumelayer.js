@@ -5,7 +5,12 @@
 
 import _ from "lodash";
 
+import {
+  scaleGlobalPositionWithResolution,
+  scaleGlobalPositionWithResolutionFloat,
+} from "oxalis/model/helpers/position_converter";
 import Constants, {
+  OrthoViews,
   type BoundingBoxType,
   type OrthoView,
   type Vector2,
@@ -27,123 +32,36 @@ import Toast from "libs/toast";
 import Store from "oxalis/store";
 
 export class VoxelIterator {
-  hasNext: boolean = true;
   map: Uint8Array;
-  x = 0;
-  y = 0;
   width: number;
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
-  numberOfSlices: number;
-  boundingBox: ?BoundingBoxType;
-  next: Vector3;
-  currentSlice = 0;
-  thirdDimensionIndex: DimensionIndices;
+  layer: VolumeLayer;
 
-  static finished(): VoxelIterator {
-    const iterator = new VoxelIterator(new Uint8Array(1), 0, 0, [0, 0], () => [0, 0, 0], 0);
-    iterator.hasNext = false;
+  static finished(layer: VolumeLayer): VoxelIterator {
+    const iterator = new VoxelIterator(layer, new Uint8Array(1), 0, 0, [0, 0], () => [0, 0, 0]);
     return iterator;
   }
 
   constructor(
+    layer: VolumeLayer,
     map: Uint8Array,
     width: number,
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3,
-    thirdDimensionIndex: DimensionIndices,
-    numberOfSlices: number = 1,
-    boundingBox?: ?BoundingBoxType,
   ) {
+    this.layer = layer;
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
-    this.thirdDimensionIndex = thirdDimensionIndex;
-    this.boundingBox = boundingBox;
-    this.numberOfSlices = numberOfSlices;
-    this.reset();
   }
 
   linearizeIndex(x: number, y: number): number {
     return x * this.height + y;
-  }
-
-  get3DCoordinateWithSliceOffset(position: Vector2): Vector3 {
-    const threeDPosition = this.get3DCoordinate(position);
-    threeDPosition[this.thirdDimensionIndex] += this.currentSlice;
-    return threeDPosition;
-  }
-
-  reset(resetSliceCount: boolean = true) {
-    this.x = 0;
-    this.y = 0;
-    if (resetSliceCount) {
-      this.currentSlice = 0;
-    }
-
-    const firstCoordinate = this.get3DCoordinateWithSliceOffset(this.minCoord2d);
-    if (this.map[0] != 0 && this.isCoordinateInBounds(firstCoordinate)) {
-      this.next = firstCoordinate;
-    } else {
-      this.getNext();
-    }
-  }
-
-  isCoordinateInBounds(coor: Vector3): boolean {
-    if (!this.boundingBox) {
-      return true;
-    }
-    return (
-      coor[0] >= this.boundingBox.min[0] &&
-      coor[0] <= this.boundingBox.max[0] &&
-      coor[1] >= this.boundingBox.min[1] &&
-      coor[1] <= this.boundingBox.max[1] &&
-      coor[2] >= this.boundingBox.min[2] &&
-      coor[2] <= this.boundingBox.max[2]
-    );
-  }
-
-  nextSlice() {
-    ++this.currentSlice;
-    if (this.currentSlice < this.numberOfSlices) {
-      this.reset(false);
-      return true;
-    }
-    return false;
-  }
-
-  getNext(): Vector3 {
-    const res = this.next;
-    let foundNext = false;
-    while (!foundNext) {
-      this.x = (this.x + 1) % this.width;
-      if (this.x === 0) {
-        this.y++;
-      }
-      if (this.y === this.height) {
-        const hasNextSlice = this.nextSlice();
-        if (!hasNextSlice) {
-          foundNext = true;
-          this.hasNext = false;
-        }
-      } else if (this.map[this.linearizeIndex(this.x, this.y)]) {
-        const currentCoordinate = this.get3DCoordinateWithSliceOffset([
-          this.x + this.minCoord2d[0],
-          this.y + this.minCoord2d[1],
-        ]);
-        // Check if position is in bounds.
-        if (this.isCoordinateInBounds(currentCoordinate)) {
-          this.next = currentCoordinate;
-          this.hasNext = true;
-          foundNext = true;
-        }
-      }
-    }
-    return res;
   }
 }
 
@@ -177,24 +95,36 @@ export class VoxelNeighborStack2D {
 }
 
 class VolumeLayer {
+  /*
+  From the outside, the VolumeLayer accepts only global positions. Internally,
+  these are converted to the actual used resolution (activeResolution).
+  Therefore, members of this class are in the resolution space of
+  `activeResolution`.
+  */
+
   plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
+  activeResolution: Vector3;
 
-  constructor(plane: OrthoView, thirdDimensionValue: number) {
+  constructor(plane: OrthoView, thirdDimensionValue: number, activeResolution: Vector3) {
     this.plane = plane;
-    this.thirdDimensionValue = thirdDimensionValue;
     this.maxCoord = null;
     this.minCoord = null;
+    this.activeResolution = activeResolution;
+
+    const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
+    this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeResolution[thirdDim]);
   }
 
   addContour(pos: Vector3): void {
     this.updateArea(pos);
   }
 
-  updateArea(pos: Vector3): void {
+  updateArea(unzoomedPos: Vector3): void {
+    const pos = scaleGlobalPositionWithResolution(unzoomedPos, this.activeResolution);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -229,14 +159,14 @@ class VolumeLayer {
     return this.getContourList().length === 0;
   }
 
-  getVoxelIterator(mode: VolumeTool, activeResolution: Vector3): VoxelIterator {
+  getVoxelIterator(mode: VolumeTool): VoxelIterator {
     if (this.isEmpty() || this.minCoord == null) {
-      return VoxelIterator.finished();
+      return VoxelIterator.finished(this);
     }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
 
     if (this.maxCoord == null) {
-      return VoxelIterator.finished();
+      return VoxelIterator.finished(this);
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
@@ -244,7 +174,7 @@ class VolumeLayer {
     // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
     if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
       Toast.info(messages["tracing.area_to_fill_is_too_big"]);
-      return VoxelIterator.finished();
+      return VoxelIterator.finished(this);
     }
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
@@ -276,38 +206,38 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
-    const numberOfSlices = getNumberOfSlicesForResolution(activeResolution, this.plane);
+    const numberOfSlices = getNumberOfSlicesForResolution(this.activeResolution, this.plane);
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
+      this,
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
-      thirdDimensionIndex,
-      numberOfSlices,
     );
     return iterator;
   }
 
-  getCircleVoxelIterator(
-    position: Vector3,
-    activeResolution: Vector3,
-    boundings?: ?BoundingBoxType,
-  ): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
+    const dimIndices = Dimensions.getIndices(this.plane);
 
     const radius = Math.round(brushSize / 2);
-    const width = 2 * radius;
-    const height = 2 * radius;
+    const width = Math.floor((2 * radius) / this.activeResolution[dimIndices[0]]);
+    const height = Math.floor((2 * radius) / this.activeResolution[dimIndices[1]]);
 
     const map = new Uint8Array(width * height).fill(0);
 
-    const floatingCoord2d = this.get2DCoordinate(position);
-    const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
-    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
+    const floatingCoord2d = this.get2DCoordinate(
+      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
+    );
+    const minCoord2d = [
+      Math.floor(floatingCoord2d[0] - width / 2),
+      Math.floor(floatingCoord2d[1] - height / 2),
+    ];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
@@ -317,20 +247,25 @@ class VolumeLayer {
     const setMap = (x, y) => {
       map[x * height + y] = 1;
     };
-    Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
+    Drawing.fillCircle(
+      Math.floor(radius / this.activeResolution[dimIndices[0]]),
+      Math.floor(radius / this.activeResolution[dimIndices[1]]),
+      Math.floor(radius / this.activeResolution[dimIndices[0]]), // todo: wont work for anisotropic mags
+      scaleX,
+      scaleY,
+      setMap,
+    );
 
-    const numberOfSlices = getNumberOfSlicesForResolution(activeResolution, this.plane);
+    const numberOfSlices = getNumberOfSlicesForResolution(this.activeResolution, this.plane);
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
+      this,
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
-      thirdDimensionIndex,
-      numberOfSlices,
-      boundings,
     );
     return iterator;
   }
@@ -369,26 +304,42 @@ class VolumeLayer {
 
   get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
-    const [firstDim, secondDim] = Dimensions.getIndices(this.plane);
-    return [coord3d[firstDim], coord3d[secondDim]];
+    const transposed = Dimensions.transDim(coord3d, this.plane);
+    return [transposed[0], transposed[1]];
   }
 
   get3DCoordinate(coord2d: Vector2): Vector3 {
-    // Put thirdCoordinate back in
-    const index = Dimensions.thirdDimensionForPlane(this.plane);
-    let index2d = 0;
-    const res = [0, 0, 0];
+    return Dimensions.transDim([coord2d[0], coord2d[1], this.thirdDimensionValue], this.plane);
+  }
 
-    // todo: dont iterate
-    for (let i = 0; i <= 2; i++) {
-      if (i !== index) {
-        res[i] = coord2d[index2d++];
-      } else {
-        res[i] = this.thirdDimensionValue;
+  getFast3DCoordinateFunction(): (
+    coordX: number,
+    coordY: number,
+    out: Vector3 | Float32Array,
+  ) => void {
+    switch (this.plane) {
+      case OrthoViews.PLANE_XY:
+        return (coordX, coordY, out) => {
+          out[0] = coordX;
+          out[1] = coordY;
+          out[2] = this.thirdDimensionValue;
+        };
+      case OrthoViews.PLANE_YZ:
+        return (coordX, coordY, out) => {
+          out[0] = this.thirdDimensionValue;
+          out[1] = coordY;
+          out[2] = coordX;
+        };
+      case OrthoViews.PLANE_XZ:
+        return (coordX, coordY, out) => {
+          out[0] = coordX;
+          out[1] = this.thirdDimensionValue;
+          out[2] = coordY;
+        };
+      default: {
+        throw new Error("Unknown plane id");
       }
     }
-
-    return res;
   }
 
   getCentroid(): Vector3 {

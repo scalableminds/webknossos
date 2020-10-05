@@ -326,29 +326,7 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  labelVoxelsInAllResolutions(
-    iterator: VoxelIterator,
-    label: number,
-    activeCellId?: ?number = null,
-  ): void {
-    // TODO: Do not label voxel in higher resolutions multiple times (also see https://github.com/scalableminds/webknossos/issues/4838)
-    // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
-    // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
-    // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-
-    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
-      while (iterator.hasNext) {
-        const voxel = iterator.getNext();
-        this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
-      }
-      iterator.reset();
-    }
-
-    this.triggerPushQueue();
-  }
-
   labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
-    // Also see labelVoxelsInAllResolutions
     // TODO: Do not label voxel in higher resolutions multiple times (also see https://github.com/scalableminds/webknossos/issues/4838)
     // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
     // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
@@ -560,7 +538,7 @@ class DataCube {
     return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null, zoomStep);
   }
 
-  getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
+  getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 

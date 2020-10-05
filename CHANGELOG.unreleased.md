@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)
+- Fixed the disappearing of dataset settings after switching between view mode and trace mode. [#4845](https://github.com/scalableminds/webknossos/pull/4845)
 
 ### Removed
 -

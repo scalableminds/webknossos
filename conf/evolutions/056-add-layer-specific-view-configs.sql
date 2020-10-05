@@ -3,17 +3,17 @@
 START TRANSACTION;
 
 CREATE TABLE webknossos.user_dataSetLayerConfigurations(
-    _user CHAR(24) NOT NULL,
-    _dataSet CHAR(24) NOT NULL,
-    layerName VARCHAR(256) NOT NULL,
-    configuration JSONB NOT NULL,
-    PRIMARY KEY (_user, _dataSet, layerName),
-    CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
+  _user CHAR(24) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  configuration JSONB NOT NULL,
+  PRIMARY KEY (_user, _dataSet, layerName),
+  CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
 );
 
 ALTER TABLE webknossos.user_dataSetLayerConfigurations
-    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
-    ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
 
 -- Insert the layer configs into the new table
 INSERT INTO webknossos.user_dataSetLayerConfigurations(_user, _dataset, layerName, configuration)

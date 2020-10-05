@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.10.0...HEAD)
 
 ### Added
-- 
+- The find data function now works for volume tracings, too. [#4847](https://github.com/scalableminds/webknossos/pull/4847)
 
 ### Changed
 - The position input of tracings now accepts decimal input. When losing focus the values are cut off at the comma. [#4777](https://github.com/scalableminds/webknossos/pull/4803)

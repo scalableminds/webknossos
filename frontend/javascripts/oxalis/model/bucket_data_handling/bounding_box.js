@@ -7,7 +7,6 @@ import _ from "lodash";
 
 import { V3 } from "libs/mjs";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import constants, {
   type BoundingBoxType,
@@ -86,29 +85,29 @@ class BoundingBox {
   chunkIntoBuckets() {
     const size = V3.sub(this.max, this.min);
     const start = [...this.min];
-    const chunk_size = [32, 32, 32];
-    const chunk_border_alignments = [32, 32, 32];
+    const chunkSize = [32, 32, 32];
+    const chunkBorderAlignments = [32, 32, 32];
 
     // Move the start to be aligned correctly. This doesn't actually change
     // the start of the first chunk, because we'll intersect with `self`,
     // but it'll lead to all chunk borders being aligned correctly.
-    const start_adjust = [
-      start[0] % chunk_border_alignments[0],
-      start[1] % chunk_border_alignments[1],
-      start[2] % chunk_border_alignments[2],
+    const startAdjust = [
+      start[0] % chunkBorderAlignments[0],
+      start[1] % chunkBorderAlignments[1],
+      start[2] % chunkBorderAlignments[2],
     ];
 
     const boxes = [];
 
-    for (const x of _.range(start[0] - start_adjust[0], start[0] + size[0], chunk_size[0])) {
-      for (const y of _.range(start[1] - start_adjust[1], start[1] + size[1], chunk_size[1])) {
-        for (const z of _.range(start[2] - start_adjust[2], start[2] + size[2], chunk_size[2])) {
+    for (const x of _.range(start[0] - startAdjust[0], start[0] + size[0], chunkSize[0])) {
+      for (const y of _.range(start[1] - startAdjust[1], start[1] + size[1], chunkSize[1])) {
+        for (const z of _.range(start[2] - startAdjust[2], start[2] + size[2], chunkSize[2])) {
           const newMin = [x, y, z];
           boxes.push(
             this.intersectedWith(
               new BoundingBox({
                 min: newMin,
-                max: V3.add(newMin, chunk_size),
+                max: V3.add(newMin, chunkSize),
               }),
             ),
           );

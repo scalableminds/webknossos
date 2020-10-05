@@ -14,7 +14,7 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
-import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
+import { VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
 import { getResolutions, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";

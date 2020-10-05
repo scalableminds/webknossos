@@ -11,7 +11,6 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import Constants, {
   OrthoViews,
-  type BoundingBoxType,
   type OrthoView,
   type Vector2,
   type Vector3,
@@ -20,12 +19,9 @@ import Constants, {
   type VolumeTool,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import {
-  enforceVolumeTracing,
-  getNumberOfSlicesForResolution,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import Dimensions, { type DimensionIndices } from "oxalis/model/dimensions";
+import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -38,7 +34,6 @@ export class VoxelIterator {
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
   getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void;
-  layer: VolumeLayer;
 
   static finished(): VoxelIterator {
     const iterator = new VoxelIterator(new Uint8Array(0), 0, 0, [0, 0], () => [0, 0, 0], () => {});
@@ -207,9 +202,6 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
-    const numberOfSlices = getNumberOfSlicesForResolution(this.activeResolution, this.plane);
-    const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
-
     const iterator = new VoxelIterator(
       map,
       width,
@@ -221,7 +213,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
+  getCircleVoxelIterator(position: Vector3): VoxelIterator {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const dimIndices = Dimensions.getIndices(this.plane);
@@ -256,9 +248,6 @@ class VolumeLayer {
       scaleY,
       setMap,
     );
-
-    const numberOfSlices = getNumberOfSlicesForResolution(this.activeResolution, this.plane);
-    const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
       map,

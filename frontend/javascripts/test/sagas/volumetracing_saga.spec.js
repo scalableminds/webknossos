@@ -126,7 +126,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next([1, 1, 1]);
@@ -150,7 +150,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next([1, 1, 1]);
@@ -174,7 +174,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(ContourModeEnum.DELETE_FROM_ACTIVE_CELL);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
   saga.next([1, 1, 1]);

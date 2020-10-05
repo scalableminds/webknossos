@@ -4,7 +4,7 @@ import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontr
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
-import Constants, { type Vector2, type Vector4 } from "oxalis/constants";
+import Constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import anyTest, { type TestInterface } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
@@ -461,7 +461,11 @@ test("A labeledVoxelMap should be applied correctly", t => {
     labelVoxelInVoxelMap(firstDim, secondDim, voxelMap),
   );
   labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
-  const get3DAddress = (voxel2D: Vector2) => [...voxel2D, 5];
+  const get3DAddress = (x: number, y: number, out: Vector3 | Float32Array) => {
+    out[0] = x;
+    out[1] = y;
+    out[2] = 5;
+  };
   const expectedBucketData = new Uint32Array(Constants.BUCKET_SIZE).fill(0);
   voxelsToLabel.forEach(([firstDim, secondDim]) => {
     const addr = cube.getVoxelIndex([firstDim, secondDim, 5], 0);

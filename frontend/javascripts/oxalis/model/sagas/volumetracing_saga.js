@@ -35,13 +35,11 @@ import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
-  getNumberOfSlicesForResolution,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
   getFlooredPosition,
   getRotation,
-  getCurrentResolution,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -123,18 +121,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    let activeResolution = yield* select(state => getCurrentResolution(state));
-    // todo: use labeledResolution
-    let numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
-    const activeViewportBounding = yield* call(
-      getBoundingsFromPosition,
-      initialViewport,
-      numberOfSlices,
-    );
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
         labelWithIterator,
-        currentLayer.getCircleVoxelIterator(startEditingAction.position, activeViewportBounding),
+        currentLayer.getCircleVoxelIterator(startEditingAction.position),
         contourTracingMode,
       );
     }
@@ -161,16 +151,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
-        activeResolution = yield* select(state => getCurrentResolution(state));
-        numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
-        const currentViewportBounding = yield* call(
-          getBoundingsFromPosition,
-          activeViewport,
-          numberOfSlices,
-        );
         yield* call(
           labelWithIterator,
-          currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
+          currentLayer.getCircleVoxelIterator(addToLayerAction.position),
           contourTracingMode,
         );
       }
@@ -237,10 +220,8 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
   const activeResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
-  const get3DCoordinateFromLocal2D = ([x, y]) => {
-    return iterator.get3DCoordinate([x + iterator.minCoord2d[0], y + iterator.minCoord2d[1]]);
-  };
-
+  const get3DCoordinateFromLocal2D = ([x, y]) =>
+    iterator.get3DCoordinate([x + iterator.minCoord2d[0], y + iterator.minCoord2d[1]]);
   const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
   const bottomRight3DCoord = get3DCoordinateFromLocal2D([iterator.width, iterator.height]);
   // todo: make this prettier

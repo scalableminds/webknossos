@@ -456,7 +456,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
                     organization <- createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
@@ -518,30 +517,17 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(
       implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) =
-      future2Fox(
-        rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
-          .addQueryString("token" -> token, "organizationName" -> organizationName)
-          .get
-          .futureBox)
+      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+        .addQueryString("token" -> token, "organizationName" -> organizationName)
+        .get
+        .futureBox
 
     for {
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
+      _ <- Future.sequence(datastores.map(sendRPCToDataStore(_, token)))
     } yield ()
   }
-
-  private def checkOrganizationFolder(implicit request: RequestHeader) =
-    for {
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Fox.serialCombined(datastores)(d =>
-        rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get.futureBox.map {
-          case Full(_) => Fox.successful(())
-          // This failure exists if the datastore is down. We still want to be able to create organizations, therefore we ignore this error.
-          case Failure(errorMsg, _, _) if errorMsg.contains("Connection refused") => Fox.successful(())
-          case box: EmptyBox                                                      => box.toFox
-      })
-    } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

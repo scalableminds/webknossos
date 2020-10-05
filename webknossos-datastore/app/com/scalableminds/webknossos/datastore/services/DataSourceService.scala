@@ -115,7 +115,7 @@ class DataSourceService @Inject()(
       try {
         Fox.successful(PathUtils.ensureDirectory(dir))
       } catch {
-        case e: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
+        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
       }
 
     val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)

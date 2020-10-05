@@ -4,7 +4,7 @@ import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -190,4 +190,16 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
+
+  def findData(tracingId: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      AllowRemoteOrigin {
+        for {
+          positionOpt <- tracingService.findData(tracingId)
+        } yield {
+          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Point3D(1, 1, 1))))
+        }
+      }
+    }
+  }
 }

@@ -100,16 +100,16 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def getExactDataOffset(data: Array[Byte]): Point3D = {
       val bytesPerElement = dataLayer.bytesPerElement
-      val cubeLength = DataLayer.bucketLength / bytesPerElement
+      val bucketLength = DataLayer.bucketLength
       for {
-        z <- 0 until cubeLength
-        y <- 0 until cubeLength
-        x <- 0 until cubeLength
+        z <- 0 until bucketLength
+        y <- 0 until bucketLength
+        x <- 0 until bucketLength
         scaledX = x * bytesPerElement
-        scaledY = y * bytesPerElement
-        scaledZ = z * bytesPerElement
+        scaledY = y * bytesPerElement * bucketLength
+        scaledZ = z * bytesPerElement * bucketLength * bucketLength
       } {
-        val voxelOffset = scaledX + scaledY * cubeLength + scaledZ * cubeLength * cubeLength
+        val voxelOffset = scaledX + scaledY + scaledZ
         if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Point3D(x, y, z)
       }
       Point3D(0, 0, 0)

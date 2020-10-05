@@ -164,7 +164,6 @@ class UserService @Inject()(conf: WkConf,
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
                                                                                    dataSetConfiguration.configuration)
-      _ = userCache.invalidateUser(user._id) // TODO Why do we need to invalidate the user here?
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =

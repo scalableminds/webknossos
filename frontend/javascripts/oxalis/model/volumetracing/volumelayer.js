@@ -37,27 +37,28 @@ export class VoxelIterator {
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
+  getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void;
   layer: VolumeLayer;
 
-  static finished(layer: VolumeLayer): VoxelIterator {
-    const iterator = new VoxelIterator(layer, new Uint8Array(1), 0, 0, [0, 0], () => [0, 0, 0]);
+  static finished(): VoxelIterator {
+    const iterator = new VoxelIterator(new Uint8Array(0), 0, 0, [0, 0], () => [0, 0, 0], () => {});
     return iterator;
   }
 
   constructor(
-    layer: VolumeLayer,
     map: Uint8Array,
     width: number,
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3,
+    getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void,
   ) {
-    this.layer = layer;
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
+    this.getFast3DCoordinate = getFast3DCoordinate;
   }
 
   linearizeIndex(x: number, y: number): number {
@@ -161,12 +162,12 @@ class VolumeLayer {
 
   getVoxelIterator(mode: VolumeTool): VoxelIterator {
     if (this.isEmpty() || this.minCoord == null) {
-      return VoxelIterator.finished(this);
+      return VoxelIterator.finished();
     }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
 
     if (this.maxCoord == null) {
-      return VoxelIterator.finished(this);
+      return VoxelIterator.finished();
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
@@ -174,7 +175,7 @@ class VolumeLayer {
     // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
     if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
       Toast.info(messages["tracing.area_to_fill_is_too_big"]);
-      return VoxelIterator.finished(this);
+      return VoxelIterator.finished();
     }
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
@@ -210,12 +211,12 @@ class VolumeLayer {
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
-      this,
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      this.getFast3DCoordinateFunction(),
     );
     return iterator;
   }
@@ -260,12 +261,12 @@ class VolumeLayer {
     const thirdDimensionIndex = Dimensions.thirdDimensionForPlane(this.plane);
 
     const iterator = new VoxelIterator(
-      this,
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      this.getFast3DCoordinateFunction(),
     );
     return iterator;
   }

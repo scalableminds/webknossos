@@ -304,7 +304,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
-    iterator.layer.getFast3DCoordinateFunction(),
+    iterator.getFast3DCoordinate,
     numberOfSlices,
     thirdDim,
     shouldOverwrite,

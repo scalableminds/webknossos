@@ -327,11 +327,9 @@ class DataCube {
   }
 
   labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
-    // TODO: Do not label voxel in higher resolutions multiple times (also see https://github.com/scalableminds/webknossos/issues/4838)
-    // -> Instead of using a voxel iterator, create a LabeledVoxelsMap for the brush stroke / trace tool.
-    // If this LabeledVoxelsMap exists, the up and downsampling methods can easily be used
-    // to apply the annotation to all needed resolutions, without labeling voxels multiple times.
-
+    // This function is only provided for the wK front-end api and should not be used internally,
+    // since it only operates on one voxel and therefore is not performance-optimized.
+    // Please make use of a LabeledVoxelsMap instead.
     for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
       this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
     }

@@ -19,7 +19,7 @@ import { withoutUpdateTracing } from "../helpers/saveHelpers";
 const mockedVolumeLayer = {
   isEmpty: () => false,
   finish: _.noop,
-  getVoxelIterator: _.noop,
+  getVoxelBuffer2D: _.noop,
   getUnzoomedCentroid: _.noop,
 };
 

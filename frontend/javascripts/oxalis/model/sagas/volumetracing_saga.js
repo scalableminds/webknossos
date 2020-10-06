@@ -121,8 +121,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
-        labelWithIterator,
-        currentLayer.getCircleVoxelIterator(startEditingAction.position),
+        labelWithVoxelBuffer2D,
+        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
       );
     }
@@ -150,8 +150,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
         yield* call(
-          labelWithIterator,
-          currentLayer.getCircleVoxelIterator(addToLayerAction.position),
+          labelWithVoxelBuffer2D,
+          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
           contourTracingMode,
         );
       }
@@ -193,7 +193,7 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
 }
 
-function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
+function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -215,9 +215,9 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]) =>
-    iterator.get3DCoordinate([x + iterator.minCoord2d[0], y + iterator.minCoord2d[1]]);
+    voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
   const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
-  const bottomRight3DCoord = get3DCoordinateFromLocal2D([iterator.width, iterator.height]);
+  const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
   // Since the bottomRight3DCoord is exclusive for the described bounding box,
   // the third dimension has to be increased by one (otherwise, the volume of the bounding
   // box would be empty)
@@ -241,13 +241,16 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
-    // bx and by are the coordinates within the 2D slice of the VoxelIterator
+    // bx and by are the coordinates within the 2D slice of the VoxelBuffer2D
     // and the LabeledVoxelMap
     for (let bx = min[dimensionIndices[0]]; bx < max[dimensionIndices[0]]; bx++) {
       for (let by = min[dimensionIndices[1]]; by < max[dimensionIndices[1]]; by++) {
         if (
-          iterator.map[
-            iterator.linearizeIndex(bx - iterator.minCoord2d[0], by - iterator.minCoord2d[1])
+          voxelBuffer.map[
+            voxelBuffer.linearizeIndex(
+              bx - voxelBuffer.minCoord2d[0],
+              by - voxelBuffer.minCoord2d[1],
+            )
           ]
         ) {
           labelMapOfBucket[
@@ -281,7 +284,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
-    iterator.getFast3DCoordinate,
+    voxelBuffer.getFast3DCoordinate,
     numberOfSlices,
     thirdDim,
     shouldOverwrite,
@@ -569,7 +572,7 @@ export function* finishLayer(
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
+    yield* call(labelWithVoxelBuffer2D, layer.getVoxelBuffer2D(activeTool), contourTracingMode);
   }
 
   yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));

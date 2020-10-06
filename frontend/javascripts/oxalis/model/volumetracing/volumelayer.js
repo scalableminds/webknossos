@@ -28,7 +28,13 @@ import messages from "messages";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 
-export class VoxelIterator {
+/*
+  A VoxelBuffer2D instance holds a two dimensional slice
+  of painted (binary) voxels. It is used by the
+  VolumeLayer class to describe how volume operations
+  should be applied.
+ */
+export class VoxelBuffer2D {
   map: Uint8Array;
   width: number;
   height: number;
@@ -36,9 +42,8 @@ export class VoxelIterator {
   get3DCoordinate: Vector2 => Vector3;
   getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void;
 
-  static finished(): VoxelIterator {
-    const iterator = new VoxelIterator(new Uint8Array(0), 0, 0, [0, 0], () => [0, 0, 0], () => {});
-    return iterator;
+  static empty(): VoxelBuffer2D {
+    return new VoxelBuffer2D(new Uint8Array(0), 0, 0, [0, 0], () => [0, 0, 0], () => {});
   }
 
   constructor(
@@ -160,14 +165,14 @@ class VolumeLayer {
     return this.getContourList().length === 0;
   }
 
-  getVoxelIterator(mode: VolumeTool): VoxelIterator {
+  getVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
     if (this.isEmpty() || this.minCoord == null) {
-      return VoxelIterator.finished();
+      return VoxelBuffer2D.empty();
     }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
 
     if (this.maxCoord == null) {
-      return VoxelIterator.finished();
+      return VoxelBuffer2D.empty();
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
 
@@ -175,7 +180,7 @@ class VolumeLayer {
     // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
     if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
       Toast.info(messages["tracing.area_to_fill_is_too_big"]);
-      return VoxelIterator.finished();
+      return VoxelBuffer2D.empty();
     }
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
@@ -207,7 +212,7 @@ class VolumeLayer {
     this.fillOutsideArea(map, width, height);
     this.drawOutlineVoxels(setMap, mode);
 
-    const iterator = new VoxelIterator(
+    const buffer2D = new VoxelBuffer2D(
       map,
       width,
       height,
@@ -215,10 +220,10 @@ class VolumeLayer {
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
     );
-    return iterator;
+    return buffer2D;
   }
 
-  getCircleVoxelIterator(position: Vector3): VoxelIterator {
+  getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
     const dimIndices = Dimensions.getIndices(this.plane);
@@ -254,7 +259,7 @@ class VolumeLayer {
       setMap,
     );
 
-    const iterator = new VoxelIterator(
+    const buffer2D = new VoxelBuffer2D(
       map,
       width,
       height,
@@ -262,7 +267,7 @@ class VolumeLayer {
       this.get3DCoordinate.bind(this),
       this.getFast3DCoordinateFunction(),
     );
-    return iterator;
+    return buffer2D;
   }
 
   drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {

@@ -981,10 +981,26 @@ export async function getOrganizationForDataset(datasetName: string): Promise<st
 }
 
 export async function findDataPositionForLayer(
-  requestUrl: string,
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
 ): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
   const { position, resolution } = await doWithToken(token =>
-    Request.receiveJSON(`${requestUrl}/findData?token=${token}`),
+    Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/findData?token=${token}`,
+    ),
+  );
+  return { position, resolution };
+}
+
+export async function findDataPositionForVolumeTracing(
+  tracingstoreUrl: string,
+  tracingId: string,
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
+    Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
   );
   return { position, resolution };
 }

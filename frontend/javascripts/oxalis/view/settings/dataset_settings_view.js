@@ -20,7 +20,11 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
+import {
+  clearCache,
+  findDataPositionForLayer,
+  findDataPositionForVolumeTracing,
+} from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -400,15 +404,17 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChangeUser("gpuMemoryFactor", gpuFactor);
   };
 
-  handleFindData = async (layerName: string, isColorLayer: boolean) => {
+  handleFindData = async (layerName: string, isDataLayer: boolean) => {
     const { volume, tracingStore } = Store.getState().tracing;
     const { dataset } = this.props;
     let foundPosition;
     let foundResolution;
 
-    if (volume && !isColorLayer) {
-      const requestUrl = `${tracingStore.url}/tracings/volume/${volume.tracingId}`;
-      const { position, resolution } = await findDataPositionForLayer(requestUrl);
+    if (volume && !isDataLayer) {
+      const { position, resolution } = await findDataPositionForVolumeTracing(
+        tracingStore.url,
+        volume.tracingId,
+      );
       if ((!position || !resolution) && volume.fallbackLayer) {
         await this.handleFindData(volume.fallbackLayer, true);
         return;
@@ -416,10 +422,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       foundPosition = position;
       foundResolution = resolution;
     } else {
-      const requestUrl = `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${
-        dataset.name
-      }/layers/${layerName}`;
-      const { position, resolution } = await findDataPositionForLayer(requestUrl);
+      const { position, resolution } = await findDataPositionForLayer(
+        dataset.dataStore.url,
+        dataset,
+        layerName,
+      );
       foundPosition = position;
       foundResolution = resolution;
     }

@@ -18,6 +18,12 @@ import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+trait VolumeBucketReversionHelper {
+  def isRevertedBucket(data: Array[Byte]): Boolean = data sameElements Array[Byte](0)
+
+  def isRevertedBucket(bucket: VersionedKeyValuePair[Array[Byte]]): Boolean = isRevertedBucket(bucket.value)
+}
+
 trait VolumeBucketCompression extends LazyLogging {
 
   private val lz4factory = LZ4Factory.fastestInstance
@@ -37,9 +43,7 @@ trait VolumeBucketCompression extends LazyLogging {
 
   def decompressIfNeeded(data: Array[Byte], expectedUncompressedBucketSize: Int, debugInfo: String): Array[Byte] = {
     val isAlreadyDecompressed = data.length == expectedUncompressedBucketSize
-    // revertToVersion overwrites buckets with a single zero to indicate the absence of data without deleting old versions
-    val isRevertedBucket = data.length == 1
-    if (isAlreadyDecompressed || isRevertedBucket) {
+    if (isAlreadyDecompressed) {
       data
     } else {
       try {
@@ -65,7 +69,8 @@ trait VolumeTracingBucketHelper
     extends KeyValueStoreImplicits
     with FoxImplicits
     with VolumeBucketKeys
-    with VolumeBucketCompression {
+    with VolumeBucketCompression
+    with VolumeBucketReversionHelper {
 
   protected val cacheTimeout: FiniteDuration = 20 minutes
 
@@ -86,7 +91,7 @@ trait VolumeTracingBucketHelper
     dataFox.futureBox
       .map(
         _.toOption.map { versionedVolumeBucket =>
-          if (versionedVolumeBucket.value sameElements Array[Byte](0)) Fox.empty
+          if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
           else {
             val debugInfo =
               s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
@@ -176,15 +181,16 @@ class VersionedBucketIterator(prefix: String,
                               expectedUncompressedBucketSize: Int,
                               version: Option[Long] = None)
     extends Iterator[(BucketPosition, Array[Byte], Long)]
-    with WKWMortonHelper
     with KeyValueStoreImplicits
     with VolumeBucketCompression
     with VolumeBucketKeys
-    with FoxImplicits {
+    with FoxImplicits
+    with VolumeBucketReversionHelper {
   val batchSize = 64
 
   var currentStartKey = prefix
   var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
+  var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   def fetchNext =
     volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
@@ -195,13 +201,33 @@ class VersionedBucketIterator(prefix: String,
     currentBatchIterator
   }
 
+  def getNextNonRevertedBucket: Option[VersionedKeyValuePair[Array[Byte]]] =
+    if (currentBatchIterator.hasNext) {
+      val bucket = currentBatchIterator.next
+      currentStartKey = bucket.key
+      if (isRevertedBucket(bucket)) {
+        getNextNonRevertedBucket
+      } else {
+        Some(bucket)
+      }
+    } else {
+      if (!fetchNextAndSave.hasNext) None
+      else getNextNonRevertedBucket
+    }
+
   override def hasNext: Boolean =
-    if (currentBatchIterator.hasNext) true
-    else fetchNextAndSave.hasNext
+    if (nextBucket.isDefined) true
+    else {
+      nextBucket = getNextNonRevertedBucket
+      nextBucket.isDefined
+    }
 
   override def next: (BucketPosition, Array[Byte], Long) = {
-    val nextRes = currentBatchIterator.next
-    currentStartKey = nextRes.key
+    val nextRes = nextBucket match {
+      case Some(bucket) => bucket
+      case None         => getNextNonRevertedBucket.get
+    }
+    nextBucket = None
     parseBucketKey(nextRes.key)
       .map(key => {
         val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"

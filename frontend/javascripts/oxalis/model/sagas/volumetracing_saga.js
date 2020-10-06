@@ -68,8 +68,6 @@ import inferSegmentInViewport, {
 } from "oxalis/model/sagas/automatic_brush_saga";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 
-window.USE_VOXEL_MAP = true;
-
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
@@ -185,12 +183,12 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
 
-  const resolutionInfo = yield* select(state =>
-    getResolutionInfoOfSegmentationLayer(state.dataset),
-  );
-  const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
-  const activeResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const activeResolution = yield* select(state => {
+    const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
+    const activeZoomStep = getRequestLogZoomStep(state);
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+    return resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  });
 
   return new VolumeLayer(planeId, thirdDimValue, activeResolution);
 }
@@ -203,8 +201,6 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
 
-  const USE_VOXEL_MAP = window.USE_VOXEL_MAP;
-  console.log("USE_VOXEL_MAP", USE_VOXEL_MAP);
   console.time("Labeling");
 
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();

@@ -151,7 +151,7 @@ class VolumeLayer {
     const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
     const globalContourList = volumeTracing.contourList;
 
-    return globalContourList.map(point =>
+    return globalContourList.map<Vector3>(point =>
       scaleGlobalPositionWithResolutionFloat(point, this.activeResolution),
     );
   }
@@ -268,11 +268,12 @@ class VolumeLayer {
   drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {
     const contourList = this.getContourList();
     const state = Store.getState();
+    const dimIndices = Dimensions.getIndices(this.plane);
     const [scaleX, scaleY] = this.get2DCoordinate(
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
     const { brushSize } = state.userConfiguration;
-    const radius = Math.round(brushSize / 2);
+    const radius = Math.round(brushSize / 2 / this.activeResolution[dimIndices[0]]); // todo: wont work for anisotropic mags
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {

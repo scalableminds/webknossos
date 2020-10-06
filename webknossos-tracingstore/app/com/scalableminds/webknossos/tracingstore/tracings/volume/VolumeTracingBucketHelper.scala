@@ -88,20 +88,15 @@ trait VolumeTracingBucketHelper
       case Some(data) => Fox.successful(data)
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
     }
-    dataFox.futureBox
-      .map(
-        _.toOption.map { versionedVolumeBucket =>
-          if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
-          else {
-            val debugInfo =
-              s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
-            Fox.successful(
-              decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
-          }
-        }
-      )
-      .toFox
-      .flatten
+    dataFox.flatMap { versionedVolumeBucket =>
+      if (isRevertedBucket(versionedVolumeBucket)) Fox.empty
+      else {
+        val debugInfo =
+          s"key: $key, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
+        Fox.successful(
+          decompressIfNeeded(versionedVolumeBucket.value, expectedUncompressedBucketSizeFor(dataLayer), debugInfo))
+      }
+    }
   }
 
   def loadBucketFromCache(dataLayer: VolumeTracingLayer, bucket: BucketPosition) = {}

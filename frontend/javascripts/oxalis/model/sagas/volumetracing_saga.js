@@ -572,7 +572,7 @@ export function* finishLayer(
     yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
   }
 
-  yield* put(updateDirectionAction(layer.getCentroid()));
+  yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));
   yield* put(resetContourAction());
 }
 

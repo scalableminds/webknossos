@@ -8,6 +8,7 @@ import _ from "lodash";
 import {
   scaleGlobalPositionWithResolution,
   scaleGlobalPositionWithResolutionFloat,
+  zoomedPositionToGlobalPosition,
 } from "oxalis/model/helpers/position_converter";
 import Constants, {
   OrthoViews,
@@ -115,12 +116,12 @@ class VolumeLayer {
     this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeResolution[thirdDim]);
   }
 
-  addContour(pos: Vector3): void {
-    this.updateArea(pos);
+  addContour(globalPos: Vector3): void {
+    this.updateArea(globalPos);
   }
 
-  updateArea(unzoomedPos: Vector3): void {
-    const pos = scaleGlobalPositionWithResolution(unzoomedPos, this.activeResolution);
+  updateArea(globalPos: Vector3): void {
+    const pos = scaleGlobalPositionWithResolution(globalPos, this.activeResolution);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -332,7 +333,7 @@ class VolumeLayer {
     }
   }
 
-  getCentroid(): Vector3 {
+  getUnzoomedCentroid(): Vector3 {
     // Formula:
     // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
 
@@ -351,7 +352,9 @@ class VolumeLayer {
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
 
-    return this.get3DCoordinate([cx, cy]);
+    const zoomedPosition = this.get3DCoordinate([cx, cy]);
+    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeResolution);
+    return pos;
   }
 }
 

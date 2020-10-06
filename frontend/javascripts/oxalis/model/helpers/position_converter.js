@@ -36,6 +36,13 @@ export function scaleGlobalPositionWithResolution(
   ];
 }
 
+export function zoomedPositionToGlobalPosition(
+  [x, y, z]: Vector3,
+  currentResolution: Vector3,
+): Vector3 {
+  return [x * currentResolution[0], y * currentResolution[1], z * currentResolution[2]];
+}
+
 export function scaleGlobalPositionWithResolutionFloat(
   [x, y, z]: Vector3,
   resolution: Vector3,

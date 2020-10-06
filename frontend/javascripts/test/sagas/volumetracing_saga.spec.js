@@ -20,7 +20,7 @@ const mockedVolumeLayer = {
   isEmpty: () => false,
   finish: _.noop,
   getVoxelIterator: _.noop,
-  getCentroid: _.noop,
+  getUnzoomedCentroid: _.noop,
 };
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });

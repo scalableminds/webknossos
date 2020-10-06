@@ -9,7 +9,6 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
@@ -48,6 +47,7 @@ class VolumeTracingService @Inject()(
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper
+    with DataFinder
     with ProtoGeometryImplicits
     with FoxImplicits
     with LazyLogging {
@@ -406,25 +406,7 @@ class VolumeTracingService @Inject()(
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
 
-  def findData(tracingId: String): Fox[Option[Point3D]] = {
-    // We're using IndexedSeq here because the implicit conversions for Array[Byte] make it unusable here
-    def getExactDataOffset(volumeLayer: VolumeTracingLayer, data: IndexedSeq[Byte]): Point3D = {
-      val bytesPerElement = volumeLayer.bytesPerElement
-      val bucketLength = DataLayer.bucketLength
-      for {
-        z <- 0 until bucketLength
-        y <- 0 until bucketLength
-        x <- 0 until bucketLength
-        scaledX = x * bytesPerElement
-        scaledY = y * bytesPerElement * bucketLength
-        scaledZ = z * bytesPerElement * bucketLength * bucketLength
-      } {
-        val voxelOffset = scaledX + scaledY + scaledZ
-        if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Point3D(x, y, z)
-      }
-      Point3D(0, 0, 0)
-    }
-
+  def findData(tracingId: String): Fox[Option[Point3D]] =
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
@@ -432,15 +414,11 @@ class VolumeTracingService @Inject()(
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
-        val data = bucket._2.toIndexedSeq
-        if (data.nonEmpty && data.exists(_ != 0)) {
-          Some(
-            Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ)
-              .move(getExactDataOffset(volumeLayer, data)))
-        } else None
+        getPositionOfNonZeroData(bucket._2,
+                                 Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 volumeLayer.bytesPerElement)
       } else None
     } yield bucketPosOpt
-  }
 
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
 

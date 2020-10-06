@@ -19,6 +19,7 @@ object Histogram { implicit val jsonFormat = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
+    with DataFinder
     with FoxImplicits {
   val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
@@ -98,23 +99,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private def checkAllPositionsForData(dataSource: DataSource,
                                        dataLayer: DataLayer): Fox[Option[(Point3D, Point3D)]] = {
 
-    def getExactDataOffset(data: Array[Byte]): Point3D = {
-      val bytesPerElement = dataLayer.bytesPerElement
-      val bucketLength = DataLayer.bucketLength
-      for {
-        z <- 0 until bucketLength
-        y <- 0 until bucketLength
-        x <- 0 until bucketLength
-        scaledX = x * bytesPerElement
-        scaledY = y * bytesPerElement * bucketLength
-        scaledZ = z * bytesPerElement * bucketLength * bucketLength
-      } {
-        val voxelOffset = scaledX + scaledY + scaledZ
-        if (data.slice(voxelOffset, voxelOffset + bytesPerElement).exists(_ != 0)) return Point3D(x, y, z)
-      }
-      Point3D(0, 0, 0)
-    }
-
     def searchPositionIter(positions: List[Point3D], resolution: Point3D): Fox[Option[Point3D]] =
       positions match {
         case List() => Fox.successful(None)
@@ -128,8 +112,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     def checkIfPositionHasData(position: Point3D, resolution: Point3D) =
       for {
         data <- getDataFor(dataSource, dataLayer, position, resolution)
-        if data.nonEmpty && data.exists(_ != 0)
-      } yield position.move(getExactDataOffset(data))
+        position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement)
+      } yield position
 
     def resolutionIter(positions: List[Point3D], remainingResolutions: List[Point3D]): Fox[Option[(Point3D, Point3D)]] =
       remainingResolutions match {

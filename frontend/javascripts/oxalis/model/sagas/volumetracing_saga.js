@@ -183,14 +183,14 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
 
-  const activeResolution = yield* select(state => {
+  const labeledResolution = yield* select(state => {
     const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
-    const activeZoomStep = getRequestLogZoomStep(state);
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+    const requestedZoomStep = getRequestLogZoomStep(state);
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
     return resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
   });
 
-  return new VolumeLayer(planeId, thirdDimValue, activeResolution);
+  return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
 }
 
 function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
@@ -201,8 +201,6 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
 
-  console.time("Labeling");
-
   const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
 
   const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
@@ -212,15 +210,17 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     getResolutionInfoOfSegmentationLayer(state.dataset),
   );
 
-  const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
-  const activeResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]) =>
     iterator.get3DCoordinate([x + iterator.minCoord2d[0], y + iterator.minCoord2d[1]]);
   const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
   const bottomRight3DCoord = get3DCoordinateFromLocal2D([iterator.width, iterator.height]);
-  // todo: make this prettier
+  // Since the bottomRight3DCoord is exclusive for the described bounding box,
+  // the third dimension has to be increased by one (otherwise, the volume of the bounding
+  // box would be empty)
   bottomRight3DCoord[dimensionIndices[2]]++;
 
   const outerBoundingBox = new BoundingBox({
@@ -290,7 +290,7 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
 
   // thirdDimensionOfSlice needs to be provided in global coordinates
   const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * activeResolution[dimensionIndices[2]];
+    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
   applyLabeledVoxelMapToAllMissingResolutions(
     currentLabeledVoxelMap,
     labeledZoomStep,
@@ -302,8 +302,6 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
     shouldOverwrite,
     overwritableValue,
   );
-
-  console.timeEnd("Labeling");
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
@@ -318,11 +316,11 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
-  const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+  const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
     getResolutionInfoOfSegmentationLayer(state.dataset),
   );
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = yield* select(state => getFlooredPosition(state.flycam));
@@ -412,11 +410,11 @@ export function* floodFill(): Saga<void> {
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
-    const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const resolutionInfo = yield* select(state =>
       getResolutionInfoOfSegmentationLayer(state.dataset),
     );
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
     const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
     // The floodfill and applyVoxelMap methods iterate within the bucket.
@@ -481,7 +479,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // if shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
-  shouldOverwrite: boolean = true,
+  shouldOverwrite: boolean,
   overwritableValue: number = 0,
 ): void {
   const thirdDim = dimensionIndices[2];
@@ -494,9 +492,9 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     const sampledThirdDimensionValue =
       Math.floor(thirdDimensionOfSlice / targetResolution[thirdDim]) % Constants.BUCKET_WIDTH;
 
-    return (voxel0: number, voxel1, out) => {
-      out[dimensionIndices[0]] = voxel0;
-      out[dimensionIndices[1]] = voxel1;
+    return (x: number, y: number, out: Vector3 | Float32Array) => {
+      out[dimensionIndices[0]] = x;
+      out[dimensionIndices[1]] = y;
       out[dimensionIndices[2]] = sampledThirdDimensionValue;
     };
   };

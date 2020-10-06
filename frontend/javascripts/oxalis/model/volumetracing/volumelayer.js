@@ -149,7 +149,11 @@ class VolumeLayer {
 
   getContourList() {
     const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
-    return volumeTracing.contourList;
+    const globalContourList = volumeTracing.contourList;
+
+    return globalContourList.map(point =>
+      scaleGlobalPositionWithResolutionFloat(point, this.activeResolution),
+    );
   }
 
   isEmpty(): boolean {

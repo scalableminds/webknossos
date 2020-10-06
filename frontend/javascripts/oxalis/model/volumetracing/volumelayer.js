@@ -223,9 +223,9 @@ class VolumeLayer {
     const { brushSize } = state.userConfiguration;
     const dimIndices = Dimensions.getIndices(this.plane);
 
-    const radius = Math.round(brushSize / 2);
-    const width = Math.floor((2 * radius) / this.activeResolution[dimIndices[0]]);
-    const height = Math.floor((2 * radius) / this.activeResolution[dimIndices[1]]);
+    const unzoomedRadius = Math.round(brushSize / 2);
+    const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
+    const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
 
     const map = new Uint8Array(width * height).fill(0);
 
@@ -246,11 +246,11 @@ class VolumeLayer {
       map[x * height + y] = 1;
     };
     Drawing.fillCircle(
-      Math.floor(radius / this.activeResolution[dimIndices[0]]),
-      Math.floor(radius / this.activeResolution[dimIndices[1]]),
-      Math.floor(radius / this.activeResolution[dimIndices[0]]), // todo: wont work for anisotropic mags
-      scaleX,
-      scaleY,
+      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[0]]),
+      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[1]]),
+      unzoomedRadius,
+      scaleX / this.activeResolution[dimIndices[0]],
+      scaleY / this.activeResolution[dimIndices[1]],
       setMap,
     );
 
@@ -273,7 +273,7 @@ class VolumeLayer {
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
     const { brushSize } = state.userConfiguration;
-    const radius = Math.round(brushSize / 2 / this.activeResolution[dimIndices[0]]); // todo: wont work for anisotropic mags
+    const radius = Math.round(brushSize / 2); // todo: wont work for anisotropic mags
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {
@@ -283,7 +283,14 @@ class VolumeLayer {
         p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
         Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
       } else if (mode === VolumeToolEnum.BRUSH) {
-        Drawing.fillCircle(p1[0], p1[1], radius, scaleX, scaleY, setMap);
+        Drawing.fillCircle(
+          p1[0],
+          p1[1],
+          radius,
+          scaleX / this.activeResolution[dimIndices[0]],
+          scaleY / this.activeResolution[dimIndices[1]],
+          setMap,
+        );
       }
     }
   }

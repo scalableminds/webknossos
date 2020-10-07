@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
 import net.liftweb.common.{Box, Failure, Full}
+import com.scalableminds.util.tools.ExtendedTypes._
 
 trait WKWDataFormatHelper {
 
@@ -43,18 +44,34 @@ trait WKWDataFormatHelper {
       .resolve(s"header.${dataFileExtension}")
 
   def parseWKWFilePath(path: String): Option[BucketPosition] = {
-    val CubeRx = s".*(\\d+)/z(\\d+)/y(\\d+)/x(\\d+).${dataFileExtension}".r
+    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).${dataFileExtension}".r
     path match {
-      case CubeRx(res, z, y, x) =>
-        Some(
-          BucketPosition(x.toInt * DataLayer.bucketLength,
-                         y.toInt * DataLayer.bucketLength,
-                         z.toInt * DataLayer.bucketLength,
-                         Point3D(res.toInt, res.toInt, res.toInt)))
+      case CubeRx(_, resolutionStr, z, y, x) =>
+        val resolutionOpt = parseResolution(resolutionStr)
+        resolutionOpt match {
+          case Some(resolution) =>
+            Some(
+              BucketPosition(x.toInt * resolution.x * DataLayer.bucketLength,
+                             y.toInt * resolution.y * DataLayer.bucketLength,
+                             z.toInt * resolution.z * DataLayer.bucketLength,
+                             resolution))
+          case _ => None
+        }
       case _ =>
         None
     }
   }
+
+  protected def parseResolution(resolutionStr: String): Option[Point3D] =
+    resolutionStr.toIntOpt match {
+      case Some(resolutionInt) => Some(Point3D(resolutionInt, resolutionInt, resolutionInt))
+      case None =>
+        val pattern = """(\d+)-(\d+)-(\d+)""".r
+        resolutionStr match {
+          case pattern(x, y, z) => Some(Point3D(x.toInt, y.toInt, z.toInt))
+          case _                => None
+        }
+    }
 
   def voxelTypeToElementClass(voxelType: VoxelType.Value, voxelSize: Int): Box[ElementClass.Value] =
     (voxelType, voxelSize) match {

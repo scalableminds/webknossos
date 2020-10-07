@@ -530,9 +530,10 @@ export type APIFeatureToggles = {
 };
 
 export type APIJob = {
-  +datasetName: string,
-  +organization: string,
+  +datasetName: ?string,
+  +organizationName: string,
   +id: string,
+  +scale: ?Vector3,
   +state: string,
 };
 

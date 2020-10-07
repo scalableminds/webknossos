@@ -16,6 +16,7 @@ import {
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
@@ -146,9 +147,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
-              <Checkbox checked={this.state.needsCubing} onChange={this.handleCheckboxChange}>
-                Needs Cubing
-              </Checkbox>
+              <FormItemWithInfo label="Cubing" info="Cubing Info">
+                <Checkbox checked={this.state.needsCubing} onChange={this.handleCheckboxChange}>
+                  Needs Cubing
+                </Checkbox>
+              </FormItemWithInfo>
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],

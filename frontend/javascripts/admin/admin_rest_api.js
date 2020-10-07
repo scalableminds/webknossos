@@ -726,15 +726,13 @@ export async function getDatasets(
 export async function getJobs(): Promise<Array<APIJob>> {
   const jobs = await Request.receiveJSON("/api/jobs");
   assertResponseLimit(jobs);
-  return Object.values(jobs).map(j => {
-    const kwargs = j.kwargs.substr(2, j.kwargs.length - 2).split(", ");
-    return {
-      id: j.uuid,
-      datasetName: kwargs[1],
-      organization: kwargs[0],
-      state: j.state,
-    };
-  });
+  return jobs.map(job => ({
+    datasetName: job.commandArgs.kwargs.dataset_name,
+    organizationName: job.commandArgs.kwargs.organization_name,
+    id: job.id,
+    scale: job.commandArgs.kwargs.scale,
+    state: job.celeryInfo.state,
+  }));
 }
 
 export async function startJob(jobName: string, organization: string): Promise<Array<APIJob>> {

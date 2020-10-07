@@ -68,7 +68,7 @@ class TeamListView extends React.PureComponent<Props, State> {
       onOk: async () => {
         try {
           this.setState({ isLoading: true });
-          await startJob(job.datasetName, job.organization);
+          if (job.datasetName) await startJob(job.datasetName, job.organizationName);
           this.setState(prevState => ({
             jobs: prevState.jobs.filter(j => j.id !== job.id),
           }));
@@ -113,14 +113,15 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Dataset Name"
                 dataIndex="datasetName"
                 key="datasetName"
-                sorter={Utils.localeCompareBy(typeHint, job => job.datasetName)}
+                sorter={Utils.localeCompareBy(typeHint, job => job.datasetName || "")}
               />
               <Column
                 title="Organization"
-                dataIndex="organization"
-                key="organization"
-                sorter={Utils.localeCompareBy(typeHint, job => job.organization)}
+                dataIndex="organizationName"
+                key="organizationName"
+                sorter={Utils.localeCompareBy(typeHint, job => job.organizationName)}
               />
+              <Column title="Scale" dataIndex="scale" key="scale" />
               <Column
                 title="Id"
                 dataIndex="id"
@@ -136,12 +137,18 @@ class TeamListView extends React.PureComponent<Props, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, script: APIJob) => (
-                  <a href="#" onClick={_.partial(this.startJob, script)}>
-                    <Icon type="start" />
-                    Start Job
-                  </a>
-                )}
+                render={(__, job: APIJob) => {
+                  if (job.state === "PENDING") {
+                    return (
+                      <a href="#" onClick={_.partial(this.startJob, job)}>
+                        <Icon type="start" />
+                        Start Job
+                      </a>
+                    );
+                  } else {
+                    return null;
+                  }
+                }}
               />
             </Table>
           </Spin>

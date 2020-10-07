@@ -44,6 +44,8 @@ export type InferSegmentationInViewportAction = {
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position: Vector3,
 };
+export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
+export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -63,7 +65,9 @@ export type VolumeTracingAction =
   | CopySegmentationLayerAction
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
-  | AddBucketToUndoAction;
+  | AddBucketToUndoAction
+  | ImportVolumeTracingAction
+  | SetMaxCellAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -163,4 +167,13 @@ export const inferSegmentationInViewportAction = (
 ): InferSegmentationInViewportAction => ({
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position,
+});
+
+export const importVolumeTracingAction = (): ImportVolumeTracingAction => ({
+  type: "IMPORT_VOLUMETRACING",
+});
+
+export const setMaxCellAction = (cellId: number): SetMaxCellAction => ({
+  type: "SET_MAX_CELL",
+  cellId,
 });

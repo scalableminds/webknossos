@@ -21,6 +21,7 @@ import {
   resetContourReducer,
   hideBrushReducer,
   setContourTracingModeReducer,
+  setMaxCellReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
@@ -103,6 +104,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
 
         case "SET_CONTOUR_TRACING_MODE": {
           return setContourTracingModeReducer(state, action.mode);
+        }
+
+        case "SET_MAX_CELL": {
+          return setMaxCellReducer(state, volumeTracing, action.cellId);
         }
 
         default:

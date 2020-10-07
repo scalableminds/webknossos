@@ -1,6 +1,6 @@
 // @flow
 
-import constants, { type Vector2, type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
+import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import messages from "messages";
@@ -279,10 +279,13 @@ export function applyVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
   cellId: number,
-  get3DAddress: Vector2 => Vector3,
+  get3DAddress: (number, number, Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2,
+  // if shouldOverwrite is false, a voxel is only overwritten if
+  // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
+  overwritableValue: number = 0,
 ) {
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
@@ -291,7 +294,9 @@ export function applyVoxelMap(
     }
     bucket.markAndAddBucketForUndo();
     let data = bucket.getOrCreateData();
-    const thirdDimensionValueInBucket = get3DAddress([0, 0])[2];
+    const out = new Float32Array(3);
+    get3DAddress(0, 0, out);
+    const thirdDimensionValueInBucket = out[2];
     for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
       if (thirdDimensionValueInBucket + sliceCount === constants.BUCKET_WIDTH) {
         // The current slice is in the next bucket in the third direction.
@@ -306,12 +311,13 @@ export function applyVoxelMap(
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
-            const voxelToLabel = get3DAddress([firstDim, secondDim]);
+            get3DAddress(firstDim, secondDim, out);
+            const voxelToLabel = out;
             voxelToLabel[thirdDimensionIndex] =
               (voxelToLabel[thirdDimensionIndex] + sliceCount) % constants.BUCKET_WIDTH;
             // The voxelToLabel is already within the bucket and in the correct resolution.
             const voxelAddress = dataCube.getVoxelIndexByVoxelOffset(voxelToLabel);
-            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === 0)) {
+            if (shouldOverwrite || (!shouldOverwrite && data[voxelAddress] === overwritableValue)) {
               data[voxelAddress] = cellId;
             }
           }

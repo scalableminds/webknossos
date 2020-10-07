@@ -19,6 +19,18 @@ class Drawing {
   alpha: number = SMOOTH_ALPHA;
   smoothLength: number = SMOOTH_LENGTH;
 
+  drawHorizontalLine2d(y: number, x1: number, x2: number, draw: (number, number) => void) {
+    if (x1 < x2) {
+      for (let i = x1; i <= x2; i++) {
+        draw(i, y);
+      }
+    } else {
+      for (let i = x2; i <= x1; i++) {
+        draw(i, y);
+      }
+    }
+  }
+
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d(x: number, y: number, x1: number, y1: number, draw: (number, number) => void) {
     x = Math.round(x);
@@ -122,6 +134,69 @@ class Drawing {
     }
   }
 
+  paintBorder(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    bufX0: Array<number>,
+    bufX1: Array<number>,
+    minX: number,
+    maxX: number,
+  ): void {
+    if (y2 - y1 < 0) {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX0[y] = x;
+      });
+    } else if (y2 - y1 > 0) {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX1[y] = x;
+      });
+    } else {
+      this.drawLine2d(x1, y1, x2, y2, (x: number, y: number) => {
+        bufX0[y] = minX;
+        bufX1[y] = maxX;
+      });
+    }
+  }
+
+  // Source: https://stackoverflow.com/questions/10061146/how-to-rasterize-rotated-rectangle-in-2d-by-setpixel/19078088#19078088
+  fillRectangle(
+    xa: number,
+    ya: number,
+    xb: number,
+    yb: number,
+    xc: number,
+    yc: number,
+    xd: number,
+    yd: number,
+    draw: (number, number) => void,
+  ) {
+    xa = Math.round(xa);
+    ya = Math.round(ya);
+    xb = Math.round(xb);
+    yb = Math.round(yb);
+    xc = Math.round(xc);
+    yc = Math.round(yc);
+    xd = Math.round(xd);
+    yd = Math.round(yd);
+
+    const [minX, maxX] = [Math.min(xa, xb, xc, xd), Math.max(xa, xb, xc, xd)];
+    const [minY, maxY] = [Math.min(ya, yb, yc, yd), Math.max(ya, yb, yc, yd)];
+    const bufX0 = new Array(maxY);
+    const bufX1 = new Array(maxY);
+
+    this.paintBorder(xa, ya, xb, yb, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xb, yb, xc, yc, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xc, yc, xd, yd, bufX0, bufX1, minX, maxX);
+    this.paintBorder(xd, yd, xa, ya, bufX0, bufX1, minX, maxX);
+
+    let y;
+    for (y = minY; y <= maxY; y++) {
+      this.drawHorizontalLine2d(y, bufX0[y], bufX1[y], draw);
+    }
+  }
+
   // Source: http://will.thimbleby.net/scanline-flood-fill/
   fillArea(
     x: number,
@@ -184,9 +259,10 @@ class Drawing {
     scaleY: number,
     paint: (number, number) => void,
   ) {
+    const squaredRadius = radius ** 2;
     for (let posX = x - radius; posX < x + radius; posX++) {
       for (let posY = y - radius; posY < y + radius; posY++) {
-        if (Math.sqrt(((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2) < radius) {
+        if (((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2 < squaredRadius) {
           paint(posX, posY);
         }
       }

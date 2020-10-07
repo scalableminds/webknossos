@@ -140,3 +140,13 @@ export function setContourTracingModeReducer(state: OxalisState, mode: ContourMo
     },
   });
 }
+
+export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+  return update(state, {
+    tracing: {
+      volume: {
+        largestSegmentId: { $set: id },
+      },
+    },
+  });
+}

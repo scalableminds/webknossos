@@ -98,7 +98,17 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
             },
           );
         } else {
-          this.setState({ isUploading: false });
+          addDataset(datasetConfig).then(
+            async () => {
+              Toast.success(messages["dataset.upload_success"]);
+              trackAction("Upload dataset");
+              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              this.props.onUploaded(activeUser.organization, formValues.name);
+            },
+            () => {
+              this.setState({ isUploading: false });
+            },
+          );
         }
       }
     });

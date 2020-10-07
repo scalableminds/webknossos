@@ -22,6 +22,7 @@ import {
   hideBrushReducer,
   setContourTracingModeReducer,
   removeFallbackLayerReducer,
+  setMaxCellReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): OxalisState {
@@ -108,6 +109,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
 
         case "REMOVE_FALLBACK_LAYER": {
           return removeFallbackLayerReducer(state);
+        }
+
+        case "SET_MAX_CELL": {
+          return setMaxCellReducer(state, volumeTracing, action.cellId);
         }
 
         default:

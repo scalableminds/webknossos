@@ -34,7 +34,7 @@ export default function ViewportStatusIndicator() {
   const pronounAndVerb = unrenderableLayerNames.length > 1 ? "they don't" : "it doesn't";
 
   const renderMissingDataBlackHint = renderMissingDataBlack
-    ? ` Also consider disabling the option "Render Missing Data Black".`
+    ? " Also consider disabling the option “Render Missing Data Black”."
     : null;
 
   return (

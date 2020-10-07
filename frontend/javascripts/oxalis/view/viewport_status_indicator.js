@@ -4,12 +4,15 @@ import * as React from "react";
 
 import { Icon, Tooltip } from "antd";
 import { getUnrenderableLayersForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
+import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { usePolledState } from "libs/react_helpers";
 
 const { useState } = React;
 
 export default function ViewportStatusIndicator() {
   const [unrenderableLayerNames, setUnrenderableLayerNames] = useState([]);
+  const [renderMissingDataBlack, setRenderMissingDataBlack] = useState(true);
+  const [currentResolution, setCurrentResolution] = useState([1, 1, 1]);
 
   usePolledState(state => {
     const newMissingLayersNames = getUnrenderableLayersForCurrentZoom(state);
@@ -18,6 +21,10 @@ export default function ViewportStatusIndicator() {
         layer.category === "segmentation" ? "Segmentation" : layer.name,
       ),
     );
+
+    setRenderMissingDataBlack(state.datasetConfiguration.renderMissingDataBlack);
+
+    setCurrentResolution(getCurrentResolution(state));
   });
 
   if (unrenderableLayerNames.length === 0) {
@@ -26,14 +33,17 @@ export default function ViewportStatusIndicator() {
   const pluralS = unrenderableLayerNames.length > 1 ? "s" : "";
   const pronounAndVerb = unrenderableLayerNames.length > 1 ? "they don't" : "it doesn't";
 
+  const renderMissingDataBlackHint = renderMissingDataBlack
+    ? ` Also consider disabling the option "Render Missing Data Black".`
+    : null;
+
   return (
     <Tooltip
       title={
         <div>
-          The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")} cannot be
-          rendered because {pronounAndVerb} exist in the current resolution. Please adjust the zoom
-          level to change the active resolution. Also consider disabling the option &ldquo;Render
-          Missing Data Black&rdquo; if this is not already the case.
+          The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")}{" "}
+          {pronounAndVerb} exist in the current resolution {currentResolution.join("-")}. Adjust the
+          zoom level to change the active resolution.{renderMissingDataBlackHint}
         </div>
       }
     >

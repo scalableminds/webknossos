@@ -15,7 +15,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Empty, EmptyBox, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
@@ -27,6 +27,7 @@ import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json._
+import play.api.libs.ws.WSResponse
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -455,7 +456,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
-                    _ <- checkOrganizationFolder ?~> "organization.folderCreation.failed"
                     organization <- createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
@@ -520,19 +520,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .addQueryString("token" -> token, "organizationName" -> organizationName)
         .get
+        .futureBox
 
     for {
       token <- bearerTokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
+      _ <- Future.sequence(datastores.map(sendRPCToDataStore(_, token)))
     } yield ()
   }
-
-  private def checkOrganizationFolder(implicit request: RequestHeader) =
-    for {
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
-      _ <- Fox.serialCombined(datastores)(d => rpc(s"${d.url}/data/triggers/checkNewOrganizationFolder").get)
-    } yield ()
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

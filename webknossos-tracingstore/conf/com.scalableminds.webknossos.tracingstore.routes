@@ -18,6 +18,7 @@ POST        /volume/:tracingId/data                             @com.scalablemin
 POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, fromTask: Option[Boolean])
 GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(tracingId: String)
 POST        /volume/:tracingId/isosurface                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestIsosurface(tracingId: String)
+POST        /volume/:tracingId/importVolumeData                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.importVolumeData(tracingId: String)
 POST        /volume/getMultiple                                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getMultiple
 POST        /volume/mergedFromIds                               @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromIds(persist: Boolean)
 POST        /volume/mergedFromContents                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.mergedFromContents(persist: Boolean)

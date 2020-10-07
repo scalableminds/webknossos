@@ -1,16 +1,13 @@
 // @flow
 import { PropTypes } from "@scalableminds/prop-types";
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Icon, Spin, Input, Modal } from "antd";
+import { Table, Spin, Input } from "antd";
 import * as React from "react";
-import _ from "lodash";
 
 import type { APIJob } from "admin/api_flow_types";
-import { getJobs, startJob } from "admin/admin_rest_api";
-import { handleGenericError } from "libs/error_handling";
+import { getJobs } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
-import messages from "messages";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -62,25 +59,6 @@ class TeamListView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  startJob = (job: APIJob) => {
-    Modal.confirm({
-      title: messages["job.start"],
-      onOk: async () => {
-        try {
-          this.setState({ isLoading: true });
-          if (job.datasetName) await startJob(job.datasetName, job.organizationName);
-          this.setState(prevState => ({
-            jobs: prevState.jobs.filter(j => j.id !== job.id),
-          }));
-        } catch (error) {
-          handleGenericError(error);
-        } finally {
-          this.setState({ isLoading: false });
-        }
-      },
-    });
-  };
-
   render() {
     return (
       <div className="container">
@@ -110,23 +88,21 @@ class TeamListView extends React.PureComponent<Props, State> {
               style={{ marginTop: 30, marginBotton: 30 }}
             >
               <Column
-                title="Dataset Name"
-                dataIndex="datasetName"
-                key="datasetName"
-                sorter={Utils.localeCompareBy(typeHint, job => job.datasetName || "")}
-              />
-              <Column
-                title="Organization"
-                dataIndex="organizationName"
-                key="organizationName"
-                sorter={Utils.localeCompareBy(typeHint, job => job.organizationName)}
-              />
-              <Column title="Scale" dataIndex="scale" key="scale" />
-              <Column
-                title="Id"
+                title="Job Id"
                 dataIndex="id"
                 key="id"
                 sorter={Utils.localeCompareBy(typeHint, job => job.id)}
+              />
+              <Column
+                title="Description"
+                key="datasetName"
+                render={job => `${job.type} of ${job.datasetName}`}
+              />
+              <Column
+                title="Created at"
+                key="createdAt"
+                render={job => new Date(job.createdAt).toUTCString()}
+                sorter={Utils.compareBy(typeHint, job => job.createdAt)}
               />
               <Column
                 title="State"
@@ -134,22 +110,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 key="state"
                 sorter={Utils.localeCompareBy(typeHint, job => job.state)}
               />
-              <Column
-                title="Action"
-                key="actions"
-                render={(__, job: APIJob) => {
-                  if (job.state === "PENDING") {
-                    return (
-                      <a href="#" onClick={_.partial(this.startJob, job)}>
-                        <Icon type="start" />
-                        Start Job
-                      </a>
-                    );
-                  } else {
-                    return null;
-                  }
-                }}
-              />
+              <Column title="Action" key="actions" />
             </Table>
           </Spin>
         </div>

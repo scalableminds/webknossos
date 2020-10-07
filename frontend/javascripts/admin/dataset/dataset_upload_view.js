@@ -2,6 +2,7 @@
 import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
 import { connect } from "react-redux";
 import React from "react";
+import _ from "lodash";
 
 import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -23,7 +24,7 @@ const FormItem = Form.Item;
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded: (string, string) => void,
+  onUploaded: (string, string, boolean) => void,
 |};
 type StateProps = {|
   activeUser: ?APIUser,
@@ -88,7 +89,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
             Toast.success(messages["dataset.upload_success"]);
             trackAction("Upload dataset");
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-            this.props.onUploaded(activeUser.organization, formValues.name);
+            this.props.onUploaded(
+              activeUser.organization,
+              formValues.name,
+              this.state.needsConversion,
+            );
           },
           () => {
             this.setState({ isUploading: false });

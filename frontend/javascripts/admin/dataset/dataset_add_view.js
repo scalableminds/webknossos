@@ -14,7 +14,7 @@ import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
-import { getDatastores } from "admin/admin_rest_api";
+import { getDatastores, startJob } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
 
@@ -52,9 +52,19 @@ const fetchCategorizedDatastores = async (): Promise<{
 const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
 
-  const handleDatasetAdded = (organization: string, datasetName: string) => {
-    const url = `/datasets/${organization}/${datasetName}/import`;
-    history.push(url);
+  const handleDatasetAdded = (
+    organization: string,
+    datasetName: string,
+    needsConversion?: boolean,
+  ) => {
+    if (needsConversion) {
+      startJob(datasetName, organization);
+      const url = "/jobs";
+      history.push(url);
+    } else {
+      const url = `/datasets/${organization}/${datasetName}/import`;
+      history.push(url);
+    }
   };
 
   return (

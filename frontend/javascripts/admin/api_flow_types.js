@@ -530,11 +530,11 @@ export type APIFeatureToggles = {
 };
 
 export type APIJob = {
-  +datasetName: ?string,
-  +organizationName: string,
   +id: string,
-  +scale: ?Vector3,
+  +datasetName: ?string,
+  +type: string,
   +state: string,
+  +createdAt: number,
 };
 
 // Tracing related datatypes

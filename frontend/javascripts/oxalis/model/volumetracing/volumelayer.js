@@ -278,7 +278,7 @@ class VolumeLayer {
       getBaseVoxelFactors(state.dataset.dataSource.scale),
     );
     const { brushSize } = state.userConfiguration;
-    const radius = Math.round(brushSize / 2); // todo: wont work for anisotropic mags
+    const radius = Math.round(brushSize / 2);
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {

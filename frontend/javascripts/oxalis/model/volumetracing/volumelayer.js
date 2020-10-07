@@ -18,6 +18,7 @@ import Constants, {
   Vector3Indicies,
   VolumeToolEnum,
   type VolumeTool,
+  Vector2Indicies,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -223,6 +224,144 @@ class VolumeLayer {
     return buffer2D;
   }
 
+  vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
+    const dx = pos2[0] - pos1[0];
+    let perpendicularVector;
+    if (dx === 0) {
+      perpendicularVector = [1, 0];
+    } else {
+      const gradient = (pos2[1] - pos1[1]) / dx;
+      perpendicularVector = [gradient, -1];
+      const norm = this.vector2Norm(perpendicularVector);
+      perpendicularVector = this.vector2ScalarMultiplication(perpendicularVector, 1 / norm);
+    }
+    return perpendicularVector;
+  }
+
+  vector2Norm(vector: Vector2): number {
+    let norm = 0;
+    for (const i of Vector2Indicies) {
+      norm += Math.pow(vector[i], 2);
+    }
+    return Math.sqrt(norm);
+  }
+
+  vector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
+    const sum = [0, 0];
+    for (const i of Vector2Indicies) {
+      sum[i] = vector1[i] + vector2[i];
+    }
+    return sum;
+  }
+
+  vector2ScalarMultiplication(vector: Vector2, scalar: number): Vector2 {
+    const product = [0, 0];
+    for (const i of Vector2Indicies) {
+      product[i] = vector[i] * scalar;
+    }
+    return product;
+  }
+
+  vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
+    let distance = 0;
+    for (const i of Vector2Indicies) {
+      distance += Math.pow((pos2[i] - pos1[i]) / scale[i], 2);
+    }
+    return Math.sqrt(distance);
+  }
+
+  vector2WithScale(vector: Vector2, scale: Vector2): Vector2 {
+    const result = [0, 0];
+    for (const i of Vector2Indicies) {
+      result[i] = vector[i] * scale[i];
+    }
+    return result;
+  }
+
+  createMap(width: number, height: number): Uint8Array {
+    return new Uint8Array(width * height).fill(0);
+  }
+
+  getRectangleBetweenCircles(
+    centre1: Vector2,
+    centre2: Vector2,
+    radius: number,
+    scale: Vector2,
+  ): [number, number, number, number, number, number, number, number] {
+    const normedPerpendicularVector = this.vector2PerpendicularVector(centre1, centre2);
+    const shiftVector = this.vector2WithScale(
+      this.vector2ScalarMultiplication(normedPerpendicularVector, radius),
+      scale,
+    );
+    const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
+
+    // calculate the rectangle's corners
+    const [xa, ya] = this.vector2Sum(centre2, negShiftVector);
+    const [xb, yb] = this.vector2Sum(centre2, shiftVector);
+    const [xc, yc] = this.vector2Sum(centre1, shiftVector);
+    const [xd, yd] = this.vector2Sum(centre1, negShiftVector);
+    return [xa, ya, xb, yb, xc, yc, xd, yd];
+  }
+
+  getRectangleVoxelBuffer2D(
+    lastPosition: Vector3,
+    position: Vector3,
+    boundings?: ?BoundingBoxType,
+  ): ?VoxelBuffer2D {
+    const state = Store.getState();
+    const { brushSize } = state.userConfiguration;
+
+    const radius = Math.round(brushSize / 2);
+    // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
+    const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
+    const floatingCoord2dLastPosition = this.get2DCoordinate(lastPosition);
+    const floatingCoord2dPosition = this.get2DCoordinate(position);
+
+    if (
+      this.vector2DistanceWithScale(floatingCoord2dLastPosition, floatingCoord2dPosition, scale) <
+      1.5 * radius
+    ) {
+      return null;
+    }
+    let [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(
+      floatingCoord2dLastPosition,
+      floatingCoord2dPosition,
+      radius,
+      scale,
+    );
+    const minCoord2d = [Math.floor(Math.min(xa, xb, xc, xd)), Math.floor(Math.min(ya, yb, yc, yd))];
+    const maxCoord2d = [Math.ceil(Math.max(xa, xb, xc, xd)), Math.ceil(Math.max(ya, yb, yc, yd))];
+    const [width, height] = maxCoord2d;
+    const map = this.createMap(width, height);
+
+    const setMap = (x, y) => {
+      map[x * height + y] = 1;
+    };
+
+    // translate the coordinates so the containing box originates in (0|0)
+    const [diffX, diffY] = minCoord2d;
+    xa -= diffX;
+    ya -= diffY;
+    xb -= diffX;
+    yb -= diffY;
+    xc -= diffX;
+    yc -= diffY;
+    xd -= diffX;
+    yd -= diffY;
+
+    Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
+
+    const voxelBuffer2D = new VoxelBuffer2D(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+      boundings,
+    );
+    return voxelBuffer2D;
+  }
+
   getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
@@ -232,7 +371,7 @@ class VolumeLayer {
     const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
     const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
 
-    const map = new Uint8Array(width * height).fill(0);
+    const map = this.createMap(width, height);
 
     const floatingCoord2d = this.get2DCoordinate(
       scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
@@ -285,11 +424,20 @@ class VolumeLayer {
     let p2;
     for (let i = 0; i < contourList.length; i++) {
       p1 = this.get2DCoordinate(contourList[i]);
-
+      p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
       if (mode === VolumeToolEnum.TRACE) {
-        p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
         Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
       } else if (mode === VolumeToolEnum.BRUSH) {
+        // we don't want to connect the last and the first circle with a rectangle
+        if (i !== contourList.length - 1) {
+          const [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(p1, p2, radius, [
+            scaleX / this.activeResolution[dimIndices[0]],
+            scaleY / this.activeResolution[dimIndices[1]],
+          ]);
+          if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
+            Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
+          }
+        }
         Drawing.fillCircle(
           p1[0],
           p1[1],

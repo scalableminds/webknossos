@@ -1,10 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -13,10 +15,11 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotifica
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import play.api.i18n.Messages
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
+import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
@@ -179,6 +182,22 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
     }
   }
 
+  def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
+    Action.async(parse.multipartFormData) { implicit request =>
+      log {
+        accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId)) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId)
+              currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
+              zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
+              largestSegmentId <- tracingService.importVolumeData(tracingId, tracing, zipFile, currentVersion)
+            } yield Ok(Json.toJson(largestSegmentId))
+          }
+        }
+      }
+    }
+
   def updateActionLog(tracingId: String) = Action.async { implicit request =>
     log {
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
@@ -217,4 +236,17 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
 
   private def formatNeighborList(neighbors: List[Int]): String =
     "[" + neighbors.mkString(", ") + "]"
+
+  def findData(tracingId: String) = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
+      AllowRemoteOrigin {
+        for {
+          positionOpt <- tracingService.findData(tracingId)
+        } yield {
+          Ok(Json.obj("position" -> positionOpt, "resolution" -> positionOpt.map(_ => Point3D(1, 1, 1))))
+        }
+      }
+    }
+  }
+
 }

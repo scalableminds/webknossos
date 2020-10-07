@@ -491,7 +491,7 @@ class VolumeTracingService @Inject()(
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
-      bucketStream = volumeLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+      bucketStream = volumeLayer.bucketProvider.bucketStream(Some(tracing.version))
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
@@ -608,7 +608,7 @@ class VolumeTracingService @Inject()(
     }
     mergedVolume.addLabelSet(importLabelSet)
 
-    volumeLayer.bucketProvider.bucketStream(1).foreach {
+    volumeLayer.bucketProvider.bucketStream().foreach {
       case (position, bytes) =>
         if (!isAllZero(bytes)) {
           mergedVolume.add(0, position, bytes)

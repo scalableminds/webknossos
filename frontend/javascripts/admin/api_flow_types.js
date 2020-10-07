@@ -62,11 +62,6 @@ export type APISegmentationLayer = {|
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
-export type APIReducedDataLayer = {|
-  +name: string,
-  +isSegmentationLayer: boolean,
-|};
-
 export type APIHistogramData = Array<{
   numberOfElements: number,
   elementCounts: Array<number>,

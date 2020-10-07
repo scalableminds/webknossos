@@ -23,7 +23,6 @@ import {
   type APIProjectProgressReport,
   type APIProjectUpdater,
   type APIProjectWithAssignments,
-  type APIReducedDataLayer,
   type APISampleDataset,
   type APIScript,
   type APIScriptCreator,
@@ -786,12 +785,12 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
 
 export function getDatasetViewConfiguration(
   datasetId: APIDatasetId,
-  displayedLayers: Array<APIReducedDataLayer>,
+  displayedVolumeTracings: Array<string>,
 ): Promise<Object> {
   return Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
-      data: displayedLayers,
+      data: displayedVolumeTracings,
       method: "POST",
     },
   );

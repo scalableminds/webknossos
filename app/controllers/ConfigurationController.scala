@@ -1,17 +1,17 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.Category
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, DataSetLayerId, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO, UserService}
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.{JsObject, JsValue}
+import play.api.i18n.Messages
 import play.api.libs.json.Json._
+import play.api.libs.json.{JsObject, JsValue}
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
@@ -45,19 +45,23 @@ class ConfigurationController @Inject()(
   }
 
   def readDataSet(organizationName: String, dataSetName: String) =
-    sil.UserAwareAction.async(validateJson[List[DataSetLayerId]]) { implicit request =>
+    sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
       request.identity.toFox.flatMap { user =>
         for {
           configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
           initialConfigurationMap = configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty)
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
+          dataSource <- dataSetService.dataSourceFor(dataSet)
+          dataSetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
+          allLayerIds = dataSetLayers.map(dl => DataSetLayerId(dl.name, dl.category == Category.segmentation)) ++ request.body
+            .map(DataSetLayerId(_, true))
           layerConfigJson <- userDataSetLayerConfigurationDAO.findAllByLayerNameForUserAndDataset(
-            request.body.map(_.name),
+            allLayerIds.map(_.name),
             user._id,
             dataSetName)
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          layerSourceDefaultViewConfigs <- dataSetConfigurationDefaults.getAllLayerSourceDefaultViewConfigForDataSet(
-            dataSet)
-          layerSettings = dataSetConfigurationDefaults.layerConfigurationOrDefaults(request.body,
+          layerSourceDefaultViewConfigs = dataSetConfigurationDefaults.getAllLayerSourceDefaultViewConfigForDataSet(
+            dataSetLayers)
+          layerSettings = dataSetConfigurationDefaults.layerConfigurationOrDefaults(allLayerIds,
                                                                                     layerConfigJson,
                                                                                     layerSourceDefaultViewConfigs)
         } yield dataSetConfigurationDefaults.buildCompleteConfig(initialConfigurationMap, layerSettings)

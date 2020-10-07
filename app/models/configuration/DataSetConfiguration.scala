@@ -2,7 +2,7 @@ package models.configuration
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, ViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike, ViewConfiguration}
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetService}
 import play.api.libs.json._
@@ -74,15 +74,8 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
   def buildCompleteConfig(initialConfiguration: Map[String, JsValue], layerConfigurations: Map[String, JsValue]) =
     DataSetConfiguration(initialConfiguration + ("layers" -> Json.toJson(layerConfigurations)))
 
-  def getAllLayerSourceDefaultViewConfigForDataSet(dataSet: DataSet)(
-      implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] =
-    for {
-
-      dataSource <- dataSetService.dataSourceFor(dataSet)
-      dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
-      layerSourceDefaultViewConfig = dataLayers.flatMap(dl =>
-        dl.defaultViewConfiguration.map(c => (dl.name, Json.toJson(c.toMap))))
-    } yield layerSourceDefaultViewConfig.toMap
+  def getAllLayerSourceDefaultViewConfigForDataSet(dataLayers: List[DataLayerLike]): Map[String, JsValue] =
+    dataLayers.flatMap(dl => dl.defaultViewConfiguration.map(c => (dl.name, Json.toJson(c.toMap)))).toMap
 
   val initialDefaultPerColorLayer: Map[String, JsValue] = Map(
     "brightness" -> JsNumber(0),

@@ -4,6 +4,7 @@ import _ from "lodash";
 import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { type Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import messages from "messages";
 import type { DimensionMap } from "oxalis/model/dimensions";
 
@@ -44,7 +45,7 @@ function upsampleVoxelMap(
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (labeledBucket.type === "null") {
-      warnAboutCouldNotCreate(labeledBucket);
+      warnAboutCouldNotCreate(labeledBucket.getAddress());
       continue;
     }
     const goalBaseBucketAddress = map3(
@@ -289,27 +290,49 @@ export function applyVoxelMap(
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
 ) {
+  function preprocessBucket(bucket) {
+    if (bucket.type === "null") {
+      return;
+    }
+    bucket.markAndAddBucketForUndo();
+  }
+
+  function postprocessBucket(bucket) {
+    if (bucket.type === "null") {
+      return;
+    }
+    dataCube.pushQueue.insert(bucket);
+    bucket.trigger("bucketLabeled");
+  }
+
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
-    let bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
+    let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (bucket.type === "null") {
       continue;
     }
-    bucket.markAndAddBucketForUndo();
-    let data = bucket.getOrCreateData();
+    preprocessBucket(bucket);
     const out = new Float32Array(3);
     get3DAddress(0, 0, out);
     const thirdDimensionValueInBucket = out[2];
     for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
-      if (thirdDimensionValueInBucket + sliceCount === constants.BUCKET_WIDTH) {
+      const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
+      if (newThirdDimValue > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
         const nextBucketZoomedAddress = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;
+
+        postprocessBucket(bucket);
+
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
         if (bucket.type === "null") {
           continue;
         }
-        data = bucket.getOrCreateData();
+        preprocessBucket(bucket);
       }
+      if (bucket.type === "null") {
+        continue;
+      }
+      const data = bucket.getOrCreateData();
       for (let firstDim = 0; firstDim < constants.BUCKET_WIDTH; firstDim++) {
         for (let secondDim = 0; secondDim < constants.BUCKET_WIDTH; secondDim++) {
           if (voxelMap[firstDim * constants.BUCKET_WIDTH + secondDim] === 1) {
@@ -326,7 +349,8 @@ export function applyVoxelMap(
         }
       }
     }
-    dataCube.pushQueue.insert(bucket);
-    bucket.trigger("bucketLabeled");
+
+    // Post-processing: add to pushQueue and notify about labeling
+    postprocessBucket(bucket);
   }
 }

@@ -303,11 +303,7 @@ class VolumeLayer {
     return [xa, ya, xb, yb, xc, yc, xd, yd];
   }
 
-  getRectangleVoxelBuffer2D(
-    lastPosition: Vector3,
-    position: Vector3,
-    boundings?: ?BoundingBoxType,
-  ): ?VoxelBuffer2D {
+  getRectangleVoxelBuffer2D(lastPosition: Vector3, position: Vector3): ?VoxelBuffer2D {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
 
@@ -357,7 +353,7 @@ class VolumeLayer {
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
-      boundings,
+      this.getFast3DCoordinateFunction(),
     );
     return voxelBuffer2D;
   }

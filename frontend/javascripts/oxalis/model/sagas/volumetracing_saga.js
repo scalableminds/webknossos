@@ -250,7 +250,7 @@ function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode, labeledZoomSte
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
-    // globalA (first dim) and globalB (secondB) are global coordinates
+    // globalA (first dim) and globalB (second dim) are global coordinates
     // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
     // and the LabeledVoxelMap
     for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {

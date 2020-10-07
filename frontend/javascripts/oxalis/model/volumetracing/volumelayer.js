@@ -253,6 +253,8 @@ class VolumeLayer {
     Drawing.fillCircle(
       Math.floor(unzoomedRadius / this.activeResolution[dimIndices[0]]),
       Math.floor(unzoomedRadius / this.activeResolution[dimIndices[1]]),
+      // the unzoomedRadius is adapted to the correct resolution by the
+      // following scale parameters
       unzoomedRadius,
       scaleX / this.activeResolution[dimIndices[0]],
       scaleY / this.activeResolution[dimIndices[1]],

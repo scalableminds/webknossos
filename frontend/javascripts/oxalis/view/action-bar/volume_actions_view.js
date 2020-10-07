@@ -11,7 +11,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import Store, { type OxalisState } from "oxalis/store";
 
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
@@ -25,7 +25,7 @@ type Props = {|
   // eslint-disable-next-line react/no-unused-prop-types
   zoomStep: number,
   isInMergerMode: boolean,
-  activeResolution: Vector3,
+  labeledResolution: ?Vector3,
 |};
 
 const isZoomStepTooHighForTraceTool = () => isVolumeTraceToolDisallowed(Store.getState());
@@ -46,8 +46,9 @@ class VolumeActionsView extends PureComponent<Props> {
   };
 
   render() {
-    const { activeTool, activeResolution, isInMergerMode } = this.props;
-    const hasResolutionWithHigherDimension = activeResolution.some(val => val > 1);
+    const { activeTool, labeledResolution, isInMergerMode } = this.props;
+    const isLabelingPossible = labeledResolution != null;
+    const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
     const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
       <Tooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
         <i className="fas fa-layer-group" />
@@ -75,12 +76,15 @@ class VolumeActionsView extends PureComponent<Props> {
             <Tooltip title={traceToolDisabledTooltip}>
               <RadioButton
                 value={VolumeToolEnum.TRACE}
-                disabled={isInMergerMode || isTraceToolDisabled}
+                disabled={isInMergerMode || isTraceToolDisabled || !isLabelingPossible}
               >
                 Trace {activeTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
               </RadioButton>
             </Tooltip>
-            <RadioButton value={VolumeToolEnum.BRUSH} disabled={isInMergerMode}>
+            <RadioButton
+              value={VolumeToolEnum.BRUSH}
+              disabled={isInMergerMode || !isLabelingPossible}
+            >
               Brush {activeTool === "BRUSH" ? multiSliceAnnotationInfoIcon : null}
             </RadioButton>
           </Tooltip>
@@ -97,11 +101,14 @@ class VolumeActionsView extends PureComponent<Props> {
 }
 
 function mapStateToProps(state: OxalisState): Props {
+  const maybeResolutionWithZoomStep = getRenderableResolutionForSegmentation(state);
+  const labeledResolution =
+    maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   return {
     activeTool: enforceVolumeTracing(state.tracing).activeTool,
     zoomStep: state.flycam.zoomStep,
     isInMergerMode: state.temporaryConfiguration.isMergerModeEnabled,
-    activeResolution: getCurrentResolution(state),
+    labeledResolution,
   };
 }
 

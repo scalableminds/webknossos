@@ -26,6 +26,7 @@ import {
   copySegmentationLayerAction,
   inferSegmentationInViewportAction,
   setActiveCellAction,
+  resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
@@ -117,6 +118,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
+        Store.dispatch(resetContourAction());
       }
     },
 
@@ -156,6 +158,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
         Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
+        Store.dispatch(resetContourAction());
       }
     },
 

@@ -4,7 +4,6 @@ import _ from "lodash";
 import DataLayer from "oxalis/model/data_layer";
 import {
   type CopySegmentationLayerAction,
-  resetContourAction,
   updateDirectionAction,
   setToolAction,
   finishAnnotationStrokeAction,
@@ -46,6 +45,7 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import {
   getResolutionInfoOfSegmentationLayer,
   ResolutionInfo,
+  getRenderableResolutionForSegmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import Constants, {
   type BoundingBoxType,
@@ -116,7 +116,24 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     if (isZoomStepTooHighForTraceTool && activeTool === VolumeToolEnum.TRACE) {
       continue;
     }
-    const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
+
+    const maybeLabeledResolutionWithZoomStep = yield* select(
+      getRenderableResolutionForSegmentation,
+    );
+    if (!maybeLabeledResolutionWithZoomStep) {
+      // Volume data is currently not rendered. Don't annotate anything.
+      continue;
+    }
+
+    const {
+      zoomStep: labeledZoomStep,
+      resolution: labeledResolution,
+    } = maybeLabeledResolutionWithZoomStep;
+    const currentLayer = yield* call(
+      createVolumeLayer,
+      startEditingAction.planeId,
+      labeledResolution,
+    );
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
     if (activeTool === VolumeToolEnum.BRUSH) {
@@ -124,6 +141,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
+        labeledZoomStep,
       );
     }
 
@@ -153,11 +171,12 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           labelWithVoxelBuffer2D,
           currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
           contourTracingMode,
+          labeledZoomStep,
         );
       }
     }
 
-    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode, labeledZoomStep);
     yield* put(finishAnnotationStrokeAction());
   }
 }
@@ -179,21 +198,14 @@ function* getBoundingsFromPosition(
   return currentViewportBounding;
 }
 
-function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
+function* createVolumeLayer(planeId: OrthoView, labeledResolution: Vector3): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
-
-  const labeledResolution = yield* select(state => {
-    const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
-    const requestedZoomStep = getRequestLogZoomStep(state);
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    return resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
-  });
 
   return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
 }
 
-function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode): Saga<void> {
+function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode, labeledZoomStep): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -209,9 +221,6 @@ function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode): Saga<void> {
   const resolutionInfo = yield* select(state =>
     getResolutionInfoOfSegmentationLayer(state.dataset),
   );
-
-  const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
 
   const get3DCoordinateFromLocal2D = ([x, y]) =>
@@ -568,17 +577,22 @@ export function* finishLayer(
   layer: VolumeLayer,
   activeTool: VolumeTool,
   contourTracingMode: ContourMode,
+  labeledZoomStep: number,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    yield* call(labelWithVoxelBuffer2D, layer.getVoxelBuffer2D(activeTool), contourTracingMode);
+    yield* call(
+      labelWithVoxelBuffer2D,
+      layer.getVoxelBuffer2D(activeTool),
+      contourTracingMode,
+      labeledZoomStep,
+    );
   }
 
   yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));
-  yield* put(resetContourAction());
 }
 
 export function* ensureNoTraceToolInLowResolutions(): Saga<*> {

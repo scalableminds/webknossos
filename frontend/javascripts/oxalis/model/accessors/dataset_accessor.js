@@ -34,8 +34,8 @@ import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers
 export type ResolutionsMap = Map<number, Vector3>;
 
 export class ResolutionInfo {
-  resolutions: Array<Vector3>;
-  resolutionMap: Map<number, Vector3>;
+  resolutions: $ReadOnlyArray<Vector3>;
+  resolutionMap: $ReadOnlyMap<number, Vector3>;
 
   constructor(resolutions: Array<Vector3>) {
     this.resolutions = resolutions;
@@ -578,12 +578,71 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
       return !_.range(1, maxZoomStepDiff + 1).some(diff => {
-        const fallbackZoomstep = zoomStep + diff;
-        return resolutionInfo.hasIndex(fallbackZoomstep);
+        const fallbackZoomStep = zoomStep + diff;
+        return resolutionInfo.hasIndex(fallbackZoomStep);
       });
     })
     .map<DataLayerType>(({ layer }) => layer);
   return unrenderableLayers;
+}
+
+/*
+  This function returns the resolution and zoom step in which the segmentation
+  layer is currently rendered (if it is rendered). These properties should be used
+  when labeling volume data.
+ */
+export function getRenderableResolutionForSegmentation(
+  state: OxalisState,
+): ?{ resolution: Vector3, zoomStep: number } {
+  const { dataset } = state;
+  const requestedZoomStep = getRequestLogZoomStep(state);
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+  const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
+  const segmentationLayer = getSegmentationLayer(dataset);
+
+  if (!segmentationLayer) {
+    return null;
+  }
+
+  // Check whether the segmentation layer is enabled
+  const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
+  if (segmentationSettings.isDisabled) {
+    return null;
+  }
+
+  // Check whether the requested zoom step exists
+  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+    return {
+      zoomStep: requestedZoomStep,
+      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
+    };
+  }
+
+  // Since `renderMissingDataBlack` is enabled, the fallback magnifications
+  // should not be considered.
+  // rendered.
+  if (renderMissingDataBlack) {
+    return null;
+  }
+
+  // The current magnification is missing and fallback rendering
+  // is activated. Thus, check whether one of the fallback
+  // zoomSteps can be rendered.
+  for (
+    let fallbackZoomStep = requestedZoomStep + 1;
+    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
+    fallbackZoomStep++
+  ) {
+    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+      return {
+        zoomStep: fallbackZoomStep,
+        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
+      };
+    }
+  }
+
+  return null;
 }
 
 export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(

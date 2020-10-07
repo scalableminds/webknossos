@@ -187,7 +187,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     const pluralS = this.state.files.length > 1 ? "s" : "";
     return (
       <Modal
-        title={`Import ${this.state.files.length} NML file${pluralS}`}
+        title={`Import ${this.state.files.length} Tracing${pluralS}`}
         visible={this.state.files.length > 0}
         onCancel={() => this.setState({ files: [] })}
         footer={

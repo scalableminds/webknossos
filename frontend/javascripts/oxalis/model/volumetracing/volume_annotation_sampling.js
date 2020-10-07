@@ -1,5 +1,6 @@
 // @flow
 
+import _ from "lodash";
 import constants, { type Vector3, type LabeledVoxelsMap } from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";

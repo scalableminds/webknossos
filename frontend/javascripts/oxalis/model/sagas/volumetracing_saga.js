@@ -145,7 +145,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       );
     }
 
-    let lastPosition = startEditingAction.position;
+    // let lastPosition = startEditingAction.position;
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield* race({
         addToLayerAction: _take("ADD_TO_LAYER"),
@@ -189,7 +189,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           labeledZoomStep,
         );
       }
-      lastPosition = addToLayerAction.position;
+      // lastPosition = addToLayerAction.position;
     }
 
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode, labeledZoomStep);

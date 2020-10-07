@@ -544,9 +544,9 @@ export function getEnabledLayers(
 
 /*
   This function returns layers which cannot be rendered (since
-  the current magnification is missing), even though they should
+  the current resolution is missing), even though they should
   be rendered (since they are enabled). The function takes fallback
-  magnifications into account if renderMissingDataBlack is disabled.
+  resolutions into account if renderMissingDataBlack is disabled.
  */
 function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
   const { dataset } = state;
@@ -569,12 +569,12 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
 
       if (renderMissingDataBlack) {
         // We already know that the layer is missing. Since `renderMissingDataBlack`
-        // is enabled, the fallback magnifications don't matter. The layer cannot be
+        // is enabled, the fallback resolutions don't matter. The layer cannot be
         // rendered.
         return true;
       }
 
-      // The current magnification is missing and fallback rendering
+      // The current resolution is missing and fallback rendering
       // is activated. Thus, check whether one of the fallback
       // zoomSteps can be rendered.
       return !_.range(1, maxZoomStepDiff + 1).some(diff => {
@@ -619,14 +619,14 @@ export function getRenderableResolutionForSegmentation(
     };
   }
 
-  // Since `renderMissingDataBlack` is enabled, the fallback magnifications
+  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
   // should not be considered.
   // rendered.
   if (renderMissingDataBlack) {
     return null;
   }
 
-  // The current magnification is missing and fallback rendering
+  // The current resolution is missing and fallback rendering
   // is activated. Thus, check whether one of the fallback
   // zoomSteps can be rendered.
   for (

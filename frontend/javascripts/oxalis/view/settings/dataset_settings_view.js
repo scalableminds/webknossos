@@ -562,7 +562,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             label={
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
-                <Tooltip title="If disabled, missing data will be rendered by using poorer magnifications.">
+                <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>

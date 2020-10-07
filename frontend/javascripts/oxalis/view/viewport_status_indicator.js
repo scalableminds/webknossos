@@ -31,9 +31,9 @@ export default function ViewportStatusIndicator() {
       title={
         <div>
           The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")} cannot be
-          rendered because {pronounAndVerb} exist in the current magnification. Please adjust the
-          zoom level to change the active magnification. Also consider disabling the option
-          &ldquo;Render Missing Data Black&rdquo; if this is not already the case.
+          rendered because {pronounAndVerb} exist in the current resolution. Please adjust the zoom
+          level to change the active resolution. Also consider disabling the option &ldquo;Render
+          Missing Data Black&rdquo; if this is not already the case.
         </div>
       }
     >

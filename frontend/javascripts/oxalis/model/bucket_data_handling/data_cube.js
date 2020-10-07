@@ -402,7 +402,7 @@ class DataCube {
     }
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       throw new Error(
-        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current magnification.`,
+        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current resolution.`,
       );
     }
     const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);

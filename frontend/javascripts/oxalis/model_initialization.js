@@ -446,7 +446,7 @@ function setupLayerForVolumeTracing(
       Toast.warning(
         messages["tracing.volume_resolution_mismatch"],
         {},
-        `The magnifications of the volume tracing (${tracingResolutions.toString()}) don't match the dataset's magnifications (${targetResolutions.toString()}). This can happen when the magnification of the dataset was changed after this tracing was created. Note that there might be rendering issues for this reason.`,
+        `The resolutions of the volume tracing (${tracingResolutions.toString()}) don't match the dataset's resolutions (${targetResolutions.toString()}). This can happen when the resolution of the dataset was changed after this tracing was created. Note that there might be rendering issues for this reason.`,
       );
       throw HANDLED_ERROR;
     } else {

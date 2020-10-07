@@ -111,7 +111,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.uint64_segmentation_warning":
     "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
-    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",

@@ -51,7 +51,7 @@ function isValidMagnification(rule, value, callback) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     callback();
   } else {
-    callback("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
+    callback("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
   }
 }
 
@@ -64,7 +64,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
     allowedMagnifications.max != null &&
     allowedMagnifications.min > allowedMagnifications.max
   ) {
-    Toast.error("Minimum magnification must not be greater than maximum magnification.");
+    Toast.error("Minimum resolution must not be greater than maximum resolution.");
     return null;
   }
 
@@ -301,9 +301,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 valuePropName: "checked",
               })(
                 <Checkbox>
-                  Restrict Magnifications{" "}
+                  Restrict Resolutions{" "}
                   <Tooltip
-                    title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be addressed with 4 and 8."
+                    title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
                     placement="right"
                   >
                     <Icon type="info-circle" />

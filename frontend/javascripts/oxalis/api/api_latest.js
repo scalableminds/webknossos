@@ -855,9 +855,9 @@ class DataApi {
 
   /**
    * Returns raw binary data for a given layer, position and zoom level. If the zoom
-   * level is not provided, the first magnification will be used. If this
-   * magnification does not exist, the next existing magnification will be used.
-   * If the zoom level is provided and points to a not existent magnification,
+   * level is not provided, the first resolution will be used. If this
+   * resolution does not exist, the next existing resolution will be used.
+   * If the zoom level is provided and points to a not existent resolution,
    * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket

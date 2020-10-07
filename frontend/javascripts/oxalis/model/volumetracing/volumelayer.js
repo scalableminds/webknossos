@@ -303,7 +303,15 @@ class VolumeLayer {
     return [xa, ya, xb, yb, xc, yc, xd, yd];
   }
 
-  getRectangleVoxelBuffer2D(lastPosition: Vector3, position: Vector3): ?VoxelBuffer2D {
+  getRectangleVoxelBuffer2D(
+    lastUnzoomedPosition: Vector3,
+    unzoomedPosition: Vector3,
+  ): ?VoxelBuffer2D {
+    const lastPosition = scaleGlobalPositionWithResolution(
+      lastUnzoomedPosition,
+      this.activeResolution,
+    );
+    const position = scaleGlobalPositionWithResolution(unzoomedPosition, this.activeResolution);
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
 

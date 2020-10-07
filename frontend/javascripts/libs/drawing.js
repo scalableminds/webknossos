@@ -139,8 +139,8 @@ class Drawing {
     y1: number,
     x2: number,
     y2: number,
-    bufX0: Array<number>,
-    bufX1: Array<number>,
+    bufX0: Float32Array,
+    bufX1: Float32Array,
     minX: number,
     maxX: number,
   ): void {
@@ -183,8 +183,8 @@ class Drawing {
 
     const [minX, maxX] = [Math.min(xa, xb, xc, xd), Math.max(xa, xb, xc, xd)];
     const [minY, maxY] = [Math.min(ya, yb, yc, yd), Math.max(ya, yb, yc, yd)];
-    const bufX0 = new Array(maxY);
-    const bufX1 = new Array(maxY);
+    const bufX0 = new Float32Array(maxY);
+    const bufX1 = new Float32Array(maxY);
 
     this.paintBorder(xa, ya, xb, yb, bufX0, bufX1, minX, maxX);
     this.paintBorder(xb, yb, xc, yc, bufX0, bufX1, minX, maxX);

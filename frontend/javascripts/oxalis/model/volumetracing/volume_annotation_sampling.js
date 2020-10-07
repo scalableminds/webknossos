@@ -37,10 +37,13 @@ function upsampleVoxelMap(
   const thirdDimensionBucketValue = Math.floor(
     thirdDimensionVoxelValue / targetResolution[dimensionIndices[2]] / constants.BUCKET_WIDTH,
   );
+  const warnAboutCouldNotCreate = _.once(zoomedAddress => {
+    console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
+  });
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (labeledBucket.type === "null") {
-      console.warn(messages["sampling.could_not_get_or_create_bucket"](labeledBucketZoomedAddress));
+      warnAboutCouldNotCreate(labeledBucket);
       continue;
     }
     const goalBaseBucketAddress = map3(
@@ -68,12 +71,7 @@ function upsampleVoxelMap(
           targetZoomStep,
         ]);
         if (currentGoalBucket.type === "null") {
-          console.warn(
-            messages["sampling.could_not_get_or_create_bucket"]([
-              ...currentGoalBucketAddress,
-              targetZoomStep,
-            ]),
-          );
+          console.warn(warnAboutCouldNotCreate([...currentGoalBucketAddress, targetZoomStep]));
           continue;
         }
         const currentGoalVoxelMap = new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
@@ -157,10 +155,15 @@ function downsampleVoxelMap(
   const labeledVoxelMapInTargetResolution: LabeledVoxelsMap = new Map();
   const scaleToSource = map3((val, index) => val / sourceResolution[index], targetResolution);
   const scaleToGoal = map3((val, index) => val / targetResolution[index], sourceResolution);
+
+  const warnAboutCouldNotCreate = _.once(zoomedAddress => {
+    console.warn(messages["sampling.could_not_get_or_create_bucket"](zoomedAddress));
+  });
+
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (labeledBucket.type === "null") {
-      console.warn(messages["sampling.could_not_get_or_create_bucket"](labeledBucketZoomedAddress));
+      warnAboutCouldNotCreate(labeledBucketZoomedAddress);
       continue;
     }
     const goalBucketAddress = map3(
@@ -169,9 +172,7 @@ function downsampleVoxelMap(
     );
     const goalBucket = dataCube.getOrCreateBucket([...goalBucketAddress, targetZoomStep]);
     if (goalBucket.type === "null") {
-      console.warn(
-        messages["sampling.could_not_get_or_create_bucket"]([...goalBucketAddress, targetZoomStep]),
-      );
+      warnAboutCouldNotCreate([...goalBucketAddress, targetZoomStep]);
       continue;
     }
     // Scale the bucket address back to the source scale to calculate the offset the source bucket has to the goalBucket.

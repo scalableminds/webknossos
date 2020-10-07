@@ -169,18 +169,19 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
-        const rectangleIterator = currentLayer.getRectangleVoxelBuffer2D(
-          lastPosition,
-          addToLayerAction.position,
-        );
-        if (rectangleIterator) {
-          yield* call(
-            labelWithVoxelBuffer2D,
-            rectangleIterator,
-            contourTracingMode,
-            labeledZoomStep,
-          );
-        }
+        // Disable continuous drawing for performance reasons
+        // const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
+        //   lastPosition,
+        //   addToLayerAction.position,
+        // );
+        // if (rectangleVoxelBuffer2D) {
+        //   yield* call(
+        //     labelWithVoxelBuffer2D,
+        //     rectangleVoxelBuffer2D,
+        //     contourTracingMode,
+        //     labeledZoomStep,
+        //   );
+        // }
         yield* call(
           labelWithVoxelBuffer2D,
           currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),

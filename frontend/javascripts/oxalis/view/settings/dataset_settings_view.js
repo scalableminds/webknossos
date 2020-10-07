@@ -20,7 +20,11 @@ import {
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
-import { findDataPositionForLayer, clearCache } from "admin/admin_rest_api";
+import {
+  clearCache,
+  findDataPositionForLayer,
+  findDataPositionForVolumeTracing,
+} from "admin/admin_rest_api";
 import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -77,18 +81,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
       : "If you are having trouble finding your data, webKnossos can try to find a position which contains data.";
-    // If the tracing contains a volume tracing, the backend can only
-    // search in the fallback layer of the segmentation layer for data.
-    let layerNameToSearchDataIn = layerName;
-    if (!isColorLayer) {
-      const { volume } = Store.getState().tracing;
-      if (volume && volume.fallbackLayer) {
-        layerNameToSearchDataIn = volume.fallbackLayer;
-      } else if (volume && !volume.fallbackLayer && !isDisabled) {
-        isDisabled = true;
-        tooltipText =
-          "You do not have a fallback layer for this segmentation layer. It is only possible to search in fallback layers.";
-      }
+
+    const { volume } = Store.getState().tracing;
+    if (!isColorLayer && volume && volume.fallbackLayer) {
+      tooltipText =
+        "webKnossos will try to find data in your volume tracing first and in the fallback layer afterwards.";
     }
 
     return (
@@ -97,7 +94,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           type="scan"
           onClick={
             !isDisabled
-              ? () => this.handleFindData(layerNameToSearchDataIn)
+              ? () => this.handleFindData(layerName, isColorLayer)
               : () => Promise.resolve()
           }
           style={{
@@ -405,14 +402,34 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     this.props.onChangeUser("gpuMemoryFactor", gpuFactor);
   };
 
-  handleFindData = async (layerName: string) => {
+  handleFindData = async (layerName: string, isDataLayer: boolean) => {
+    const { volume, tracingStore } = Store.getState().tracing;
     const { dataset } = this.props;
-    const { position, resolution } = await findDataPositionForLayer(
-      dataset.dataStore.url,
-      dataset,
-      layerName,
-    );
-    if (!position || !resolution) {
+    let foundPosition;
+    let foundResolution;
+
+    if (volume && !isDataLayer) {
+      const { position, resolution } = await findDataPositionForVolumeTracing(
+        tracingStore.url,
+        volume.tracingId,
+      );
+      if ((!position || !resolution) && volume.fallbackLayer) {
+        await this.handleFindData(volume.fallbackLayer, true);
+        return;
+      }
+      foundPosition = position;
+      foundResolution = resolution;
+    } else {
+      const { position, resolution } = await findDataPositionForLayer(
+        dataset.dataStore.url,
+        dataset,
+        layerName,
+      );
+      foundPosition = position;
+      foundResolution = resolution;
+    }
+
+    if (!foundPosition || !foundResolution) {
       const { upperBoundary, lowerBoundary } = getLayerBoundaries(dataset, layerName);
       const centerPosition = V3.add(lowerBoundary, upperBoundary).map(el => el / 2);
 
@@ -423,10 +440,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       return;
     }
 
-    this.props.onSetPosition(position);
-    const zoomValue = this.props.onZoomToResolution(resolution);
+    this.props.onSetPosition(foundPosition);
+    const zoomValue = this.props.onZoomToResolution(foundResolution);
     Toast.success(
-      `Jumping to position ${position.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
+      `Jumping to position ${foundPosition.join(", ")} and zooming to ${zoomValue.toFixed(2)}`,
     );
   };
 

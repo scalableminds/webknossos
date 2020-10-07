@@ -290,14 +290,14 @@ export function applyVoxelMap(
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
 ) {
-  function preprocessBucket(bucket) {
+  function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
     }
     bucket.markAndAddBucketForUndo();
   }
 
-  function postprocessBucket(bucket) {
+  function postprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
     }
@@ -322,12 +322,12 @@ export function applyVoxelMap(
         nextBucketZoomedAddress[thirdDimensionIndex]++;
 
         postprocessBucket(bucket);
-
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
+        preprocessBucket(bucket);
+
         if (bucket.type === "null") {
           continue;
         }
-        preprocessBucket(bucket);
       }
       if (bucket.type === "null") {
         continue;

@@ -35,13 +35,11 @@ import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
-  getNumberOfSlicesForResolution,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
   getFlooredPosition,
   getRotation,
-  getCurrentResolution,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -60,6 +58,7 @@ import Constants, {
   VolumeToolEnum,
   type LabeledVoxelsMap,
 } from "oxalis/constants";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
@@ -67,6 +66,7 @@ import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import inferSegmentInViewport, {
   getHalfViewportExtents,
 } from "oxalis/model/sagas/automatic_brush_saga";
+import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -119,21 +119,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const currentLayer = yield* call(createVolumeLayer, startEditingAction.planeId);
 
     const initialViewport = yield* select(state => state.viewModeData.plane.activeViewport);
-    let activeResolution = yield* select(state => getCurrentResolution(state));
-    let numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
-    const activeViewportBounding = yield* call(
-      getBoundingsFromPosition,
-      initialViewport,
-      numberOfSlices,
-    );
     if (activeTool === VolumeToolEnum.BRUSH) {
       yield* call(
-        labelWithIterator,
-        currentLayer.getCircleVoxelIterator(
-          startEditingAction.position,
-          activeResolution,
-          activeViewportBounding,
-        ),
+        labelWithVoxelBuffer2D,
+        currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
       );
     }
@@ -160,20 +149,9 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         currentLayer.addContour(addToLayerAction.position);
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
-        activeResolution = yield* select(state => getCurrentResolution(state));
-        numberOfSlices = getNumberOfSlicesForResolution(activeResolution, initialViewport);
-        const currentViewportBounding = yield* call(
-          getBoundingsFromPosition,
-          activeViewport,
-          numberOfSlices,
-        );
         yield* call(
-          labelWithIterator,
-          currentLayer.getCircleVoxelIterator(
-            addToLayerAction.position,
-            activeResolution,
-            currentViewportBounding,
-          ),
+          labelWithVoxelBuffer2D,
+          currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
           contourTracingMode,
         );
       }
@@ -204,32 +182,131 @@ function* getBoundingsFromPosition(
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
-  return new VolumeLayer(planeId, thirdDimValue);
+
+  const labeledResolution = yield* select(state => {
+    const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
+    const requestedZoomStep = getRequestLogZoomStep(state);
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+    return resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+  });
+
+  return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
 }
 
-function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
+function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
   const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
-  switch (contourTracingMode) {
-    case ContourModeEnum.DRAW_OVERWRITE:
-      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, activeCellId);
-      break;
-    case ContourModeEnum.DRAW:
-      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, activeCellId, 0);
-      break;
-    case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
-      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, 0, activeCellId);
-      break;
-    case ContourModeEnum.DELETE_FROM_ANY_CELL:
-      yield* call([cube, cube.labelVoxelsInAllResolutions], iterator, 0);
-      break;
-    default:
-      throw new Error("Invalid volume tracing mode.");
+
+  const currentLabeledVoxelMap: LabeledVoxelsMap = new Map();
+
+  const activeViewport = yield* select(state => state.viewModeData.plane.activeViewport);
+  const dimensionIndices = Dimensions.getIndices(activeViewport);
+
+  const resolutionInfo = yield* select(state =>
+    getResolutionInfoOfSegmentationLayer(state.dataset),
+  );
+
+  const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
+  const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
+
+  const get3DCoordinateFromLocal2D = ([x, y]) =>
+    voxelBuffer.get3DCoordinate([x + voxelBuffer.minCoord2d[0], y + voxelBuffer.minCoord2d[1]]);
+  const topLeft3DCoord = get3DCoordinateFromLocal2D([0, 0]);
+  const bottomRight3DCoord = get3DCoordinateFromLocal2D([voxelBuffer.width, voxelBuffer.height]);
+  // Since the bottomRight3DCoord is exclusive for the described bounding box,
+  // the third dimension has to be increased by one (otherwise, the volume of the bounding
+  // box would be empty)
+  bottomRight3DCoord[dimensionIndices[2]]++;
+
+  const outerBoundingBox = new BoundingBox({
+    min: topLeft3DCoord,
+    max: bottomRight3DCoord,
+  });
+
+  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
+
+  for (const boundingBoxChunk of bucketBoundingBoxes) {
+    const { min, max } = boundingBoxChunk;
+    const bucketZoomedAddress = zoomedPositionToZoomedAddress(min, labeledZoomStep);
+
+    if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
+      throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
+    }
+
+    const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
+    currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
+
+    // globalA (first dim) and globalB (secondB) are global coordinates
+    // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
+    // and the LabeledVoxelMap
+    for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
+      for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
+        if (
+          voxelBuffer.map[
+            voxelBuffer.linearizeIndex(
+              globalA - voxelBuffer.minCoord2d[0],
+              globalB - voxelBuffer.minCoord2d[1],
+            )
+          ]
+        ) {
+          labelMapOfBucket[
+            (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
+              (globalB % Constants.BUCKET_WIDTH)
+          ] = 1;
+        }
+      }
+    }
   }
+
+  const shouldOverwrite = [
+    ContourModeEnum.DRAW_OVERWRITE,
+    ContourModeEnum.DELETE_FROM_ANY_CELL,
+  ].includes(contourTracingMode);
+
+  // Since the LabeledVoxelMap is created in the current magnification,
+  // we only need to annotate one slice in this mag.
+  // `applyLabeledVoxelMapToAllMissingResolutions` will take care of
+  // annotating multiple slices
+  const numberOfSlices = 1;
+  const thirdDim = dimensionIndices[2];
+
+  const isDeleting = [
+    ContourModeEnum.DELETE_FROM_ACTIVE_CELL,
+    ContourModeEnum.DELETE_FROM_ANY_CELL,
+  ].includes(contourTracingMode);
+  const newCellIdValue = isDeleting ? 0 : activeCellId;
+  const overwritableValue = isDeleting ? activeCellId : 0;
+
+  applyVoxelMap(
+    currentLabeledVoxelMap,
+    cube,
+    newCellIdValue,
+    voxelBuffer.getFast3DCoordinate,
+    numberOfSlices,
+    thirdDim,
+    shouldOverwrite,
+    overwritableValue,
+  );
+
+  // thirdDimensionOfSlice needs to be provided in global coordinates
+  const thirdDimensionOfSlice =
+    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+  applyLabeledVoxelMapToAllMissingResolutions(
+    currentLabeledVoxelMap,
+    labeledZoomStep,
+    dimensionIndices,
+    resolutionInfo,
+    cube,
+    newCellIdValue,
+    thirdDimensionOfSlice,
+    shouldOverwrite,
+    overwritableValue,
+  );
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void> {
@@ -244,11 +321,11 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
 
   const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
-  const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+  const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
   const resolutionInfo = yield* select(state =>
     getResolutionInfoOfSegmentationLayer(state.dataset),
   );
-  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+  const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
   const dimensionIndices = Dimensions.getIndices(activeViewport);
   const position = yield* select(state => getFlooredPosition(state.flycam));
@@ -338,11 +415,11 @@ export function* floodFill(): Saga<void> {
     const seedVoxel = Dimensions.roundCoordinate(position);
     const activeCellId = yield* select(state => enforceVolumeTracing(state.tracing).activeCellId);
     const dimensionIndices = Dimensions.getIndices(planeId);
-    const activeZoomStep = yield* select(state => getRequestLogZoomStep(state));
+    const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
     const resolutionInfo = yield* select(state =>
       getResolutionInfoOfSegmentationLayer(state.dataset),
     );
-    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(activeZoomStep);
+    const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
 
     const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
     // The floodfill and applyVoxelMap methods iterate within the bucket.
@@ -405,7 +482,10 @@ function applyLabeledVoxelMapToAllMissingResolutions(
   segmentationCube: DataCube,
   cellId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
+  // if shouldOverwrite is false, a voxel is only overwritten if
+  // its old value is equal to overwritableValue.
   shouldOverwrite: boolean,
+  overwritableValue: number = 0,
 ): void {
   const thirdDim = dimensionIndices[2];
 
@@ -417,13 +497,10 @@ function applyLabeledVoxelMapToAllMissingResolutions(
     const sampledThirdDimensionValue =
       Math.floor(thirdDimensionOfSlice / targetResolution[thirdDim]) % Constants.BUCKET_WIDTH;
 
-    return (voxel: Vector2) => {
-      const unorderedVoxelWithThirdDimension = [voxel[0], voxel[1], sampledThirdDimensionValue];
-      const orderedVoxelWithThirdDimension = Dimensions.transDimWithIndices(
-        unorderedVoxelWithThirdDimension,
-        dimensionIndices,
-      );
-      return orderedVoxelWithThirdDimension;
+    return (x: number, y: number, out: Vector3 | Float32Array) => {
+      out[dimensionIndices[0]] = x;
+      out[dimensionIndices[1]] = y;
+      out[dimensionIndices[2]] = sampledThirdDimensionValue;
     };
   };
 
@@ -471,6 +548,7 @@ function applyLabeledVoxelMapToAllMissingResolutions(
         numberOfSlices,
         thirdDim,
         shouldOverwrite,
+        overwritableValue,
       );
     }
   }
@@ -496,15 +574,10 @@ export function* finishLayer(
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    const currentResolution = yield* select(state => getCurrentResolution(state));
-    yield* call(
-      labelWithIterator,
-      layer.getVoxelIterator(activeTool, currentResolution),
-      contourTracingMode,
-    );
+    yield* call(labelWithVoxelBuffer2D, layer.getVoxelBuffer2D(activeTool), contourTracingMode);
   }
 
-  yield* put(updateDirectionAction(layer.getCentroid()));
+  yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));
   yield* put(resetContourAction());
 }
 

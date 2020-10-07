@@ -19,8 +19,8 @@ import { withoutUpdateTracing } from "../helpers/saveHelpers";
 const mockedVolumeLayer = {
   isEmpty: () => false,
   finish: _.noop,
-  getVoxelIterator: _.noop,
-  getCentroid: _.noop,
+  getVoxelBuffer2D: _.noop,
+  getUnzoomedCentroid: _.noop,
 };
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -113,6 +113,9 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next(VolumeToolEnum.BRUSH);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
+  // Pass position
+  startEditingSaga.next([1, 1, 1]);
+  // Pass active resolution
   const layer = startEditingSaga.next([1, 1, 1]).value;
   t.is(layer.plane, OrthoViews.PLANE_XY);
 });
@@ -126,11 +129,9 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next([1, 1, 1]);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   saga.next({ addToLayerAction: addToLayerActionFn([2, 3, 4]) });
@@ -150,11 +151,9 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next([1, 1, 1]);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
@@ -174,11 +173,9 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(ContourModeEnum.DELETE_FROM_ACTIVE_CELL);
   saga.next(VolumeToolEnum.TRACE);
   saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
   saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next([1, 1, 1]);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
@@ -193,7 +190,6 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   // $FlowFixMe[incompatible-call]
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
-  saga.next([1, 1, 1]);
   saga.next();
   expectValueDeepEqual(t, saga.next(), put(resetContourAction));
   t.true(saga.next().done);

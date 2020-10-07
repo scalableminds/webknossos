@@ -184,9 +184,10 @@ class Drawing {
     scaleY: number,
     paint: (number, number) => void,
   ) {
+    const squaredRadius = radius ** 2;
     for (let posX = x - radius; posX < x + radius; posX++) {
       for (let posY = y - radius; posY < y + radius; posY++) {
-        if (Math.sqrt(((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2) < radius) {
+        if (((posX - x) / scaleX) ** 2 + ((posY - y) / scaleY) ** 2 < squaredRadius) {
           paint(posX, posY);
         }
       }

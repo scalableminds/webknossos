@@ -241,20 +241,22 @@ function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode): Saga<void> {
     const labelMapOfBucket = new Uint8Array(Constants.BUCKET_WIDTH ** 2);
     currentLabeledVoxelMap.set(bucketZoomedAddress, labelMapOfBucket);
 
-    // bx and by are the coordinates within the 2D slice of the VoxelBuffer2D
+    // globalA (first dim) and globalB (secondB) are global coordinates
+    // which can be used to index into the 2D slice of the VoxelBuffer2D (when subtracting the minCoord2d)
     // and the LabeledVoxelMap
-    for (let bx = min[dimensionIndices[0]]; bx < max[dimensionIndices[0]]; bx++) {
-      for (let by = min[dimensionIndices[1]]; by < max[dimensionIndices[1]]; by++) {
+    for (let globalA = min[dimensionIndices[0]]; globalA < max[dimensionIndices[0]]; globalA++) {
+      for (let globalB = min[dimensionIndices[1]]; globalB < max[dimensionIndices[1]]; globalB++) {
         if (
           voxelBuffer.map[
             voxelBuffer.linearizeIndex(
-              bx - voxelBuffer.minCoord2d[0],
-              by - voxelBuffer.minCoord2d[1],
+              globalA - voxelBuffer.minCoord2d[0],
+              globalB - voxelBuffer.minCoord2d[1],
             )
           ]
         ) {
           labelMapOfBucket[
-            (bx % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH + (by % Constants.BUCKET_WIDTH)
+            (globalA % Constants.BUCKET_WIDTH) * Constants.BUCKET_WIDTH +
+              (globalB % Constants.BUCKET_WIDTH)
           ] = 1;
         }
       }

@@ -1015,6 +1015,16 @@ export async function findDataPositionForLayer(
   return { position, resolution };
 }
 
+export async function findDataPositionForVolumeTracing(
+  tracingstoreUrl: string,
+  tracingId: string,
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
+    Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
+  );
+  return { position, resolution };
+}
+
 export async function getHistogramForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,

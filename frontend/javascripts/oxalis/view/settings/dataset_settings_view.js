@@ -111,8 +111,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getReloadDataButton = (layerName: string) => {
     const tooltipText =
       "Reload the data from the server. Use this when the data on the server changed.";
-    // If the tracing contains a volume tracing, the backend can only
-    // search in the fallback layer of the segmentation layer for data.
     return (
       <Tooltip title={tooltipText}>
         <AsyncIconButton

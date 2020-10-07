@@ -45,7 +45,7 @@ function upsampleVoxelMap(
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     const labeledBucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
     if (labeledBucket.type === "null") {
-      warnAboutCouldNotCreate(labeledBucket.getAddress());
+      warnAboutCouldNotCreate(labeledBucketZoomedAddress);
       continue;
     }
     const goalBaseBucketAddress = map3(
@@ -316,7 +316,7 @@ export function applyVoxelMap(
     const thirdDimensionValueInBucket = out[2];
     for (let sliceCount = 0; sliceCount < numberOfSlicesToApply; sliceCount++) {
       const newThirdDimValue = thirdDimensionValueInBucket + sliceCount;
-      if (newThirdDimValue > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
+      if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
         const nextBucketZoomedAddress = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;

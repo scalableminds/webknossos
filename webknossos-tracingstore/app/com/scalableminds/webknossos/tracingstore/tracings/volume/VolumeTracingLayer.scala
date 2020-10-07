@@ -20,8 +20,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
 
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
@@ -33,12 +32,11 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
-  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStream(layer, resolution, version)
+  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    bucketStream(layer, version)
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
-    bucketStreamWithVersion(layer, resolution, version)
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+    bucketStreamWithVersion(layer, version)
 }
 
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
@@ -59,11 +57,10 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
       _ <- bool2Fox(temporaryTracingStore.contains(layer.name)) ?~> "Temporary Volume Tracing expired"
     } yield ()
 
-  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStreamFromCache(layer, resolution)
+  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    bucketStreamFromCache(layer)
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
     throw new NotImplementedException // Temporary Volume Tracings do not support versioning
 }
 

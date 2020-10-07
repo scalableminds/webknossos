@@ -193,7 +193,7 @@ tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
 
 annotation.create.failed=Failed to create annotation.
-annotation.volume.uint64=Creating volume tracings on a uint64 fallback layer is not allowed.
+annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
 annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation

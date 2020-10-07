@@ -127,7 +127,7 @@ class VolumeTracingService @Inject()(
                                     tracing: VolumeTracing): Fox[VolumeTracing] = {
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
 
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
@@ -342,7 +342,7 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
 
     val zipResult = ZipIO.zip(buckets, os)
 
@@ -404,7 +404,7 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
@@ -513,7 +513,7 @@ class VolumeTracingService @Inject()(
         val resulutionSet = new mutable.HashSet[Point3D]()
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
         val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
-          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+          dataLayer.bucketProvider.bucketStream(Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, _) =>
             resulutionSet.add(bucketPosition.resolution)
@@ -530,7 +530,7 @@ class VolumeTracingService @Inject()(
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
         val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
         val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
-          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+          dataLayer.bucketProvider.bucketStream(Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, data) =>
             if (data.length > 1 && (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1))) { // skip reverted buckets
@@ -546,7 +546,7 @@ class VolumeTracingService @Inject()(
       case ((selector, tracing), sourceVolumeIndex) =>
         val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
         val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
-          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+          dataLayer.bucketProvider.bucketStream(Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, data) =>
             if (data.length > 1 && (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1))) {

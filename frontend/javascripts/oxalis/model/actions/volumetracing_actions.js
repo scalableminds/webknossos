@@ -45,6 +45,8 @@ export type InferSegmentationInViewportAction = {
   position: Vector3,
 };
 export type RemoveFallbackLayerAction = { type: "REMOVE_FALLBACK_LAYER" };
+export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
+export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 
 export type VolumeTracingAction =
   | InitializeVolumeTracingAction
@@ -65,7 +67,9 @@ export type VolumeTracingAction =
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | AddBucketToUndoAction
-  | RemoveFallbackLayerAction;
+  | RemoveFallbackLayerAction
+  | ImportVolumeTracingAction
+  | SetMaxCellAction;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -170,4 +174,13 @@ export const inferSegmentationInViewportAction = (
 
 export const removeFallbackLayerAction = (): RemoveFallbackLayerAction => ({
   type: "REMOVE_FALLBACK_LAYER",
+});
+
+export const importVolumeTracingAction = (): ImportVolumeTracingAction => ({
+  type: "IMPORT_VOLUMETRACING",
+});
+
+export const setMaxCellAction = (cellId: number): SetMaxCellAction => ({
+  type: "SET_MAX_CELL",
+  cellId,
 });

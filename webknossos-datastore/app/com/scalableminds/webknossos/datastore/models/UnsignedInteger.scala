@@ -12,6 +12,7 @@ import scala.reflect.ClassTag
 trait UnsignedInteger {
   def increment: UnsignedInteger
   def isZero: Boolean
+  def toSignedLong: Long
 }
 
 object UInt8 { @inline final def apply(n: Byte): UInt8 = new UInt8(n) }
@@ -31,11 +32,21 @@ object UnsignedInteger {
       case ElementClass.uint64 => UInt64(0)
       case _                   => wrongElementClass(elementClass)
     }
+
+  def fromLongWithElementClass(long: Long, elementClass: ElementClass.Value): UnsignedInteger =
+    elementClass match {
+      case ElementClass.uint8  => UInt8(long.toByte)
+      case ElementClass.uint16 => UInt16(long.toShort)
+      case ElementClass.uint32 => UInt32(long.toInt)
+      case ElementClass.uint64 => UInt64(long)
+      case _                   => wrongElementClass(elementClass)
+    }
 }
 
 class UInt8(val signed: Byte) extends UnsignedInteger {
   def increment: UInt8 = UInt8((signed + 1).toByte)
   def isZero: Boolean = signed == 0
+  override def toSignedLong: Long = signed.toLong
   override def toString = s"UInt8($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -46,6 +57,7 @@ class UInt8(val signed: Byte) extends UnsignedInteger {
 class UInt16(val signed: Short) extends UnsignedInteger {
   def increment: UInt16 = UInt16((signed + 1).toShort)
   def isZero: Boolean = signed == 0
+  override def toSignedLong: Long = signed.toLong
   override def toString = s"UInt16($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -56,6 +68,7 @@ class UInt16(val signed: Short) extends UnsignedInteger {
 class UInt32(val signed: Int) extends UnsignedInteger {
   def increment: UInt32 = UInt32(signed + 1)
   def isZero: Boolean = signed == 0
+  override def toSignedLong: Long = signed.toLong
   override def toString = s"UInt32($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {
@@ -66,6 +79,7 @@ class UInt32(val signed: Int) extends UnsignedInteger {
 class UInt64(val signed: Long) extends UnsignedInteger {
   def increment: UInt64 = UInt64(signed + 1)
   def isZero: Boolean = signed == 0L
+  override def toSignedLong: Long = signed
   override def toString = s"UInt64($signed)"
   override def hashCode: Int = signed.hashCode
   override def equals(that: Any): Boolean = that match {

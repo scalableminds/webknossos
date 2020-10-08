@@ -423,11 +423,13 @@ function setupLayerForVolumeTracing(
   const fallbackLayer = layers[fallbackLayerIndex];
   const boundaries = getBoundaries(dataset);
 
+  const tracingHasResolutionList = Boolean(tracing.resolutions) && tracing.resolutions.length > 0;
+
   // Legacy tracings don't have the `tracing.resolutions` property
   // since they were created before WK started to maintain multiple resolution
   // in volume annotations. Therefore, this code falls back to mag (1, 1, 1) for
   // that case.
-  const tracingResolutions = tracing.resolutions
+  const tracingResolutions = tracingHasResolutionList
     ? tracing.resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];
 
@@ -442,7 +444,7 @@ function setupLayerForVolumeTracing(
     resolutionsAreSubset(tracingResolutions, targetResolutions);
 
   if (!doResolutionsMatch) {
-    if (tracing.resolutions) {
+    if (tracingHasResolutionList) {
       Toast.warning(
         messages["tracing.volume_resolution_mismatch"],
         {},

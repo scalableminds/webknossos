@@ -89,9 +89,9 @@ class VolumeTracingService @Inject()(
           case Full(t) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                val resolution = math.pow(2, a.zoomStep).toInt
+                val resolution = lookUpVolumeResolution(t, a.zoomStep)
                 val bucket =
-                  BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
+                  BucketPosition(a.position.x, a.position.y, a.position.z, resolution)
                 saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
@@ -122,6 +122,16 @@ class VolumeTracingService @Inject()(
         updateGroup.version,
         updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
+
+  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Point3D =
+    if (tracing.resolutions.nonEmpty) {
+      if (tracing.resolutions.length >= zoomStep) {
+        tracing.resolutions(zoomStep)
+      } else Point3D(0, 0, 0)
+    } else {
+      val isotropicResolution = math.pow(2, zoomStep).toInt
+      Point3D(isotropicResolution, isotropicResolution, isotropicResolution)
+    }
 
   private def revertToVolumeVersion(tracingId: String,
                                     sourceVersion: Long,
@@ -426,11 +436,14 @@ class VolumeTracingService @Inject()(
   private def volumeTracingLayer(tracingId: String,
                                  tracing: VolumeTracing,
                                  isTemporaryTracing: Boolean = false): VolumeTracingLayer =
-    VolumeTracingLayer(tracingId,
-                       tracing.boundingBox,
-                       tracing.elementClass,
-                       tracing.largestSegmentId,
-                       isTemporaryTracing)
+    VolumeTracingLayer(
+      tracingId,
+      tracing.boundingBox,
+      tracing.elementClass,
+      tracing.largestSegmentId,
+      isTemporaryTracing,
+      volumeResolutions = tracing.resolutions.map(point3DFromProto).toList
+    )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =

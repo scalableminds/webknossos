@@ -70,7 +70,8 @@ case class VolumeTracingLayer(
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     isTemporaryTracing: Boolean = false,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None,
+    volumeResolutions: List[Point3D] = List.empty
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
@@ -90,7 +91,8 @@ case class VolumeTracingLayer(
 
   val mappings: Option[Set[String]] = None
 
-  val resolutions: List[Point3D] = List(Point3D(1, 1, 1)) // unused for volume tracings
+  val resolutions: List[Point3D] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Point3D(1, 1, 1))
+
   override def containsResolution(resolution: Point3D) =
     true // allow requesting buckets of all resolutions. database takes care of missing.
 }

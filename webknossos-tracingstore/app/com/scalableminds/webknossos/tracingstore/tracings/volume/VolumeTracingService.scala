@@ -571,7 +571,7 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(Some(tracing.version))
         bucketStream.foreach {
           case (bucketPosition, data) =>
-            if (data.length > 1 && (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1))) { // skip reverted buckets
+            if (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1)) {
               val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
               val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
               labelSet ++= nonZeroData

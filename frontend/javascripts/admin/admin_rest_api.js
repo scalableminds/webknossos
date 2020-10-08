@@ -49,7 +49,7 @@ import {
   type TracingType,
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
-import type { DatasetConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
@@ -659,6 +659,7 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+
   return tracing;
 }
 
@@ -670,6 +671,25 @@ export function getUpdateActionLog(
   return doWithToken(token =>
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+    ),
+  );
+}
+
+export async function importVolumeTracing(tracing: Tracing, dataFile: File): Promise<number> {
+  const volumeTracing = tracing.volume;
+  if (!volumeTracing) throw new Error("Volume Tracing must exist when importing Volume Tracing.");
+
+  return doWithToken(token =>
+    Request.sendMultipartFormReceiveJSON(
+      `${tracing.tracingStore.url}/tracings/volume/${
+        volumeTracing.tracingId
+      }/importVolumeData?token=${token}`,
+      {
+        data: {
+          dataFile,
+          currentVersion: volumeTracing.version,
+        },
+      },
     ),
   );
 }
@@ -991,6 +1011,16 @@ export async function findDataPositionForLayer(
         datasetId.name
       }/layers/${layerName}/findData?token=${token}`,
     ),
+  );
+  return { position, resolution };
+}
+
+export async function findDataPositionForVolumeTracing(
+  tracingstoreUrl: string,
+  tracingId: string,
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
+    Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
   );
   return { position, resolution };
 }

@@ -114,6 +114,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       );
     }
 
+    let lastPosition = startEditingAction.position;
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield* race({
         addToLayerAction: _take("ADD_TO_LAYER"),
@@ -121,6 +122,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       });
 
       if (finishEditingAction) break;
+
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
@@ -137,14 +139,22 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
         const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
+        const rectangleIterator = currentLayer.getRectangleVoxelIterator(
+          lastPosition,
+          addToLayerAction.position,
+          currentViewportBounding,
+        );
+        if (rectangleIterator) {
+          yield* call(labelWithIterator, rectangleIterator, contourTracingMode);
+        }
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
           contourTracingMode,
         );
       }
+      lastPosition = addToLayerAction.position;
     }
-
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
     yield* put(finishAnnotationStrokeAction());
   }

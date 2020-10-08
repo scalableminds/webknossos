@@ -344,6 +344,18 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
     return;
   }
 
+  // Disable copy-segmentation for the same zoom steps where the trace tool is forbidden, too,
+  // to avoid large performance lags.
+  // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
+  // is solved.
+  const isResolutionTooLow = yield* select(state => isVolumeTraceToolDisallowed(state));
+  if (isResolutionTooLow) {
+    Toast.warning(
+      'The "copy segmentation"-feature is not supported at this zoom level. Please zoom in further.',
+    );
+    return;
+  }
+
   const segmentationLayer: DataLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   const requestedZoomStep = yield* select(state => getRequestLogZoomStep(state));
@@ -372,7 +384,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
       // Do not overwrite already labelled voxels
       if (currentLabelValue === 0) {
         cube.labelVoxelInResolution(voxelTargetAddress, templateLabelValue, labeledZoomStep);
-        const bucket = cube.getBucket(
+        const bucket = cube.getOrCreateBucket(
           cube.positionToZoomedAddress(voxelTargetAddress, labeledZoomStep),
         );
         if (bucket.type === "null") {

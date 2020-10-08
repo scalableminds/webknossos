@@ -246,17 +246,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            (
-              <div style= {{ maxWidth: 300 }}>
-                {(dataset.dataSource.dataLayers || []).map(layer => (
-                  <Tag key={layer.name}>
-                    {layer.category} - {layer.elementClass}
-                  </Tag>
-                ))}
-              </div>
-            )
-          }
+          render={(__, dataset: APIMaybeUnimportedDataset) => (
+            <div style={{ maxWidth: 300 }}>
+              {(dataset.dataSource.dataLayers || []).map(layer => (
+                <Tag key={layer.name}>
+                  {layer.category} - {layer.elementClass}
+                </Tag>
+              ))}
+            </div>
+          )}
         />
 
         <Column

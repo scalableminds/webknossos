@@ -470,11 +470,9 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (_, data) =>
-            if (data.length > 1) { // skip reverted buckets
-              val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-              val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-              labelSet ++= nonZeroData
-            }
+            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+            labelSet ++= nonZeroData
         }
         mergedVolume.addLabelSet(labelSet)
     }

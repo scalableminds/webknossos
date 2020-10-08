@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.io.{BufferedOutputStream, File, FileOutputStream, RandomAccessFile}
 import java.util.concurrent.ConcurrentHashMap
 
 import akka.util.ByteString
@@ -64,16 +64,16 @@ class SampleDataSourceService @Inject()(rpc: RPC,
     for {
       responseBox <- rpc(availableDatasets(id.name).url).get.futureBox
       _ = responseBox match {
-        case Full(response) => {
+        case Full(response) =>
           val bytes: ByteString = response.bodyAsBytes
-          val tmpfile = File.createTempFile("demodataset", "zip")
-          val stream = new BufferedOutputStream(new FileOutputStream(tmpfile))
-          stream.write(bytes.toArray)
-          stream.close()
-          dataSourceService.handleUpload(id, tmpfile).map { _ =>
+          val fileName = s"${System.currentTimeMillis()}-${id.name}"
+          val tmpfile = new RandomAccessFile(dataSourceService.dataBaseDir.resolve(s".$fileName.temp").toFile, "rw")
+          tmpfile.write(bytes.toArray)
+          tmpfile.close()
+
+          dataSourceService.finishUpload(UploadInformation(fileName, id.team, id.name, List.empty)).map { _ =>
             runningDownloads.remove(id)
           }
-        }
         case _ => runningDownloads.remove(id)
       }
     } yield ()

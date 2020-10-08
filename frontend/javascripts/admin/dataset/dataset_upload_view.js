@@ -3,9 +3,9 @@ import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
-import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
+import type { APIDataStore, APIUser, APIDatasetId } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { addDataset } from "admin/admin_rest_api";
+import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -71,22 +71,44 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           isUploading: true,
         });
 
-        const datasetConfig: DatasetConfig = {
-          ...formValues,
-          organization: activeUser.organization,
+        const datasetId: APIDatasetId = {
+          name: formValues.name,
+          owningOrganization: activeUser.organization,
         };
 
-        addDataset(datasetConfig).then(
-          async () => {
-            Toast.success(messages["dataset.upload_success"]);
-            trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-            this.props.onUploaded(activeUser.organization, formValues.name);
-          },
-          () => {
-            this.setState({ isUploading: false });
-          },
-        );
+        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
+
+        resumableUpload.on("fileSuccess", (file) => {
+          const uploadInfo = {
+            uploadId: file.uniqueIdentifier,
+            organization: datasetId.owningOrganization,
+            name: datasetId.name,
+            initialTeams: formValues.initialTeams,
+          };
+
+          finishDatasetUpload(formValues.datastore, uploadInfo).then(
+            async () => {
+              Toast.success(messages["dataset.upload_success"]);
+              trackAction("Upload dataset");
+              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              this.props.onUploaded(activeUser.organization, formValues.name);
+            },
+            () => {
+              this.setState({ isUploading: false });
+            },
+          );
+        });
+
+        resumableUpload.on("fileAdded", () => {
+          resumableUpload.upload();
+        });
+
+        resumableUpload.on("fileError", (file, message) => {
+          Toast.error(message);
+          this.setState({ isUploading: false });
+        });
+
+        resumableUpload.addFiles(formValues.zipFile);
       }
     });
   };

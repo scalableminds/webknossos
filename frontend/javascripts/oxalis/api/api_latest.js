@@ -738,13 +738,18 @@ class DataApi {
   /**
    * Invalidates all downloaded buckets of the given layer so that they are reloaded.
    */
-  reloadBuckets(layerName: string): void {
-    _.forEach(this.model.dataLayers, dataLayer => {
+  async reloadBuckets(layerName: string): Promise<void> {
+    await Promise.all(Object.keys(this.model.dataLayers).map(async (currentLayerName) => {
+      const dataLayer = this.model.dataLayers[currentLayerName]
+      if (dataLayer.cube.isSegmentation) {
+        await Model.ensureSavedState();
+      }
+
       if (dataLayer.name === layerName) {
         dataLayer.cube.collectAllBuckets();
         dataLayer.layerRenderingManager.refresh();
       }
-    });
+    }));
   }
 
   /**

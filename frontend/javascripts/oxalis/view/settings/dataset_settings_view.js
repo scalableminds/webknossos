@@ -450,7 +450,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
-    api.data.reloadBuckets(layerName);
+    await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -466,7 +466,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const { layers } = this.props.datasetConfiguration;
     const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
       await clearCache(this.props.dataset, layerName);
-      api.data.reloadBuckets(layerName);
+      await api.data.reloadBuckets(layerName);
     });
     await Promise.all(reloadAllLayersPromises);
     window.needsRerender = true;

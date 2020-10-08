@@ -78,7 +78,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
 
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
-        resumableUpload.on("fileSuccess", (file) => {
+        resumableUpload.on("fileSuccess", file => {
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
             organization: datasetId.owningOrganization,

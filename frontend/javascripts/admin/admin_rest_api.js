@@ -859,7 +859,7 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
         target: `${datastoreUrl}/data/datasets?token=${token}`,
         query: datasetId,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
-        permanentErrors: [400, 403, 404, 409, 415, 500, 501]
+        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
       }),
   );
 }

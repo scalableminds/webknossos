@@ -45,8 +45,8 @@ class DataSourceService @Inject()(
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  private val forConversionPrefix = "__for_conversion_"
-  private val currentlyConvertingPrefix = "__converting_"
+  private val forConversionPrefix = ".for_conversion_"
+  private val currentlyConvertingPrefix = ".converting_"
 
   var inboxCheckVerboseCounter = 0
 

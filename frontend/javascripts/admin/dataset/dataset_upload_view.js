@@ -35,11 +35,19 @@ type PropsWithForm = {|
 
 type State = {
   isUploading: boolean,
+  isRetrying: boolean,
+  isFinished: boolean,
+  fileList: Array<*>,
+  uploadProgress: number,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
     isUploading: false,
+    isRetrying: false,
+    isFinished: false,
+    fileList: [],
+    uploadProgress: 0,
   };
 
   isDatasetManagerOrAdmin = () =>
@@ -63,7 +71,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
       formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
-      formValues.initialTeams = formValues.initialTeams.map(team => team.id);
 
       if (!err && activeUser != null) {
         Toast.info("Uploading datasets");
@@ -79,11 +86,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
         resumableUpload.on("fileSuccess", file => {
+          this.setState({ isFinished: true });
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
             organization: datasetId.owningOrganization,
             name: datasetId.name,
-            initialTeams: formValues.initialTeams,
+            initialTeams: formValues.initialTeams.map(team => team.id),
           };
 
           finishDatasetUpload(formValues.datastore, uploadInfo).then(
@@ -94,7 +102,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               this.props.onUploaded(activeUser.organization, formValues.name);
             },
             () => {
-              this.setState({ isUploading: false });
+              this.setState({
+                isUploading: false,
+                isFinished: false,
+                isRetrying: false,
+                uploadProgress: 0,
+              });
             },
           );
         });
@@ -108,6 +121,14 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           this.setState({ isUploading: false });
         });
 
+        resumableUpload.on("fileProgress", file => {
+          this.setState({ isRetrying: false, uploadProgress: file.progress(false) });
+        });
+
+        resumableUpload.on("fileRetry", () => {
+          this.setState({ isRetrying: true });
+        });
+
         resumableUpload.addFiles(formValues.zipFile);
       }
     });
@@ -117,10 +138,19 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
+    const { isUploading, isRetrying, isFinished, uploadProgress } = this.state;
+    let tooltip;
+    if (isFinished) {
+      tooltip = "Converting Dataset...";
+    } else {
+      tooltip = `${isRetrying ? "Retrying... - " : ""}${Math.round(
+        uploadProgress * 100,
+      )}% completed`;
+    }
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
-        <Spin spinning={this.state.isUploading} size="large">
+        <Spin spinning={isUploading} tip={tooltip} size="large">
           <CardContainer withoutCard={withoutCard} title="Upload Dataset">
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <Row gutter={8}>
@@ -164,6 +194,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 })(
                   <Upload.Dragger
                     name="files"
+                    // fileList={this.state.fileList}
                     beforeUpload={file => {
                       if (!form.getFieldValue("name")) {
                         const filename = file.name
@@ -171,9 +202,15 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                           .slice(0, -1)
                           .join(".");
                         form.setFieldsValue({ name: filename });
+                        form.validateFields(["name"]);
                       }
                       form.setFieldsValue({ zipFile: [file] });
+
                       return false;
+                    }}
+                    onChange={info => {
+                      const fileList = info.fileList.slice(-1);
+                      form.setFieldsValue({ fileList });
                     }}
                   >
                     <p className="ant-upload-drag-icon">

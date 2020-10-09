@@ -121,26 +121,33 @@ class DataSourceService @Inject()(
                    resumableUploadInformation: ResumableUploadInformation,
                    currentChunkNumber: Int,
                    chunkFile: File): Fox[Unit] = {
-    val needsWrite = pendingUploadChunks.get(uploadId) match {
-      case Some((_, set)) =>
-        set.add(currentChunkNumber)
+    val needsWrite = pendingUploadChunks.synchronized {
+      pendingUploadChunks.get(uploadId) match {
+        case Some((_, set)) =>
+          set.add(currentChunkNumber)
 
-      case None =>
-        pendingUploadChunks.put(uploadId,
-                                (resumableUploadInformation.totalChunkNumber, mutable.HashSet[Int](currentChunkNumber)))
-        true
+        case None =>
+          pendingUploadChunks.put(
+            uploadId,
+            (resumableUploadInformation.totalChunkNumber, mutable.HashSet[Int](currentChunkNumber)))
+          true
+      }
     }
     if (needsWrite) {
       try {
         val bytes = Files.readAllBytes(chunkFile.toPath)
 
-        val tempFile = new RandomAccessFile(dataBaseDir.resolve(s".$uploadId.temp").toFile, "rw")
-        tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
-        tempFile.write(bytes)
-        tempFile.close()
+        this.synchronized {
+          val tempFile = new RandomAccessFile(dataBaseDir.resolve(s".$uploadId.temp").toFile, "rw")
+          tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
+          tempFile.write(bytes)
+          tempFile.close()
+        }
       } catch {
         case e: Exception =>
-          pendingUploadChunks(uploadId)._2.remove(currentChunkNumber)
+          pendingUploadChunks.synchronized {
+            pendingUploadChunks(uploadId)._2.remove(currentChunkNumber)
+          }
           val errorMsg = s"Error receiving chunk $currentChunkNumber for upload $uploadId: ${e.getMessage}"
           logger.warn(errorMsg)
           return Fox.failure(errorMsg)
@@ -171,15 +178,19 @@ class DataSourceService @Inject()(
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
     for {
-      _ <- ensureAllChunksUploaded
+      _ <- pendingUploadChunks.synchronized { ensureAllChunksUploaded }
       _ <- ensureDirectory(dataSourceDir)
-      unzipResult = ZipIO.unzipToFolder(
-        zipFile,
-        dataSourceDir,
-        includeHiddenFiles = false,
-        truncateCommonPrefix = true,
-        Some(Category.values.map(_.toString).toList)
-      )
+      unzipResult = this.synchronized {
+        ZipIO.unzipToFolder(
+          zipFile,
+          dataSourceDir,
+          includeHiddenFiles = false,
+          truncateCommonPrefix = true,
+          Some(Category.values.map(_.toString).toList)
+        )
+      }
+      _ = pendingUploadChunks.synchronized { pendingUploadChunks.remove(uploadId) }
+      _ = this.synchronized { zipFile.delete() }
       _ <- unzipResult match {
         case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, dataSourceId.team))
         case e =>
@@ -187,8 +198,6 @@ class DataSourceService @Inject()(
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
-      _ = pendingUploadChunks.remove(uploadId)
-      _ = zipFile.delete()
     } yield (dataSourceId, uploadInformation.initialTeams)
   }
 

@@ -105,6 +105,7 @@ class DataSourceController @Inject()(
                   else Fox.successful(())
                   chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                   _ <- dataSourceService.handleUpload(uploadId,
+                                                      id,
                                                       resumableUploadInformation,
                                                       chunkNumber,
                                                       new File(chunkFile.ref.path.toString))

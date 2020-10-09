@@ -118,6 +118,7 @@ class DataSourceService @Inject()(
   }
 
   def handleUpload(uploadId: String,
+                   datasourceId: DataSourceId,
                    resumableUploadInformation: ResumableUploadInformation,
                    currentChunkNumber: Int,
                    chunkFile: File): Fox[Unit] = {
@@ -148,7 +149,7 @@ class DataSourceService @Inject()(
           pendingUploadChunks.synchronized {
             pendingUploadChunks(uploadId)._2.remove(currentChunkNumber)
           }
-          val errorMsg = s"Error receiving chunk $currentChunkNumber for upload $uploadId: ${e.getMessage}"
+          val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
           logger.warn(errorMsg)
           return Fox.failure(errorMsg)
       }

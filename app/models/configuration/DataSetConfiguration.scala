@@ -16,18 +16,22 @@ object DataSetConfiguration { implicit val dataSetConfigurationFormat = Json.for
 
 class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
 
-  def constructInitialDefault(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
+  def constructInitialDefaultForDataset(dataSet: DataSet, requestedVolumeIds: List[String] = List())(
+      implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
       dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
-      initialConfig = constructInitialDefault(dataLayers.map(dl => (dl.name, dl.category)),
-                                              dataLayers.map(_.defaultViewConfiguration.map(_.toMap))).configuration
+      initialConfig = constructInitialDefaultForLayers(
+        dataLayers.map(dl => (dl.name, dl.category)) ++ requestedVolumeIds.map((_, Category.segmentation)),
+        dataLayers.map(_.defaultViewConfiguration.map(_.toMap)) ++ requestedVolumeIds.map(_ => None)
+      ).configuration
       sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
       defaultConfig = dataSet.defaultConfiguration.map(_.configuration).getOrElse(Map.empty)
     } yield DataSetConfiguration(initialConfig ++ sourceDefaultConfig ++ defaultConfig)
 
-  def constructInitialDefault(layers: List[(String, Category.Value)],
-                              layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {
+  def constructInitialDefaultForLayers(
+      layers: List[(String, Category.Value)],
+      layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {
     val layerValues = Json.toJson(
       layers
         .zipAll(layerDefaults, ("", Category.color), None)
@@ -53,7 +57,7 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
 
   def configurationOrDefaults(configuration: DataSetConfiguration,
                               sourceDefaultConfiguration: Option[ViewConfiguration] = None): Map[String, JsValue] =
-    constructInitialDefault(List()).configuration ++
+    constructInitialDefaultForLayers(List()).configuration ++
       sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty) ++
       configuration.configuration
 

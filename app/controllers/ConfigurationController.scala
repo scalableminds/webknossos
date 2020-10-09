@@ -68,10 +68,10 @@ class ConfigurationController @Inject()(
       }.orElse(
           for {
             dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-            config <- dataSetConfigurationDefaults.constructInitialDefault(dataSet)
+            config <- dataSetConfigurationDefaults.constructInitialDefaultForDataset(dataSet, request.body)
           } yield config
         )
-        .getOrElse(dataSetConfigurationDefaults.constructInitialDefault(List()))
+        .getOrElse(dataSetConfigurationDefaults.constructInitialDefaultForLayers(List()))
         .map(configuration => Ok(toJson(configuration.configuration)))
     }
 
@@ -99,7 +99,7 @@ class ConfigurationController @Inject()(
           Fox.successful(
             Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
         case _ =>
-          dataSetConfigurationDefaults.constructInitialDefault(dataSet).map(c => Ok(toJson(c.configuration)))
+          dataSetConfigurationDefaults.constructInitialDefaultForDataset(dataSet).map(c => Ok(toJson(c.configuration)))
       }
     }
   }

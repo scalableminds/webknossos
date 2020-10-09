@@ -49,6 +49,10 @@ const descriptionFns = {
     description: "Updated the segmentation.",
     type: "picture",
   }),
+  importVolumeTracing: (): Description => ({
+    description: "Imported a Volume Tracing.",
+    type: "plus",
+  }),
   createTracing: (): Description => ({
     description: "Created the annotation.",
     type: "rocket",
@@ -137,6 +141,11 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   const updateBucketUAs = groupedUpdateActions.updateBucket;
   if (updateBucketUAs != null) {
     return getDescriptionForSpecificBatch(updateBucketUAs, "updateBucket");
+  }
+
+  const importVolumeTracingUAs = groupedUpdateActions.importVolumeTracing;
+  if (importVolumeTracingUAs != null) {
+    return getDescriptionForSpecificBatch(importVolumeTracingUAs, "importVolumeTracing");
   }
 
   const createTracingUAs = groupedUpdateActions.createTracing;

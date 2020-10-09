@@ -39,28 +39,27 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     }
   }
 
-  renderUserTags(user: APIUser) {
+  renderUserTags(user: APIUser): Array<React.Node> {
     if (user.isAdmin) {
-      return (
+      return [
         <Tag key={`team_role_${user.id}`} color="red">
           Admin
-        </Tag>
-      );
+        </Tag>,
+      ];
     } else {
-      const teamTags = user.isDatasetManager
+      const managerTags = user.isDatasetManager
         ? [
             <Tag key={`dataset_manager_${user.id}`} color="geekblue">
               Dataset Manager
             </Tag>,
           ]
         : [];
-      return teamTags.concat(
-        user.teams.map(team => (
-          <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
-            {team.name}
-          </Tag>
-        )),
-      );
+      const teamTags = user.teams.map(team => (
+        <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
+          {team.name}
+        </Tag>
+      ));
+      return managerTags.concat(teamTags);
     }
   }
 

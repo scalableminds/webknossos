@@ -25,7 +25,7 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 6;
 
 class PullQueue {
   cube: DataCube;

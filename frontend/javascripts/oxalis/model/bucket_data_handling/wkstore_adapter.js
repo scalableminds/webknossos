@@ -18,7 +18,6 @@ import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
-import Toast from "libs/toast";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);

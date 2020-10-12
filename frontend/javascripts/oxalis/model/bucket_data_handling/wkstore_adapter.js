@@ -10,6 +10,7 @@ import {
   isSegmentationLayer,
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import ErrorHandling from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
@@ -179,14 +180,7 @@ export async function requestFromStore(
     detailedError += `(URL: ${dataUrl})`;
     console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
-    Toast.warning(
-      errorMessage,
-      {
-        key: errorMessage,
-        sticky: false,
-      },
-      detailedError,
-    );
+    ErrorHandling.notify(new Error(errorMessage), { detailedError, errorResponse });
     return batch.map(_val => null);
   }
 }

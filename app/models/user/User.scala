@@ -1,13 +1,13 @@
 package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.api.{AuthInfo, Identity, LoginInfo}
+import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.UserConfiguration
 import models.team._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -307,14 +307,6 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
 class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO)(
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-
-  def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] =
-    for {
-      rows <- run(UserDatasetconfigurations.filter(_._User === userId.id).result)
-    } yield {
-      rows.map(r => (ObjectId(r._Dataset), Json.parse(r.configuration).as[JsValue])).toMap
-    }
-
   def findOneForUserAndDataset(userId: ObjectId, dataSetName: String)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       rows <- run(sql"""select c.configuration
@@ -343,32 +335,6 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
         retryIfErrorContains = List(transactionSerializationError)
       )
     } yield ()
-
-  def insertDatasetConfigurationsFor(userId: ObjectId, configurations: Map[String, DataSetConfiguration])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- Fox.combined(configurations.map {
-        case (dataSetName, configuration) =>
-          insertDatasetConfiguration(userId, dataSetName, configuration.configuration)
-      }.toList)
-    } yield ()
-
-  private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      user <- userDAO.findOne(userId)
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
-      _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
-    } yield ()
-
-  private def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- userDAO.assertUpdateAccess(userId)
-      _ <- run(sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")
-    } yield ()
-
 }
 
 class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)

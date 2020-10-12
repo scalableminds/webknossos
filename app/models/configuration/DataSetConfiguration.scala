@@ -1,37 +1,65 @@
 package models.configuration
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike, ViewConfiguration}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
 import javax.inject.Inject
-import models.binary.{DataSet, DataSetService}
+import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.user.{User, UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO}
 import play.api.libs.json._
+import utils.ObjectId
 
 case class DataSetLayerId(name: String, isSegmentationLayer: Boolean)
 object DataSetLayerId { implicit val dataSetLayerId = Json.format[DataSetLayerId] }
 
-case class DataSetConfiguration(configuration: Map[String, JsValue])
+//case class DataSetConfiguration(configuration: Map[String, JsValue])
 
-object DataSetConfiguration { implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration] }
+class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
+                                            userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
+                                            dataSetDAO: DataSetDAO) {
 
-class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
+  def getDataSetConfigurationForUserAndDataset(
+      requestedVolumeIds: List[String],
+      user: User,
+      dataSetName: String,
+      organizationName: String)(implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] = {
+    def getLayerConfigurations(dataSetLayers: List[DataLayerLike], requestedVolumeIds: List[String]) = {
+      val allLayerNames = dataSetLayers.map(_.name) ++ requestedVolumeIds
+      userDataSetLayerConfigurationDAO.findAllByLayerNameForUserAndDataset(allLayerNames, user._id, dataSetName).map {
+        layerConfigJson =>
+          val layerSourceDefaultViewConfigs = getAllLayerSourceDefaultViewConfigForDataSet(dataSetLayers)
+          mergeLayerConfigurations(allLayerNames, layerConfigJson, layerSourceDefaultViewConfigs)
+      }
+    }
+    for {
+      configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
+      dataSetConfiguration = configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty)
+
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
+      dataSource <- dataSetService.dataSourceFor(dataSet)
+      dataSetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
+      layerConfigurations <- getLayerConfigurations(dataSetLayers, requestedVolumeIds)
+    } yield buildCompleteDataSetConfiguration(dataSetConfiguration, layerConfigurations)
+  }
 
   def constructInitialDefaultForDataset(dataSet: DataSet, requestedVolumeIds: List[String] = List())(
-      implicit ctx: DBAccessContext): Fox[DataSetConfiguration] =
+      implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet)
       dataLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
       initialConfig = constructInitialDefaultForLayers(
         dataLayers.map(dl => (dl.name, dl.category)) ++ requestedVolumeIds.map((_, Category.segmentation)),
         dataLayers.map(_.defaultViewConfiguration.map(_.toMap)) ++ requestedVolumeIds.map(_ => None)
-      ).configuration
-      sourceDefaultConfig = dataSet.sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty)
-      defaultConfig = dataSet.defaultConfiguration.map(_.configuration).getOrElse(Map.empty)
-    } yield DataSetConfiguration(initialConfig ++ sourceDefaultConfig ++ defaultConfig)
+      )
+      sourceDefaultConfig = dataSet.defaultViewConfiguration.map(_.toMap).getOrElse(Map.empty)
+      defaultConfig = dataSet.adminDefaultViewConfiguration.getOrElse(Map.empty)
+    } yield initialConfig ++ sourceDefaultConfig ++ defaultConfig
 
   def constructInitialDefaultForLayers(
       layers: List[(String, Category.Value)],
-      layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetConfiguration = {
+      layerDefaults: List[Option[Map[String, JsValue]]] = List.empty): DataSetViewConfiguration = {
     val layerValues = Json.toJson(
       layers
         .zipAll(layerDefaults, ("", Category.color), None)
@@ -44,39 +72,30 @@ class DataSetConfigurationDefaults @Inject()(dataSetService: DataSetService) {
         }
         .toMap)
 
-    DataSetConfiguration(
-      Map(
-        "fourBit" -> JsBoolean(false),
-        "interpolation" -> JsBoolean(true),
-        "highlightHoveredCellId" -> JsBoolean(true),
-        "renderMissingDataBlack" -> JsBoolean(true),
-        "layers" -> layerValues
-      )
+    Map(
+      "fourBit" -> JsBoolean(false),
+      "interpolation" -> JsBoolean(true),
+      "highlightHoveredCellId" -> JsBoolean(true),
+      "renderMissingDataBlack" -> JsBoolean(true),
+      "layers" -> layerValues
     )
   }
 
-  def configurationOrDefaults(configuration: DataSetConfiguration,
-                              sourceDefaultConfiguration: Option[ViewConfiguration] = None): Map[String, JsValue] =
-    constructInitialDefaultForLayers(List()).configuration ++
-      sourceDefaultConfiguration.map(_.toMap).getOrElse(Map.empty) ++
-      configuration.configuration
+  def configurationOrDefaults(
+      configuration: DataSetViewConfiguration,
+      sourceDefaultConfiguration: Option[DataSetViewConfiguration] = None): Map[String, JsValue] =
+    constructInitialDefaultForLayers(List()) ++ sourceDefaultConfiguration.getOrElse(Map.empty) ++ configuration
 
-  def layerConfigurationOrDefaults(requestedLayer: List[DataSetLayerId],
-                                   existingLayerConfiguration: Map[String, JsValue],
-                                   sourceDefaultConfiguration: Map[String, JsValue]) =
-    requestedLayer.map {
-      case DataSetLayerId(name, isSegmentationLayer) =>
-        (name,
-         existingLayerConfiguration.getOrElse(
-           name,
-           sourceDefaultConfiguration.getOrElse(name,
-                                                Json.toJson(
-                                                  if (isSegmentationLayer) initialDefaultPerSegmentationLayer
-                                                  else initialDefaultPerColorLayer))))
+  def mergeLayerConfigurations(allLayerNames: List[String],
+                               existingLayerConfiguration: Map[String, JsValue],
+                               sourceDefaultConfiguration: Map[String, JsValue]) =
+    allLayerNames.flatMap { name =>
+      existingLayerConfiguration.get(name).orElse(sourceDefaultConfiguration.get(name)).map((name, _))
     }.toMap
 
-  def buildCompleteConfig(initialConfiguration: Map[String, JsValue], layerConfigurations: Map[String, JsValue]) =
-    DataSetConfiguration(initialConfiguration + ("layers" -> Json.toJson(layerConfigurations)))
+  def buildCompleteDataSetConfiguration(dataSetConfiguration: Map[String, JsValue],
+                                        layerConfigurations: Map[String, JsValue]): DataSetViewConfiguration =
+    dataSetConfiguration + ("layers" -> Json.toJson(layerConfigurations))
 
   def getAllLayerSourceDefaultViewConfigForDataSet(dataLayers: List[DataLayerLike]): Map[String, JsValue] =
     dataLayers.flatMap(dl => dl.defaultViewConfiguration.map(c => (dl.name, Json.toJson(c.toMap)))).toMap

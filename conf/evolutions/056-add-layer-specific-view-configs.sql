@@ -30,6 +30,10 @@ UPDATE webknossos.user_dataSetConfigurations
 SET configuration = configuration - 'quality'
 WHERE configuration ? 'quality';
 
+ALTER TABLE webknossos.dataSet_layers ADD COLUMN adminViewConfiguration JSONB;
+ALTER TABLE webknossos.dataSet_layers ADD CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object');
+
+ALTER TABLE
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 56;
 

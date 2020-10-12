@@ -67,10 +67,10 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ => {
-            val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
-            val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
+            val defaultCenterOpt = dataSet.adminDefaultViewConfiguration.flatMap(c =>
+              c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
+            val defaultZoomOpt = dataSet.adminDefaultViewConfiguration.flatMap(c =>
+              c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)
               .flatMap(

@@ -10,9 +10,10 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.UserConfiguration
 import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
@@ -147,7 +148,7 @@ class UserService @Inject()(conf: WkConf,
       user: User,
       dataSetName: String,
       organizationName: String,
-      dataSetConfiguration: DataSetConfiguration,
+      dataSetConfiguration: DataSetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
@@ -163,7 +164,7 @@ class UserService @Inject()(conf: WkConf,
       }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
-                                                                                   dataSetConfiguration.configuration)
+                                                                                   dataSetConfiguration)
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =

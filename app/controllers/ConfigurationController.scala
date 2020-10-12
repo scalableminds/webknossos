@@ -3,15 +3,14 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.Category
 import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO, DataSetService}
-import models.configuration.{DataSetConfiguration, DataSetConfigurationDefaults, DataSetLayerId, UserConfiguration}
+import models.configuration.{DataSetConfigurationService, UserConfiguration}
 import models.user.{UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO, UserService}
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
+import play.api.libs.json.JsObject
 import play.api.libs.json.Json._
-import play.api.libs.json.{JsObject, JsValue}
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext
@@ -22,7 +21,7 @@ class ConfigurationController @Inject()(
     dataSetDAO: DataSetDAO,
     userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
     userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
-    dataSetConfigurationDefaults: DataSetConfigurationDefaults,
+    dataSetConfigurationService: DataSetConfigurationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -46,33 +45,18 @@ class ConfigurationController @Inject()(
 
   def readDataSet(organizationName: String, dataSetName: String) =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
-      request.identity.toFox.flatMap { user =>
-        for {
-          configurationJson: JsValue <- userDataSetConfigurationDAO.findOneForUserAndDataset(user._id, dataSetName)
-          initialConfigurationMap = configurationJson.validate[Map[String, JsValue]].getOrElse(Map.empty)
-          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-          dataSource <- dataSetService.dataSourceFor(dataSet)
-          dataSetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
-          allLayerIds = dataSetLayers.map(dl => DataSetLayerId(dl.name, dl.category == Category.segmentation)) ++ request.body
-            .map(DataSetLayerId(_, true))
-          layerConfigJson <- userDataSetLayerConfigurationDAO.findAllByLayerNameForUserAndDataset(
-            allLayerIds.map(_.name),
-            user._id,
-            dataSetName)
-          layerSourceDefaultViewConfigs = dataSetConfigurationDefaults.getAllLayerSourceDefaultViewConfigForDataSet(
-            dataSetLayers)
-          layerSettings = dataSetConfigurationDefaults.layerConfigurationOrDefaults(allLayerIds,
-                                                                                    layerConfigJson,
-                                                                                    layerSourceDefaultViewConfigs)
-        } yield dataSetConfigurationDefaults.buildCompleteConfig(initialConfigurationMap, layerSettings)
-      }.orElse(
+      request.identity.toFox
+        .flatMap(user =>
+          dataSetConfigurationService
+            .getDataSetConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName))
+        .orElse(
           for {
             dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext)
-            config <- dataSetConfigurationDefaults.constructInitialDefaultForDataset(dataSet, request.body)
+            config <- dataSetConfigurationService.constructInitialDefaultForDataset(dataSet, request.body)
           } yield config
         )
-        .getOrElse(dataSetConfigurationDefaults.constructInitialDefaultForLayers(List()))
-        .map(configuration => Ok(toJson(configuration.configuration)))
+        .getOrElse(dataSetConfigurationService.constructInitialDefaultForLayers(List()))
+        .map(configuration => Ok(toJson(configuration)))
     }
 
   def updateDataSet(organizationName: String, dataSetName: String) =
@@ -85,7 +69,7 @@ class ConfigurationController @Inject()(
         _ <- userService.updateDataSetConfiguration(request.identity,
                                                     dataSetName,
                                                     organizationName,
-                                                    DataSetConfiguration(dataSetConf),
+                                                    dataSetConf,
                                                     layerConf)
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
@@ -94,12 +78,12 @@ class ConfigurationController @Inject()(
 
   def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization).flatMap { dataSet: DataSet =>
-      dataSet.defaultConfiguration match {
+      dataSet.adminDefaultViewConfiguration match {
         case Some(c) =>
           Fox.successful(
-            Ok(toJson(dataSetConfigurationDefaults.configurationOrDefaults(c, dataSet.sourceDefaultConfiguration))))
+            Ok(toJson(dataSetConfigurationService.configurationOrDefaults(c, dataSet.defaultViewConfiguration))))
         case _ =>
-          dataSetConfigurationDefaults.constructInitialDefaultForDataset(dataSet).map(c => Ok(toJson(c.configuration)))
+          dataSetConfigurationService.constructInitialDefaultForDataset(dataSet).map(c => Ok(toJson(c)))
       }
     }
   }
@@ -111,7 +95,7 @@ class ConfigurationController @Inject()(
         _ <- dataSetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
-        _ <- dataSetDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))
+        _ <- dataSetDAO.updateDefaultConfigurationByName(dataset._id, conf)
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }

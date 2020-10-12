@@ -37,7 +37,6 @@ type State = {
   isUploading: boolean,
   isRetrying: boolean,
   isFinished: boolean,
-  fileList: Array<*>,
   uploadProgress: number,
 };
 
@@ -46,7 +45,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     isUploading: false,
     isRetrying: false,
     isFinished: false,
-    fileList: [],
     uploadProgress: 0,
   };
 
@@ -56,9 +54,9 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
 
   normFile = e => {
     if (Array.isArray(e)) {
-      return e;
+      return e.slice(-1);
     }
-    return e && e.fileList;
+    return e && e.fileList.slice(-1);
   };
 
   handleSubmit = evt => {
@@ -194,7 +192,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 })(
                   <Upload.Dragger
                     name="files"
-                    // fileList={this.state.fileList}
                     beforeUpload={file => {
                       if (!form.getFieldValue("name")) {
                         const filename = file.name
@@ -207,10 +204,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                       form.setFieldsValue({ zipFile: [file] });
 
                       return false;
-                    }}
-                    onChange={info => {
-                      const fileList = info.fileList.slice(-1);
-                      form.setFieldsValue({ fileList });
                     }}
                   >
                     <p className="ant-upload-drag-icon">

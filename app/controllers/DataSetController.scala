@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
-import models.user.{User, UserService}
+import models.user.{User, UserDAO, UserService}
 import oxalis.security.{URLSharing, WkEnv}
 import play.api.cache.SyncCacheApi
 import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
@@ -21,6 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class DataSetController @Inject()(userService: UserService,
+                                  userDAO: UserDAO,
                                   dataSetService: DataSetService,
                                   dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                   dataSetDataLayerDAO: DataSetDataLayerDAO,
@@ -176,11 +177,14 @@ class DataSetController @Inject()(userService: UserService,
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-        dataSetName) ~> NOT_FOUND
+      organization <- organizationDAO.findOneByName(organizationName)
+      dataSet <- dataSetDAO
+        .findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
-      users <- userService.findByTeams(allowedTeams)
-      usersJs <- Fox.serialCombined(users.distinct)(u => userService.compactWrites(u))
+      usersByTeams <- userDAO.findAllByTeams(allowedTeams)
+      adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
+      usersJs <- Fox.serialCombined((usersByTeams ++ adminsAndDatasetManagers).distinct)(u =>
+        userService.compactWrites(u))
     } yield {
       Ok(Json.toJson(usersJs))
     }

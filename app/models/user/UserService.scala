@@ -11,6 +11,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import javax.inject.Inject
 import models.binary.DataSetDAO
 import models.configuration.UserConfiguration
@@ -154,13 +155,17 @@ class UserService @Inject()(conf: WkConf,
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",
         dataSetName)
-      layerMap = layerConfiguration.map(_.validate[Map[String, JsValue]].getOrElse(Map.empty)).getOrElse(Map.empty)
+      layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
-          userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
-                                                                                               dataSet._id,
-                                                                                               name,
-                                                                                               config)
+          config.asOpt[LayerViewConfiguration] match {
+            case Some(viewConfiguration) =>
+              userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+                                                                                                   dataSet._id,
+                                                                                                   name,
+                                                                                                   viewConfiguration)
+            case None => Fox.successful(())
+          }
       }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,

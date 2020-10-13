@@ -129,7 +129,6 @@ class PullQueue {
     const bucket = this.cube.getBucket(bucketAddress);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);
-      bucket.setVisualizationColor(0x00ff00);
     }
   }
 

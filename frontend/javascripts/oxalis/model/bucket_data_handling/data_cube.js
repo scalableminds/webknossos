@@ -219,7 +219,7 @@ class DataCube {
       return this.getNullBucket(address);
     }
 
-    let bucket = this.getBucket(address);
+    let bucket = this.getBucket(address, true);
     if (bucket instanceof NullBucket) {
       bucket = this.createBucket(address);
     }
@@ -228,8 +228,8 @@ class DataCube {
   }
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address: Vector4): Bucket {
-    if (!this.isWithinBounds(address)) {
+  getBucket(address: Vector4, skipBoundsCheck: boolean = false): Bucket {
+    if (!skipBoundsCheck && !this.isWithinBounds(address)) {
       return this.getNullBucket(address);
     }
 

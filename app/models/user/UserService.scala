@@ -50,9 +50,6 @@ class UserService @Inject()(conf: WkConf,
   def defaultUser =
     userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
 
-  def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    userDAO.findAllByTeams(teams)
-
   def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
     if (useCache)
       userCache.findUser(userId)
@@ -268,7 +265,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   def compactWrites(user: User): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       teamMemberships <- teamMembershipsFor(user._id)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
@@ -278,6 +275,8 @@ class UserService @Inject()(conf: WkConf,
         "email" -> user.email,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isDatasetManager" -> user.isDatasetManager,
         "isAnonymous" -> false,
         "teams" -> teamMembershipsJs
       )

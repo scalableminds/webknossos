@@ -171,15 +171,19 @@ export async function requestFromStore(
     const errorMessage = `Requesting data from layer "${
       layerInfo.name
     }" failed. Some rendered areas might remain empty. Retrying...`;
-    let detailedError =
+    const detailedError =
       errorResponse.status != null
-        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}".`
+        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}" - URL: ${
+            errorResponse.url
+          }.`
         : errorResponse.message;
 
-    detailedError += `(URL: ${dataUrl})`;
     console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
-    ErrorHandling.notify(new Error(errorMessage), { detailedError, errorResponse });
+    ErrorHandling.notify(new Error(errorMessage), {
+      detailedError,
+      isOnline: window.navigator.onLine,
+    });
     return batch.map(_val => null);
   }
 }

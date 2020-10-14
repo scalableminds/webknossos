@@ -284,7 +284,9 @@ export default class TextureBucketManager {
     };
     enqueueBucket(index);
 
-    let debouncedUpdateBucketData;
+    let unlistenToLoadedFn = _.noop;
+    let unlistenToLabeledFn = _.noop;
+
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.
       // Also the index could have changed, so retrieve the index again.
@@ -292,17 +294,17 @@ export default class TextureBucketManager {
       if (bucketIndex != null) {
         enqueueBucket(bucketIndex);
       } else {
-        bucket.off("bucketLabeled", debouncedUpdateBucketData);
+        unlistenToLabeledFn();
       }
     };
 
     if (!bucket.hasData()) {
-      bucket.on("bucketLoaded", updateBucketData);
+      unlistenToLoadedFn = bucket.on("bucketLoaded", updateBucketData);
     }
-    bucket.on("bucketLabeled", updateBucketData);
+    unlistenToLabeledFn = bucket.on("bucketLabeled", updateBucketData);
     bucket.once("bucketCollected", () => {
-      bucket.off("bucketLabeled", updateBucketData);
-      bucket.off("bucketLoaded", updateBucketData);
+      unlistenToLoadedFn();
+      unlistenToLabeledFn();
       this.freeBucket(bucket);
     });
   }

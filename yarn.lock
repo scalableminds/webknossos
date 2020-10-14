@@ -8471,10 +8471,10 @@ nan@^2.14.0:
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.14.1.tgz#d7be34dfa3105b91494c3147089315eff8874b01"
   integrity sha512-isWHgVjnFjh2x2yuJ/tj3JbwoHu3UC2dX5G/88Cm24yB6YopVgxvBObDY7n5xW6ExmFhJpSEQqFPvq9zaXc8Jw==
 
-nanoevents@^1.0.2:
-  version "1.0.8"
-  resolved "https://registry.yarnpkg.com/nanoevents/-/nanoevents-1.0.8.tgz#e96e256898cb04994a567153e20d62e3819a0391"
-  integrity sha512-ocw0BZNSEQfHYvAQinL71loxZcrDoDs3kOWYvF3vQHlvI0RTkP36L+JL1hqcen4sXljqAuD7xYl8tcaRWKMRNQ==
+nanoevents@^5.1.8:
+  version "5.1.8"
+  resolved "https://registry.yarnpkg.com/nanoevents/-/nanoevents-5.1.8.tgz#3a192513ca3dc88421a3b60cb22ca802074aacfb"
+  integrity sha512-hxhbaIUYJxJIGFJLB6ls3byky/qWCYWyOY3eMYMyic736S14eW63V8B4fwdNfd97EKhg9346xbEKUYsb+44Hqg==
 
 nanomatch@^1.2.9:
   version "1.2.13"

@@ -246,9 +246,7 @@ class DataCube {
 
   createBucket(address: Vector4): Bucket {
     const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
-    bucket.on({
-      bucketLoaded: () => this.trigger("bucketLoaded", address),
-    });
+    bucket.on("bucketLoaded", () => this.trigger("bucketLoaded", address));
     this.addBucketToGarbageCollection(bucket);
 
     const bucketIndex = this.getBucketIndex(address);

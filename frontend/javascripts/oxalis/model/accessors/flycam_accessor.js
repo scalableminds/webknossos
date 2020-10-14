@@ -186,26 +186,26 @@ function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<num
   );
 }
 
-export function getUp(flycam: Flycam): Vector3 {
+function _getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[4], matrix[5], matrix[6]];
 }
 
-export function getLeft(flycam: Flycam): Vector3 {
+function _getLeft(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[0], matrix[1], matrix[2]];
 }
 
-export function getPosition(flycam: Flycam): Vector3 {
+function _getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
 }
 
-export function getFlooredPosition(flycam: Flycam): Vector3 {
+function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3(x => Math.floor(x), getPosition(flycam));
 }
 
-export function getRotation(flycam: Flycam): Vector3 {
+function _getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
@@ -218,9 +218,16 @@ export function getRotation(flycam: Flycam): Vector3 {
   ];
 }
 
-export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
+function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
+
+export const getUp = memoizeOne(_getUp);
+export const getLeft = memoizeOne(_getLeft);
+export const getPosition = memoizeOne(_getPosition);
+export const getFlooredPosition = memoizeOne(_getFlooredPosition);
+export const getRotation = memoizeOne(_getRotation);
+export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 export function getRequestLogZoomStep(state: OxalisState): number {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);

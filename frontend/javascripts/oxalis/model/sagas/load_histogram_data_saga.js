@@ -17,6 +17,7 @@ async function fetchAllHistogramsForLayers(
   const histograms: HistogramDataForAllLayers = {};
   for (const dataLayer of dataLayers) {
     try {
+      // We send the histogram data requests sequentially so there is less blockage of bucket data requests.
       // eslint-disable-next-line no-await-in-loop
       const data = await getHistogramForLayer(dataset.dataStore.url, dataset, dataLayer.name);
       if (Array.isArray(data) && data.length > 0) {

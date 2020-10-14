@@ -148,14 +148,13 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: typeof THREE.Vector3): void => {
-    this.TDViewBorders.position.copy(posVec);
-    this.crosshair[0].position.copy(posVec);
-    this.crosshair[1].position.copy(posVec);
-    this.plane.position.copy(posVec);
+  setPosition = (x: number, y: number, z: number): void => {
+    this.TDViewBorders.position.set(x, y, z);
+    this.crosshair[0].position.set(x, y, z);
+    this.crosshair[1].position.set(x, y, z);
+    this.plane.position.set(x, y, z);
 
-    const globalPosition = getPosition(Store.getState().flycam);
-    this.plane.material.setGlobalPosition(globalPosition);
+    this.plane.material.setGlobalPosition(x, y, z);
   };
 
   setVisible = (visible: boolean): void => {

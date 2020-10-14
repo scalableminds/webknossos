@@ -322,7 +322,7 @@ class SceneController {
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(new THREE.Vector3(...pos));
+          this.planes[planeId].setPosition(pos[0], pos[1], pos[2]);
         } else {
           this.planes[planeId].setVisible(false);
         }
@@ -331,7 +331,7 @@ class SceneController {
       const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
+        this.planes[planeId].setPosition(pos[0], pos[1], pos[2]);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
         this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
@@ -343,7 +343,6 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    const globalPosVec = new THREE.Vector3(...globalPosition);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
@@ -358,11 +357,11 @@ class SceneController {
 
     if (optArbitraryPlane) {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
-      optArbitraryPlane.setPosition(globalPosVec);
+      optArbitraryPlane.setPosition(globalPosition[0], globalPosition[1], globalPosition[2]);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint);
-        currentPlane.setPosition(globalPosVec);
+        currentPlane.setPosition(globalPosition[0], globalPosition[1], globalPosition[2]);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
         if (isVisible) {

@@ -1,7 +1,8 @@
 // @flow
 import { PropTypes } from "@scalableminds/prop-types";
-import { type RouterHistory, withRouter } from "react-router-dom";
-import { Table, Spin, Input } from "antd";
+import { Link, type RouterHistory, withRouter } from "react-router-dom";
+import { Table, Spin, Input, Icon } from "antd";
+import { connect } from "react-redux";
 import * as React from "react";
 
 import type { APIJob } from "admin/api_flow_types";
@@ -14,9 +15,13 @@ const { Search } = Input;
 
 const typeHint: APIJob[] = [];
 
-type Props = {|
+type OwnProps = {|
   history: RouterHistory,
 |};
+type StateProps = {|
+  activeUser: ?APIUser,
+|};
+type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isLoading: boolean,
   jobs: Array<APIJob>,
@@ -28,7 +33,7 @@ const persistence: Persistence<State> = new Persistence(
   "jobList",
 );
 
-class TeamListView extends React.PureComponent<Props, State> {
+class JobListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     jobs: [],
@@ -110,7 +115,26 @@ class TeamListView extends React.PureComponent<Props, State> {
                 key="state"
                 sorter={Utils.localeCompareBy(typeHint, job => job.state)}
               />
-              <Column title="Action" key="actions" />
+              <Column
+                title="Action"
+                key="actions"
+                fixed="right"
+                render={(__, job: APIJob) => (
+                  <span>
+                    {job.state === "FINISHED" && (
+                      <Link
+                        to={`/datasets/${this.props.activeUser.organization}/${
+                          job.datasetName
+                        }/view`}
+                        title="View Dataset"
+                      >
+                        <Icon type="eye-o" />
+                        View
+                      </Link>
+                    )}
+                  </span>
+                )}
+              />
             </Table>
           </Spin>
         </div>
@@ -119,4 +143,8 @@ class TeamListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(TeamListView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(JobListView));

@@ -16,7 +16,9 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import { Vector3Input } from "libs/vector_input";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { syncValidator } from "../../dashboard/dataset/validation";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
@@ -148,7 +150,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               </FormItem>
               <FormItemWithInfo label="Conversion" info="Info">
                 {getFieldDecorator("needsConversion", {
-                  rules: [{ required: true }],
                   initialValue: false,
                 })(
                   <Checkbox
@@ -162,6 +163,34 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Checkbox>,
                 )}
               </FormItemWithInfo>
+              {this.state.needsConversion && (
+                <FormItemWithInfo
+                  label="Voxel Size"
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  disabled={this.state.needsConversion}
+                >
+                  {getFieldDecorator("scale", {
+                    rules: [
+                      {
+                        required: this.state.needsConversion,
+                        message: "Please provide a scale for the dataset.",
+                      },
+                      {
+                        validator: syncValidator(
+                          value => value && value.every(el => el > 0),
+                          "Each component of the scale must be larger than 0",
+                        ),
+                      },
+                    ],
+                  })(
+                    <Vector3Input
+                      style={{ width: 400 }}
+                      allowDecimals
+                      onChange={scale => form.setFieldsValue({ scale })}
+                    />,
+                  )}
+                </FormItemWithInfo>
+              )}
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],

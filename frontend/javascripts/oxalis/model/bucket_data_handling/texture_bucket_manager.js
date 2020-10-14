@@ -46,7 +46,7 @@ function getSomeValue<T>(set: Set<T>): T {
     break;
   }
 
-  if (!value) {
+  if (value == null) {
     throw new Error("Cannot get value of set because it's empty.");
   }
 

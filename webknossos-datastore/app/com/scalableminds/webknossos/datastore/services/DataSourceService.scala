@@ -48,9 +48,7 @@ class DataSourceService @Inject()(
   var inboxCheckVerboseCounter = 0
 
   def tick: Unit = {
-    checkInbox(verbose = inboxCheckVerboseCounter == 0)
-    inboxCheckVerboseCounter += 1
-    if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
+    ()
   }
 
   private def skipTrash(path: Path) = !path.toString.contains(".trash")

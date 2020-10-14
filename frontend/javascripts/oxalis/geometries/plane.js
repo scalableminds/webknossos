@@ -7,7 +7,6 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -134,7 +133,7 @@ class Plane {
   }
 
   setScale(xFactor: number, yFactor: number): void {
-    if (this.lastScaleFactors[0] != xFactor || this.lastScaleFactors[1] != yFactor) {
+    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
       this.lastScaleFactors[0] = xFactor;
       this.lastScaleFactors[1] = yFactor;
     } else {

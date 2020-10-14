@@ -8,7 +8,7 @@ import type {
   APIDataLayer,
   HybridServerTracing,
   ServerVolumeTracing,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import {
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
@@ -67,7 +67,7 @@ import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
-import { getValidatedDatasetViewConfiguration } from "libs/dataset_view_configuration_validation";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -127,11 +127,8 @@ export async function initialize(
   );
 
   initializeDataset(initialFetch, dataset, tracing);
+  enforceValidatedDatasetViewConfiguration(initialDatasetSettings, dataset);
   initializeSettings(initialUserSettings, initialDatasetSettings);
-
-  const test = getValidatedDatasetViewConfiguration(initialDatasetSettings);
-
-  console.log(test);
 
   let initializationInformation = null;
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.

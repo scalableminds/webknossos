@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from
 import React from "react";
 import _ from "lodash";
 
-import type { APITask } from "admin/api_flow_types";
+import type { APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { createTasks } from "admin/admin_rest_api";

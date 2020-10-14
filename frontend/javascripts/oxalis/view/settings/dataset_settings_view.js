@@ -12,7 +12,7 @@ import { V3 } from "libs/mjs";
 import api from "oxalis/api/internal_api";
 
 import messages, { settings } from "messages";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,

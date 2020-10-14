@@ -4,7 +4,7 @@ import { Modal, Button, Tooltip, Icon, Table, InputNumber, Tag, Badge } from "an
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIUser, ExperienceDomainList } from "admin/api_flow_types";
+import type { APIUser, ExperienceDomainList } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import { updateUser } from "admin/admin_rest_api";
 import HighlightableRow from "components/highlightable_row";

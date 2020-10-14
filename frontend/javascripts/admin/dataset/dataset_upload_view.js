@@ -3,7 +3,7 @@ import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
-import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
+import type { APIDataStore, APIUser, DatasetConfig } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { addDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";

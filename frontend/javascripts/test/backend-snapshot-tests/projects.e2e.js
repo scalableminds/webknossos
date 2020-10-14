@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 
-import type { APIProject, APIProjectUpdater } from "admin/api_flow_types";
+import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
 import {
   tokenUserA,
   tokenUserD,

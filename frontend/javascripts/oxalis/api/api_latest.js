@@ -101,7 +101,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";

@@ -6,7 +6,7 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 
-import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
+import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "types/api_flow_types";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";

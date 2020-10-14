@@ -20,7 +20,7 @@ import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 import window from "libs/window";
-import type { ElementClass } from "admin/api_flow_types";
+import type { ElementClass } from "types/api_flow_types";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.

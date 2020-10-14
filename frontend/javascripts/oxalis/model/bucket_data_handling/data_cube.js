@@ -33,7 +33,7 @@ import constants, {
   type Vector4,
   type BoundingBoxType,
 } from "oxalis/constants";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
 class CubeEntry {
   data: Map<number, Bucket>;

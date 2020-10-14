@@ -7,7 +7,7 @@ import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import { jsonStringify } from "libs/utils";
 import { settings } from "messages";
-import { validateUserSettingsJSON } from "dashboard/dataset/validation";
+import { validateUserSettingsJSON } from "types/validation";
 
 const FormItem = Form.Item;
 const { Panel } = Collapse;

@@ -3,7 +3,7 @@ import { Alert, Divider, Radio, Modal, Input, Button, Row, Col, Icon } from "ant
 import { useSelector } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
-import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "admin/api_flow_types";
+import type { APIDataset, APIAnnotationVisibility, APIAnnotationType } from "types/api_flow_types";
 import {
   getDatasetSharingToken,
   getTeamsForSharedAnnotation,

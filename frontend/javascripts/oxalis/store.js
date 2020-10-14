@@ -24,7 +24,7 @@ import type {
   APIUser,
   APIUserBase,
   MeshMetaData,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";

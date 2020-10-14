@@ -6,7 +6,7 @@ import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 
-import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";

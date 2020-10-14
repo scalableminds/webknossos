@@ -48,7 +48,7 @@ import {
   type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";

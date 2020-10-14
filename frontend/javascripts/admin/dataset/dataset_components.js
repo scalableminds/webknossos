@@ -4,7 +4,7 @@ import * as React from "react";
 import { Form, Input, Select, Card } from "antd";
 import messages from "messages";
 import { isDatasetNameValid } from "admin/admin_rest_api";
-import type { APIDataStore, APIUser } from "admin/api_flow_types";
+import type { APIDataStore, APIUser } from "types/api_flow_types";
 
 const FormItem = Form.Item;
 const { Option } = Select;

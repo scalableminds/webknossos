@@ -6,7 +6,7 @@ import AirbrakeClient from "airbrake-js";
 import _ from "lodash";
 
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";

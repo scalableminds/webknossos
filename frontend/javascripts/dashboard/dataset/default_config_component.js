@@ -4,9 +4,9 @@ import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip } fr
 import * as React from "react";
 
 import { Vector3Input } from "libs/vector_input";
+import { validateLayerConfigurationJSON, syncValidator } from "types/validation";
 
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
-import { validateLayerConfigurationJSON, syncValidator } from "./validation";
 
 const FormItem = Form.Item;
 

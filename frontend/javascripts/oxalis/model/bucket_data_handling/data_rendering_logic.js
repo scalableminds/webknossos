@@ -3,7 +3,7 @@ import _ from "lodash";
 
 import { document } from "libs/window";
 import constants, { type Vector3 } from "oxalis/constants";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";
 
 type GpuSpecs = {

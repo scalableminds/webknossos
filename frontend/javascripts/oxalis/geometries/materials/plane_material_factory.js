@@ -34,7 +34,7 @@ import * as Utils from "libs/utils";
 import app from "app";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean,

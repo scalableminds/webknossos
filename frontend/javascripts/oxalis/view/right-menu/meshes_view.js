@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import React from "react";
 
 import type { ExtractReturn } from "libs/type_helpers";
-import type { MeshMetaData, RemoteMeshMetaData } from "admin/api_flow_types";
+import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { Vector3Input } from "libs/vector_input";

@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
 
-import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";

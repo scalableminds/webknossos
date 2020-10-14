@@ -31,10 +31,12 @@ class Plane {
   baseScaleVector: typeof THREE.Vector3;
   crosshair: Array<typeof THREE.LineSegments>;
   TDViewBorders: typeof THREE.Line;
+  lastScaleFactors: [number, number];
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
+    this.lastScaleFactors = [-1, -1];
 
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
@@ -132,6 +134,13 @@ class Plane {
   }
 
   setScale(xFactor: number, yFactor: number): void {
+    if (this.lastScaleFactors[0] != xFactor || this.lastScaleFactors[1] != yFactor) {
+      this.lastScaleFactors[0] = xFactor;
+      this.lastScaleFactors[1] = yFactor;
+    } else {
+      return;
+    }
+
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
       this.baseScaleVector,

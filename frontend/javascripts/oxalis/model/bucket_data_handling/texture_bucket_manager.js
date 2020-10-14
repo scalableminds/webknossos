@@ -40,6 +40,19 @@ import type { ElementClass } from "admin/api_flow_types";
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
 export const channelCountForLookupBuffer = 2;
 
+function getSomeValue<T>(set: Set<T>): T {
+  let value;
+  for (value of set) {
+    break;
+  }
+
+  if (!value) {
+    throw new Error("Cannot get value of set because it's empty.");
+  }
+
+  return value;
+}
+
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;
@@ -138,19 +151,18 @@ export default class TextureBucketManager {
     }
 
     // Remove unused buckets
-    const freeBuckets = Array.from(freeBucketSet.values());
-    for (const freeBucket of freeBuckets) {
+    for (const freeBucket of freeBucketSet.values()) {
       this.freeBucket(freeBucket);
     }
 
     let needsNewBucket = false;
-    const freeIndexArray = Array.from(this.freeIndexSet);
+
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
-        if (freeIndexArray.length === 0) {
+        if (this.freeIndexSet.size === 0) {
           throw new Error("A new bucket should be stored but there is no space for it?");
         }
-        const freeBucketIdx = freeIndexArray.shift();
+        const freeBucketIdx = getSomeValue(this.freeIndexSet);
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
         needsNewBucket = true;
       }
@@ -158,7 +170,7 @@ export default class TextureBucketManager {
 
     // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
     // or if new buckets are needed or if the anchorPoint changed. Otherwise we may end up in an endless loop.
-    if (freeBuckets.length > 0 || needsNewBucket || isAnchorPointNew) {
+    if (freeBucketSet.size > 0 || needsNewBucket || isAnchorPointNew) {
       this._refreshLookUpBuffer();
     }
   }

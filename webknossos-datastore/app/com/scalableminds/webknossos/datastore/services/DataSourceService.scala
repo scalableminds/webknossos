@@ -45,9 +45,6 @@ class DataSourceService @Inject()(
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  private val forConversionPrefix = ".for_conversion_"
-  private val currentlyConvertingPrefix = ".converting_"
-
   var inboxCheckVerboseCounter = 0
 
   def tick: Unit = {
@@ -119,9 +116,7 @@ class DataSourceService @Inject()(
         case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
       }
 
-    val conversionPrefix = if (needsConversion) forConversionPrefix else ""
-
-    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(s"$conversionPrefix${id.name}")
+    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(".forConversion").resolve(id.name)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
@@ -229,14 +224,10 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def skipTrash(path: Path) = !path.toString.contains(".trash")
-  private def skipDatasetsForConversion(path: Path) = !path.toString.contains(forConversionPrefix)
-  private def skipCurrentlyConvertingDatasets(path: Path) = !path.toString.contains(currentlyConvertingPrefix)
-
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
-    PathUtils.listDirectories(path, skipTrash, skipDatasetsForConversion, skipCurrentlyConvertingDatasets) match {
+    PathUtils.listDirectories(path) match {
       case Full(dataSourceDirs) =>
         val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources

@@ -50,9 +50,9 @@ ALTER TABLE webknossos.dataSet_layers ADD CONSTRAINT adminViewConfigurationIsJso
 
 --split default configuration as well
 UPDATE webknossos.dataSet_layers dl
-SET adminViewConfiguration = dS.defaultConfiguration->'layers'->dl.name
+SET adminViewConfiguration = dS.adminViewConfiguration->'layers'->dl.name
 FROM webknossos.dataSets dS
-WHERE dl._dataSet = dS._id AND dS.defaultConfiguration ? 'layers' AND dS.defaultConfiguration->'layers' ? dl.name;
+WHERE dl._dataSet = dS._id AND dS.adminViewConfiguration ? 'layers' AND dS.adminViewConfiguration->'layers' ? dl.name;
 
 -- Remove layers field from old table
 UPDATE webknossos.dataSets

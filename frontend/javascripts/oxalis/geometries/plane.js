@@ -156,13 +156,26 @@ class Plane {
     );
   };
 
-  setPosition = (x: number, y: number, z: number): void => {
+  // In case the plane's position was offset to make geometries
+  // on the plane visible (by moving the plane to the back), one can
+  // additionall pass the originalPosition (which is necessary for the
+  // shader)
+  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
+    const [x, y, z] = pos;
     this.TDViewBorders.position.set(x, y, z);
     this.crosshair[0].position.set(x, y, z);
     this.crosshair[1].position.set(x, y, z);
     this.plane.position.set(x, y, z);
 
-    this.plane.material.setGlobalPosition(x, y, z);
+    if (originalPosition == null) {
+      this.plane.material.setGlobalPosition(x, y, z);
+    } else {
+      this.plane.material.setGlobalPosition(
+        originalPosition[0],
+        originalPosition[1],
+        originalPosition[2],
+      );
+    }
   };
 
   setVisible = (visible: boolean): void => {

@@ -317,12 +317,13 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
-          const pos = _.clone(getPosition(Store.getState().flycam));
+          const originalPosition = getPosition(Store.getState().flycam);
+          const pos = _.clone(originalPosition);
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(pos[0], pos[1], pos[2]);
+          this.planes[planeId].setPosition(pos, originalPosition);
         } else {
           this.planes[planeId].setVisible(false);
         }
@@ -331,7 +332,7 @@ class SceneController {
       const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(pos[0], pos[1], pos[2]);
+        this.planes[planeId].setPosition(pos);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
         this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
@@ -357,11 +358,9 @@ class SceneController {
 
     if (optArbitraryPlane) {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
-      optArbitraryPlane.setPosition(globalPosition[0], globalPosition[1], globalPosition[2]);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint);
-        currentPlane.setPosition(globalPosition[0], globalPosition[1], globalPosition[2]);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
         if (isVisible) {

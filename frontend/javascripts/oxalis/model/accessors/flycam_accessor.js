@@ -202,7 +202,7 @@ function _getPosition(flycam: Flycam): Vector3 {
 }
 
 function _getFlooredPosition(flycam: Flycam): Vector3 {
-  return map3(x => Math.floor(x), getPosition(flycam));
+  return map3(x => Math.floor(x), _getPosition(flycam));
 }
 
 function _getRotation(flycam: Flycam): Vector3 {

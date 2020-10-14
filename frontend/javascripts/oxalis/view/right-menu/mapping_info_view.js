@@ -2,7 +2,6 @@
  * mapping_info_view.js
  * @flow
  */
-import type { Dispatch } from "redux";
 import { Icon, Select, Switch, Table, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
@@ -478,5 +477,4 @@ const maxWait = 500;
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-  null,
 )(debounceRender(MappingInfoView, debounceTime, { maxWait }));

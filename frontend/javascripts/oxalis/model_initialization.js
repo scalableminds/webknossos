@@ -67,6 +67,7 @@ import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
+import { getValidatedDatasetViewConfiguration } from "libs/dataset_view_configuration_validation";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -127,6 +128,10 @@ export async function initialize(
 
   initializeDataset(initialFetch, dataset, tracing);
   initializeSettings(initialUserSettings, initialDatasetSettings);
+
+  const test = getValidatedDatasetViewConfiguration(initialDatasetSettings);
+
+  console.log(test);
 
   let initializationInformation = null;
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.

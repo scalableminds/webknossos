@@ -3,7 +3,7 @@
 import {
   getDefaultLayerViewConfiguration,
   defaultDatasetViewConfiguration,
-} from "types/schemas/dataset_view_configuration.schema.js";
+} from "types/schemas/dataset_view_configuration.schema";
 import { type APIDataset, type APIDataLayer } from "types/api_flow_types";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
@@ -38,9 +38,7 @@ export const enforceValidatedDatasetViewConfiguration = (
     "types::DatasetViewConfiguration",
     datasetViewConfiguration,
   );
-  if (validationErrors.length) {
-    eliminateErrors(datasetViewConfiguration, validationErrors, defaultDatasetViewConfiguration);
-  }
+  eliminateErrors(datasetViewConfiguration, validationErrors, defaultDatasetViewConfiguration);
 
   const { layers } = datasetViewConfiguration;
   const newLayerConfig = {};

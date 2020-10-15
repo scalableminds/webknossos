@@ -81,7 +81,7 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
       agglomerateIds((segmentId - minId).toInt)
     }
 
-    getOrHandleUncachedKey(segmentId.toLong, handleUncachedAgglomerate)
+    getOrHandleUncachedKey(segmentId.toLong, () => handleUncachedAgglomerate())
   }
 }
 
@@ -148,7 +148,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
   }
 
   def withCache(request: DataServiceDataRequest, input: Array[ULong], reader: IHDF5Reader)(
-      readHDF: (IHDF5Reader, Long, Long) => Array[Long]) = {
+      readHDF: (IHDF5Reader, Long, Long) => Array[Long]): Array[Long] = {
     val readerRange = getReaderRange(request)
     if (readerRange._2 - readerRange._1 < maxReaderRange) {
       val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)

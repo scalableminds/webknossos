@@ -55,6 +55,11 @@ function getMinAndMax(props: HistogramProps) {
   return { min: dataMin, max: dataMax };
 }
 
+function getPrecisionOf(num: number): number {
+  const decimals = num.toString().split(".")[1];
+  return decimals ? decimals.length : 0;
+}
+
 class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   canvasRef: ?HTMLCanvasElement;
 
@@ -112,6 +117,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
   }
+
+  getPrecision = () =>
+    Math.max(getPrecisionOf(this.state.currentMin), getPrecisionOf(this.state.currentMax)) + 3;
 
   drawHistogram = (
     ctx: CanvasRenderingContext2D,
@@ -183,7 +191,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   };
 
   tipFormatter = (value: number) =>
-    value > 10000 ? value.toExponential() : roundTo(value, 2).toString();
+    value > 10000 ? value.toExponential() : roundTo(value, this.getPrecision()).toString();
 
   // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
@@ -245,7 +253,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
-                  precision={2}
                   onChange={value => {
                     value = parseFloat(value);
                     if (value <= maxRange) {
@@ -270,7 +277,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
-                  precision={2}
                   onChange={value => {
                     value = parseFloat(value);
                     if (value >= minRange) {

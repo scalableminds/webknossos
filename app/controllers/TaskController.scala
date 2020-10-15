@@ -296,13 +296,13 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                         params.boundingBox,
                         params.editPosition,
                         params.editRotation,
-                        false
+                        volumeShowFallbackLayer = false
                       )
                       .map(v => (v, None)))
 
                 volumeFox.map(v => (skeletonBox, Full(v)))
               case f: Failure => Fox.failure(f.msg, Empty, f.chain)
-              // We don't need to catch the Empty case here because `toSuccessFox` can only emit Fulls and Failures
+              case _          => Fox.failure("")
             }
         }
         .map(_.unzip)
@@ -335,6 +335,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             case None        => Empty
           }
         case f: Failure => f
+        case _          => Failure("")
       }
       volumeBaseBoxes: List[Box[(VolumeTracing, Option[File])]] = successes.map {
         case Full(success) =>
@@ -343,6 +344,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             case None                  => Empty
           }
         case f: Failure => f
+        case _          => Failure("")
       }
       fullParams = (successes, skeletonBaseBoxes, volumeBaseBoxes).zipped.map {
         case (s, skeletonBox, volumeBox) =>
@@ -358,7 +360,6 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                                                                                                                  volumeBases).zipped.map {
         case (paramBox, skeletonBox, volumeBox) =>
           paramBox match {
-            case f: Failure => f
             case Full(params) =>
               val skeletonFailure = skeletonBox match {
                 case f: Failure => Some(f)
@@ -373,6 +374,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                 skeletonFailure.orElse(volumeFailure).get
               else
                 Full(params, skeletonBox.toOption, volumeBox.toOption)
+            case f: Failure => f
+            case _          => Failure("")
           }
       }
 
@@ -494,9 +497,9 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
         case _          => Fox.successful(None)
       })
       skeletonTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), skeletonTracingIds).zipped.toList,
-                                                  true)
+                                                  isSkeletonId = true)
       volumeTracingsIdsMerged = mergeTracingIds((requestedTasks.map(_.map(_._1)), volumeTracingIds).zipped.toList,
-                                                false)
+                                                isSkeletonId = false)
       requestedTasksWithTracingIds = (requestedTasks, skeletonTracingsIdsMerged, volumeTracingsIdsMerged).zipped.toList
       taskObjects: List[Fox[Task]] = requestedTasksWithTracingIds.map(r =>
         createTaskWithoutAnnotationBase(r._1.map(_._1), r._2, r._3))

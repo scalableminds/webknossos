@@ -47,6 +47,7 @@ class VolumeTracingService @Inject()(
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper
+    with DataFinder
     with ProtoGeometryImplicits
     with FoxImplicits
     with LazyLogging {
@@ -415,6 +416,20 @@ class VolumeTracingService @Inject()(
       result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
     } yield result
 
+  def findData(tracingId: String): Fox[Option[Point3D]] =
+    for {
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      volumeLayer = volumeTracingLayer(tracingId, tracing)
+      bucketStream = volumeLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+      bucketPosOpt = if (bucketStream.hasNext) {
+        val bucket = bucketStream.next()
+        val bucketPos = bucket._1
+        getPositionOfNonZeroData(bucket._2,
+                                 Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 volumeLayer.bytesPerElement)
+      } else None
+    } yield bucketPosOpt
+
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
 
   def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
@@ -455,11 +470,9 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (_, data) =>
-            if (data.length > 1) { // skip reverted buckets
-              val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-              val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-              labelSet ++= nonZeroData
-            }
+            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+            labelSet ++= nonZeroData
         }
         mergedVolume.addLabelSet(labelSet)
     }

@@ -17,6 +17,7 @@ import features from "features";
 import { getDatastores, startJob } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
+import { type Vector3 } from "oxalis/constants";
 
 const { TabPane } = Tabs;
 
@@ -56,9 +57,10 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
     organization: string,
     datasetName: string,
     needsConversion?: boolean,
+    scale?: Vector3,
   ) => {
-    if (needsConversion) {
-      startJob(datasetName, organization);
+    if (needsConversion && scale) {
+      startJob(datasetName, organization, scale);
       const url = "/jobs";
       history.push(url);
     } else {

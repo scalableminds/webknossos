@@ -41,10 +41,7 @@ import type { ElementClass } from "admin/api_flow_types";
 export const channelCountForLookupBuffer = 2;
 
 function getSomeValue<T>(set: Set<T>): T {
-  let value;
-  for (value of set) {
-    break;
-  }
+  const value = set.values().next().value;
 
   if (value == null) {
     throw new Error("Cannot get value of set because it's empty.");

@@ -40,6 +40,16 @@ import type { ElementClass } from "admin/api_flow_types";
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
 export const channelCountForLookupBuffer = 2;
 
+function getSomeValue<T>(set: Set<T>): T {
+  const value = set.values().next().value;
+
+  if (value == null) {
+    throw new Error("Cannot get value of set because it's empty.");
+  }
+
+  return value;
+}
+
 export default class TextureBucketManager {
   dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;

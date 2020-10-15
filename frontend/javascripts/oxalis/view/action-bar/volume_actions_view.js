@@ -115,7 +115,7 @@ function OverwriteModeSwitch({ isControlPressed }) {
   }, [isControlPressed]);
 
   return (
-    <RadioGroup value={overwriteMode} onChange={handleSetOverwriteMode}>
+    <RadioGroup value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
       <RadioButton style={narrowButtonStyle} value={OverwriteModeEnum.OVERWRITE_ALL}>
         <img
           src="/assets/images/overwrite-all.svg"
@@ -169,7 +169,7 @@ export default function VolumeActionsView() {
         if (document.activeElement) document.activeElement.blur();
       }}
     >
-      <RadioGroup onChange={handleSetTool} value={adaptedActiveTool} style={{ marginRight: 10 }}>
+      <RadioGroup onChange={handleSetTool} value={adaptedActiveTool}>
         <RadioButton style={narrowButtonStyle} value={VolumeToolEnum.MOVE}>
           <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
         </RadioButton>

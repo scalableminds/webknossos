@@ -178,6 +178,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DELETE);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -195,7 +196,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
       volumeLayer,
       VolumeToolEnum.TRACE,
       ContourModeEnum.DELETE,
-      OverwriteModeEnum.OVERWRITE_EMPTY,
+      OverwriteModeEnum.OVERWRITE_ALL,
     ),
   );
 });

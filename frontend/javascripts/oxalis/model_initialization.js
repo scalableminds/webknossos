@@ -120,12 +120,12 @@ export async function initialize(
     displayedVolumeTracings.push(tracing.volume.id);
   }
 
+  initializeDataset(initialFetch, dataset, tracing);
+
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     displayedVolumeTracings,
   );
-
-  initializeDataset(initialFetch, dataset, tracing);
   initializeSettings(initialUserSettings, initialDatasetSettings);
 
   let initializationInformation = null;

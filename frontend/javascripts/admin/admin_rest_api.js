@@ -804,19 +804,19 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetViewConfiguration(
-  datasetId: APIDatasetId,
+export async function getDatasetViewConfiguration(
+  dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
-): Promise<Object> {
-  const settings = Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+): Promise<DatasetConfiguration> {
+  const settings = await Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
     },
   );
 
-  enforceValidatedDatasetViewConfiguration(settings, datasetId);
+  enforceValidatedDatasetViewConfiguration(settings, dataset);
   return settings;
 }
 

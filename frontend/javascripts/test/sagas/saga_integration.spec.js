@@ -53,7 +53,7 @@ test.serial(
             Store.getState().tracing.skeleton,
             [1, 2, 3],
             [0, 0, 0],
-            2,
+            1,
           ),
         ],
       ],

@@ -520,9 +520,9 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   while (true) {
     if (tracingType === "skeleton") {
-      console.log(yield* take(saveRelevantActionsForSkeleton));
+      yield* take(saveRelevantActionsForSkeleton);
     } else {
-      console.log(yield* take(saveRelevantActionsForVolume));
+      yield* take(saveRelevantActionsForVolume);
     }
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(

@@ -123,9 +123,13 @@ export const convertCellIdToRGB: ShaderModule = {
   `,
 };
 
-// This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane.
+// This function mirrors the above convertCellIdToRGB-function.
 // Output is in [0,1] for H, S, L and A
-export const jsConvertCellIdToHSLA = (id: number, customColors: ?Array<number>): Array<number> => {
+export const jsConvertCellIdToHSLA = (
+  id: number,
+  customColors?: ?Array<number>,
+  alpha: number = 1,
+): Array<number> => {
   if (id === 0) {
     // Return white
     return [1, 1, 1, 1];
@@ -146,7 +150,7 @@ export const jsConvertCellIdToHSLA = (id: number, customColors: ?Array<number>):
     hue = (1 / 360) * jsRgb2hsv(jsColormapJet(colorValueDecimal))[0];
   }
 
-  return [hue, 1, 0.5, 0.15];
+  return [hue, 1, 0.5, alpha];
 };
 
 export const getBrushOverlay: ShaderModule = {

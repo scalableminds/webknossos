@@ -96,6 +96,8 @@ export const VolumeToolEnum = {
   MOVE: "MOVE",
   TRACE: "TRACE",
   BRUSH: "BRUSH",
+  FILL_CELL: "FILL_CELL",
+  PICK_CELL: "PICK_CELL",
 };
 export type VolumeTool = $Keys<typeof VolumeToolEnum>;
 

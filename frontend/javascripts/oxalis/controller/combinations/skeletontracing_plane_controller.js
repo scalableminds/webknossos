@@ -92,7 +92,7 @@ export function getPlaneMouseControls(planeView: PlaneView) {
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
       const { volume } = Store.getState().tracing;
-      if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
+      if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
         // We avoid creating nodes when in brushing mode.
         setWaypoint(calculateGlobalPos(pos), event.ctrlKey);
       }

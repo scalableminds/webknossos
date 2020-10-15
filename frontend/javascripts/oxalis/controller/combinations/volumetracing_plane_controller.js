@@ -159,7 +159,14 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     },
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      if (event.shiftKey && !event.ctrlKey) {
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+
+      const shouldPickCell =
+        tool === VolumeToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
+
+      const shouldFillCell = tool === VolumeToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+
+      if (shouldPickCell) {
         const segmentation = Model.getSegmentationLayer();
         if (!segmentation) {
           return;
@@ -172,7 +179,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
           Store.dispatch(setActiveCellAction(cellId));
           isosurfaceLeftClick(pos, plane, event);
         }
-      } else if (event.shiftKey && event.ctrlKey) {
+      } else if (shouldFillCell) {
         Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
       } else if (event.metaKey) {
         if (isAutomaticBrushEnabled()) {

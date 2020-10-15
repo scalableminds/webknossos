@@ -1,10 +1,8 @@
 // @flow
 
-export function getDefaultLayerViewConfiguration(dynamicDefault: Object) {
+export function getDefaultLayerViewConfiguration(dynamicDefault: Object = {}) {
   const defaultLayerViewConfiguration = {
     color: [255, 255, 255],
-    brightness: null,
-    contrast: null,
     alpha: 100,
     intensityRange: [0, 255],
     min: null,
@@ -48,7 +46,7 @@ export const baseDatasetViewConfiguration = {
   fourBit: { type: "boolean" },
   interpolation: { type: "boolean" },
   highlightHoveredCellId: { type: "boolean" },
-  zoom: { type: "number" },
+  zoom: { type: "number", minimum: 0.005 },
   renderMissingDataBlack: { type: "boolean" },
   loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
   segmentationPatternOpacity: { type: "number", minimum: 0, maximum: 100 },

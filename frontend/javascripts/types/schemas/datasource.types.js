@@ -6,8 +6,6 @@
 
 type Vector3 = [number, number, number];
 
-type Vector2 = [number, number];
-
 type BoundingBox = {
   topLeft: Vector3,
   width: number,

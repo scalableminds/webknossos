@@ -65,7 +65,6 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
 export const settingComments = {
   clippingDistance: "orthogonal mode",
   moveValue: "orthogonal mode",
-  quality: "0 (high), 1 (medium), 2 (low)",
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",

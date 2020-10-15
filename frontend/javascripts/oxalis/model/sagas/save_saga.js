@@ -488,18 +488,6 @@ export function* saveTracingAsync(): Saga<void> {
   yield _all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
 }
 
-const saveRelevantActionsForSkeleton = [
-  ...SkeletonTracingSaveRelevantActions,
-  ...FlycamActions,
-  ...ViewModeSaveRelevantActions,
-  "SET_TRACING",
-];
-const saveRelevantActionsForVolume = [
-  ...VolumeTracingSaveRelevantActions,
-  ...FlycamActions,
-  ...ViewModeSaveRelevantActions,
-];
-
 export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
   yield* take(
     tracingType === "skeleton" ? "INITIALIZE_SKELETONTRACING" : "INITIALIZE_VOLUMETRACING",
@@ -520,9 +508,18 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   while (true) {
     if (tracingType === "skeleton") {
-      yield* take(saveRelevantActionsForSkeleton);
+      yield* take([
+        ...SkeletonTracingSaveRelevantActions,
+        ...FlycamActions,
+        ...ViewModeSaveRelevantActions,
+        "SET_TRACING",
+      ]);
     } else {
-      yield* take(saveRelevantActionsForVolume);
+      yield* take([
+        ...VolumeTracingSaveRelevantActions,
+        ...FlycamActions,
+        ...ViewModeSaveRelevantActions,
+      ]);
     }
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(

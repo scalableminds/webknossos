@@ -23,8 +23,8 @@ export const layerViewConfiguration = {
   color: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 },
   alpha: { type: "number", minimum: 0, maximum: 100 },
   intensityRange: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 },
-  min: { type: ["number", "null"] },
-  max: { type: ["number", "null"] },
+  min: { type: "number" },
+  max: { type: "number" },
   isDisabled: { type: "boolean" },
   isInverted: { type: "boolean" },
   isInEditMode: { type: "boolean" },
@@ -44,17 +44,21 @@ export const defaultDatasetViewConfiguration = {
   layers: {},
 };
 
-export const datasetViewConfiguration = {
+export const baseDatasetViewConfiguration = {
   fourBit: { type: "boolean" },
   interpolation: { type: "boolean" },
   highlightHoveredCellId: { type: "boolean" },
-  renderIsosurfaces: { type: "boolean" },
-  zoom: { type: ["number", "null"] },
+  zoom: { type: "number" },
   renderMissingDataBlack: { type: "boolean" },
   loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
   segmentationPatternOpacity: { type: "number", minimum: 0, maximum: 100 },
-  position: { type: ["array", "null"], items: { type: "number" }, minItems: 3, maxItems: 3 },
-  rotation: { type: ["array", "null"], items: { type: "number" }, minItems: 3, maxItems: 3 },
+};
+
+export const datasetViewConfiguration = {
+  ...baseDatasetViewConfiguration,
+  renderIsosurfaces: { type: "boolean" },
+  position: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 },
+  rotation: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 },
   layers: { type: "object" },
 };
 
@@ -91,6 +95,10 @@ export default {
       properties: layerViewConfiguration,
       additionalProperties: false,
       required: ["color", "alpha", "intensityRange", "isDisabled", "isInverted", "isInEditMode"],
+    },
+    "types::LayerViewConfigurationObject": {
+      type: "object",
+      additionalProperties: { $ref: "#/definitions/types::OptionalLayerViewConfiguration" },
     },
   },
 };

@@ -33,9 +33,10 @@ export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIData
 export const enforceValidatedDatasetViewConfiguration = (
   datasetViewConfiguration: Object,
   dataset: APIDataset,
+  isOptional: boolean = false,
 ) => {
   const validationErrors = validateObjectWithType(
-    "types::DatasetViewConfiguration",
+    isOptional ? "types::OptionalDatasetViewConfiguration" : "types::DatasetViewConfiguration",
     datasetViewConfiguration,
   );
   eliminateErrors(datasetViewConfiguration, validationErrors, defaultDatasetViewConfiguration);
@@ -50,13 +51,13 @@ export const enforceValidatedDatasetViewConfiguration = (
     const existingLayerConfig = layers[layer.name];
     if (existingLayerConfig) {
       const layerErrors = validateObjectWithType(
-        "types::LayerViewConfiguration",
+        isOptional ? "types::OptionalLayerViewConfiguration" : "types::LayerViewConfiguration",
         existingLayerConfig,
       );
       eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
       newLayerConfig[layer.name] = existingLayerConfig;
     } else {
-      newLayerConfig[layer.name] = layerConfigDefault;
+      newLayerConfig[layer.name] = isOptional ? {} : layerConfigDefault;
     }
   });
   datasetViewConfiguration.layers = newLayerConfig;

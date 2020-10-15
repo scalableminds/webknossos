@@ -2,7 +2,7 @@
 
 import jsonschema from "jsonschema";
 
-import DatasourceSchema from "types/schemas/datasource.schema";
+import DatasourceSchema from "types/schemas/datasource.schema.json";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 
@@ -43,8 +43,8 @@ export const validateObjectWithType = (type: string, json: Object) => {
 };
 
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
-export const validateLayerConfigurationJSON = validateWithSchema("types::LayerUserConfiguration");
 export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
+export const validateLayerViewConfigurationObjectJSON = validateWithSchema("types::LayerViewConfigurationObject");
 
 export const isValidJSON = (json: string) => {
   try {

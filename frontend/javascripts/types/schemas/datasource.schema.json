@@ -140,21 +140,6 @@
         }
       },
       "required": ["id", "dataLayers", "scale"]
-    },
-    "types::LayerUserConfiguration": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "brightness": { "type": "number" },
-          "contrast": { "type": "number" },
-          "color": { "$ref": "#/definitions/types::Vector3" },
-          "intensityRange": { "$ref": "#/definitions/types::Vector2" },
-          "isDisabled": { "type": "boolean" },
-          "isInverted": { "type": "boolean" },
-          "alpha": { "type": "number" }
-        }
-      }
     }
   }
 }

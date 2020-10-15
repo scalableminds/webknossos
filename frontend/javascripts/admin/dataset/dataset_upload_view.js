@@ -148,7 +148,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
-              <FormItemWithInfo label="Conversion" info="Info">
+              <FormItemWithInfo
+                label="Conversion"
+                info="If your dataset is not yet in WKW or KNOSSOS format, it needs conversion."
+              >
                 {getFieldDecorator("needsConversion", {
                   initialValue: false,
                 })(

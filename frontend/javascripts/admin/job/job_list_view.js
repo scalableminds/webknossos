@@ -34,6 +34,8 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
+  intervalID;
+
   state = {
     isLoading: true,
     jobs: [],
@@ -52,12 +54,22 @@ class JobListView extends React.PureComponent<Props, State> {
     persistence.persist(this.props.history, nextState);
   }
 
+  componentWillUnmount() {
+    clearTimeout(this.intervalID);
+  }
+
   async fetchData(): Promise<void> {
     const jobs = await getJobs();
-    this.setState({
-      isLoading: false,
-      jobs: jobs || [],
-    });
+    this.setState(
+      {
+        isLoading: false,
+        jobs: jobs || [],
+      },
+      // refresh jobs every 5 seconds
+      () => {
+        this.intervalID = setTimeout(this.fetchData.bind(this), 5000);
+      },
+    );
   }
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -119,9 +131,10 @@ class JobListView extends React.PureComponent<Props, State> {
                 title="Action"
                 key="actions"
                 fixed="right"
+                width={150}
                 render={(__, job: APIJob) => (
                   <span>
-                    {job.state === "FINISHED" && (
+                    {job.state === "SUCCESS" && (
                       <Link
                         to={`/datasets/${this.props.activeUser.organization}/${
                           job.datasetName

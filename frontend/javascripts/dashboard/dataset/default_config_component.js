@@ -108,7 +108,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
             dataSource={_.map(getDefaultLayerViewConfiguration(), (value, key: string) => ({
               name: layerViewConfigurations[key],
               key,
-              value: value ? value.toString() : "null",
+              value: value == null ? "not set" : value.toString(),
               comment: comments[key] || "",
             }))}
             size="small"

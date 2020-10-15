@@ -2,7 +2,6 @@
  * mapping_info_view.js
  * @flow
  */
-import type { Dispatch } from "redux";
 import { Icon, Select, Switch, Table, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
@@ -445,21 +444,11 @@ class MappingInfoView extends React.Component<Props, State> {
   }
 }
 
-const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  setMappingEnabled(isEnabled) {
-    dispatch(setMappingEnabledAction(isEnabled));
-  },
-  setAvailableMappingsForLayer(
-    layerName: string,
-    mappingNames: Array<string>,
-    agglomerateNames: Array<string>,
-  ): void {
-    dispatch(setLayerMappingsAction(layerName, mappingNames, agglomerateNames));
-  },
-  setHideUnmappedIds(hideUnmappedIds: boolean): void {
-    dispatch(setHideUnmappedIdsAction(hideUnmappedIds));
-  },
-});
+const mapDispatchToProps = {
+  setMappingEnabled: setMappingEnabledAction,
+  setAvailableMappingsForLayer: setLayerMappingsAction,
+  setHideUnmappedIds: setHideUnmappedIdsAction,
+};
 
 function mapStateToProps(state: OxalisState) {
   return {
@@ -488,8 +477,4 @@ const maxWait = 500;
 export default connect<Props, OwnProps, _, _, _, _>(
   mapStateToProps,
   mapDispatchToProps,
-  null,
-  {
-    pure: false,
-  },
 )(debounceRender(MappingInfoView, debounceTime, { maxWait }));

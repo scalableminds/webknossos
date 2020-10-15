@@ -110,6 +110,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -123,6 +124,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -146,6 +148,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);

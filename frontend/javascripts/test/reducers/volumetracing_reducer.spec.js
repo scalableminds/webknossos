@@ -229,6 +229,18 @@ test("VolumeTracing should cycle trace/view/brush tool", t => {
     t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
   });
 
+  newState = VolumeTracingReducer(newState, cycleToolAction);
+
+  getVolumeTracing(newState.tracing).map(tracing => {
+    t.is(tracing.activeTool, VolumeToolEnum.FILL_CELL);
+  });
+
+  newState = VolumeTracingReducer(newState, cycleToolAction);
+
+  getVolumeTracing(newState.tracing).map(tracing => {
+    t.is(tracing.activeTool, VolumeToolEnum.PICK_CELL);
+  });
+
   // Cycle tool back to MOVE
   newState = VolumeTracingReducer(newState, cycleToolAction);
 

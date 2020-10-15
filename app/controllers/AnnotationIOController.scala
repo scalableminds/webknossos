@@ -63,23 +63,19 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
       log {
-        logger.info("upload request received")
         val shouldCreateGroupForEachFile: Boolean =
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDataSetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (new File(f.ref.path.toString), f.filename))
         val parsedFiles = nmlService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
-        logger.info("wrap...")
         val tracingsProcessed = nmlService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
-        logger.info("wrap done")
 
         val parseSuccesses: List[NmlParseResult] = tracingsProcessed.filter(_.succeeded)
 
         if (parseSuccesses.isEmpty) {
           returnError(parsedFiles)
         } else {
-          logger.info("sort, extract name, description")
           val (skeletonTracings, volumeTracingsWithDataLocations) = extractTracings(parseSuccesses)
           val name = nameForUploaded(parseSuccesses.map(_.fileName))
           val description = descriptionForNMLs(parseSuccesses.map(_.description))
@@ -101,13 +97,11 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                 )
               } yield mergedIdOpt
             }
-            _ <- Fox.successful(logger.info("send to tracingstore..."))
             mergedSkeletonTracingIdOpt <- Fox.runOptional(skeletonTracings.headOption) { _ =>
-              time(silent=false, "send to tracingstore")(tracingStoreClient.mergeSkeletonTracingsByContents(
+              tracingStoreClient.mergeSkeletonTracingsByContents(
                 SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
-                persistTracing = true))
+                persistTracing = true)
             }
-            _ <- Fox.successful(logger.info("register to annotation db..."))
             annotation <- annotationService.createFrom(request.identity,
                                                        dataSet,
                                                        mergedSkeletonTracingIdOpt,
@@ -122,15 +116,6 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
             )
         }
       }
-  }
-
-  def time[R](silent: Boolean, label: String)(block: => R): R = {
-    val t0 = System.nanoTime()
-    val result = block    // call-by-name
-    val t1 = System.nanoTime()
-    val duration = (t1 - t0)/1000000
-    if (!silent && t1 - t0 > 5000000) {println(f"$duration ms " + label)}
-    result
   }
 
   private def findDataSetForUploadedAnnotations(

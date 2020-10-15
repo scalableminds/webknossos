@@ -45,13 +45,13 @@ class Startup @Inject()(actorSystem: ActorSystem,
     annotationDAO.deleteOldInitializingAnnotations
   }
 
-  /*ensurePostgresDatabase.onComplete { _ =>
+  ensurePostgresDatabase.onComplete { _ =>
     initialDataService.insert.futureBox.map {
       case Full(_)            => ()
       case Failure(msg, _, _) => logger.info("No initial data inserted: " + msg)
       case _                  => logger.warn("Error while inserting initial data")
     }
-  }*/
+  }
 
   lifecycle.addStopHook { () =>
     Future.successful {

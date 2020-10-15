@@ -53,6 +53,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
   normFile = e => {
+    // Ensure that only one dataset can be uploaded simultaneously
     if (Array.isArray(e)) {
       return e.slice(-1);
     }

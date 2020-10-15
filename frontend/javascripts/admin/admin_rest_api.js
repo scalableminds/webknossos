@@ -63,6 +63,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { saveAs } from "file-saver";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -807,13 +808,16 @@ export function getDatasetViewConfiguration(
   datasetId: APIDatasetId,
   displayedVolumeTracings: Array<string>,
 ): Promise<Object> {
-  return Request.sendJSONReceiveJSON(
+  const settings = Request.sendJSONReceiveJSON(
     `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
     },
   );
+
+  enforceValidatedDatasetViewConfiguration(settings, datasetId);
+  return settings;
 }
 
 export function updateDatasetConfiguration(

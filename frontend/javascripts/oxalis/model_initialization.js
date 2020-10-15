@@ -67,7 +67,6 @@ import * as Utils from "libs/utils";
 import constants, { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import window from "libs/window";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 export const HANDLED_ERROR = "error_was_handled";
 
@@ -127,7 +126,6 @@ export async function initialize(
   );
 
   initializeDataset(initialFetch, dataset, tracing);
-  enforceValidatedDatasetViewConfiguration(initialDatasetSettings, dataset);
   initializeSettings(initialUserSettings, initialDatasetSettings);
 
   let initializationInformation = null;

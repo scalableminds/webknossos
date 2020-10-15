@@ -86,8 +86,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (
         (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-        (contourTracingMode === ContourModeEnum.DRAW ||
-          contourTracingMode === ContourModeEnum.DRAW_OVERWRITE)
+        contourTracingMode === ContourModeEnum.DRAW
       ) {
         Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
       }
@@ -97,14 +96,10 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-        if (event.ctrlKey) {
-          if (isAutomaticBrushEnabled()) {
-            return;
-          }
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-        } else {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW_OVERWRITE));
+        if (event.ctrlKey && isAutomaticBrushEnabled()) {
+          return;
         }
+        Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
     },
@@ -127,8 +122,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (
         (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-        (contourTracingMode === ContourModeEnum.DELETE_FROM_ACTIVE_CELL ||
-          contourTracingMode === ContourModeEnum.DELETE_FROM_ANY_CELL)
+        contourTracingMode === ContourModeEnum.DELETE
       ) {
         Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
       }
@@ -138,11 +132,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-        if (event.ctrlKey) {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ACTIVE_CELL));
-        } else {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ANY_CELL));
-        }
+        Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
     },

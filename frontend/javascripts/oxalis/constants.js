@@ -109,9 +109,7 @@ export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
 export const ContourModeEnum = {
   IDLE: "IDLE",
   DRAW: "DRAW",
-  DRAW_OVERWRITE: "DRAW_OVERWRITE",
-  DELETE_FROM_ACTIVE_CELL: "DELETE_FROM_ACTIVE_CELL",
-  DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
+  DELETE: "DELETE",
 };
 export type ContourMode = $Keys<typeof ContourModeEnum>;
 

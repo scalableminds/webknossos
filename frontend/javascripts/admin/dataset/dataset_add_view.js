@@ -56,8 +56,8 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   const handleDatasetAdded = (
     organization: string,
     datasetName: string,
-    needsConversion?: boolean,
-    scale?: Vector3,
+    needsConversion: ?boolean,
+    scale: ?Vector3,
   ) => {
     if (needsConversion && scale) {
       startJob(datasetName, organization, scale);

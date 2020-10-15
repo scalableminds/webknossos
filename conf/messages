@@ -288,5 +288,6 @@ initialData.notEnabled=Initial Data Insertion is not enabled in the configuratio
 initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
 
 job.notFound = Job with id {0} could not be found.
+job.couldNotRunCubing = Failed to start WKW conversion job.
 
 unexpectedReturn=Unexpected return of parameters

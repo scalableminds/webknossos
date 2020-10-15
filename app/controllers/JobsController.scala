@@ -130,7 +130,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
         "kwargs" -> Json
           .obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> "11.24,11.24,25"))
 
-      job <- jobService.runJob(command, commandArgs, request.identity)
+      job <- jobService.runJob(command, commandArgs, request.identity) ?~> "jobs.couldNotRunCubing"
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

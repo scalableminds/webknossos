@@ -15,8 +15,12 @@ const eliminateErrors = (instance: Object, errors: Array<*>, defaults: Object) =
     } else if (error.name === "additionalProperties") {
       delete instance[error.argument];
     } else {
-      const [invalidFieldName] = error.property.split(".").slice(-1);
-      instance[invalidFieldName] = defaults[invalidFieldName];
+      const invalidFieldName = error.property.split(".")[1];
+      if (defaults[invalidFieldName] === null) {
+        delete instance[invalidFieldName];
+      } else {
+        instance[invalidFieldName] = defaults[invalidFieldName];
+      }
     }
   });
 };

@@ -14,8 +14,8 @@ import {
   UNDO_HISTORY_SIZE,
   maximumActionCountPerSave,
 } from "oxalis/model/sagas/save_saga_constants";
-import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry } from "oxalis/store";
-import { type UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { Tracing, SkeletonTracing, Flycam, SaveQueueEntry, CameraData } from "oxalis/store";
+import { type UpdateAction, updateTdCamera } from "oxalis/model/sagas/update_actions";
 import {
   VolumeTracingSaveRelevantActions,
   type AddBucketToUndoAction,
@@ -41,6 +41,7 @@ import {
   setTracingAction,
   centerActiveNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
@@ -460,6 +461,8 @@ export function performDiffTracing(
   tracing: Tracing,
   prevFlycam: Flycam,
   flycam: Flycam,
+  prevTdCamera: CameraData,
+  tdCamera: CameraData,
 ): Array<UpdateAction> {
   let actions = [];
   if (tracingType === "skeleton" && tracing.skeleton != null && prevTracing.skeleton != null) {
@@ -474,12 +477,28 @@ export function performDiffTracing(
     );
   }
 
+  if (prevTdCamera !== tdCamera) {
+    actions = actions.concat(updateTdCamera());
+  }
+
   return actions;
 }
 
 export function* saveTracingAsync(): Saga<void> {
   yield _all([_call(saveTracingTypeAsync, "skeleton"), _call(saveTracingTypeAsync, "volume")]);
 }
+
+const saveRelevantActionsForSkeleton = [
+  ...SkeletonTracingSaveRelevantActions,
+  ...FlycamActions,
+  ...ViewModeSaveRelevantActions,
+  "SET_TRACING",
+];
+const saveRelevantActionsForVolume = [
+  ...VolumeTracingSaveRelevantActions,
+  ...FlycamActions,
+  ...ViewModeSaveRelevantActions,
+];
 
 export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<void> {
   yield* take(
@@ -488,6 +507,7 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   let prevTracing = yield* select(state => state.tracing);
   let prevFlycam = yield* select(state => state.flycam);
+  let prevTdCamera = yield* select(state => state.viewModeData.plane.tdCamera);
 
   yield* take("WK_READY");
   const initialAllowUpdate = yield* select(
@@ -500,9 +520,9 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
   while (true) {
     if (tracingType === "skeleton") {
-      yield* take([...SkeletonTracingSaveRelevantActions, ...FlycamActions, "SET_TRACING"]);
+      console.log(yield* take(saveRelevantActionsForSkeleton));
     } else {
-      yield* take([...VolumeTracingSaveRelevantActions, ...FlycamActions]);
+      console.log(yield* take(saveRelevantActionsForVolume));
     }
     // The allowUpdate setting could have changed in the meantime
     const allowUpdate = yield* select(
@@ -515,10 +535,20 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
 
     const tracing = yield* select(state => state.tracing);
     const flycam = yield* select(state => state.flycam);
+    const tdCamera = yield* select(state => state.viewModeData.plane.tdCamera);
     const items = compactUpdateActions(
       // $FlowFixMe[incompatible-call] Should be resolved when we improve the typing of sagas in general
       Array.from(
-        yield* call(performDiffTracing, tracingType, prevTracing, tracing, prevFlycam, flycam),
+        yield* call(
+          performDiffTracing,
+          tracingType,
+          prevTracing,
+          tracing,
+          prevFlycam,
+          flycam,
+          prevTdCamera,
+          tdCamera,
+        ),
       ),
       tracing,
     );
@@ -527,5 +557,6 @@ export function* saveTracingTypeAsync(tracingType: "skeleton" | "volume"): Saga<
     }
     prevTracing = tracing;
     prevFlycam = flycam;
+    prevTdCamera = tdCamera;
   }
 }

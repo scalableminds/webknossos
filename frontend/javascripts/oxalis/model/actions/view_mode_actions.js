@@ -113,4 +113,13 @@ export type ViewModeAction =
   | SetInputCatcherRect
   | SetInputCatcherRects;
 
+export const ViewModeSaveRelevantActions = [
+  // TODO: This action is executed by the code very often, but also when rotating. Maybe trigger an extra
+  // action for the rotation and add it here, to find out whether the user triggered an action or the code.
+  // "SET_TD_CAMERA",
+  "CENTER_TD_VIEW",
+  "ZOOM_TD_VIEW",
+  "MOVE_TD_VIEW_BY_VECTOR",
+];
+
 export default {};

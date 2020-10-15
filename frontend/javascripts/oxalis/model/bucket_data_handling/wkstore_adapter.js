@@ -10,6 +10,7 @@ import {
   isSegmentationLayer,
   getByteCountFromLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import ErrorHandling from "libs/error_handling";
 import { parseAsMaybe } from "libs/utils";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
@@ -17,7 +18,6 @@ import ByteArrayToLz4Base64Worker from "oxalis/workers/byte_array_to_lz4_base64.
 import DecodeFourBitWorker from "oxalis/workers/decode_four_bit.worker";
 import Request from "libs/request";
 import Store, { type DataLayerType } from "oxalis/store";
-import Toast from "libs/toast";
 import constants, { type Vector3, type Vector4 } from "oxalis/constants";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);
@@ -171,22 +171,19 @@ export async function requestFromStore(
     const errorMessage = `Requesting data from layer "${
       layerInfo.name
     }" failed. Some rendered areas might remain empty. Retrying...`;
-    let detailedError =
+    const detailedError =
       errorResponse.status != null
-        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}".`
+        ? `Status code ${errorResponse.status} - "${errorResponse.statusText}" - URL: ${
+            errorResponse.url
+          }.`
         : errorResponse.message;
 
-    detailedError += `(URL: ${dataUrl})`;
     console.error(`${errorMessage} ${detailedError}`);
     console.error(errorResponse);
-    Toast.warning(
-      errorMessage,
-      {
-        key: errorMessage,
-        sticky: false,
-      },
+    ErrorHandling.notify(new Error(errorMessage), {
       detailedError,
-    );
+      isOnline: window.navigator.onLine,
+    });
     return batch.map(_val => null);
   }
 }

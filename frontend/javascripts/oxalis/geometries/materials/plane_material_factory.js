@@ -309,7 +309,7 @@ class PlaneMaterialFactory {
 
     shaderEditor.addMaterial(this.shaderId, this.material);
 
-    this.material.setGlobalPosition = ([x, y, z]) => {
+    this.material.setGlobalPosition = (x, y, z) => {
       this.uniforms.globalPosition.value.set(x, y, z);
     };
 

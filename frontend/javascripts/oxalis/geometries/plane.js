@@ -7,7 +7,6 @@ import * as THREE from "three";
 import _ from "lodash";
 
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -31,10 +30,12 @@ class Plane {
   baseScaleVector: typeof THREE.Vector3;
   crosshair: Array<typeof THREE.LineSegments>;
   TDViewBorders: typeof THREE.Line;
+  lastScaleFactors: [number, number];
 
   constructor(planeID: OrthoView) {
     this.planeID = planeID;
     this.displayCrosshair = true;
+    this.lastScaleFactors = [-1, -1];
 
     // VIEWPORT_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
@@ -132,6 +133,13 @@ class Plane {
   }
 
   setScale(xFactor: number, yFactor: number): void {
+    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
+      this.lastScaleFactors[0] = xFactor;
+      this.lastScaleFactors[1] = yFactor;
+    } else {
+      return;
+    }
+
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
       this.baseScaleVector,
@@ -148,14 +156,26 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: typeof THREE.Vector3): void => {
-    this.TDViewBorders.position.copy(posVec);
-    this.crosshair[0].position.copy(posVec);
-    this.crosshair[1].position.copy(posVec);
-    this.plane.position.copy(posVec);
+  // In case the plane's position was offset to make geometries
+  // on the plane visible (by moving the plane to the back), one can
+  // additionall pass the originalPosition (which is necessary for the
+  // shader)
+  setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
+    const [x, y, z] = pos;
+    this.TDViewBorders.position.set(x, y, z);
+    this.crosshair[0].position.set(x, y, z);
+    this.crosshair[1].position.set(x, y, z);
+    this.plane.position.set(x, y, z);
 
-    const globalPosition = getPosition(Store.getState().flycam);
-    this.plane.material.setGlobalPosition(globalPosition);
+    if (originalPosition == null) {
+      this.plane.material.setGlobalPosition(x, y, z);
+    } else {
+      this.plane.material.setGlobalPosition(
+        originalPosition[0],
+        originalPosition[1],
+        originalPosition[2],
+      );
+    }
   };
 
   setVisible = (visible: boolean): void => {

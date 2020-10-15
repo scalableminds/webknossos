@@ -99,6 +99,7 @@ export const VolumeToolEnum = {
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };
+export const ToolsWithOverwriteCapabilities = [VolumeToolEnum.TRACE, VolumeToolEnum.BRUSH];
 export type VolumeTool = $Keys<typeof VolumeToolEnum>;
 
 export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
@@ -113,6 +114,13 @@ export const ContourModeEnum = {
   DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
 };
 export type ContourMode = $Keys<typeof ContourModeEnum>;
+
+export const OverwriteModeEnum = {
+  OVERWRITE_ALL: "OVERWRITE_ALL",
+  OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
+};
+
+export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
 
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;

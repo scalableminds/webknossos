@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import { VolumeToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -19,6 +19,7 @@ import {
   updateDirectionReducer,
   addToLayerReducer,
   resetContourReducer,
+  setOverwriteModeModeReducer,
   hideBrushReducer,
   setContourTracingModeReducer,
   removeFallbackLayerReducer,
@@ -40,6 +41,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         activeCellId: 0,
         lastCentroid: null,
         contourTracingMode: ContourModeEnum.IDLE,
+        overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
         contourList: [],
         maxCellId,
         cells: {},
@@ -105,6 +107,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
 
         case "SET_CONTOUR_TRACING_MODE": {
           return setContourTracingModeReducer(state, action.mode);
+        }
+
+        case "SET_OVERWRITE_MODE": {
+          return setOverwriteModeModeReducer(state, action.mode);
         }
 
         case "REMOVE_FALLBACK_LAYER": {

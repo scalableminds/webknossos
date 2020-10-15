@@ -3,16 +3,27 @@ import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
 
-import { type VolumeTool, VolumeToolEnum } from "oxalis/constants";
+import {
+  ToolsWithOverwriteCapabilities,
+  type VolumeTool,
+  VolumeToolEnum,
+  type OverwriteMode,
+  OverwriteModeEnum,
+} from "oxalis/constants";
 import { document } from "libs/window";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  setToolAction,
+  createCellAction,
+  setOverwriteModeAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Store, { type OxalisState, type Mapping } from "oxalis/store";
 import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 
 import { useState, useEffect } from "react";
 
+// Source: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
 export function useKeyPress(targetKey: string) {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
@@ -69,6 +80,18 @@ function adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed
   return activeTool;
 }
 
+function adaptOverwriteModeToShortcut(overwriteMode, isControlPressed) {
+  if (!isControlPressed) {
+    return overwriteMode;
+  }
+
+  if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
+    return OverwriteModeEnum.OVERWRITE_EMPTY;
+  } else {
+    return OverwriteModeEnum.OVERWRITE_ALL;
+  }
+}
+
 // Workaround until github.com/facebook/flow/issues/1113 is fixed
 const RadioGroup = Radio.Group;
 const RadioButton = Radio.Button;
@@ -103,6 +126,46 @@ const handleCreateCell = () => {
   Store.dispatch(createCellAction());
 };
 
+const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => {
+  Store.dispatch(setOverwriteModeAction(event.target.value));
+};
+
+function OverwriteModeSwitch({ isControlPressed }) {
+  const overwriteMode = useSelector(state => enforceVolumeTracing(state.tracing).overwriteMode);
+  const adaptedOverwriteMode = adaptOverwriteModeToShortcut(overwriteMode, isControlPressed);
+
+  return (
+    <RadioGroup value={adaptedOverwriteMode} onChange={handleSetOverwriteMode}>
+      <RadioButton style={narrowButtonStyle} value={OverwriteModeEnum.OVERWRITE_ALL}>
+        <svg
+          style={{ verticalAlign: "middle" }}
+          width="19"
+          height="15"
+          viewBox="0 0 24 16"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="7.75" cy="7.75" r="7.5" stroke="#C7C7C7" stroke-width="0.75" />
+          <circle cx="16.25" cy="7.75" r="7.25" fill="#f1f1f1" stroke="#f1f1f1" />
+        </svg>
+      </RadioButton>
+      <RadioButton style={narrowButtonStyle} value={OverwriteModeEnum.OVERWRITE_EMPTY}>
+        <svg
+          style={{ verticalAlign: "middle" }}
+          width="19"
+          height="15"
+          viewBox="0 0 23 16"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="15.25" cy="7.75" r="7.25" fill="#f1f1f1" stroke="#f1f1f1" />
+          <circle cx="7.75" cy="7.75" r="7.5" fill="#3A3D48" stroke="#C7C7C7" stroke-width="0.75" />
+        </svg>
+      </RadioButton>
+    </RadioGroup>
+  );
+}
+
 export default function VolumeActionsView() {
   const activeTool = useSelector(state => enforceVolumeTracing(state.tracing).activeTool);
   const activeCellId = useSelector(state => enforceVolumeTracing(state.tracing).activeCellId);
@@ -122,7 +185,7 @@ export default function VolumeActionsView() {
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
 
-  const activeToolWithShortcut = adaptActiveToolToShortcuts(
+  const adaptedActiveTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
     isControlPressed,
@@ -134,11 +197,7 @@ export default function VolumeActionsView() {
         if (document.activeElement) document.activeElement.blur();
       }}
     >
-      <RadioGroup
-        onChange={handleSetTool}
-        value={activeToolWithShortcut}
-        style={{ marginRight: 10 }}
-      >
+      <RadioGroup onChange={handleSetTool} value={adaptedActiveTool} style={{ marginRight: 10 }}>
         <RadioButton style={narrowButtonStyle} value={VolumeToolEnum.MOVE}>
           <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
         </RadioButton>
@@ -199,45 +258,13 @@ export default function VolumeActionsView() {
         </Tooltip>
       </RadioGroup>
 
-      <RadioGroup value="overwrite-all">
-        <RadioButton style={narrowButtonStyle} value="overwrite-all">
-          <svg
-            style={{ verticalAlign: "middle" }}
-            width="19"
-            height="15"
-            viewBox="0 0 24 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="7.75" cy="7.75" r="7.5" stroke="#C7C7C7" stroke-width="0.75" />
-            <circle cx="16.25" cy="7.75" r="7.25" fill="#f1f1f1" stroke="#f1f1f1" />
-          </svg>
-        </RadioButton>
-        <RadioButton style={narrowButtonStyle} value="overwrite">
-          <svg
-            style={{ verticalAlign: "middle" }}
-            width="19"
-            height="15"
-            viewBox="0 0 23 16"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="15.25" cy="7.75" r="7.25" fill="#f1f1f1" stroke="#f1f1f1" />
-            <circle
-              cx="7.75"
-              cy="7.75"
-              r="7.5"
-              fill="#3A3D48"
-              stroke="#C7C7C7"
-              stroke-width="0.75"
-            />
-          </svg>
-        </RadioButton>
-      </RadioGroup>
+      {ToolsWithOverwriteCapabilities.includes(adaptedActiveTool) ? (
+        <OverwriteModeSwitch isControlPressed={isControlPressed} />
+      ) : null}
 
       <ButtonGroup style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
-          <ButtonComponent onClick={handleCreateCell}>
+          <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
             <svg
               style={{ verticalAlign: "middle" }}
               width="16"

@@ -112,7 +112,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     leftMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
-      Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
+      // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
@@ -139,9 +139,9 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
         if (event.ctrlKey) {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ANY_CELL));
-        } else {
           Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ACTIVE_CELL));
+        } else {
+          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ANY_CELL));
         }
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
@@ -150,11 +150,11 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     rightMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
-      Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
+      // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
-        Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
+        // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
       }
     },
 

@@ -179,7 +179,7 @@
 .ant-layout-header {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
-  @dark-border: #67687b;
+  @dark-border: #585868;
   @primary-border: #1890ff;
   @hover-border: #40a9ff;
 
@@ -193,6 +193,11 @@
 
     &:hover {
       border-color: @hover-border;
+      z-index: 1;
+    }
+
+    &:not(:first-child):hover::before {
+      background-color: @hover-border !important;
     }
 
     &.ant-btn-disabled,
@@ -215,6 +220,9 @@
   // Radio button
   .ant-radio-button-wrapper:first-child {
     border-left: 1px solid @dark-border;
+    &:hover {
+      border-left: 1px solid @hover-border;
+    }
   }
 
   .ant-radio-button-wrapper-checked,

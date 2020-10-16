@@ -2,6 +2,7 @@
 import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
 import React, { useState, useEffect, useRef } from "react";
+import memoizeOne from "memoize-one";
 
 import {
   ToolsWithOverwriteCapabilities,
@@ -133,12 +134,27 @@ function usePrevious(value) {
   return ref.current;
 }
 
+const RadioButtonWithTooltip = ({
+  title,
+  disabledTitle,
+  disabled,
+  ...props
+}: {
+  title: string,
+  disabledTitle?: string,
+  disabled?: boolean,
+}) => {
+  return (
+    <Tooltip title={disabled ? disabledTitle : title}>
+      {/* $FlowIgnore[cannot-spread-inexact]*/}
+      <RadioButton disabled={disabled} {...props} />
+    </Tooltip>
+  );
+};
+
 function OverwriteModeSwitch({ isControlPressed }) {
   const overwriteMode = useSelector(state => enforceVolumeTracing(state.tracing).overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
-  console.log("isControlPressed", isControlPressed);
-  console.log("previousIsControlPressed", previousIsControlPressed);
-  console.log("...");
   const didControlChange =
     previousIsControlPressed != null && isControlPressed !== previousIsControlPressed;
   useEffect(() => {
@@ -149,25 +165,26 @@ function OverwriteModeSwitch({ isControlPressed }) {
 
   return (
     <RadioGroup value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
-      <RadioButton style={narrowButtonStyle} value={OverwriteModeEnum.OVERWRITE_ALL}>
-        <img
-          src="/assets/images/overwrite-all.svg"
-          alt="Overwrite All Icon"
-          title="Overwrite everything. This setting can be toggled by holding CTRL."
-        />
-      </RadioButton>
-      <RadioButton style={narrowButtonStyle} value={OverwriteModeEnum.OVERWRITE_EMPTY}>
-        <img
-          src="/assets/images/overwrite-empty.svg"
-          alt="Overwrite Empty Icon"
-          title="Only overwrite empty areas. In case of deleting (via right-click), only the current cell ID is overwritten. This setting can be toggled by holding CTRL."
-        />
-      </RadioButton>
+      <RadioButtonWithTooltip
+        title="Overwrite everything. This setting can be toggled by holding CTRL."
+        style={narrowButtonStyle}
+        value={OverwriteModeEnum.OVERWRITE_ALL}
+      >
+        <img src="/assets/images/overwrite-all.svg" alt="Overwrite All Icon" />
+      </RadioButtonWithTooltip>
+      <RadioButtonWithTooltip
+        title="Only overwrite empty areas. In case of deleting (via right-click), only the current cell ID is overwritten. This setting can be toggled by holding CTRL."
+        style={narrowButtonStyle}
+        value={OverwriteModeEnum.OVERWRITE_EMPTY}
+      >
+        <img src="/assets/images/overwrite-empty.svg" alt="Overwrite Empty Icon" />
+      </RadioButtonWithTooltip>
     </RadioGroup>
   );
 }
 
 export default function VolumeActionsView() {
+  const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const activeTool = useSelector(state => enforceVolumeTracing(state.tracing).activeTool);
   const activeCellId = useSelector(state => enforceVolumeTracing(state.tracing).activeCellId);
   const isMappingEnabled = useSelector(
@@ -198,6 +215,13 @@ export default function VolumeActionsView() {
     isAltPressed,
   );
 
+  const disabledVolumeExplanation =
+    "Volume annotation is disabled while the merger mode is active.";
+
+  const moveToolDescription = `Pointer – Use left-click to move around${
+    hasSkeleton ? " and right-click to create new skeleton nodes" : ""
+  }.`;
+
   return (
     <div
       onClick={() => {
@@ -205,47 +229,58 @@ export default function VolumeActionsView() {
       }}
     >
       <RadioGroup onChange={handleSetTool} value={adaptedActiveTool}>
-        <RadioButton style={narrowButtonStyle} value={VolumeToolEnum.MOVE}>
-          <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
-        </RadioButton>
-        <Tooltip
-          title={
-            isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : ""
-          }
+        <RadioButtonWithTooltip
+          title={moveToolDescription}
+          disabledTitle=""
+          disabled={false}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.MOVE}
         >
-          <RadioButton
-            style={narrowButtonStyle}
-            value={VolumeToolEnum.TRACE}
-            disabled={isInMergerMode}
-          >
-            <img
-              src="/assets/images/lasso.svg"
-              alt="Trace Tool Icon"
-              style={{ opacity: isInMergerMode ? 0.5 : 1 }}
-            />
-          </RadioButton>
-          <RadioButton
-            style={narrowButtonStyle}
-            value={VolumeToolEnum.BRUSH}
-            disabled={isInMergerMode}
-          >
-            <i className="fas fa-paint-brush" />
-          </RadioButton>
-          <RadioButton
-            style={narrowButtonStyle}
-            value={VolumeToolEnum.FILL_CELL}
-            disabled={isInMergerMode}
-          >
-            <i className="fas fa-fill-drip" />
-          </RadioButton>
-          <RadioButton
-            style={narrowButtonStyle}
-            value={VolumeToolEnum.PICK_CELL}
-            disabled={isInMergerMode}
-          >
-            <i className="fas fa-eye-dropper" />
-          </RadioButton>
-        </Tooltip>
+          <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
+          title={"Trace – Draw outlines around the voxel you would like to label."}
+          disabledTitle={disabledVolumeExplanation}
+          disabled={isInMergerMode}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.TRACE}
+        >
+          <img
+            src="/assets/images/lasso.svg"
+            alt="Trace Tool Icon"
+            style={{ opacity: isInMergerMode ? 0.5 : 1 }}
+          />
+        </RadioButtonWithTooltip>
+
+        <RadioButtonWithTooltip
+          title={
+            "Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+          }
+          disabledTitle={disabledVolumeExplanation}
+          disabled={isInMergerMode}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.BRUSH}
+        >
+          <i className="fas fa-paint-brush" />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
+          title="Fill Tool – Flood-fill the clicked region."
+          disabledTitle={disabledVolumeExplanation}
+          disabled={isInMergerMode}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.FILL_CELL}
+        >
+          <i className="fas fa-fill-drip" />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
+          title="Cell Picker – Click on a voxel to make its cell id the active cell id."
+          disabledTitle={disabledVolumeExplanation}
+          disabled={isInMergerMode}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.PICK_CELL}
+        >
+          <i className="fas fa-eye-dropper" />
+        </RadioButtonWithTooltip>
       </RadioGroup>
 
       {ToolsWithOverwriteCapabilities.includes(adaptedActiveTool) ? (
@@ -254,13 +289,13 @@ export default function VolumeActionsView() {
 
       <ButtonGroup style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
-          <ButtonComponent
+          <RadioButtonWithTooltip
+            title="Create a new Cell ID"
             onClick={handleCreateCell}
             style={{ width: 36, paddingLeft: 10 }}
-            title="Create a new Cell ID"
           >
             <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
-          </ButtonComponent>
+          </RadioButtonWithTooltip>
         </Badge>
       </ButtonGroup>
     </div>

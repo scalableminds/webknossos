@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Checkbox, Icon, Input, Modal, Spin, Tooltip, Upload } from "antd";
+import { Button, Checkbox, Icon, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -23,6 +23,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 
 const ButtonGroup = Button.Group;
 
@@ -76,6 +77,8 @@ const mapStateToProps = (state: OxalisState) => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
   isHybrid: state.tracing.volume != null && state.tracing.skeleton != null,
+  isosurfaces: state.isosurfaces,
+  mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -131,6 +134,23 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   };
 
   render() {
+    const convertHSLAToCSSString = ([h, s, l, a]) =>
+      `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+
+    const convertCellIdToCSS = id =>
+      convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
+
+    const renderIsosurfaceListItem = (cellId: number) => (
+      <List.Item>
+        {" "}
+        <span
+          className="colored-circle"
+          style={{ backgroundColor: convertCellIdToCSS(cellId) }}
+        />{" "}
+        Segment {cellId}
+      </List.Item>
+    );
+
     return (
       <div className="padded-tab-content">
         <ButtonGroup style={{ marginBottom: 12 }}>
@@ -158,6 +178,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             </Tooltip>
           )}
         </ButtonGroup>
+        <List dataSource={this.props.isosurfaces} renderItem={renderIsosurfaceListItem} />
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}

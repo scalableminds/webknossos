@@ -420,27 +420,38 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
           mappings.map(sanitize(_)).toList)}', #${optionLiteral(
           s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
-          s.adminViewConfiguration.map(d => Json.toJson(d).toString))})"""
+          s.adminViewConfiguration.map(d => Json.toJson(d).toString))})
+          on conflict (_dataSet, name) do update set category = '#${s.category.toString}', elementClass = '#${s.elementClass.toString}',
+                     boundingBox = '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', largestSegmentId = ${s.largestSegmentId},
+                     mappings = '#${writeArrayTuple(mappings.map(sanitize(_)).toList)}',
+            defaultViewConfiguration = #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
       }
       case d: AbstractDataLayer => {
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
                      '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}', #${optionLiteral(
           d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
-          d.adminViewConfiguration.map(d => Json.toJson(d).toString))})"""
+          d.adminViewConfiguration.map(d => Json.toJson(d).toString))})
+          on conflict (_dataSet, name) do update set category = '#${d.category.toString}', elementClass = '#${d.elementClass.toString}',
+                     boundingBox = '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}',
+            defaultViewConfiguration = #${optionLiteral(d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
       }
       case _ => throw new Exception("DataLayer type mismatch")
     }
 
   def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery =
-      sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
-    val insertQueries = source.toUsable match {
-      case Some(usable) => usable.dataLayers.map(insertLayerQuery(_dataSet, _))
-      case None         => List()
+    def getSpecificClearQuery(dataLayers: List[DataLayer]) =
+      sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet} and name not in #${writeStructTupleWithQuotes(
+        dataLayers.map(d => sanitize(d.name)))}"
+    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
+
+    val queries = source.toUsable match {
+      case Some(usable) =>
+        getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(_dataSet, _))
+      case None => List(clearQuery)
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
+      _ <- run(DBIO.sequence(queries))
       _ <- dataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
     } yield ()
   }

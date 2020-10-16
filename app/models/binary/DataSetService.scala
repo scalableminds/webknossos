@@ -171,8 +171,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                   dataSource.hashCode,
                                                                   dataSource,
                                                                   dataSource.isUsable)(GlobalAccessContext)
-        // TODO should we preserve the adminViewConfiguration here?
-        _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
       } yield foundDataSet._id
 
   private def updateDataSourceDifferentDataStore(
@@ -193,7 +191,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                     dataSource.hashCode,
                                                                     dataSource,
                                                                     dataSource.isUsable)(GlobalAccessContext)
-          _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
         } yield Some(foundDataSet._id)
       } else {
         logger.info(

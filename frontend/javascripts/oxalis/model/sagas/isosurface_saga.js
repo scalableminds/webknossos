@@ -10,6 +10,7 @@ import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
+  addIsosurfaceAction,
   finishedRefreshingIsosurfacesAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
@@ -182,6 +183,7 @@ function* loadIsosurfaceWithNeighbors(
 ): Saga<void> {
   let isInitialRequest = true;
   let positionsToRequest = [clippedPosition];
+  yield* put(addIsosurfaceAction(segmentId));
   while (positionsToRequest.length > 0) {
     const position = positionsToRequest.shift();
     const neighbors = yield* call(

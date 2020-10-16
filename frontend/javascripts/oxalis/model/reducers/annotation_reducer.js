@@ -117,7 +117,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "ADD_ISOSURFACE": {
       const { cellId } = action;
-      const newIsosurfaceList = state.isosurfaces.filter(id => id !== cellId).push(cellId);
+      const newIsosurfaceList = state.isosurfaces.filter(id => id !== cellId);
+      newIsosurfaceList.push(cellId);
       return update(state, {
         isosurfaces: { $set: newIsosurfaceList },
       });

@@ -1,7 +1,7 @@
 // @flow
 import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import {
   ToolsWithOverwriteCapabilities,
@@ -54,8 +54,13 @@ export function useKeyPress(targetKey: string) {
   return keyPressed;
 }
 
-function adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed): VolumeTool {
-  if (!isShiftPressed && !isControlPressed) {
+function adaptActiveToolToShortcuts(
+  activeTool,
+  isShiftPressed,
+  isControlPressed,
+  isAltPressed,
+): VolumeTool {
+  if (!isShiftPressed && !isControlPressed && !isAltPressed) {
     // No modifier is pressed
     return activeTool;
   }
@@ -66,13 +71,19 @@ function adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed
     return activeTool;
   }
 
-  if (!isControlPressed) {
+  if (isShiftPressed && !isControlPressed && !isAltPressed) {
     // Only shift is pressed. Switch to the picker
     return VolumeToolEnum.PICK_CELL;
   }
 
-  if (isControlPressed && isShiftPressed) {
+  if (isControlPressed && isShiftPressed && !isAltPressed) {
+    // Control and shift invoke the fill cell tool
     return VolumeToolEnum.FILL_CELL;
+  }
+
+  if (isAltPressed) {
+    // Alt switches to the move tool
+    return VolumeToolEnum.MOVE;
   }
 
   return activeTool;
@@ -108,11 +119,33 @@ const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => 
   Store.dispatch(setOverwriteModeAction(event.target.value));
 };
 
+function usePrevious(value) {
+  // The ref object is a generic container whose current property is mutable ...
+  // ... and can hold any value, similar to an instance property on a class
+  const ref = useRef();
+
+  // Store current value in ref
+  useEffect(() => {
+    ref.current = value;
+  }, [value]); // Only re-run if value changes
+
+  // Return previous value (happens before update in useEffect above)
+  return ref.current;
+}
+
 function OverwriteModeSwitch({ isControlPressed }) {
   const overwriteMode = useSelector(state => enforceVolumeTracing(state.tracing).overwriteMode);
+  const previousIsControlPressed = usePrevious(isControlPressed);
+  console.log("isControlPressed", isControlPressed);
+  console.log("previousIsControlPressed", previousIsControlPressed);
+  console.log("...");
+  const didControlChange =
+    previousIsControlPressed != null && isControlPressed !== previousIsControlPressed;
   useEffect(() => {
-    Store.dispatch(setOverwriteModeAction(toggleOverwriteMode(overwriteMode)));
-  }, [isControlPressed]);
+    if (didControlChange) {
+      Store.dispatch(setOverwriteModeAction(toggleOverwriteMode(overwriteMode)));
+    }
+  }, [didControlChange]);
 
   return (
     <RadioGroup value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
@@ -153,6 +186,7 @@ export default function VolumeActionsView() {
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
+  const isAltPressed = useKeyPress("Alt");
 
   const customColors = isMappingEnabled ? mappingColors : null;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
@@ -161,6 +195,7 @@ export default function VolumeActionsView() {
     activeTool,
     isShiftPressed,
     isControlPressed,
+    isAltPressed,
   );
 
   return (

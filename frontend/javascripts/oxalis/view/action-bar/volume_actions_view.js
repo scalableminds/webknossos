@@ -220,6 +220,15 @@ export default function VolumeActionsView() {
           </Tooltip>
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
+          title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+          disabledTitle={disabledVolumeExplanation}
+          disabled={isInMergerMode}
+          style={narrowButtonStyle}
+          value={VolumeToolEnum.BRUSH}
+        >
+          <i className="fas fa-paint-brush" />
+        </RadioButtonWithTooltip>
+        <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."
           disabledTitle={disabledVolumeExplanation}
           disabled={isInMergerMode}
@@ -229,18 +238,9 @@ export default function VolumeActionsView() {
           <img
             src="/assets/images/lasso.svg"
             alt="Trace Tool Icon"
+            className="svg-gray-to-highlighted-blue"
             style={{ opacity: isInMergerMode ? 0.5 : 1 }}
           />
-        </RadioButtonWithTooltip>
-
-        <RadioButtonWithTooltip
-          title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-          disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode}
-          style={narrowButtonStyle}
-          value={VolumeToolEnum.BRUSH}
-        >
-          <i className="fas fa-paint-brush" />
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Fill Tool – Flood-fill the clicked region."

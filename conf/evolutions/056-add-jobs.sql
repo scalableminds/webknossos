@@ -8,6 +8,7 @@ CREATE TABLE webknossos.jobs(
   command TEXT NOT NULL,
   commandArgs JSONB NOT NULL,
   celeryJobId CHAR(36) NOT NULL,
+  celeryInfo JSONB NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

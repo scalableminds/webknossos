@@ -24,6 +24,7 @@ case class Job(
     command: String,
     commandArgs: JsObject = Json.obj(),
     celeryJobId: String,
+    celeryInfo: JsObject = Json.obj(),
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -42,6 +43,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.command,
           Json.parse(r.commandargs).as[JsObject],
           r.celeryjobid,
+          Json.parse(r.celeryinfo).as[JsObject],
           r.created.getTime,
           r.isdeleted)
     )
@@ -57,8 +59,8 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(j: Job)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, celeryJobId, created, isDeleted)
-                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}', ${j.celeryJobId}, ${new java.sql.Timestamp(
+      _ <- run(sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, celeryJobId, celeryInfo, created, isDeleted)
+                         values(${j._id}, ${j._owner}, ${j.command}, '#${sanitize(j.commandArgs.toString)}', ${j.celeryJobId}, '#${sanitize(j.celeryInfo.toString)}', ${new java.sql.Timestamp(
         j.created)}, ${j.isDeleted})""")
     } yield ()
 

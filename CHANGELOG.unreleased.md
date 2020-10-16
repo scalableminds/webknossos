@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Hybrid tracings can now be imported directly in the tracing view via drag'n'drop. [#4837](https://github.com/scalableminds/webknossos/pull/4837)
 - The find data function now works for volume tracings, too. [#4847](https://github.com/scalableminds/webknossos/pull/4847)
 - Added admins and dataset managers to dataset access list, as they can access all datasets of the organization. [#4862](https://github.com/scalableminds/webknossos/pull/4862)
+- Added the possibility to move the current position by dragging with the middle-mouse-button. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 
 ### Changed
 - Brush circles are now connected with rectangles to provide a continuous stroke even if the brush is moved quickly. [#4785](https://github.com/scalableminds/webknossos/pull/4822)
@@ -21,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - webknossos.org only: Accounts associated with new organizations can now be created even when a datastore is unreachable. The necessary folders are created lazily when needed. [#4846](https://github.com/scalableminds/webknossos/pull/4846)
 - When downloading a volume tracing, buckets containing a single 0 byte, that were created to restore older versions, are now skipped. [#4851](https://github.com/scalableminds/webknossos/pull/4851)
 - Task information CSV now contains additional column `creationInfo`, containing the original NML filename for tasks based on existing NMLs. [#4866](https://github.com/scalableminds/webknossos/pull/4866)
+- Improved the toolbar to make the different webKnossos tools easier to use. For example, the fill-tool and the cell-picker have a dedicated button in volume annotations now. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 
 ### Fixed
 - Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)

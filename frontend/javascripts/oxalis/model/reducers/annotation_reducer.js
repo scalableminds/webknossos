@@ -107,10 +107,19 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "tracing", { meshes: newMeshes });
     }
 
-    case "UPDATE_ISOSURFACE_LIST": {
-      const { segmentIdList } = action;
+    case "REMOVE_ISOSURFACE": {
+      const { cellId } = action;
+      const newIsosurfaceList = state.isosurfaces.filter(id => id !== cellId);
       return update(state, {
-        isosurfaces: { $set: segmentIdList },
+        isosurfaces: { $set: newIsosurfaceList },
+      });
+    }
+
+    case "ADD_ISOSURFACE": {
+      const { cellId } = action;
+      const newIsosurfaceList = state.isosurfaces.filter(id => id !== cellId).push(cellId);
+      return update(state, {
+        isosurfaces: { $set: newIsosurfaceList },
       });
     }
 

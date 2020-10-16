@@ -93,9 +93,9 @@ export type RemoveIsosurfaceAction = {
   cellId: number,
 };
 
-export type UpdateIsosurfaceListAction = {
-  type: "UPDATE_ISOSURFACE_LIST",
-  segmentIdList: Array<number>,
+export type AddIsosurfaceAction = {
+  type: "ADD_ISOSURFACE",
+  cellId: number,
 };
 
 export type AnnotationActionTypes =
@@ -116,7 +116,7 @@ export type AnnotationActionTypes =
   | FinishedRefreshingIsosurfacesAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
-  | UpdateIsosurfaceListAction;
+  | AddIsosurfaceAction;
 
 export const initializeAnnotationAction = (
   annotation: APIAnnotation,
@@ -228,7 +228,7 @@ export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction =
   cellId,
 });
 
-export const addIsosurfaceAction = (segmentIdList: Array<number>): UpdateIsosurfaceListAction => ({
-  type: "UPDATE_ISOSURFACE_LIST",
-  segmentIdList,
+export const addIsosurfaceAction = (cellId: number): AddIsosurfaceAction => ({
+  type: "ADD_ISOSURFACE",
+  cellId,
 });

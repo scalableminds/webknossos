@@ -463,6 +463,7 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
+  +isosurfaces: Array<number>,
 |};
 
 const sagaMiddleware = createSagaMiddleware();

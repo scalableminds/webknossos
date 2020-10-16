@@ -205,6 +205,7 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
   },
+  isosurfaces: [],
 };
 
 export default defaultState;

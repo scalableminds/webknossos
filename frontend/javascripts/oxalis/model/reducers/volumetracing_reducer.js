@@ -40,7 +40,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         type: "volume",
         activeCellId: 0,
         lastCentroid: null,
-        contourTracingMode: ContourModeEnum.IDLE,
+        contourTracingMode: ContourModeEnum.DRAW,
         overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
         contourList: [],
         maxCellId,

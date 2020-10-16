@@ -106,9 +106,6 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
     leftMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
-
-      // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
-
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
       }
@@ -140,11 +137,8 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     rightMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
-      // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
-
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
-        // Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
       }
     },
 

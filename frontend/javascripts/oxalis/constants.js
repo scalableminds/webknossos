@@ -107,7 +107,6 @@ export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
 }
 
 export const ContourModeEnum = {
-  IDLE: "IDLE",
   DRAW: "DRAW",
   DELETE: "DELETE",
 };

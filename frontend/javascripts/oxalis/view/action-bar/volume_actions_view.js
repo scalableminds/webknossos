@@ -1,8 +1,8 @@
 // @flow
 import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
-import React, { useState, useEffect, useRef } from "react";
-import memoizeOne from "memoize-one";
+import React, { useEffect } from "react";
+import { usePrevious, useKeyPress } from "libs/react_hooks";
 
 import {
   ToolsWithOverwriteCapabilities,
@@ -21,39 +21,6 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import Store from "oxalis/store";
 import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
-
-// Source: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: string) {
-  // State for keeping track of whether key is pressed
-  const [keyPressed, setKeyPressed] = useState(false);
-
-  // If pressed key is our target key then set to true
-  function downHandler({ key }) {
-    if (key === targetKey) {
-      setKeyPressed(true);
-    }
-  }
-
-  // If released key is our target key then set to false
-  const upHandler = ({ key }) => {
-    if (key === targetKey) {
-      setKeyPressed(false);
-    }
-  };
-
-  // Add event listeners
-  useEffect(() => {
-    window.addEventListener("keydown", downHandler);
-    window.addEventListener("keyup", upHandler);
-    // Remove event listeners on cleanup
-    return () => {
-      window.removeEventListener("keydown", downHandler);
-      window.removeEventListener("keyup", upHandler);
-    };
-  }, []); // Empty array ensures that effect is only run on mount and unmount
-
-  return keyPressed;
-}
 
 function adaptActiveToolToShortcuts(
   activeTool,
@@ -98,11 +65,6 @@ function toggleOverwriteMode(overwriteMode) {
   }
 }
 
-// Workaround until github.com/facebook/flow/issues/1113 is fixed
-const RadioGroup = Radio.Group;
-const RadioButton = Radio.Button;
-const ButtonGroup = Button.Group;
-
 const narrowButtonStyle = {
   paddingLeft: 10,
   width: 38,
@@ -120,20 +82,6 @@ const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => 
   Store.dispatch(setOverwriteModeAction(event.target.value));
 };
 
-function usePrevious(value) {
-  // The ref object is a generic container whose current property is mutable ...
-  // ... and can hold any value, similar to an instance property on a class
-  const ref = useRef();
-
-  // Store current value in ref
-  useEffect(() => {
-    ref.current = value;
-  }, [value]); // Only re-run if value changes
-
-  // Return previous value (happens before update in useEffect above)
-  return ref.current;
-}
-
 const RadioButtonWithTooltip = ({
   title,
   disabledTitle,
@@ -143,14 +91,12 @@ const RadioButtonWithTooltip = ({
   title: string,
   disabledTitle?: string,
   disabled?: boolean,
-}) => {
-  return (
-    <Tooltip title={disabled ? disabledTitle : title}>
-      {/* $FlowIgnore[cannot-spread-inexact]*/}
-      <RadioButton disabled={disabled} {...props} />
-    </Tooltip>
-  );
-};
+}) => (
+  <Tooltip title={disabled ? disabledTitle : title}>
+    {/* $FlowIgnore[cannot-spread-inexact] */}
+    <Radio.Button disabled={disabled} {...props} />
+  </Tooltip>
+);
 
 function OverwriteModeSwitch({ isControlPressed }) {
   const overwriteMode = useSelector(state => enforceVolumeTracing(state.tracing).overwriteMode);
@@ -164,7 +110,7 @@ function OverwriteModeSwitch({ isControlPressed }) {
   }, [didControlChange]);
 
   return (
-    <RadioGroup value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
+    <Radio.Group value={overwriteMode} onChange={handleSetOverwriteMode} style={{ marginLeft: 10 }}>
       <RadioButtonWithTooltip
         title="Overwrite everything. This setting can be toggled by holding CTRL."
         style={narrowButtonStyle}
@@ -179,7 +125,7 @@ function OverwriteModeSwitch({ isControlPressed }) {
       >
         <img src="/assets/images/overwrite-empty.svg" alt="Overwrite Empty Icon" />
       </RadioButtonWithTooltip>
-    </RadioGroup>
+    </Radio.Group>
   );
 }
 
@@ -228,7 +174,7 @@ export default function VolumeActionsView() {
         if (document.activeElement) document.activeElement.blur();
       }}
     >
-      <RadioGroup onChange={handleSetTool} value={adaptedActiveTool}>
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         <RadioButtonWithTooltip
           title={moveToolDescription}
           disabledTitle=""
@@ -239,7 +185,7 @@ export default function VolumeActionsView() {
           <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
-          title={"Trace – Draw outlines around the voxel you would like to label."}
+          title="Trace – Draw outlines around the voxel you would like to label."
           disabledTitle={disabledVolumeExplanation}
           disabled={isInMergerMode}
           style={narrowButtonStyle}
@@ -253,9 +199,7 @@ export default function VolumeActionsView() {
         </RadioButtonWithTooltip>
 
         <RadioButtonWithTooltip
-          title={
-            "Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-          }
+          title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
           disabledTitle={disabledVolumeExplanation}
           disabled={isInMergerMode}
           style={narrowButtonStyle}
@@ -281,23 +225,21 @@ export default function VolumeActionsView() {
         >
           <i className="fas fa-eye-dropper" />
         </RadioButtonWithTooltip>
-      </RadioGroup>
+      </Radio.Group>
 
       {ToolsWithOverwriteCapabilities.includes(adaptedActiveTool) ? (
         <OverwriteModeSwitch isControlPressed={isControlPressed} />
       ) : null}
 
-      <ButtonGroup style={{ marginLeft: 12 }}>
+      <Button.Group style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
-          <RadioButtonWithTooltip
-            title="Create a new Cell ID"
-            onClick={handleCreateCell}
-            style={{ width: 36, paddingLeft: 10 }}
-          >
-            <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
-          </RadioButtonWithTooltip>
+          <Tooltip title={`Create a new Cell ID – The currently active cell id is ${activeCellId}`}>
+            <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
+              <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
+            </ButtonComponent>
+          </Tooltip>
         </Badge>
-      </ButtonGroup>
+      </Button.Group>
     </div>
   );
 }

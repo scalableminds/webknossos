@@ -22,6 +22,34 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Store from "oxalis/store";
 import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 
+function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
+  if (activeTool !== VolumeToolEnum.MOVE) {
+    return null;
+  }
+
+  if (!isShiftPressed && !isControlPressed && !isAltPressed) {
+    return null;
+  }
+
+  if (isShiftPressed && !isControlPressed && !isAltPressed) {
+    return "Click to select a node.";
+  }
+
+  if (!isShiftPressed && isControlPressed && !isAltPressed) {
+    return "Drag to move the selected node. Right-click to create a new node without selecting it.";
+  }
+
+  if (isShiftPressed && !isControlPressed && isAltPressed) {
+    return "Click on a node to create an edge to the currently active node.";
+  }
+
+  if (isShiftPressed && isControlPressed && !isAltPressed) {
+    return "Click on a node to delete the edge to the currently active node.";
+  }
+
+  return null;
+}
+
 function adaptActiveToolToShortcuts(
   activeTool,
   isShiftPressed,
@@ -161,6 +189,11 @@ export default function VolumeActionsView() {
     isAltPressed,
   );
 
+  const moveToolHint = hasSkeleton
+    ? getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
+    : null;
+  const previousMoveToolHint = usePrevious(moveToolHint);
+
   const disabledVolumeExplanation =
     "Volume annotation is disabled while the merger mode is active.";
 
@@ -182,7 +215,9 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.MOVE}
         >
-          <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+          <Tooltip title={moveToolHint || previousMoveToolHint} visible={moveToolHint != null}>
+            <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
+          </Tooltip>
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."

@@ -25,13 +25,19 @@ export function useKeyPress(targetKey: string) {
   function downHandler({ key }) {
     if (key === targetKey) {
       setKeyPressed(true);
+      window.addEventListener("blur", releaseKey);
     }
+  }
+
+  function releaseKey() {
+    setKeyPressed(false);
+    window.removeEventListener("blur", releaseKey);
   }
 
   // If released key is our target key then set to false
   const upHandler = ({ key }) => {
     if (key === targetKey) {
-      setKeyPressed(false);
+      releaseKey();
     }
   };
 

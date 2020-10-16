@@ -90,6 +90,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Features {
     val isDemoInstance = get[Boolean]("features.isDemoInstance")
+    val jobsEnabled = get[Boolean]("features.jobsEnabled")
     val taskReopenAllowed = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets = get[Boolean]("features.allowDeleteDatasets")
   }

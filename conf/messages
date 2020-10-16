@@ -289,5 +289,6 @@ initialData.organizationsNotEmpty=There are already organizations present in the
 
 job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
+job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 
 unexpectedReturn=Unexpected return of parameters

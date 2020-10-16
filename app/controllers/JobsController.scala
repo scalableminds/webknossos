@@ -90,6 +90,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
 
   def runJob(command: String, commandArgs: JsObject, owner: User)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
+      _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
       result <- rpc(s"${wkConf.Jobs.Flower.uri}/api/task/async-apply/tasks.$command")
         .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
         .postWithJsonResponse[JsValue, Map[String, JsValue]](commandArgs)
@@ -120,19 +121,20 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runCubingJob(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
-    for {
-      organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                   organizationName)
-      _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
-      command = "tiff_cubing"
-      commandArgs = Json.obj(
-        "kwargs" -> Json
-          .obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> "11.24,11.24,25"))
+  def runCubingJob(organizationName: String, dataSetName: String, scale: String) = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                     organizationName)
+        _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
+        command = "tiff_cubing"
+        commandArgs = Json.obj(
+          "kwargs" -> Json
+            .obj("organization_name" -> organizationName, "dataset_name" -> dataSetName, "scale" -> scale))
 
-      job <- jobService.runJob(command, commandArgs, request.identity) ?~> "jobs.couldNotRunCubing"
-      js <- jobService.publicWrites(job)
-    } yield Ok(js)
+        job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
+        js <- jobService.publicWrites(job)
+      } yield Ok(js)
   }
 
 }

@@ -122,6 +122,7 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 There are two ways to set default View Configuration Settings:
 - inside the `datasource_properties.json`
 - in the `Edit View` for Datasets
+
 The View Configuration from the `Edit View` takes precedence over the `datasource_properties.json`.
 You don't have to set complete View Configurations in neither option, as webKnossos will fill missing attributes with sensible defaults.
 These View Configurations impact the first appearance of the Dataset for all users.

@@ -6,6 +6,7 @@ import _ from "lodash";
 
 import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 import { addDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -26,7 +27,7 @@ const FormItem = Form.Item;
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded: (string, string, boolean) => void,
+  onUploaded: (string, string, boolean, ?Vector3) => void,
 |};
 type StateProps = {|
   activeUser: ?APIUser,
@@ -95,6 +96,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               activeUser.organization,
               formValues.name,
               this.state.needsConversion,
+              formValues.scale,
             );
           },
           () => {

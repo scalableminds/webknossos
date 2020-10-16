@@ -5,23 +5,22 @@ import { Table, Spin, Input, Icon } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIJob } from "admin/api_flow_types";
+import type { APIJob, APIUser } from "admin/api_flow_types";
 import { getJobs } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
 
 const typeHint: APIJob[] = [];
 
-type OwnProps = {|
-  history: RouterHistory,
-|};
 type StateProps = {|
   activeUser: ?APIUser,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type Props = { ...StateProps, history: RouterHistory };
+
 type State = {
   isLoading: boolean,
   jobs: Array<APIJob>,
@@ -134,7 +133,7 @@ class JobListView extends React.PureComponent<Props, State> {
                 width={150}
                 render={(__, job: APIJob) => (
                   <span>
-                    {job.state === "SUCCESS" && (
+                    {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
                       <Link
                         to={`/datasets/${this.props.activeUser.organization}/${
                           job.datasetName
@@ -160,4 +159,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(JobListView));
+export default connect<StateProps, {||}, _, _, _, _>(mapStateToProps)(withRouter(JobListView));

@@ -735,8 +735,14 @@ export async function getJobs(): Promise<Array<APIJob>> {
   }));
 }
 
-export async function startJob(jobName: string, organization: string): Promise<Array<APIJob>> {
-  return Request.receiveJSON(`/api/jobs/run/cubing/${organization}/${jobName}`);
+export async function startJob(
+  jobName: string,
+  organization: string,
+  scale: Vector3,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+  );
 }
 
 export function getDatasetDatasource(

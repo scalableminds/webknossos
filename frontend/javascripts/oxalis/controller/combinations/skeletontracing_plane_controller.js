@@ -354,13 +354,10 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
   const rotation = getRotationOrtho(activeViewport);
   addNode(position, rotation, !ctrlPressed);
 
-  // Strg + Rightclick to set new not active branchpoint
+  // Ctrl + right click to set new not active branchpoint
   const { newNodeNewTree } = Store.getState().userConfiguration;
   if (ctrlPressed && !newNodeNewTree) {
     Store.dispatch(createBranchPointAction());
-    activeNodeMaybe.map(activeNode => {
-      Store.dispatch(setActiveNodeAction(activeNode.id));
-    });
   }
 }
 
@@ -384,6 +381,8 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
+      null,
+      !centered,
     ),
   );
 

@@ -3,7 +3,7 @@ package controllers
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
@@ -89,22 +89,16 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
     } else {
       val updateResult = for {
         _ <- Fox.successful(celeryInfosLastUpdated = System.currentTimeMillis())
-        celeryInfoJson <- rpc(s"${wkConf.Jobs.Flower.uri}/api/tasks")
-          .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
-          .getWithJsonResponse[JsObject]
+        celeryInfoJson <- flowerRpc(s"/api/tasks").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>
           jobDAO.updateCeleryInfoByCeleryId(jobId, celeryInfoMap(jobId)))
       } yield ()
-      for {
-        updateBox <- updateResult.futureBox
-      } yield {
-        updateBox match {
-          case Full(_)    => ()
-          case f: Failure => logger.warn(s"Could not update celery infos: $f")
-          case _          => logger.warn(s"Could not update celery infos (empty)")
-        }
+      updateResult.futureBox.map {
+        case Full(_)    => ()
+        case f: Failure => logger.warn(s"Could not update celery infos: $f")
+        case _          => logger.warn(s"Could not update celery infos (empty)")
       }
     }
 
@@ -120,21 +114,20 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
       ))
 
   def getCeleryInfo(job: Job): Fox[JsObject] =
-    rpc(s"${wkConf.Jobs.Flower.uri}/api/task/info/${job.celeryJobId}")
-      .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
-      .getWithJsonResponse[JsObject]
+    flowerRpc(s"/api/task/info/${job.celeryJobId}").getWithJsonResponse[JsObject]
 
   def runJob(command: String, commandArgs: JsObject, owner: User)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
-      result <- rpc(s"${wkConf.Jobs.Flower.uri}/api/task/async-apply/tasks.$command")
-        .withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
+      result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
         .postWithJsonResponse[JsValue, Map[String, JsValue]](commandArgs)
       celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
       job = Job(ObjectId.generate, owner._id, command, commandArgs, celeryJobId)
       _ <- jobDAO.insertOne(job)
     } yield job
 
+  private def flowerRpc(route: String): RPCRequest =
+    rpc(wkConf.Jobs.Flower.uri + route).withBasicAuth(wkConf.Jobs.Flower.username, wkConf.Jobs.Flower.password)
 }
 
 class JobsController @Inject()(jobDAO: JobDAO,

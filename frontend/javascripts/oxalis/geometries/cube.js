@@ -7,6 +7,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
 
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   type OrthoView,
   type OrthoViewMap,
@@ -28,8 +29,8 @@ type Properties = {
 };
 
 class Cube {
-  crossSections: OrthoViewMap<THREE.Line>;
-  cube: THREE.Line;
+  crossSections: OrthoViewMap<typeof THREE.Line>;
+  cube: typeof THREE.Line;
   min: Vector3;
   max: Vector3;
   showCrossSections: boolean;
@@ -68,9 +69,10 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
-    Store.subscribe(() => {
-      this.updatePosition(getPosition(Store.getState().flycam));
-    });
+    listenToStoreProperty(
+      state => getPosition(state.flycam),
+      position => this.updatePosition(position),
+    );
   }
 
   setCorners(min: Vector3, max: Vector3) {

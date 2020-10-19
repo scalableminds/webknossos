@@ -5,35 +5,39 @@ import java.nio.file.Paths
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter}
+import com.scalableminds.webknossos.datastore.models.{
+  BucketPosition,
+  UnsignedInteger,
+  UnsignedIntegerArray,
+  WebKnossosIsosurfaceRequest
+}
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFileCreator
-
-import scala.concurrent.duration._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsObject, JsValue, Json}
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
-
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
     tracingDataStore: TracingDataStore,
+    isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: RedisTemporaryStore,
@@ -43,6 +47,7 @@ class VolumeTracingService @Inject()(
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
     with WKWDataFormatHelper
+    with DataFinder
     with ProtoGeometryImplicits
     with FoxImplicits
     with LazyLogging {
@@ -63,6 +68,9 @@ class VolumeTracingService @Inject()(
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
   val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
+
+  isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
+  val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
 
   override def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.volumes.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
@@ -96,6 +104,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateUserBoundingBoxes         => Fox.successful(t.withUserBoundingBoxes(a.boundingBoxes.map(_.toProto)))
               case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
               case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
+              case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
               case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>
@@ -191,25 +200,31 @@ class VolumeTracingService @Inject()(
     mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
   }
 
-  class MergedVolume(elementClass: ElementClass) extends DataConverter {
+  class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0) extends DataConverter {
     private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
     private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
     private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
+    var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
     def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
       if (labelSets.isEmpty || labelMaps.nonEmpty) {
         ()
       } else {
-        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass).increment
+        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
+        if (initialLargestSegmentId > 0) {
+          labelMaps += mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
+          i = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
+        }
         labelSets.toList.foreach { labelSet =>
           var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
           labelSet.foreach { label =>
-            labelMap += ((label, i))
             i = i.increment
+            labelMap += ((label, i))
           }
           labelMaps += labelMap
         }
+        largestSegmentId = i
       }
 
     def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
@@ -221,7 +236,9 @@ class VolumeTracingService @Inject()(
           dataTyped.zipWithIndex.foreach {
             case (valueTyped, index) =>
               if (!valueTyped.isZero) {
-                val byteValueMapped = if (labelMaps.isEmpty) valueTyped else labelMaps(sourceVolumeIndex)(valueTyped)
+                val byteValueMapped =
+                  if (labelMaps.isEmpty || initialLargestSegmentId > 0 && sourceVolumeIndex == 0) valueTyped
+                  else labelMaps(sourceVolumeIndex)(valueTyped)
                 mutableBucketData(index) = byteValueMapped
               }
           }
@@ -231,9 +248,10 @@ class VolumeTracingService @Inject()(
             mergedVolume += ((bucketPosition, dataTyped))
           } else {
             val dataMapped = dataTyped.map { byteValue =>
-              if (!byteValue.isZero) {
+              if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+                byteValue
+              else
                 labelMaps(sourceVolumeIndex)(byteValue)
-              } else byteValue
             }
             mergedVolume += ((bucketPosition, dataMapped))
           }
@@ -381,6 +399,37 @@ class VolumeTracingService @Inject()(
     } yield Json.toJson(updateActionGroupsJs)
   }
 
+  def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
+    for {
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      segmentationLayer = volumeTracingLayer(tracingId, tracing)
+      isosurfaceRequest = IsosurfaceRequest(
+        None,
+        segmentationLayer,
+        request.cuboid(segmentationLayer),
+        request.segmentId,
+        request.voxelDimensions,
+        request.scale,
+        request.mapping,
+        request.mappingType
+      )
+      result <- isosurfaceService.requestIsosurfaceViaActor(isosurfaceRequest)
+    } yield result
+
+  def findData(tracingId: String): Fox[Option[Point3D]] =
+    for {
+      tracing <- find(tracingId) ?~> "tracing.notFound"
+      volumeLayer = volumeTracingLayer(tracingId, tracing)
+      bucketStream = volumeLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+      bucketPosOpt = if (bucketStream.hasNext) {
+        val bucket = bucketStream.next()
+        val bucketPos = bucket._1
+        getPositionOfNonZeroData(bucket._2,
+                                 Point3D(bucketPos.globalX, bucketPos.globalY, bucketPos.globalZ),
+                                 volumeLayer.bytesPerElement)
+      } else None
+    } yield bucketPosOpt
+
   def merge(tracings: Seq[VolumeTracing]): VolumeTracing = tracings.reduceLeft(mergeTwo)
 
   def mergeTwo(tracingA: VolumeTracing, tracingB: VolumeTracing): VolumeTracing = {
@@ -421,11 +470,9 @@ class VolumeTracingService @Inject()(
           dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
         bucketStream.foreach {
           case (_, data) =>
-            if (data.length > 1) { // skip reverted buckets
-              val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-              val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-              labelSet ++= nonZeroData
-            }
+            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
+            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
+            labelSet ++= nonZeroData
         }
         mergedVolume.addLabelSet(labelSet)
     }
@@ -442,6 +489,65 @@ class VolumeTracingService @Inject()(
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
     mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
+  }
+
+  def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] = {
+    if (currentVersion != tracing.version) return Fox.failure("version.mismatch")
+
+    val volumeLayer = volumeTracingLayer(tracingId, tracing)
+    val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
+
+    val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
+    ZipIO.withUnziped(zipFile) {
+      case (_, is) =>
+        WKWFile.read(is) {
+          case (header, buckets) =>
+            if (header.numBlocksPerCube == 1) {
+              val dataTyped =
+                UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
+              val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+              importLabelSet ++= nonZeroData
+            }
+        }
+    }
+    mergedVolume.addLabelSet(importLabelSet)
+
+    volumeLayer.bucketProvider.bucketStream(1).foreach {
+      case (position, bytes) =>
+        if (!isAllZero(bytes)) {
+          mergedVolume.add(0, position, bytes)
+        }
+    }
+
+    ZipIO.withUnziped(zipFile) {
+      case (fileName, is) =>
+        WKWFile.read(is) {
+          case (header, buckets) =>
+            if (header.numBlocksPerCube == 1) {
+              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                val data = buckets.next()
+                if (!isAllZero(data)) {
+                  mergedVolume.add(1, bucketPosition, data)
+                }
+              }
+            }
+        }
+    }
+
+    val updateGroup = UpdateActionGroup[VolumeTracing](
+      tracing.version + 1,
+      System.currentTimeMillis(),
+      List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
+      None,
+      None,
+      None,
+      None,
+      None)
+
+    for {
+      _ <- mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+      _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
+    } yield mergedVolume.largestSegmentId.toSignedLong
   }
 
 }

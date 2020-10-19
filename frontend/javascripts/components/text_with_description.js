@@ -7,12 +7,12 @@ import EditableTextLabel, {
   type EditableTextLabelProp,
 } from "oxalis/view/components/editable_text_label";
 
-type EditableProps = {
+type EditableProps = {|
   isEditable: true,
   description: string,
   ...EditableTextLabelProp,
-};
-type NonEditableProps = { isEditable: false, description: string, value: string };
+|};
+type NonEditableProps = {| isEditable: false, description: string, value: string |};
 type Props = EditableProps | NonEditableProps;
 
 class TextWithDescription extends React.PureComponent<Props> {
@@ -29,6 +29,7 @@ class TextWithDescription extends React.PureComponent<Props> {
     return (
       <React.Fragment>
         {isEditable ? (
+          // $FlowIssue[incompatible-type]
           <EditableTextLabel {...editableProps} />
         ) : (
           <span style={{ margin: "0 10px", display: "inline-block" }}>

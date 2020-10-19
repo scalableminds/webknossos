@@ -63,7 +63,7 @@ test.serial("createProject and deleteProject", async t => {
 });
 
 function convertProjectToProjectUpdater(project: APIProject): APIProjectUpdater {
-  // $FlowFixMe
+  // $FlowFixMe[incompatible-return]
   return Object.assign({}, project, {
     owner: project.owner.id,
   });

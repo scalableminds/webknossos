@@ -53,7 +53,7 @@ const fullWidth = { width: "100%" };
 const maxDisplayedTasksCount = 50;
 
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId";
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 
 type Props = {
   form: Object,
@@ -92,6 +92,7 @@ export function taskToText(task: APITask) {
     editPosition,
     editRotation,
     status,
+    creationInfo,
     boundingBoxVec6,
     projectName,
     script,
@@ -103,10 +104,11 @@ export function taskToText(task: APITask) {
   const totalNumberOfInstances = status.open + status.active + status.finished;
   const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
   const scriptId = script ? `${script.id}` : "";
+  const creationInfoOrEmpty = creationInfo || "";
 
   const taskAsString =
     `${id},${dataSet},${type.id},${neededExperienceAsString},${editPositionAsString},` +
-    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId}`;
+    `${editRotationAsString},${totalNumberOfInstances},${boundingBoxAsString},${projectName},${scriptId},${creationInfoOrEmpty}`;
   return taskAsString;
 }
 
@@ -586,7 +588,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   value={this.state.specificationType}
                   onChange={(evt: SyntheticInputEvent<*>) =>
                     this.setState({
-                      // $FlowFixMe Inference for enum.coalesce does not work properly anymore? Flow update might help
+                      // $FlowIssue[incompatible-call] Inference for enum.coalesce does not work properly anymore? Flow update might help
                       specificationType: Enum.coalesce(SpecificationEnum, evt.target.value),
                     })
                   }

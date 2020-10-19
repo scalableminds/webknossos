@@ -7,11 +7,13 @@ import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import Model from "oxalis/model";
 import {
   getActiveTree,
   getActiveGroup,
@@ -19,7 +21,7 @@ import {
   enforceSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
-import { getBuildInfo } from "admin/admin_rest_api";
+import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
 import { readFileAsText, readFileAsArrayBuffer } from "libs/read_file";
 import {
   serializeToNml,
@@ -48,9 +50,14 @@ import {
   setTreeGroupsAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  importVolumeTracingAction,
+  setMaxCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { addUserBoundingBoxesAction } from "oxalis/model/actions/annotation_actions";
 import { type Action } from "oxalis/model/actions/actions";
+import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import InputComponent from "oxalis/view/components/input_component";
 import Store, {
@@ -67,6 +74,7 @@ import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
+import JSZip from "jszip";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
@@ -181,13 +189,56 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
       }
     };
 
+    const tryParsingFileAsZip = async file => {
+      try {
+        const findFileNameWithExtension = (fileName: string, ext: string) =>
+          _.last(fileName.split(".")).toLowerCase() === ext;
+
+        const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
+        const nmlFileName = Object.keys(zipFile.files).find(key =>
+          findFileNameWithExtension(key, "nml"),
+        );
+        const nmlFile = await zipFile.file(nmlFileName).async("blob");
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+
+        const dataFileName = Object.keys(zipFile.files).find(key =>
+          findFileNameWithExtension(key, "zip"),
+        );
+        if (dataFileName) {
+          const dataBlob = await zipFile.file(dataFileName).async("blob");
+          const dataFile = new File([dataBlob], dataFileName);
+
+          await Model.ensureSavedState();
+          const { tracing, dataset } = Store.getState();
+          const oldVolumeTracing = tracing.volume;
+
+          const newLargestSegmentId = await importVolumeTracing(tracing, dataFile);
+
+          if (oldVolumeTracing) {
+            Store.dispatch(importVolumeTracingAction());
+            Store.dispatch(setVersionNumberAction(oldVolumeTracing.version + 1, "volume"));
+            Store.dispatch(setMaxCellAction(newLargestSegmentId));
+            await clearCache(dataset, oldVolumeTracing.tracingId);
+            api.data.reloadBuckets(oldVolumeTracing.tracingId);
+            window.needsRerender = true;
+          }
+        }
+
+        return nmlImportActions;
+      } catch (error) {
+        console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
+        return undefined;
+      }
+    };
+
     const { successes: importActionsWithDatasetNames, errors } = await Utils.promiseAllWithErrors(
       files.map(async file => {
-        const ext = _.last(file.name.split("."));
-        const tryImportFunctions =
-          ext === "nml" || ext === "xml"
-            ? [tryParsingFileAsNml, tryParsingFileAsProtobuf]
-            : [tryParsingFileAsProtobuf, tryParsingFileAsNml];
+        const ext = _.last(file.name.split(".")).toLowerCase();
+        let tryImportFunctions;
+        if (ext === "nml" || ext === "xml")
+          tryImportFunctions = [tryParsingFileAsNml, tryParsingFileAsProtobuf];
+        else if (ext === "zip") tryImportFunctions = [tryParsingFileAsZip];
+        else tryImportFunctions = [tryParsingFileAsProtobuf, tryParsingFileAsNml];
         /* eslint-disable no-await-in-loop */
         for (const importFunction of tryImportFunctions) {
           const maybeImportAction = await importFunction(file);
@@ -196,7 +247,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           }
         }
         /* eslint-enable no-await-in-loop */
-        throw new Error(`"${file.name}" could not be parsed as either NML or protobuf.`);
+        throw new Error(`"${file.name}" could not be parsed as NML, protobuf or ZIP.`);
       }),
     );
 
@@ -611,98 +662,109 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
     return (
       <div id={treeTabId} className="padded-tab-content">
-        <Modal
-          visible={this.state.isDownloading || this.state.isUploading}
-          title={title}
-          closable={false}
-          footer={null}
-          width={200}
-          style={{ textAlign: "center" }}
-        >
-          <Spin />
-        </Modal>
-        <ButtonGroup>
-          <AdvancedSearchPopover
-            onSelect={this.handleSearchSelect}
-            data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-            searchKey="name"
-            provideShortcut
-            targetId={treeTabId}
-          >
-            <Tooltip title="Open the search via CTRL + Shift + F">
-              <ButtonComponent>
-                <Icon type="search" />
-              </ButtonComponent>
-            </Tooltip>
-          </AdvancedSearchPopover>
-          <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
-            <i className="fas fa-plus" /> Create
-          </ButtonComponent>
-          <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
-            <i className="far fa-trash-alt" /> Delete
-          </ButtonComponent>
-          <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
-            <i className="fas fa-toggle-on" /> Toggle All
-          </ButtonComponent>
-          <ButtonComponent
-            onClick={this.toggleInactiveTrees}
-            title="Toggle Visibility of Inactive Trees"
-          >
-            <i className="fas fa-toggle-off" /> Toggle Inactive
-          </ButtonComponent>
-          <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
-            <ButtonComponent>
-              More
-              <Icon type="down" />
-            </ButtonComponent>
-          </Dropdown>
-        </ButtonGroup>
-        <InputGroup compact>
-          <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
-            <i className="fas fa-arrow-left" />
-          </ButtonComponent>
-          <InputComponent
-            onChange={this.handleChangeTreeName}
-            value={activeTreeName || activeGroupName}
-            disabled={noTreesAndGroups}
-            style={{ width: "60%" }}
-          />
-          <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
-            <i className="fas fa-arrow-right" />
-          </ButtonComponent>
-          <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
-            <ButtonComponent title="Sort">
-              <i className="fas fa-sort-alpha-down" />
-            </ButtonComponent>
-          </Dropdown>
-        </InputGroup>
-        {noTreesAndGroups ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                There are no trees in this tracing.
-                <br /> A new tree will be created automatically once a node is set.
-              </span>
-            }
-          />
-        ) : (
-          <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
-            <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
-            {this.getTreesComponents(orderAttribute)}
-          </ul>
-        )}
-        {groupToDelete !== null ? (
-          <DeleteGroupModalView
-            onCancel={this.hideDeleteGroupsModal}
-            onJustDeleteGroup={() => {
-              this.deleteGroupAndHideModal(groupToDelete, false);
-            }}
-            onDeleteGroupAndTrees={() => {
-              this.deleteGroupAndHideModal(groupToDelete, true);
-            }}
-          />
-        ) : null}
+        <DomVisibilityObserver targetId={treeTabId}>
+          {isVisibleInDom =>
+            !isVisibleInDom ? null : (
+              <React.Fragment>
+                <Modal
+                  visible={this.state.isDownloading || this.state.isUploading}
+                  title={title}
+                  closable={false}
+                  footer={null}
+                  width={200}
+                  style={{ textAlign: "center" }}
+                >
+                  <Spin />
+                </Modal>
+                <ButtonGroup>
+                  <AdvancedSearchPopover
+                    onSelect={this.handleSearchSelect}
+                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                    searchKey="name"
+                    provideShortcut
+                    targetId={treeTabId}
+                  >
+                    <Tooltip title="Open the search via CTRL + Shift + F">
+                      <ButtonComponent>
+                        <Icon type="search" />
+                      </ButtonComponent>
+                    </Tooltip>
+                  </AdvancedSearchPopover>
+                  <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
+                    <i className="fas fa-plus" /> Create
+                  </ButtonComponent>
+                  <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
+                    <i className="far fa-trash-alt" /> Delete
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleAllTrees}
+                    title="Toggle Visibility of All Trees"
+                  >
+                    <i className="fas fa-toggle-on" /> Toggle All
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleInactiveTrees}
+                    title="Toggle Visibility of Inactive Trees"
+                  >
+                    <i className="fas fa-toggle-off" /> Toggle Inactive
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
+                    <ButtonComponent>
+                      More
+                      <Icon type="down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </ButtonGroup>
+                <InputGroup compact>
+                  <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
+                    <i className="fas fa-arrow-left" />
+                  </ButtonComponent>
+                  <InputComponent
+                    onChange={this.handleChangeTreeName}
+                    value={activeTreeName || activeGroupName}
+                    disabled={noTreesAndGroups}
+                    style={{ width: "60%" }}
+                  />
+                  <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
+                    <i className="fas fa-arrow-right" />
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
+                    <ButtonComponent title="Sort">
+                      <i className="fas fa-sort-alpha-down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </InputGroup>
+                {noTreesAndGroups ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <span>
+                        There are no trees in this tracing.
+                        <br /> A new tree will be created automatically once a node is set.
+                      </span>
+                    }
+                  />
+                ) : (
+                  <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+                    <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
+                    {this.getTreesComponents(orderAttribute)}
+                  </ul>
+                )}
+                {groupToDelete !== null ? (
+                  <DeleteGroupModalView
+                    onCancel={this.hideDeleteGroupsModal}
+                    onJustDeleteGroup={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, false);
+                    }}
+                    onDeleteGroupAndTrees={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, true);
+                    }}
+                  />
+                ) : null}
+              </React.Fragment>
+            )
+          }
+        </DomVisibilityObserver>
       </div>
     );
   }

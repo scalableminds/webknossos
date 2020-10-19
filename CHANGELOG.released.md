@@ -7,6 +7,32 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [20.10.0](https://github.com/scalableminds/webknossos/releases/tag/20.10.0) - 2020-9-21
+[Commits](https://github.com/scalableminds/webknossos/compare/20.09.0...20.10.0)
+
+### Highlights
+- Added the possibility to undo and redo volume annotation strokes. [#4771](https://github.com/scalableminds/webknossos/pull/4771)
+- Isosurface generation now also supports volume tracings (without fallback layers). [#4567](https://github.com/scalableminds/webknossos/pull/4567)
+- Added a tool to initiate a flood fill in a volume tracing with the active cell id. [#4780](https://github.com/scalableminds/webknossos/pull/4780)
+- Added the possibility to navigate to the preceding/subsequent node by pressing "ctrl + ," or "ctrl + ." in a skeleton tracing. [#4147](https://github.com/scalableminds/webknossos/pull/4784)
+
+### Added
+- Added the possibility to merge volume tracings both via file upload (zip of zips) and when viewing projects/tasks as compound annotations. [#4709](https://github.com/scalableminds/webknossos/pull/4709)
+- Added the possibility to remove the fallback segmentation layer from a hybrid/volume tracing. Accessible by a minus button next to the layer's settings. [#4741](https://github.com/scalableminds/webknossos/pull/4766)
+
+### Changed
+- When d/f switching is turned off and a slice is copied with the shortcut `v`, the previous slice used as the source will always be slice - 1 and `shift + v` will always take slice + 1 as the slice to copy from. [#4728](https://github.com/scalableminds/webknossos/pull/4728)
+- Disabled the autofill feature of the brush when using this tool to erase data. [#4729](https://github.com/scalableminds/webknossos/pull/4729)
+- The rotation buttons of the 3D-viewport no longer change the zoom. [#4750](https://github.com/scalableminds/webknossos/pull/4750)
+- Improved the performance of applying agglomerate files. [#4706](https://github.com/scalableminds/webknossos/pull/4706)
+- When uploading tasks via NML, NML are shown in the task modal instead of a toast. [#4723](https://github.com/scalableminds/webknossos/pull/4723)
+
+### Fixed
+- Improved the data loading behavior for flight and oblique mode. [#4800](https://github.com/scalableminds/webknossos/pull/4800)
+- Fixed an issue where in some cases the tree list was only visible after the window was resized. [#4816](https://github.com/scalableminds/webknossos/pull/4816)
+- Fixed a bug where some volume annotations that had been reverted to a previous version became un-downloadable. [#4805](https://github.com/scalableminds/webknossos/pull/4805)
+- Fixed a UI bug where some tooltip wouldn't close after editing a label. [#4815](https://github.com/scalableminds/webknossos/pull/4815)
+
 ## [20.09.0](https://github.com/scalableminds/webknossos/releases/tag/20.9.0) - 2020-8-20
 [Commits](https://github.com/scalableminds/webknossos/compare/20.8.0...20.09.0)
 
@@ -35,6 +61,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Speed up NML import in existing tracings for NMLs with many trees (20,000+). [#4742](https://github.com/scalableminds/webknossos/pull/4742)
 - Fixed tree groups when uploading NMLs with multi-component trees. [#4735](https://github.com/scalableminds/webknossos/pull/4735)
 - Fixed that invalid number values in slider settings could crash webKnossos. [#4758](https://github.com/scalableminds/webknossos/pull/4758)
+- Improved resilience in time tracking, preventing overlapping timespans. [#4830](https://github.com/scalableminds/webknossos/pull/4830)
 
 ## [20.08.0](https://github.com/scalableminds/webknossos/releases/tag/20.08.0) - 2020-07-20
 [Commits](https://github.com/scalableminds/webknossos/compare/20.07.0...20.08.0)
@@ -127,13 +154,13 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
 - It is now possible to upload volume tracings as a base for tasks. The upload format is similar to the project / task type download format. [#4565](https://github.com/scalableminds/webknossos/pull/4565)
-- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543) 
+- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543)
 
 ### Added
 - Users can undo finishing a task when the task was finished via the API, e.g. by a user script. [#4495](https://github.com/scalableminds/webknossos/pull/4495)
 - Added the magnification used for determining the segment ids in the segmentation tab to the table of the tab. [#4480](https://github.com/scalableminds/webknossos/pull/4480)
 - Added support for ID mapping of segmentation layer based on HDF5 agglomerate files. [#4469](https://github.com/scalableminds/webknossos/pull/4469)
-- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543) 
+- Added the possibility to share the dataset which is currently viewed (using a private token if the dataset is not public).  The option can be found in the dropdown of the navigation bar. [#4543](https://github.com/scalableminds/webknossos/pull/4543)
 - Added option to hide all unmapped segments to segmentation tab. [#4510](https://github.com/scalableminds/webknossos/pull/4510)
 - When wK changes datasource-properties.json files of datasets, now it creates a backup log of previous versions. [#4534](https://github.com/scalableminds/webknossos/pull/4534)
 - Added a warning to the position input in tracings if the current position is out of bounds. The warning colors the position input orange. [#4544](https://github.com/scalableminds/webknossos/pull/4544)

@@ -50,7 +50,7 @@ import {
   type TracingType,
   type WkConnectDatasetConfig,
 } from "admin/api_flow_types";
-import type { DatasetConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
@@ -660,6 +660,7 @@ export async function getTracingForAnnotationType(
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
   // The tracing id is not contained in the server tracing, but in the annotation content.
   tracing.id = tracingId;
+
   return tracing;
 }
 
@@ -671,6 +672,25 @@ export function getUpdateActionLog(
   return doWithToken(token =>
     Request.receiveJSON(
       `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/updateActionLog?token=${token}`,
+    ),
+  );
+}
+
+export async function importVolumeTracing(tracing: Tracing, dataFile: File): Promise<number> {
+  const volumeTracing = tracing.volume;
+  if (!volumeTracing) throw new Error("Volume Tracing must exist when importing Volume Tracing.");
+
+  return doWithToken(token =>
+    Request.sendMultipartFormReceiveJSON(
+      `${tracing.tracingStore.url}/tracings/volume/${
+        volumeTracing.tracingId
+      }/importVolumeData?token=${token}`,
+      {
+        data: {
+          dataFile,
+          currentVersion: volumeTracing.version,
+        },
+      },
     ),
   );
 }
@@ -688,7 +708,7 @@ export async function downloadNml(
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
-    // $FlowFixMe Flow returns val as mixed here due to the use of Object.entries
+    // $FlowIssue[incompatible-type] Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
   if (showVolumeDownloadWarning) {
@@ -1018,6 +1038,16 @@ export async function findDataPositionForLayer(
   return { position, resolution };
 }
 
+export async function findDataPositionForVolumeTracing(
+  tracingstoreUrl: string,
+  tracingId: string,
+): Promise<{ position: ?Vector3, resolution: ?Vector3 }> {
+  const { position, resolution } = await doWithToken(token =>
+    Request.receiveJSON(`${tracingstoreUrl}/tracings/volume/${tracingId}/findData?token=${token}`),
+  );
+  return { position, resolution };
+}
+
 export async function getHistogramForLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1274,20 +1304,18 @@ type IsosurfaceRequest = {
   segmentId: number,
   voxelDimensions: Vector3,
   cubeSize: Vector3,
+  scale: Vector3,
 };
 
 export function computeIsosurface(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
+  requestUrl: string,
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize } = isosurfaceRequest;
+  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${
-        layer.fallbackLayer != null ? layer.fallbackLayer : layer.name
-      }/isosurface?token=${token}`,
+      `${requestUrl}/isosurface?token=${token}`,
       {
         data: {
           // The back-end needs a small padding at the border of the
@@ -1303,6 +1331,7 @@ export function computeIsosurface(
           mappingType: layer.activeMappingType,
           // "size" of each voxel (i.e., only every nth voxel is considered in each dimension)
           voxelDimensions,
+          scale,
         },
       },
     );

@@ -101,6 +101,18 @@ object RemoveFallbackLayer {
   implicit val removeFallbackLayer = Json.format[RemoveFallbackLayer]
 }
 
+case class ImportVolumeData(largestSegmentId: Long, actionTimestamp: Option[Long] = None, info: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact =
+    CompactVolumeUpdateAction("importVolumeTracing", actionTimestamp, Json.obj("largestSegmentId" -> largestSegmentId))
+}
+
+object ImportVolumeData {
+  implicit val importVolumeData = Json.format[ImportVolumeData]
+}
+
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
     extends VolumeUpdateAction
 
@@ -129,6 +141,7 @@ object VolumeUpdateAction {
         case "updateUserBoundingBoxes"         => (json \ "value").validate[UpdateUserBoundingBoxes]
         case "updateUserBoundingBoxVisibility" => (json \ "value").validate[UpdateUserBoundingBoxVisibility]
         case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
+        case "importVolumeTracing"             => (json \ "value").validate[ImportVolumeData]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 
@@ -150,6 +163,8 @@ object VolumeUpdateAction {
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.updateUserBoundingBoxVisibilityFormat))
       case s: RemoveFallbackLayer =>
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayer.removeFallbackLayer))
+      case s: ImportVolumeData =>
+        Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeData.importVolumeData))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

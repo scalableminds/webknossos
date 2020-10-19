@@ -15,8 +15,8 @@ const COLOR_NORMAL = new THREE.Color(0x0000ff);
 const COLOR_DELETE = new THREE.Color(0xff0000);
 
 class ContourGeometry {
-  color: THREE.Color;
-  edge: THREE.Line;
+  color: typeof THREE.Color;
+  edge: typeof THREE.Line;
 
   constructor() {
     this.color = COLOR_NORMAL;
@@ -76,7 +76,7 @@ class ContourGeometry {
     app.vent.trigger("rerender");
   }
 
-  finalizeMesh(mesh: THREE.Line) {
+  finalizeMesh(mesh: typeof THREE.Line) {
     if (mesh.geometry.attributes.position.array !== mesh.vertexBuffer.getBuffer()) {
       // Need to rebuild Geometry
       const positionAttribute = new THREE.BufferAttribute(mesh.vertexBuffer.getBuffer(), 3);

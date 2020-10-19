@@ -51,21 +51,21 @@ class SceneController {
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
   datasetBoundingBox: Cube;
-  userBoundingBoxGroup: THREE.Group;
+  userBoundingBoxGroup: typeof THREE.Group;
   userBoundingBoxes: Array<Cube>;
   taskBoundingBox: ?Cube;
   contour: ContourGeometry;
   planes: OrthoViewMap<Plane>;
-  rootNode: THREE.Object3D;
-  renderer: THREE.WebGLRenderer;
-  scene: THREE.Scene;
-  rootGroup: THREE.Object3D;
-  stlMeshes: { [key: string]: THREE.Mesh } = {};
+  rootNode: typeof THREE.Object3D;
+  renderer: typeof THREE.WebGLRenderer;
+  scene: typeof THREE.Scene;
+  rootGroup: typeof THREE.Object3D;
+  stlMeshes: { [key: string]: typeof THREE.Mesh } = {};
 
   // isosurfacesRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
-  isosurfacesRootGroup: THREE.Group;
-  isosurfacesGroupsPerSegmentationId: { [key: number]: THREE.Group } = {};
+  isosurfacesRootGroup: typeof THREE.Group;
+  isosurfacesGroupsPerSegmentationId: { [key: number]: typeof THREE.Group } = {};
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
@@ -128,14 +128,14 @@ class SceneController {
       return cube;
     };
 
-    window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
+    window.removeBucketMesh = (mesh: typeof THREE.LineSegments) => this.rootNode.remove(mesh);
   }
 
-  getIsosurfaceGeometry(cellId: number): THREE.Geometry {
+  getIsosurfaceGeometry(cellId: number): typeof THREE.Geometry {
     return this.isosurfacesGroupsPerSegmentationId[cellId];
   }
 
-  addSTL(meshMetaData: MeshMetaData, geometry: THREE.Geometry): void {
+  addSTL(meshMetaData: MeshMetaData, geometry: typeof THREE.Geometry): void {
     const { id, position } = meshMetaData;
     if (this.stlMeshes[id] != null) {
       console.warn(`Mesh with id ${id} has already been added to the scene.`);
@@ -168,7 +168,7 @@ class SceneController {
     this.addIsosurfaceFromGeometry(geometry, segmentationId);
   }
 
-  addIsosurfaceFromGeometry(geometry: THREE.Geometry, segmentationId: number): void {
+  addIsosurfaceFromGeometry(geometry: typeof THREE.Geometry, segmentationId: number): void {
     const [hue] = jsConvertCellIdToHSLA(segmentationId);
     const color = new THREE.Color().setHSL(hue, 0.5, 0.1);
 
@@ -186,6 +186,7 @@ class SceneController {
       .to({ opacity: 0.95 }, 500)
       .onUpdate(function onUpdate() {
         meshMaterial.opacity = this.opacity;
+        app.vent.trigger("rerender");
       })
       .start();
 
@@ -316,12 +317,13 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(!hidePlanes);
-          const pos = _.clone(getPosition(Store.getState().flycam));
+          const originalPosition = getPosition(Store.getState().flycam);
+          const pos = _.clone(originalPosition);
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
             planeId === OrthoViews.PLANE_XY ? this.planeShift[ind[2]] : -this.planeShift[ind[2]];
-          this.planes[planeId].setPosition(new THREE.Vector3(...pos));
+          this.planes[planeId].setPosition(pos, originalPosition);
         } else {
           this.planes[planeId].setVisible(false);
         }
@@ -330,7 +332,7 @@ class SceneController {
       const { tdViewDisplayPlanes } = Store.getState().userConfiguration;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
-        this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
+        this.planes[planeId].setPosition(pos);
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
         this.planes[planeId].plane.visible = this.isPlaneVisible[planeId] && tdViewDisplayPlanes;
@@ -342,7 +344,6 @@ class SceneController {
     const state = Store.getState();
     const { flycam } = state;
     const globalPosition = getPosition(flycam);
-    const globalPosVec = new THREE.Vector3(...globalPosition);
 
     // The anchor point refers to the top-left-front bucket of the bounding box
     // which covers all three rendered planes. Relative to this anchor point,
@@ -357,11 +358,9 @@ class SceneController {
 
     if (optArbitraryPlane) {
       optArbitraryPlane.updateAnchorPoints(anchorPoint);
-      optArbitraryPlane.setPosition(globalPosVec);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint);
-        currentPlane.setPosition(globalPosVec);
         const [scaleX, scaleY] = getPlaneScalingFactor(state, flycam, currentPlane.planeID);
         const isVisible = scaleX > 0 && scaleY > 0;
         if (isVisible) {
@@ -399,7 +398,7 @@ class SceneController {
     app.vent.trigger("rerender");
   }
 
-  getRootNode(): THREE.Object3D {
+  getRootNode(): typeof THREE.Object3D {
     return this.rootNode;
   }
 

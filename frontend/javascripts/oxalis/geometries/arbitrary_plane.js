@@ -28,8 +28,8 @@ import shaderEditor from "oxalis/model/helpers/shader_editor";
 const renderDebuggerPlane = false;
 
 type ArbitraryMeshes = {|
-  mainPlane: THREE.Mesh,
-  debuggerPlane: ?THREE.Mesh,
+  mainPlane: typeof THREE.Mesh,
+  debuggerPlane: ?typeof THREE.Mesh,
 |};
 
 class ArbitraryPlane {
@@ -58,11 +58,11 @@ class ArbitraryPlane {
     }
   }
 
-  setPosition = ({ x, y, z }: THREE.Vector3) => {
-    this.meshes.mainPlane.material.setGlobalPosition([x, y, z]);
+  setPosition = (x: number, y: number, z: number) => {
+    this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 
-  addToScene(scene: THREE.Scene) {
+  addToScene(scene: typeof THREE.Scene) {
     _.values(this.meshes).forEach(mesh => {
       if (mesh) {
         scene.add(mesh);

@@ -44,12 +44,12 @@ export function createWorker<T>(WorkerClass: UseCreateWorkerToUseMe<T>): T {
   if (wrap == null) {
     // In a node context (e.g., when executing tests), we don't create web workers which is why
     // we can simply return the input function here.
-    // $FlowIgnore
+    // $FlowExpectedError[incompatible-return]
     return WorkerClass;
   }
 
   return wrap(
-    // $FlowIgnore
+    // $FlowExpectedError[not-a-function]
     new WorkerClass(),
   );
 }
@@ -59,7 +59,7 @@ export function expose<T>(fn: T): UseCreateWorkerToUseMe<T> {
   if (_expose != null) {
     _expose(fn, self);
   }
-  // $FlowIgnore
+  // $FlowExpectedError[incompatible-return]
   return fn;
 }
 
@@ -70,6 +70,6 @@ export function pretendPromise<T>(t: T): Promise<T> {
   // for variadic function types, we have to cheat with the return type on
   // the call side. For this scenario, this function can be used (see
   // async_bucket_picker.worker.js as an example).
-  // $FlowIgnore
+  // $FlowExpectedError[incompatible-return]
   return t;
 }

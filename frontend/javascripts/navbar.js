@@ -276,8 +276,6 @@ function AnonymousAvatar() {
   return (
     <Popover
       placement="bottomRight"
-      // For some reason flow doesn't get that the style prop is optional ...
-      // $FlowFixMe ... without this FixMe flow throws errors for other instantiations of the LoginForm without a style.
       content={<LoginForm layout="horizontal" style={{ maxWidth: 500 }} />}
       trigger="click"
       style={{ position: "fixed" }}
@@ -333,7 +331,7 @@ function Navbar({
   const trailingNavItems = [];
 
   if (_isAuthenticated) {
-    // $FlowFixMe Flow doesn't check that the activeUser cannot be empty here
+    // $FlowIssue[incompatible-type] Flow doesn't check that the activeUser cannot be empty here
     const loggedInUser: APIUser = activeUser;
     menuItems.push(<DashboardSubMenu key="dashboard" collapse={collapseAllNavItems} />);
 

@@ -46,7 +46,6 @@ organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
 organization.name.alreadyInUse=The chosen organization name is already in use.
-organization.folderCreation.failed=Failed to create organization directory, please make sure webKnossos has write permissions in the “binaryData” directory.
 
 user.activated={0} has been activated
 user.notFound=User not found
@@ -97,6 +96,7 @@ dataSet.name.notInSamples=This dataset name is not one of the available sample d
 dataSet.source.notFound=The data source for the data source couldn’t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.import.fileAccessDenied=Cannot create organization folder. Please make sure webKnossos has write permissions in the “binaryData” directory
 dataSet.type.invalid=External data set of type “{0}” is not supported
 dataSet.upload.success=Dataset successfully uploaded. The import is in progress and you can view the status on the dashboard.
 dataSet.create.success=Dataset successfully created

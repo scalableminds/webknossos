@@ -15,6 +15,7 @@ import window, { document, location } from "libs/window";
 const MAX_NUM_ERRORS = 50;
 const BLACKLISTED_ERROR_MESSAGES = [
   "ResizeObserver loop limit exceeded",
+  "ResizeObserver loop completed with undelivered notifications.",
   "Invariant Violation: Cannot call hover while not dragging.",
   // Errors from the sortable-tree when dragging an element onto itself
   "Uncaught Invariant Violation: Expected to find a valid target.",
@@ -55,7 +56,7 @@ class ErrorHandling {
   throwAssertions: boolean;
   sendLocalErrors: boolean;
   commitHash: ?string;
-  airbrake: AirbrakeClient;
+  airbrake: typeof AirbrakeClient;
   numberOfErrors: number = 0;
 
   initialize(options: ErrorHandlingOptions) {

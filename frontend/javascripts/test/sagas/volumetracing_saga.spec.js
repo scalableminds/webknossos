@@ -186,7 +186,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
 });
 
 test("finishLayer saga should emit resetContourAction and then be done (saga test)", t => {
-  // $FlowFixMe
+  // $FlowFixMe[incompatible-call]
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
   saga.next();

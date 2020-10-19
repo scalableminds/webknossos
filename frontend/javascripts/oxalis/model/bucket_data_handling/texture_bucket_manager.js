@@ -40,10 +40,20 @@ import type { ElementClass } from "admin/api_flow_types";
 // If f == -2, the bucket is not supposed to be rendered. Out of bounds.
 export const channelCountForLookupBuffer = 2;
 
+function getSomeValue<T>(set: Set<T>): T {
+  const value = set.values().next().value;
+
+  if (value == null) {
+    throw new Error("Cannot get value of set because it's empty.");
+  }
+
+  return value;
+}
+
 export default class TextureBucketManager {
-  dataTextures: Array<UpdatableTexture>;
+  dataTextures: Array<typeof UpdatableTexture>;
   lookUpBuffer: Float32Array;
-  lookUpTexture: THREE.DataTexture;
+  lookUpTexture: typeof THREE.DataTexture;
   // Holds the index for each active bucket, to which it should (or already
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
@@ -138,19 +148,18 @@ export default class TextureBucketManager {
     }
 
     // Remove unused buckets
-    const freeBuckets = Array.from(freeBucketSet.values());
-    for (const freeBucket of freeBuckets) {
+    for (const freeBucket of freeBucketSet.values()) {
       this.freeBucket(freeBucket);
     }
 
     let needsNewBucket = false;
-    const freeIndexArray = Array.from(this.freeIndexSet);
+
     for (const nextBucket of buckets) {
       if (!this.activeBucketToIndexMap.has(nextBucket)) {
-        if (freeIndexArray.length === 0) {
+        if (this.freeIndexSet.size === 0) {
           throw new Error("A new bucket should be stored but there is no space for it?");
         }
-        const freeBucketIdx = freeIndexArray.shift();
+        const freeBucketIdx = getSomeValue(this.freeIndexSet);
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
         needsNewBucket = true;
       }
@@ -158,7 +167,7 @@ export default class TextureBucketManager {
 
     // The lookup buffer only needs to be refreshed if some previously active buckets are no longer needed
     // or if new buckets are needed or if the anchorPoint changed. Otherwise we may end up in an endless loop.
-    if (freeBuckets.length > 0 || needsNewBucket || isAnchorPointNew) {
+    if (freeBucketSet.size > 0 || needsNewBucket || isAnchorPointNew) {
       this._refreshLookUpBuffer();
     }
   }
@@ -236,7 +245,7 @@ export default class TextureBucketManager {
     });
   }
 
-  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+  getTextures(): Array<typeof THREE.DataTexture | typeof UpdatableTexture> {
     return [this.lookUpTexture].concat(this.dataTextures);
   }
 
@@ -284,7 +293,9 @@ export default class TextureBucketManager {
     };
     enqueueBucket(index);
 
-    let debouncedUpdateBucketData;
+    let unlistenToLoadedFn = _.noop;
+    let unlistenToLabeledFn = _.noop;
+
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.
       // Also the index could have changed, so retrieve the index again.
@@ -292,17 +303,17 @@ export default class TextureBucketManager {
       if (bucketIndex != null) {
         enqueueBucket(bucketIndex);
       } else {
-        bucket.off("bucketLabeled", debouncedUpdateBucketData);
+        unlistenToLabeledFn();
       }
     };
 
     if (!bucket.hasData()) {
-      bucket.on("bucketLoaded", updateBucketData);
+      unlistenToLoadedFn = bucket.on("bucketLoaded", updateBucketData);
     }
-    bucket.on("bucketLabeled", updateBucketData);
+    unlistenToLabeledFn = bucket.on("bucketLabeled", updateBucketData);
     bucket.once("bucketCollected", () => {
-      bucket.off("bucketLabeled", updateBucketData);
-      bucket.off("bucketLoaded", updateBucketData);
+      unlistenToLoadedFn();
+      unlistenToLabeledFn();
       this.freeBucket(bucket);
     });
   }

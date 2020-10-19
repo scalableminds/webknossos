@@ -71,6 +71,7 @@ import {
   setTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { refreshIsosurfacesAction } from "oxalis/model/actions/annotation_actions";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -270,7 +271,7 @@ class TracingApi {
       tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
-    // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
+    // $FlowIssue[incompatible-use] remove once https://github.com/facebook/flow/issues/34 is closed
     const comment = tree.comments.find(__ => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -819,6 +820,10 @@ class DataApi {
    */
   isMappingEnabled(): boolean {
     return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
+  }
+
+  refreshIsosurfaces() {
+    Store.dispatch(refreshIsosurfacesAction());
   }
 
   /**

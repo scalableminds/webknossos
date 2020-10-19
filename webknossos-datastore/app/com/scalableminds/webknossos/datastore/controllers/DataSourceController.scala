@@ -210,15 +210,6 @@ class DataSourceController @Inject()(
     }
   }
 
-  def checkNewOrganizationDirectory = Action { implicit request =>
-    AllowRemoteOrigin {
-      if (Files.isWritable(dataSourceService.dataBaseDir))
-        Ok
-      else
-        BadRequest
-    }
-  }
-
   def reload(organizationName: String, dataSetName: String, layerName: Option[String] = None) = Action.async {
     implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {

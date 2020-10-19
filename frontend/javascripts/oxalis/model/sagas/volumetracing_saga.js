@@ -31,7 +31,11 @@ import {
   enforceVolumeTracing,
   isVolumeTracingDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getFlooredPosition,
+  getRotation,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   type BoundingBoxType,
   type ContourMode,
@@ -110,6 +114,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       );
     }
 
+    let lastPosition = startEditingAction.position;
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield* race({
         addToLayerAction: _take("ADD_TO_LAYER"),
@@ -117,6 +122,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       });
 
       if (finishEditingAction) break;
+
       if (!addToLayerAction || addToLayerAction.type !== "ADD_TO_LAYER") {
         throw new Error("Unexpected action. Satisfy flow.");
       }
@@ -133,21 +139,29 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
         const currentViewportBounding = yield* call(getBoundingsFromPosition, activeViewport);
+        const rectangleIterator = currentLayer.getRectangleVoxelIterator(
+          lastPosition,
+          addToLayerAction.position,
+          currentViewportBounding,
+        );
+        if (rectangleIterator) {
+          yield* call(labelWithIterator, rectangleIterator, contourTracingMode);
+        }
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
           contourTracingMode,
         );
       }
+      lastPosition = addToLayerAction.position;
     }
-
     yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
     yield* put(finishAnnotationStrokeAction());
   }
 }
 
 function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBoxType> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const halfViewportExtents = yield* call(getHalfViewportExtents, currentViewport);
   const halfViewportExtentsUVW = Dimensions.transDim([...halfViewportExtents, 0], currentViewport);
   return {
@@ -157,7 +171,7 @@ function* getBoundingsFromPosition(currentViewport: OrthoView): Saga<BoundingBox
 }
 
 function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const thirdDimValue = position[Dimensions.thirdDimensionForPlane(planeId)];
   return new VolumeLayer(planeId, thirdDimValue);
 }
@@ -198,7 +212,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   }
 
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
-  const position = Dimensions.roundCoordinate(yield* select(state => getPosition(state.flycam)));
+  const position = yield* select(state => getFlooredPosition(state.flycam));
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtents,
     activeViewport,

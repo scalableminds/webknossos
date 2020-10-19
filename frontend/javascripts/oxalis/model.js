@@ -58,7 +58,7 @@ export class OxalisModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    // $FlowFixMe remove once https://github.com/facebook/flow/issues/2221 is fixed
+    // $FlowIssue[incompatible-return] remove once https://github.com/facebook/flow/issues/2221 is fixed
     return Object.values(this.dataLayers);
   }
 

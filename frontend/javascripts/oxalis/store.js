@@ -147,10 +147,10 @@ export type TreeGroupTypeFlat = {|
   +groupId: number,
 |};
 
-export type TreeGroup = {
+export type TreeGroup = {|
   ...TreeGroupTypeFlat,
   +children: Array<TreeGroup>,
-};
+|};
 
 export type VolumeCell = {
   +id: number,
@@ -234,9 +234,9 @@ export type ReadOnlyTracing = {|
 
 export type HybridTracing = {|
   ...Annotation,
-  skeleton: ?SkeletonTracing,
-  volume: ?VolumeTracing,
-  readOnly: ?ReadOnlyTracing,
+  +skeleton: ?SkeletonTracing,
+  +volume: ?VolumeTracing,
+  +readOnly: ?ReadOnlyTracing,
 |};
 
 export type Tracing = HybridTracing;
@@ -448,6 +448,7 @@ type UiInformation = {
   +isImportingMesh: boolean,
   +isInAnnotationView: boolean,
   +hasOrganizations: boolean,
+  +isRefreshingIsosurfaces: boolean,
 };
 
 export type OxalisState = {|

@@ -41,7 +41,7 @@ class ConfigurationController @Inject()(
     }
   }
 
-  def readDataSet(organizationName: String, dataSetName: String) =
+  def readDataSetViewConfiguration(organizationName: String, dataSetName: String) =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
       request.identity.toFox
         .flatMap(user =>
@@ -54,30 +54,31 @@ class ConfigurationController @Inject()(
         .map(configuration => Ok(toJson(configuration)))
     }
 
-  def updateDataSet(organizationName: String, dataSetName: String) =
+  def updateDataSetViewConfiguration(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         jsConfiguration <- request.body.asOpt[JsObject] ?~> "user.configuration.dataset.invalid"
         conf = jsConfiguration.fields.toMap
         dataSetConf = conf - "layers"
         layerConf = conf.get("layers")
-        _ <- userService.updateDataSetConfiguration(request.identity,
-                                                    dataSetName,
-                                                    organizationName,
-                                                    dataSetConf,
-                                                    layerConf)
+        _ <- userService.updateDataSetViewConfiguration(request.identity,
+                                                        dataSetName,
+                                                        organizationName,
+                                                        dataSetConf,
+                                                        layerConf)
       } yield {
         JsonOk(Messages("user.configuration.dataset.updated"))
       }
     }
 
-  def readDataSetDefault(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
-    dataSetConfigurationService
-      .getCompleteAdminViewConfiguration(dataSetName, organizationName)
-      .map(configuration => Ok(toJson(configuration)))
+  def readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String) = sil.SecuredAction.async {
+    implicit request =>
+      dataSetConfigurationService
+        .getCompleteAdminViewConfiguration(dataSetName, organizationName)
+        .map(configuration => Ok(toJson(configuration)))
   }
 
-  def updateDataSetDefault(organizationName: String, dataSetName: String) =
+  def updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String) =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         dataset <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND

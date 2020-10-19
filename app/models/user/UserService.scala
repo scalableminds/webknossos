@@ -142,7 +142,7 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetConfiguration(
+  def updateDataSetViewConfiguration(
       user: User,
       dataSetName: String,
       organizationName: String,

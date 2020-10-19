@@ -101,6 +101,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               this.props.onUploaded(activeUser.organization, formValues.name);
             },
             () => {
+              Toast.error(messages["dataset.upload_failed"]);
               this.setState({
                 isUploading: false,
                 isFinished: false,

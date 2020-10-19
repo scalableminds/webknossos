@@ -269,7 +269,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   };
 
-  this.update = (externalUpdate = false) => {
+  this.update = (externalUpdate = false, userTriggered = false) => {
     _eye.subVectors(_this.object.position, _this.lastTarget);
 
     if (!_this.noRotate) {
@@ -298,7 +298,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
 
     _this.lastTarget = _this.target.clone();
     if (!externalUpdate) {
-      _this.updateCallback();
+      _this.updateCallback(userTriggered);
     }
   };
 
@@ -383,7 +383,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     } else if (_state === STATE.PAN && !_this.noPan) {
       _this.getMouseOnScreen(event.pageX, event.pageY, _panEnd);
     }
-    _this.update();
+    _this.update(false, true);
   }
 
   function mouseup(event) {
@@ -490,7 +490,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
       default:
         _state = STATE.NONE;
     }
-    _this.update();
+    _this.update(false, true);
   }
 
   function touchend(event) {

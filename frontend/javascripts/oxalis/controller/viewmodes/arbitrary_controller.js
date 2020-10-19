@@ -1,6 +1,5 @@
 // @flow
 import * as React from "react";
-import _ from "lodash";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
 import { type Matrix4x4, V3 } from "libs/mjs";
@@ -311,7 +310,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   onBucketLoaded = () => {
-    console.log("onBucketLoaded");
     this.arbitraryView.draw();
     app.vent.trigger("rerender");
   };

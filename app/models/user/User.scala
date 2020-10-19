@@ -118,18 +118,33 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed
     }
 
-  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
+  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(
+      implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teams.isEmpty) Fox.successful(List())
     else
       for {
         accessQuery <- readAccessQuery
-        r <- run(sql"""select u.*
+        r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #${columns} from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
                                and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})
                          order by _id""".as[UsersRow])
         parsed <- Fox.combined(r.toList.map(parse))
       } yield parsed
+
+  def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columns}
+                     from #${existingCollectionName}
+                     where #${accessQuery}
+                     and (isDatasetManager
+                          or isAdmin)
+                     and not isDeactivated
+                     and _organization = $organizationId
+                     order by _id""".as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
 
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {

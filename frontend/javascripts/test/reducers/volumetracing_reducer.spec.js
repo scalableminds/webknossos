@@ -217,16 +217,15 @@ test("VolumeTracing should cycle trace/view/brush tool", t => {
 
   // Cycle tool to Trace
   let newState = VolumeTracingReducer(initialState, cycleToolAction);
-
   getVolumeTracing(newState.tracing).map(tracing => {
-    t.is(tracing.activeTool, VolumeToolEnum.TRACE);
+    t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
   });
 
   // Cycle tool to Brush
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
-    t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
+    t.is(tracing.activeTool, VolumeToolEnum.TRACE);
   });
 
   newState = VolumeTracingReducer(newState, cycleToolAction);

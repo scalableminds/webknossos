@@ -23,6 +23,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - When downloading a volume tracing, buckets containing a single 0 byte, that were created to restore older versions, are now skipped. [#4851](https://github.com/scalableminds/webknossos/pull/4851)
 - Task information CSV now contains additional column `creationInfo`, containing the original NML filename for tasks based on existing NMLs. [#4866](https://github.com/scalableminds/webknossos/pull/4866)
 - Improved the toolbar to make the different webKnossos tools easier to use. For example, the fill-tool and the cell-picker have a dedicated button in volume annotations now. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
+- Dragging with the middle mouse button changes the active position (even when another tool is selected). [#4875](https://github.com/scalableminds/webknossos/pull/4875)
+- The default overwrite-behavior in volume annotating changed so that erasing with the brush- or trace-tool always erases all voxels (regardless of their segment id). Before that, only the current segment id was overwritten by default. As before, this behavior can be toggled by pressing CTRL. Alternatively, one can now also switch the mode in the toolbar. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 
 ### Fixed
 - Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)

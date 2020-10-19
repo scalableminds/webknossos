@@ -94,8 +94,8 @@ export type ControlMode = $Keys<typeof ControlModeEnum>;
 
 export const VolumeToolEnum = {
   MOVE: "MOVE",
-  TRACE: "TRACE",
   BRUSH: "BRUSH",
+  TRACE: "TRACE",
   FILL_CELL: "FILL_CELL",
   PICK_CELL: "PICK_CELL",
 };

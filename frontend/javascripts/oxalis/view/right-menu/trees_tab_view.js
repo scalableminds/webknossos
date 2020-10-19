@@ -7,6 +7,7 @@ import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import {
   createGroupToTreesMap,
   callDeep,
@@ -661,98 +662,109 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
     return (
       <div id={treeTabId} className="padded-tab-content">
-        <Modal
-          visible={this.state.isDownloading || this.state.isUploading}
-          title={title}
-          closable={false}
-          footer={null}
-          width={200}
-          style={{ textAlign: "center" }}
-        >
-          <Spin />
-        </Modal>
-        <ButtonGroup>
-          <AdvancedSearchPopover
-            onSelect={this.handleSearchSelect}
-            data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-            searchKey="name"
-            provideShortcut
-            targetId={treeTabId}
-          >
-            <Tooltip title="Open the search via CTRL + Shift + F">
-              <ButtonComponent>
-                <Icon type="search" />
-              </ButtonComponent>
-            </Tooltip>
-          </AdvancedSearchPopover>
-          <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
-            <i className="fas fa-plus" /> Create
-          </ButtonComponent>
-          <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
-            <i className="far fa-trash-alt" /> Delete
-          </ButtonComponent>
-          <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
-            <i className="fas fa-toggle-on" /> Toggle All
-          </ButtonComponent>
-          <ButtonComponent
-            onClick={this.toggleInactiveTrees}
-            title="Toggle Visibility of Inactive Trees"
-          >
-            <i className="fas fa-toggle-off" /> Toggle Inactive
-          </ButtonComponent>
-          <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
-            <ButtonComponent>
-              More
-              <Icon type="down" />
-            </ButtonComponent>
-          </Dropdown>
-        </ButtonGroup>
-        <InputGroup compact>
-          <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
-            <i className="fas fa-arrow-left" />
-          </ButtonComponent>
-          <InputComponent
-            onChange={this.handleChangeTreeName}
-            value={activeTreeName || activeGroupName}
-            disabled={noTreesAndGroups}
-            style={{ width: "60%" }}
-          />
-          <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
-            <i className="fas fa-arrow-right" />
-          </ButtonComponent>
-          <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
-            <ButtonComponent title="Sort">
-              <i className="fas fa-sort-alpha-down" />
-            </ButtonComponent>
-          </Dropdown>
-        </InputGroup>
-        {noTreesAndGroups ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                There are no trees in this tracing.
-                <br /> A new tree will be created automatically once a node is set.
-              </span>
-            }
-          />
-        ) : (
-          <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
-            <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
-            {this.getTreesComponents(orderAttribute)}
-          </ul>
-        )}
-        {groupToDelete !== null ? (
-          <DeleteGroupModalView
-            onCancel={this.hideDeleteGroupsModal}
-            onJustDeleteGroup={() => {
-              this.deleteGroupAndHideModal(groupToDelete, false);
-            }}
-            onDeleteGroupAndTrees={() => {
-              this.deleteGroupAndHideModal(groupToDelete, true);
-            }}
-          />
-        ) : null}
+        <DomVisibilityObserver targetId={treeTabId}>
+          {isVisibleInDom =>
+            !isVisibleInDom ? null : (
+              <React.Fragment>
+                <Modal
+                  visible={this.state.isDownloading || this.state.isUploading}
+                  title={title}
+                  closable={false}
+                  footer={null}
+                  width={200}
+                  style={{ textAlign: "center" }}
+                >
+                  <Spin />
+                </Modal>
+                <ButtonGroup>
+                  <AdvancedSearchPopover
+                    onSelect={this.handleSearchSelect}
+                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                    searchKey="name"
+                    provideShortcut
+                    targetId={treeTabId}
+                  >
+                    <Tooltip title="Open the search via CTRL + Shift + F">
+                      <ButtonComponent>
+                        <Icon type="search" />
+                      </ButtonComponent>
+                    </Tooltip>
+                  </AdvancedSearchPopover>
+                  <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
+                    <i className="fas fa-plus" /> Create
+                  </ButtonComponent>
+                  <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
+                    <i className="far fa-trash-alt" /> Delete
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleAllTrees}
+                    title="Toggle Visibility of All Trees"
+                  >
+                    <i className="fas fa-toggle-on" /> Toggle All
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleInactiveTrees}
+                    title="Toggle Visibility of Inactive Trees"
+                  >
+                    <i className="fas fa-toggle-off" /> Toggle Inactive
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
+                    <ButtonComponent>
+                      More
+                      <Icon type="down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </ButtonGroup>
+                <InputGroup compact>
+                  <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
+                    <i className="fas fa-arrow-left" />
+                  </ButtonComponent>
+                  <InputComponent
+                    onChange={this.handleChangeTreeName}
+                    value={activeTreeName || activeGroupName}
+                    disabled={noTreesAndGroups}
+                    style={{ width: "60%" }}
+                  />
+                  <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
+                    <i className="fas fa-arrow-right" />
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
+                    <ButtonComponent title="Sort">
+                      <i className="fas fa-sort-alpha-down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </InputGroup>
+                {noTreesAndGroups ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <span>
+                        There are no trees in this tracing.
+                        <br /> A new tree will be created automatically once a node is set.
+                      </span>
+                    }
+                  />
+                ) : (
+                  <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+                    <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
+                    {this.getTreesComponents(orderAttribute)}
+                  </ul>
+                )}
+                {groupToDelete !== null ? (
+                  <DeleteGroupModalView
+                    onCancel={this.hideDeleteGroupsModal}
+                    onJustDeleteGroup={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, false);
+                    }}
+                    onDeleteGroupAndTrees={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, true);
+                    }}
+                  />
+                ) : null}
+              </React.Fragment>
+            )
+          }
+        </DomVisibilityObserver>
       </div>
     );
   }

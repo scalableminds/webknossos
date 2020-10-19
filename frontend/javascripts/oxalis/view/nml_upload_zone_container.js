@@ -121,7 +121,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                 <Avatar size="large" icon="file" style={{ backgroundColor: "rgb(58, 144, 255)" }} />
               }
               title={
-                <span>
+                <span style={{ wordBreak: "break-word" }}>
                   {file.name}{" "}
                   <span className="ant-list-item-meta-description">({prettyBytes(file.size)})</span>
                 </span>

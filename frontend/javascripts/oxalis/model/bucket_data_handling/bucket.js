@@ -3,9 +3,9 @@
  * @flow
  */
 
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import _ from "lodash";
+import { createNanoEvents } from "nanoevents";
 
 import { mod } from "libs/utils";
 import {
@@ -48,6 +48,12 @@ export const bucketDebuggingFlags = {
 };
 // Exposing this variable allows debugging on deployed systems
 window.bucketDebuggingFlags = bucketDebuggingFlags;
+
+type Emitter = {
+  on: Function,
+  events: Object,
+  emit: Function,
+};
 
 export class NullBucket {
   type: "null" = "null";
@@ -115,13 +121,10 @@ export class DataBucket {
   data: ?BucketDataArray;
   temporalBucketManager: TemporalBucketManager;
   zoomedAddress: Vector4;
-  // Copied from backbone events (TODO: handle this better)
-  trigger: Function;
-  on: Function;
-  off: Function;
-  once: Function;
   cube: DataCube;
   _fallbackBucket: ?Bucket;
+  throttledTriggerLabeled: () => void;
+  emitter: Emitter;
 
   constructor(
     elementClass: ElementClass,
@@ -129,7 +132,8 @@ export class DataBucket {
     temporalBucketManager: TemporalBucketManager,
     cube: DataCube,
   ) {
-    _.extend(this, BackboneEvents);
+    this.emitter = createNanoEvents();
+
     this.elementClass = elementClass;
     this.cube = cube;
     this.zoomedAddress = zoomedAddress;
@@ -140,6 +144,28 @@ export class DataBucket {
     this.accessed = false;
 
     this.data = null;
+
+    if (this.cube.isSegmentation) {
+      this.throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
+    } else {
+      this.throttledTriggerLabeled = _.noop;
+    }
+  }
+
+  once(event: string, callback: Function): () => void {
+    const unbind = this.emitter.on(event, (...args) => {
+      unbind();
+      callback(...args);
+    });
+    return unbind;
+  }
+
+  on(event: string, cb: Function): () => void {
+    return this.emitter.on(event, cb);
+  }
+
+  trigger(event: string, ...args: Array<any>): void {
+    this.emitter.emit(event, ...args);
   }
 
   getBoundingBox(): BoundingBoxType {
@@ -166,6 +192,8 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
+    this.emitter.events = {};
   }
 
   needsRequest(): boolean {
@@ -225,8 +253,6 @@ export class DataBucket {
     labelFunc(bucketData);
     this.throttledTriggerLabeled();
   }
-
-  throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
 
   markAndAddBucketForUndo() {
     this.dirty = true;

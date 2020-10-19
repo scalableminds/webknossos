@@ -19,6 +19,10 @@ mockRequire("libs/request", RequestMock);
 const WkstoreAdapterMock = { requestWithFallback: sinon.stub() };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
+const mockedCube = {
+  isSegmentation: true,
+};
+
 const layer = {
   url: "url",
   name: "layername",
@@ -66,8 +70,8 @@ test.beforeEach(t => {
   const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
 
   const buckets = [
-    new DataBucket("uint8", [0, 0, 0, 0], null),
-    new DataBucket("uint8", [1, 1, 1, 1], null),
+    new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
+    new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),
   ];
 
   for (const bucket of buckets) {

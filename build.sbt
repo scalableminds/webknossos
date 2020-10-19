@@ -15,6 +15,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps"
 )
 
+PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s",
+                            "play.server.http.idleTimeout" -> "10000s")
+
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/Routes.scala",
                              ".*/ReverseRoutes.scala",

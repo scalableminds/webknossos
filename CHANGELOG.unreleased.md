@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The find data function now works for volume tracings, too. [#4847](https://github.com/scalableminds/webknossos/pull/4847)
 - Added admins and dataset managers to dataset access list, as they can access all datasets of the organization. [#4862](https://github.com/scalableminds/webknossos/pull/4862)
 - Added the possibility to move the current position by dragging with the middle-mouse-button. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
+- Sped up the NML parsing via dashboard import. [#4872](https://github.com/scalableminds/webknossos/pull/4872)
 
 ### Changed
 - Brush circles are now connected with rectangles to provide a continuous stroke even if the brush is moved quickly. [#4785](https://github.com/scalableminds/webknossos/pull/4822)

@@ -89,7 +89,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
     } else {
       val updateResult = for {
         _ <- Fox.successful(celeryInfosLastUpdated = System.currentTimeMillis())
-        celeryInfoJson <- flowerRpc(s"/api/tasks").getWithJsonResponse[JsObject]
+        celeryInfoJson <- flowerRpc("/api/tasks").getWithJsonResponse[JsObject]
         celeryInfoMap <- celeryInfoJson
           .validate[Map[String, JsObject]] ?~> "Could not validate celery response as json map"
         _ <- Fox.serialCombined(celeryInfoMap.keys.toList)(jobId =>

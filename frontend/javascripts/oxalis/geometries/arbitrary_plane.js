@@ -58,8 +58,8 @@ class ArbitraryPlane {
     }
   }
 
-  setPosition = ({ x, y, z }: typeof THREE.Vector3) => {
-    this.meshes.mainPlane.material.setGlobalPosition([x, y, z]);
+  setPosition = (x: number, y: number, z: number) => {
+    this.meshes.mainPlane.material.setGlobalPosition(x, y, z);
   };
 
   addToScene(scene: typeof THREE.Scene) {

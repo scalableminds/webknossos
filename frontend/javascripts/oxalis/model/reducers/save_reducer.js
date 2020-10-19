@@ -28,6 +28,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         const updateActionChunks = _.chunk(items, maximumActionCountPerBatch);
         const transactionGroupCount = updateActionChunks.length;
 
+        const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
         const oldQueue = state.save.queue[action.tracingType];
         const newQueue = oldQueue.concat(
           updateActionChunks.map((actions, transactionGroupIndex) => ({
@@ -39,8 +40,8 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
             timestamp: Date.now(),
             actions,
             stats,
-            // TODO: Redux Action Log context for debugging purposes. Remove this again if it is no longer needed.
-            info: JSON.stringify(getActionLog().slice(-50)),
+            // Redux Action Log context for debugging purposes.
+            info: actionLogInfo,
           })),
         );
         return update(state, {

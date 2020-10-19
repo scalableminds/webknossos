@@ -65,9 +65,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
             Toast.warning(
-              `This tracing was initialized with an active node ID, which does not
-              belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
-              the last tree instead.`,
+              `Annotation was initialized with active node ID ${nodeId}, which is not present in the trees. Falling back to last tree instead.`,
               { timeout: 10000 },
             );
             activeNodeId = null;

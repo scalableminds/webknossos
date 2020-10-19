@@ -159,10 +159,9 @@ class CameraController extends React.PureComponent<Props> {
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.dataSource.scale, gPos);
-    const cPosVec = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XY].position.copy(cPosVec);
-    this.props.cameras[OrthoViews.PLANE_YZ].position.copy(cPosVec);
-    this.props.cameras[OrthoViews.PLANE_XZ].position.copy(cPosVec);
+    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
   }
 
   bindToEvents() {

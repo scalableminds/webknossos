@@ -1,5 +1,5 @@
 // @flow
-import NanoEvents from "nanoevents";
+import { createNanoEvents } from "nanoevents";
 import _ from "lodash";
 
 import { getIsInIframe } from "libs/utils";
@@ -16,7 +16,7 @@ import getDefaultLayouts, {
   type LayoutKeys,
 } from "./default_layout_configs";
 
-export const layoutEmitter = new NanoEvents();
+export const layoutEmitter = createNanoEvents();
 
 // For debugging purposes:
 const disableLayoutPersistance = false;

@@ -167,7 +167,7 @@
     "mini-css-extract-plugin": "^0.4.0",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",
-    "nanoevents": "^1.0.2",
+    "nanoevents": "^5.1.8",
     "pako": "^0.2.8",
     "pretty-bytes": "^5.1.0",
     "protobufjs": "^6.8.6",

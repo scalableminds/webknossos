@@ -110,7 +110,7 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       </Menu.Item>
       {features().jobsEnabled && (
         <Menu.Item key="/jobs">
-          <Link to="/jobs">Jobs</Link>
+          <Link to="/jobs">Processing Jobs</Link>
         </Menu.Item>
       )}
       <Menu.Item key="/scripts">

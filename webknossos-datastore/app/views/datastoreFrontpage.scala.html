@@ -1,0 +1,25 @@
+@( kind: String, name: String, uri: String, wKUri: String, healthPath: String )
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>webKnossos @(kind)</title>
+  <meta name="robot" content="noindex" />
+  <link rel="shortcut icon" type="image/png" href="https://static.webknossos.org/images/oxalis.svg" />
+  <style>
+    * {font-family: "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+    font-size: 14px;
+    line-height: 1.5;}
+    body {max-width: 30em; margin: 2em auto; text-align: center}
+img {display: block; margin: 2em auto}
+a {color: #777}</style>
+</head>
+<body>
+<a href="@(wKUri)"><img src="https://static.webknossos.org/images/oxalis.svg" alt="" /></a>
+<p>This is the <b>webKnossos @(kind)</b> <em>@(name)</em> at @(uri), serving webKnossos at </p>
+<p><b><a href="@(wKUri)">@(wKUri)</a></b>.</p>
+<p>You may be looking for <a href="api/buildinfo">build info</a> or <a href="@(healthPath)">health check</a>.</p>
+</body>
+</html>

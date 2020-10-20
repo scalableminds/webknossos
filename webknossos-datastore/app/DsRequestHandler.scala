@@ -27,13 +27,22 @@ class DsRequestHandler @Inject()(webCommands: WebCommands,
                                  filters: HttpFilters,
                                  conf: DataStoreConfig)
     extends DefaultHttpRequestHandler(webCommands, optionalDevContext, router, errorHandler, configuration, filters)
-    with InjectedController with AdditionalHeaders with LazyLogging {
+    with InjectedController
+    with AdditionalHeaders
+    with LazyLogging {
   override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.method == "OPTIONS") {
       Some(Action { options(request) })
     } else {
       if (request.path == "/" || request.path == "/index.html") {
-        Some(Action { Ok(s"Hello from the webKnossos Datastore “${conf.Datastore.name}” at ${conf.Http.uri} serving the webKnossos isntance at ${conf.Datastore.WebKnossos.uri}. All systems operational.") })
+        Some(Action {
+          Ok(
+            views.html.datastoreFrontpage("Datastore",
+                                          conf.Datastore.name,
+                                          conf.Http.uri,
+                                          conf.Datastore.WebKnossos.uri,
+                                          "data/health"))
+        })
       } else {
         super.routeRequest(request)
       }

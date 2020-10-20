@@ -33,7 +33,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
-  intervalID;
+  intervalID: ?number;
 
   state = {
     isLoading: true,

@@ -72,7 +72,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
 
       if (!err && activeUser != null) {
-        Toast.info("Uploading datasets");
+        Toast.info("Uploading dataset");
         this.setState({
           isUploading: true,
         });

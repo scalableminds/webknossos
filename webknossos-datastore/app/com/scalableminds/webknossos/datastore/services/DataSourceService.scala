@@ -28,11 +28,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
 
-case class ResumableUploadInformation(chunkSize: Int, totalChunkNumber: Long)
-
-case class UploadInformation(uploadId: String, organization: String, name: String, initialTeams: List[String])
-object UploadInformation { implicit val uploadInformationFormat = Json.format[UploadInformation] }
-
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
@@ -46,12 +41,10 @@ class DataSourceService @Inject()(
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 50
-  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  val dataBaseDir: Path = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
-
-  val pendingUploadChunks: mutable.HashMap[String, (Long, mutable.HashSet[Int])] = mutable.HashMap.empty
 
   var inboxCheckVerboseCounter = 0
 
@@ -115,91 +108,6 @@ class DataSourceService @Inject()(
     }
 
     if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
-  }
-
-  def handleUpload(uploadId: String,
-                   datasourceId: DataSourceId,
-                   resumableUploadInformation: ResumableUploadInformation,
-                   currentChunkNumber: Int,
-                   chunkFile: File): Fox[Unit] = {
-    val needsWrite = pendingUploadChunks.synchronized {
-      pendingUploadChunks.get(uploadId) match {
-        case Some((_, set)) =>
-          set.add(currentChunkNumber)
-
-        case None =>
-          pendingUploadChunks.put(
-            uploadId,
-            (resumableUploadInformation.totalChunkNumber, mutable.HashSet[Int](currentChunkNumber)))
-          true
-      }
-    }
-    if (needsWrite) {
-      try {
-        val bytes = Files.readAllBytes(chunkFile.toPath)
-
-        this.synchronized {
-          val tempFile = new RandomAccessFile(dataBaseDir.resolve(s".$uploadId.temp").toFile, "rw")
-          tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
-          tempFile.write(bytes)
-          tempFile.close()
-        }
-      } catch {
-        case e: Exception =>
-          pendingUploadChunks.synchronized {
-            pendingUploadChunks(uploadId)._2.remove(currentChunkNumber)
-          }
-          val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
-          logger.warn(errorMsg)
-          return Fox.failure(errorMsg)
-      }
-    }
-    Fox.successful(())
-  }
-
-  def finishUpload(uploadInformation: UploadInformation) = {
-    val uploadId = uploadInformation.uploadId
-    val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
-
-    def ensureDirectory(dir: Path) =
-      try {
-        Fox.successful(PathUtils.ensureDirectory(dir))
-      } catch {
-        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
-      }
-
-    def ensureAllChunksUploaded = pendingUploadChunks.get(uploadId) match {
-      case Some((totalChunkNumber, set)) => bool2Fox(set.size == totalChunkNumber)
-      case None                          => Fox.failure("unknown upload")
-    }
-
-    val dataSourceDir = dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
-    val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
-
-    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
-
-    for {
-      _ <- pendingUploadChunks.synchronized { ensureAllChunksUploaded }
-      _ <- ensureDirectory(dataSourceDir)
-      unzipResult = this.synchronized {
-        ZipIO.unzipToFolder(
-          zipFile,
-          dataSourceDir,
-          includeHiddenFiles = false,
-          truncateCommonPrefix = true,
-          Some(Category.values.map(_.toString).toList)
-        )
-      }
-      _ = pendingUploadChunks.synchronized { pendingUploadChunks.remove(uploadId) }
-      _ = this.synchronized { zipFile.delete() }
-      _ <- unzipResult match {
-        case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, dataSourceId.team))
-        case e =>
-          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
-          logger.warn(errorMsg)
-          Fox.failure(errorMsg)
-      }
-    } yield (dataSourceId, uploadInformation.initialTeams)
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {

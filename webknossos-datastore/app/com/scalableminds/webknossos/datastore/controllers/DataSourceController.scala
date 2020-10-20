@@ -22,7 +22,8 @@ class DataSourceController @Inject()(
     webKnossosServer: DataStoreWkRpcClient,
     accessTokenService: DataStoreAccessTokenService,
     sampleDatasetService: SampleDataSourceService,
-    binaryDataServiceHolder: BinaryDataServiceHolder
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -96,19 +97,19 @@ class DataSourceController @Inject()(
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
-              case (name, organization, chunkNumber, chunkSize, totalChunkNumber, uploadId) =>
+              case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                 val id = DataSourceId(name, organization)
-                val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkNumber)
+                val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                 for {
-                  _ <- if (!dataSourceService.pendingUploadChunks.contains(uploadId))
+                  _ <- if (!uploadService.isKnownUpload(uploadId))
                     webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
                   else Fox.successful(())
                   chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
-                  _ <- dataSourceService.handleUpload(uploadId,
-                                                      id,
-                                                      resumableUploadInformation,
-                                                      chunkNumber,
-                                                      new File(chunkFile.ref.path.toString))
+                  _ <- uploadService.handleUploadChunk(uploadId,
+                                                       id,
+                                                       resumableUploadInformation,
+                                                       chunkNumber,
+                                                       new File(chunkFile.ref.path.toString))
 
                 } yield {
                   Ok
@@ -123,7 +124,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
-          (dataSourceId, initialTeams) <- dataSourceService.finishUpload(request.body)
+          (dataSourceId, initialTeams) <- uploadService.finishUpload(request.body)
           userTokenOpt = accessTokenService.tokenFromRequest(request)
           _ <- webKnossosServer.postInitialTeams(dataSourceId, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
         } yield Ok

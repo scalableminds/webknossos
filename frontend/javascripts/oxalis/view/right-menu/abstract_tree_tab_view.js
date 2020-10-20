@@ -76,6 +76,10 @@ class AbstractTreeView extends Component<Props, State> {
     }
   };
 
+  onClickShow = () => {
+    this.setState({ visible: true });
+  };
+
   render() {
     return (
       <div className="flex-center">
@@ -89,7 +93,7 @@ class AbstractTreeView extends Component<Props, State> {
           />
         ) : (
           <React.Fragment>
-            <Button type="primary" onClick={() => this.setState({ visible: true })}>
+            <Button type="primary" onClick={this.onClickShow}>
               Show Abstract Tree
             </Button>
             <span

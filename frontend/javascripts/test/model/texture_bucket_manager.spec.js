@@ -49,13 +49,17 @@ const temporalBucketManagerMock = {
   addBucket: () => {},
 };
 
+const mockedCube = {
+  isSegmentation: false,
+};
+
 const { default: TextureBucketManager, channelCountForLookupBuffer } = mock.reRequire(
   "oxalis/model/bucket_data_handling/texture_bucket_manager",
 );
 const { DataBucket } = mock.reRequire("oxalis/model/bucket_data_handling/bucket");
 
 const buildBucket = (zoomedAddress, firstByte) => {
-  const bucket = new DataBucket("uint8", zoomedAddress, temporalBucketManagerMock);
+  const bucket = new DataBucket("uint8", zoomedAddress, temporalBucketManagerMock, mockedCube);
   bucket.pull();
   const data = new Uint8Array(32 ** 3);
   data[0] = firstByte;

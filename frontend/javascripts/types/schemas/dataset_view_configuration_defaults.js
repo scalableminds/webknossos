@@ -1,5 +1,6 @@
 // @flow
 
+import _ from "lodash";
 import {
   getDefaultLayerViewConfiguration,
   defaultDatasetViewConfiguration,
@@ -15,7 +16,9 @@ const eliminateErrors = (instance: Object, errors: Array<*>, defaults: Object) =
     } else if (error.name === "additionalProperties") {
       delete instance[error.argument];
     } else {
-      const invalidFieldName = error.property.split(".")[1];
+      const wrongPropertyPath = error.property.split(".");
+      // assert();
+      const invalidFieldName = wrongPropertyPath[1];
       if (defaults[invalidFieldName] === null) {
         delete instance[invalidFieldName];
       } else {
@@ -57,7 +60,9 @@ export const enforceValidatedDatasetViewConfiguration = (
       eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
       newLayerConfig[layer.name] = existingLayerConfig;
     } else {
-      newLayerConfig[layer.name] = isOptional ? {} : layerConfigDefault;
+      newLayerConfig[layer.name] = isOptional
+        ? {}
+        : _.pickBy(layerConfigDefault, value => value !== null);
     }
   });
   datasetViewConfiguration.layers = newLayerConfig;

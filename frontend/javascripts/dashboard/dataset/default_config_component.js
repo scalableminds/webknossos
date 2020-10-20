@@ -36,7 +36,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
   ];
 
   const comments = {
-    alpha: "20 for segementation layer",
+    alpha: "20 for segmentation layer",
     loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
   };
 

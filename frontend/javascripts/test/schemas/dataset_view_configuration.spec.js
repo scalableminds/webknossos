@@ -72,3 +72,17 @@ test("validated view configuration should not add missing property, when optiona
   enforceValidatedDatasetViewConfiguration(validatedConfiguration, DATASET, true);
   t.is(validatedConfiguration.fourBit === undefined, true);
 });
+
+test("validated should correctly remove nested additional property for known field", t => {
+  const validatedConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+  validatedConfiguration.fourBit = { deeply: "nested" };
+  enforceValidatedDatasetViewConfiguration(validatedConfiguration, DATASET, false);
+  t.is(validateObjectWithType(datasetViewConfigurationType, validatedConfiguration).length, 0);
+});
+
+test("validated should correctly remove nested additional property for unknown field", t => {
+  const validatedConfiguration = _.cloneDeep(CORRECT_DATASET_CONFIGURATION);
+  validatedConfiguration.test = { deeply: "nested" };
+  enforceValidatedDatasetViewConfiguration(validatedConfiguration, DATASET, false);
+  t.is(validateObjectWithType(datasetViewConfigurationType, validatedConfiguration).length, 0);
+});

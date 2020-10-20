@@ -11,6 +11,8 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import type { OxalisState } from "oxalis/store";
 
+const refreshInterval = 5000;
+
 const { Column } = Table;
 const { Search } = Input;
 
@@ -33,7 +35,7 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class JobListView extends React.PureComponent<Props, State> {
-  intervalID: ?number;
+  intervalID: ?TimeoutID;
 
   state = {
     isLoading: true,
@@ -64,11 +66,11 @@ class JobListView extends React.PureComponent<Props, State> {
     this.setState(
       {
         isLoading: false,
-        jobs: jobs || [],
+        jobs,
       },
-      // refresh jobs every 5 seconds
+      // refresh jobs according to the refresh interval
       () => {
-        this.intervalID = setTimeout(this.fetchData.bind(this), 5000);
+        this.intervalID = setTimeout(this.fetchData.bind(this), refreshInterval);
       },
     );
   }

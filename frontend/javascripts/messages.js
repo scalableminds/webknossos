@@ -179,7 +179,6 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
-  "job.start": "Do you really want to start this job?",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",

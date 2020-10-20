@@ -186,7 +186,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                       {
                         validator: syncValidator(
                           value => value && value.every(el => el > 0),
-                          "Each component of the scale must be larger than 0",
+                          "Each component of the scale must be larger than 0.",
                         ),
                       },
                     ],

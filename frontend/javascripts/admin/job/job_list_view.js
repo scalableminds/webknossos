@@ -54,7 +54,9 @@ class JobListView extends React.PureComponent<Props, State> {
   }
 
   componentWillUnmount() {
-    clearTimeout(this.intervalID);
+    if (this.intervalID != null) {
+      clearTimeout(this.intervalID);
+    }
   }
 
   async fetchData(): Promise<void> {

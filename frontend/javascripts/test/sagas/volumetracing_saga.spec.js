@@ -12,6 +12,7 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";
 import test from "ava";
+import type { VolumeTracing } from "oxalis/store";
 
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { withoutUpdateTracing } from "../helpers/saveHelpers";
@@ -35,23 +36,20 @@ const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
-const volumeTracing = {
+const volumeTracing: VolumeTracing = {
   type: "volume",
-  annotationType: "Explorational",
-  name: "",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  version: 0,
   activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,
-  cells: [],
-  viewMode: 0,
+  cells: {},
   maxCellId: 0,
   contourList: [[1, 2, 3], [7, 8, 9]],
-  restrictions: {
-    branchPointsAllowed: true,
-    allowUpdate: true,
-    allowFinish: true,
-    allowAccess: true,
-    allowDownload: true,
-  },
+  boundingBox: null,
+  userBoundingBoxes: [],
+  lastCentroid: null,
+  contourTracingMode: ContourModeEnum.IDLE,
 };
 
 const initialState = update(defaultState, {
@@ -74,13 +72,15 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   // only updateTracing
-  const items = execCall(t, saga.next(initialState.flycam));
+  const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
 });
 
@@ -92,12 +92,14 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(newState.tracing);
-  const items = execCall(t, saga.next(newState.flycam));
+  saga.next(newState.flycam);
+  const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "volume")));

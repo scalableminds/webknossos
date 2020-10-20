@@ -396,6 +396,16 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
 }
 
+case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
+    extends UpdateAction.SkeletonUpdateAction {
+
+  override def applyOn(tracing: SkeletonTracing): SkeletonTracing = tracing
+
+  override def addTimestamp(timestamp: Long): UpdateAction[SkeletonTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addInfo(info: Option[String]): UpdateAction[SkeletonTracing] = this.copy(info = info)
+}
+
 object CreateTreeSkeletonAction { implicit val jsonFormat = Json.format[CreateTreeSkeletonAction] }
 object DeleteTreeSkeletonAction { implicit val jsonFormat = Json.format[DeleteTreeSkeletonAction] }
 object UpdateTreeSkeletonAction { implicit val jsonFormat = Json.format[UpdateTreeSkeletonAction] }
@@ -413,6 +423,7 @@ object UpdateTreeVisibility { implicit val jsonFormat = Json.format[UpdateTreeVi
 object UpdateTreeGroupVisibility { implicit val jsonFormat = Json.format[UpdateTreeGroupVisibility] }
 object UpdateUserBoundingBoxes { implicit val jsonFormat = Json.format[UpdateUserBoundingBoxes] }
 object UpdateUserBoundingBoxVisibility { implicit val jsonFormat = Json.format[UpdateUserBoundingBoxVisibility] }
+object UpdateTdCamera { implicit val jsonFormat = Json.format[UpdateTdCamera] }
 
 object SkeletonUpdateAction {
 
@@ -437,10 +448,11 @@ object SkeletonUpdateAction {
         case "updateTreeGroupVisibility"       => deserialize[UpdateTreeGroupVisibility](jsonValue)
         case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxes](jsonValue)
         case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibility](jsonValue)
+        case "updateTdCamera"                  => deserialize[UpdateTdCamera](jsonValue)
       }
     }
 
-    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]) =
+    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]): JsResult[T] =
       if (shouldTransformPositions)
         json.transform(positionTransform).get.validate[T]
       else
@@ -449,7 +461,7 @@ object SkeletonUpdateAction {
     private val positionTransform =
       (JsPath \ 'position).json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
 
-    override def writes(a: UpdateAction[SkeletonTracing]) = a match {
+    override def writes(a: UpdateAction[SkeletonTracing]): JsObject = a match {
       case s: CreateTreeSkeletonAction =>
         Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
       case s: DeleteTreeSkeletonAction =>
@@ -485,6 +497,8 @@ object SkeletonUpdateAction {
       case s: UpdateUserBoundingBoxVisibility =>
         Json.obj("name" -> "updateUserBoundingBoxVisibility",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.jsonFormat))
+      case s: UpdateTdCamera =>
+        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCamera.jsonFormat))
     }
   }
 }

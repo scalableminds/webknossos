@@ -52,7 +52,7 @@ export type CreateNodeUpdateAction = {|
   name: "createNode",
   value: NodeWithTreeId,
 |};
-type UpdateNodeUpdateAction = {|
+export type UpdateNodeUpdateAction = {|
   name: "updateNode",
   value: NodeWithTreeId,
 |};
@@ -63,7 +63,7 @@ export type UpdateTreeVisibilityUpdateAction = {|
     isVisible: boolean,
   |},
 |};
-type UpdateTreeGroupVisibilityUpdateAction = {|
+export type UpdateTreeGroupVisibilityUpdateAction = {|
   name: "updateTreeGroupVisibility",
   value: {|
     treeGroupId: ?number,
@@ -77,7 +77,7 @@ export type DeleteNodeUpdateAction = {|
     nodeId: number,
   |},
 |};
-type CreateEdgeUpdateAction = {|
+export type CreateEdgeUpdateAction = {|
   name: "createEdge",
   value: {|
     treeId: number,
@@ -85,7 +85,7 @@ type CreateEdgeUpdateAction = {|
     target: number,
   |},
 |};
-type DeleteEdgeUpdateAction = {|
+export type DeleteEdgeUpdateAction = {|
   name: "deleteEdge",
   value: {|
     treeId: number,
@@ -140,6 +140,10 @@ export type RemoveFallbackLayerAction = {|
   name: "removeFallbackLayer",
   value: {},
 |};
+export type UpdateTdCameraAction = {|
+  name: "updateTdCamera",
+  value: {},
+|};
 
 export type UpdateAction =
   | UpdateTreeUpdateAction
@@ -159,7 +163,8 @@ export type UpdateAction =
   | UpdateTreeGroupVisibilityUpdateAction
   | RevertToVersionUpdateAction
   | UpdateTreeGroupsUpdateAction
-  | RemoveFallbackLayerAction;
+  | RemoveFallbackLayerAction
+  | UpdateTdCameraAction;
 
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {|
@@ -196,7 +201,8 @@ export type ServerUpdateAction =
   | AsServerAction<RevertToVersionUpdateAction>
   | AsServerAction<UpdateTreeGroupsUpdateAction>
   | AsServerAction<CreateTracingUpdateAction>
-  | AsServerAction<RemoveFallbackLayerAction>;
+  | AsServerAction<RemoveFallbackLayerAction>
+  | AsServerAction<UpdateTdCameraAction>;
 
 export function createTree(tree: Tree): UpdateTreeUpdateAction {
   return {
@@ -403,6 +409,13 @@ export function revertToVersion(version: number): RevertToVersionUpdateAction {
 export function removeFallbackLayer(): RemoveFallbackLayerAction {
   return {
     name: "removeFallbackLayer",
+    value: {},
+  };
+}
+
+export function updateTdCamera(): UpdateTdCameraAction {
+  return {
+    name: "updateTdCamera",
     value: {},
   };
 }

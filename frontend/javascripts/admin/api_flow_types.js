@@ -527,6 +527,7 @@ export type APIFeatureToggles = {
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,
+  +jobsEnabled: boolean,
 };
 
 export type APIJob = {

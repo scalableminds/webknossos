@@ -108,9 +108,11 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       <Menu.Item key="/taskTypes">
         <Link to="/taskTypes">Task Types</Link>
       </Menu.Item>
-      <Menu.Item key="/jobs">
-        <Link to="/jobs">Jobs</Link>
-      </Menu.Item>
+      {features().jobsEnabled && (
+        <Menu.Item key="/jobs">
+          <Link to="/jobs">Jobs</Link>
+        </Menu.Item>
+      )}
       <Menu.Item key="/scripts">
         <Link to="/scripts">Scripts</Link>
       </Menu.Item>

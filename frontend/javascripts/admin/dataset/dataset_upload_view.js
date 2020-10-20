@@ -19,6 +19,7 @@ import {
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import features from "features";
 import { syncValidator } from "../../dashboard/dataset/validation";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
@@ -150,24 +151,26 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
-              <FormItemWithInfo
-                label="Conversion"
-                info="If your dataset is not yet in WKW or KNOSSOS format, it needs conversion."
-              >
-                {getFieldDecorator("needsConversion", {
-                  initialValue: false,
-                })(
-                  <Checkbox
-                    checked={this.state.needsConversion}
-                    onChange={evt => {
-                      this.handleCheckboxChange(evt);
-                      form.setFieldsValue({ needsConversion: this.state.needsConversion });
-                    }}
-                  >
-                    Needs Conversion
-                  </Checkbox>,
-                )}
-              </FormItemWithInfo>
+              {features().jobsEnabled && (
+                <FormItemWithInfo
+                  label="Conversion"
+                  info="If your dataset is not yet in WKW or KNOSSOS format, it needs conversion."
+                >
+                  {getFieldDecorator("needsConversion", {
+                    initialValue: false,
+                  })(
+                    <Checkbox
+                      checked={this.state.needsConversion}
+                      onChange={evt => {
+                        this.handleCheckboxChange(evt);
+                        form.setFieldsValue({ needsConversion: this.state.needsConversion });
+                      }}
+                    >
+                      Needs Conversion
+                    </Checkbox>,
+                  )}
+                </FormItemWithInfo>
+              )}
               {this.state.needsConversion && (
                 <FormItemWithInfo
                   label="Voxel Size"

@@ -28,7 +28,7 @@ const FormItem = Form.Item;
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded: (string, string, boolean, ?Vector3) => void,
+  onUploaded: (string, string, boolean, ?Vector3) => Promise<void>,
 |};
 type StateProps = {|
   activeUser: ?APIUser,

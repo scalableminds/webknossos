@@ -53,14 +53,14 @@ const fetchCategorizedDatastores = async (): Promise<{
 const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
 
-  const handleDatasetAdded = (
+  const handleDatasetAdded = async (
     organization: string,
     datasetName: string,
     needsConversion: ?boolean,
     scale: ?Vector3,
-  ) => {
+  ): Promise<void> => {
     if (needsConversion && scale) {
-      startJob(datasetName, organization, scale);
+      await startJob(datasetName, organization, scale);
       const url = "/jobs";
       history.push(url);
     } else {

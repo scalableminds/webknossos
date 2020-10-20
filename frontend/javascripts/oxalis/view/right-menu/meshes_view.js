@@ -134,6 +134,20 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   };
 
   render() {
+    const reloadButton = (
+      <Icon
+        key="reload-button"
+        type="redo"
+        onClick={(__, segmentId: number) => console.log(segmentId)}
+      />
+    );
+    const downloadButton = (
+      <Icon
+        key="reload-button"
+        type="vertical-align-bottom"
+        onClick={(__, segmentId: number) => console.log(segmentId)}
+      />
+    );
     const convertHSLAToCSSString = ([h, s, l, a]) =>
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
 
@@ -141,13 +155,12 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
     const renderIsosurfaceListItem = (cellId: number) => (
-      <List.Item>
+      <List.Item actions={[reloadButton, downloadButton]}>
         {" "}
         <span
-          className="colored-circle"
+          className="circle"
           style={{ backgroundColor: convertCellIdToCSS(cellId) }}
-        />{" "}
-        Segment {cellId}
+        /> Segment {cellId}
       </List.Item>
     );
 
@@ -178,7 +191,11 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             </Tooltip>
           )}
         </ButtonGroup>
-        <List dataSource={this.props.isosurfaces} renderItem={renderIsosurfaceListItem} />
+        <List
+          dataSource={this.props.isosurfaces}
+          renderItem={renderIsosurfaceListItem}
+          split={false}
+        />
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}

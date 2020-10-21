@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Checkbox, Icon, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
+import { Button, Checkbox, Icon, Input, Modal, Spin, Table, Tooltip, Upload } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -8,12 +8,14 @@ import React from "react";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import Store from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { Vector3Input } from "libs/vector_input";
 import {
   createMeshFromBufferAction,
   deleteMeshAction,
   importIsosurfaceFromStlAction,
+  triggerActiveIsosurfaceDownloadAction,
   triggerIsosurfaceDownloadAction,
   updateLocalMeshMetaDataAction,
   updateRemoteMeshMetaDataAction,
@@ -26,6 +28,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 
 const ButtonGroup = Button.Group;
+const { Column } = Table;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -104,7 +107,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     }
   },
   downloadIsosurface() {
-    dispatch(triggerIsosurfaceDownloadAction());
+    dispatch(triggerActiveIsosurfaceDownloadAction());
   },
 });
 
@@ -134,35 +137,20 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   };
 
   render() {
-    const reloadButton = (
-      <Icon
-        key="reload-button"
-        type="redo"
-        onClick={(__, segmentId: number) => console.log(segmentId)}
-      />
+    const refreshButton = (segmentId: number) => (
+      <Icon key="refresh-button" type="redo" onClick={console.log(segmentId)} />
     );
-    const downloadButton = (
+    const downloadButton = (segmentId: number) => (
       <Icon
-        key="reload-button"
+        key="download-button"
         type="vertical-align-bottom"
-        onClick={(__, segmentId: number) => console.log(segmentId)}
+        onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
       />
     );
     const convertHSLAToCSSString = ([h, s, l, a]) =>
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
-
-    const renderIsosurfaceListItem = (cellId: number) => (
-      <List.Item actions={[reloadButton, downloadButton]}>
-        {" "}
-        <span
-          className="circle"
-          style={{ backgroundColor: convertCellIdToCSS(cellId) }}
-        /> Segment {cellId}
-      </List.Item>
-    );
 
     return (
       <div className="padded-tab-content">
@@ -191,11 +179,38 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             </Tooltip>
           )}
         </ButtonGroup>
-        <List
+        <Table
           dataSource={this.props.isosurfaces}
-          renderItem={renderIsosurfaceListItem}
-          split={false}
-        />
+          showHeader={false}
+          pagination={false}
+          bordered={false}
+          size="small"
+          key="cellId"
+          locale={{ emptyText: "There are no isosurfaces yet." }}
+        >
+          <Column
+            title="cellId"
+            key="cellId"
+            render={(cellId: number) => (
+              <div>
+                <span className="circle" style={{ backgroundColor: convertCellIdToCSS(cellId) }} />{" "}
+                Segment {cellId}
+              </div>
+            )}
+          />
+          <Column
+            title="Action"
+            key="actions"
+            fixed="right"
+            render={(__, segmentId: number) => (
+              <span>
+                {refreshButton(segmentId)}
+                {downloadButton(segmentId)}
+              </span>
+            )}
+          />
+        </Table>
+
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}

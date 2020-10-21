@@ -2,7 +2,7 @@
 
 import "test/sagas/skeletontracing_saga.mock.js";
 
-import type { SaveQueueEntry } from "oxalis/store";
+import type { SaveQueueEntry, SkeletonTracing } from "oxalis/store";
 import ChainReducer from "test/helpers/chainReducer";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -10,6 +10,8 @@ import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue
 import compactUpdateActions from "oxalis/model/helpers/compaction/compact_update_actions";
 import mockRequire from "mock-require";
 import test from "ava";
+import defaultState from "oxalis/default_state";
+import update from "immutability-helper";
 
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
@@ -39,7 +41,6 @@ const SkeletonTracingReducer = mockRequire.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
 const { take, put } = mockRequire.reRequire("redux-saga/effects");
-const { M4x4 } = mockRequire.reRequire("libs/mjs");
 
 function testDiffing(prevTracing, nextTracing, prevFlycam, flycam) {
   return withoutUpdateTracing(
@@ -59,56 +60,42 @@ function compactSaveQueueWithUpdateActions(
   );
 }
 
-const initialState = {
-  dataset: {
-    dataSource: {
-      scale: [5, 5, 5],
-    },
-  },
-  task: {
-    id: 1,
-  },
-  datasetConfiguration: {
-    fourBit: false,
-    interpolation: false,
-  },
-  tracing: {
-    restrictions: {
-      branchPointsAllowed: true,
-      allowUpdate: true,
-      allowFinish: true,
-      allowAccess: true,
-      allowDownload: true,
-    },
-    annotationType: "Explorational",
-    name: "",
-    skeleton: {
-      type: "skeleton",
-      trees: {
-        "1": {
-          treeId: 1,
-          name: "TestTree",
-          nodes: new DiffableMap(),
-          timestamp: 12345678,
-          branchPoints: [],
-          edges: new EdgeCollection(),
-          comments: [],
-          color: [23, 23, 23],
-          isVisible: true,
-        },
-      },
-      activeTreeId: 1,
-      activeNodeId: null,
-      cachedMaxNodeId: 0,
-    },
-    volume: null,
-  },
-  flycam: {
-    zoomStep: 2,
-    currentMatrix: M4x4.identity,
-    spaceDirectionOrtho: [1, 1, 1],
-  },
+const skeletonTracing: SkeletonTracing = {
+  type: "skeleton",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  version: 0,
+  trees: {},
+  treeGroups: [],
+  activeGroupId: -1,
+  activeTreeId: 1,
+  activeNodeId: null,
+  cachedMaxNodeId: 0,
+  boundingBox: null,
+  userBoundingBoxes: [],
+  navigationList: { list: [], activeIndex: -1 },
 };
+
+skeletonTracing.trees[1] = {
+  treeId: 1,
+  name: "TestTree",
+  nodes: new DiffableMap(),
+  timestamp: 12345678,
+  branchPoints: [],
+  edges: new EdgeCollection(),
+  comments: [],
+  color: [23, 23, 23],
+  isVisible: true,
+  groupId: -1,
+};
+
+const initialState = update(defaultState, {
+  tracing: {
+    restrictions: { allowUpdate: { $set: true }, branchPointsAllowed: { $set: true } },
+    skeleton: { $set: skeletonTracing },
+  },
+});
+
 const createNodeAction = SkeletonTracingActions.createNodeAction([1, 2, 3], [0, 1, 0], 0, 1.2);
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
@@ -127,13 +114,15 @@ test("SkeletonTracingSaga shouldn't do anything if unchanged (saga test)", t => 
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   // only updateTracing
-  const items = execCall(t, saga.next(initialState.flycam));
+  const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
 });
 
@@ -145,12 +134,14 @@ test("SkeletonTracingSaga should do something if changed (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(newState.tracing);
-  const items = execCall(t, saga.next(newState.flycam));
+  saga.next(newState.flycam);
+  const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.true(withoutUpdateTracing(items).length > 0);
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "skeleton")));
 });
@@ -369,7 +360,6 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
     testState.flycam,
     newState.flycam,
   );
-
   t.is(updateActions[0].name, "updateTree");
   t.is(updateActions[0].value.id, 1);
   t.deepEqual(updateActions[0].value.branchPoints, [{ nodeId: 1, timestamp: 12345678 }]);

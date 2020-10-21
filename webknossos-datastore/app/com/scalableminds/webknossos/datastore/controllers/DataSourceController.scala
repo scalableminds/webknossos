@@ -1,14 +1,14 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
-import java.nio.file.{Files}
+import java.nio.file.Files
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
-import play.api.data.Forms.{nonEmptyText, tuple}
+import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
@@ -22,7 +22,8 @@ class DataSourceController @Inject()(
     webKnossosServer: DataStoreWkRpcClient,
     accessTokenService: DataStoreAccessTokenService,
     sampleDatasetService: SampleDataSourceService,
-    binaryDataServiceHolder: BinaryDataServiceHolder
+    binaryDataServiceHolder: BinaryDataServiceHolder,
+    uploadService: UploadService
 )(implicit bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
@@ -82,9 +83,12 @@ class DataSourceController @Inject()(
     val uploadForm = Form(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText,
-        "initialTeams" -> play.api.data.Forms.list(nonEmptyText)
-      )).fill(("", "", List()))
+        "owningOrganization" -> nonEmptyText,
+        "resumableChunkNumber" -> number,
+        "resumableChunkSize" -> number,
+        "resumableTotalChunks" -> longNumber,
+        "resumableIdentifier" -> nonEmptyText
+      )).fill(("", "", -1, -1, -1, ""))
 
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
@@ -93,14 +97,20 @@ class DataSourceController @Inject()(
           .fold(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
-              case (name, organization, initialTeams) =>
+              case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
                 val id = DataSourceId(name, organization)
+                val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                 for {
-                  _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
-                  zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
-                  _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
-                  userTokenOpt = accessTokenService.tokenFromRequest(request)
-                  _ <- webKnossosServer.postInitialTeams(id, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
+                  _ <- if (!uploadService.isKnownUpload(uploadId))
+                    webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
+                  else Fox.successful(())
+                  chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                  _ <- uploadService.handleUploadChunk(uploadId,
+                                                       id,
+                                                       resumableUploadInformation,
+                                                       chunkNumber,
+                                                       new File(chunkFile.ref.path.toString))
+
                 } yield {
                   Ok
                 }
@@ -108,6 +118,19 @@ class DataSourceController @Inject()(
           )
       }
     }
+  }
+
+  def finishUpload = Action.async(validateJson[UploadInformation]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+      AllowRemoteOrigin {
+        for {
+          (dataSourceId, initialTeams) <- uploadService.finishUpload(request.body)
+          userTokenOpt = accessTokenService.tokenFromRequest(request)
+          _ <- webKnossosServer.postInitialTeams(dataSourceId, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
+        } yield Ok
+      }
+    }
+
   }
 
   def fetchSampleDataSource(organizationName: String, dataSetName: String) = Action.async { implicit request =>

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter}
+import java.io.{File, FileWriter, RandomAccessFile}
 import java.nio.file.{AccessDeniedException, Files, Path, Paths}
 
 import akka.actor.ActorSystem
@@ -23,6 +23,7 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 import org.joda.time.format.ISODateTimeFormat
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
@@ -40,7 +41,7 @@ class DataSourceService @Inject()(
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
   private val MaxNumberOfFilesForDataFormatGuessing = 50
-  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  val dataBaseDir: Path = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
   private val logFileName = Paths.get("datasource-properties-backups.log")
@@ -107,37 +108,6 @@ class DataSourceService @Inject()(
     }
 
     if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
-  }
-
-  def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
-
-    def ensureDirectory(dir: Path) =
-      try {
-        Fox.successful(PathUtils.ensureDirectory(dir))
-      } catch {
-        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
-      }
-
-    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
-
-    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
-
-    for {
-      _ <- ensureDirectory(dataSourceDir)
-      unzipResult = ZipIO.unzipToFolder(dataSetZip,
-                                        dataSourceDir,
-                                        includeHiddenFiles = false,
-                                        truncateCommonPrefix = true,
-                                        Some(Category.values.map(_.toString).toList))
-      _ <- unzipResult match {
-        case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        case e => {
-          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
-          logger.warn(errorMsg)
-          Fox.failure(errorMsg)
-        }
-      }
-    } yield ()
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {

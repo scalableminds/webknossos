@@ -1,15 +1,9 @@
 // @flow
-import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
-import _ from "lodash";
 
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type ModifierKeys } from "libs/input";
 import { type Matrix4x4, V3 } from "libs/mjs";
-import {
-  enforceSkeletonTracing,
-  getActiveNode,
-  getMaxNodeId,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
@@ -73,12 +67,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   storePropertyUnsubscribers: Array<Function>;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  stopListening: Function;
-
   componentDidMount() {
-    _.extend(this, BackboneEvents);
     this.input = {
       mouseController: null,
     };
@@ -211,7 +200,10 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Recenter active node
       s: () => {
-        const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+        const skeletonTracing = Store.getState().tracing.skeleton;
+        if (!skeletonTracing) {
+          return;
+        }
         getActiveNode(skeletonTracing).map(activeNode =>
           api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
         );
@@ -228,6 +220,10 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
+        const skeletonTracing = Store.getState().tracing.skeleton;
+        if (!skeletonTracing) {
+          return;
+        }
         Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
       },
 
@@ -243,7 +239,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   nextNode(nextOne: boolean): void {
-    const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+    const skeletonTracing = Store.getState().tracing.skeleton;
+    if (!skeletonTracing) {
+      return;
+    }
     Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
       ([activeNode, maxNodeId]) => {
         if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
@@ -275,14 +274,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   bindToEvents(): void {
-    const onBucketLoaded = () => {
-      this.arbitraryView.draw();
-      app.vent.trigger("rerender");
-    };
-
-    for (const dataLayer of Model.getAllLayers()) {
-      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
-    }
+    this.startListeningToBuckets();
 
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
@@ -315,6 +307,23 @@ class ArbitraryController extends React.PureComponent<Props> {
         },
       ),
     );
+  }
+
+  onBucketLoaded = () => {
+    this.arbitraryView.draw();
+    app.vent.trigger("rerender");
+  };
+
+  startListeningToBuckets() {
+    for (const dataLayer of Model.getAllLayers()) {
+      dataLayer.cube.on("bucketLoaded", this.onBucketLoaded);
+    }
+  }
+
+  stopListeningToBuckets() {
+    for (const dataLayer of Model.getAllLayers()) {
+      dataLayer.cube.off("bucketLoaded", this.onBucketLoaded);
+    }
   }
 
   start(): void {
@@ -350,7 +359,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   stop(): void {
-    this.stopListening();
+    this.stopListeningToBuckets();
     this.unsubscribeStoreListeners();
 
     if (this.isStarted) {
@@ -401,6 +410,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   pushBranch(): void {
+    if (!Store.getState().tracing.skeleton) {
+      return;
+    }
+
     // Consider for deletion
     this.setWaypoint();
     Store.dispatch(createBranchPointAction());

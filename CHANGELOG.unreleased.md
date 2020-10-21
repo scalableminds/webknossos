@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added admins and dataset managers to dataset access list, as they can access all datasets of the organization. [#4862](https://github.com/scalableminds/webknossos/pull/4862)
 - Added the possibility to move the current position by dragging with the middle-mouse-button. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 - Sped up the NML parsing via dashboard import. [#4872](https://github.com/scalableminds/webknossos/pull/4872)
+- Movements in the 3D viewport are now time-tracked. [#4876](https://github.com/scalableminds/webknossos/pull/4876)
 
 ### Changed
 - Brush circles are now connected with rectangles to provide a continuous stroke even if the brush is moved quickly. [#4785](https://github.com/scalableminds/webknossos/pull/4822)
@@ -26,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved the toolbar to make the different webKnossos tools easier to use. For example, the fill-tool and the cell-picker have a dedicated button in volume annotations now. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 - Dragging with the middle mouse button changes the active position (even when another tool is selected). [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 - The default overwrite-behavior in volume annotating changed so that erasing with the brush- or trace-tool always erases all voxels (regardless of their segment id). Before that, only the current segment id was overwritten by default. As before, this behavior can be toggled by pressing CTRL. Alternatively, one can now also switch the mode in the toolbar. [#4875](https://github.com/scalableminds/webknossos/pull/4875)
+- The dataset upload is now more robust and can recover from a failed upload of a data chunk. [#4860](https://github.com/scalableminds/webknossos/pull/4860)
 
 ### Fixed
 - Fixed failing histogram requests for float layers with NaN values. [#4834](https://github.com/scalableminds/webknossos/pull/4834)

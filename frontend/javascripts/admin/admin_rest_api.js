@@ -750,7 +750,7 @@ export async function getJobs(): Promise<Array<APIJob>> {
     id: job.id,
     type: job.command,
     datasetName: job.commandArgs.kwargs.dataset_name,
-    state: job.celeryInfo.state.toLowerCase(),
+    state: _.capitalize(job.celeryInfo.state.toLowerCase()),
     createdAt: job.created,
   }));
 }

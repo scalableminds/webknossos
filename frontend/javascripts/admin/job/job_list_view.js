@@ -137,7 +137,7 @@ class JobListView extends React.PureComponent<Props, State> {
                 width={150}
                 render={(__, job: APIJob) => (
                   <span>
-                    {job.state === "success" && job.datasetName && this.props.activeUser && (
+                    {job.state === "Success" && job.datasetName && this.props.activeUser && (
                       <Link
                         to={`/datasets/${this.props.activeUser.organization}/${
                           job.datasetName

@@ -4,10 +4,10 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataStore, APIUser, DatasetConfig } from "admin/api_flow_types";
+import type { APIDataStore, APIUser, APIDatasetId } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { addDataset } from "admin/admin_rest_api";
+import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -42,12 +42,18 @@ type PropsWithForm = {|
 type State = {
   isUploading: boolean,
   needsConversion: boolean,
+  isRetrying: boolean,
+  isFinished: boolean,
+  uploadProgress: number,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
     isUploading: false,
     needsConversion: false,
+    isRetrying: false,
+    isFinished: false,
+    uploadProgress: 0,
   };
 
   isDatasetManagerOrAdmin = () =>
@@ -55,10 +61,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
   normFile = e => {
+    // Ensure that only one dataset can be uploaded simultaneously
     if (Array.isArray(e)) {
-      return e;
+      return e.slice(-1);
     }
-    return e && e.fileList;
+    return e && e.fileList.slice(-1);
   };
 
   handleCheckboxChange = evt => {
@@ -75,35 +82,72 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
       formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj);
-      formValues.initialTeams = formValues.initialTeams.map(team => team.id);
 
       if (!err && activeUser != null) {
-        Toast.info("Uploading datasets");
+        Toast.info("Uploading dataset");
         this.setState({
           isUploading: true,
         });
 
-        const datasetConfig: DatasetConfig = {
-          ...formValues,
-          organization: activeUser.organization,
+        const datasetId: APIDatasetId = {
+          name: formValues.name,
+          owningOrganization: activeUser.organization,
         };
 
-        addDataset(datasetConfig).then(
-          async () => {
-            Toast.success(messages["dataset.upload_success"]);
-            trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-            this.props.onUploaded(
-              activeUser.organization,
-              formValues.name,
-              this.state.needsConversion,
-              formValues.scale,
-            );
-          },
-          () => {
-            this.setState({ isUploading: false });
-          },
-        );
+        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
+
+        resumableUpload.on("fileSuccess", file => {
+          this.setState({ isFinished: true });
+          const uploadInfo = {
+            uploadId: file.uniqueIdentifier,
+            organization: datasetId.owningOrganization,
+            name: datasetId.name,
+            initialTeams: formValues.initialTeams.map(team => team.id),
+            needsConversion: formValues.needsConversion,
+          };
+
+          finishDatasetUpload(formValues.datastore, uploadInfo).then(
+            async () => {
+              Toast.success(messages["dataset.upload_success"]);
+              trackAction("Upload dataset");
+              await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
+              this.props.onUploaded(
+                activeUser.organization,
+                formValues.name,
+                this.state.needsConversion,
+                formValues.scale,
+              );
+            },
+            () => {
+              Toast.error(messages["dataset.upload_failed"]);
+              this.setState({
+                isUploading: false,
+                isFinished: false,
+                isRetrying: false,
+                uploadProgress: 0,
+              });
+            },
+          );
+        });
+
+        resumableUpload.on("fileAdded", () => {
+          resumableUpload.upload();
+        });
+
+        resumableUpload.on("fileError", (file, message) => {
+          Toast.error(message);
+          this.setState({ isUploading: false });
+        });
+
+        resumableUpload.on("fileProgress", file => {
+          this.setState({ isRetrying: false, uploadProgress: file.progress(false) });
+        });
+
+        resumableUpload.on("fileRetry", () => {
+          this.setState({ isRetrying: true });
+        });
+
+        resumableUpload.addFiles(formValues.zipFile);
       }
     });
   };
@@ -112,10 +156,19 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
+    const { isUploading, isRetrying, isFinished, uploadProgress } = this.state;
+    let tooltip;
+    if (isFinished) {
+      tooltip = "Converting Dataset...";
+    } else {
+      tooltip = `${isRetrying ? "Retrying... - " : ""}${Math.round(
+        uploadProgress * 100,
+      )}% completed`;
+    }
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
-        <Spin spinning={this.state.isUploading} size="large">
+        <Spin spinning={isUploading} tip={tooltip} size="large">
           <CardContainer withoutCard={withoutCard} title="Upload Dataset">
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <Row gutter={8}>
@@ -214,8 +267,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                           .slice(0, -1)
                           .join(".");
                         form.setFieldsValue({ name: filename });
+                        form.validateFields(["name"]);
                       }
                       form.setFieldsValue({ zipFile: [file] });
+
                       return false;
                     }}
                   >

@@ -39,6 +39,23 @@ type MoveTDViewByVectorAction = {
   y: number,
 };
 
+// These two actions are used instead of their functionally identical counterparts
+// (without the `_WITHOUT_TIME_TRACKING` suffix)
+// when dispatching these actions should not trigger the save queue diffing.
+// Therefore, the save queue will not become dirty and no time is tracked by the backend.
+// The actions are used by initialization code and by the `setTargetAndFixPosition`
+// workaround in the td_controller.js.
+type SetTDCameraWithoutTimeTrackingAction = {
+  type: "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
+  cameraData: PartialCameraData,
+};
+
+type MoveTDViewByVectorWithoutTimeTrackingAction = {
+  type: "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
+  x: number,
+  y: number,
+};
+
 type SetInputCatcherRect = {
   type: "SET_INPUT_CATCHER_RECT",
   viewport: Viewport,
@@ -57,6 +74,14 @@ export const setViewportAction = (viewport: OrthoView): SetViewportAction => ({
 
 export const setTDCameraAction = (cameraData: PartialCameraData): SetTDCameraAction => ({
   type: "SET_TD_CAMERA",
+  cameraData,
+});
+
+// See the explanation further up for when to use this action instead of the setTDCameraAction
+export const setTDCameraWithoutTimeTrackingAction = (
+  cameraData: PartialCameraData,
+): SetTDCameraWithoutTimeTrackingAction => ({
+  type: "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
   cameraData,
 });
 
@@ -79,6 +104,16 @@ export const zoomTDViewAction = (
 
 export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVectorAction => ({
   type: "MOVE_TD_VIEW_BY_VECTOR",
+  x,
+  y,
+});
+
+// See the explanation further up for when to use this action instead of the moveTDViewByVectorAction
+export const moveTDViewByVectorWithoutTimeTrackingAction = (
+  x: number,
+  y: number,
+): MoveTDViewByVectorWithoutTimeTrackingAction => ({
+  type: "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
   x,
   y,
 });
@@ -107,10 +142,19 @@ export const setInputCatcherRects = (viewportRects: ViewportRects): SetInputCatc
 export type ViewModeAction =
   | SetViewportAction
   | SetTDCameraAction
+  | SetTDCameraWithoutTimeTrackingAction
   | CenterTDViewAction
   | ZoomTDViewAction
   | MoveTDViewByVectorAction
+  | MoveTDViewByVectorWithoutTimeTrackingAction
   | SetInputCatcherRect
   | SetInputCatcherRects;
+
+export const ViewModeSaveRelevantActions = [
+  "SET_TD_CAMERA",
+  "CENTER_TD_VIEW",
+  "ZOOM_TD_VIEW",
+  "MOVE_TD_VIEW_BY_VECTOR",
+];
 
 export default {};

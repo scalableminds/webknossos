@@ -113,6 +113,20 @@ object ImportVolumeData {
   implicit val importVolumeData = Json.format[ImportVolumeData]
 }
 
+case class UpdateTdCamera(actionTimestamp: Option[Long] = None, info: Option[String] = None)
+    extends VolumeUpdateAction {
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
+    this.copy(actionTimestamp = Some(timestamp))
+
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("updateTdCamera", actionTimestamp, Json.obj())
+}
+
+object UpdateTdCamera {
+  implicit val updateTdCameraFormat = Json.format[UpdateTdCamera]
+}
+
 case class CompactVolumeUpdateAction(name: String, actionTimestamp: Option[Long], value: JsObject)
     extends VolumeUpdateAction
 
@@ -142,6 +156,7 @@ object VolumeUpdateAction {
         case "updateUserBoundingBoxVisibility" => (json \ "value").validate[UpdateUserBoundingBoxVisibility]
         case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
         case "importVolumeTracing"             => (json \ "value").validate[ImportVolumeData]
+        case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 
@@ -165,6 +180,8 @@ object VolumeUpdateAction {
         Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayer.removeFallbackLayer))
       case s: ImportVolumeData =>
         Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeData.importVolumeData))
+      case s: UpdateTdCamera =>
+        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCamera.updateTdCameraFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

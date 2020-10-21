@@ -36,12 +36,7 @@ class DsRequestHandler @Inject()(webCommands: WebCommands,
     } else {
       if (request.path == "/" || request.path == "/index.html") {
         Some(Action {
-          Ok(
-            views.html.datastoreFrontpage("Datastore",
-                                          conf.Datastore.name,
-                                          conf.Http.uri,
-                                          conf.Datastore.WebKnossos.uri,
-                                          "data/health"))
+          Ok(views.html.datastoreFrontpage("Datastore", conf.Datastore.name, conf.Datastore.WebKnossos.uri))
         })
       } else {
         super.routeRequest(request)

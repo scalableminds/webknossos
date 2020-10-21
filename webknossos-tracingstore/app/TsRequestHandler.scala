@@ -24,12 +24,7 @@ class TsRequestHandler @Inject()(webCommands: WebCommands,
     } else {
       if (request.path == "/" || request.path == "/index.html") {
         Some(Action {
-          Ok(
-            views.html.datastoreFrontpage("Tracingstore",
-                                          conf.Tracingstore.name,
-                                          conf.Http.uri,
-                                          conf.Tracingstore.WebKnossos.uri,
-                                          "tracings/health"))
+          Ok(views.html.datastoreFrontpage("Tracingstore", conf.Tracingstore.name, conf.Tracingstore.WebKnossos.uri))
         })
       } else {
         super.routeRequest(request)

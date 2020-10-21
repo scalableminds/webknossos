@@ -14,6 +14,7 @@ import {
   finishedRefreshingIsosurfacesAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
+  type TriggerIsosurfaceDownloadAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
@@ -271,10 +272,9 @@ function* maybeLoadIsosurface(
   );
 }
 
-function* downloadActiveIsosurfaceCell(): Saga<void> {
-  const currentId = yield* call(getCurrentCellId);
+function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometry(currentId);
+  const geometry = sceneController.getIsosurfaceGeometry(cellId);
   if (geometry == null) {
     const errorMessages = messages["tracing.not_isosurface_available_to_download"];
     Toast.error(errorMessages[0], { sticky: false }, errorMessages[1]);
@@ -287,10 +287,19 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   isosurfaceMarker.forEach((marker, index) => {
     stl.setUint8(index, marker);
   });
-  stl.setUint32(cellIdIndex, currentId, true);
+  stl.setUint32(cellIdIndex, cellId, true);
 
   const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `isosurface-${currentId}.stl`);
+  yield* call(saveAs, blob, `isosurface-${cellId}.stl`);
+}
+
+function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
+  yield* call(downloadIsosurfaceCellById, action.cellId);
+}
+
+function* downloadActiveIsosurfaceCell(): Saga<void> {
+  const currentId = yield* call(getCurrentCellId);
+  yield* call(downloadIsosurfaceCellById, currentId);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -377,7 +386,8 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
   yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
-  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);

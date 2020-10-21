@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, FileWriter}
-import java.nio.file.{AccessDeniedException, Files, Path, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -105,40 +105,6 @@ class DataSourceService @Inject()(
     }
 
     if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
-  }
-
-  def handleUpload(id: DataSourceId, dataSetZip: File, needsConversion: Boolean): Fox[Unit] = {
-
-    def ensureDirectory(dir: Path) =
-      try {
-        Fox.successful(PathUtils.ensureDirectory(dir))
-      } catch {
-        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
-      }
-
-    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(".forConversion").resolve(id.name)
-
-    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
-
-    for {
-      _ <- ensureDirectory(dataSourceDir)
-      unzipResult = ZipIO.unzipToFolder(dataSetZip,
-                                        dataSourceDir,
-                                        includeHiddenFiles = false,
-                                        truncateCommonPrefix = true,
-                                        Some(Category.values.map(_.toString).toList))
-      _ <- unzipResult match {
-        case Full(_) =>
-          if (needsConversion)
-            Fox.successful(())
-          else
-            dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        case e =>
-          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
-          logger.warn(errorMsg)
-          Fox.failure(errorMsg)
-      }
-    } yield ()
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {

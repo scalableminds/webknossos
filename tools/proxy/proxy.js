@@ -57,7 +57,7 @@ function spawnIfNotSpecified(keyword, command, args, options) {
 function killAll() {
   for (const proc of Object.values(processes).filter(x => x)) {
     if (proc.connected) {
-      proc.kill();
+      proc.kill("SIGKILL");
     }
   }
 }

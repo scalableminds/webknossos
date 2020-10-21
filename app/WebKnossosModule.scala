@@ -1,5 +1,6 @@
 import com.google.inject.AbstractModule
 import controllers.{InitialDataService, JobService}
+import com.scalableminds.webknossos.datastore.services.DataSourceService
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.task.TaskService
@@ -22,6 +23,7 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserCache]).asEagerSingleton()
     bind(classOf[AnnotationStore]).asEagerSingleton()
     bind(classOf[DataSetService]).asEagerSingleton()
+    bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[TimeSpanService]).asEagerSingleton()
     bind(classOf[JobService]).asEagerSingleton()
   }

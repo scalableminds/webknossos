@@ -1,6 +1,6 @@
 // @flow
 
-import { Button, Checkbox, Icon, Input, Modal, Spin, Table, Tooltip, Upload } from "antd";
+import { Button, Checkbox, Icon, Input, List, Modal, Spin, Tooltip, Upload } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
@@ -28,7 +28,6 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 
 const ButtonGroup = Button.Group;
-const { Column } = Table;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -138,19 +137,38 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
 
   render() {
     const refreshButton = (segmentId: number) => (
-      <Icon key="refresh-button" type="redo" onClick={console.log(segmentId)} />
+      <Tooltip title="refresh isosurface">
+        <Icon key="refresh-button" type="redo" onClick={console.log(segmentId)} />
+      </Tooltip>
     );
     const downloadButton = (segmentId: number) => (
-      <Icon
-        key="download-button"
-        type="vertical-align-bottom"
-        onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
-      />
+      <Tooltip title="download isosurface">
+        <Icon
+          key="download-button"
+          type="vertical-align-bottom"
+          onClick={() => Store.dispatch(triggerIsosurfaceDownloadAction(segmentId))}
+        />
+      </Tooltip>
     );
     const convertHSLAToCSSString = ([h, s, l, a]) =>
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
+
+    const renderListItem = (cellId: number) => (
+      <List.Item
+        actions={[refreshButton(cellId), downloadButton(cellId)]}
+        style={{ marginBottom: -15 }}
+      >
+        <span
+          className="circle"
+          style={{
+            backgroundColor: convertCellIdToCSS(cellId),
+          }}
+        />{" "}
+        Segment {cellId}
+      </List.Item>
+    );
 
     return (
       <div className="padded-tab-content">
@@ -179,37 +197,14 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             </Tooltip>
           )}
         </ButtonGroup>
-        <Table
+
+        <List
           dataSource={this.props.isosurfaces}
-          showHeader={false}
-          pagination={false}
-          bordered={false}
           size="small"
-          key="cellId"
-          locale={{ emptyText: "There are no isosurfaces yet." }}
-        >
-          <Column
-            title="cellId"
-            key="cellId"
-            render={(cellId: number) => (
-              <div>
-                <span className="circle" style={{ backgroundColor: convertCellIdToCSS(cellId) }} />{" "}
-                Segment {cellId}
-              </div>
-            )}
-          />
-          <Column
-            title="Action"
-            key="actions"
-            fixed="right"
-            render={(__, segmentId: number) => (
-              <span>
-                {refreshButton(segmentId)}
-                {downloadButton(segmentId)}
-              </span>
-            )}
-          />
-        </Table>
+          split={false}
+          renderItem={renderListItem}
+          locale={{ emptyText: " " }}
+        />
 
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal

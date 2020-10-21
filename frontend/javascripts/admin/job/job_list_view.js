@@ -1,4 +1,6 @@
 // @flow
+import _ from "lodash";
+
 import { PropTypes } from "@scalableminds/prop-types";
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Table, Spin, Input, Icon } from "antd";
@@ -126,8 +128,8 @@ class JobListView extends React.PureComponent<Props, State> {
               />
               <Column
                 title="State"
-                dataIndex="state"
                 key="state"
+                render={job => _.capitalize(job.state.toLowerCase())}
                 sorter={Utils.localeCompareBy(typeHint, job => job.state)}
               />
               <Column
@@ -137,7 +139,7 @@ class JobListView extends React.PureComponent<Props, State> {
                 width={150}
                 render={(__, job: APIJob) => (
                   <span>
-                    {job.state === "Success" && job.datasetName && this.props.activeUser && (
+                    {job.state === "SUCCESS" && job.datasetName && this.props.activeUser && (
                       <Link
                         to={`/datasets/${this.props.activeUser.organization}/${
                           job.datasetName

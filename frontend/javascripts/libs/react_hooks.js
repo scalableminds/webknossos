@@ -36,13 +36,11 @@ export function useKeyPress(targetKey: string) {
       if (event.key === targetKey) {
         pressKey();
       }
-    } else {
+    } else if (modifierState[targetKey]) {
       // Use the modifierState as this seems to be more robust. See
       // the other comment below which describes some edge cases
       // regarding modifiers.
-      if (modifierState[targetKey]) {
-        pressKey();
-      }
+      pressKey();
     }
   }
 
@@ -65,14 +63,12 @@ export function useKeyPress(targetKey: string) {
       if (event.key === targetKey) {
         releaseKey();
       }
-    } else {
+    } else if (!modifierState[targetKey]) {
       // The targetKey is a modifier. Use the modifierState as this
       // is more robust against pressing multiple modifiers. For example,
       // on Linux, pressing Shift and then toggling Alt, will send a release
       // of the Meta key even though that key was never touched.
-      if (!modifierState[targetKey]) {
-        releaseKey();
-      }
+      releaseKey();
     }
   };
 

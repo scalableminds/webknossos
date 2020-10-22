@@ -215,13 +215,13 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
 test("VolumeTracing should cycle trace/view/brush tool", t => {
   const cycleToolAction = VolumeTracingActions.cycleToolAction();
 
-  // Cycle tool to Trace
+  // Cycle tool to Brush
   let newState = VolumeTracingReducer(initialState, cycleToolAction);
   getVolumeTracing(newState.tracing).map(tracing => {
     t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
   });
 
-  // Cycle tool to Brush
+  // Cycle tool to Trace
   newState = VolumeTracingReducer(newState, cycleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {

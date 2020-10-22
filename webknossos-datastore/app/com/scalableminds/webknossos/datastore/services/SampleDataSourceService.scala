@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{BufferedOutputStream, File, FileOutputStream, RandomAccessFile}
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.concurrent.ConcurrentHashMap
 
 import akka.util.ByteString
@@ -16,7 +16,7 @@ import play.api.libs.json.Json
 case class SampleDatasetInfo(url: String, description: String)
 
 class SampleDataSourceService @Inject()(rpc: RPC,
-                                        uploadService: UploadService,
+                                        dataSourceService: DataSourceService,
                                         webknossosServer: DataStoreWkRpcClient,
                                         dataSourceRepository: DataSourceRepository)
     extends FoxImplicits {
@@ -64,16 +64,16 @@ class SampleDataSourceService @Inject()(rpc: RPC,
     for {
       responseBox <- rpc(availableDatasets(id.name).url).get.futureBox
       _ = responseBox match {
-        case Full(response) =>
+        case Full(response) => {
           val bytes: ByteString = response.bodyAsBytes
-          val fileName = s"${System.currentTimeMillis()}-${id.name}"
-          val tmpfile = new RandomAccessFile(uploadService.dataBaseDir.resolve(s".$fileName.temp").toFile, "rw")
-          tmpfile.write(bytes.toArray)
-          tmpfile.close()
-
-          uploadService.finishUpload(UploadInformation(fileName, id.team, id.name, List.empty)).map { _ =>
+          val tmpfile = File.createTempFile("demodataset", "zip")
+          val stream = new BufferedOutputStream(new FileOutputStream(tmpfile))
+          stream.write(bytes.toArray)
+          stream.close()
+          dataSourceService.handleUpload(id, tmpfile).map { _ =>
             runningDownloads.remove(id)
           }
+        }
         case _ => runningDownloads.remove(id)
       }
     } yield ()

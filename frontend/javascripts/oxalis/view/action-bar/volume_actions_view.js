@@ -3,6 +3,7 @@ import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
 import React, { useEffect } from "react";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
+import Model from "oxalis/model";
 
 import {
   ToolsWithOverwriteCapabilities,
@@ -157,10 +158,17 @@ function OverwriteModeSwitch({ isControlPressed }) {
   );
 }
 
+const mapId = id => {
+  const cube = Model.getSegmentationLayer().cube;
+  return cube.mapId(id);
+};
+
 export default function VolumeActionsView() {
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const activeTool = useSelector(state => enforceVolumeTracing(state.tracing).activeTool);
-  const activeCellId = useSelector(state => enforceVolumeTracing(state.tracing).activeCellId);
+  const unmappedActiveCellId = useSelector(
+    state => enforceVolumeTracing(state.tracing).activeCellId,
+  );
   const isMappingEnabled = useSelector(
     state => state.temporaryConfiguration.activeMapping.isMappingEnabled,
   );
@@ -184,7 +192,9 @@ export default function VolumeActionsView() {
   const isAltPressed = useKeyPress("Alt");
 
   const customColors = isMappingEnabled ? mappingColors : null;
+  const activeCellId = isMappingEnabled ? mapId(unmappedActiveCellId) : unmappedActiveCellId;
   const activeCellColor = convertCellIdToCSS(activeCellId, customColors);
+  const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";
 
   const adaptedActiveTool = adaptActiveToolToShortcuts(
     activeTool,
@@ -277,7 +287,9 @@ export default function VolumeActionsView() {
 
       <Button.Group style={{ marginLeft: 12 }}>
         <Badge dot style={{ boxShadow: "none", background: activeCellColor }}>
-          <Tooltip title={`Create a new Cell ID – The currently active cell id is ${activeCellId}`}>
+          <Tooltip
+            title={`Create a new Cell ID – The active cell id is ${unmappedActiveCellId}${mappedIdInfo}.`}
+          >
             <ButtonComponent onClick={handleCreateCell} style={{ width: 36, paddingLeft: 10 }}>
               <img src="/assets/images/new-cell.svg" alt="New Cell Icon" />
             </ButtonComponent>

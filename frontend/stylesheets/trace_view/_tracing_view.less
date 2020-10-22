@@ -176,7 +176,7 @@
 .ant-layout-header {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
-  @dark-border: #67687b;
+  @dark-border: #585868;
   @primary-border: #1890ff;
   @hover-border: #40a9ff;
 
@@ -190,6 +190,11 @@
 
     &:hover {
       border-color: @hover-border;
+      z-index: 1;
+    }
+
+    &:not(:first-child):hover::before {
+      background-color: @hover-border !important;
     }
 
     &.ant-btn-disabled,
@@ -198,6 +203,10 @@
     &.ant-select-selection-disabled {
       color: fade(@dark-fg, 50%);
       border-color: @dark-border;
+
+      &:hover::before {
+        background-color: @dark-border !important;
+      }
     }
   }
 
@@ -212,12 +221,23 @@
   // Radio button
   .ant-radio-button-wrapper:first-child {
     border-left: 1px solid @dark-border;
+    &:hover {
+      border-left: 1px solid @hover-border;
+    }
   }
 
   .ant-radio-button-wrapper-checked,
   .ant-radio-button-wrapper-checked:first-child {
     border-color: @primary-border;
     color: @primary-border;
+  }
+
+  .ant-radio-button-wrapper-checked .svg-gray-to-highlighted-blue {
+    // Calculated with https://codepen.io/sosuke/pen/Pjoqqp
+    // Input: background-color: #f1f1f1 for .pixel
+    // Prepended `brightness(50%) invert(39%)` to output
+    filter: brightness(50%) invert(39%) sepia(61%) saturate(2429%) hue-rotate(194deg)
+      brightness(105%) contrast(101%);
   }
 
   .ant-radio-button-wrapper:not(:first-child)::before {

@@ -50,7 +50,9 @@ import {
 import Constants, {
   type BoundingBoxType,
   type ContourMode,
+  type OverwriteMode,
   ContourModeEnum,
+  OverwriteModeEnum,
   type OrthoView,
   type VolumeTool,
   type Vector2,
@@ -106,9 +108,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const contourTracingMode = yield* select(
       state => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
-    const isDrawing =
-      contourTracingMode === ContourModeEnum.DRAW_OVERWRITE ||
-      contourTracingMode === ContourModeEnum.DRAW;
+    const overwriteMode = yield* select(state => enforceVolumeTracing(state.tracing).overwriteMode);
+    const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
     // The trace tool is not allowed for too high zoom steps.
@@ -142,6 +143,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
         labeledZoomStep,
+        overwriteMode,
       );
     }
 
@@ -179,6 +181,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         //     labelWithVoxelBuffer2D,
         //     rectangleVoxelBuffer2D,
         //     contourTracingMode,
+        //     overwriteMode,
         //     labeledZoomStep,
         //   );
         // }
@@ -186,13 +189,21 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           labelWithVoxelBuffer2D,
           currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
           contourTracingMode,
+          overwriteMode,
           labeledZoomStep,
         );
       }
       // lastPosition = addToLayerAction.position;
     }
 
-    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode, labeledZoomStep);
+    yield* call(
+      finishLayer,
+      currentLayer,
+      activeTool,
+      contourTracingMode,
+      overwriteMode,
+      labeledZoomStep,
+    );
     yield* put(finishAnnotationStrokeAction());
   }
 }
@@ -221,7 +232,12 @@ function* createVolumeLayer(planeId: OrthoView, labeledResolution: Vector3): Sag
   return new VolumeLayer(planeId, thirdDimValue, labeledResolution);
 }
 
-function* labelWithVoxelBuffer2D(voxelBuffer, contourTracingMode, labeledZoomStep): Saga<void> {
+function* labelWithVoxelBuffer2D(
+  voxelBuffer,
+  contourTracingMode,
+  overwriteMode: OverwriteMode,
+  labeledZoomStep: number,
+): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -605,6 +621,7 @@ export function* finishLayer(
   layer: VolumeLayer,
   activeTool: VolumeTool,
   contourTracingMode: ContourMode,
+  overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
@@ -616,6 +633,7 @@ export function* finishLayer(
       labelWithVoxelBuffer2D,
       layer.getVoxelBuffer2D(activeTool),
       contourTracingMode,
+      overwriteMode,
       labeledZoomStep,
     );
   }

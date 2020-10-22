@@ -52,7 +52,6 @@ import Constants, {
   type ContourMode,
   type OverwriteMode,
   ContourModeEnum,
-  OverwriteModeEnum,
   type OrthoView,
   type VolumeTool,
   type Vector2,
@@ -142,8 +141,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         labelWithVoxelBuffer2D,
         currentLayer.getCircleVoxelBuffer2D(startEditingAction.position),
         contourTracingMode,
-        labeledZoomStep,
         overwriteMode,
+        labeledZoomStep,
       );
     }
 
@@ -304,10 +303,7 @@ function* labelWithVoxelBuffer2D(
     }
   }
 
-  const shouldOverwrite = [
-    ContourModeEnum.DRAW_OVERWRITE,
-    ContourModeEnum.DELETE_FROM_ANY_CELL,
-  ].includes(contourTracingMode);
+  const shouldOverwrite = contourTracingMode === ContourModeEnum.DRAW;
 
   // Since the LabeledVoxelMap is created in the current magnification,
   // we only need to annotate one slice in this mag.
@@ -316,10 +312,7 @@ function* labelWithVoxelBuffer2D(
   const numberOfSlices = 1;
   const thirdDim = dimensionIndices[2];
 
-  const isDeleting = [
-    ContourModeEnum.DELETE_FROM_ACTIVE_CELL,
-    ContourModeEnum.DELETE_FROM_ANY_CELL,
-  ].includes(contourTracingMode);
+  const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
 

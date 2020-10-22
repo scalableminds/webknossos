@@ -11,7 +11,6 @@ import {
   VolumeToolEnum,
   type OverwriteMode,
   OverwriteModeEnum,
-  type Vector3,
 } from "oxalis/constants";
 import { document } from "libs/window";
 import {
@@ -184,7 +183,6 @@ export default function VolumeActionsView() {
     state => state.temporaryConfiguration.activeMapping.mappingColors,
   );
 
-  const zoomStep = useSelector(state => state.flycam.zoomStep);
   const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
@@ -274,7 +272,7 @@ export default function VolumeActionsView() {
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."
-          disabledTitle={disabledVolumeExplanation}
+          disabledTitle={traceToolDisabledTooltip || disabledVolumeExplanation}
           disabled={isInMergerMode || isTraceToolDisabled || !isLabelingPossible}
           style={narrowButtonStyle}
           value={VolumeToolEnum.TRACE}

@@ -206,6 +206,10 @@
     &.ant-select-selection-disabled {
       color: fade(@dark-fg, 50%);
       border-color: @dark-border;
+
+      &:hover::before {
+        background-color: @dark-border !important;
+      }
     }
   }
 

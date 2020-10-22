@@ -277,7 +277,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
-            {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
+            {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
           <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}

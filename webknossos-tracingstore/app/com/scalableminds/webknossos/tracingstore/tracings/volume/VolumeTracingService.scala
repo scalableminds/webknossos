@@ -108,6 +108,7 @@ class VolumeTracingService @Inject()(
               case a: UpdateUserBoundingBoxVisibility => updateBoundingBoxVisibility(t, a.boundingBoxId, a.isVisible)
               case _: RemoveFallbackLayer             => Fox.successful(t.clearFallbackLayer)
               case a: ImportVolumeData                => Fox.successful(t.withLargestSegmentId(a.largestSegmentId))
+              case _: UpdateTdCamera                  => Fox.successful(t)
               case _                                  => Fox.failure("Unknown action.")
             }
           case Empty =>

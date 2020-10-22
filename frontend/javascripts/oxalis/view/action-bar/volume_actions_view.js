@@ -169,6 +169,10 @@ export default function VolumeActionsView() {
     state => state.temporaryConfiguration.activeMapping.mappingColors,
   );
 
+  // Ensure that no volume-tool is selected when being in merger mode.
+  // Even though, the volume toolbar is disabled, the user can still cycle through
+  // the tools via the w shortcut. In that case, the effect-hook is re-executed
+  // and the tool is switched to MOVE.
   useEffect(() => {
     if (isInMergerMode) {
       Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
@@ -215,6 +219,11 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.MOVE}
         >
+          {/*
+            When visible changes to false, the tooltip fades out in an animation. However, moveToolHint
+            will be null, too, which means the tooltip text would immediately change to an empty string.
+            To avoid this, we fallback to previousMoveToolHint.
+          */}
           <Tooltip title={moveToolHint || previousMoveToolHint} visible={moveToolHint != null}>
             <i style={{ paddingLeft: 4 }} className="fas fa-mouse-pointer" />
           </Tooltip>

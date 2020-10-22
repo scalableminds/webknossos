@@ -12,7 +12,7 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { movePlane, calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { enforce } from "libs/utils";
 import {
   enforceSkeletonTracing,
@@ -41,10 +41,7 @@ import {
   setNodePositionAction,
   updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  setDirectionAction,
-  movePlaneFlycamOrthoAction,
-} from "oxalis/model/actions/flycam_actions";
+import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import type { Edge, Tree, Node } from "oxalis/store";
@@ -75,13 +72,6 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
   _.defer(() => simulateTracing(nodesPerTree, nodesAlreadySet + 1));
 }
 
-const movePlane = (delta: Point2) => {
-  const state = Store.getState();
-  const { activeViewport } = state.viewModeData.plane;
-  const v = [-delta.x, -delta.y, 0];
-  Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
-};
-
 export function getPlaneMouseControls(planeView: PlaneView) {
   return {
     leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
@@ -89,11 +79,8 @@ export function getPlaneMouseControls(planeView: PlaneView) {
       if (tracing.skeleton != null && event.ctrlKey) {
         moveNode(delta.x, delta.y);
       } else {
-        movePlane(delta);
+        movePlane([-delta.x, -delta.y, 0]);
       }
-    },
-    middleDownMove: (delta: Point2) => {
-      movePlane(delta);
     },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),

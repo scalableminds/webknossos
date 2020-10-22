@@ -38,8 +38,8 @@ type KeyboardLoopHandler = {
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type BindingMap<T: Function> = { [key: KeyboardKey]: T };
-type MouseButtonWhich = 1 | 3;
-type MouseButtonString = "left" | "right";
+type MouseButtonWhich = 1 | 2 | 3;
+type MouseButtonString = "left" | "middle" | "right";
 type MouseHandler =
   | ((deltaY: number, modifier: ?ModifierKeys) => void)
   | ((position: Point2, id: ?string, event: MouseEvent) => void)
@@ -308,6 +308,7 @@ export class InputMouse {
   id: ?string;
 
   leftMouseButton: InputMouseButton;
+  middleMouseButton: InputMouseButton;
   rightMouseButton: InputMouseButton;
   isMouseOver: boolean = false;
   lastPosition: ?Point2 = null;
@@ -338,6 +339,7 @@ export class InputMouse {
     this.id = id;
 
     this.leftMouseButton = new InputMouseButton("left", 1, this, this.id);
+    this.middleMouseButton = new InputMouseButton("middle", 2, this, this.id);
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
     this.delegatedEvents = {};
@@ -416,12 +418,14 @@ export class InputMouse {
     this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
+    this.middleMouseButton.handleMouseDown(event);
     this.rightMouseButton.handleMouseDown(event);
   };
 
   mouseUp = (event: MouseEvent): void => {
     isDragging = false;
     this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
+    this.middleMouseButton.handleMouseUp(event, this.triggeredByTouch);
     this.rightMouseButton.handleMouseUp(event, this.triggeredByTouch);
 
     this.triggeredByTouch = false;
@@ -458,6 +462,7 @@ export class InputMouse {
 
     if (delta != null && (delta.x !== 0 || delta.y !== 0)) {
       this.leftMouseButton.handleMouseMove(event, delta);
+      this.middleMouseButton.handleMouseMove(event, delta);
       this.rightMouseButton.handleMouseMove(event, delta);
       if (this.isHit(event)) {
         this.trigger("mouseMove", delta, this.position, this.id, event);

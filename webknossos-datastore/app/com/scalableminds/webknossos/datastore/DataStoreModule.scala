@@ -15,7 +15,7 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)
     bind(classOf[DataSourceRepository]).asEagerSingleton()
-    bind(classOf[UploadService]).asEagerSingleton()
+    bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[DataStoreWkRpcClient]).asEagerSingleton()
     bind(classOf[BinaryDataServiceHolder]).asEagerSingleton()
     bind(classOf[MappingService]).asEagerSingleton()

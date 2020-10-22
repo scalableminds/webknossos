@@ -41,7 +41,7 @@ function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPres
   }
 
   if (isShiftPressed && !isControlPressed && isAltPressed) {
-    return "Click on a node to create an edge to the currently active node.";
+    return "Click on a node in another tree to merge the two trees.";
   }
 
   if (isShiftPressed && isControlPressed && !isAltPressed) {

@@ -114,8 +114,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
     } yield result
   }
 
-  def duplicateAllBaseTracings(taskParametersList: List[TaskParameters],
-                               organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider) =
+  private def duplicateAllBaseTracings(taskParametersList: List[TaskParameters],
+                               organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
       params =>
         Fox
@@ -143,7 +143,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       tracingStoreClient: TracingStoreRpcClient,
       organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     annotation.volumeTracingId
-      .map(id => tracingStoreClient.duplicateVolumeTracing(id))
+      .map(id => tracingStoreClient.duplicateVolumeTracing(id, allowedMagnifications))
       .getOrElse(
         annotationService
           .createVolumeTracingBase(
@@ -154,11 +154,11 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             params.editRotation,
             false
           )
-          .flatMap(tracingStoreClient.saveVolumeTracing(_)))
+          .flatMap(tracingStoreClient.saveVolumeTracing(_, allowedMagnifications)))
 
-  def duplicateBaseTracings(baseAnnotation: BaseAnnotation, taskParameters: TaskParameters, organizationId: ObjectId)(
+  private def duplicateBaseTracings(baseAnnotation: BaseAnnotation, taskParameters: TaskParameters, organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
-      m: MessagesProvider) = {
+      m: MessagesProvider): Fox[BaseAnnotation] = {
 
     @SuppressWarnings(Array("TraversableHead")) // We check if nonCancelledTaskAnnotations are empty before so head always works
     def checkForTask(taskId: ObjectId): Fox[Annotation] =
@@ -221,7 +221,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       } yield skeletonTracingOpt
     }
 
-  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
+  private def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
@@ -492,7 +492,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
       }
       volumeTracingIds: List[Box[Option[String]]] <- Fox.sequence(requestedTasks.map(_.map(_._3)).map {
         case Full(Some((tracing, initialFile))) =>
-          tracingStoreClient.saveVolumeTracing(tracing, initialFile).map(Some(_))
+          tracingStoreClient.saveVolumeTracing(tracing, initialFile, allowedMagnifications).map(Some(_))
         case f: Failure => box2Fox(f)
         case _          => Fox.successful(None)
       })

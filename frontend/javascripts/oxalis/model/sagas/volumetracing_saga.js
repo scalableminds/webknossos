@@ -39,7 +39,9 @@ import {
 import {
   type BoundingBoxType,
   type ContourMode,
+  type OverwriteMode,
   ContourModeEnum,
+  OverwriteModeEnum,
   type OrthoView,
   type VolumeTool,
   type Vector2,
@@ -93,9 +95,8 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const contourTracingMode = yield* select(
       state => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
-    const isDrawing =
-      contourTracingMode === ContourModeEnum.DRAW_OVERWRITE ||
-      contourTracingMode === ContourModeEnum.DRAW;
+    const overwriteMode = yield* select(state => enforceVolumeTracing(state.tracing).overwriteMode);
+    const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
     // Volume tracing for higher zoomsteps is currently not allowed
     if (yield* select(state => isVolumeTracingDisallowed(state))) {
@@ -111,6 +112,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
         labelWithIterator,
         currentLayer.getCircleVoxelIterator(startEditingAction.position, activeViewportBounding),
         contourTracingMode,
+        overwriteMode,
       );
     }
 
@@ -145,17 +147,18 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           currentViewportBounding,
         );
         if (rectangleIterator) {
-          yield* call(labelWithIterator, rectangleIterator, contourTracingMode);
+          yield* call(labelWithIterator, rectangleIterator, contourTracingMode, overwriteMode);
         }
         yield* call(
           labelWithIterator,
           currentLayer.getCircleVoxelIterator(addToLayerAction.position, currentViewportBounding),
           contourTracingMode,
+          overwriteMode,
         );
       }
       lastPosition = addToLayerAction.position;
     }
-    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode);
+    yield* call(finishLayer, currentLayer, activeTool, contourTracingMode, overwriteMode);
     yield* put(finishAnnotationStrokeAction());
   }
 }
@@ -176,7 +179,11 @@ function* createVolumeLayer(planeId: OrthoView): Saga<VolumeLayer> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
+function* labelWithIterator(
+  iterator,
+  contourTracingMode,
+  overwriteMode: OverwriteMode,
+): Saga<void> {
   const allowUpdate = yield* select(state => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
@@ -184,17 +191,20 @@ function* labelWithIterator(iterator, contourTracingMode): Saga<void> {
   const segmentationLayer = yield* call([Model, Model.getSegmentationLayer]);
   const { cube } = segmentationLayer;
   switch (contourTracingMode) {
-    case ContourModeEnum.DRAW_OVERWRITE:
-      yield* call([cube, cube.labelVoxels], iterator, activeCellId);
-      break;
     case ContourModeEnum.DRAW:
-      yield* call([cube, cube.labelVoxels], iterator, activeCellId, 0);
+      if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
+        yield* call([cube, cube.labelVoxels], iterator, activeCellId);
+      } else {
+        yield* call([cube, cube.labelVoxels], iterator, activeCellId, 0);
+      }
+
       break;
-    case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
-      yield* call([cube, cube.labelVoxels], iterator, 0, activeCellId);
-      break;
-    case ContourModeEnum.DELETE_FROM_ANY_CELL:
-      yield* call([cube, cube.labelVoxels], iterator, 0);
+    case ContourModeEnum.DELETE:
+      if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
+        yield* call([cube, cube.labelVoxels], iterator, 0);
+      } else {
+        yield* call([cube, cube.labelVoxels], iterator, 0, activeCellId);
+      }
       break;
     default:
       throw new Error("Invalid volume tracing mode.");
@@ -302,13 +312,19 @@ export function* finishLayer(
   layer: VolumeLayer,
   activeTool: VolumeTool,
   contourTracingMode: ContourMode,
+  overwriteMode: OverwriteMode,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
 
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
-    yield* call(labelWithIterator, layer.getVoxelIterator(activeTool), contourTracingMode);
+    yield* call(
+      labelWithIterator,
+      layer.getVoxelIterator(activeTool),
+      contourTracingMode,
+      overwriteMode,
+    );
   }
 
   yield* put(updateDirectionAction(layer.getCentroid()));

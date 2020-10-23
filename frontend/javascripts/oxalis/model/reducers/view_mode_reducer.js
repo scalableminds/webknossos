@@ -20,6 +20,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
         },
       });
     }
+    case "SET_TD_CAMERA_WITHOUT_TIME_TRACKING":
     case "SET_TD_CAMERA": {
       return setTDCameraReducer(state, action.cameraData);
     }
@@ -35,6 +36,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
         action.curHeight,
       );
     }
+    case "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING":
     case "MOVE_TD_VIEW_BY_VECTOR": {
       return moveTDViewByVectorReducer(state, action.x, action.y);
     }

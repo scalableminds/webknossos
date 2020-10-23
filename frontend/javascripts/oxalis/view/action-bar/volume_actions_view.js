@@ -102,7 +102,7 @@ function toggleOverwriteMode(overwriteMode) {
 
 const narrowButtonStyle = {
   paddingLeft: 10,
-  width: 38,
+  paddingRight: 8,
 };
 
 const handleSetTool = (event: { target: { value: VolumeTool } }) => {
@@ -191,7 +191,7 @@ export default function VolumeActionsView() {
   const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
     <Tooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
-      <i className="fas fa-layer-group" />
+      <i className="fas fa-layer-group" style={{ marginLeft: 4 }} />
     </Tooltip>
   ) : null;
   const isTraceToolDisabled = isZoomStepTooHighForTraceTool();
@@ -283,7 +283,6 @@ export default function VolumeActionsView() {
             className="svg-gray-to-highlighted-blue"
             style={{ opacity: isInMergerMode ? 0.5 : 1 }}
           />
-          {multiSliceAnnotationInfoIcon}
           {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip

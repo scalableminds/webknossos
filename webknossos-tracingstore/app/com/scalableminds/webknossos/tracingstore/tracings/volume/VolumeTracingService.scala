@@ -126,9 +126,10 @@ class VolumeTracingService @Inject()(
 
   private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Point3D =
     if (tracing.resolutions.nonEmpty) {
-      if (tracing.resolutions.length >= zoomStep) {
-        tracing.resolutions(zoomStep)
-      } else throw new Exception(s"Received bucket with zoomStep (${zoomStep}), could not look up that resolution tracing.resolutions (${tracing.resolutions})")
+      tracing.resolutions.find(r => r.maxDim == math.pow(2, zoomStep)).getOrElse {
+        throw new Exception(
+          s"Received bucket with zoomStep ($zoomStep), could not look up that resolution tracing.resolutions (${tracing.resolutions})")
+      }
     } else {
       val isotropicResolution = math.pow(2, zoomStep).toInt
       Point3D(isotropicResolution, isotropicResolution, isotropicResolution)

@@ -5,10 +5,14 @@ import models.annotation.AnnotationSettings._
 import play.api.libs.json._
 
 case class AllowedMagnifications(
-  shouldRestrict: Boolean,
-  min: Int,
-  max: Int
+    shouldRestrict: Boolean,
+    min: Int,
+    max: Int
 )
+
+object AllowedMagnifications {
+  implicit val format: Format[AllowedMagnifications] = Json.format[AllowedMagnifications]
+}
 
 case class AnnotationSettings(
     allowedModes: List[String] = SKELETON_MODES,

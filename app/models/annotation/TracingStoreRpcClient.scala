@@ -87,7 +87,8 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
 
   def duplicateVolumeTracing(volumeTracingId: String,
                              fromTask: Boolean = false,
-                             dataSetBoundingBox: Option[BoundingBox] = None): Fox[String] = {
+                             dataSetBoundingBox: Option[BoundingBox] = None,
+                             allowedMagnifications: Option[AllowedMagnifications] = None): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
@@ -138,7 +139,9 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)
 
-  def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[String] = {
+  def saveVolumeTracing(tracing: VolumeTracing,
+                        initialData: Option[File] = None,
+                        allowedMagnifications: Option[AllowedMagnifications] = None): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")

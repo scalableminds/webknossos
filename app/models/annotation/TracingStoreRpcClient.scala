@@ -90,11 +90,19 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
                              dataSetBoundingBox: Option[BoundingBox] = None,
                              allowedMagnifications: Option[AllowedMagnifications] = None): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
+    val magnificationQuery = allowedMagnifications.map(_.toQueryString).getOrElse("")
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryString("fromTask" -> fromTask.toString)
+      .addQueryStringOptional("minMagnification", minMagnificationOpt(allowedMagnifications))
+      .addQueryStringOptional("maxMagnification", maxMagnificationOpt(allowedMagnifications))
       .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
+
+  private def minMagnificationOpt(allowedMagnifications: Option[AllowedMagnifications]): Option[String] =
+    allowedMagnifications.flatMap(am => if (am.shouldRestrict) Some(am.min.toString) else None)
+  private def maxMagnificationOpt(allowedMagnifications: Option[AllowedMagnifications]): Option[String] =
+    allowedMagnifications.flatMap(am => if (am.shouldRestrict) Some(am.min.toString) else None)
 
   def mergeSkeletonTracingsByIds(tracingIds: List[Option[String]], persistTracing: Boolean): Fox[String] = {
     logger.debug("Called to merge SkeletonTracings by ids." + baseInfo)
@@ -146,11 +154,15 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+        .addQueryStringOptional("minMagnification", minMagnificationOpt(allowedMagnifications))
+        .addQueryStringOptional("maxMagnification", maxMagnificationOpt(allowedMagnifications))
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ <- initialData match {
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
             .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+            .addQueryStringOptional("minMagnification", minMagnificationOpt(allowedMagnifications))
+            .addQueryStringOptional("maxMagnification", maxMagnificationOpt(allowedMagnifications))
             .post(file)
         case _ =>
           Fox.successful(())

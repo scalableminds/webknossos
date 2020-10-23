@@ -4,12 +4,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings._
 import play.api.libs.json._
 
-case class AllowedMagnifications(
-    shouldRestrict: Boolean,
-    min: Int,
-    max: Int
-)
-
 object AllowedMagnifications {
   implicit val format: Format[AllowedMagnifications] = Json.format[AllowedMagnifications]
 }
@@ -53,4 +47,15 @@ object AnnotationSettings {
       .filter(JsonValidationError("annotation.mode.invalid")) { a =>
         a.allowedModes.forall(ALL_MODES.contains)
       }
+}
+
+case class AllowedMagnifications(
+    shouldRestrict: Boolean,
+    min: Int,
+    max: Int
+) {
+  def toQueryString: String =
+    if (shouldRestrict)
+      s"minResolution=$min&maxResolution=$max"
+    else ""
 }

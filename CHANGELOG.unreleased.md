@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the possibility to move the current position by dragging with the middle-mouse-button (regardless of the active tool). [#4875](https://github.com/scalableminds/webknossos/pull/4875)
 - Sped up the NML parsing via dashboard import. [#4872](https://github.com/scalableminds/webknossos/pull/4872)
 - Movements in the 3D viewport are now time-tracked. [#4876](https://github.com/scalableminds/webknossos/pull/4876)
+- Dataset uploads on a specific Datastore can now be restricted to a single organization. [#4892](https://github.com/scalableminds/webknossos/pull/4892)
 
 ### Changed
 - Brush circles are now connected with rectangles to provide a continuous stroke even if the brush is moved quickly. [#4785](https://github.com/scalableminds/webknossos/pull/4822)

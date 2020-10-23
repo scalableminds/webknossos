@@ -96,7 +96,7 @@ class DataSourceController @Inject()(
               case (name, organization, initialTeams) =>
                 val id = DataSourceId(name, organization)
                 for {
-                  _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
+                  _ <- webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
                   zipFile <- request.body.file("zipFile[]") ?~> "zip.file.notFound"
                   _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.path.toAbsolutePath.toString))
                   userTokenOpt = accessTokenService.tokenFromRequest(request)

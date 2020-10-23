@@ -9,7 +9,7 @@ import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{SQLClient, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,6 +23,7 @@ case class DataStore(
     isForeign: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
+    onlyAllowedOrganization: Option[ObjectId] = None
 )
 
 object DataStore {
@@ -45,7 +46,8 @@ object DataStore {
       isDeleted = false,
       isForeign.getOrElse(false),
       isConnector.getOrElse(false),
-      allowsUpload.getOrElse(true)
+      allowsUpload.getOrElse(true),
+      None
     )
 
   def fromUpdateForm(name: String,
@@ -102,7 +104,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.isforeign,
         r.isconnector,
-        r.allowsupload
+        r.allowsupload,
+        r.onlyallowedorganization.map(ObjectId(_))
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =

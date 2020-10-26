@@ -23,7 +23,6 @@ class WebKnossosModule extends AbstractModule {
     bind(classOf[UserCache]).asEagerSingleton()
     bind(classOf[AnnotationStore]).asEagerSingleton()
     bind(classOf[DataSetService]).asEagerSingleton()
-    bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[TimeSpanService]).asEagerSingleton()
     bind(classOf[JobService]).asEagerSingleton()
   }

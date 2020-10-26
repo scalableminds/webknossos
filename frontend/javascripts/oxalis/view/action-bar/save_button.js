@@ -3,7 +3,8 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import type { OxalisState, ProgressInfo, IsBusyInfo } from "oxalis/store";
+import Store from "oxalis/store";
+import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
@@ -16,15 +17,14 @@ type OwnProps = {|
   className?: string,
 |};
 type StateProps = {|
-  progressInfo: ProgressInfo,
+  progressFraction: ?number,
   isBusyInfo: IsBusyInfo,
-  oldestUnsavedTimestamp: ?number,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
 type State = {
   isStateSaved: boolean,
-  currentTimestamp: number,
+  showUnsavedWarning: boolean,
 };
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
@@ -45,7 +45,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   savedPollingInterval: number = 0;
   state = {
     isStateSaved: false,
-    currentTimestamp: Date.now(),
+    showUnsavedWarning: false,
   };
 
   componentDidMount() {
@@ -59,9 +59,18 @@ class SaveButton extends React.PureComponent<Props, State> {
 
   _forceUpdate = () => {
     const isStateSaved = Model.stateSaved();
+    const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
+
+    const unsavedDuration =
+      oldestUnsavedTimestamp != null ? new Date() - oldestUnsavedTimestamp : 0;
+    const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
+    if (showUnsavedWarning) {
+      reportUnsavedDurationThresholdExceeded();
+    }
+
     this.setState({
       isStateSaved,
-      currentTimestamp: Date.now(),
+      showUnsavedWarning,
     });
   };
 
@@ -76,18 +85,12 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 
   shouldShowProgress(): boolean {
-    // For a low action count, the progress info would show only for a very short amount of time
-    return isBusy(this.props.isBusyInfo) && this.props.progressInfo.totalActionCount > 5000;
+    return isBusy(this.props.isBusyInfo) && this.props.progressFraction != null;
   }
 
   render() {
-    const { progressInfo, oldestUnsavedTimestamp } = this.props;
-    const unsavedDuration =
-      oldestUnsavedTimestamp != null ? this.state.currentTimestamp - oldestUnsavedTimestamp : 0;
-    const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
-    if (showUnsavedWarning) {
-      reportUnsavedDurationThresholdExceeded();
-    }
+    const { progressFraction } = this.props;
+    const showUnsavedWarning = this.state.showUnsavedWarning;
 
     return (
       <ButtonComponent
@@ -99,10 +102,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         style={{ background: showUnsavedWarning ? "#e33f36" : null }}
       >
         {this.shouldShowProgress() ? (
-          <span style={{ marginLeft: 8 }}>
-            {Math.floor((progressInfo.processedActionCount / progressInfo.totalActionCount) * 100)}{" "}
-            %
-          </span>
+          <span style={{ marginLeft: 8 }}>{Math.floor((progressFraction || 0) * 100)} %</span>
         ) : (
           <span className="hide-on-small-screen">Save</span>
         )}
@@ -139,12 +139,15 @@ function getOldestUnsavedTimestamp(saveQueue): ?number {
 
 function mapStateToProps(state: OxalisState): StateProps {
   const { progressInfo, isBusyInfo } = state.save;
-  const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(state.save.queue);
 
   return {
-    progressInfo,
     isBusyInfo,
-    oldestUnsavedTimestamp,
+    // For a low action count, the progress info would show only for a very short amount of time.
+    // Therefore, the progressFraction is set to null, if the count is low.
+    progressFraction:
+      progressInfo.totalActionCount > 5000
+        ? progressInfo.processedActionCount / progressInfo.totalActionCount
+        : null,
   };
 }
 

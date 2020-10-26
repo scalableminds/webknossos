@@ -15,6 +15,7 @@ import {
   type APIDatasetId,
   type APIFeatureToggles,
   type APIHistogramData,
+  type APIJob,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -38,7 +39,6 @@ import {
   type APIUpdateActionBatch,
   type APIUser,
   type APIUserLoggedTime,
-  type DatasetConfig,
   type ExperienceDomainList,
   type HybridServerTracing,
   type MeshMetaData,
@@ -63,6 +63,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { saveAs } from "file-saver";
+import ResumableJS from "resumablejs";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -742,6 +743,28 @@ export async function getDatasets(
   return datasets;
 }
 
+export async function getJobs(): Promise<Array<APIJob>> {
+  const jobs = await Request.receiveJSON("/api/jobs");
+  assertResponseLimit(jobs);
+  return jobs.map(job => ({
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.kwargs.dataset_name,
+    state: job.celeryInfo.state,
+    createdAt: job.created,
+  }));
+}
+
+export async function startJob(
+  jobName: string,
+  organization: string,
+  scale: Vector3,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
@@ -851,11 +874,36 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string): Promise<*> {
+  const getRandomString = () => {
+    const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
+    return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+  };
+
+  return doWithToken(
+    token =>
+      new ResumableJS({
+        testChunks: false,
+        target: `${datastoreUrl}/data/datasets?token=${token}`,
+        query: datasetId,
+        chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
+        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
+        simultaneousUploads: 3,
+        chunkRetryInterval: 2000,
+        maxChunkRetries: undefined,
+        generateUniqueIdentifier: getRandomString,
+      }),
+  );
+}
+
+export function finishDatasetUpload(
+  datastoreHost: string,
+  uploadInformation: Object,
+): Promise<void> {
   return doWithToken(token =>
-    Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datasetConfig,
-      host: datasetConfig.datastore,
+    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
+      data: uploadInformation,
+      host: datastoreHost,
     }),
   );
 }

@@ -28,7 +28,7 @@ const Slash = () => (
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
-  onAdded: (string, string) => void,
+  onAdded: (string, string) => Promise<void>,
 |};
 type StateProps = {|
   activeUser: ?APIUser,

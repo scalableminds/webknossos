@@ -97,6 +97,8 @@ dataSet.source.notFound=The data source for the data source couldn’t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.fileAccessDenied=Cannot create organization folder. Please make sure webKnossos has write permissions in the “binaryData” directory
+dataSet.import.unknownUpload=Cannot find the uploaded DataSet.
+dataSet.import.incomplete=Dataset cannot be imported because the upload is incomplete. Please wait until the Dataset is fully uploaded.
 dataSet.type.invalid=External data set of type “{0}” is not supported
 dataSet.upload.success=Dataset successfully uploaded. The import is in progress and you can view the status on the dashboard.
 dataSet.create.success=Dataset successfully created
@@ -288,5 +290,9 @@ serialization.failed=Failed to serialize data.
 
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
 initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
+
+job.notFound = Job with id {0} could not be found.
+job.couldNotRunCubing = Failed to start WKW conversion job.
+job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 
 unexpectedReturn=Unexpected return of parameters

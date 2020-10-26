@@ -154,8 +154,6 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
         .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
-        .addQueryStringOptional("minMagnification", minMagnificationOpt(allowedMagnifications))
-        .addQueryStringOptional("maxMagnification", maxMagnificationOpt(allowedMagnifications))
         .postProtoWithJsonResponse[VolumeTracing, String](tracing)
       _ <- initialData match {
         case Some(file) =>

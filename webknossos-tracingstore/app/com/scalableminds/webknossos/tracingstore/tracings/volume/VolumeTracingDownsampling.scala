@@ -64,7 +64,7 @@ trait VolumeTracingDownsampling
   def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
       implicit ec: ExecutionContext): Fox[Set[Point3D]] = {
     val bucketVolume = 32 * 32 * 32
-    val originalMag = Point3D(1, 1, 1)
+    val originalMag = Point3D(1, 1, 1) //TODO start at actual original mag
     for {
       requiredMags <- getRequiredMags(tracing)
       elementClass = elementClassFromProto(tracing.elementClass)
@@ -190,7 +190,7 @@ trait VolumeTracingDownsampling
   private def mode[T](items: Seq[T]): T =
     items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
-  private def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
+  protected def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
       magsForTracing = VolumeTracingDownsampling.resolutionsForVolumeTracingByLayerName(dataSource,
@@ -198,12 +198,19 @@ trait VolumeTracingDownsampling
       magsToCreate = magsForTracing.filterNot(_.maxDim == 1).sortBy(_.maxDim)
     } yield magsToCreate
 
-  def resolutionsMatch(tracings: Seq[VolumeTracing]): Boolean =
-    tracings.headOption.forall { firstTracing =>
-      tracings.forall(t =>
-        resolveLegacyResolutionList(t.resolutions).toSet == resolveLegacyResolutionList(firstTracing.resolutions).toSet)
-    }
-
-  private def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]) =
+  protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
     if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
+}
+
+case class ResolutionRestrictions(
+    min: Option[Int],
+    max: Option[Int]
+) {
+  def filterAllowed(resolutions: Seq[Point3D]): Seq[Point3D] =
+    resolutions.filter(isAllowed)
+
+  def isAllowed(resolution: Point3D): Boolean =
+    min.getOrElse(0) < resolution.maxDim && max.getOrElse(Int.MaxValue) > resolution.maxDim
+
+  def isForbidden(resolution: Point3D): Boolean = !isAllowed(resolution)
 }

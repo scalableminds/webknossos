@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, Web
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -42,24 +42,23 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(tracingId: String) = Action.async { implicit request =>
-    log {
-      logTime(slackNotificationService.reportUnusalRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-          AllowRemoteOrigin {
-            for {
-              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              originalResolutions <- tracingService.initializeWithData(tracingId, tracing, initialData).toFox
-              filledResolutions <- tracingService.downsample(tracingId: String,
-                                                             tracing: VolumeTracing,
-                                                             originalResolutions)
-              _ <- tracingService.updateResolutionList(tracingId, tracing, filledResolutions)
-            } yield Ok(Json.toJson(tracingId))
+  def initialData(tracingId: String, minMagnification: Option[Int], maxMagnification: Option[Int]) = Action.async {
+    implicit request =>
+      log {
+        logTime(slackNotificationService.reportUnusalRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+            AllowRemoteOrigin {
+              for {
+                initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+                magRestrictions = ResolutionRestrictions(minMagnification, maxMagnification)
+                resolutions <- tracingService.initializeWithData(tracingId, tracing, initialData, magRestrictions).toFox
+                _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+              } yield Ok(Json.toJson(tracingId))
+            }
           }
         }
       }
-    }
   }
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[VolumeTracings]) { implicit request =>
@@ -84,11 +83,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              originalResolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
-              filledResolutions <- tracingService.downsample(tracingId: String,
-                                                             tracing: VolumeTracing,
-                                                             originalResolutions)
-              _ <- tracingService.updateResolutionList(tracingId, tracing, filledResolutions)
+              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -146,7 +142,10 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String, fromTask: Option[Boolean]) = Action.async { implicit request =>
+  def duplicate(tracingId: String,
+                fromTask: Option[Boolean],
+                minMagnification: Option[Int],
+                maxMagnification: Option[Int]) = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -154,7 +153,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-              newId <- tracingService.duplicate(tracingId, tracing, fromTask.getOrElse(false), dataSetBoundingBox)
+              magRestrictions = ResolutionRestrictions(minMagnification, maxMagnification)
+              newId <- tracingService.duplicate(tracingId,
+                                                tracing,
+                                                fromTask.getOrElse(false),
+                                                dataSetBoundingBox,
+                                                magRestrictions)
             } yield {
               Ok(Json.toJson(newId))
             }

@@ -1,7 +1,9 @@
 package models.annotation
 
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDownsampling
 import models.annotation.AnnotationSettings._
+import models.binary.DataSet
 import play.api.libs.json._
 
 object AllowedMagnifications {

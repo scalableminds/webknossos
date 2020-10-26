@@ -8,14 +8,14 @@ GET         /health                                             @com.scalablemin
 # Volume tracings
 POST        /volume/save                                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save
 POST        /volume/saveMultiple                                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.saveMultiple
-POST        /volume/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(tracingId: String)
+POST        /volume/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(tracingId: String, minMagnification: Option[Int], maxMagnification: Option[Int])
 POST        /volume/:tracingId/initialDataMultiple              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(tracingId: String)
 GET         /volume/:tracingId                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/update                           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.update(tracingId: String)
 GET         /volume/:tracingId/allData                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allData(tracingId: String, version: Option[Long])
 GET         /volume/:tracingId/allDataBlocking                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataBlocking(tracingId: String, version: Option[Long])
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(tracingId: String)
-POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, fromTask: Option[Boolean])
+POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(tracingId: String, fromTask: Option[Boolean], minMagnification: Option[Int], maxMagnification: Option[Int])
 POST        /volume/:tracingId/unlinkFallback                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.unlinkFallback(tracingId: String)
 GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(tracingId: String)
 POST        /volume/:tracingId/isosurface                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestIsosurface(tracingId: String)

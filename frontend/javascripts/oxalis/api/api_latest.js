@@ -82,6 +82,7 @@ import {
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
 import Store, {
+  type Tree,
   type AnnotationType,
   type MappingType,
   type DatasetConfiguration,
@@ -573,6 +574,40 @@ class TracingApi {
       }
     }
     return result;
+  }
+
+  measureTreeLength(tree: Tree): number {
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+
+    // Pre-allocate vectors
+    const currentScaledPositionA = new Float32Array([0, 0, 0]);
+    const currentScaledPositionB = new Float32Array([0, 0, 0]);
+    const diffVector = new Float32Array([0, 0, 0]);
+
+    let lengthAcc = 0;
+    for (const edge of tree.edges.all()) {
+      const sourceNode = tree.nodes.get(edge.source);
+      const targetNode = tree.nodes.get(edge.target);
+
+      V3.scale3(sourceNode.position, datasetScale, currentScaledPositionA);
+      V3.scale3(targetNode.position, datasetScale, currentScaledPositionB);
+      V3.sub(currentScaledPositionA, currentScaledPositionB, diffVector);
+
+      lengthAcc += V3.length(diffVector);
+    }
+
+    return lengthAcc;
+  }
+
+  measureAllTrees(): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+
+    const totalLength = _.values(skeletonTracing.trees).reduce(
+      (sum, currentTree) => (sum += this.measureTreeLength(currentTree)),
+      0,
+    );
+
+    return totalLength;
   }
 
   /**

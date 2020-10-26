@@ -96,12 +96,20 @@ export function insertTreesAndTransform(
       makeTreeNodeFromTree,
     );
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
-    treeNode.isIndeterminate = _.some(
-      treeNode.children,
-      groupOrTree => groupOrTree.isChecked || groupOrTree.isIndeterminate,
-    );
-    treeNode.isChecked = _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
-    if (treeNode.isChecked) treeNode.isIndeterminate = false;
+    // Empty groups should show up as indeterminate and not checked
+    treeNode.isChecked =
+      treeNode.children.length > 0 &&
+      _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
+    treeNode.isIndeterminate = treeNode.isChecked
+      ? false
+      : treeNode.children.length === 0 ||
+        _.some(
+          treeNode.children,
+          groupOrTree =>
+            groupOrTree.isChecked ||
+            // Empty groups which are shown as indeterminate should not influence the indeterminate state of their parents
+            (groupOrTree.isIndeterminate && groupOrTree.children.length > 0),
+        );
     return treeNode;
   });
 }

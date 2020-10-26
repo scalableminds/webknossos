@@ -62,6 +62,10 @@ export class ResolutionInfo {
     }
   }
 
+  getResolutionList(): Array<Vector3> {
+    return Array.from(this.resolutionMap.entries()).map(entry => entry[1]);
+  }
+
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return Array.from(this.resolutionMap.entries()).map(entry => {
       const [powerOfTwo, resolution] = entry;

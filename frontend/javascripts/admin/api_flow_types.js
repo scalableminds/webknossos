@@ -520,6 +520,15 @@ export type APIFeatureToggles = {
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,
+  +jobsEnabled: boolean,
+};
+
+export type APIJob = {
+  +id: string,
+  +datasetName: ?string,
+  +type: string,
+  +state: string,
+  +createdAt: number,
 };
 
 // Tracing related datatypes

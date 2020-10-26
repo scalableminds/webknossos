@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(55);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(56);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -335,6 +335,16 @@ CREATE TABLE webknossos.maintenance(
 );
 INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
 
+CREATE TABLE webknossos.jobs(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _owner CHAR(24) NOT NULL,
+  command TEXT NOT NULL,
+  commandArgs JSONB NOT NULL,
+  celeryJobId CHAR(36) NOT NULL,
+  celeryInfo JSONB NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
 
 
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
@@ -353,6 +363,7 @@ CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NO
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
+CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
 

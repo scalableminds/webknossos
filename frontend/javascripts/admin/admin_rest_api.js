@@ -15,6 +15,7 @@ import {
   type APIDatasetId,
   type APIFeatureToggles,
   type APIHistogramData,
+  type APIJob,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -740,6 +741,28 @@ export async function getDatasets(
   assertResponseLimit(datasets);
 
   return datasets;
+}
+
+export async function getJobs(): Promise<Array<APIJob>> {
+  const jobs = await Request.receiveJSON("/api/jobs");
+  assertResponseLimit(jobs);
+  return jobs.map(job => ({
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.kwargs.dataset_name,
+    state: job.celeryInfo.state,
+    createdAt: job.created,
+  }));
+}
+
+export async function startJob(
+  jobName: string,
+  organization: string,
+  scale: Vector3,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+  );
 }
 
 export function getDatasetDatasource(

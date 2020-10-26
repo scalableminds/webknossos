@@ -24,11 +24,11 @@ import scala.concurrent.ExecutionContext
 
 class SQLClient @Inject()(configuration: Configuration, slackNotificationService: SlackNotificationService) {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)
-  def getSlackNotificationService = slackNotificationService
+  def getSlackNotificationService: SlackNotificationService = slackNotificationService
 }
 
 case class ObjectId(id: String) {
-  override def toString = id
+  override def toString: String = id
 }
 
 object ObjectId extends FoxImplicits {

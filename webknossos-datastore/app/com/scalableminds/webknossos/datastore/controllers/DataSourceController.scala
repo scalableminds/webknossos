@@ -8,6 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
+import play.api.data.Forms.{nonEmptyText, tuple, boolean}
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
@@ -110,7 +111,6 @@ class DataSourceController @Inject()(
                                                        resumableUploadInformation,
                                                        chunkNumber,
                                                        new File(chunkFile.ref.path.toString))
-
                 } yield {
                   Ok
                 }

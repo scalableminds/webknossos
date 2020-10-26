@@ -403,8 +403,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
         >
           <DatasetUploadView
             datastores={this.state.datastores}
-            onUploaded={(_organization: string, datasetName: string) => {
-              this.setState({ datasetNameToImport: datasetName, showDatasetUploadModal: false });
+            onUploaded={async (_organization: string, datasetName: string) => {
+              this.setState({
+                datasetNameToImport: datasetName,
+                showDatasetUploadModal: false,
+              });
             }}
             withoutCard
           />

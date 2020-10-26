@@ -33,6 +33,7 @@ import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
   type BoundingBoxType,
   type ContourMode,
+  type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
   type ViewMode,
@@ -222,6 +223,9 @@ export type VolumeTracing = {|
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
+  // This overwrite mode is used when no modifier is pressed.
+  // Pressing the modifier, will toggle the mode
+  +overwriteMode: OverwriteMode,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
   +fallbackLayer?: string,

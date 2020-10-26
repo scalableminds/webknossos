@@ -133,16 +133,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   nodes: { $set: newDiffableMap },
                   edges: { $set: edges },
                 });
+                const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
+                const activeTreeId = action.dontActivate
+                  ? skeletonTracing.activeTreeId
+                  : tree.treeId;
                 return update(state, {
                   tracing: {
                     skeleton: {
                       trees: {
                         [tree.treeId]: { $set: newTree },
                       },
-                      activeNodeId: { $set: node.id },
+                      activeNodeId: { $set: activeNodeId },
                       activeGroupId: { $set: null },
                       cachedMaxNodeId: { $set: node.id },
-                      activeTreeId: { $set: tree.treeId },
+                      activeTreeId: { $set: activeTreeId },
                     },
                   },
                 });

@@ -328,6 +328,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       <div>
         <Checkbox
           checked={node.isChecked}
+          indeterminate={node.isIndeterminate}
           onChange={this.onCheck}
           node={node}
           style={CHECKBOX_STYLE}

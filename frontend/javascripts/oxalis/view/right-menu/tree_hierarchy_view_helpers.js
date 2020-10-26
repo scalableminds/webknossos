@@ -19,6 +19,7 @@ export type TreeNode = {
   id: number,
   expanded: boolean,
   isChecked: boolean,
+  isIndeterminate: boolean,
   timestamp: number,
   type: TreeOrGroup,
   children: Array<TreeNode>,
@@ -49,6 +50,7 @@ function makeTreeNode(
       name,
       timestamp: 0,
       isChecked: false,
+      isIndeterminate: false,
       children: [],
       expanded: true,
     },
@@ -94,7 +96,12 @@ export function insertTreesAndTransform(
       makeTreeNodeFromTree,
     );
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
+    treeNode.isIndeterminate = _.some(
+      treeNode.children,
+      groupOrTree => groupOrTree.isChecked || groupOrTree.isIndeterminate,
+    );
     treeNode.isChecked = _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
+    if (treeNode.isChecked) treeNode.isIndeterminate = false;
     return treeNode;
   });
 }

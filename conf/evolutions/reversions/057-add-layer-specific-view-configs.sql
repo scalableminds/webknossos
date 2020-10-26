@@ -47,6 +47,6 @@ SET defaultConfiguration = jsonb_set(
         defaultConfiguration)
 WHERE defaultConfiguration is not null;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 55;
+UPDATE webknossos.releaseInformation SET schemaVersion = 56;
 
 COMMIT TRANSACTION;

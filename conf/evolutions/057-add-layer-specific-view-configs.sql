@@ -68,6 +68,6 @@ WHERE adminViewConfiguration ? 'quality';
 ALTER TABLE webknossos.user_dataSetConfigurations RENAME COLUMN configuration TO viewConfiguration;
 ALTER TABLE webknossos.user_dataSetConfigurations RENAME CONSTRAINT configurationIsJsonObject TO viewConfigurationIsJsonObject;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 56;
+UPDATE webknossos.releaseInformation SET schemaVersion = 57;
 
 COMMIT TRANSACTION;

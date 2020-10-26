@@ -70,7 +70,7 @@ type State = {
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
-    expandedGroupIds: {},
+    expandedGroupIds: { [MISSING_GROUP_ID]: true },
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
@@ -381,6 +381,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   }
 
+  getNodeKey({ node }: { node: TreeNode }): number {
+    // The hierarchical tree contains group and tree nodes which share ids. To generate a unique
+    // id number, use the [-1, ...] range for the group ids and the [..., -2] range for the tree ids.
+    return node.type === TYPE_GROUP ? node.id : -1 - node.id;
+  }
+
+  searchFinishCallback = (matches: Array<{ path: Array<number> }>) => {
+    if (matches.length === 0) return;
+
+    // Nodes which are matched, automatically trigger the expansion of all their parent groups.
+    // However, this does not trigger the onVisibilityToggle, which is why this function is needed.
+    const { path } = matches[0];
+    // The last entry in the path is the activated group/tree which should not be expanded
+    const expandedGroupIds = {};
+    for (const groupId of path.slice(0, -1)) {
+      expandedGroupIds[groupId] = true;
+    }
+    this.setState(prevState => ({
+      expandedGroupIds: update(prevState.expandedGroupIds, { $merge: expandedGroupIds }),
+    }));
+  };
+
   canDrop(params: { nextParent: TreeNode }) {
     const { nextParent } = params;
     return nextParent != null && nextParent.type === TYPE_GROUP;
@@ -404,6 +426,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
               searchQuery={{ activeTreeId, activeGroupId }}
+              getNodeKey={this.getNodeKey}
+              searchFinishCallback={this.searchFinishCallback}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}

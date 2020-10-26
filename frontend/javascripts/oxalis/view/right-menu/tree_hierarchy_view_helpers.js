@@ -86,7 +86,7 @@ export function insertTreesAndTransform(
     const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
-      expanded: expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : true,
+      expanded: expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : false,
       children: insertTreesAndTransform(group.children, groupToTreesMap, expandedGroupIds, sortBy),
     });
     // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop

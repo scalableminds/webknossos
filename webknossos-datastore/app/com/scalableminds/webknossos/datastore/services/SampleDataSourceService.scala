@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{BufferedOutputStream, File, FileOutputStream, RandomAccessFile}
+import java.io.RandomAccessFile
 import java.util.concurrent.ConcurrentHashMap
 
 import akka.util.ByteString
@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import net.liftweb.common.Full
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 case class SampleDatasetInfo(url: String, description: String)
 
@@ -71,15 +71,19 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           tmpfile.write(bytes.toArray)
           tmpfile.close()
 
-          uploadService.finishUpload(UploadInformation(fileName, id.team, id.name, List.empty)).map { _ =>
-            runningDownloads.remove(id)
-          }
+          uploadService
+            .finishUpload(UploadInformation(fileName, id.team, id.name, List.empty, needsConversion = false))
+            .map { _ =>
+              runningDownloads.remove(id)
+            }
         case _ => runningDownloads.remove(id)
       }
     } yield ()
 
   case class SampleDataSourceWithStatus(name: String, status: String, description: String)
-  object SampleDataSourceWithStatus { implicit val format = Json.format[SampleDataSourceWithStatus] }
+  object SampleDataSourceWithStatus {
+    implicit val format: OFormat[SampleDataSourceWithStatus] = Json.format[SampleDataSourceWithStatus]
+  }
 
   def listWithStatus(organizationName: String): List[SampleDataSourceWithStatus] =
     availableDatasets.keys.toList.map(

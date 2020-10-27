@@ -174,15 +174,15 @@ class VolumeTracingService @Inject()(
     val resolutionSets = new mutable.HashSet[Set[Point3D]]()
     ZipIO.withUnziped(initialData) {
       case (_, is) =>
-        val resulutionSet = new mutable.HashSet[Point3D]()
+        val resolutionSet = new mutable.HashSet[Point3D]()
         ZipIO.withUnziped(is) {
           case (fileName, _) =>
             parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-              resulutionSet.add(bucketPosition.resolution)
+              resolutionSet.add(bucketPosition.resolution)
             }
         }
-        if (resolutionSets.nonEmpty) {
-          resolutionSets.add(resulutionSet.toSet)
+        if (resolutionSet.nonEmpty) {
+          resolutionSets.add(resolutionSet.toSet)
         }
     }
     if (resolutionSets.isEmpty) {
@@ -495,7 +495,10 @@ class VolumeTracingService @Inject()(
     } yield id
 
   def downsample(tracingId: String, tracing: VolumeTracing): Fox[Unit] =
-    downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
+    for {
+      resultingResolutions <- downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
+      _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
+    } yield ()
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {

@@ -434,29 +434,6 @@ function setupLayerForVolumeTracing(
     ? resolutions.map(({ x, y, z }) => [x, y, z])
     : [[1, 1, 1]];
 
-  console.log("Volume tracing resolutions:", tracingResolutions);
-  const targetResolutions =
-    fallbackLayer != null ? fallbackLayer.resolutions : getResolutions(dataset);
-
-  const resolutionsAreSubset = (resAs, resBs) =>
-    resAs.every(resA => resBs.some(resB => _.isEqual(resA, resB)));
-  const doResolutionsMatch =
-    resolutionsAreSubset(targetResolutions, tracingResolutions) &&
-    resolutionsAreSubset(tracingResolutions, targetResolutions);
-
-  if (!doResolutionsMatch) {
-    if (tracingHasResolutionList) {
-      Toast.warning(
-        messages["tracing.volume_resolution_mismatch"],
-        {},
-        `The resolutions of the volume tracing (${tracingResolutions.toString()}) don't match the dataset's resolutions (${targetResolutions.toString()}). This can happen when the resolution of the dataset was changed after this tracing was created. Note that there might be rendering issues for this reason.`,
-      );
-      throw HANDLED_ERROR;
-    } else {
-      console.log("Detected legacy tracing with no resolution pyramid.");
-    }
-  }
-
   const tracingLayer = {
     name: tracing.id,
     elementClass: tracing.elementClass,

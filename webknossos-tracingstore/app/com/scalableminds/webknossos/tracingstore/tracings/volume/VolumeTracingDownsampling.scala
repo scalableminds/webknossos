@@ -48,7 +48,7 @@ trait VolumeTracingDownsampling
                  toCache: Boolean = false): Fox[Unit]
 
   def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+      implicit ec: ExecutionContext): Fox[List[Point3D]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
@@ -77,7 +77,7 @@ trait VolumeTracingDownsampling
         saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
       }
       _ = logger.debug(s"Downsampled mags $magsToCreate from $sourceMag for volume tracing $tracingId.")
-    } yield ()
+    } yield sourceMag :: magsToCreate
   }
 
   private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
@@ -200,14 +200,14 @@ trait VolumeTracingDownsampling
   private def getSourceMag(tracing: VolumeTracing): Point3D =
     tracing.resolutions.minBy(_.maxDim)
 
-  private def getMagsToCreate(tracing: VolumeTracing): Fox[Seq[Point3D]] =
+  private def getMagsToCreate(tracing: VolumeTracing): Fox[List[Point3D]] =
     for {
       requiredMags <- getRequiredMags(tracing)
       sourceMag = getSourceMag(tracing)
       magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
     } yield magsToCreate
 
-  protected def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
+  protected def getRequiredMags(tracing: VolumeTracing): Fox[List[Point3D]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
       magsForTracing = VolumeTracingDownsampling.resolutionsForVolumeTracingByLayerName(dataSource,

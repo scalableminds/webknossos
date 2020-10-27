@@ -99,7 +99,6 @@ export function insertTreesAndTransform(
       makeTreeNodeFromTree,
     );
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
-    // Empty groups should show up as indeterminate and not checked
     treeNode.isChecked = _.every(
       treeNode.children,
       // Groups that don't contain any trees should not influence the state of their parents

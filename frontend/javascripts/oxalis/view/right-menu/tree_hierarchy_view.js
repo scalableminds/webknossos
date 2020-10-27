@@ -9,7 +9,6 @@ import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
-import update from "immutability-helper";
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -126,7 +125,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   onChange = (treeData: Array<TreeNode>) => {
-    this.setState({ groupTree: treeData });
+    const expandedGroupIds = {};
+    forEachTreeNode(treeData, node => {
+      if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
+    });
+    this.setState({ groupTree: treeData, expandedGroupIds });
   };
 
   onCheck = (evt: SyntheticMouseEvent<*>) => {
@@ -174,15 +177,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       this.selectGroupById(groupId);
     }
-  };
-
-  onExpand = (params: { node: TreeNode, expanded: boolean }) => {
-    // Cannot use object destructuring in the parameters here, because the linter will complain
-    // about the Flow types
-    const { node, expanded } = params;
-    this.setState(prevState => ({
-      expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
-    }));
   };
 
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
@@ -393,29 +387,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  searchFinishCallback = (matches: Array<{ path: Array<number> }>) => {
-    if (matches.length === 0) return;
-
-    // Nodes which are matched, automatically trigger the expansion of all their parent groups.
-    // However, this does not trigger the onVisibilityToggle, which is why this function is needed.
-    const { path } = matches[0];
-    // Use the latest state to avoid races with the onChange state update
-    this.setState(prevState => {
-      const expandedGroupIds = {};
-      // The last entry in the path is the activated group/tree which should not be expanded
-      for (const groupId of path.slice(0, -1)) {
-        // path contains node keys (see getNodeKey), but as we are looking for a group
-        // where the node key equals the groupId, this is fine
-        findTreeNode(prevState.groupTree, groupId, item => {
-          if (item.expanded && item.type === TYPE_GROUP) expandedGroupIds[groupId] = true;
-        });
-      }
-      return {
-        expandedGroupIds: update(prevState.expandedGroupIds, { $merge: expandedGroupIds }),
-      };
-    });
-  };
-
   canDrop(params: { nextParent: TreeNode }) {
     const { nextParent } = params;
     return nextParent != null && nextParent.type === TYPE_GROUP;
@@ -436,11 +407,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               treeData={this.state.groupTree}
               onChange={this.onChange}
               onMoveNode={this.onMoveNode}
-              onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
               searchQuery={{ activeTreeId, activeGroupId }}
               getNodeKey={this.getNodeKey}
-              searchFinishCallback={this.searchFinishCallback}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}

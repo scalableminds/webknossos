@@ -151,7 +151,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
       readHDF: (IHDF5Reader, Long, Long) => Array[Long]): Array[Long] = {
     val readerRange = getReaderRange(request)
     if (readerRange._2 - readerRange._1 < maxReaderRange) {
-      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong)
+      val agglomerateIds = readHDF(reader, readerRange._1.toLong, (readerRange._2 - readerRange._1).toLong + 1)
       input.map(i => if (i == ULong(0)) 0L else agglomerateIds((i - readerRange._1).toInt))
     } else {
       var offset = readerRange._1

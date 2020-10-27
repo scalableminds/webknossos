@@ -20,7 +20,6 @@ import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import {
   createGroupToTreesMap,
   callDeep,
@@ -88,7 +87,6 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import JSZip from "jszip";
-import { V3 } from "libs/mjs";
 import { formatNumberToLength } from "libs/format_utils";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
@@ -612,7 +610,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
+        <Menu.Item
+          key="shuffleTreeColor"
+          onClick={this.shuffleTreeColor}
+          title="Shuffle Tree Color"
+        >
           <i className="fas fa-adjust" /> Shuffle Tree Color
         </Menu.Item>
         <Menu.Item
@@ -669,7 +671,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
   handleMeasureSkeletonLength = () => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
-      return null;
+      return;
     }
 
     const notificationText = getActiveTree(skeletonTracing)

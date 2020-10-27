@@ -41,8 +41,8 @@ class TracingStoreWkRpcClient @Inject()(
                  "userToken" -> userToken))
 
   def getDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[DataSourceLike] =
-    rpc(
-      s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/${organizationNameOpt.getOrElse("")}/${dataSetName}")
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/${dataSetName}")
+      .addQueryStringOptional("organizationName", organizationNameOpt)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]
 

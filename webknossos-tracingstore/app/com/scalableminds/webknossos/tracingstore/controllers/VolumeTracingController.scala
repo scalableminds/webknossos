@@ -7,6 +7,7 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
@@ -145,7 +146,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   def duplicate(tracingId: String,
                 fromTask: Option[Boolean],
                 minMagnification: Option[Int],
-                maxMagnification: Option[Int]) = Action.async { implicit request =>
+                maxMagnification: Option[Int],
+                downsample: Option[Boolean]) = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -154,11 +156,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
               magRestrictions = ResolutionRestrictions(minMagnification, maxMagnification)
-              newId <- tracingService.duplicate(tracingId,
-                                                tracing,
-                                                fromTask.getOrElse(false),
-                                                dataSetBoundingBox,
-                                                magRestrictions)
+              (newId, newTracing) <- tracingService.duplicate(tracingId,
+                                                              tracing,
+                                                              fromTask.getOrElse(false),
+                                                              dataSetBoundingBox,
+                                                              magRestrictions)
+              _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
             } yield {
               Ok(Json.toJson(newId))
             }

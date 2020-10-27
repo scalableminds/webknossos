@@ -415,7 +415,7 @@ class VolumeTracingService @Inject()(
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
                 dataSetBoundingBox: Option[BoundingBox],
-                magRestrictions: ResolutionRestrictions): Fox[String] = {
+                magRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
     val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
     val newTracing = tracingWithMagRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
@@ -423,14 +423,7 @@ class VolumeTracingService @Inject()(
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "magRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, sourceTracing, newId, newTracing)
-    } yield newId
-  }
-
-  private def restrictMagList(tracing: VolumeTracing, magRestrictions: ResolutionRestrictions): VolumeTracing = {
-    val tracingResolutions =
-      resolveLegacyResolutionList(tracing.resolutions)
-    val allowedResolutions = magRestrictions.filterAllowed(tracingResolutions.map(point3DFromProto))
-    tracing.withResolutions(allowedResolutions.map(point3DToProto))
+    } yield (newId, newTracing)
   }
 
   @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
@@ -501,17 +494,8 @@ class VolumeTracingService @Inject()(
                  toCache)
     } yield id
 
-  //TODO: supply downsample option in duplicate route
-  def downsample(tracingId: String, tracing: VolumeTracing, originalResolutions: Set[Point3D]): Fox[Set[Point3D]] = {
-    if (tracing.version != 0L) {
-      return Failure("Tracing has already been edited.")
-    }
-    if (originalResolutions == Set(Point3D(1, 1, 1))) {
-      // is legacy tracing, needs downsampling
-      val volumeLayer = volumeTracingLayer(tracingId, tracing)
-      downsampleWithLayer(tracingId, tracing, volumeLayer)
-    } else Fox.successful(originalResolutions)
-  }
+  def downsample(tracingId: String, tracing: VolumeTracing): Fox[Unit] =
+    downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {

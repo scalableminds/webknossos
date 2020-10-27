@@ -88,7 +88,8 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
   def duplicateVolumeTracing(volumeTracingId: String,
                              fromTask: Boolean = false,
                              dataSetBoundingBox: Option[BoundingBox] = None,
-                             allowedMagnifications: Option[AllowedMagnifications] = None): Fox[String] = {
+                             allowedMagnifications: Option[AllowedMagnifications] = None,
+                             downsample: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     val magnificationQuery = allowedMagnifications.map(_.toQueryString).getOrElse("")
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
@@ -96,6 +97,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
       .addQueryString("fromTask" -> fromTask.toString)
       .addQueryStringOptional("minMagnification", minMagnificationOpt(allowedMagnifications))
       .addQueryStringOptional("maxMagnification", maxMagnificationOpt(allowedMagnifications))
+      .addQueryString("downsample" -> downsample.toString)
       .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 

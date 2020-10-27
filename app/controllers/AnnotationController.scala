@@ -166,7 +166,20 @@ class AnnotationController @Inject()(
     for {
       _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
       annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- annotationService.makeAnnotationHybrid(annotation) ?~> "annotation.makeHybrid.failed"
+      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- annotationService.makeAnnotationHybrid(annotation, organization.name) ?~> "annotation.makeHybrid.failed"
+      updated <- provider.provideAnnotation(typ, id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield {
+      JsonOk(json)
+    }
+  }
+
+  def downsample(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+      annotation <- provider.provideAnnotation(typ, id, request.identity)
+      _ <- annotationService.downsampleAnnotation(annotation) ?~> "annotation.downsample.failed"
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
     } yield {

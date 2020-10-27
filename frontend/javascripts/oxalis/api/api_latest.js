@@ -603,7 +603,7 @@ class TracingApi {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
 
     const totalLength = _.values(skeletonTracing.trees).reduce(
-      (sum, currentTree) => (sum += this.measureTreeLength(currentTree)),
+      (sum, currentTree) => sum + this.measureTreeLength(currentTree),
       0,
     );
 

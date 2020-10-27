@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
+import java.lang.Thread.sleep
+
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -31,7 +33,9 @@ class WKWBucketProvider(layer: WKWLayer)
     with FoxImplicits
     with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[WKWCube] = {
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = {
+
+    //sleep(21000)
 
     val wkwFile = wkwFilePath(
       readInstruction.cube,

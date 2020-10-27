@@ -37,6 +37,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -326,13 +327,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     return (
       <div>
-        <Checkbox
-          checked={node.isChecked}
-          indeterminate={node.isIndeterminate}
-          onChange={this.onCheck}
-          node={node}
-          style={CHECKBOX_STYLE}
-        />{" "}
+        {node.containsTrees ? (
+          <Checkbox
+            checked={node.isChecked}
+            indeterminate={node.isIndeterminate}
+            onChange={this.onCheck}
+            node={node}
+            style={CHECKBOX_STYLE}
+          />
+        ) : (
+          <span style={CHECKBOX_PLACEHOLDER_STYLE} />
+        )}
         {nameAndDropdown}
       </div>
     );
@@ -360,9 +365,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           />
           <div
             data-id={node.id}
-            style={{ marginLeft: 10, display: "inline" }}
+            style={{ marginLeft: 9, display: "inline" }}
             onClick={this.onSelectTree}
-          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
+          >{`(${tree.nodes.size()}) ${tree.name}`}</div>
         </div>
       );
       nodeProps.className = "tree-type";

@@ -20,6 +20,7 @@ export type TreeNode = {
   expanded: boolean,
   isChecked: boolean,
   isIndeterminate: boolean,
+  containsTrees: boolean,
   timestamp: number,
   type: TreeOrGroup,
   children: Array<TreeNode>,
@@ -51,6 +52,7 @@ function makeTreeNode(
       timestamp: 0,
       isChecked: false,
       isIndeterminate: false,
+      containsTrees: false,
       children: [],
       expanded: true,
     },
@@ -62,6 +64,7 @@ function makeTreeNodeFromTree(tree: Tree): TreeNode {
   return makeTreeNode(tree.treeId, tree.name, TYPE_TREE, {
     timestamp: tree.timestamp,
     isChecked: tree.isVisible,
+    containsTrees: true,
   });
 }
 
@@ -97,19 +100,21 @@ export function insertTreesAndTransform(
     );
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
     // Empty groups should show up as indeterminate and not checked
-    treeNode.isChecked =
-      treeNode.children.length > 0 &&
-      _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
+    treeNode.isChecked = _.every(
+      treeNode.children,
+      // Groups that don't contain any trees should not influence the state of their parents
+      groupOrTree => groupOrTree.isChecked || !groupOrTree.containsTrees,
+    );
     treeNode.isIndeterminate = treeNode.isChecked
       ? false
-      : treeNode.children.length === 0 ||
-        _.some(
+      : _.some(
           treeNode.children,
+          // Groups that don't contain any trees should not influence the state of their parents
           groupOrTree =>
-            groupOrTree.isChecked ||
-            // Empty groups which are shown as indeterminate should not influence the indeterminate state of their parents
-            (groupOrTree.isIndeterminate && groupOrTree.children.length > 0),
+            (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
         );
+    treeNode.containsTrees =
+      trees.length > 0 || _.some(treeNode.children, groupOrTree => groupOrTree.containsTrees);
     return treeNode;
   });
 }

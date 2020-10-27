@@ -399,14 +399,21 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // Nodes which are matched, automatically trigger the expansion of all their parent groups.
     // However, this does not trigger the onVisibilityToggle, which is why this function is needed.
     const { path } = matches[0];
-    // The last entry in the path is the activated group/tree which should not be expanded
-    const expandedGroupIds = {};
-    for (const groupId of path.slice(0, -1)) {
-      expandedGroupIds[groupId] = true;
-    }
-    this.setState(prevState => ({
-      expandedGroupIds: update(prevState.expandedGroupIds, { $merge: expandedGroupIds }),
-    }));
+    // Use the latest state to avoid races with the onChange state update
+    this.setState(prevState => {
+      const expandedGroupIds = {};
+      // The last entry in the path is the activated group/tree which should not be expanded
+      for (const groupId of path.slice(0, -1)) {
+        // path contains node keys (see getNodeKey), but as we are looking for a group
+        // where the node key equals the groupId, this is fine
+        findTreeNode(prevState.groupTree, groupId, item => {
+          if (item.expanded && item.type === TYPE_GROUP) expandedGroupIds[groupId] = true;
+        });
+      }
+      return {
+        expandedGroupIds: update(prevState.expandedGroupIds, { $merge: expandedGroupIds }),
+      };
+    });
   };
 
   canDrop(params: { nextParent: TreeNode }) {

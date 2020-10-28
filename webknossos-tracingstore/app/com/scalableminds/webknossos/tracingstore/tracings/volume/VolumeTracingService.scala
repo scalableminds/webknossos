@@ -198,59 +198,61 @@ class VolumeTracingService @Inject()(
       getRequiredMags(tracing).map(_.toSet)
     } else {
 
-      val resolutionsMatch = resolutionSets.headOption.forall { head =>
+      val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
         resolutionSets.forall(_ == head)
       }
 
-      val mergedVolume = new MergedVolume(tracing.elementClass)
+      if (resolutionsDoMatch) {
+        val mergedVolume = new MergedVolume(tracing.elementClass)
 
-      ZipIO.withUnziped(initialData) {
-        case (_, is) =>
-          val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-          ZipIO.withUnziped(is) {
-            case (fileName, is) =>
-              WKWFile.read(is) {
-                case (header, buckets) =>
-                  if (header.numBlocksPerCube == 1) {
-                    parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                      if (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1)) {
-                        val dataTyped =
-                          UnsignedIntegerArray.fromByteArray(buckets.next(),
-                                                             elementClassFromProto(tracing.elementClass))
-                        val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-                        labelSet ++= nonZeroData
+        ZipIO.withUnziped(initialData) {
+          case (_, is) =>
+            val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
+            ZipIO.withUnziped(is) {
+              case (fileName, is) =>
+                WKWFile.read(is) {
+                  case (header, buckets) =>
+                    if (header.numBlocksPerCube == 1) {
+                      parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                        if (resolutionsDoMatch || bucketPosition.resolution == Point3D(1, 1, 1)) {
+                          val dataTyped =
+                            UnsignedIntegerArray.fromByteArray(buckets.next(),
+                                                               elementClassFromProto(tracing.elementClass))
+                          val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+                          labelSet ++= nonZeroData
+                        }
                       }
                     }
-                  }
-              }
-          }
-          mergedVolume.addLabelSet(labelSet)
-      }
+                }
+            }
+            mergedVolume.addLabelSet(labelSet)
+        }
 
-      var sourceVolumeIndex = 0 //order must be deterministic, same as label set order
-      ZipIO.withUnziped(initialData) {
-        case (_, is) =>
-          ZipIO.withUnziped(is) {
-            case (fileName, is) =>
-              WKWFile.read(is) {
-                case (header, buckets) =>
-                  if (header.numBlocksPerCube == 1) {
-                    parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                      val data = buckets.next()
-                      if (!isAllZero(data) && (resolutionsMatch || bucketPosition.resolution == Point3D(1, 1, 1))) {
-                        mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
+        var sourceVolumeIndex = 0 //order must be deterministic, same as label set order
+        ZipIO.withUnziped(initialData) {
+          case (_, is) =>
+            ZipIO.withUnziped(is) {
+              case (fileName, is) =>
+                WKWFile.read(is) {
+                  case (header, buckets) =>
+                    if (header.numBlocksPerCube == 1) {
+                      parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
+                        val data = buckets.next()
+                        if (!isAllZero(data) && (resolutionsDoMatch || bucketPosition.resolution == Point3D(1, 1, 1))) {
+                          mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
+                        }
                       }
                     }
-                  }
-              }
-          }
-          sourceVolumeIndex += 1
-      }
+                }
+            }
+            sourceVolumeIndex += 1
+        }
 
-      val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-      for {
-        _ <- mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
-      } yield mergedVolume.presentResolutions
+        val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
+        for {
+          _ <- mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
+        } yield mergedVolume.presentResolutions
+      } else Fox.failure("annotation.volume.resolutionsDoNotMatch")
     }
   }
 

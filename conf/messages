@@ -197,6 +197,7 @@ tracing.notFound=Tracing couldn’t be found
 annotation.create.failed=Failed to create annotation.
 annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
 annotation.volume.magRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
+annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
 annotation.notFound=Annotation couldn’t be found
 annotation.notFound.considerLoggingIn=Annotation couldn’t be found. If the annotation is not public, you need to log in to see it.
 annotation.invalid=Invalid annotation

@@ -19,7 +19,11 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, V
 import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{VolumeTracingDefaults, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ResolutionRestrictions,
+  VolumeTracingDefaults,
+  VolumeTracingDownsampling
+}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationState._
@@ -105,25 +109,33 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Point3D] = None,
-      startRotation: Option[Vector3D] = None
-  ): VolumeTracing =
-    VolumeTracing(
-      None,
-      boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
-      System.currentTimeMillis(),
-      dataSource.id.name,
-      point3DToProto(startPosition.getOrElse(dataSource.center)),
-      vector3DToProto(startRotation.getOrElse(vector3DFromProto(VolumeTracingDefaults.editRotation))),
-      elementClassToProto(fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
-      fallbackLayer.map(_.name),
-      fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
-      0,
-      VolumeTracingDefaults.zoomLevel,
-      organizationName = Some(organizationName),
-      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer).map(point3DToProto)
-    )
+      startRotation: Option[Vector3D] = None,
+      resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
+  ): Fox[VolumeTracing] = {
+    val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
+    val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
+    for {
+      _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
+    } yield
+      VolumeTracing(
+        None,
+        boundingBoxToProto(boundingBox.getOrElse(dataSource.boundingBox)),
+        System.currentTimeMillis(),
+        dataSource.id.name,
+        point3DToProto(startPosition.getOrElse(dataSource.center)),
+        vector3DToProto(startRotation.getOrElse(vector3DFromProto(VolumeTracingDefaults.editRotation))),
+        elementClassToProto(
+          fallbackLayer.map(layer => layer.elementClass).getOrElse(VolumeTracingDefaults.elementClass)),
+        fallbackLayer.map(_.name),
+        fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
+        0,
+        VolumeTracingDefaults.zoomLevel,
+        organizationName = Some(organizationName),
+        resolutions = resolutionsRestricted.map(point3DToProto)
+      )
+  }
 
-  def createTracings(
+  def createTracingsForExplorational(
       dataSet: DataSet,
       dataSource: DataSource,
       tracingType: TracingType.Value,
@@ -159,7 +171,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           client <- tracingStoreService.clientFor(dataSet)
           fallbackLayer = getFallbackLayer()
           _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, organizationName, fallbackLayer))
+          volumeTracing <- createVolumeTracing(dataSource, organizationName, fallbackLayer)
+          volumeTracingId <- client.saveVolumeTracing(volumeTracing)
         } yield (None, Some(volumeTracingId))
       case TracingType.hybrid =>
         for {
@@ -170,7 +183,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
             SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
                                                         editPosition = dataSource.center,
                                                         organizationName = Some(organizationName)))
-          volumeTracingId <- client.saveVolumeTracing(createVolumeTracing(dataSource, organizationName, fallbackLayer))
+          volumeTracing <- createVolumeTracing(dataSource, organizationName, fallbackLayer)
+          volumeTracingId <- client.saveVolumeTracing(volumeTracing)
         } yield (Some(skeletonTracingId), Some(volumeTracingId))
     }
   }
@@ -183,7 +197,11 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       dataSource <- dataSetService.dataSourceFor(dataSet)
       organization <- organizationDAO.findOne(user._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataSet.notImported", dataSource.id.name)
-      tracingIds <- createTracings(dataSet, usableDataSource, tracingType, withFallback, organization.name)
+      tracingIds <- createTracingsForExplorational(dataSet,
+                                                   usableDataSource,
+                                                   tracingType,
+                                                   withFallback,
+                                                   organization.name)
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(
         ObjectId.generate,
@@ -203,12 +221,17 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       implicit ctx: DBAccessContext): Fox[Unit] = {
     def createNewTracings(dataSet: DataSet, dataSource: DataSource) = annotation.tracingType match {
       case TracingType.skeleton =>
-        createTracings(dataSet, dataSource, TracingType.volume, true, organizationName).flatMap {
+        createTracingsForExplorational(dataSet, dataSource, TracingType.volume, true, organizationName).flatMap {
           case (_, Some(volumeId)) => annotationDAO.updateVolumeTracingId(annotation._id, volumeId)
           case _                   => Fox.failure("unexpectedReturn")
         }
       case TracingType.volume =>
-        createTracings(dataSet, dataSource, TracingType.skeleton, false, organizationName, annotation.volumeTracingId).flatMap {
+        createTracingsForExplorational(dataSet,
+                                       dataSource,
+                                       TracingType.skeleton,
+                                       false,
+                                       organizationName,
+                                       annotation.volumeTracingId).flatMap {
           case (Some(skeletonId), _) => annotationDAO.updateSkeletonTracingId(annotation._id, skeletonId)
           case _                     => Fox.failure("unexpectedReturn")
         }
@@ -357,13 +380,14 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     )
   }
 
-  def createVolumeTracingBase(
-      dataSetName: String,
-      organizationId: ObjectId,
-      boundingBox: Option[BoundingBox],
-      startPosition: Point3D,
-      startRotation: Vector3D,
-      volumeShowFallbackLayer: Boolean)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
+  def createVolumeTracingBase(dataSetName: String,
+                              organizationId: ObjectId,
+                              boundingBox: Option[BoundingBox],
+                              startPosition: Point3D,
+                              startRotation: Vector3D,
+                              volumeShowFallbackLayer: Boolean,
+                              resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext,
+                                                                              m: MessagesProvider): Fox[VolumeTracing] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages("dataset.notFound",
@@ -378,7 +402,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       } else None
       _ <- bool2Fox(fallbackLayer.forall(_.elementClass != ElementClass.uint64)) ?~> "annotation.volume.uint64"
 
-      volumeTracing = createVolumeTracing(
+      volumeTracing <- createVolumeTracing(
         dataSource,
         organization.name,
         fallbackLayer = fallbackLayer,
@@ -386,7 +410,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
           if (box.isEmpty) None else Some(box)
         },
         startPosition = Some(startPosition),
-        startRotation = Some(startRotation)
+        startRotation = Some(startRotation),
+        resolutionRestrictions = resolutionRestrictions
       )
     } yield volumeTracing
 

@@ -1,7 +1,7 @@
 package models.annotation
 
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDownsampling
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingDownsampling}
 import models.annotation.AnnotationSettings._
 import models.binary.DataSet
 import play.api.libs.json._
@@ -17,7 +17,15 @@ case class AnnotationSettings(
     somaClickingAllowed: Boolean = true,
     mergerMode: Boolean = false,
     allowedMagnifications: Option[AllowedMagnifications] = None
-)
+) {
+  def resolutionRestrictions: ResolutionRestrictions =
+    allowedMagnifications match {
+      case None => ResolutionRestrictions.empty
+      case Some(allowedMags) =>
+        if (allowedMags.shouldRestrict) ResolutionRestrictions(Some(allowedMags.min), Some(allowedMags.max))
+        else ResolutionRestrictions.empty
+    }
+}
 
 object AnnotationSettings {
   val ORTHOGONAL = "orthogonal"

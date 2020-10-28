@@ -89,10 +89,7 @@ class VolumeTracingService @Inject()(
           case Full(t) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                val resolution = lookUpVolumeResolution(t, a.zoomStep)
-                val bucket =
-                  BucketPosition(a.position.x, a.position.y, a.position.z, resolution)
-                saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
+                updateBucket(tracingId, t, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   t.copy(
@@ -124,14 +121,25 @@ class VolumeTracingService @Inject()(
         updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
 
-  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Point3D =
+  private def updateBucket(tracingId: String,
+                           volumeTracing: VolumeTracing,
+                           action: UpdateBucketVolumeAction,
+                           updateGroupVersion: Long): Fox[VolumeTracing] =
+    for {
+      resolution <- lookUpVolumeResolution(volumeTracing, action.zoomStep)
+      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
+      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
+    } yield volumeTracing
+
+  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Point3D] =
     if (tracing.resolutions.nonEmpty) {
-      if (tracing.resolutions.length >= zoomStep) {
-        tracing.resolutions(zoomStep)
-      } else Point3D(0, 0, 0)
+      tracing.resolutions
+        .find(r => r.maxDim == math.pow(2, zoomStep))
+        .map(point3DFromProto)
+        .toFox ?~> s"Received bucket with zoomStep ($zoomStep), no matching resolution found in tracing (has ${tracing.resolutions})"
     } else {
       val isotropicResolution = math.pow(2, zoomStep).toInt
-      Point3D(isotropicResolution, isotropicResolution, isotropicResolution)
+      Fox.successful(Point3D(isotropicResolution, isotropicResolution, isotropicResolution))
     }
 
   private def revertToVolumeVersion(tracingId: String,

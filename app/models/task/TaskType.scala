@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
 import models.annotation.{AllowedMagnifications, AnnotationSettings}
 import models.team.TeamDAO
@@ -24,7 +25,7 @@ case class TaskType(
     tracingType: TracingType.Value = TracingType.skeleton,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
-) extends FoxImplicits {}
+)
 
 class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
 

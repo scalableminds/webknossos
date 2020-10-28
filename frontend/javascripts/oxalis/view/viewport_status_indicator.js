@@ -31,7 +31,7 @@ export default function ViewportStatusIndicator() {
     return null;
   }
   const pluralS = unrenderableLayerNames.length > 1 ? "s" : "";
-  const pronounAndVerb = unrenderableLayerNames.length > 1 ? "they don't" : "it doesn't";
+  const dontVerb = unrenderableLayerNames.length > 1 ? "don't" : "doesn't";
 
   const renderMissingDataBlackHint = renderMissingDataBlack
     ? " Also consider disabling the option “Render Missing Data Black”."
@@ -41,9 +41,9 @@ export default function ViewportStatusIndicator() {
     <Tooltip
       title={
         <div>
-          The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")}{" "}
-          {pronounAndVerb} exist in the current resolution {currentResolution.join("-")}. Adjust the
-          zoom level to change the active resolution.{renderMissingDataBlackHint}
+          The layer{pluralS} {unrenderableLayerNames.map(name => `"${name}"`).join(", ")} {dontVerb}{" "}
+          exist in the current resolution {currentResolution.join("-")}. Adjust the zoom level to
+          change the active resolution.{renderMissingDataBlackHint}
         </div>
       }
     >

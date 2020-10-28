@@ -249,7 +249,7 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 export function getCurrentResolution(state: OxalisState): Vector3 {
   const resolutions = getResolutions(state.dataset);
   const logZoomStep = getRequestLogZoomStep(state);
-  return resolutions[logZoomStep];
+  return resolutions[logZoomStep] || [1, 1, 1];
 }
 
 export function getValidZoomRangeForUser(state: OxalisState): [number, number] {

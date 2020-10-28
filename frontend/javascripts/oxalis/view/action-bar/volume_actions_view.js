@@ -102,7 +102,7 @@ function toggleOverwriteMode(overwriteMode) {
 
 const narrowButtonStyle = {
   paddingLeft: 10,
-  width: 38,
+  paddingRight: 8,
 };
 
 const handleSetTool = (event: { target: { value: VolumeTool } }) => {
@@ -189,13 +189,15 @@ export default function VolumeActionsView() {
   const isLabelingPossible = labeledResolution != null;
 
   const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
+
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
     <Tooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
-      <i className="fas fa-layer-group" />
+      <i className="fas fa-layer-group" style={{ marginLeft: 4 }} />
     </Tooltip>
   ) : null;
-  const isTraceToolDisabled = isZoomStepTooHighForTraceTool();
-  const traceToolDisabledTooltip = isTraceToolDisabled
+  const isTraceToolImpossible = isZoomStepTooHighForTraceTool();
+  const isTraceToolDisabled = isInMergerMode || isTraceToolImpossible || !isLabelingPossible;
+  const traceToolDisabledTooltip = isTraceToolImpossible
     ? "Your zoom is too low to use the trace tool. Please zoom in further to use it."
     : "";
 
@@ -204,10 +206,10 @@ export default function VolumeActionsView() {
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   useEffect(() => {
-    if (isInMergerMode) {
+    if (isInMergerMode || !isLabelingPossible) {
       Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
     }
-  }, [isInMergerMode, activeTool]);
+  }, [isInMergerMode, activeTool, isLabelingPossible]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
@@ -230,8 +232,9 @@ export default function VolumeActionsView() {
     : null;
   const previousMoveToolHint = usePrevious(moveToolHint);
 
-  const disabledVolumeExplanation =
-    "Volume annotation is disabled while the merger mode is active.";
+  const disabledVolumeExplanation = isLabelingPossible
+    ? "Volume annotation is disabled while the merger mode is active."
+    : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
 
   const moveToolDescription = `Pointer – Use left-click to move around${
     hasSkeleton ? " and right-click to create new skeleton nodes" : ""
@@ -273,7 +276,7 @@ export default function VolumeActionsView() {
         <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."
           disabledTitle={traceToolDisabledTooltip || disabledVolumeExplanation}
-          disabled={isInMergerMode || isTraceToolDisabled || !isLabelingPossible}
+          disabled={isTraceToolDisabled}
           style={narrowButtonStyle}
           value={VolumeToolEnum.TRACE}
         >
@@ -281,15 +284,14 @@ export default function VolumeActionsView() {
             src="/assets/images/lasso.svg"
             alt="Trace Tool Icon"
             className="svg-gray-to-highlighted-blue"
-            style={{ opacity: isInMergerMode ? 0.5 : 1 }}
+            style={{ opacity: isTraceToolDisabled ? 0.5 : 1 }}
           />
-          {multiSliceAnnotationInfoIcon}
           {adaptedActiveTool === "TRACE" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Fill Tool – Flood-fill the clicked region."
           disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode}
+          disabled={isInMergerMode || !isLabelingPossible}
           style={narrowButtonStyle}
           value={VolumeToolEnum.FILL_CELL}
         >
@@ -298,7 +300,7 @@ export default function VolumeActionsView() {
         <RadioButtonWithTooltip
           title="Cell Picker – Click on a voxel to make its cell id the active cell id."
           disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode}
+          disabled={isInMergerMode || !isLabelingPossible}
           style={narrowButtonStyle}
           value={VolumeToolEnum.PICK_CELL}
         >

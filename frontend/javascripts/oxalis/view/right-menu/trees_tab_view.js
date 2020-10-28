@@ -645,9 +645,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
         <Menu.Item
           key="measureAllSkeletons"
           onClick={this.handleMeasureAllSkeletonsLength}
-          title="Measure Length of all Skeletons"
+          title="Measure Length of All Skeletons"
         >
-          <i className="fas fa-ruler" /> Measure Length of all Skeletons
+          <i className="fas fa-ruler" /> Measure Length of All Skeletons
         </Menu.Item>
       </Menu>
     );

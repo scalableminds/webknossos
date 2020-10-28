@@ -177,7 +177,6 @@ class AnnotationController @Inject()(
 
   def downsample(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.successful(Thread.sleep(10))
       _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- annotationService.downsampleAnnotation(annotation) ?~> "annotation.downsample.failed"

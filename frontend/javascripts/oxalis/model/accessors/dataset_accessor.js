@@ -62,6 +62,10 @@ export class ResolutionInfo {
     }
   }
 
+  getResolutionList(): Array<Vector3> {
+    return Array.from(this.resolutionMap.entries()).map(entry => entry[1]);
+  }
+
   getResolutionsWithIndices(): Array<[number, Vector3]> {
     return Array.from(this.resolutionMap.entries()).map(entry => {
       const [powerOfTwo, resolution] = entry;
@@ -586,12 +590,16 @@ function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
   return unrenderableLayers;
 }
 
+export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayersForCurrentZoom,
+);
+
 /*
   This function returns the resolution and zoom step in which the segmentation
   layer is currently rendered (if it is rendered). These properties should be used
   when labeling volume data.
  */
-export function getRenderableResolutionForSegmentation(
+function _getRenderableResolutionForSegmentation(
   state: OxalisState,
 ): ?{ resolution: Vector3, zoomStep: number } {
   const { dataset } = state;
@@ -645,8 +653,8 @@ export function getRenderableResolutionForSegmentation(
   return null;
 }
 
-export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayersForCurrentZoom,
+export const getRenderableResolutionForSegmentation = reuseInstanceOnEquality(
+  _getRenderableResolutionForSegmentation,
 );
 
 export function getThumbnailURL(dataset: APIDataset): string {

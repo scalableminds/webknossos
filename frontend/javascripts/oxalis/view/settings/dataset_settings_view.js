@@ -3,7 +3,7 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, Modal } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tooltip, Modal } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -32,6 +32,8 @@ import {
   getElementClass,
   getLayerBoundaries,
   getDefaultIntensityRangeOfLayer,
+  getLayerByName,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
@@ -257,11 +259,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
     const onChange = (value, event) => {
-      if (!event.ctrlKey) {
+      if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
         return;
       }
-      // If ctrl is pressed, toggle between "all layers visible" and
+      // If a modifier is pressed, toggle between "all layers visible" and
       // "only selected layer visible".
       if (this.isLayerExclusivelyVisible(layerName)) {
         this.setVisibilityForAllLayers(true);
@@ -272,6 +274,9 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
 
+    const layer = getLayerByName(this.props.dataset, layerName);
+    const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
+
     return (
       <Row>
         <Col span={24}>
@@ -279,7 +284,25 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
           <span style={{ fontWeight: 700 }}>
             {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
-          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
+
+          <Tooltip
+            title={
+              <div>
+                Data Type: {elementClass}
+                <br />
+                Available resolutions:
+                <ul>
+                  {resolutions.map(r => (
+                    <li key={r.join()}>{r.join("-")}</li>
+                  ))}
+                </ul>
+              </div>
+            }
+            placement="left"
+          >
+            <Icon style={{ marginLeft: 4 }} type="info-circle" />
+          </Tooltip>
+
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}

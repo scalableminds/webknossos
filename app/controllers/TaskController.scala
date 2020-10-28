@@ -10,6 +10,7 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
 import javax.inject.Inject
 import models.annotation.nml.NmlService
@@ -136,15 +137,14 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             params.editRotation
           )))
 
-  private def duplicateVolumeTracingOrCreateVolumeTracingBase(annotation: Annotation,
-                                                              params: TaskParameters,
-                                                              tracingStoreClient: TracingStoreRpcClient,
-                                                              organizationId: ObjectId,
-                                                              allowedMagnifications: Option[AllowedMagnifications])(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[String] =
+  private def duplicateVolumeTracingOrCreateVolumeTracingBase(
+      annotation: Annotation,
+      params: TaskParameters,
+      tracingStoreClient: TracingStoreRpcClient,
+      organizationId: ObjectId,
+      resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     annotation.volumeTracingId
-      .map(id => tracingStoreClient.duplicateVolumeTracing(id, allowedMagnifications = allowedMagnifications))
+      .map(id => tracingStoreClient.duplicateVolumeTracing(id, resolutionRestrictions = resolutionRestrictions))
       .getOrElse(
         annotationService
           .createVolumeTracingBase(
@@ -153,9 +153,10 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
             params.boundingBox,
             params.editPosition,
             params.editRotation,
-            volumeShowFallbackLayer = false
+            volumeShowFallbackLayer = false,
+            resolutionRestrictions = resolutionRestrictions
           )
-          .flatMap(tracingStoreClient.saveVolumeTracing(_, allowedMagnifications = allowedMagnifications)))
+          .flatMap(tracingStoreClient.saveVolumeTracing(_, resolutionRestrictions = resolutionRestrictions)))
 
   private def duplicateBaseTracings(
       baseAnnotation: BaseAnnotation,
@@ -202,7 +203,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                                                         taskParameters,
                                                         tracingStoreClient,
                                                         organizationId,
-                                                        taskType.settings.allowedMagnifications).map(Some(_))
+                                                        taskType.settings.resolutionRestrictions).map(Some(_))
       else Fox.successful(None)
     } yield BaseAnnotation(baseAnnotationIdValidated.id, newSkeletonId, newVolumeId)
   }
@@ -241,7 +242,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
               params.boundingBox,
               params.editPosition,
               params.editRotation,
-              volumeShowFallbackLayer = false
+              volumeShowFallbackLayer = false,
+              resolutionRestrictions = taskType.settings.resolutionRestrictions
             )
             .map(v => Some((v, None)))
         } else Fox.successful(None)
@@ -301,7 +303,8 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
                         params.boundingBox,
                         params.editPosition,
                         params.editRotation,
-                        volumeShowFallbackLayer = false
+                        volumeShowFallbackLayer = false,
+                        resolutionRestrictions = taskType.settings.resolutionRestrictions
                       )
                       .map(v => (v, None)))
 
@@ -539,7 +542,7 @@ class TaskController @Inject()(annotationDAO: AnnotationDAO,
           taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"
           taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
           saveResult <- tracingStoreClient
-            .saveVolumeTracing(tracing, initialFile, allowedMagnifications = taskType.settings.allowedMagnifications)
+            .saveVolumeTracing(tracing, initialFile, resolutionRestrictions = taskType.settings.resolutionRestrictions)
             .map(Some(_))
         } yield saveResult
       case f: Failure => box2Fox(f)

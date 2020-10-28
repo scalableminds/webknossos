@@ -225,6 +225,10 @@ trait VolumeTracingDownsampling
     if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
 }
 
+object ResolutionRestrictions {
+  def empty: ResolutionRestrictions = ResolutionRestrictions(None, None)
+}
+
 case class ResolutionRestrictions(
     min: Option[Int],
     max: Option[Int]
@@ -236,4 +240,7 @@ case class ResolutionRestrictions(
     min.getOrElse(0) < resolution.maxDim && max.getOrElse(Int.MaxValue) > resolution.maxDim
 
   def isForbidden(resolution: Point3D): Boolean = !isAllowed(resolution)
+
+  def minStr: Option[String] = min.map(_.toString)
+  def maxStr: Option[String] = max.map(_.toString)
 }

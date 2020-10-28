@@ -129,7 +129,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           .flatMap {
             case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
               logger.info(
-                s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} on DataStore ${dataStore.name}")
+                s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
               Fox.successful(List.empty)
             case Full(organization) =>
               for {

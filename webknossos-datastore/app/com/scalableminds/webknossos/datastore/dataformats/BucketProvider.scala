@@ -8,7 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty}
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 

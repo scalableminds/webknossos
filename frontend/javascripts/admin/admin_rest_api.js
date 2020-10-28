@@ -740,6 +740,21 @@ export async function unlinkFallbackSegmentation(
   });
 }
 
+// When the annotation is open, please use the corresponding method
+// in api_latest.js.
+export async function downsampleSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  const response = await Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/downsample`,
+    {
+      method: "PATCH",
+    },
+  );
+  console.log("response", response);
+}
+
 // ### Datasets
 export async function getDatasets(
   isUnreported: ?boolean,
@@ -1168,7 +1183,7 @@ export function updateUserConfiguration(userConfiguration: Object): Object {
   });
 }
 
-// ### TimeTracking
+// ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
   day: moment$Moment,

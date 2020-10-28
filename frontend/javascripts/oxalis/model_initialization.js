@@ -25,7 +25,6 @@ import {
   getMostExtensiveResolutions,
   getSegmentationLayer,
   isElementClassSupported,
-  getResolutions,
   convertToDenseResolution,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";

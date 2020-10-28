@@ -32,6 +32,7 @@ import {
   finishAnnotation,
   getMappingsForDatasetLayer,
   requestTask,
+  downsampleSegmentation,
 } from "admin/admin_rest_api";
 import {
   findTreeByNodeId,
@@ -703,6 +704,21 @@ class TracingApi {
       );
     }
     Store.dispatch(setToolAction(tool));
+  }
+
+  /**
+   * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
+     Note that this will block the UI, save the current changes and then reload the page after the downsampling
+     has finished.
+   */
+  async downsampleSegmentation() {
+    const { annotationId, annotationType } = Store.getState().tracing;
+    await this.save();
+    await downsampleSegmentation(annotationId, annotationType);
+    await this.hardReload();
+
+    // todo:
+    // - check is explorational && hasVolume && ...?
   }
 }
 

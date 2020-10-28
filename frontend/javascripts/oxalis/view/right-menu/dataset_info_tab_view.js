@@ -3,11 +3,13 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon } from "antd";
+import { Tooltip, Icon, Modal } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
-import React from "react";
+import React, { useState } from "react";
 
+import { AsyncButton } from "components/async_clickables";
+import api from "oxalis/api/internal_api";
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
@@ -39,6 +41,9 @@ type StateProps = {|
 type DispatchProps = {|
   setAnnotationName: string => void,
   setAnnotationDescription: string => void,
+|};
+type State = {|
+  isDownsampleVolumeModalVisible: boolean,
 |};
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
@@ -136,7 +141,51 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
-class DatasetInfoTabView extends React.PureComponent<Props> {
+function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal }) {
+  const [isDownsampling, setIsDownsampling] = useState(false);
+
+  const handleTriggerDownsampling = async () => {
+    setIsDownsampling(true);
+    await api.tracing.downsampleSegmentation();
+    setIsDownsampling(false);
+  };
+
+  return (
+    <Modal
+      title="Downsample Volume Annotation"
+      onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
+      visible={visible}
+      footer={null}
+      maskClosable={false}
+    >
+      <p>
+        Do you want to re-create the downsampled resolutions of the volume annotation? The best
+        resolution will be used to re-create all dependent resolutions. Use this functionality if
+        the downsampled resolutions of the volume data are missing or if you wish to compute these
+        from scratch.
+      </p>
+
+      <p style={{ fontWeight: "bold" }}>
+        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
+        Also, the version history of the volume data will be reset.
+      </p>
+      <div style={{ display: "flex", "justify-content": "center", marginTop: 12 }}>
+        <AsyncButton onClick={handleTriggerDownsampling} type="primary">
+          Downsample
+        </AsyncButton>
+      </div>
+    </Modal>
+  );
+}
+
+class DatasetInfoTabView extends React.PureComponent<Props, State> {
+  constructor() {
+    super();
+    this.state = {
+      isDownsampleVolumeModalVisible: false,
+    };
+  }
+
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -357,6 +406,28 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     return null;
   }
 
+  showDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: true });
+  };
+
+  hideDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: false });
+  };
+
+  getOptionalDownsampleVolumeIcon = () => {
+    if (this.props.task != null) {
+      return null;
+    }
+    if (this.props.tracing.volume == null) {
+      return null;
+    }
+    return (
+      <Tooltip title="Open Dialog to Downsample Volume Data">
+        <Icon type="reload" onClick={this.showDownsampleVolumeModal} style={{ marginLeft: 8 }} />
+      </Tooltip>
+    );
+  };
+
   render() {
     const { dataset, activeResolution } = this.props;
     const isDatasetViewMode =
@@ -393,6 +464,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             </td>
             <td style={{ paddingRight: 4, paddingTop: 10, verticalAlign: "top" }}>
               {activeResolution.join("-")}
+              {this.getOptionalDownsampleVolumeIcon()}
             </td>
           </tr>
         </Tooltip>
@@ -445,6 +517,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
+        <DownsampleVolumeModal
+          visible={this.state.isDownsampleVolumeModalVisible}
+          hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
+        />
       </div>
     );
   }

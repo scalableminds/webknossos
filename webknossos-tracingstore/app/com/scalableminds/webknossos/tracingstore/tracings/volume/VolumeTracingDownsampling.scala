@@ -237,7 +237,7 @@ case class ResolutionRestrictions(
     resolutions.filter(isAllowed)
 
   def isAllowed(resolution: Point3D): Boolean =
-    min.getOrElse(0) < resolution.maxDim && max.getOrElse(Int.MaxValue) > resolution.maxDim
+    min.getOrElse(0) <= resolution.maxDim && max.getOrElse(Int.MaxValue) >= resolution.maxDim
 
   def isForbidden(resolution: Point3D): Boolean = !isAllowed(resolution)
 

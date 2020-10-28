@@ -675,7 +675,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
 
     const notificationText = getActiveTree(skeletonTracing)
-      .map(api.tracing.measureTreeLength)
+      .map(tree => api.tracing.measureTreeLength(tree.treeId))
       .map(
         length =>
           `The currently active tree has a total length of ${formatNumberToLength(length)}.`,

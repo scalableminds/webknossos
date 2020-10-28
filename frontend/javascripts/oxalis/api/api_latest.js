@@ -82,7 +82,6 @@ import {
 import { wkReadyAction, restartSagaAction } from "oxalis/model/actions/actions";
 import Model, { type OxalisModel } from "oxalis/model";
 import Store, {
-  type Tree,
   type AnnotationType,
   type MappingType,
   type DatasetConfiguration,
@@ -576,7 +575,13 @@ class TracingApi {
     return result;
   }
 
-  measureTreeLength(tree: Tree): number {
+  measureTreeLength(treeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const tree = skeletonTracing.trees[treeId];
+    if (!tree) {
+      throw new Error(`Tree with id ${treeId} not found.`);
+    }
+
     const datasetScale = Store.getState().dataset.dataSource.scale;
 
     // Pre-allocate vectors
@@ -603,7 +608,7 @@ class TracingApi {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
 
     const totalLength = _.values(skeletonTracing.trees).reduce(
-      (sum, currentTree) => sum + this.measureTreeLength(currentTree),
+      (sum, currentTree) => sum + this.measureTreeLength(currentTree.treeId),
       0,
     );
 

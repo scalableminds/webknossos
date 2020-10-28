@@ -23,7 +23,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
       if (duration > 500) {
         val className = this.getClass.getName.split("\\.").last
         logger.warn(
-          s"loading file in $className took too long.\n"
+          s"loading file in $className took ${if (duration > 3000) "really " else ""}long.\n"
             + s"  duration: $duration\n"
             + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
             + s"  dataLayer: ${readInstruction.dataLayer.name}\n"

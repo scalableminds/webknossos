@@ -93,6 +93,9 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def idColumn(x: Datastores): Rep[String] = x.name
   def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"
+
   def parse(r: DatastoresRow): Fox[DataStore] =
     Fox.successful(
       DataStore(
@@ -119,7 +122,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
-      r <- run(sql"select #${columns} from webknossos.datastores_ order by name".as[DatastoresRow])
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from webknossos.datastores_ where #$accessQuery order by name".as[DatastoresRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

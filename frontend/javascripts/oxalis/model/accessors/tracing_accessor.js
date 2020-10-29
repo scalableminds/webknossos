@@ -4,7 +4,7 @@ import type {
   HybridServerTracing,
   ServerSkeletonTracing,
   ServerVolumeTracing,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { Tracing, VolumeTracing, SkeletonTracing, ReadOnlyTracing } from "oxalis/store";
 
 export function getSomeTracing(

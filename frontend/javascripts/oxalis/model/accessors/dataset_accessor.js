@@ -9,7 +9,7 @@ import type {
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   ElementClass,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type {
   Settings,
   DataLayerType,

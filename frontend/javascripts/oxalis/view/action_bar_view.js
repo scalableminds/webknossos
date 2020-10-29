@@ -8,7 +8,7 @@ import type {
   APIUser,
   APIMaybeUnimportedDataset,
   TracingType,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
 import {
   layoutEmitter,

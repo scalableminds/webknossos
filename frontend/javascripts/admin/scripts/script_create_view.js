@@ -4,7 +4,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {

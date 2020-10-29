@@ -46,7 +46,6 @@ const initialState: OxalisState = {
   },
   datasetConfiguration: {
     ...defaultState.datasetConfiguration,
-    quality: 0,
   },
   userConfiguration: {
     ...defaultState.userConfiguration,

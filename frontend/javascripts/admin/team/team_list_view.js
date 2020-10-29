@@ -5,7 +5,7 @@ import { Table, Icon, Spin, Button, Input, Modal, Alert } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APITeam } from "admin/api_flow_types";
+import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import CreateTeamModal from "admin/team/create_team_modal_view";

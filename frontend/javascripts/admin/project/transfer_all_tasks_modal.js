@@ -4,7 +4,7 @@ import { Modal, Button, Table, Spin } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIUser, APIProject, APIActiveUser } from "admin/api_flow_types";
+import type { APIUser, APIProject, APIActiveUser } from "types/api_flow_types";
 import {
   getUsers,
   getUsersWithActiveTasks,

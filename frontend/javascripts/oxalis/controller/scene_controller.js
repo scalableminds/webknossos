@@ -8,7 +8,7 @@ import * as THREE from "three";
 import TWEEN from "tween.js";
 import _ from "lodash";
 
-import type { MeshMetaData } from "admin/api_flow_types";
+import type { MeshMetaData } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import {

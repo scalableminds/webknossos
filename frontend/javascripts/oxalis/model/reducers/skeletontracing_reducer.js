@@ -43,7 +43,7 @@ import ColorGenerator from "libs/color_generator";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;

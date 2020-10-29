@@ -2,7 +2,7 @@
 import { Modal } from "antd";
 import React from "react";
 
-import type { ServerSkeletonTracing } from "admin/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,

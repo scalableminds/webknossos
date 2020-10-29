@@ -6,8 +6,6 @@
 
 type Vector3 = [number, number, number];
 
-type Vector2 = [number, number];
-
 type BoundingBox = {
   topLeft: Vector3,
   width: number,
@@ -66,14 +64,4 @@ export type DatasourceConfiguration = {
   dataLayers: Array<DataLayer>,
   // Add minimum=0 and exclusiveMinimum=true to items
   scale: Array<number>,
-};
-
-export type LayerUserConfiguration = {
-  [name: string]: {
-    brightness: number,
-    contrast: number,
-    color: Vector3,
-    intensityRange: Vector2,
-    isDisabled: boolean,
-  },
 };

@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.knossos
 import com.scalableminds.webknossos.datastore.models.CubePosition
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import play.api.libs.json._
 
 case class KnossosSection(name: String, resolutions: List[Either[Int, Point3D]], boundingBox: BoundingBox) {
@@ -43,7 +44,8 @@ case class KnossosDataLayer(
     category: Category.Value,
     sections: List[KnossosSection],
     elementClass: ElementClass.Value,
-    defaultViewConfiguration: Option[ColorLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends KnossosLayer
 
 object KnossosDataLayer {
@@ -56,7 +58,8 @@ case class KnossosSegmentationLayer(
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer
     with KnossosLayer
 

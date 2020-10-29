@@ -19,7 +19,7 @@ import {
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "admin/api_flow_types";
+import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   TaskCreationResponse,

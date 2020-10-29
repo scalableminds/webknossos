@@ -3,7 +3,7 @@ import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, TracingType } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDataset, TracingType } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";

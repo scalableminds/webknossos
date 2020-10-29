@@ -93,8 +93,8 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   inboxSourceHash INT,
-  sourceDefaultConfiguration JSONB,
-  defaultConfiguration JSONB,
+  defaultViewConfiguration JSONB,
+  adminViewConfiguration JSONB,
   description TEXT,
   displayName VARCHAR(256),
   isPublic BOOLEAN NOT NULL DEFAULT false,
@@ -109,8 +109,8 @@ CREATE TABLE webknossos.dataSets(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
-  CONSTRAINT sourceDefaultConfigurationIsJsonObject CHECK(jsonb_typeof(sourceDefaultConfiguration) = 'object'),
-  CONSTRAINT defaultConfigurationIsJsonObject CHECK(jsonb_typeof(defaultConfiguration) = 'object'),
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
+  CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
   CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
 );
 
@@ -125,8 +125,10 @@ CREATE TABLE webknossos.dataSet_layers(
   largestSegmentId BIGINT,
   mappings VARCHAR(256)[],
   defaultViewConfiguration JSONB,
+  adminViewConfiguration JSONB,
   PRIMARY KEY(_dataSet, name),
-  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object')
+  CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
+  CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object')
 );
 
 CREATE TABLE webknossos.dataSet_allowedTeams(
@@ -312,10 +314,21 @@ CREATE TABLE webknossos.user_experiences(
 CREATE TABLE webknossos.user_dataSetConfigurations(
   _user CHAR(24) NOT NULL,
   _dataSet CHAR(24) NOT NULL,
-  configuration JSONB NOT NULL,
+  viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _dataSet),
-  CONSTRAINT configurationIsJsonObject CHECK(jsonb_typeof(configuration) = 'object')
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
+
+CREATE TABLE webknossos.user_dataSetLayerConfigurations(
+  _user CHAR(24) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  viewConfiguration JSONB NOT NULL,
+  PRIMARY KEY (_user, _dataSet, layerName),
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
+);
+
+
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TABLE webknossos.tokens(
@@ -436,6 +449,9 @@ ALTER TABLE webknossos.user_team_roles
 ALTER TABLE webknossos.user_experiences
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.user_dataSetConfigurations
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_dataSetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
 

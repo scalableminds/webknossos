@@ -8,7 +8,7 @@ import {
   addMeshMetaDataAction,
   updateLocalMeshMetaDataAction,
 } from "oxalis/model/actions/annotation_actions";
-import type { MeshMetaData } from "admin/api_flow_types";
+import type { MeshMetaData } from "types/api_flow_types";
 import {
   type Saga,
   _all,

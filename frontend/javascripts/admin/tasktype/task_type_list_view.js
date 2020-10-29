@@ -7,7 +7,7 @@ import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
 
-import type { APITaskType } from "admin/api_flow_types";
+import type { APITaskType } from "types/api_flow_types";
 import { getTaskTypes, deleteTaskType, downloadNml } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";

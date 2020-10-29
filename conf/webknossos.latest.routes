@@ -28,10 +28,10 @@ POST          /auth/createOrganizationWithAdmin                                 
 # Configurations
 GET           /user/userConfiguration                                           controllers.ConfigurationController.read
 PUT           /user/userConfiguration                                           controllers.ConfigurationController.update
-GET           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSet(organizationName: String, dataSetName: String)
-PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSet(organizationName: String, dataSetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetDefault(organizationName: String, dataSetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetDefault(organizationName: String, dataSetName: String)
+POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String)
+PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
+GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
+PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
 
 # Users
 POST          /user/tasks/request                                               controllers.TaskController.request

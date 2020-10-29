@@ -8,7 +8,7 @@ import * as React from "react";
 import _ from "lodash";
 
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithAssignments, APIUser } from "admin/api_flow_types";
+import type { APIProjectWithAssignments, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {

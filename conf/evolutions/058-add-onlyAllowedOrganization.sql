@@ -8,6 +8,6 @@ ALTER TABLE webknossos.dataStores ADD COLUMN onlyAllowedOrganization CHAR(24);
 
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 57;
+UPDATE webknossos.releaseInformation SET schemaVersion = 58;
 
 COMMIT TRANSACTION;

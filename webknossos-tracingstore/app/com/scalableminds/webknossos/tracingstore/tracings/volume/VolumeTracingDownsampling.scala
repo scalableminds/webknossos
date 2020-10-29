@@ -221,7 +221,7 @@ trait VolumeTracingDownsampling
     tracing.withResolutions(allowedResolutions.map(point3DToProto))
   }
 
-  private def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
+  protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
     if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
 }
 

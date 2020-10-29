@@ -5,7 +5,7 @@ import React from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 
-import type { APIUser, APIDataStore } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";

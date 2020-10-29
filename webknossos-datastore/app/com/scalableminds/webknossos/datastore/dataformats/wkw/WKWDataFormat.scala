@@ -2,13 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.Path
 
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  ColorLayerViewConfiguration,
-  DataLayer,
-  SegmentationLayer,
-  SegmentationLayerViewConfiguration
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, SegmentationLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
@@ -30,7 +24,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         .map(_.boundingBox)
         .orElse(guessBoundingBox(baseDir, wkwResolutions.headOption))
         .getOrElse(BoundingBox.empty)
-      val defaultViewConfiguration = previous.flatMap(_.defaultViewConfiguration)
+      val adminViewConfiguration = previous.flatMap(_.adminViewConfiguration)
       category match {
         case Category.segmentation =>
           val mappings = exploreMappings(baseDir)
@@ -38,20 +32,24 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
             case Some(l: SegmentationLayer) => l.largestSegmentId
             case _                          => SegmentationLayer.defaultLargestSegmentId
           }
-          WKWSegmentationLayer(name,
-                               boundingBox,
-                               wkwResolutions,
-                               elementClass,
-                               mappings,
-                               largestSegmentId,
-                               defaultViewConfiguration.map(SegmentationLayerViewConfiguration.from))
+          WKWSegmentationLayer(
+            name,
+            boundingBox,
+            wkwResolutions,
+            elementClass,
+            mappings,
+            largestSegmentId,
+            adminViewConfiguration = adminViewConfiguration
+          )
         case _ =>
-          WKWDataLayer(name,
-                       category,
-                       boundingBox,
-                       wkwResolutions,
-                       elementClass,
-                       defaultViewConfiguration.map(ColorLayerViewConfiguration.from))
+          WKWDataLayer(
+            name,
+            category,
+            boundingBox,
+            wkwResolutions,
+            elementClass,
+            adminViewConfiguration = adminViewConfiguration
+          )
       }
     }).passFailure { f =>
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")

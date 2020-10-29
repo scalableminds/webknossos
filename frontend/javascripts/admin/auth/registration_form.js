@@ -2,7 +2,7 @@
 import { Form, Input, Button, Row, Col, Icon, Checkbox } from "antd";
 import React from "react";
 
-import { type APIOrganization } from "admin/api_flow_types";
+import { type APIOrganization } from "types/api_flow_types";
 import { loginUser, getOrganization } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Request from "libs/request";

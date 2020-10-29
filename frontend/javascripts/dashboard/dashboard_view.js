@@ -6,7 +6,7 @@ import React, { PureComponent } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getUser } from "admin/admin_rest_api";

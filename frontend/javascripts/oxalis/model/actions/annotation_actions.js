@@ -5,7 +5,7 @@ import type {
   MeshMetaData,
   RemoteMeshMetaData,
   APIAnnotationVisibility,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { UserBoundingBox } from "oxalis/store";
 
 type InitializeAnnotationAction = {

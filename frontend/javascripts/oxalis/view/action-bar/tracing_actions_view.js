@@ -4,7 +4,7 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   type LayoutKeys,

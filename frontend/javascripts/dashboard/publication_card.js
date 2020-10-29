@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
 
-import type { APIDataset, APIDatasetDetails } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetDetails } from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,

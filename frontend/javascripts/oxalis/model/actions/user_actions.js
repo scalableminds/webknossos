@@ -1,5 +1,5 @@
 // @flow
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 
 type SetActiveUser = {
   type: "SET_ACTIVE_USER",

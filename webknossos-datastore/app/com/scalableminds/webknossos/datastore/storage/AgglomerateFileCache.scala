@@ -159,7 +159,7 @@ class BoundingBoxCache(val cache: mutable.HashMap[(Long, Long, Long), BoundingBo
       val isTransformed = Array.fill(input.length)(false)
       while (offset <= readerRange._2) {
         val agglomerateIds =
-          readHDF(reader, offset.toLong, spire.math.min(maxReaderRange, readerRange._2 - offset).toLong)
+          readHDF(reader, offset.toLong, spire.math.min(maxReaderRange, readerRange._2 - offset).toLong + 1)
         for (i <- input.indices) {
           val inputElement = input(i)
           if (!isTransformed(i) && inputElement >= offset && inputElement < offset + maxReaderRange) {

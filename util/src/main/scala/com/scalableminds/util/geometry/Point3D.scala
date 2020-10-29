@@ -25,6 +25,9 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def hasGreaterCoordinateAs(other: Point3D) =
     x > other.x || y > other.y || z > other.z
 
+  def isIsotropic: Boolean =
+    x == y && y == z
+
   override def toString = "(%d, %d, %d)".format(x, y, z)
 
   def toList = List(x, y, z)

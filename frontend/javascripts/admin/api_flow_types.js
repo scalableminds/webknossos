@@ -599,6 +599,7 @@ export type ServerSkeletonTracing = {|
   boundingBox?: ServerBoundingBox,
   trees: Array<ServerSkeletonTracingTree>,
   treeGroups: ?Array<TreeGroup>,
+  organizationName?: string,
 |};
 
 export type ServerVolumeTracing = {|
@@ -613,6 +614,7 @@ export type ServerVolumeTracing = {|
   // were added to volume tracings. Also see:
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>,
+  organizationName?: string,
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

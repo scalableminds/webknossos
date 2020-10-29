@@ -168,7 +168,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
           val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
             s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(2000)}"
           logger.error(errorMsg)
-          Failure(errorMsg.take(200))
+          Failure(errorMsg.take(400))
         }
       }
       .recover {

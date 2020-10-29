@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer

@@ -68,7 +68,12 @@ class BinaryDataController @Inject()(
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
           duration = System.currentTimeMillis() - t
-          _ = if (duration > 3000) logger.info(s"complete data request took $duration")
+          _ = if (duration > 10000)
+            logger.info(
+              s"Complete data request took $duration ms.\n"
+                + s"  dataSource: $organizationName/$dataSetName\n"
+                + s"  dataLayer: $dataLayerName\n"
+                + s"  requestCount: ${request.body.size}")
         } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
       }
     }

@@ -43,7 +43,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(tracingId: String, minMagnification: Option[Int], maxMagnification: Option[Int]) = Action.async {
+  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]) = Action.async {
     implicit request =>
       log {
         logTime(slackNotificationService.reportUnusalRequest) {
@@ -52,7 +52,7 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
               for {
                 initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
                 tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-                magRestrictions = ResolutionRestrictions(minMagnification, maxMagnification)
+                magRestrictions = ResolutionRestrictions(minResolution, maxResolution)
                 resolutions <- tracingService.initializeWithData(tracingId, tracing, initialData, magRestrictions).toFox
                 _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
               } yield Ok(Json.toJson(tracingId))

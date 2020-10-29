@@ -23,7 +23,7 @@ object KnossosDataFormat extends DataSourceImporter {
       case _               => None
     }
 
-    val adminViewConfiguration = previous.flatMap(_.adminViewConfiguration)
+    val defaultViewConfiguration = previous.flatMap(_.defaultViewConfiguration)
 
     (for {
       elementClass <- guessElementClass(baseDir)
@@ -37,9 +37,9 @@ object KnossosDataFormat extends DataSourceImporter {
             case Some(l: SegmentationLayer) => l.largestSegmentId
             case _                          => SegmentationLayer.defaultLargestSegmentId
           }
-          KnossosSegmentationLayer(name, sections, elementClass, mappings, largestSegmentId, adminViewConfiguration)
+          KnossosSegmentationLayer(name, sections, elementClass, mappings, largestSegmentId, defaultViewConfiguration)
         case _ =>
-          KnossosDataLayer(name, category, sections, elementClass, adminViewConfiguration)
+          KnossosDataLayer(name, category, sections, elementClass, defaultViewConfiguration)
       }
     }).passFailure { f =>
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")

@@ -24,7 +24,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         .map(_.boundingBox)
         .orElse(guessBoundingBox(baseDir, wkwResolutions.headOption))
         .getOrElse(BoundingBox.empty)
-      val adminViewConfiguration = previous.flatMap(_.adminViewConfiguration)
+      val defaultViewConfiguration = previous.flatMap(_.defaultViewConfiguration)
       category match {
         case Category.segmentation =>
           val mappings = exploreMappings(baseDir)
@@ -39,7 +39,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
             elementClass,
             mappings,
             largestSegmentId,
-            adminViewConfiguration = adminViewConfiguration
+            defaultViewConfiguration
           )
         case _ =>
           WKWDataLayer(
@@ -48,7 +48,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
             boundingBox,
             wkwResolutions,
             elementClass,
-            adminViewConfiguration = adminViewConfiguration
+            defaultViewConfiguration
           )
       }
     }).passFailure { f =>

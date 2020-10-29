@@ -70,9 +70,8 @@ class AgglomerateIdCache(val maxEntries: Int, val standardBlockSize: Int) extend
     def handleUncachedAgglomerate(): Long = {
       val minId =
         if (segmentId < ULong(standardBlockSize / 2)) ULong(0) else segmentId - ULong(standardBlockSize / 2)
-      val blockSize = spire.math.min(size - minId, ULong(standardBlockSize))
 
-      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, blockSize.toLong)
+      val agglomerateIds = readFromFile(reader, dataSet, minId.toLong, standardBlockSize)
 
       agglomerateIds.zipWithIndex.foreach {
         case (id, index) => put(index + minId.toLong, id)

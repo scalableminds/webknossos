@@ -7,7 +7,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
 
-import type { APIAnnotationCompact } from "admin/api_flow_types";
+import type { APIAnnotationCompact } from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 
 import {

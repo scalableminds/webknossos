@@ -7,7 +7,7 @@ import { Table, Spin, Input, Icon } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIJob, APIUser } from "admin/api_flow_types";
+import type { APIJob, APIUser } from "types/api_flow_types";
 import { getJobs } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";

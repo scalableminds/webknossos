@@ -5,7 +5,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
-import type { APIUser, APIProject, APITaskType } from "admin/api_flow_types";
+import type { APIUser, APIProject, APITaskType } from "types/api_flow_types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 

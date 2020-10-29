@@ -5,7 +5,7 @@ import type {
   APIAnnotation,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type {
   Annotation,
   BoundingBoxObject,

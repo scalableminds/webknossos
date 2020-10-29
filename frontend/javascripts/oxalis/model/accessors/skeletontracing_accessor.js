@@ -2,7 +2,7 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 
-import type { HybridServerTracing, ServerSkeletonTracing } from "admin/api_flow_types";
+import type { HybridServerTracing, ServerSkeletonTracing } from "types/api_flow_types";
 import type {
   Tracing,
   SkeletonTracing,

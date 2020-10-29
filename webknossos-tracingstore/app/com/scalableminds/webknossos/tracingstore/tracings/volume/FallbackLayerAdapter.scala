@@ -51,4 +51,6 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
   override lazy val mappingProvider: MappingProvider = fallback.mappingProvider
 
   val defaultViewConfiguration = primary.defaultViewConfiguration
+
+  val adminViewConfiguration = primary.adminViewConfiguration
 }

@@ -2,12 +2,14 @@
 
 import jsonschema from "jsonschema";
 
-import DatasourceSchema from "libs/datasource.schema.json";
-import UserSettingsSchema from "libs/user_settings.schema";
+import DatasourceSchema from "types/schemas/datasource.schema.json";
+import UserSettingsSchema from "types/schemas/user_settings.schema";
+import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 
 const validator = new jsonschema.Validator();
 validator.addSchema(DatasourceSchema, "/");
 validator.addSchema(UserSettingsSchema, "/");
+validator.addSchema(ViewConfigurationSchema, "/");
 
 const validateWithSchema = (type: string) => (rule: Object, value: string, callback: Function) => {
   try {
@@ -29,9 +31,22 @@ const validateWithSchema = (type: string) => (rule: Object, value: string, callb
   }
 };
 
+export const validateObjectWithType = (type: string, json: Object) => {
+  const result = validator.validate(json, {
+    $ref: `#/definitions/${type}`,
+  });
+  if (result.valid) {
+    return [];
+  } else {
+    return result.errors;
+  }
+};
+
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
-export const validateLayerConfigurationJSON = validateWithSchema("types::LayerUserConfiguration");
 export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
+export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
+  "types::LayerViewConfigurationObject",
+);
 
 export const isValidJSON = (json: string) => {
   try {

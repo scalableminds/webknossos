@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import {
   tokenUserA,
   setCurrToken,

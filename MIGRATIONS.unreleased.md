@@ -9,4 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
-- 
+- [057-add-layer-specific-view-configs.sql](conf/evolutions/056-add-layer-specific-view-configs.sql)
+- [058-add-onlyAllowedOrganization.sql](conf/evolutions/057-add-onlyAllowedOrganization.sql) 

@@ -4,7 +4,7 @@ import * as React from "react";
 import _ from "lodash";
 import update from "immutability-helper";
 
-import type { APIUser, APITeam, APITeamMembership } from "admin/api_flow_types";
+import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
 

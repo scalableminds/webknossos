@@ -2,7 +2,7 @@
 import React, { createContext, useState, type Node } from "react";
 
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
-import type { APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDataset } from "types/api_flow_types";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";

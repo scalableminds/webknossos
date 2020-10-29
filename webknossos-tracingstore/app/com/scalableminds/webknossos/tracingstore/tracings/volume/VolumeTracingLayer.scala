@@ -4,6 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
@@ -73,7 +74,8 @@ case class VolumeTracingLayer(
     elementClass: ElementClass.Value,
     largestSegmentId: Long,
     isTemporaryTracing: Boolean = false,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])

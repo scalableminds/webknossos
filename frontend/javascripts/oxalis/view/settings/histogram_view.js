@@ -7,8 +7,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import { type ElementClass } from "admin/api_flow_types";
-import type { APIHistogramData } from "admin/api_flow_types";
+import type { APIHistogramData, ElementClass } from "types/api_flow_types";
 import type { Vector3, Vector2 } from "oxalis/constants";
 import { roundTo } from "libs/utils";
 

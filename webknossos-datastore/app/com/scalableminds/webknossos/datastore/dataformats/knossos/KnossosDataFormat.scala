@@ -3,14 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.knossos
 import java.io.File
 import java.nio.file.Path
 
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  Category,
-  ColorLayerViewConfiguration,
-  DataLayer,
-  ElementClass,
-  SegmentationLayer,
-  SegmentationLayerViewConfiguration
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass, SegmentationLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
@@ -44,14 +37,9 @@ object KnossosDataFormat extends DataSourceImporter {
             case Some(l: SegmentationLayer) => l.largestSegmentId
             case _                          => SegmentationLayer.defaultLargestSegmentId
           }
-          val defaultVC = defaultViewConfiguration.map(SegmentationLayerViewConfiguration.from)
-          KnossosSegmentationLayer(name, sections, elementClass, mappings, largestSegmentId, defaultVC)
+          KnossosSegmentationLayer(name, sections, elementClass, mappings, largestSegmentId, defaultViewConfiguration)
         case _ =>
-          KnossosDataLayer(name,
-                           category,
-                           sections,
-                           elementClass,
-                           defaultViewConfiguration.map(ColorLayerViewConfiguration.from))
+          KnossosDataLayer(name, category, sections, elementClass, defaultViewConfiguration)
       }
     }).passFailure { f =>
       report.error(layer => s"Error processing layer '$layer' - ${f.msg}")

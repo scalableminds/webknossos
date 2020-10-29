@@ -105,7 +105,6 @@ const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {
         isInEditMode: false,
       },
     },
-    quality: 0,
     highlightHoveredCellId: true,
     renderIsosurfaces: false,
     renderMissingDataBlack: false,

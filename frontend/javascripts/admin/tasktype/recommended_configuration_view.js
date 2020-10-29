@@ -7,7 +7,7 @@ import type { DatasetConfiguration, UserConfiguration } from "oxalis/store";
 import { jsonEditStyle } from "dashboard/dataset/helper_components";
 import { jsonStringify } from "libs/utils";
 import { settings } from "messages";
-import { validateUserSettingsJSON } from "dashboard/dataset/validation";
+import { validateUserSettingsJSON } from "types/validation";
 
 const FormItem = Form.Item;
 const { Panel } = Collapse;
@@ -65,7 +65,6 @@ export const DEFAULT_RECOMMENDED_CONFIGURATION: $Shape<{|
 export const settingComments = {
   clippingDistance: "orthogonal mode",
   moveValue: "orthogonal mode",
-  quality: "0 (high), 1 (medium), 2 (low)",
   clippingDistanceArbitrary: "flight/oblique mode",
   moveValue3d: "flight/oblique mode",
   loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",

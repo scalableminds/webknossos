@@ -9,7 +9,7 @@ import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results, WrappedRequest}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{SQLClient, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,6 +23,7 @@ case class DataStore(
     isForeign: Boolean = false,
     isConnector: Boolean = false,
     allowsUpload: Boolean = true,
+    onlyAllowedOrganization: Option[ObjectId] = None
 )
 
 object DataStore {
@@ -45,7 +46,8 @@ object DataStore {
       isDeleted = false,
       isForeign.getOrElse(false),
       isConnector.getOrElse(false),
-      allowsUpload.getOrElse(true)
+      allowsUpload.getOrElse(true),
+      None
     )
 
   def fromUpdateForm(name: String,
@@ -91,6 +93,9 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def idColumn(x: Datastores): Rep[String] = x.name
   def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = '$requestingUserId'))"
+
   def parse(r: DatastoresRow): Fox[DataStore] =
     Fox.successful(
       DataStore(
@@ -102,7 +107,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.isforeign,
         r.isconnector,
-        r.allowsupload
+        r.allowsupload,
+        r.onlyallowedorganization.map(ObjectId(_))
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
@@ -116,7 +122,8 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
-      r <- run(sql"select #${columns} from webknossos.datastores_ order by name".as[DatastoresRow])
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #$columns from webknossos.datastores_ where #$accessQuery order by name".as[DatastoresRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

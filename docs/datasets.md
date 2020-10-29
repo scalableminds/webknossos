@@ -112,11 +112,22 @@ The `Advanced` view lets you edit the underlying JSON configuration directly.
 ### View Configuration
 - `Position`: Default position of the dataset in voxel coordinates. When opening the dataset, users will be located at this position.
 - `Zoom`: Default zoom.
-- `Segmentation Opacity`: Default opacity of the segmentation layer.
+- `Segmentation Pattern Opacity`: Default opacity of the patterns rendered inside segmentation cells.
 - `Interpolation`: Whether interpolation should be enabled by default.
-- `Layer Configuration`: This is an advanced feature to control the default settings (e.g. brightness, contrast, color) per layer. It needs to be configured in a JSON format.
+- `Layer Configuration`: This is an advanced feature to control the default settings (e.g. alpha, color, intensity range) per layer. It needs to be configured in a JSON format.
 
 ![Dataset Editing: View Configuration Tab](images/dataset_view_config.png)
+
+#### View Configuration Hierarchy
+There are two ways to set default View Configuration Settings:
+- inside the `datasource_properties.json`
+- in the `Edit View` for Datasets
+
+The View Configuration from the `Edit View` takes precedence over the `datasource_properties.json`.
+You don't have to set complete View Configurations in neither option, as webKnossos will fill missing attributes with sensible defaults.
+These View Configurations impact the first appearance of the Dataset for all users.
+Each user can further customize their View Configuration in the [Annotation UI Settings](./tracing_ui.md#dataset-settings)
+
 
 ## Dataset Sharing
 Read more in the [Sharing guide](./sharing.md#dataset-sharing)
@@ -126,7 +137,7 @@ The system architecture of webKnossos allows for versatile deployment options wh
 This may be useful when dealing with large datasets that should remain in your data center.
 [Please contact us](mailto:hello@scalableminds.com) if you require any assistance with your setup.
 
-scalable minds also offers a dataset alignment tools called **Voxelytics Align**.
+scalable minds also offers a dataset alignment tool called **Voxelytics Align**.
 [Learn more.](https://scalableminds.com/voxelytics-align)
 
 {% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%} 

@@ -10,9 +10,11 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.UserConfiguration
 import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
@@ -28,6 +30,7 @@ class UserService @Inject()(conf: WkConf,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -139,19 +142,31 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetConfiguration(
+  def updateDataSetViewConfiguration(
       user: User,
       dataSetName: String,
       organizationName: String,
-      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext, m: MessagesProvider) =
+      dataSetConfiguration: DataSetViewConfiguration,
+      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",
         dataSetName)
+      layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
+      _ <- Fox.serialCombined(layerMap.toList) {
+        case (name, config) =>
+          config.asOpt[LayerViewConfiguration] match {
+            case Some(viewConfiguration) =>
+              userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+                                                                                                   dataSet._id,
+                                                                                                   name,
+                                                                                                   viewConfiguration)
+            case None => Fox.successful(())
+          }
+      }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
-                                                                                   configuration.configuration)
-      _ = userCache.invalidateUser(user._id)
+                                                                                   dataSetConfiguration)
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =

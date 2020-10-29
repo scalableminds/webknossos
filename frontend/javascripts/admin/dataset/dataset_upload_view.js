@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
-import type { APIDataStore, APIUser, APIDatasetId } from "admin/api_flow_types";
+import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
@@ -20,7 +20,7 @@ import {
 import { Vector3Input } from "libs/vector_input";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
-import { syncValidator } from "../../dashboard/dataset/validation";
+import { syncValidator } from "types/validation";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;

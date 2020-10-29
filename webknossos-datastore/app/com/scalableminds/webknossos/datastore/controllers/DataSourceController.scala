@@ -103,7 +103,7 @@ class DataSourceController @Inject()(
                 val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                 for {
                   _ <- if (!uploadService.isKnownUpload(uploadId))
-                    webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.name.alreadyTaken"
+                    webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
                   else Fox.successful(())
                   chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
                   _ <- uploadService.handleUploadChunk(uploadId,

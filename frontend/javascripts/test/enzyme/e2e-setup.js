@@ -105,7 +105,7 @@ export async function writeFlowCheckingFile(
   fs.writeFileSync(
     `frontend/javascripts/test/snapshots/flow-check/test-flow-checking-${name}.js`,
     `// @flow
-import type { ${flowTypeString} } from "admin/api_flow_types";
+import type { ${flowTypeString} } from "types/api_flow_types";
 const a: ${fullFlowType} = ${JSON.stringify(object)}`,
   );
 }

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.Json
 
@@ -38,7 +39,8 @@ case class WKWDataLayer(
     boundingBox: BoundingBox,
     wkwResolutions: List[WKWResolution],
     elementClass: ElementClass.Value,
-    defaultViewConfiguration: Option[ColorLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -52,7 +54,8 @@ case class WKWSegmentationLayer(
     elementClass: ElementClass.Value,
     mappings: Option[Set[String]],
     largestSegmentId: Long,
-    defaultViewConfiguration: Option[SegmentationLayerViewConfiguration] = None
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None
 ) extends SegmentationLayer
     with WKWLayer
 

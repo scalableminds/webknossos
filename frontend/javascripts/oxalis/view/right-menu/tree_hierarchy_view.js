@@ -9,7 +9,6 @@ import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
-import update from "immutability-helper";
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -37,6 +36,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -70,7 +70,7 @@ type State = {
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
-    expandedGroupIds: {},
+    expandedGroupIds: { [MISSING_GROUP_ID]: true },
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
@@ -125,7 +125,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   onChange = (treeData: Array<TreeNode>) => {
-    this.setState({ groupTree: treeData });
+    const expandedGroupIds = {};
+    forEachTreeNode(treeData, node => {
+      if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
+    });
+    this.setState({ groupTree: treeData, expandedGroupIds });
   };
 
   onCheck = (evt: SyntheticMouseEvent<*>) => {
@@ -173,15 +177,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       this.selectGroupById(groupId);
     }
-  };
-
-  onExpand = (params: { node: TreeNode, expanded: boolean }) => {
-    // Cannot use object destructuring in the parameters here, because the linter will complain
-    // about the Flow types
-    const { node, expanded } = params;
-    this.setState(prevState => ({
-      expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
-    }));
   };
 
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
@@ -326,12 +321,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     return (
       <div>
-        <Checkbox
-          checked={node.isChecked}
-          onChange={this.onCheck}
-          node={node}
-          style={CHECKBOX_STYLE}
-        />{" "}
+        {node.containsTrees ? (
+          <Checkbox
+            checked={node.isChecked}
+            indeterminate={node.isIndeterminate}
+            onChange={this.onCheck}
+            node={node}
+            style={CHECKBOX_STYLE}
+          />
+        ) : (
+          <span style={CHECKBOX_PLACEHOLDER_STYLE} />
+        )}
         {nameAndDropdown}
       </div>
     );
@@ -359,9 +359,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           />
           <div
             data-id={node.id}
-            style={{ marginLeft: 10, display: "inline" }}
+            style={{ marginLeft: 9, display: "inline" }}
             onClick={this.onSelectTree}
-          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
+          >{`(${tree.nodes.size()}) ${tree.name}`}</div>
         </div>
       );
       nodeProps.className = "tree-type";
@@ -379,6 +379,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       (node.type === TYPE_TREE && node.id === searchQuery.activeTreeId) ||
       (node.type === TYPE_GROUP && node.id === searchQuery.activeGroupId)
     );
+  }
+
+  getNodeKey({ node }: { node: TreeNode }): number {
+    // The hierarchical tree contains group and tree nodes which share ids. To generate a unique
+    // id number, use the [-1, ...] range for the group ids and the [..., -2] range for the tree ids.
+    return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
   canDrop(params: { nextParent: TreeNode }) {
@@ -401,9 +407,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               treeData={this.state.groupTree}
               onChange={this.onChange}
               onMoveNode={this.onMoveNode}
-              onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
               searchQuery={{ activeTreeId, activeGroupId }}
+              getNodeKey={this.getNodeKey}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}

@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
 
-import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APITeam, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";

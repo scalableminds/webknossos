@@ -31,7 +31,7 @@ import type {
   ServerSkeletonTracingTree,
   ServerNode,
   ServerBranchPoint,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getSkeletonTracing,

@@ -40,7 +40,6 @@ const defaultState: OxalisState = {
     fourBit: false,
     interpolation: false,
     layers: {},
-    quality: 0,
     loadingStrategy: "PROGRESSIVE_QUALITY",
     highlightHoveredCellId: true,
     segmentationPatternOpacity: 40,

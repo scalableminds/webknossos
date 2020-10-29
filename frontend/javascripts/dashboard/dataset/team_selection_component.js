@@ -3,7 +3,7 @@ import { Select, Spin } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APITeam } from "admin/api_flow_types";
+import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, getTeams } from "admin/admin_rest_api";
 
 const { Option } = Select;

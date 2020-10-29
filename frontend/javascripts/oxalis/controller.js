@@ -36,7 +36,7 @@ import Store, {
 import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 
 import app from "app";
 import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";

@@ -127,6 +127,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           .findOneByName(orgaTuple._1)
           .futureBox
           .flatMap {
+            case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
+              logger.info(
+                s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
+              Fox.successful(List.empty)
             case Full(organization) =>
               for {
                 foundDatasets <- dataSetDAO.findAllByNamesAndOrganization(orgaTuple._2.map(_.id.name), organization._id)

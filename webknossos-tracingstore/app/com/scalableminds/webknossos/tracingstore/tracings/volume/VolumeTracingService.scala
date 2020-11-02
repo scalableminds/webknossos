@@ -506,7 +506,7 @@ class VolumeTracingService @Inject()(
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
       _ <- bool2Fox(resolutions.nonEmpty) ?~> "Resolution restrictions result in zero resolutions"
-      id <- save(tracing.copy(resolutions = resolutions.map(point3DToProto).toSeq),
+      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(point3DToProto)),
                  Some(tracingId),
                  tracing.version,
                  toCache)

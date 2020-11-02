@@ -105,6 +105,7 @@ type SetTreeColorIndexAction = {
   colorIndex: number,
 };
 type ShuffleTreeColorAction = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
+type SetTreeColorAction = { type: "SET_TREE_COLOR", treeId: number, color: Vector3 };
 type ShuffleAllTreeColorsAction = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentAction = {
   type: "CREATE_COMMENT",
@@ -148,6 +149,7 @@ export type SkeletonTracingAction =
   | MergeTreesAction
   | SetTreeNameAction
   | SelectNextTreeAction
+  | SetTreeColorAction
   | ShuffleTreeColorAction
   | ShuffleAllTreeColorsAction
   | SetTreeColorIndexAction
@@ -196,6 +198,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
+  "SET_TREE_COLOR_INDEX",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
 ];
@@ -416,6 +419,12 @@ export const setTreeColorIndexAction = (
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorAction => ({
   type: "SHUFFLE_TREE_COLOR",
   treeId,
+});
+
+export const setTreeColorAction = (treeId: number, color: Vector3): SetTreeColorAction => ({
+  type: "SET_TREE_COLOR",
+  treeId,
+  color,
 });
 
 export const shuffleAllTreeColorsAction = (): ShuffleAllTreeColorsAction => ({

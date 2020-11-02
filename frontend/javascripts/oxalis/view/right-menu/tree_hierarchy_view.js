@@ -9,6 +9,8 @@ import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
+import type { Vector3 } from "oxalis/constants";
+import * as Utils from "libs/utils";
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -28,6 +30,7 @@ import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer
 import {
   setActiveTreeAction,
   setActiveGroupAction,
+  setTreeColorAction,
   toggleTreeAction,
   toggleTreeGroupAction,
   toggleAllTreesAction,
@@ -56,6 +59,7 @@ type Props = {
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
+  onSetTreeColor: (number, Vector3) => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
@@ -362,6 +366,34 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             style={{ marginLeft: 9, display: "inline" }}
             onClick={this.onSelectTree}
           >{`(${tree.nodes.size()}) ${tree.name}`}</div>
+          <div style={{ position: "relative", display: "inline" }}>
+            <i
+              className="fas fa-eye-dropper fa-sm"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                cursor: "pointer",
+              }}
+            />
+            <input
+              type="color"
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: 14,
+                opacity: 0,
+                cursor: "pointer",
+              }}
+              onChange={event => {
+                let color = Utils.hexToRgb(event.target.value);
+                color = Utils.map3(component => component / 255, color);
+                this.props.onSetTreeColor(tree.treeId, color);
+              }}
+            />
+          </div>
         </div>
       );
       nodeProps.className = "tree-type";
@@ -437,6 +469,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetActiveGroup(groupId) {
     dispatch(setActiveGroupAction(groupId));
+  },
+  onSetTreeColor(treeId, color) {
+    dispatch(setTreeColorAction(treeId, color));
   },
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));

@@ -155,12 +155,12 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-              magRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
               (newId, newTracing) <- tracingService.duplicate(tracingId,
                                                               tracing,
                                                               fromTask.getOrElse(false),
                                                               dataSetBoundingBox,
-                                                              magRestrictions)
+                                                              resolutionRestrictions)
               _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
             } yield {
               Ok(Json.toJson(newId))

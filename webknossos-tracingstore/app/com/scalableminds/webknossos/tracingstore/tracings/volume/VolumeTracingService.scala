@@ -214,10 +214,12 @@ class VolumeTracingService @Inject()(
               case (header, buckets) =>
                 if (header.numBlocksPerCube == 1) {
                   parseWKWFilePath(fileName.toString).map { _ =>
-                    val dataTyped =
-                      UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
-                    val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-                    labelSet ++= nonZeroData
+                    if (buckets.hasNext) {
+                      val dataTyped =
+                        UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
+                      val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
+                      labelSet ++= nonZeroData
+                    }
                   }
                 }
             }
@@ -234,9 +236,11 @@ class VolumeTracingService @Inject()(
               case (header, buckets) =>
                 if (header.numBlocksPerCube == 1) {
                   parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                    val data = buckets.next()
-                    if (!isAllZero(data)) {
-                      mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
+                    if (buckets.hasNext) {
+                      val data = buckets.next()
+                      if (!isAllZero(data)) {
+                        mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
+                      }
                     }
                   }
                 }
@@ -259,7 +263,7 @@ class VolumeTracingService @Inject()(
     def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
-      if (labelSets.isEmpty || labelMaps.nonEmpty) {
+      if (labelSets.length <= 1 || labelMaps.nonEmpty) {
         ()
       } else {
         var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
@@ -288,7 +292,7 @@ class VolumeTracingService @Inject()(
             case (valueTyped, index) =>
               if (!valueTyped.isZero) {
                 val byteValueMapped =
-                  if (labelMaps.isEmpty || initialLargestSegmentId > 0 && sourceVolumeIndex == 0) valueTyped
+                  if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
                   else labelMaps(sourceVolumeIndex)(valueTyped)
                 mutableBucketData(index) = byteValueMapped
               }
@@ -345,17 +349,26 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                val data = buckets.next()
-                if (isAllZero(data) || resolutionRestrictions.isForbidden(bucket.resolution)) {
-                  Fox.successful(())
+                logger.info(s"parsed wkw file path ${fileName.toString} to bucket $bucket")
+                if (buckets.hasNext) {
+                  val data = buckets.next()
+                  logger.info(s"successfully fetched data")
+                  if (isAllZero(data) || resolutionRestrictions.isForbidden(bucket.resolution)) {
+                    logger.info(s"data is zero or resolution ${bucket.resolution} is forbidden")
+                    Fox.successful(())
+                  } else {
+                    logger.info(s"adding ${bucket.resolution} bucket")
+                    savedResolutions.add(bucket.resolution)
+                    saveBucket(dataLayer, bucket, data, tracing.version)
+                  }
                 } else {
-                  savedResolutions.add(bucket.resolution)
-                  saveBucket(dataLayer, bucket, data, tracing.version)
+                  logger.info("buckets iterator is empty.")
                 }
               }
             }
         }
     }
+    logger.info(s"saved resolutions: ${savedResolutions}")
 
     for {
       _ <- unzipResult
@@ -658,7 +671,7 @@ class VolumeTracingService @Inject()(
       case (_, is) =>
         WKWFile.read(is) {
           case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
+            if (header.numBlocksPerCube == 1 && buckets.hasNext) {
               val dataTyped =
                 UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
               val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
@@ -681,9 +694,11 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                val data = buckets.next()
-                if (!isAllZero(data)) {
-                  mergedVolume.add(1, bucketPosition, data)
+                if (buckets.hasNext) {
+                  val data = buckets.next()
+                  if (!isAllZero(data)) {
+                    mergedVolume.add(1, bucketPosition, data)
+                  }
                 }
               }
             }

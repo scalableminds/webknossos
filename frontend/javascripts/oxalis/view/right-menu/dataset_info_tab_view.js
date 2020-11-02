@@ -145,9 +145,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     this.props.setAnnotationDescription(newDescription);
   };
 
-  getTracingStatistics() {
+  getSkeletonTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
-
     return this.props.tracing.skeleton != null ? (
       <div>
         <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
@@ -156,8 +155,19 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
         <p>
           Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
         </p>
+        <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse(null)}</p>
       </div>
     ) : null;
+  }
+
+  getVolumeTracingStatistics() {
+    const { volumeTracing } = this.props.tracing;
+    const segmentationLayer = Model.getSegmentationLayer();
+    if (volumeTracing == null || segmentationLayer == null) {
+      return null;
+    }
+    const { activeCellId } = volumeTracing;
+    const availableMappings = segmentationLayer.mappings;
   }
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
@@ -407,7 +417,6 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           {this.getDatasetName(isDatasetViewMode)}
           {this.maybePrintOwner()}
         </div>
-
         <div className="info-tab-block">
           <table style={{ fontSize: 14 }}>
             <tbody>
@@ -442,8 +451,9 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             </tbody>
           </table>
         </div>
-
+        Skeleton Statistics:
         <div className="info-tab-block">{this.getTracingStatistics()}</div>
+        Volume Statistics:
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
       </div>

@@ -21,6 +21,7 @@ export type SkeletonTracingStats = {|
   nodeCount: number,
   edgeCount: number,
   branchPointCount: number,
+  activeNodeId: number,
 |};
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
@@ -166,12 +167,13 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
 
 export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
   return getSkeletonTracing(tracing)
-    .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
-    .map(trees => ({
+    .chain(skeletonTracing => Maybe.fromNullable({ trees: skeletonTracing.trees, skeletonTracing }))
+    .map(({ trees, skeletonTracing }) => ({
       treeCount: _.size(trees),
       nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
       edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+      activeNodeId: skeletonTracing.activeNodeId,
     }));
 }
 

@@ -300,7 +300,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
                 valuePropName: "checked",
               })(
-                <Checkbox>
+                <Checkbox disabled={isEditingMode}>
                   Restrict Resolutions{" "}
                   <Tooltip
                     title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
@@ -327,7 +327,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   Minimum:{" "}
                   {getFieldDecorator("settings.allowedMagnifications.min", {
                     rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" />)}
+                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>
               </div>
               <div>
@@ -335,7 +335,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                   Maximum:{" "}
                   {getFieldDecorator("settings.allowedMagnifications.max", {
                     rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" />)}
+                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>
               </div>
             </div>

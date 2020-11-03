@@ -25,7 +25,7 @@ import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
-import watchTasksAsync from "oxalis/model/sagas/task_saga";
+import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
 
 export default function* rootSaga(): Saga<void> {
@@ -40,6 +40,7 @@ function* restartableSaga(): Saga<void> {
   try {
     yield _all([
       _call(warnAboutSegmentationZoom),
+      _call(warnAboutMagRestriction),
       _call(watchPushSettingsAsync),
       _call(watchSkeletonTracingAsync),
       _call(collectUndoStates),

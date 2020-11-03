@@ -289,11 +289,14 @@ export function getZoomValue(flycam: Flycam): number {
   return flycam.zoomStep;
 }
 
-function getValidTaskZoomRange(state: OxalisState): [number, number] {
+export function getValidTaskZoomRange(
+  state: OxalisState,
+  respectRestriction: boolean = false,
+): [number, number] {
   const defaultRange = [userSettings.zoom.minimum, Infinity];
   const { allowedMagnifications } = state.tracing.restrictions;
 
-  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+  if (!respectRestriction || !allowedMagnifications || !allowedMagnifications.shouldRestrict) {
     return defaultRange;
   }
 

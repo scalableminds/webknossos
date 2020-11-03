@@ -595,18 +595,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         ? fallbackLayerInfo.resolutions
         : getResolutions(this.props.dataset);
 
-    console.log("volumeTargetResolutions", volumeTargetResolutions);
     const getMaxDim = resolution => Math.max(...resolution);
 
     const volumeTracingResolutions = segmentationLayer.resolutions;
 
-    console.log("volumeTracingResolutions", volumeTracingResolutions);
     const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
-    console.log("sourceMag", sourceMag);
     const possibleMags = volumeTargetResolutions.filter(
       resolution => getMaxDim(resolution) >= getMaxDim(sourceMag),
     );
-    console.log("possibleMags", possibleMags);
 
     const magsToDownsample = _.differenceWith(possibleMags, volumeTracingResolutions, _.isEqual);
     return magsToDownsample;

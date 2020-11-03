@@ -10,7 +10,7 @@ import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import {
   LogSliderSetting,
   NumberInputSetting,
@@ -42,7 +42,7 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";

@@ -8,7 +8,7 @@ import * as React from "react";
 import _ from "lodash";
 import moment from "moment";
 
-import type { APIUser, APITeamMembership, ExperienceMap } from "admin/api_flow_types";
+import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
 import { InviteUsersPopover } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";

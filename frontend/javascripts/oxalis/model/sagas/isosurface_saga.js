@@ -1,7 +1,7 @@
 // @flow
 import { saveAs } from "file-saver";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { ResolutionInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   changeActiveIsosurfaceCellAction,

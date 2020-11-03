@@ -2,7 +2,7 @@
 import { Row, Col, Form, Button } from "antd";
 import * as React from "react";
 
-import type { APITeam } from "admin/api_flow_types";
+import type { APITeam } from "types/api_flow_types";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
 const FormItem = Form.Item;

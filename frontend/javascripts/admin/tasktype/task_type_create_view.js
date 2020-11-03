@@ -16,7 +16,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
-import type { APITeam } from "admin/api_flow_types";
+import type { APITeam } from "types/api_flow_types";
 import {
   getEditableTeams,
   createTaskType,

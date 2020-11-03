@@ -116,6 +116,8 @@ dataSet.initialTeams.teamsNotEmpty=Dataset already has allowed teams
 dataset.initialTeams.invalidTeams=Can only assign teams of user
 dataset.initialTeams.timeout=Timeout while setting initial teams. Was the request sent manually?
 dataset.delete.disabled=Dataset deletion is disabled for this webKnossos instance
+dataSet.upload.Datastore.restricted=Your organization is not allowed to upload datasets to this datastore. Please choose another datastore.
+dataSet.upload.validation.failed=Failed to validate Dataset information for upload.
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -290,5 +292,9 @@ serialization.failed=Failed to serialize data.
 
 initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
 initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again
+
+job.notFound = Job with id {0} could not be found.
+job.couldNotRunCubing = Failed to start WKW conversion job.
+job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 
 unexpectedReturn=Unexpected return of parameters

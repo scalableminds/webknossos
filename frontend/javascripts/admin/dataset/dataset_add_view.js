@@ -5,7 +5,7 @@ import React from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 
-import type { APIUser, APIDataStore } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import DatasetAddForeignView from "admin/dataset/dataset_add_foreign_view";
@@ -14,9 +14,10 @@ import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
-import { getDatastores } from "admin/admin_rest_api";
+import { getDatastores, startJob } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
+import { type Vector3 } from "oxalis/constants";
 
 const { TabPane } = Tabs;
 
@@ -52,9 +53,20 @@ const fetchCategorizedDatastores = async (): Promise<{
 const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
 
-  const handleDatasetAdded = (organization: string, datasetName: string) => {
-    const url = `/datasets/${organization}/${datasetName}/import`;
-    history.push(url);
+  const handleDatasetAdded = async (
+    organization: string,
+    datasetName: string,
+    needsConversion: ?boolean,
+    scale: ?Vector3,
+  ): Promise<void> => {
+    if (needsConversion && scale) {
+      await startJob(datasetName, organization, scale);
+      const url = "/jobs";
+      history.push(url);
+    } else {
+      const url = `/datasets/${organization}/${datasetName}/import`;
+      history.push(url);
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 // @flow
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 
 type SetDatasetAction = { type: "SET_DATASET", dataset: APIDataset };
 type SetLayerMappingsAction = {

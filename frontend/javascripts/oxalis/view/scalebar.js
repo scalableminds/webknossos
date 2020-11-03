@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 
 import { Tooltip } from "antd";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { convertPixelsToNm } from "oxalis/view/right-menu/dataset_info_tab_view";
 import { formatNumberToLength } from "libs/format_utils";

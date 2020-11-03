@@ -157,6 +157,7 @@ export function __setupOxalis(t, mode, apiVersion) {
       }),
     );
   Request.receiveJSON.returns(Promise.resolve({}));
+  Request.sendJSONReceiveJSON.returns(Promise.resolve({}));
 
   return Model.fetch(
     ANNOTATION_TYPE,

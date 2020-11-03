@@ -6,7 +6,7 @@ import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 
-import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
 import type { OxalisState } from "oxalis/store";
@@ -25,6 +25,7 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DisableGenericDnd from "components/disable_generic_dnd";
 import FeaturesView from "pages/frontpage/features_view";
 import FinishResetPasswordView from "admin/auth/finish_reset_password_view";
+import JobListView from "admin/job/job_list_view";
 import LoginView from "admin/auth/login_view";
 import Navbar from "navbar";
 import Onboarding from "admin/onboarding";
@@ -377,6 +378,11 @@ class ReactRouter extends React.Component<Props> {
                 path="/scripts"
                 component={ScriptListView}
                 exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/jobs"
+                render={() => <JobListView />}
               />
               <Route
                 path="/help/keyboardshortcuts"

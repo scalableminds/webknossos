@@ -2,7 +2,7 @@
 import React from "react";
 import _ from "lodash";
 
-import type { APITaskType } from "admin/api_flow_types";
+import type { APITaskType } from "types/api_flow_types";
 import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {

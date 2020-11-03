@@ -3,7 +3,7 @@ import { Dropdown, Menu, Icon, Modal } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 
-import type { APIUser, APITask, APIAnnotation } from "admin/api_flow_types";
+import type { APIUser, APITask, APIAnnotation } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { formatSeconds } from "libs/format_utils";
 import { AsyncLink } from "components/async_clickables";

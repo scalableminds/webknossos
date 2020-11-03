@@ -1,10 +1,12 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
+import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
 import { connect } from "react-redux";
 import React from "react";
+import _ from "lodash";
 
-import type { APIDataStore, APIUser, APIDatasetId } from "admin/api_flow_types";
+import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
 import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -15,14 +17,18 @@ import {
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
+import { Vector3Input } from "libs/vector_input";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import features from "features";
+import { syncValidator } from "types/validation";
+import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
 
 const FormItem = Form.Item;
 
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded: (string, string) => void,
+  onUploaded: (string, string, boolean, ?Vector3) => Promise<void>,
 |};
 type StateProps = {|
   activeUser: ?APIUser,
@@ -35,6 +41,7 @@ type PropsWithForm = {|
 
 type State = {
   isUploading: boolean,
+  needsConversion: boolean,
   isRetrying: boolean,
   isFinished: boolean,
   uploadProgress: number,
@@ -43,6 +50,7 @@ type State = {
 class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   state = {
     isUploading: false,
+    needsConversion: false,
     isRetrying: false,
     isFinished: false,
     uploadProgress: 0,
@@ -58,6 +66,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       return e.slice(-1);
     }
     return e && e.fileList.slice(-1);
+  };
+
+  handleCheckboxChange = evt => {
+    this.setState({ needsConversion: evt.target.checked });
   };
 
   handleSubmit = evt => {
@@ -91,6 +103,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
             organization: datasetId.owningOrganization,
             name: datasetId.name,
             initialTeams: formValues.initialTeams.map(team => team.id),
+            needsConversion: formValues.needsConversion,
           };
 
           finishDatasetUpload(formValues.datastore, uploadInfo).then(
@@ -98,7 +111,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               Toast.success(messages["dataset.upload_success"]);
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-              this.props.onUploaded(activeUser.organization, formValues.name);
+              this.props.onUploaded(
+                activeUser.organization,
+                formValues.name,
+                this.state.needsConversion,
+                formValues.scale,
+              );
             },
             () => {
               Toast.error(messages["dataset.upload_failed"]);
@@ -186,6 +204,54 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
+              {features().jobsEnabled && (
+                <FormItemWithInfo
+                  label="Convert"
+                  info="If your dataset is not yet in WKW or KNOSSOS format, it needs to be converted."
+                >
+                  {getFieldDecorator("needsConversion", {
+                    initialValue: false,
+                  })(
+                    <Checkbox
+                      checked={this.state.needsConversion}
+                      onChange={evt => {
+                        this.handleCheckboxChange(evt);
+                        form.setFieldsValue({ needsConversion: this.state.needsConversion });
+                      }}
+                    >
+                      Needs Conversion
+                    </Checkbox>,
+                  )}
+                </FormItemWithInfo>
+              )}
+              {this.state.needsConversion && (
+                <FormItemWithInfo
+                  label="Voxel Size"
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  disabled={this.state.needsConversion}
+                >
+                  {getFieldDecorator("scale", {
+                    rules: [
+                      {
+                        required: this.state.needsConversion,
+                        message: "Please provide a scale for the dataset.",
+                      },
+                      {
+                        validator: syncValidator(
+                          value => value && value.every(el => el > 0),
+                          "Each component of the scale must be larger than 0.",
+                        ),
+                      },
+                    ],
+                  })(
+                    <Vector3Input
+                      style={{ width: 400 }}
+                      allowDecimals
+                      onChange={scale => form.setFieldsValue({ scale })}
+                    />,
+                  )}
+                </FormItemWithInfo>
+              )}
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],

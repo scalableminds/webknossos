@@ -3,7 +3,7 @@
 import Saxophone from "@scalableminds/saxophone";
 import _ from "lodash";
 
-import type { APIBuildInfo } from "admin/api_flow_types";
+import type { APIBuildInfo } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,

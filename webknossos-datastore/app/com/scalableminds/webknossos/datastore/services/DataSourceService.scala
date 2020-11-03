@@ -1,12 +1,12 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter, RandomAccessFile}
-import java.nio.file.{AccessDeniedException, Files, Path, Paths}
+import java.io.{File, FileWriter}
+import java.nio.file.{Files, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.util.io.{PathUtils, ZipIO}
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
@@ -23,7 +23,6 @@ import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 import org.joda.time.format.ISODateTimeFormat
 
-import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.Source
@@ -54,17 +53,15 @@ class DataSourceService @Inject()(
     if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
   }
 
-  private def skipTrash(path: Path) = !path.toString.contains(".trash")
-
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir, skipTrash) match {
-        case Full(dirs) =>
+      _ <- PathUtils.listDirectories(dataBaseDir) match {
+        case Full(organizationDirs) =>
           for {
             _ <- Fox.successful(())
-            _ = if (verbose) logEmptyDirs(dirs)
-            foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+            _ = if (verbose) logEmptyDirs(organizationDirs)
+            foundInboxSources = organizationDirs.flatMap(teamAwareInboxSources)
             _ = logFoundDatasources(foundInboxSources, verbose)
             _ <- dataSourceRepository.updateDataSources(foundInboxSources)
           } yield ()
@@ -197,8 +194,8 @@ class DataSourceService @Inject()(
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
-      case Full(dirs) =>
-        val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
+      case Full(dataSourceDirs) =>
+        val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")

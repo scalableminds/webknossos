@@ -2,7 +2,7 @@
 import { Link, type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Table, Tag, Icon, Tooltip } from "antd";
 import * as React from "react";
-import type { APIAnnotationCompact } from "admin/api_flow_types";
+import type { APIAnnotationCompact } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { getSharedAnnotations } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";

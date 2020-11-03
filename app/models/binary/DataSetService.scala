@@ -80,16 +80,16 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           publication,
           Some(dataSource.hashCode()),
           dataSource.defaultViewConfiguration,
-          None,
-          None,
-          None,
-          false,
-          dataSource.toUsable.isDefined,
-          dataSource.id.name,
-          dataSource.scaleOpt,
-          None,
-          dataSource.statusOpt.getOrElse(""),
-          None,
+          adminViewConfiguration = None,
+          description = None,
+          displayName = None,
+          isPublic = false,
+          isUsable = dataSource.toUsable.isDefined,
+          name = dataSource.id.name,
+          scale = dataSource.scaleOpt,
+          sharingToken = None,
+          status = dataSource.statusOpt.getOrElse(""),
+          logoUrl = None,
           details = publication.map(_ => details)
         ))
       _ <- dataSetDataLayerDAO.updateLayers(newId, dataSource)
@@ -127,6 +127,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           .findOneByName(orgaTuple._1)
           .futureBox
           .flatMap {
+            case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
+              logger.info(
+                s"Ignoring ${orgaTuple._2.length} reported datasets for forbidden organization ${orgaTuple._1} from organization-specific datastore ${dataStore.name}")
+              Fox.successful(List.empty)
             case Full(organization) =>
               for {
                 foundDatasets <- dataSetDAO.findAllByNamesAndOrganization(orgaTuple._2.map(_.id.name), organization._id)
@@ -171,7 +175,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                   dataSource.hashCode,
                                                                   dataSource,
                                                                   dataSource.isUsable)(GlobalAccessContext)
-        _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
       } yield foundDataSet._id
 
   private def updateDataSourceDifferentDataStore(
@@ -192,7 +195,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                     dataSource.hashCode,
                                                                     dataSource,
                                                                     dataSource.isUsable)(GlobalAccessContext)
-          _ <- dataSetDataLayerDAO.updateLayers(foundDataSet._id, dataSource)
         } yield Some(foundDataSet._id)
       } else {
         logger.info(
@@ -292,6 +294,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       // dont leak team names of other organizations
       teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
     } yield teamsFiltered
+
+  def allLayersFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] =
+    for {
+      dataSource <- dataSourceFor(dataSet)
+      dataSetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
+    } yield dataSetLayers
 
   def isEditableBy(
       dataSet: DataSet,

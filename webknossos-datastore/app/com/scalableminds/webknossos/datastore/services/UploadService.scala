@@ -1,37 +1,29 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter, RandomAccessFile}
-import java.nio.file.{AccessDeniedException, Files, Path, Paths}
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{AccessDeniedException, Files, Path}
 
-import akka.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
-import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
-import org.joda.time.DateTime
-import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
-import org.joda.time.format.ISODateTimeFormat
+import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.io.Source
 
 case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
 
-case class UploadInformation(uploadId: String, organization: String, name: String, initialTeams: List[String])
-object UploadInformation { implicit val uploadInformationFormat = Json.format[UploadInformation] }
+case class UploadInformation(uploadId: String,
+                             organization: String,
+                             name: String,
+                             initialTeams: List[String],
+                             needsConversion: Option[Boolean])
+object UploadInformation {
+  implicit val uploadInformationFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
+}
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSourceService: DataSourceService)
     extends LazyLogging
@@ -82,7 +74,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     Fox.successful(())
   }
 
-  def finishUpload(uploadInformation: UploadInformation) = {
+  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
 
@@ -99,7 +91,12 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       case None => Fox.failure("dataSet.import.unknownUpload")
     }
 
-    val dataSourceDir = dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    val dataSourceDir =
+      if (uploadInformation.needsConversion.getOrElse(false))
+        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
+      else
+        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
@@ -120,8 +117,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       _ = this.synchronized { zipFile.delete() }
       _ <- unzipResult match {
         case Full(_) =>
-          dataSourceRepository.updateDataSource(
-            dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
+          if (uploadInformation.needsConversion.getOrElse(false))
+            Fox.successful(())
+          else
+            dataSourceRepository.updateDataSource(
+              dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
         case e =>
           val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
           logger.warn(errorMsg)

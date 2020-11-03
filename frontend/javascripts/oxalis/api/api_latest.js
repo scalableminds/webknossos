@@ -105,7 +105,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
@@ -588,6 +588,46 @@ class TracingApi {
       }
     }
     return result;
+  }
+
+  measureTreeLength(treeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const tree = skeletonTracing.trees[treeId];
+    if (!tree) {
+      throw new Error(`Tree with id ${treeId} not found.`);
+    }
+
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+
+    // Pre-allocate vectors
+    const currentScaledPositionA = new Float32Array([0, 0, 0]);
+    const currentScaledPositionB = new Float32Array([0, 0, 0]);
+    const diffVector = new Float32Array([0, 0, 0]);
+
+    let lengthAcc = 0;
+    for (const edge of tree.edges.all()) {
+      const sourceNode = tree.nodes.get(edge.source);
+      const targetNode = tree.nodes.get(edge.target);
+
+      V3.scale3(sourceNode.position, datasetScale, currentScaledPositionA);
+      V3.scale3(targetNode.position, datasetScale, currentScaledPositionB);
+      V3.sub(currentScaledPositionA, currentScaledPositionB, diffVector);
+
+      lengthAcc += V3.length(diffVector);
+    }
+
+    return lengthAcc;
+  }
+
+  measureAllTrees(): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+
+    const totalLength = _.values(skeletonTracing.trees).reduce(
+      (sum, currentTree) => sum + this.measureTreeLength(currentTree.treeId),
+      0,
+    );
+
+    return totalLength;
   }
 
   /**

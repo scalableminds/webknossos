@@ -1,17 +1,44 @@
 // @flow
 
-import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip } from "antd";
+import _ from "lodash";
+import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip, Table } from "antd";
 import * as React from "react";
 
 import { Vector3Input } from "libs/vector_input";
+import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
+import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { layerViewConfigurations } from "messages";
 
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
-import { validateLayerConfigurationJSON, syncValidator } from "./validation";
 
 const FormItem = Form.Item;
 
 export default function DefaultConfigComponent({ form }: { form: Object }) {
   const { getFieldDecorator } = form;
+
+  const columns = [
+    {
+      title: "Name",
+      dataIndex: "name",
+    },
+    {
+      title: "Key",
+      dataIndex: "key",
+    },
+    {
+      title: "Default Value",
+      dataIndex: "value",
+    },
+    {
+      title: "Comment",
+      dataIndex: "comment",
+    },
+  ];
+
+  const comments = {
+    alpha: "20 for segmentation layer",
+    loadingStrategy: "BEST_QUALITY_FIRST or PROGRESSIVE_QUALITY",
+  };
 
   return (
     <div>
@@ -61,14 +88,36 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
           </FormItem>
         </Col>
       </Row>
-      <FormItemWithInfo
-        label="Layer Configuration"
-        info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
-      >
-        {getFieldDecorator("defaultConfigurationLayersJson", {
-          rules: [{ validator: validateLayerConfigurationJSON }],
-        })(<Input.TextArea rows="10" style={jsonEditStyle} />)}
-      </FormItemWithInfo>
+      <Row gutter={32}>
+        <Col span={12}>
+          <FormItemWithInfo
+            label="Layer Configuration"
+            info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
+          >
+            {getFieldDecorator("defaultConfigurationLayersJson", {
+              rules: [{ validator: validateLayerViewConfigurationObjectJSON }],
+            })(<Input.TextArea rows="10" style={jsonEditStyle} />)}
+          </FormItemWithInfo>
+        </Col>
+        <Col span={12}>
+          Valid layer view configurations and their default values:
+          <br />
+          <br />
+          <Table
+            columns={columns}
+            dataSource={_.map(getDefaultLayerViewConfiguration(), (value, key: string) => ({
+              name: layerViewConfigurations[key],
+              key,
+              value: value == null ? "not set" : value.toString(),
+              comment: comments[key] || "",
+            }))}
+            size="small"
+            pagination={false}
+            className="large-table"
+            scroll={{ x: "max-content" }}
+          />
+        </Col>
+      </Row>
     </div>
   );
 }

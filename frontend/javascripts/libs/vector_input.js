@@ -2,7 +2,7 @@
 import * as React from "react";
 import _ from "lodash";
 
-import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";
+import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import InputComponent from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";

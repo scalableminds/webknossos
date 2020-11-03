@@ -73,7 +73,8 @@ class BinaryDataController @Inject()(
               s"Complete data request took $duration ms.\n"
                 + s"  dataSource: $organizationName/$dataSetName\n"
                 + s"  dataLayer: $dataLayerName\n"
-                + s"  requestCount: ${request.body.size}")
+                + s"  requestCount: ${request.body.size}"
+                + s"  requestHead: ${request.body.headOption}")
         } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
       }
     }

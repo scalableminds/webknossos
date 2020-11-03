@@ -9,7 +9,7 @@ import { connect } from "react-redux";
 import React, { useState } from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,

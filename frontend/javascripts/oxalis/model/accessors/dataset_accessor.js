@@ -10,7 +10,7 @@ import type {
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   ElementClass,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type {
   Settings,

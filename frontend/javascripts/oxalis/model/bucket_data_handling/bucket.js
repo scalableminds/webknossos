@@ -25,7 +25,7 @@ import Constants, {
 } from "oxalis/constants";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
 
 export const BucketStateEnum = {

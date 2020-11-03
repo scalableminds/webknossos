@@ -3,7 +3,7 @@ import { Row, Col, Card } from "antd";
 import Markdown from "react-remarkable";
 import React from "react";
 
-import type { APIOrganization } from "admin/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
 
 type Props = {};

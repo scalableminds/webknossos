@@ -9,7 +9,7 @@ import { type InferSegmentationInViewportAction } from "oxalis/model/actions/vol
 import { sleep } from "libs/utils";
 import { type Vector2, type Vector3, type OrthoView, OrthoViews } from "oxalis/constants";
 import { getMeanAndStdDevFromDataset } from "admin/admin_rest_api";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import TensorFlowWorker from "oxalis/workers/tensorflow.worker";
 import mainThreadPredict from "oxalis/workers/tensorflow.impl";

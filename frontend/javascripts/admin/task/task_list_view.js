@@ -7,7 +7,7 @@ import React from "react";
 import _ from "lodash";
 
 import { AsyncLink } from "components/async_clickables";
-import type { APITask, APITaskType } from "admin/api_flow_types";
+import type { APITask, APITaskType } from "types/api_flow_types";
 import { deleteTask, getTasks, downloadNml } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";

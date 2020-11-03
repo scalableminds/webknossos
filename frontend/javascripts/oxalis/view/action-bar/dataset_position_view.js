@@ -3,7 +3,7 @@ import { Input, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { Vector3Input } from "libs/vector_input";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";

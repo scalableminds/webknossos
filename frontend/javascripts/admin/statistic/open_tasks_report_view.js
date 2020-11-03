@@ -2,7 +2,7 @@
 import { Spin, Table, Card } from "antd";
 import * as React from "react";
 
-import type { APIOpenTasksReport } from "admin/api_flow_types";
+import type { APIOpenTasksReport } from "types/api_flow_types";
 import { getOpenTasksReport } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import * as Utils from "libs/utils";

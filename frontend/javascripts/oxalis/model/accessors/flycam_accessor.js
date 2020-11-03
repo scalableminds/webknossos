@@ -14,7 +14,7 @@ import {
   getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   type OrthoView,

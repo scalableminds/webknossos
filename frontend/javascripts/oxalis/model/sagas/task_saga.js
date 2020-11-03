@@ -2,7 +2,7 @@
 import React from "react";
 import _ from "lodash";
 
-import type { APITaskType } from "admin/api_flow_types";
+import type { APITaskType } from "types/api_flow_types";
 import { type Saga, call, put, select, _delay, take } from "oxalis/model/sagas/effect-generators";
 import { clamp } from "libs/utils";
 import {

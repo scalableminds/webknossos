@@ -9,7 +9,7 @@ import _ from "lodash";
 import debounceRender from "react-debounce-render";
 
 import createProgressCallback from "libs/progress_callback";
-import type { APIDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";

@@ -28,10 +28,10 @@ POST          /auth/createOrganizationWithAdmin                                 
 # Configurations
 GET           /user/userConfiguration                                           controllers.ConfigurationController.read
 PUT           /user/userConfiguration                                           controllers.ConfigurationController.update
-GET           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSet(organizationName: String, dataSetName: String)
-PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSet(organizationName: String, dataSetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetDefault(organizationName: String, dataSetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetDefault(organizationName: String, dataSetName: String)
+POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String)
+PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
+GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
+PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
 
 # Users
 POST          /user/tasks/request                                               controllers.TaskController.request
@@ -183,3 +183,8 @@ GET           /operatorData                                                     
 GET           /time/allusers/:year/:month                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /time/userlist/:year/:month                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /time/user/:userId                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+
+# Long-Running Jobs
+GET           /jobs                                                             controllers.JobsController.list
+GET           /jobs/:id                                                         controllers.JobsController.get(id: String)
+GET           /jobs/run/cubing/:organizationName/:dataSetName                   controllers.JobsController.runCubingJob(organizationName: String, dataSetName: String, scale: String)

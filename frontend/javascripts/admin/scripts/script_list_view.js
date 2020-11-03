@@ -6,7 +6,7 @@ import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIScript, APIUser } from "admin/api_flow_types";
+import type { APIScript, APIUser } from "types/api_flow_types";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";

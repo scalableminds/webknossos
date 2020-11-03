@@ -2,7 +2,7 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { ServerVolumeTracing } from "admin/api_flow_types";
+import type { ServerVolumeTracing } from "types/api_flow_types";
 import type {
   Vector2,
   Vector3,

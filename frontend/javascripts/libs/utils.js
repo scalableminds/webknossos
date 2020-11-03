@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import naturalSort from "javascript-natural-sort";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   Vector3,

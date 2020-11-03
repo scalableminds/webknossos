@@ -42,6 +42,17 @@ export const settings = {
   autoBrush: "Automatic Brush (Beta)",
 };
 
+export const layerViewConfigurations = {
+  color: "Color",
+  alpha: "Layer opacity",
+  intensityRange: "Intensity Range",
+  min: "Minimum Data Value",
+  max: "Maximum Data Value",
+  isDisabled: "Disabled Layer",
+  isInverted: "Inverted Layer",
+  isInEditMode: "Configuration Mode",
+};
+
 export default {
   yes: "Yes",
   no: "No",

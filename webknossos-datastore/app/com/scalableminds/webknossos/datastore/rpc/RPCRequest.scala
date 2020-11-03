@@ -27,6 +27,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
     this
   }
 
+  def withBasicAuth(username: String, password: String): RPCRequest = {
+    request = request.withAuth(username, password, WSAuthScheme.BASIC)
+    this
+  }
+
   def silent: RPCRequest = {
     verbose = false
     this

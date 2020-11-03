@@ -9,7 +9,7 @@ import Markdown from "react-remarkable";
 import React from "react";
 import _ from "lodash";
 
-import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";

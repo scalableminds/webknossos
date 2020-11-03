@@ -6,7 +6,7 @@ import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
 import type { VolumeTool, ContourMode } from "oxalis/constants";
-import type { HybridServerTracing, ServerVolumeTracing } from "admin/api_flow_types";
+import type { HybridServerTracing, ServerVolumeTracing } from "types/api_flow_types";
 
 export function getVolumeTracing(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volume != null) {

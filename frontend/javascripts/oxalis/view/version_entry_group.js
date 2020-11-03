@@ -3,7 +3,7 @@ import { Avatar, List } from "antd";
 import * as React from "react";
 import _ from "lodash";
 
-import type { APIUpdateActionBatch } from "admin/api_flow_types";
+import type { APIUpdateActionBatch } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import VersionEntry from "oxalis/view/version_entry";
 

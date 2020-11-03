@@ -15,6 +15,7 @@ import {
   type APIDatasetId,
   type APIFeatureToggles,
   type APIHistogramData,
+  type APIJob,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -47,7 +48,7 @@ import {
   type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -62,6 +63,7 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { saveAs } from "file-saver";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import ResumableJS from "resumablejs";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
@@ -766,6 +768,28 @@ export async function getDatasets(
   return datasets;
 }
 
+export async function getJobs(): Promise<Array<APIJob>> {
+  const jobs = await Request.receiveJSON("/api/jobs");
+  assertResponseLimit(jobs);
+  return jobs.map(job => ({
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.kwargs.dataset_name,
+    state: job.celeryInfo.state,
+    createdAt: job.created,
+  }));
+}
+
+export async function startJob(
+  jobName: string,
+  organization: string,
+  scale: Vector3,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+  );
+}
+
 export function getDatasetDatasource(
   dataset: APIMaybeUnimportedDataset,
 ): Promise<APIDataSourceWithMessages> {
@@ -827,10 +851,20 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object> {
-  return Request.receiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+export async function getDatasetViewConfiguration(
+  dataset: APIDataset,
+  displayedVolumeTracings: Array<string>,
+): Promise<DatasetConfiguration> {
+  const settings = await Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    {
+      data: displayedVolumeTracings,
+      method: "POST",
+    },
   );
+
+  enforceValidatedDatasetViewConfiguration(settings, dataset);
+  return settings;
 }
 
 export function updateDatasetConfiguration(

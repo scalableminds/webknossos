@@ -72,7 +72,7 @@ class SampleDataSourceService @Inject()(rpc: RPC,
           tmpfile.close()
 
           uploadService
-            .finishUpload(UploadInformation(fileName, id.team, id.name, List.empty, needsConversion = false))
+            .finishUpload(UploadInformation(fileName, id.team, id.name, List.empty, needsConversion = None))
             .map { _ =>
               runningDownloads.remove(id)
             }

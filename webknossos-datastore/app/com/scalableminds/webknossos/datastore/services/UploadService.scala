@@ -20,7 +20,7 @@ case class UploadInformation(uploadId: String,
                              organization: String,
                              name: String,
                              initialTeams: List[String],
-                             needsConversion: Boolean)
+                             needsConversion: Option[Boolean])
 object UploadInformation {
   implicit val uploadInformationFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
 }
@@ -92,7 +92,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     }
 
     val dataSourceDir =
-      if (uploadInformation.needsConversion)
+      if (uploadInformation.needsConversion.getOrElse(false))
         dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
@@ -117,7 +117,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       _ = this.synchronized { zipFile.delete() }
       _ <- unzipResult match {
         case Full(_) =>
-          if (uploadInformation.needsConversion)
+          if (uploadInformation.needsConversion.getOrElse(false))
             Fox.successful(())
           else
             dataSourceRepository.updateDataSource(

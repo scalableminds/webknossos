@@ -72,7 +72,7 @@ case class VolumeTracingLayer(
     largestSegmentId: Long,
     isTemporaryTracing: Boolean = false,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
     volumeResolutions: List[Point3D] = List.empty
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,

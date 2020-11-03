@@ -443,6 +443,7 @@ function setupLayerForVolumeTracing(
     mappings: fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
     // remember the name of the original layer, used to request mappings
     fallbackLayer: tracing.fallbackLayer,
+    fallbackLayerInfo: fallbackLayer,
   };
 
   if (fallbackLayer != null) {

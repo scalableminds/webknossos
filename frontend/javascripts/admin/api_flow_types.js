@@ -58,6 +58,8 @@ export type APISegmentationLayer = {|
   +mappings?: Array<string>,
   +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
+  // eslint-disable-next-line no-use-before-define
+  +fallbackLayerInfo?: APIDataLayer,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;

@@ -6,35 +6,34 @@
 import { Col, Collapse, Icon, Row, Select, Switch, Tooltip, Modal } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { useState } from "react";
 import _ from "lodash";
-import { V3 } from "libs/mjs";
-import api from "oxalis/api/internal_api";
 
-import messages, { settings } from "messages";
 import type { APIDataset } from "admin/api_flow_types";
-import { AsyncIconButton } from "components/async_clickables";
+import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
+import { V3 } from "libs/mjs";
 import {
   findDataPositionForLayer,
   clearCache,
   findDataPositionForVolumeTracing,
   unlinkFallbackSegmentation,
 } from "admin/admin_rest_api";
-import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getDefaultIntensityRangeOfLayer,
   getElementClass,
   getLayerBoundaries,
-  getDefaultIntensityRangeOfLayer,
   getLayerByName,
   getResolutionInfo,
+  getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
@@ -49,10 +48,13 @@ import Store, {
   type UserConfiguration,
   type HistogramDataForAllLayers,
   type Tracing,
+  type Task,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
 import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
+import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -76,9 +78,76 @@ type DatasetSettingsProps = {|
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
   onUnlinkFallbackLayer: Tracing => Promise<void>,
   tracing: Tracing,
+  task: ?Task,
 |};
 
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
+  const [isDownsampling, setIsDownsampling] = useState(false);
+
+  const handleTriggerDownsampling = async () => {
+    setIsDownsampling(true);
+    await api.tracing.downsampleSegmentation();
+    setIsDownsampling(false);
+  };
+
+  return (
+    <Modal
+      title="Downsample Volume Annotation"
+      onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
+      visible={visible}
+      footer={null}
+      width={800}
+      maskClosable={false}
+    >
+      <p>
+        This annotation does not have volume annotation data in all resolutions. Consequently,
+        annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
+        webKnossos will use the best resolution of the volume data to create all dependent
+        resolutions.
+      </p>
+
+      <p>
+        The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
+        {magsToDownsample.map(mag => mag.join("-")).join(", ")}.
+      </p>
+
+      <p>
+        The cause for the missing resolutions can be one of the following:
+        <ul>
+          <li>
+            The annotation was created before webKnossos supported multi-resolution volume tracings.
+          </li>
+          <li>An old annotation was uploaded which did not include all resolutions.</li>
+          <li>The annotation was created in a task that was restricted to certain resolutions.</li>
+          <li>The dataset was mutated to have more resolutions.</li>
+        </ul>
+      </p>
+
+      <p style={{ fontWeight: "bold" }}>
+        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
+        Also, the version history of the volume data will be reset.
+      </p>
+      <div style={{ display: "flex", "justify-content": "center", marginTop: 12 }}>
+        <AsyncButton onClick={handleTriggerDownsampling} type="primary">
+          Downsample
+        </AsyncButton>
+      </div>
+    </Modal>
+  );
+}
+
+type State = {|
+  isDownsampleVolumeModalVisible: boolean,
+|};
+
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  constructor() {
+    super();
+    this.state = {
+      isDownsampleVolumeModalVisible: false,
+    };
+  }
+
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
@@ -303,6 +372,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             <Icon style={{ marginLeft: 4 }} type="info-circle" />
           </Tooltip>
 
+          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
+
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
@@ -508,6 +579,75 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       "Layers"
     );
 
+  getVolumeMagsToDownsample = (): Array<Vector3> => {
+    // todo: memoize?
+    if (this.props.task != null) {
+      return [];
+    }
+    const volumeTracing = this.props.tracing.volume;
+    if (volumeTracing == null) {
+      return [];
+    }
+    const segmentationLayer = Model.getSegmentationLayer();
+    const fallbackLayerInfo = segmentationLayer.fallbackLayerInfo;
+    const volumeTargetResolutions =
+      fallbackLayerInfo != null
+        ? fallbackLayerInfo.resolutions
+        : getResolutions(this.props.dataset);
+
+    console.log("volumeTargetResolutions", volumeTargetResolutions);
+    const getMaxDim = resolution => Math.max(...resolution);
+
+    const volumeTracingResolutions = segmentationLayer.resolutions;
+
+    console.log("volumeTracingResolutions", volumeTracingResolutions);
+    const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
+    console.log("sourceMag", sourceMag);
+    const possibleMags = volumeTargetResolutions.filter(
+      resolution => getMaxDim(resolution) >= getMaxDim(sourceMag),
+    );
+    console.log("possibleMags", possibleMags);
+
+    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingResolutions, _.isEqual);
+    return magsToDownsample;
+  };
+
+  getOptionalDownsampleVolumeIcon = () => {
+    const magsToDownsample = this.getVolumeMagsToDownsample();
+    const hasExtensiveResolutions = magsToDownsample.length === 0;
+
+    if (hasExtensiveResolutions) {
+      return null;
+    }
+
+    return (
+      <Tooltip title="Open Dialog to Downsample Volume Data">
+        <a href="#" onClick={this.showDownsampleVolumeModal}>
+          <img
+            src="/assets/images/icon-downsampling.svg"
+            style={{
+              width: 20,
+              height: 20,
+              filter:
+                "invert(47%) sepia(52%) saturate(1836%) hue-rotate(352deg) brightness(99%) contrast(105%)",
+              verticalAlign: "top",
+              cursor: "pointer",
+            }}
+            alt="Resolution Icon"
+          />
+        </a>
+      </Tooltip>
+    );
+  };
+
+  showDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: true });
+  };
+
+  hideDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: false });
+  };
+
   render() {
     const { layers } = this.props.datasetConfiguration;
     const segmentationLayerName = Model.getSegmentationLayerName();
@@ -594,6 +734,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             onChange={this.onChangeRenderMissingDataBlack}
           />
         </Panel>
+        <DownsampleVolumeModal
+          visible={this.state.isDownsampleVolumeModalVisible}
+          hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
+          magsToDownsample={this.getVolumeMagsToDownsample()}
+        />
       </Collapse>
     );
   }
@@ -606,6 +751,7 @@ const mapStateToProps = (state: OxalisState) => ({
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
   tracing: state.tracing,
+  task: state.task,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -349,26 +349,19 @@ class VolumeTracingService @Inject()(
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                logger.info(s"parsed wkw file path ${fileName.toString} to bucket $bucket")
                 if (buckets.hasNext) {
                   val data = buckets.next()
-                  logger.info(s"successfully fetched data")
                   if (isAllZero(data) || resolutionRestrictions.isForbidden(bucket.resolution)) {
-                    logger.info(s"data is zero or resolution ${bucket.resolution} is forbidden")
                     Fox.successful(())
                   } else {
-                    logger.info(s"adding ${bucket.resolution} bucket")
                     savedResolutions.add(bucket.resolution)
                     saveBucket(dataLayer, bucket, data, tracing.version)
                   }
-                } else {
-                  logger.info("buckets iterator is empty.")
                 }
               }
             }
         }
     }
-    logger.info(s"saved resolutions: ${savedResolutions}")
 
     for {
       _ <- unzipResult

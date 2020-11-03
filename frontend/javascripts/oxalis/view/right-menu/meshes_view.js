@@ -136,11 +136,6 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   };
 
   render() {
-    const refreshButton = (segmentId: number) => (
-      <Tooltip title="refresh isosurface">
-        <Icon key="refresh-button" type="redo" onClick={console.log(segmentId)} />
-      </Tooltip>
-    );
     const downloadButton = (segmentId: number) => (
       <Tooltip title="download isosurface">
         <Icon
@@ -156,10 +151,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
     const renderListItem = (cellId: number) => (
-      <List.Item
-        actions={[refreshButton(cellId), downloadButton(cellId)]}
-        style={{ marginBottom: -15 }}
-      >
+      <List.Item actions={[downloadButton(cellId)]} style={{ marginBottom: -15 }}>
         <span
           className="circle"
           style={{

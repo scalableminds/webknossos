@@ -157,7 +157,7 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
           rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
             .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
             .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
-            .addQueryStringOptional("minResolution", resolutionRestrictions.maxStr)
+            .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
             .post(file)
         case _ =>
           Fox.successful(())

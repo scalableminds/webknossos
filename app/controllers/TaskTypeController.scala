@@ -66,6 +66,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
         taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
         taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
         _ <- bool2Fox(taskTypeFromForm.tracingType == taskType.tracingType) ?~> "taskType.tracingTypeImmutable"
+        _ <- bool2Fox(taskTypeFromForm.settings.allowedMagnifications == taskType.settings.allowedMagnifications) ?~> "taskType.allowedMagnificationsImmutable"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
         _ <- Fox

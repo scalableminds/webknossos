@@ -28,7 +28,7 @@ object VolumeTracingDownsampling {
 
   def resolutionsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Point3D] = {
     val fallBackLayerMags = fallbackLayer.map(_.resolutions)
-    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct)
+    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct).sortBy(_.maxDim)
   }
 }
 

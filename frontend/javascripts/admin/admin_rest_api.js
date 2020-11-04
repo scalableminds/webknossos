@@ -743,18 +743,15 @@ export async function unlinkFallbackSegmentation(
 }
 
 // When the annotation is open, please use the corresponding method
-// in api_latest.js.
+// in api_latest.js. It will take care of saving the annotation and
+// reloading it.
 export async function downsampleSegmentation(
   annotationId: string,
   annotationType: APIAnnotationType,
 ): Promise<void> {
-  const response = await Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/downsample`,
-    {
-      method: "PATCH",
-    },
-  );
-  console.log("response", response);
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/downsample`, {
+    method: "PATCH",
+  });
 }
 
 // ### Datasets

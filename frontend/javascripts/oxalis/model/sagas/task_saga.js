@@ -1,6 +1,7 @@
 // @flow
 import React from "react";
 import _ from "lodash";
+import { Button } from "antd";
 
 import type { APITaskType } from "types/api_flow_types";
 import { type Saga, call, put, select, _delay, take } from "oxalis/model/sagas/effect-generators";
@@ -155,9 +156,9 @@ export function* warnAboutMagRestriction(): Saga<void> {
         <React.Fragment>
           Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
           is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
-          <a href="#" onClick={clampZoom}>
+          <Button type="link" onClick={clampZoom}>
             here
-          </a>{" "}
+          </Button>{" "}
           to adjust the zoom accordingly.
         </React.Fragment>
       );

@@ -7,7 +7,6 @@ import { Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import React from "react";
-import _ from "lodash";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum, type Vector3 } from "oxalis/constants";

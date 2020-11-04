@@ -94,7 +94,8 @@ export function getPlaneMouseControls(planeView: PlaneView) {
         // but not all (e.g., deleting a tree from the tree tab should be allowed). Therefore,
         // this solution is a bit of a shortcut. However, it should cover 90% of the use case
         // for restricting the rendered magnification.
-        // See https://github.com/scalableminds/webknossos/pull/4891 for context.
+        // See https://github.com/scalableminds/webknossos/pull/4891 for context and
+        // https://github.com/scalableminds/webknossos/issues/4838 for the follow-up issue.
         return;
       }
 

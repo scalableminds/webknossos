@@ -580,7 +580,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     );
 
   getVolumeMagsToDownsample = (): Array<Vector3> => {
-    // todo: memoize?
     if (this.props.task != null) {
       return [];
     }

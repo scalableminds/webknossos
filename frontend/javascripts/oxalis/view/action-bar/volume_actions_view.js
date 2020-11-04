@@ -175,13 +175,16 @@ const getExplanationForDisabledVolume = (
   isLabelingPossible,
   isZoomInvalidForTracing,
 ) => {
-  if (isInMergerMode) return "Volume annotation is disabled while the merger mode is active.";
-
-  if (!isLabelingPossible)
-    return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
-
   if (isZoomInvalidForTracing) {
     return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
+  }
+
+  if (isInMergerMode) {
+    return "Volume annotation is disabled while the merger mode is active.";
+  }
+
+  if (!isLabelingPossible) {
+    return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
   }
 
   return "Volume annotation is currently disabled.";

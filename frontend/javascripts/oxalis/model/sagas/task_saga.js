@@ -175,14 +175,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
-    yield* take([
-      "ZOOM_IN",
-      "ZOOM_OUT",
-      "ZOOM_BY_DELTA",
-      "SET_ZOOM_STEP",
-      "SET_STORED_LAYOUTS",
-      "SET_TOOL",
-    ]);
+    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"]);
     yield* warnMaybe();
   }
 }

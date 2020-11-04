@@ -748,15 +748,21 @@ class TracingApi {
 
   /**
    * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
-     Note that this will block the UI, save the current changes and then reload the page after the downsampling
+     This method will save the current changes and then reload the page after the downsampling
      has finished.
      This function can only be used for non-tasks.
+
+     Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
+     downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
    */
   async downsampleSegmentation() {
     const state = Store.getState();
-    const { annotationId, annotationType } = state.tracing;
+    const { annotationId, annotationType, volume } = state.tracing;
     if (state.task != null) {
       throw new Error("Cannot downsample segmentation for a task.");
+    }
+    if (volume == null) {
+      throw new Error("Cannot downsample segmentation for annotation without volume data.");
     }
 
     await this.save();

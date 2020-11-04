@@ -26,6 +26,7 @@ import {
   getPosition,
   getRotationOrtho,
   getRequestLogZoomStep,
+  isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   setActiveNodeAction,
@@ -85,7 +86,19 @@ export function getPlaneMouseControls(planeView: PlaneView) {
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const { volume } = Store.getState().tracing;
+      const state = Store.getState();
+      if (isMagRestrictionViolated(state)) {
+        // The current zoom value violates the specified magnification-restriction in the
+        // task type. Therefore, we don't abort the action here.
+        // Actually, one would need to handle more skeleton actions (e.g., deleting a node),
+        // but not all (e.g., deleting a tree from the tree tab should be allowed). Therefore,
+        // this solution is a bit of a shortcut. However, it should cover 90% of the use case
+        // for restricting the rendered magnification.
+        // See https://github.com/scalableminds/webknossos/pull/4891 for context.
+        return;
+      }
+
+      const { volume } = state.tracing;
       if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
         // We avoid creating nodes when in brushing mode.
         setWaypoint(calculateGlobalPos(pos), event.ctrlKey);

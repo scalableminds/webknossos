@@ -6,8 +6,8 @@ import type { APITaskType } from "types/api_flow_types";
 import { type Saga, call, put, select, _delay, take } from "oxalis/model/sagas/effect-generators";
 import { clamp } from "libs/utils";
 import {
-  getRequestLogZoomStep,
   getValidTaskZoomRange,
+  isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -133,46 +133,35 @@ export default function* watchTasksAsync(): Saga<void> {
 
 export function* warnAboutMagRestriction(): Saga<void> {
   function* warnMaybe(): Saga<void> {
-    const tracing = yield* select(state => state.tracing);
-    const { allowedMagnifications } = tracing.restrictions;
-
-    if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+    const { allowUpdate } = yield* select(state => state.tracing.restrictions);
+    if (!allowUpdate) {
+      // If updates are not allowed in general, we return here, since we don't
+      // want to show any warnings when the user cannot edit the annotation in the first
+      // place (e.g., when viewing the annotation of another user).
       return;
     }
 
-    const isMagRestrictionViolated = yield* select(storeState => {
-      const zoomStep = getRequestLogZoomStep(storeState);
-      if (allowedMagnifications.min != null && zoomStep < Math.log2(allowedMagnifications.min)) {
-        return true;
-      }
-      if (allowedMagnifications.max != null && zoomStep > Math.log2(allowedMagnifications.max)) {
-        return true;
-      }
-      return false;
-    });
-
-    const [min, max] = yield* select(storeState => getValidTaskZoomRange(storeState, true));
-
-    const clampZoom = () => {
-      const currentZoomStep = Store.getState().flycam.zoomStep;
-
-      const newZoomValue = clamp(min, currentZoomStep, max);
-      Store.dispatch(setZoomStepAction(newZoomValue));
-    };
-    const message = (
-      <React.Fragment>
-        Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
-        is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
-        <a href="#" onClick={clampZoom}>
-          here
-        </a>{" "}
-        to adjust the zoom accordingly.
-      </React.Fragment>
-    );
-
+    const isViolated = yield* select(isMagRestrictionViolated);
     const toastConfig = { sticky: true, key: "mag-restriction-warning" };
 
-    if (isMagRestrictionViolated) {
+    if (isViolated) {
+      const [min, max] = yield* select(storeState => getValidTaskZoomRange(storeState, true));
+      const clampZoom = () => {
+        const currentZoomStep = Store.getState().flycam.zoomStep;
+        const newZoomValue = clamp(min, currentZoomStep, max);
+        Store.dispatch(setZoomStepAction(newZoomValue));
+      };
+      const message = (
+        <React.Fragment>
+          Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
+          is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
+          <a href="#" onClick={clampZoom}>
+            here
+          </a>{" "}
+          to adjust the zoom accordingly.
+        </React.Fragment>
+      );
+
       Toast.error(message, toastConfig);
     } else {
       Toast.close(toastConfig.key);
@@ -185,7 +174,14 @@ export function* warnAboutMagRestriction(): Saga<void> {
   yield* warnMaybe();
 
   while (true) {
-    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"]);
+    yield* take([
+      "ZOOM_IN",
+      "ZOOM_OUT",
+      "ZOOM_BY_DELTA",
+      "SET_ZOOM_STEP",
+      "SET_STORED_LAYOUTS",
+      "SET_TOOL",
+    ]);
     yield* warnMaybe();
   }
 }

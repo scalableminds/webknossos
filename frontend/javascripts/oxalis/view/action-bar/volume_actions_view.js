@@ -17,6 +17,7 @@ import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
 import {
   setToolAction,
   createCellAction,
@@ -169,6 +170,23 @@ const mapId = id => {
   return cube.mapId(id);
 };
 
+const getExplanationForDisabledVolume = (
+  isInMergerMode,
+  isLabelingPossible,
+  isZoomInvalidForTracing,
+) => {
+  if (isInMergerMode) return "Volume annotation is disabled while the merger mode is active.";
+
+  if (!isLabelingPossible)
+    return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
+
+  if (isZoomInvalidForTracing) {
+    return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
+  }
+
+  return "Volume annotation is currently disabled.";
+};
+
 export default function VolumeActionsView() {
   const hasSkeleton = useSelector(state => state.tracing.skeleton != null);
   const activeTool = useSelector(state => enforceVolumeTracing(state.tracing).activeTool);
@@ -188,6 +206,8 @@ export default function VolumeActionsView() {
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const isLabelingPossible = labeledResolution != null;
 
+  const isZoomInvalidForTracing = useSelector(isMagRestrictionViolated);
+
   const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
 
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
@@ -206,10 +226,10 @@ export default function VolumeActionsView() {
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   useEffect(() => {
-    if (isInMergerMode || !isLabelingPossible) {
+    if (isInMergerMode || !isLabelingPossible || isZoomInvalidForTracing) {
       Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
     }
-  }, [isInMergerMode, activeTool, isLabelingPossible]);
+  }, [isInMergerMode, activeTool, isLabelingPossible, isZoomInvalidForTracing]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
@@ -232,9 +252,11 @@ export default function VolumeActionsView() {
     : null;
   const previousMoveToolHint = usePrevious(moveToolHint);
 
-  const disabledVolumeExplanation = isLabelingPossible
-    ? "Volume annotation is disabled while the merger mode is active."
-    : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
+  const disabledVolumeExplanation = getExplanationForDisabledVolume(
+    isInMergerMode,
+    isLabelingPossible,
+    isZoomInvalidForTracing,
+  );
 
   const moveToolDescription = `Pointer – Use left-click to move around${
     hasSkeleton ? " and right-click to create new skeleton nodes" : ""

@@ -318,6 +318,23 @@ export function getValidTaskZoomRange(
   return [min, max];
 }
 
+export function isMagRestrictionViolated(state: OxalisState): boolean {
+  const { allowedMagnifications } = state.tracing.restrictions;
+
+  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+    return false;
+  }
+
+  const zoomStep = getRequestLogZoomStep(state);
+  if (allowedMagnifications.min != null && zoomStep < Math.log2(allowedMagnifications.min)) {
+    return true;
+  }
+  if (allowedMagnifications.max != null && zoomStep > Math.log2(allowedMagnifications.max)) {
+    return true;
+  }
+  return false;
+}
+
 export function getPlaneScalingFactor(
   state: OxalisState,
   flycam: Flycam,

@@ -155,7 +155,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
       const message = (
         <React.Fragment>
           Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
-          is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
+          it is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
           <Button type="link" onClick={clampZoom} style={{ padding: 0 }}>
             here
           </Button>{" "}

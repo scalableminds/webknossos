@@ -141,12 +141,9 @@ type State = {|
 |};
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
-  constructor() {
-    super();
-    this.state = {
-      isDownsampleVolumeModalVisible: false,
-    };
-  }
+  state = {
+    isDownsampleVolumeModalVisible: false,
+  };
 
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled

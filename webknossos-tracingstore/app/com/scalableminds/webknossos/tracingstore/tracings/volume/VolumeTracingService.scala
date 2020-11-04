@@ -426,12 +426,12 @@ class VolumeTracingService @Inject()(
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
                 dataSetBoundingBox: Option[BoundingBox],
-                magRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
+                resolutionRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
     val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
-    val tracingWithMagRestrictions = restrictMagList(tracingWithBB, magRestrictions)
-    val newTracing = tracingWithMagRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
+    val newTracing = tracingWithResolutionRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
     for {
-      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "magRestrictions.tooTight"
+      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
       newId <- save(newTracing, None, newTracing.version)
       _ <- duplicateData(tracingId, sourceTracing, newId, newTracing)
     } yield (newId, newTracing)

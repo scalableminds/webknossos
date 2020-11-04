@@ -214,10 +214,11 @@ trait VolumeTracingDownsampling
                                                                                         tracing.fallbackLayer)
     } yield magsForTracing.sortBy(_.maxDim)
 
-  protected def restrictMagList(tracing: VolumeTracing, magRestrictions: ResolutionRestrictions): VolumeTracing = {
+  protected def restrictMagList(tracing: VolumeTracing,
+                                resolutionRestrictions: ResolutionRestrictions): VolumeTracing = {
     val tracingResolutions =
       resolveLegacyResolutionList(tracing.resolutions)
-    val allowedResolutions = magRestrictions.filterAllowed(tracingResolutions.map(point3DFromProto))
+    val allowedResolutions = resolutionRestrictions.filterAllowed(tracingResolutions.map(point3DFromProto))
     tracing.withResolutions(allowedResolutions.map(point3DToProto))
   }
 

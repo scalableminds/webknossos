@@ -61,7 +61,7 @@ trait VolumeTracingDownsampling
       }
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
-      updatedBucketsMutable = new mutable.HashSet[BucketPosition]()
+      updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
       _ = magsToCreate.foldLeft(sourceMag) { (previousMag, requiredMag) =>
         downsampleMagFromMag(previousMag,
                              requiredMag,
@@ -102,7 +102,7 @@ trait VolumeTracingDownsampling
                                    requiredMag: Point3D,
                                    originalBucketPositions: List[BucketPosition],
                                    bucketDataMapMutable: mutable.HashMap[BucketPosition, Array[Byte]],
-                                   updatedBucketsMutable: mutable.HashSet[BucketPosition],
+                                   updatedBucketsMutable: mutable.ListBuffer[BucketPosition],
                                    bucketVolume: Int,
                                    elementClass: ElementClass.Value,
                                    dataLayer: VolumeTracingLayer): Unit = {
@@ -123,7 +123,7 @@ trait VolumeTracingDownsampling
           UnsignedIntegerArray.toByteArray(dataDownscaledTyped, elementClass)
         }
       bucketDataMapMutable(downsampledBucketPosition) = downsampledData
-      updatedBucketsMutable.add(downsampledBucketPosition)
+      updatedBucketsMutable += downsampledBucketPosition
     }
   }
 

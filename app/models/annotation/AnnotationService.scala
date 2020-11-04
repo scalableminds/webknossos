@@ -115,7 +115,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     val resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
     for {
-      _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
+      _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
     } yield
       VolumeTracing(
         None,

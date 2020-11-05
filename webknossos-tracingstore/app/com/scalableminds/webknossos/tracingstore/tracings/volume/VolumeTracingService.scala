@@ -263,7 +263,7 @@ class VolumeTracingService @Inject()(
     def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
     private def prepareLabelMaps(): Unit =
-      if (labelSets.length <= 1 || labelMaps.nonEmpty) {
+      if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
         ()
       } else {
         var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)

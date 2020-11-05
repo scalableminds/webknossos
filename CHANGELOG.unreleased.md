@@ -21,6 +21,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed the disappearing of dataset settings after switching between view mode and annotation mode. [#4845](https://github.com/scalableminds/webknossos/pull/4845)
 - Fixed a rare error in the agglomerate mapping for large datasets. [#4904](https://github.com/scalableminds/webknossos/pull/4904)
+- Fixed a bug where in volume annotation zip upload some buckets were discarded. [#4914](https://github.com/scalableminds/webknossos/pull/4914)
 
 ### Removed
 -

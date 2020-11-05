@@ -119,8 +119,8 @@ export function jsonStringify(json: Object) {
   return JSON.stringify(json, null, "  ");
 }
 
-export function clamp(a: number, x: number, b: number): number {
-  return Math.max(a, Math.min(b, x));
+export function clamp(min: number, value: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function zeroPad(num: number, zeros: number = 0): string {

@@ -14,6 +14,7 @@ import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.JsonHelper.optionFormat
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.typesafe.scalalogging.LazyLogging
 import models.binary.{DataSet, DataStoreRpcClient}
 import net.liftweb.common.Box
@@ -87,11 +88,16 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
 
   def duplicateVolumeTracing(volumeTracingId: String,
                              fromTask: Boolean = false,
-                             dataSetBoundingBox: Option[BoundingBox] = None): Fox[String] = {
+                             dataSetBoundingBox: Option[BoundingBox] = None,
+                             resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty,
+                             downsample: Boolean = false): Fox[String] = {
     logger.debug("Called to duplicate VolumeTracing." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/${volumeTracingId}/duplicate")
       .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
       .addQueryString("fromTask" -> fromTask.toString)
+      .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
+      .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
+      .addQueryString("downsample" -> downsample.toString)
       .postWithJsonResponse[Option[BoundingBox], String](dataSetBoundingBox)
   }
 
@@ -138,7 +144,9 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
   private def packVolumeDataZips(files: List[File]): File =
     ZipIO.zipToTempFile(files)
 
-  def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[String] = {
+  def saveVolumeTracing(tracing: VolumeTracing,
+                        initialData: Option[File] = None,
+                        resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty): Fox[String] = {
     logger.debug("Called to create VolumeTracing." + baseInfo)
     for {
       tracingId <- rpc(s"${tracingStore.url}/tracings/volume/save")
@@ -148,6 +156,8 @@ class TracingStoreRpcClient(tracingStore: TracingStore, dataSet: DataSet, rpc: R
         case Some(file) =>
           rpc(s"${tracingStore.url}/tracings/volume/${tracingId}/initialData")
             .addQueryString("token" -> TracingStoreRpcClient.webKnossosToken)
+            .addQueryStringOptional("minResolution", resolutionRestrictions.minStr)
+            .addQueryStringOptional("maxResolution", resolutionRestrictions.maxStr)
             .post(file)
         case _ =>
           Fox.successful(())

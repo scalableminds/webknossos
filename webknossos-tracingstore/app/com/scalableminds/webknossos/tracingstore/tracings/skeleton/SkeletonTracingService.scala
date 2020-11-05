@@ -176,11 +176,11 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     )
   }
 
-  def mergeVolumeDataWithDownsampling(tracingSelectors: Seq[TracingSelector],
-                                      tracings: Seq[SkeletonTracing],
-                                      newId: String,
-                                      newTracing: SkeletonTracing,
-                                      toCache: Boolean): Fox[Unit] = Fox.successful(())
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
+                      tracings: Seq[SkeletonTracing],
+                      newId: String,
+                      newTracing: SkeletonTracing,
+                      toCache: Boolean): Fox[Unit] = Fox.successful(())
 
   def updateActionLog(tracingId: String) = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

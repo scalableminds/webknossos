@@ -172,10 +172,10 @@ trait TracingService[T <: GeneratedMessage with Message[T]]
 
   def merge(tracings: Seq[T]): T
 
-  def mergeVolumeDataWithDownsampling(tracingSelectors: Seq[TracingSelector],
-                                      tracings: Seq[T],
-                                      newId: String,
-                                      newTracing: T,
-                                      toCache: Boolean): Fox[Unit]
+  def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
+                      tracings: Seq[T],
+                      newId: String,
+                      newTracing: T,
+                      toCache: Boolean): Fox[Unit]
 
 }

@@ -18,20 +18,27 @@ trait WKWDataFormatHelper {
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
       baseDir: Path = Paths.get(""),
-      resolutionAsTriple: Boolean = false
+      resolutionAsTriple: Option[Boolean] = None
   ): Path =
     baseDir
       .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
-      .resolve(if (resolutionAsTriple) s"${cube.resolution.x}-${cube.resolution.y}-${cube.resolution.z}"
-      else cube.resolution.maxDim.toString)
+      .resolve(formatResolution(cube.resolution, resolutionAsTriple))
       .resolve(s"z${cube.z}")
       .resolve(s"y${cube.y}")
       .resolve(s"x${cube.x}.${dataFileExtension}")
 
+  private def formatResolution(resolution: Point3D, resolutionAsTripleOpt: Option[Boolean] = None): String =
+    resolutionAsTripleOpt.map { resolutionAsTriple =>
+      if (resolutionAsTriple) s"${resolution.x}-${resolution.y}-${resolution.z}"
+      else resolution.maxDim.toString
+    }.getOrElse {
+      if (resolution.isIsotropic) resolution.maxDim.toString else s"${resolution.x}-${resolution.y}-${resolution.z}"
+    }
+
   def wkwHeaderFilePath(
-      resolution: Int,
+      resolution: Point3D,
       dataSourceId: Option[DataSourceId] = None,
       dataLayerName: Option[String] = None,
       baseDir: Path = Paths.get("")
@@ -40,7 +47,7 @@ trait WKWDataFormatHelper {
       .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
-      .resolve(resolution.toString)
+      .resolve(formatResolution(resolution))
       .resolve(s"header.${dataFileExtension}")
 
   def parseWKWFilePath(path: String): Option[BucketPosition] = {

@@ -56,15 +56,14 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
 
-  def dataSource(name: String, organizationName: String, dataSetName: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def dataSource(name: String, organizationName: Option[String], dataSetName: String): Action[AnyContent] =
+    Action.async { implicit request =>
       tracingStoreService.validateAccess(name) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        val organizationNameOpt = if (organizationName == "") None else Some(organizationName)
         for {
-          organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
+          organizationIdOpt <- Fox.runOptional(organizationName) {
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
-          } ?~> Messages("organization.notFound", organizationNameOpt.getOrElse("")) ~> NOT_FOUND
+          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
             dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
           } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
@@ -74,5 +73,5 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
           dataSource <- dataSetService.dataSourceFor(dataSet)
         } yield Ok(Json.toJson(dataSource))
       }
-  }
+    }
 }

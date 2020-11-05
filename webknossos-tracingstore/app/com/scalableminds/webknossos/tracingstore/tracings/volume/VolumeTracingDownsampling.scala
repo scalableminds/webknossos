@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
@@ -28,7 +28,7 @@ object VolumeTracingDownsampling {
 
   def resolutionsForVolumeTracing(dataSource: DataSourceLike, fallbackLayer: Option[DataLayerLike]): List[Point3D] = {
     val fallBackLayerMags = fallbackLayer.map(_.resolutions)
-    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct)
+    fallBackLayerMags.getOrElse(dataSource.dataLayers.flatMap(_.resolutions).distinct).sortBy(_.maxDim)
   }
 }
 
@@ -36,7 +36,8 @@ trait VolumeTracingDownsampling
     extends BucketKeys
     with ProtoGeometryImplicits
     with VolumeBucketCompression
-    with KeyValueStoreImplicits {
+    with KeyValueStoreImplicits
+    with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
   val tracingStoreWkRpcClient: TracingStoreWkRpcClient
@@ -46,56 +47,62 @@ trait VolumeTracingDownsampling
                  version: Long,
                  toCache: Boolean = false): Fox[Unit]
 
-  private def fillMapWithInitialBucketsInplace(bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
-                                               tracingId: String,
-                                               dataLayer: VolumeTracingLayer): Unit = {
-    val data: List[VersionedKeyValuePair[Array[Byte]]] =
-      tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
-    data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
-      val bucketPosition = parseBucketKey(keyValuePair.key).map(_._2)
-      bucketPosition.foreach {
-        bucketDataMap(_) = decompressIfNeeded(keyValuePair.value,
-                                              expectedUncompressedBucketSizeFor(dataLayer),
-                                              s"bucket $bucketPosition during downsampling")
-      }
-    }
-  }
-
   def downsampleWithLayer(tracingId: String, tracing: VolumeTracing, dataLayer: VolumeTracingLayer)(
-      implicit ec: ExecutionContext): Fox[Set[Point3D]] = {
+      implicit ec: ExecutionContext): Fox[List[Point3D]] = {
     val bucketVolume = 32 * 32 * 32
-    val originalMag = Point3D(1, 1, 1)
     for {
-      requiredMags <- getRequiredMags(tracing)
+      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- bool2Fox(tracing.resolutions.nonEmpty) ?~> "Cannot downsample tracing with no resolution list"
+      sourceMag = getSourceMag(tracing)
+      magsToCreate <- getMagsToCreate(tracing)
       elementClass = elementClassFromProto(tracing.elementClass)
-      bucketDataMap = new mutable.HashMap[BucketPosition, Array[Byte]]() {
+      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]() {
         override def default(key: BucketPosition): Array[Byte] = Array[Byte](0)
       }
-      _ = fillMapWithInitialBucketsInplace(bucketDataMap, tracingId, dataLayer)
-      originalBucketPositions: List[BucketPosition] = bucketDataMap.keys.toList
-      updatedBuckets = new mutable.HashSet[BucketPosition]()
-      _ = requiredMags.foldLeft(originalMag) { (previousMag, requiredMag) =>
+      _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
+      originalBucketPositions = bucketDataMapMutable.keys.toList
+      updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
+      _ = magsToCreate.foldLeft(sourceMag) { (previousMag, requiredMag) =>
         downsampleMagFromMag(previousMag,
                              requiredMag,
                              originalBucketPositions,
-                             bucketDataMap,
-                             updatedBuckets,
+                             bucketDataMapMutable,
+                             updatedBucketsMutable,
                              bucketVolume,
                              elementClass,
                              dataLayer)
         requiredMag
       }
-      _ <- Fox.serialCombined(updatedBuckets.toList) { bucketPosition: BucketPosition =>
-        saveBucket(dataLayer, bucketPosition, bucketDataMap(bucketPosition), tracing.version)
+      _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
+        saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
       }
-    } yield requiredMags.toSet + originalMag
+      _ = logger.debug(s"Downsampled mags $magsToCreate from $sourceMag for volume tracing $tracingId.")
+    } yield sourceMag :: magsToCreate
+  }
+
+  private def fillMapWithSourceBucketsInplace(bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
+                                              tracingId: String,
+                                              dataLayer: VolumeTracingLayer,
+                                              sourceMag: Point3D): Unit = {
+    val data: List[VersionedKeyValuePair[Array[Byte]]] =
+      tracingDataStore.volumeData.getMultipleKeys(tracingId, Some(tracingId))
+    data.foreach { keyValuePair: VersionedKeyValuePair[Array[Byte]] =>
+      val bucketPositionOpt = parseBucketKey(keyValuePair.key).map(_._2)
+      bucketPositionOpt.foreach { bucketPosition =>
+        if (bucketPosition.resolution == sourceMag) {
+          bucketDataMap(bucketPosition) = decompressIfNeeded(keyValuePair.value,
+                                                             expectedUncompressedBucketSizeFor(dataLayer),
+                                                             s"bucket $bucketPosition during downsampling")
+        }
+      }
+    }
   }
 
   private def downsampleMagFromMag(previousMag: Point3D,
                                    requiredMag: Point3D,
                                    originalBucketPositions: List[BucketPosition],
-                                   bucketDataMap: mutable.HashMap[BucketPosition, Array[Byte]],
-                                   updatedBuckets: mutable.HashSet[BucketPosition],
+                                   bucketDataMapMutable: mutable.HashMap[BucketPosition, Array[Byte]],
+                                   updatedBucketsMutable: mutable.ListBuffer[BucketPosition],
                                    bucketVolume: Int,
                                    elementClass: ElementClass.Value,
                                    dataLayer: VolumeTracingLayer): Unit = {
@@ -104,7 +111,7 @@ trait VolumeTracingDownsampling
     downsampledBucketPositions(originalBucketPositions, requiredMag).foreach { downsampledBucketPosition =>
       val sourceBuckets: Seq[BucketPosition] =
         sourceBucketPositionsFor(downsampledBucketPosition, downScaleFactor, previousMag)
-      val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMap(_))
+      val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMapMutable(_))
       val downsampledData: Array[Byte] =
         if (sourceData.forall(_.sameElements(Array[Byte](0))))
           Array[Byte](0)
@@ -115,8 +122,8 @@ trait VolumeTracingDownsampling
             downsampleData(sourceDataTyped.grouped(bucketVolume).toArray, downScaleFactor, bucketVolume)
           UnsignedIntegerArray.toByteArray(dataDownscaledTyped, elementClass)
         }
-      bucketDataMap(downsampledBucketPosition) = downsampledData
-      updatedBuckets.add(downsampledBucketPosition)
+      bucketDataMapMutable(downsampledBucketPosition) = downsampledData
+      updatedBucketsMutable += downsampledBucketPosition
     }
   }
 
@@ -190,20 +197,51 @@ trait VolumeTracingDownsampling
   private def mode[T](items: Seq[T]): T =
     items.groupBy(i => i).mapValues(_.size).maxBy(_._2)._1
 
-  private def getRequiredMags(tracing: VolumeTracing): Fox[Seq[Point3D]] =
+  private def getSourceMag(tracing: VolumeTracing): Point3D =
+    tracing.resolutions.minBy(_.maxDim)
+
+  private def getMagsToCreate(tracing: VolumeTracing): Fox[List[Point3D]] =
+    for {
+      requiredMags <- getRequiredMags(tracing)
+      sourceMag = getSourceMag(tracing)
+      magsToCreate = requiredMags.filter(_.maxDim > sourceMag.maxDim)
+    } yield magsToCreate
+
+  protected def getRequiredMags(tracing: VolumeTracing): Fox[List[Point3D]] =
     for {
       dataSource: DataSourceLike <- tracingStoreWkRpcClient.getDataSource(tracing.organizationName, tracing.dataSetName)
       magsForTracing = VolumeTracingDownsampling.resolutionsForVolumeTracingByLayerName(dataSource,
                                                                                         tracing.fallbackLayer)
-      magsToCreate = magsForTracing.filterNot(_.maxDim == 1).sortBy(_.maxDim)
-    } yield magsToCreate
+    } yield magsForTracing.sortBy(_.maxDim)
 
-  def resolutionsMatch(tracings: Seq[VolumeTracing]): Boolean =
-    tracings.headOption.forall { firstTracing =>
-      tracings.forall(t =>
-        resolveLegacyResolutionList(t.resolutions).toSet == resolveLegacyResolutionList(firstTracing.resolutions).toSet)
-    }
+  protected def restrictMagList(tracing: VolumeTracing,
+                                resolutionRestrictions: ResolutionRestrictions): VolumeTracing = {
+    val tracingResolutions =
+      resolveLegacyResolutionList(tracing.resolutions)
+    val allowedResolutions = resolutionRestrictions.filterAllowed(tracingResolutions.map(point3DFromProto))
+    tracing.withResolutions(allowedResolutions.map(point3DToProto))
+  }
 
-  private def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]) =
+  protected def resolveLegacyResolutionList(resolutions: Seq[ProtoPoint3D]): Seq[ProtoPoint3D] =
     if (resolutions.isEmpty) Seq(ProtoPoint3D(1, 1, 1)) else resolutions
+}
+
+object ResolutionRestrictions {
+  def empty: ResolutionRestrictions = ResolutionRestrictions(None, None)
+}
+
+case class ResolutionRestrictions(
+    min: Option[Int],
+    max: Option[Int]
+) {
+  def filterAllowed(resolutions: Seq[Point3D]): Seq[Point3D] =
+    resolutions.filter(isAllowed)
+
+  def isAllowed(resolution: Point3D): Boolean =
+    min.getOrElse(0) <= resolution.maxDim && max.getOrElse(Int.MaxValue) >= resolution.maxDim
+
+  def isForbidden(resolution: Point3D): Boolean = !isAllowed(resolution)
+
+  def minStr: Option[String] = min.map(_.toString)
+  def maxStr: Option[String] = max.map(_.toString)
 }

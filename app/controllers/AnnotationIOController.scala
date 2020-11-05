@@ -67,7 +67,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDataSetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
-        val attachedFiles = request.body.files.map(f => (new File(f.ref.path.toString), f.filename))
+        val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles = nmlService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
         val tracingsProcessed = nmlService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
 

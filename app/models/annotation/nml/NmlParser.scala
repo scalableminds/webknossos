@@ -35,8 +35,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_TIMESTAMP = 0L
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
-  def parse(name: String, nmlInputStream: InputStream, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
-      implicit m: MessagesProvider)
+  def parse(name: String,
+            nmlInputStream: InputStream,
+            overwritingDataSetName: Option[String],
+            isTaskUpload: Boolean,
+            basePath: Option[String] = None)(implicit m: MessagesProvider)
     : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
     try {
       val data = XML.load(nmlInputStream)
@@ -91,7 +94,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                  None,
                  userBoundingBoxes
                ),
-               volumes.head.location)
+               basePath.getOrElse("") + volumes.head.location)
             )
 
         val skeletonTracing =

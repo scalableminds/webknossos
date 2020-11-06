@@ -8,7 +8,7 @@ import type {
   APIDataLayer,
   HybridServerTracing,
   ServerVolumeTracing,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import {
   computeDataTexturesSetup,
   getSupportedTextureSpecs,
@@ -33,7 +33,7 @@ import {
   getDataset,
   getSharingToken,
   getUserConfiguration,
-  getDatasetConfiguration,
+  getDatasetViewConfiguration,
 } from "admin/admin_rest_api";
 import { initializeAnnotationAction } from "oxalis/model/actions/annotation_actions";
 import {
@@ -109,13 +109,23 @@ export async function initialize(
     datasetId = { name, owningOrganization };
   }
 
-  const [dataset, initialUserSettings, initialDatasetSettings, tracing] = await fetchParallel(
+  const [dataset, initialUserSettings, tracing] = await fetchParallel(
     annotation,
     datasetId,
     versions,
   );
 
+  const displayedVolumeTracings = [];
+  if (tracing != null && tracing.volume != null) {
+    displayedVolumeTracings.push(tracing.volume.id);
+  }
+
   initializeDataset(initialFetch, dataset, tracing);
+
+  const initialDatasetSettings = await getDatasetViewConfiguration(
+    dataset,
+    displayedVolumeTracings,
+  );
   initializeSettings(initialUserSettings, initialDatasetSettings);
 
   let initializationInformation = null;
@@ -156,13 +166,13 @@ async function fetchParallel(
   annotation: ?APIAnnotation,
   datasetId: APIDatasetId,
   versions?: Versions,
-): Promise<[APIDataset, *, *, ?HybridServerTracing]> {
+): Promise<[APIDataset, *, ?HybridServerTracing]> {
   // (Also see https://github.com/facebook/flow/issues/4936)
   // $FlowIssue[incompatible-return] Type inference with Promise.all seems to be a bit broken in flow
   return Promise.all([
     getDataset(datasetId, getSharingToken()),
     getUserConfiguration(),
-    getDatasetConfiguration(datasetId),
+
     // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     // $FlowIssue[incompatible-call] Type inference with Promise.all seems to be a bit broken in flow
     annotation ? getTracingForAnnotations(annotation, versions) : null,

@@ -6,7 +6,7 @@ import {
   tokenUserA,
   writeFlowCheckingFile,
 } from "test/enzyme/e2e-setup";
-import { APIAnnotationTypeEnum } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { diffTrees } from "oxalis/model/sagas/skeletontracing_saga";
 import { sendRequestWithToken, addVersionNumbers } from "oxalis/model/sagas/save_saga";

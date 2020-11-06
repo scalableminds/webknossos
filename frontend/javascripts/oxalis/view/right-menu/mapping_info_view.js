@@ -9,7 +9,7 @@ import _ from "lodash";
 import debounceRender from "react-debounce-render";
 
 import createProgressCallback from "libs/progress_callback";
-import type { APIDataset, APISegmentationLayer } from "admin/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -67,8 +67,8 @@ type State = {
 };
 
 const convertHSLAToCSSString = ([h, s, l, a]) => `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
-const convertCellIdToCSS = (id, customColors) =>
-  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors));
+export const convertCellIdToCSS = (id: number, customColors: ?Array<number>, alpha?: number) =>
+  convertHSLAToCSSString(jsConvertCellIdToHSLA(id, customColors, alpha));
 
 const hasSegmentation = () => Model.getSegmentationLayer() != null;
 
@@ -226,7 +226,7 @@ class MappingInfoView extends React.Component<Props, State> {
         unmapped: (
           <span
             style={{
-              background: convertCellIdToCSS(idInfo.unmapped || 0),
+              background: convertCellIdToCSS(idInfo.unmapped || 0, null, 0.15),
             }}
           >
             {idInfo.unmapped}
@@ -235,7 +235,7 @@ class MappingInfoView extends React.Component<Props, State> {
         mapped: (
           <span
             style={{
-              background: convertCellIdToCSS(idInfo.mapped || 0, customColors),
+              background: convertCellIdToCSS(idInfo.mapped || 0, customColors, 0.15),
             }}
           >
             {idInfo.mapped}

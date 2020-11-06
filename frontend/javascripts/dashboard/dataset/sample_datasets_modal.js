@@ -9,7 +9,7 @@ import {
 } from "admin/admin_rest_api";
 import { useInterval, useFetch } from "libs/react_helpers";
 import { handleGenericError } from "libs/error_handling";
-import type { APISampleDataset } from "admin/api_flow_types";
+import type { APISampleDataset } from "types/api_flow_types";
 
 type Props = {
   destroy: () => void,

@@ -402,13 +402,6 @@ export type APITaskWithAnnotation = APITask & {
   +annotation: APIAnnotation,
 };
 
-export type DatasetConfig = {
-  +name: string,
-  +organization: string,
-  +datastore: string,
-  +zipFile: File,
-};
-
 type NeuroglancerLayer = {
   // This is the source URL of the layer, should start with gs://, http:// or https://
   source: string,
@@ -527,6 +520,15 @@ export type APIFeatureToggles = {
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,
+  +jobsEnabled: boolean,
+};
+
+export type APIJob = {
+  +id: string,
+  +datasetName: ?string,
+  +type: string,
+  +state: string,
+  +createdAt: number,
 };
 
 // Tracing related datatypes

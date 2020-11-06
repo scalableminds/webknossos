@@ -41,6 +41,17 @@ export const settings = {
   autoBrush: "Automatic Brush (Beta)",
 };
 
+export const layerViewConfigurations = {
+  color: "Color",
+  alpha: "Layer opacity",
+  intensityRange: "Intensity Range",
+  min: "Minimum Data Value",
+  max: "Maximum Data Value",
+  isDisabled: "Disabled Layer",
+  isInverted: "Inverted Layer",
+  isInEditMode: "Configuration Mode",
+};
+
 export default {
   yes: "Yes",
   no: "No",
@@ -180,6 +191,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
+  "dataset.upload_failed": "The dataset upload failed.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.invalid_datasource_json":

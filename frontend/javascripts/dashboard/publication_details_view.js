@@ -3,7 +3,7 @@ import * as React from "react";
 import { Layout, Icon, Spin, Tooltip } from "antd";
 
 import { getDatasets } from "admin/admin_rest_api";
-import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import { handleGenericError } from "libs/error_handling";
 import { SimpleHeader } from "dashboard/spotlight_view";

@@ -19,7 +19,7 @@ import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { type Node } from "react";
 
-import type { APIUser, APIDataStore } from "admin/api_flow_types";
+import type { APIUser, APIDataStore } from "types/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
 import { getDatastores } from "admin/admin_rest_api";
 import { location } from "libs/window";
@@ -403,8 +403,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
         >
           <DatasetUploadView
             datastores={this.state.datastores}
-            onUploaded={(_organization: string, datasetName: string) => {
-              this.setState({ datasetNameToImport: datasetName, showDatasetUploadModal: false });
+            onUploaded={async (_organization: string, datasetName: string) => {
+              this.setState({
+                datasetNameToImport: datasetName,
+                showDatasetUploadModal: false,
+              });
             }}
             withoutCard
           />

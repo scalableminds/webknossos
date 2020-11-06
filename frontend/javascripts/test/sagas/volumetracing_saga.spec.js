@@ -5,13 +5,14 @@ import { take, put, call } from "redux-saga/effects";
 import _ from "lodash";
 import update from "immutability-helper";
 
-import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
 import { pushSaveQueueTransaction } from "oxalis/model/actions/save_actions";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import defaultState from "oxalis/default_state";
 import mockRequire from "mock-require";
 import test from "ava";
+import type { VolumeTracing } from "oxalis/store";
 
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { withoutUpdateTracing } from "../helpers/saveHelpers";
@@ -35,23 +36,21 @@ const { saveTracingTypeAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
-const volumeTracing = {
+const volumeTracing: VolumeTracing = {
   type: "volume",
-  annotationType: "Explorational",
-  name: "",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  version: 0,
   activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,
-  cells: [],
-  viewMode: 0,
+  cells: {},
   maxCellId: 0,
   contourList: [[1, 2, 3], [7, 8, 9]],
-  restrictions: {
-    branchPointsAllowed: true,
-    allowUpdate: true,
-    allowFinish: true,
-    allowAccess: true,
-    allowDownload: true,
-  },
+  boundingBox: null,
+  userBoundingBoxes: [],
+  lastCentroid: null,
+  contourTracingMode: ContourModeEnum.DRAW,
+  overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
 };
 
 const initialState = update(defaultState, {
@@ -74,13 +73,15 @@ test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(initialState.tracing);
+  saga.next(initialState.flycam);
   // only updateTracing
-  const items = execCall(t, saga.next(initialState.flycam));
+  const items = execCall(t, saga.next(initialState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
 });
 
@@ -92,12 +93,14 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   saga.next();
   saga.next(initialState.tracing);
   saga.next(initialState.flycam);
+  saga.next(initialState.viewModeData.plane.tdCamera);
   saga.next();
   saga.next(true);
   saga.next();
   saga.next(true);
   saga.next(newState.tracing);
-  const items = execCall(t, saga.next(newState.flycam));
+  saga.next(newState.flycam);
+  const items = execCall(t, saga.next(newState.viewModeData.plane.tdCamera));
   t.is(withoutUpdateTracing(items).length, 0);
   t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueTransaction(items, "volume")));
@@ -109,7 +112,8 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -122,7 +126,8 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -145,7 +150,8 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DRAW_OVERWRITE);
+  saga.next(ContourModeEnum.DRAW);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -158,7 +164,13 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   expectValueDeepEqual(
     t,
     saga.next({ finishEditingAction }),
-    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DRAW_OVERWRITE),
+    call(
+      finishLayer,
+      volumeLayer,
+      VolumeToolEnum.TRACE,
+      ContourModeEnum.DRAW,
+      OverwriteModeEnum.OVERWRITE_ALL,
+    ),
   );
 });
 
@@ -168,7 +180,8 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DELETE_FROM_ACTIVE_CELL);
+  saga.next(ContourModeEnum.DELETE);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -181,7 +194,13 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   expectValueDeepEqual(
     t,
     saga.next({ finishEditingAction }),
-    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DELETE_FROM_ACTIVE_CELL),
+    call(
+      finishLayer,
+      volumeLayer,
+      VolumeToolEnum.TRACE,
+      ContourModeEnum.DELETE,
+      OverwriteModeEnum.OVERWRITE_ALL,
+    ),
   );
 });
 

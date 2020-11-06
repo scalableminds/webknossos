@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import type { APIMapping } from "admin/api_flow_types";
+import type { APIMapping } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";

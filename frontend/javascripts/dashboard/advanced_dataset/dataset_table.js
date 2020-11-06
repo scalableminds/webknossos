@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
 
-import type { APITeam, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APITeam, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -246,13 +246,15 @@ class DatasetTable extends React.PureComponent<Props, State> {
           title="Data Layers"
           key="dataLayers"
           dataIndex="dataSource.dataLayers"
-          render={(__, dataset: APIMaybeUnimportedDataset) =>
-            (dataset.dataSource.dataLayers || []).map(layer => (
-              <Tag key={layer.name}>
-                {layer.category} - {layer.elementClass}
-              </Tag>
-            ))
-          }
+          render={(__, dataset: APIMaybeUnimportedDataset) => (
+            <div style={{ maxWidth: 300 }}>
+              {(dataset.dataSource.dataLayers || []).map(layer => (
+                <Tag key={layer.name}>
+                  {layer.category} - {layer.elementClass}
+                </Tag>
+              ))}
+            </div>
+          )}
         />
 
         <Column

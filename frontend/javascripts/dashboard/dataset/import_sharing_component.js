@@ -4,7 +4,7 @@ import { Button, Input, Checkbox, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
 import React, { useState, useEffect } from "react";
 
-import type { APIDataset, APIDatasetId } from "admin/api_flow_types";
+import type { APIDataset, APIDatasetId } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   getDatasetSharingToken,

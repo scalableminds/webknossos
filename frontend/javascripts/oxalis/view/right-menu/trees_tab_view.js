@@ -1,5 +1,17 @@
 // @flow
-import { Alert, Button, Dropdown, Empty, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Empty,
+  Input,
+  Menu,
+  Icon,
+  Spin,
+  Modal,
+  Tooltip,
+  notification,
+} from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -75,6 +87,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import JSZip from "jszip";
+import { formatNumberToLength } from "libs/format_utils";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
@@ -597,15 +610,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
-          <i className="fas fa-adjust" /> Change Color
+        <Menu.Item
+          key="shuffleTreeColor"
+          onClick={this.shuffleTreeColor}
+          title="Shuffle Tree Color"
+        >
+          <i className="fas fa-adjust" /> Shuffle Tree Color
         </Menu.Item>
         <Menu.Item
           key="shuffleAllTreeColors"
           onClick={this.shuffleAllTreeColors}
           title="Shuffle All Tree Colors"
         >
-          <i className="fas fa-random" /> Shuffle All Colors
+          <i className="fas fa-random" /> Shuffle All Tree Colors
         </Menu.Item>
         <Menu.Item
           key="handleNmlDownload"
@@ -616,6 +633,21 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
           <Icon type="upload" /> Import NML
+        </Menu.Item>
+
+        <Menu.Item
+          key="measureSkeleton"
+          onClick={this.handleMeasureSkeletonLength}
+          title="Measure Skeleton Length"
+        >
+          <i className="fas fa-ruler" /> Measure Skeleton Length
+        </Menu.Item>
+        <Menu.Item
+          key="measureAllSkeletons"
+          onClick={this.handleMeasureAllSkeletonsLength}
+          title="Measure Length of All Skeletons"
+        >
+          <i className="fas fa-ruler" /> Measure Length of All Skeletons
         </Menu.Item>
       </Menu>
     );
@@ -635,6 +667,35 @@ class TreesTabView extends React.PureComponent<Props, State> {
         }
       />
     ) : null;
+
+  handleMeasureSkeletonLength = () => {
+    const { skeletonTracing } = this.props;
+    if (!skeletonTracing) {
+      return;
+    }
+
+    const notificationText = getActiveTree(skeletonTracing)
+      .map(tree => api.tracing.measureTreeLength(tree.treeId))
+      .map(
+        length =>
+          `The currently active tree has a total length of ${formatNumberToLength(length)}.`,
+      )
+      .getOrElse("Please ensure that a tree is selected.");
+
+    notification.open({
+      message: notificationText,
+      icon: <i className="fas fa-ruler" />,
+    });
+  };
+
+  handleMeasureAllSkeletonsLength = () => {
+    const totalLength = api.tracing.measureAllTrees();
+
+    notification.open({
+      message: `The total length of all skeletons is ${formatNumberToLength(totalLength)}.`,
+      icon: <i className="fas fa-ruler" />,
+    });
+  };
 
   render() {
     const { skeletonTracing } = this.props;

@@ -2,7 +2,7 @@
 
 import { Root } from "protobufjs/light";
 
-import type { ServerTracing } from "admin/api_flow_types";
+import type { ServerTracing } from "types/api_flow_types";
 import SkeletonTracingProto from "SkeletonTracing.proto";
 import VolumeTracingProto from "VolumeTracing.proto";
 

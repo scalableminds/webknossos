@@ -2,7 +2,7 @@
 import { Badge, Icon, Spin, Table, Card } from "antd";
 import * as React from "react";
 
-import type { APIProjectProgressReport, APITeam } from "admin/api_flow_types";
+import type { APIProjectProgressReport, APITeam } from "types/api_flow_types";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import FormattedDate from "components/formatted_date";
 import Loop from "components/loop";

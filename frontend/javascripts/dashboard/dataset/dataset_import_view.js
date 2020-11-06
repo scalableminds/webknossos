@@ -6,7 +6,7 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 
-import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "admin/api_flow_types";
+import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "types/api_flow_types";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
@@ -25,7 +25,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
-import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
 import DefaultConfigComponent from "./default_config_component";
@@ -135,49 +135,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataSource,
       });
 
-      const defaultConfigPerLayer = {
-        brightness: 0,
-        contrast: 1,
-        color: [255, 255, 255],
-        intensityRange: [0, 255],
-        isDisabled: false,
-        isInverted: false,
-      };
-      const datasetDefaultConfiguration = (await getDatasetDefaultConfiguration(
+      const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
         this.props.datasetId,
-      )) || {
-        layers: _.fromPairs(
-          dataSource.dataLayers.map(layer => {
-            // Here we adjust the default intensity range depending on the datatype of the layers.
-            // Otherwise, the default max value of the intensity range would always be 255 (which is too small for uint16 for example).
-            // The value can be overwritten by the user configuration (see loadHistorgramData saga)
-            const currentDefaultLayerConfig = _.clone(defaultConfigPerLayer);
-            const intensityRange = getDefaultIntensityRangeOfLayer(dataset, layer.name);
-            currentDefaultLayerConfig.intensityRange = intensityRange;
-            return [layer.name, currentDefaultLayerConfig];
-          }),
-        ),
-      };
-      const layers = datasetDefaultConfiguration.layers || {};
-      // Remove unused brightness and contrast config and replace it with intensityRange if needed.
-      dataSource.dataLayers.forEach(layer => {
-        if (layer.category !== "color") {
-          return;
-        }
-        const currentColorLayerConfig = layers[layer.name];
-        if (currentColorLayerConfig == null) {
-          return;
-        }
-
-        delete currentColorLayerConfig.brightness;
-        delete currentColorLayerConfig.contrast;
-        // We want to intentionally manipulate the intensityRange although intensityRange is read-only.
-        const writeableLayerConfig = (currentColorLayerConfig: any);
-        writeableLayerConfig.intensityRange = currentColorLayerConfig.intensityRange || [0, 255];
-      });
+      );
+      enforceValidatedDatasetViewConfiguration(datasetDefaultConfiguration, dataset, true);
       this.props.form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
-        defaultConfigurationLayersJson: JSON.stringify(layers, null, "  "),
+        defaultConfigurationLayersJson: JSON.stringify(
+          datasetDefaultConfiguration.layers,
+          null,
+          "  ",
+        ),
       });
 
       this.setState({

@@ -7,7 +7,7 @@ import _ from "lodash";
 import moment from "moment";
 import FormattedDate from "components/formatted_date";
 import { type OxalisState } from "oxalis/store";
-import type { APIUser, APITimeTracking } from "admin/api_flow_types";
+import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";

@@ -8,7 +8,7 @@ import {
 import { getHistogramForLayer } from "admin/admin_rest_api";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 
 async function fetchAllHistogramsForLayers(
   dataLayers: Array<DataLayer>,

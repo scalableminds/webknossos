@@ -24,7 +24,7 @@ import type {
   APIUser,
   APIUserBase,
   MeshMetaData,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -33,6 +33,7 @@ import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
   type BoundingBoxType,
   type ContourMode,
+  type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
   type ViewMode,
@@ -222,6 +223,9 @@ export type VolumeTracing = {|
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
+  // This overwrite mode is used when no modifier is pressed.
+  // Pressing the modifier, will toggle the mode
+  +overwriteMode: OverwriteMode,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
   +fallbackLayer?: string,
@@ -272,7 +276,6 @@ export type DatasetConfiguration = {|
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
-  +quality: 0 | 1 | 2,
   +highlightHoveredCellId: boolean,
   +renderIsosurfaces: boolean,
   +position?: Vector3,

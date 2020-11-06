@@ -2,7 +2,7 @@
 import { Modal } from "antd";
 import React from "react";
 
-import type { ServerSkeletonTracing } from "admin/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
@@ -30,7 +30,8 @@ type CreateNodeAction = {
   viewport: number,
   resolution: number,
   timestamp: number,
-  treeId?: number,
+  treeId?: ?number,
+  dontActivate?: boolean,
 };
 type DeleteNodeAction = {
   type: "DELETE_NODE",
@@ -215,7 +216,8 @@ export const createNodeAction = (
   rotation: Vector3,
   viewport: number,
   resolution: number,
-  treeId?: number,
+  treeId?: ?number,
+  dontActivate: boolean = false,
   timestamp: number = Date.now(),
 ): CreateNodeAction => ({
   type: "CREATE_NODE",
@@ -224,6 +226,7 @@ export const createNodeAction = (
   viewport,
   resolution,
   treeId,
+  dontActivate,
   timestamp,
 });
 

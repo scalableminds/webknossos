@@ -3,7 +3,7 @@
 import { Spin, Tag } from "antd";
 import * as React from "react";
 
-import type { APIDataset, APIUser } from "admin/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { getDatasetAccessList } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";

@@ -373,6 +373,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 className="fas fa-eye-dropper fa-sm"
                 style={{
                   cursor: "pointer",
+                  color: Utils.rgbToHex(Utils.map3(value => value * 255, tree.color)),
                 }}
               />{" "}
               Change the color

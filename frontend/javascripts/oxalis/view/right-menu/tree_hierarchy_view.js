@@ -1,7 +1,7 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
+import { Checkbox, Dropdown, Icon, Menu, Modal, notification } from "antd";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
@@ -35,8 +35,11 @@ import {
   toggleTreeGroupAction,
   toggleAllTreesAction,
   setTreeGroupsAction,
+  shuffleTreeColorAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { formatNumberToLength } from "libs/format_utils";
+import api from "oxalis/api/internal_api";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
 const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
@@ -55,6 +58,7 @@ type OwnProps = {|
 
 type Props = {
   ...OwnProps,
+  onShuffleTreeColor: number => void,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
@@ -273,6 +277,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return null;
   };
 
+  handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
+    const length = api.tracing.measureTreeLength(treeId);
+    notification.open({
+      message: `The tree ${treeName} has a total length of ${formatNumberToLength(length)}.`,
+      icon: <i className="fas fa-ruler" />,
+    });
+  };
+
   renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
     const { id, name } = node;
@@ -353,6 +365,57 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
+      const menu = (
+        <Menu>
+          <Menu.Item key="changeTreeColor">
+            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+              <i
+                className="fas fa-eye-dropper fa-sm"
+                style={{
+                  cursor: "pointer",
+                }}
+              />{" "}
+              Change the color
+              <input
+                type="color"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+                onChange={event => {
+                  let color = Utils.hexToRgb(event.target.value);
+                  color = Utils.map3(component => component / 255, color);
+                  this.props.onSetTreeColor(tree.treeId, color);
+                }}
+              />
+            </div>
+          </Menu.Item>
+          <Menu.Item
+            key="shuffleTreeColor"
+            onClick={() => this.props.onShuffleTreeColor(tree.treeId)}
+            title="Shuffle Tree Color"
+          >
+            <i className="fas fa-adjust" /> Shuffle Tree Color
+          </Menu.Item>
+          <Menu.Item
+            key="measureSkeleton"
+            onClick={() => this.handleMeasureSkeletonLength(tree.treeId, tree.name)}
+            title="Measure Skeleton Length"
+          >
+            <i className="fas fa-ruler" /> Measure Skeleton Length
+          </Menu.Item>
+        </Menu>
+      );
+      const dropdownMenu = (
+        <Dropdown overlay={menu} placement="bottomCenter">
+          <Icon type="setting" className="group-actions-icon" />
+        </Dropdown>
+      );
+
       nodeProps.title = (
         <div className={styleClass}>
           <Checkbox
@@ -366,34 +429,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             style={{ marginLeft: 9, display: "inline" }}
             onClick={this.onSelectTree}
           >{`(${tree.nodes.size()}) ${tree.name}`}</div>
-          <div style={{ position: "relative", display: "inline" }}>
-            <i
-              className="fas fa-eye-dropper fa-sm"
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                cursor: "pointer",
-              }}
-            />
-            <input
-              type="color"
-              style={{
-                position: "absolute",
-                left: 0,
-                top: 0,
-                width: 14,
-                opacity: 0,
-                cursor: "pointer",
-              }}
-              onChange={event => {
-                let color = Utils.hexToRgb(event.target.value);
-                color = Utils.map3(component => component / 255, color);
-                this.props.onSetTreeColor(tree.treeId, color);
-              }}
-            />
-          </div>
+          {dropdownMenu}
         </div>
       );
       nodeProps.className = "tree-type";
@@ -472,6 +508,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetTreeColor(treeId, color) {
     dispatch(setTreeColorAction(treeId, color));
+  },
+  onShuffleTreeColor(treeId) {
+    dispatch(shuffleTreeColorAction(treeId));
   },
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));

@@ -533,9 +533,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const { color, treeId } = action;
           return getTree(skeletonTracing, treeId)
             .map(tree => {
-              tree = { ...tree, color };
               return update(state, {
-                tracing: { skeleton: { trees: { [tree.treeId]: { $set: tree } } } },
+                tracing: { skeleton: { trees: { [tree.treeId]: { color: { $set: color } } } } },
               });
             })
             .getOrElse(state);

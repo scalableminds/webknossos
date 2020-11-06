@@ -6,6 +6,7 @@ import type { Dispatch } from "redux";
 import { Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
+import _ from "lodash";
 import React from "react";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
@@ -24,7 +25,13 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
-import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
+import Store, {
+  type OxalisState,
+  type Task,
+  type Tracing,
+  type DatasetLayerConfigurationObject,
+  type DatasetLayerConfiguration,
+} from "oxalis/store";
 
 type OwnProps = {|
   portalKey: string,
@@ -32,6 +39,7 @@ type OwnProps = {|
 type StateProps = {|
   tracing: Tracing,
   dataset: APIDataset,
+  layerConfigurations: DatasetLayerConfigurationObject,
   task: ?Task,
   activeUser: ?APIUser,
   logZoomStep: number,
@@ -149,25 +157,77 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const statsMaybe = getStats(this.props.tracing);
     return this.props.tracing.skeleton != null ? (
       <div>
-        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
-        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
-        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(0)}</p>
+        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(0)}</p>
+        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(0)}</p>
         <p>
-          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(0)}
         </p>
-        <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse(null)}</p>
+        <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse("None")}</p>
       </div>
     ) : null;
   }
 
   getVolumeTracingStatistics() {
-    const { volumeTracing } = this.props.tracing;
+    const volumeTracing = this.props.tracing.volume;
     const segmentationLayer = Model.getSegmentationLayer();
     if (volumeTracing == null || segmentationLayer == null) {
       return null;
     }
     const { activeCellId } = volumeTracing;
-    const availableMappings = segmentationLayer.mappings;
+    const { mappings } = segmentationLayer;
+    const availableMappings = mappings != null ? mappings.getMappingNames() : [];
+    return (
+      <div>
+        <p>Mappings available: {availableMappings.length}</p>
+        <p>
+          Active Mapping:{" "}
+          {segmentationLayer.activeMapping != null ? segmentationLayer.activeMapping : "None"}
+        </p>
+        <p>Active Cell ID: {activeCellId}</p>
+      </div>
+    );
+  }
+
+  getLayerVisibilityStatus() {
+    const { layerConfigurations } = this.props;
+    const numberOfLayers = Object.values(layerConfigurations).length;
+    let numberOfVisibleLayers = 0;
+    for (let config of Object.values(layerConfigurations)) {
+      config = ((config: any): DatasetLayerConfiguration);
+      if (!config.isDisabled) {
+        numberOfVisibleLayers++;
+      }
+    }
+    return { numberOfVisibleLayers, numberOfLayers };
+  }
+
+  getLayerStatistics() {
+    const { layerConfigurations } = this.props;
+    const colorLayers = Model.getColorLayers();
+    const segmentationLayerName = Model.getSegmentationLayerName();
+    const getVisibilityIcon = name =>
+      layerConfigurations[name].isDisabled ? (
+        <i className="far fa-eye-slash fa-sm" />
+      ) : (
+        <i className="far fa-eye fa-sm" />
+      );
+    return (
+      <div>
+        Color Layers:
+        {colorLayers.map(({ name }) => (
+          <p key={name}>
+            {getVisibilityIcon(name)}
+            {name}
+          </p>
+        ))}
+        {segmentationLayerName != null ? (
+          <p style={{ marginTop: 4 }}>
+            {getVisibilityIcon(segmentationLayerName)} Segmentation Layer
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
@@ -377,6 +437,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const resolutions = getResolutions(this.props.dataset);
     const activeResolution = resolutions[this.props.logZoomStep];
 
+    const { numberOfLayers, numberOfVisibleLayers } = this.getLayerVisibilityStatus();
+
     const resolutionInfo =
       activeResolution != null ? (
         <Tooltip
@@ -451,9 +513,24 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             </tbody>
           </table>
         </div>
-        Skeleton Statistics:
-        <div className="info-tab-block">{this.getTracingStatistics()}</div>
-        Volume Statistics:
+        <div style={{ display: "flex", flexWrap: "wrap" }}>
+          <div className="info-tab-block">
+            <div className="info-tab-category-title">Skeleton Statistics:</div>
+            {this.getSkeletonTracingStatistics()}
+          </div>
+          {Model.getSegmentationLayerName() != null ? (
+            <div className="info-tab-block">
+              <div className="info-tab-category-title">Volume Statistics:</div>
+              {this.getVolumeTracingStatistics()}
+            </div>
+          ) : null}
+          <div className="info-tab-block">
+            <div className="info-tab-category-title">
+              Layer Statistics: ({numberOfVisibleLayers} out of {numberOfLayers} visible)
+            </div>
+            {this.getLayerStatistics()}
+          </div>
+        </div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
       </div>
@@ -464,6 +541,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 const mapStateToProps = (state: OxalisState): StateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
+  layerConfigurations: state.datasetConfiguration.layers,
   task: state.task,
   activeUser: state.activeUser,
   logZoomStep: getRequestLogZoomStep(state),

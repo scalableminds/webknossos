@@ -268,14 +268,16 @@ export type DatasetLayerConfiguration = {|
   +isInEditMode: boolean,
 |};
 
+export type DatasetLayerConfigurationObject = {
+  [name: string]: DatasetLayerConfiguration,
+};
+
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 
 export type DatasetConfiguration = {|
   +fourBit: boolean,
   +interpolation: boolean,
-  +layers: {
-    [name: string]: DatasetLayerConfiguration,
-  },
+  +layers: DatasetLayerConfigurationObject,
   +highlightHoveredCellId: boolean,
   +renderIsosurfaces: boolean,
   +position?: Vector3,

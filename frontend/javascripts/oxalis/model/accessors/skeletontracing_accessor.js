@@ -21,7 +21,7 @@ export type SkeletonTracingStats = {|
   nodeCount: number,
   edgeCount: number,
   branchPointCount: number,
-  activeNodeId: number,
+  activeNodeId: number | string,
 |};
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
@@ -173,7 +173,7 @@ export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
       nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
       edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-      activeNodeId: skeletonTracing.activeNodeId,
+      activeNodeId: skeletonTracing.activeNodeId != null ? skeletonTracing.activeNodeId : "None",
     }));
 }
 

@@ -175,7 +175,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           lastPosition,
           addToLayerAction.position,
         );
-        if (rectangleVoxelBuffer2D && !window.disableContinuousDrawing) {
+        if (rectangleVoxelBuffer2D) {
           yield* call(
             labelWithVoxelBuffer2D,
             rectangleVoxelBuffer2D,

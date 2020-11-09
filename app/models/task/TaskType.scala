@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
-import models.annotation.{AllowedMagnifications, AnnotationSettings}
+import models.annotation.AnnotationSettings
 import models.team.TeamDAO
 import slick.jdbc.PostgresProfile.api._
 import play.api.libs.json._
@@ -77,10 +77,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
           r.settingsMergermode,
-          r.settingsAllowedmagnifications
-            .map(Json.parse)
-            .map(_.validate[AllowedMagnifications])
-            .flatMap(JsonHelper.jsResultToOpt)
+          ResolutionRestrictions(r.settingsResolutionrestrictionsMin, r.settingsResolutionrestrictionsMax)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,
@@ -120,11 +117,12 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
-                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode, settings_allowedMagnifications, recommendedConfiguration, tracingType, created, isDeleted)
+                                                       settings_branchPointsAllowed, settings_somaClickingAllowed, settings_mergerMode, settings_resolutionRestrictions_min, settings_resolutionRestrictions_max, recommendedConfiguration, tracingType, created, isDeleted)
                          values(${t._id.id}, ${t._team.id}, ${t.summary}, ${t.description}, '#${sanitize(
-          writeArrayTuple(t.settings.allowedModes))}', #${optionLiteral(t.settings.preferredMode.map(sanitize(_)))},
+          writeArrayTuple(t.settings.allowedModes))}', #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                                 ${t.settings.branchPointsAllowed}, ${t.settings.somaClickingAllowed}, ${t.settings.mergerMode}, #${optionLiteral(
-          t.settings.allowedMagnifications.map(c => sanitize(Json.toJson(c).toString)))}, #${optionLiteral(
+          t.settings.resolutionRestrictions.min.map(_.toString))}, #${optionLiteral(
+          t.settings.resolutionRestrictions.max.map(_.toString))}, #${optionLiteral(
           t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))}, '#${t.tracingType.toString}',
                                 ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
@@ -139,12 +137,12 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                            summary = ${t.summary},
                            description = ${t.description},
                            settings_allowedModes = '#${sanitize(writeArrayTuple(t.settings.allowedModes))}',
-                           settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize(_)))},
+                           settings_preferredMode = #${optionLiteral(t.settings.preferredMode.map(sanitize))},
                            settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                            settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
                            settings_mergerMode = ${t.settings.mergerMode},
-                           settings_allowedMagnifications = #${optionLiteral(
-        t.settings.allowedMagnifications.map(c => sanitize(Json.toJson(c).toString)))},
+                           settings_allowedMagnifications_min = #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
+                           settings_allowedMagnifications_max = #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
                            recommendedConfiguration = #${optionLiteral(
         t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
                            isDeleted = ${t.isDeleted}

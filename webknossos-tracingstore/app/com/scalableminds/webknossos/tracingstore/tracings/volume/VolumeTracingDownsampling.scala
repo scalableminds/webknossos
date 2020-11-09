@@ -6,13 +6,9 @@ import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIn
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
-  ProtoGeometryImplicits,
-  TracingDataStore,
-  VersionedKeyValuePair
-}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, ProtoGeometryImplicits, TracingDataStore, VersionedKeyValuePair}
 import com.scalableminds.webknossos.tracingstore.geometry.{Point3D => ProtoPoint3D}
+import play.api.libs.json.{Format, Json}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -228,6 +224,7 @@ trait VolumeTracingDownsampling
 
 object ResolutionRestrictions {
   def empty: ResolutionRestrictions = ResolutionRestrictions(None, None)
+  implicit val jsonFormat: Format[ResolutionRestrictions] = Json.format[ResolutionRestrictions]
 }
 
 case class ResolutionRestrictions(

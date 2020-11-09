@@ -1,11 +1,12 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
-import models.annotation.AnnotationSettings
+import models.annotation.{AllowedMagnifications, AnnotationSettings}
 import models.team.TeamDAO
 import slick.jdbc.PostgresProfile.api._
 import play.api.libs.json._
@@ -24,7 +25,7 @@ case class TaskType(
     tracingType: TracingType.Value = TracingType.skeleton,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
-) extends FoxImplicits {}
+)
 
 class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
 
@@ -76,7 +77,10 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           r.settingsBranchpointsallowed,
           r.settingsSomaclickingallowed,
           r.settingsMergermode,
-          r.settingsAllowedmagnifications.map(Json.parse)
+          r.settingsAllowedmagnifications
+            .map(Json.parse)
+            .map(_.validate[AllowedMagnifications])
+            .flatMap(JsonHelper.jsResultToOpt)
         ),
         r.recommendedconfiguration.map(Json.parse),
         tracingType,

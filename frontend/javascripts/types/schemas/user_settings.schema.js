@@ -27,7 +27,7 @@ export const userSettings = {
   sphericalCapRadius: { type: "number", minimum: 50, maximum: 500 },
   tdViewDisplayPlanes: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
-  brushSize: { type: "number", minimum: 1, maximum: 5000 },
+  brushSize: { type: "number", minimum: 1, maximum: 300 },
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },

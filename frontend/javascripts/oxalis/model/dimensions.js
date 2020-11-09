@@ -32,6 +32,10 @@ const Dimensions = {
     return [array[ind[0]], array[ind[1]], array[ind[2]]];
   },
 
+  transDimWithIndices(array: Vector3, indices: DimensionMap): Vector3 {
+    return [array[indices[0]], array[indices[1]], array[indices[2]]];
+  },
+
   planeForThirdDimension(dim: DimensionIndices): OrthoView {
     // Return the plane in which dim is always the same
     switch (dim) {

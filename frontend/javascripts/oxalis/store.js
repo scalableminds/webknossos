@@ -223,6 +223,7 @@ export type VolumeTracing = {|
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
+  // Stores points of the currently drawn region in global coordinates
   // This overwrite mode is used when no modifier is pressed.
   // Pressing the modifier, will toggle the mode
   +overwriteMode: OverwriteMode,

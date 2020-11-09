@@ -705,14 +705,14 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
 export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
-  showVolumeDownloadWarning?: boolean = false,
+  showVolumeFallbackDownloadWarning?: boolean = false,
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
     // $FlowIssue[incompatible-type] Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
-  if (showVolumeDownloadWarning) {
+  if (showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], { timeout: 12000 });
   }
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
@@ -731,6 +731,27 @@ export async function downloadNml(
   );
   const blob = new Blob([buffer], { type: headers["content-type"] });
   saveAs(blob, filename);
+}
+
+export async function unlinkFallbackSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/unlinkFallback`, {
+    method: "PATCH",
+  });
+}
+
+// When the annotation is open, please use the corresponding method
+// in api_latest.js. It will take care of saving the annotation and
+// reloading it.
+export async function downsampleSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/downsample`, {
+    method: "PATCH",
+  });
 }
 
 // ### Datasets
@@ -1193,7 +1214,7 @@ export function updateUserConfiguration(userConfiguration: Object): Object {
   });
 }
 
-// ### TimeTracking
+// ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
   day: moment$Moment,

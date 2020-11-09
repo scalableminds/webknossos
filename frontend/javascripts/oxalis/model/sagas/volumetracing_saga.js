@@ -146,7 +146,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       );
     }
 
-    // let lastPosition = startEditingAction.position;
+    let lastPosition = startEditingAction.position;
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield* race({
         addToLayerAction: _take("ADD_TO_LAYER"),
@@ -171,19 +171,19 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       }
       if (activeTool === VolumeToolEnum.BRUSH) {
         // Disable continuous drawing for performance reasons
-        // const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
-        //   lastPosition,
-        //   addToLayerAction.position,
-        // );
-        // if (rectangleVoxelBuffer2D) {
-        //   yield* call(
-        //     labelWithVoxelBuffer2D,
-        //     rectangleVoxelBuffer2D,
-        //     contourTracingMode,
-        //     overwriteMode,
-        //     labeledZoomStep,
-        //   );
-        // }
+        const rectangleVoxelBuffer2D = currentLayer.getRectangleVoxelBuffer2D(
+          lastPosition,
+          addToLayerAction.position,
+        );
+        if (rectangleVoxelBuffer2D && !window.disableContinuousDrawing) {
+          yield* call(
+            labelWithVoxelBuffer2D,
+            rectangleVoxelBuffer2D,
+            contourTracingMode,
+            overwriteMode,
+            labeledZoomStep,
+          );
+        }
         yield* call(
           labelWithVoxelBuffer2D,
           currentLayer.getCircleVoxelBuffer2D(addToLayerAction.position),
@@ -192,7 +192,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
           labeledZoomStep,
         );
       }
-      // lastPosition = addToLayerAction.position;
+      lastPosition = addToLayerAction.position;
     }
 
     yield* call(

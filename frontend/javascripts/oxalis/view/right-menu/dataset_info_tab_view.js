@@ -7,7 +7,7 @@ import { Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import _ from "lodash";
-import React from "react";
+import React, { type Node } from "react";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -153,19 +153,32 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     this.props.setAnnotationDescription(newDescription);
   };
 
+  wrapStatistics(title: string, content: Node) {
+    return (
+      <div className="info-tab-block">
+        <div className="info-tab-category-title">{title}</div>
+        {content}
+      </div>
+    );
+  }
+
   getSkeletonTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
-    return this.props.tracing.skeleton != null ? (
-      <div>
-        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(0)}</p>
-        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(0)}</p>
-        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(0)}</p>
-        <p>
-          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(0)}
-        </p>
-        <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse("None")}</p>
-      </div>
-    ) : null;
+    return this.props.tracing.skeleton != null
+      ? this.wrapStatistics(
+          "Skeleton Statistics:",
+          <div>
+            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(0)}</p>
+            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(0)}</p>
+            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(0)}</p>
+            <p>
+              Number of Branch Points:{" "}
+              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(0)}
+            </p>
+            <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse("None")}</p>
+          </div>,
+        )
+      : null;
   }
 
   getVolumeTracingStatistics() {
@@ -177,7 +190,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const { activeCellId } = volumeTracing;
     const { mappings } = segmentationLayer;
     const availableMappings = mappings != null ? mappings.getMappingNames() : [];
-    return (
+    return this.wrapStatistics(
+      "Volume Statistics:",
       <div>
         <p>Mappings available: {availableMappings.length}</p>
         <p>
@@ -185,7 +199,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           {segmentationLayer.activeMapping != null ? segmentationLayer.activeMapping : "None"}
         </p>
         <p>Active Cell ID: {activeCellId}</p>
-      </div>
+      </div>,
     );
   }
 
@@ -204,6 +218,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
 
   getLayerStatistics() {
     const { layerConfigurations } = this.props;
+    const { numberOfLayers, numberOfVisibleLayers } = this.getLayerVisibilityStatus();
     const colorLayers = Model.getColorLayers();
     const segmentationLayerName = Model.getSegmentationLayerName();
     const getVisibilityIcon = name =>
@@ -212,7 +227,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       ) : (
         <i className="far fa-eye fa-sm" />
       );
-    return (
+    return this.wrapStatistics(
+      `Layer Statistics: (${numberOfVisibleLayers} out of ${numberOfLayers} visible)`,
       <div>
         Color Layers:
         {colorLayers.map(({ name }) => (
@@ -226,7 +242,14 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             {getVisibilityIcon(segmentationLayerName)} Segmentation Layer
           </p>
         ) : null}
-      </div>
+      </div>,
+    );
+  }
+
+  getAdditionalStatistics() {
+    return this.wrapStatistics(
+      "Additional Statistics:",
+      <div>Meshes: {this.props.tracing.meshes.length}</div>,
     );
   }
 
@@ -437,8 +460,6 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const resolutions = getResolutions(this.props.dataset);
     const activeResolution = resolutions[this.props.logZoomStep];
 
-    const { numberOfLayers, numberOfVisibleLayers } = this.getLayerVisibilityStatus();
-
     const resolutionInfo =
       activeResolution != null ? (
         <Tooltip
@@ -514,22 +535,10 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           </table>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap" }}>
-          <div className="info-tab-block">
-            <div className="info-tab-category-title">Skeleton Statistics:</div>
-            {this.getSkeletonTracingStatistics()}
-          </div>
-          {Model.getSegmentationLayerName() != null ? (
-            <div className="info-tab-block">
-              <div className="info-tab-category-title">Volume Statistics:</div>
-              {this.getVolumeTracingStatistics()}
-            </div>
-          ) : null}
-          <div className="info-tab-block">
-            <div className="info-tab-category-title">
-              Layer Statistics: ({numberOfVisibleLayers} out of {numberOfLayers} visible)
-            </div>
-            {this.getLayerStatistics()}
-          </div>
+          {this.getSkeletonTracingStatistics()}
+          {this.getVolumeTracingStatistics()}
+          {this.getLayerStatistics()}
+          {this.getAdditionalStatistics()}
         </div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}

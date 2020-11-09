@@ -47,6 +47,7 @@ type StateProps = {|
   viewMode: ViewMode,
   controlMode: ControlMode,
   hasVolume: boolean,
+  hasVolumeFallback: boolean,
   hasSkeleton: boolean,
   showVersionRestore: boolean,
   isReadOnly: boolean,
@@ -147,6 +148,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
   render() {
     const {
       hasVolume,
+      hasVolumeFallback,
       isReadOnly,
       dataset,
       showVersionRestore,
@@ -175,7 +177,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div className="action-bar">
           {isTraceMode && !showVersionRestore ? (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolume={hasVolume} />
+            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
           ) : (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
           )}
@@ -209,6 +211,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
   hasVolume: state.tracing.volume != null,
+  hasVolumeFallback: state.tracing.volume != null && state.tracing.volume.fallbackLayer != null,
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
 });

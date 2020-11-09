@@ -63,6 +63,7 @@ message SkeletonTracing {
     optional BoundingBox userBoundingBox = 10;
     repeated TreeGroup treeGroups = 11;
     repeated NamedBoundingBox userBoundingBoxes = 12;
+    optional string organizationName = 13; // to identify the dataset (may differ from annotation orga)
 }
 
 message SkeletonTracingOpt {

@@ -15,7 +15,11 @@ import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getSegmentationLayer,
+  getResolutions,
+  getResolutionInfoOfSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
 import {
@@ -175,7 +179,9 @@ class MappingInfoView extends React.Component<Props, State> {
         : getNextUsableZoomStepForPosition(globalMousePosition);
 
     const getResolutionOfZoomStepAsString = usedZoomStep => {
-      const usedResolution = segmentationLayer ? segmentationLayer.resolutions[usedZoomStep] : null;
+      const usedResolution = getResolutionInfoOfSegmentationLayer(dataset).getResolutionByIndex(
+        usedZoomStep,
+      );
       return usedResolution
         ? `${usedResolution[0]}-${usedResolution[1]}-${usedResolution[2]}`
         : "Not available";

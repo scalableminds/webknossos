@@ -34,8 +34,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
                      overwritingDataSetName: Option[String],
                      isTaskUpload: Boolean)(implicit m: MessagesProvider): NmlParseResult =
     NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload) match {
-      case Full((skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)) =>
-        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description, organizationNameOpt)
+      case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
+        NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -77,12 +77,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
 
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
-          NmlParseSuccess(name,
-                          Some(renameTrees(name, skeletonTracing)),
-                          volumeTracingOpt,
-                          description,
-                          organizationNameOpt)
+        case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), volumeTracingOpt, description)
         case r => r
       }
     } else {
@@ -101,12 +97,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     }
 
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description, organizationNameOpt) =>
-        NmlParseSuccess(name,
-                        Some(wrapTreesInGroup(name, skeletonTracing)),
-                        volumeTracingOpt,
-                        description,
-                        organizationNameOpt)
+      case NmlParseSuccess(name, Some(skeletonTracing), volumeTracingOpt, description) =>
+        NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), volumeTracingOpt, description)
       case r => r
     }
   }

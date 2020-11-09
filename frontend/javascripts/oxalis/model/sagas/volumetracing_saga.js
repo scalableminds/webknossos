@@ -52,6 +52,7 @@ import Constants, {
   type ContourMode,
   type OverwriteMode,
   ContourModeEnum,
+  OverwriteModeEnum,
   type OrthoView,
   type VolumeTool,
   type Vector2,
@@ -303,7 +304,7 @@ function* labelWithVoxelBuffer2D(
     }
   }
 
-  const shouldOverwrite = contourTracingMode === ContourModeEnum.DRAW;
+  const shouldOverwrite = overwriteMode === OverwriteModeEnum.OVERWRITE_ALL;
 
   // Since the LabeledVoxelMap is created in the current magnification,
   // we only need to annotate one slice in this mag.

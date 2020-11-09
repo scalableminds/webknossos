@@ -2,7 +2,7 @@
 
 import type { ProgressCallback } from "libs/progress_callback";
 import type { Vector3 } from "oxalis/constants";
-import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
@@ -25,6 +25,7 @@ class DataLayer {
   layerRenderingManager: LayerRenderingManager;
   resolutions: Array<Vector3>;
   fallbackLayer: ?string;
+  fallbackLayerInfo: ?DataLayerType;
 
   constructor(
     layerInfo: DataLayerType,
@@ -35,6 +36,9 @@ class DataLayer {
     this.connectionInfo = connectionInfo;
     this.name = layerInfo.name;
     this.fallbackLayer = layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : null;
+    this.fallbackLayerInfo =
+      layerInfo.fallbackLayerInfo != null ? layerInfo.fallbackLayerInfo : null;
+
     this.resolutions = layerInfo.resolutions;
 
     const { dataset } = Store.getState();
@@ -44,7 +48,7 @@ class DataLayer {
 
     this.cube = new DataCube(
       getLayerBoundaries(dataset, this.name).upperBoundary,
-      this.resolutions.length,
+      getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       isSegmentation,
     );

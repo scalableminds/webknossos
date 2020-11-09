@@ -13,7 +13,11 @@ import {
   getRequestLogZoomStep,
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions, isLayerVisible } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getResolutions,
+  isLayerVisible,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import constants, { type Vector3 } from "oxalis/constants";
@@ -96,6 +100,8 @@ function getTracingTypes(state: OxalisState) {
 export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Object): Saga<void> {
   const position = yield* select(state => getPosition(state.flycam));
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
+  const resolutionInfo = getResolutionInfo(layer.resolutions);
+
   const activePlane = yield* select(state => state.viewModeData.plane.activeViewport);
   const tracingTypes = yield* select(getTracingTypes);
   const { lastPosition, lastDirection, lastZoomStep, lastBucketPickerTick } = previousProperties;
@@ -126,6 +132,7 @@ export function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Obje
           activePlane,
           areas,
           resolutions,
+          resolutionInfo,
         );
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
           for (const item of buckets) {
@@ -156,6 +163,8 @@ export function* prefetchForArbitraryMode(
   const matrix = yield* select(state => state.flycam.currentMatrix);
   const zoomStep = yield* select(state => getRequestLogZoomStep(state));
   const tracingTypes = yield* select(getTracingTypes);
+  const resolutionInfo = getResolutionInfo(layer.resolutions);
+
   const resolutions = yield* select(state => getResolutions(state.dataset));
   const layerRenderingManager = yield* call(
     [Model, Model.getLayerRenderingManagerByName],
@@ -175,7 +184,7 @@ export function* prefetchForArbitraryMode(
         strategy.inVelocityRange(connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
-        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions);
+        const buckets = strategy.prefetch(matrix, zoomStep, position, resolutions, resolutionInfo);
         if (bucketDebuggingFlags.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = cube.getOrCreateBucket(item.bucket);

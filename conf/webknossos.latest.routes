@@ -91,6 +91,7 @@ GET           /tracingstore                                                     
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
 POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 PUT           /tracingstores/:name                                              controllers.TracingStoreController.update(name: String)
+GET           /tracingstores/:name/dataSource/:dataSetName                      controllers.WKTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)
 
 # User access tokens for datastore authentification
 POST          /userToken/generate                                               controllers.UserTokenController.generateTokenForDataStore
@@ -108,6 +109,8 @@ PATCH         /annotations/:typ/:id/transfer                                    
 
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
 PATCH         /annotations/:typ/:id/makeHybrid                                  controllers.AnnotationController.makeHybrid(typ: String, id: String)
+PATCH         /annotations/:typ/:id/downsample                                  controllers.AnnotationController.downsample(typ: String, id: String)
+PATCH         /annotations/:typ/:id/unlinkFallback                              controllers.AnnotationController.unlinkFallback(typ: String, id: String)
 DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean])

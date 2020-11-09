@@ -20,7 +20,6 @@ export function listenToStoreProperty<T>(
   callHandlerOnSubscribe: ?boolean = false,
 ): () => void {
   let currentValue;
-
   function handleChange() {
     const nextValue = select(Store.getState());
     // When callHandlerOnSubscribe is used, the initial value can be 0. In that case,

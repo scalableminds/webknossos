@@ -21,8 +21,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 }
 
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
@@ -34,12 +33,11 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
-  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStream(layer, resolution, version)
+  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    bucketStream(layer, version)
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
-    bucketStreamWithVersion(layer, resolution, version)
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+    bucketStreamWithVersion(layer, version)
 }
 
 class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVolumeTracingBucketProvider {
@@ -60,11 +58,10 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
       _ <- bool2Fox(temporaryTracingStore.contains(layer.name)) ?~> "Temporary Volume Tracing expired"
     } yield ()
 
-  override def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
-    bucketStreamFromCache(layer, resolution)
+  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+    bucketStreamFromCache(layer)
 
-  def bucketStreamWithVersion(resolution: Int,
-                              version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
     throw new NotImplementedException // Temporary Volume Tracings do not support versioning
 }
 
@@ -75,7 +72,8 @@ case class VolumeTracingLayer(
     largestSegmentId: Long,
     isTemporaryTracing: Boolean = false,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    volumeResolutions: List[Point3D] = List.empty
 )(implicit val volumeDataStore: FossilDBClient,
   implicit val volumeDataCache: TemporaryVolumeDataStore,
   implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing])
@@ -95,5 +93,8 @@ case class VolumeTracingLayer(
 
   val mappings: Option[Set[String]] = None
 
-  val resolutions: List[Point3D] = List(Point3D(1, 1, 1))
+  val resolutions: List[Point3D] = if (volumeResolutions.nonEmpty) volumeResolutions else List(Point3D(1, 1, 1))
+
+  override def containsResolution(resolution: Point3D) =
+    true // allow requesting buckets of all resolutions. database takes care of missing.
 }

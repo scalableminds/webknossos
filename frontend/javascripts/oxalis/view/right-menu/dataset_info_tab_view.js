@@ -9,12 +9,12 @@ import Markdown from "react-remarkable";
 import React from "react";
 
 import { APIAnnotationTypeEnum, type APIDataset, type APIUser } from "types/api_flow_types";
-import { ControlModeEnum } from "oxalis/constants";
+import { ControlModeEnum, type Vector3 } from "oxalis/constants";
 import { convertToHybridTracing } from "admin/admin_rest_api";
 import { formatScale } from "libs/format_utils";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getDatasetExtentAsString, getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { location } from "libs/window";
 import {
@@ -34,7 +34,7 @@ type StateProps = {|
   dataset: APIDataset,
   task: ?Task,
   activeUser: ?APIUser,
-  logZoomStep: number,
+  activeResolution: Vector3,
 |};
 type DispatchProps = {|
   setAnnotationName: string => void,
@@ -358,14 +358,13 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   }
 
   render() {
+    const { dataset, activeResolution } = this.props;
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const extentInVoxel = getDatasetExtentAsString(this.props.dataset, true);
-    const extentInLength = getDatasetExtentAsString(this.props.dataset, false);
-
-    const resolutions = getResolutions(this.props.dataset);
-    const activeResolution = resolutions[this.props.logZoomStep];
+    const extentInVoxel = getDatasetExtentAsString(dataset, true);
+    const extentInLength = getDatasetExtentAsString(dataset, false);
+    const resolutions = getResolutions(dataset);
 
     const resolutionInfo =
       activeResolution != null ? (
@@ -456,7 +455,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   dataset: state.dataset,
   task: state.task,
   activeUser: state.activeUser,
-  logZoomStep: getRequestLogZoomStep(state),
+  activeResolution: getCurrentResolution(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

@@ -26,8 +26,10 @@ import {
   copySegmentationLayerAction,
   inferSegmentationInViewportAction,
   setActiveCellAction,
+  resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTool,
   getContourTracingMode,
@@ -108,6 +110,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
+        Store.dispatch(resetContourAction());
       }
     },
 
@@ -139,6 +142,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
+        Store.dispatch(resetContourAction());
       }
     },
 
@@ -155,9 +159,14 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
         if (!segmentation) {
           return;
         }
+        const storeState = Store.getState();
+        const logZoomStep = getRequestLogZoomStep(storeState);
+        const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
+        const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
+
         const cellId = segmentation.cube.getMappedDataValue(
           calculateGlobalPos(pos),
-          getRequestLogZoomStep(Store.getState()),
+          existingZoomStep,
         );
         if (cellId > 0) {
           Store.dispatch(setActiveCellAction(cellId));

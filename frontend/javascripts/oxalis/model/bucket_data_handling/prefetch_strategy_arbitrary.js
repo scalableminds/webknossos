@@ -6,6 +6,7 @@ import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
@@ -54,11 +55,18 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
 
   prefetch(
     matrix: Matrix4x4,
-    zoomStep: number,
+    activeZoomStep: number,
     position: Vector3,
     resolutions: Array<Vector3>,
+    resolutionInfo: ResolutionInfo,
   ): Array<PullQueueItem> {
     const pullQueue = [];
+    const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
+    if (zoomStep == null) {
+      // The layer cannot be rendered at this zoom step, as necessary magnifications
+      // are missing. Don't prefetch anything.
+      return pullQueue;
+    }
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);

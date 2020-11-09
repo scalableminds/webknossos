@@ -74,6 +74,7 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
+  activeTreeDropdownId: ?number,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -82,6 +83,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
+    activeTreeDropdownId: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -269,6 +271,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({ activeTreeDropdownId: treeId });
+      return;
+    }
+    this.setState({ activeTreeDropdownId: null });
+  };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected) {
@@ -373,12 +383,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
                 className="fas fa-eye-dropper fa-sm"
                 style={{
                   cursor: "pointer",
-                  color: Utils.rgbToHex(Utils.map3(value => value * 255, tree.color)),
                 }}
               />{" "}
-              Change the color
+              Select Tree Color
               <input
                 type="color"
+                value={Utils.rgbToHex(Utils.map3(value => value * 255, tree.color))}
                 style={{
                   position: "absolute",
                   left: 0,
@@ -412,7 +422,14 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         </Menu>
       );
       const dropdownMenu = (
-        <Dropdown overlay={menu} placement="bottomCenter">
+        <Dropdown
+          overlay={menu}
+          placement="bottomCenter"
+          visible={this.state.activeTreeDropdownId === tree.treeId}
+          onVisibleChange={isVisible =>
+            this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+          }
+        >
           <Icon type="setting" className="group-actions-icon" />
         </Dropdown>
       );

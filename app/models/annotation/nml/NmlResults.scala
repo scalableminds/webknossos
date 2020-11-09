@@ -17,8 +17,6 @@ object NmlResults extends LazyLogging {
 
     def description: Option[String] = None
 
-    def organizationName: Option[String] = None
-
     def succeeded: Boolean
 
     def toSuccessFox(implicit ec: ExecutionContext): Fox[NmlParseSuccess] = this match {
@@ -36,16 +34,13 @@ object NmlResults extends LazyLogging {
   case class NmlParseSuccess(fileName: String,
                              skeletonTracing: Option[SkeletonTracing],
                              volumeTracingWithDataLocation: Option[(VolumeTracing, String)],
-                             _description: String,
-                             organizationNameOpt: Option[String])
+                             _description: String)
       extends NmlParseResult {
     def succeeded = true
 
     override def bothTracingOpts = Some((skeletonTracing, volumeTracingWithDataLocation))
 
     override def description = Some(_description)
-
-    override def organizationName: Option[String] = organizationNameOpt
 
     override def withName(name: String): NmlParseResult = this.copy(fileName = name)
   }

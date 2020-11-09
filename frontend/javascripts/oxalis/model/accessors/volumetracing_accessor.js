@@ -44,10 +44,14 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-export function isVolumeTracingDisallowed(state: OxalisState) {
-  const isVolumeTracing = state.tracing.volume != null;
-  const isWrongZoomStep = getRequestLogZoomStep(state) > 1;
-  return isVolumeTracing && isWrongZoomStep;
+export function isVolumeTraceToolDisallowed(state: OxalisState) {
+  if (state.tracing.volume == null) {
+    return true;
+  }
+  // The current resolution is too high to allow the trace tool
+  // because too many voxels could be annotated at the same time.
+  const isZoomStepTooHigh = getRequestLogZoomStep(state) > 1;
+  return isZoomStepTooHigh;
 }
 
 export function isSegmentationMissingForZoomstep(

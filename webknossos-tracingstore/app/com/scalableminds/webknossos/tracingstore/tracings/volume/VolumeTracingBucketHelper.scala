@@ -2,8 +2,10 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.services.DataConverter
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   KeyValueStoreImplicits,
@@ -13,6 +15,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 }
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 import com.typesafe.scalalogging.LazyLogging
+
 import scala.concurrent.duration._
 import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 
@@ -65,11 +68,53 @@ trait VolumeBucketCompression extends LazyLogging {
   }
 }
 
+trait BucketKeys extends WKWMortonHelper with WKWDataFormatHelper with LazyLogging {
+  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
+    val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
+    s"$dataLayerName/${formatResolution(bucket.resolution)}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+  }
+
+  protected def formatResolution(resolution: Point3D): String =
+    if (resolution.x == resolution.y && resolution.x == resolution.z)
+      s"${resolution.maxDim}"
+    else
+      s"${resolution.x}-${resolution.y}-${resolution.z}"
+
+  protected def buildKeyPrefix(dataLayerName: String): String =
+    s"$dataLayerName/"
+
+  protected def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
+    val keyRx = "([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)]".r
+
+    key match {
+      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
+        val resolutionOpt = parseResolution(resolutionStr)
+        resolutionOpt match {
+          case Some(resolution) =>
+            val x = xStr.toInt
+            val y = yStr.toInt
+            val z = zStr.toInt
+            val bucket = BucketPosition(x * resolution.x * DataLayer.bucketLength,
+                                        y * resolution.y * DataLayer.bucketLength,
+                                        z * resolution.z * DataLayer.bucketLength,
+                                        resolution)
+            Some((name, bucket))
+          case _ => None
+        }
+
+      case _ =>
+        None
+    }
+  }
+
+}
+
 trait VolumeTracingBucketHelper
     extends KeyValueStoreImplicits
     with FoxImplicits
-    with VolumeBucketKeys
     with VolumeBucketCompression
+    with DataConverter
+    with BucketKeys
     with VolumeBucketReversionHelper {
 
   protected val cacheTimeout: FiniteDuration = 20 minutes
@@ -84,6 +129,7 @@ trait VolumeTracingBucketHelper
                  bucket: BucketPosition,
                  version: Option[Long] = None): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
+
     val dataFox = loadBucketFromCache(key) match {
       case Some(data) => Fox.successful(data)
       case None       => volumeDataStore.get(key, version, mayBeEmpty = Some(true))
@@ -98,8 +144,6 @@ trait VolumeTracingBucketHelper
       }
     }
   }
-
-  def loadBucketFromCache(dataLayer: VolumeTracingLayer, bucket: BucketPosition) = {}
 
   def saveBucket(dataLayer: VolumeTracingLayer,
                  bucket: BucketPosition,
@@ -117,57 +161,24 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  def bucketStream(dataLayer: VolumeTracingLayer,
-                   resolution: Int,
-                   version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
-    val key = buildKeyPrefix(dataLayer.name, resolution)
+  def bucketStream(dataLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
+    val key = buildKeyPrefix(dataLayer.name)
     new BucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 
   def bucketStreamWithVersion(dataLayer: VolumeTracingLayer,
-                              resolution: Int,
                               version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
-    val key = buildKeyPrefix(dataLayer.name, resolution)
+    val key = buildKeyPrefix(dataLayer.name)
     new VersionedBucketIterator(key, volumeDataStore, expectedUncompressedBucketSizeFor(dataLayer), version)
   }
 
-  def bucketStreamFromCache(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
-    val keyPrefix = buildKeyPrefix(dataLayer.name, resolution)
+  def bucketStreamFromCache(dataLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
+    val keyPrefix = buildKeyPrefix(dataLayer.name)
     val keyValuePairs = volumeDataCache.findAllConditionalWithKey(key => key.startsWith(keyPrefix))
     keyValuePairs.flatMap {
       case (bucketKey, data) =>
         parseBucketKey(bucketKey).map(tuple => (tuple._2, data))
     }.toIterator
-  }
-}
-
-trait VolumeBucketKeys extends WKWMortonHelper {
-
-  protected def buildKeyPrefix(dataLayerName: String, resolution: Int): String =
-    s"$dataLayerName/${resolution}/"
-
-  protected def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
-    val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
-  }
-
-  protected def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
-    val keyRx = "([0-9a-z-]+)/(\\d+)/-?\\d+-\\[(\\d+),(\\d+),(\\d+)\\]".r
-
-    key match {
-      case keyRx(name, resolutionStr, xStr, yStr, zStr) =>
-        val resolution = resolutionStr.toInt
-        val x = xStr.toInt
-        val y = yStr.toInt
-        val z = zStr.toInt
-        val bucket = BucketPosition(x * resolution * DataLayer.bucketLength,
-                                    y * resolution * DataLayer.bucketLength,
-                                    z * resolution * DataLayer.bucketLength,
-                                    Point3D(resolution, resolution, resolution))
-        Some((name, bucket))
-      case _ =>
-        None
-    }
   }
 }
 
@@ -178,19 +189,19 @@ class VersionedBucketIterator(prefix: String,
     extends Iterator[(BucketPosition, Array[Byte], Long)]
     with KeyValueStoreImplicits
     with VolumeBucketCompression
-    with VolumeBucketKeys
+    with BucketKeys
     with FoxImplicits
     with VolumeBucketReversionHelper {
-  val batchSize = 64
+  private val batchSize = 64
 
-  var currentStartKey = prefix
-  var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
-  var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
+  private var currentStartKey = prefix
+  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
+  private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
-  def fetchNext =
+  private def fetchNext =
     volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), version, Some(batchSize)).toIterator
 
-  def fetchNextAndSave = {
+  private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
     if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
     currentBatchIterator

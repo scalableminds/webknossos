@@ -35,7 +35,7 @@ import features from "features";
 
 type OwnProps = {|
   layoutMenu: React.Node,
-  hasVolume: boolean,
+  hasVolumeFallback: boolean,
 |};
 type StateProps = {|
   annotationType: APIAnnotationType,
@@ -278,8 +278,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleDownload = async () => {
     await Model.ensureSavedState();
-    const { annotationId, annotationType, hasVolume } = this.props;
-    downloadNml(annotationId, annotationType, hasVolume);
+    const { annotationId, annotationType, hasVolumeFallback } = this.props;
+    downloadNml(annotationId, annotationType, hasVolumeFallback);
   };
 
   handleFinishAndGetNextTask = async () => {

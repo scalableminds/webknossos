@@ -2,7 +2,6 @@
 import "test/sagas/volumetracing_saga.mock.js";
 
 import { take, put, call } from "redux-saga/effects";
-import _ from "lodash";
 import update from "immutability-helper";
 
 import { OrthoViews, VolumeToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
@@ -16,13 +15,6 @@ import type { VolumeTracing } from "oxalis/store";
 
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { withoutUpdateTracing } from "../helpers/saveHelpers";
-
-const mockedVolumeLayer = {
-  isEmpty: () => false,
-  finish: _.noop,
-  getVoxelIterator: _.noop,
-  getCentroid: _.noop,
-};
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {
@@ -65,7 +57,6 @@ const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
-const resetContourAction = VolumeTracingActions.resetContourAction();
 
 test("VolumeTracingSaga shouldn't do anything if unchanged (saga test)", t => {
   const saga = saveTracingTypeAsync("volume");
@@ -114,8 +105,12 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  const startEditingSaga = execCall(t, saga.next(false));
+  saga.next(VolumeToolEnum.BRUSH);
+  saga.next(false);
+  // pass labeled resolution
+  const startEditingSaga = execCall(t, saga.next({ resolution: [1, 1, 1], zoomStep: 0 }));
   startEditingSaga.next();
+  // Pass position
   const layer = startEditingSaga.next([1, 1, 1]).value;
   t.is(layer.plane, OrthoViews.PLANE_XY);
 });
@@ -128,12 +123,12 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
-  saga.next(volumeLayer);
   saga.next(VolumeToolEnum.TRACE);
+  saga.next(false);
+  saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   saga.next({ addToLayerAction: addToLayerActionFn([2, 3, 4]) });
@@ -152,12 +147,12 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DRAW);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
-  saga.next(volumeLayer);
   saga.next(VolumeToolEnum.TRACE);
+  saga.next(false);
+  saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
@@ -170,6 +165,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
       VolumeToolEnum.TRACE,
       ContourModeEnum.DRAW,
       OverwriteModeEnum.OVERWRITE_ALL,
+      0,
     ),
   );
 });
@@ -182,12 +178,12 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next(startEditingAction);
   saga.next(ContourModeEnum.DELETE);
   saga.next(OverwriteModeEnum.OVERWRITE_ALL);
-  saga.next(false);
-  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
-  saga.next(volumeLayer);
   saga.next(VolumeToolEnum.TRACE);
+  saga.next(false);
+  saga.next({ resolution: [1, 1, 1], zoomStep: 0 }); // pass labeled resolution
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10, [1, 1, 1]);
+  saga.next(volumeLayer);
   saga.next(OrthoViews.PLANE_XY);
-  saga.next();
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next(OrthoViews.PLANE_XY);
   // Validate that finishLayer was called
@@ -200,15 +196,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
       VolumeToolEnum.TRACE,
       ContourModeEnum.DELETE,
       OverwriteModeEnum.OVERWRITE_ALL,
+      0,
     ),
   );
-});
-
-test("finishLayer saga should emit resetContourAction and then be done (saga test)", t => {
-  // $FlowFixMe[incompatible-call]
-  const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
-  saga.next();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(), put(resetContourAction));
-  t.true(saga.next().done);
 });

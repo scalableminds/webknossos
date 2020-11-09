@@ -1,11 +1,11 @@
 // @noflow
 import test from "ava";
 
+import { ensureMatchingLayerResolutions } from "oxalis/model_initialization";
 import {
-  ensureDenseLayerResolutions,
-  ensureMatchingLayerResolutions,
   convertToDenseResolution,
-} from "oxalis/model_initialization";
+  getMostExtensiveResolutions,
+} from "oxalis/model/accessors/dataset_accessor";
 
 test("Simple convertToDenseResolution", t => {
   const denseResolutions = convertToDenseResolution([[2, 2, 1], [4, 4, 2]]);
@@ -25,7 +25,6 @@ test("Complex convertToDenseResolution", t => {
       ],
     },
   };
-  ensureDenseLayerResolutions(dataset);
   ensureMatchingLayerResolutions(dataset);
   const expectedResolutions = [
     [1, 1, 1],
@@ -35,7 +34,9 @@ test("Complex convertToDenseResolution", t => {
     [16, 16, 2],
     [32, 32, 4],
   ];
+  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
+  const densify = layer => convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
 
-  t.deepEqual(dataset.dataSource.dataLayers[0].resolutions, expectedResolutions);
-  t.deepEqual(dataset.dataSource.dataLayers[1].resolutions, expectedResolutions);
+  t.deepEqual(densify(dataset.dataSource.dataLayers[0]), expectedResolutions);
+  t.deepEqual(densify(dataset.dataSource.dataLayers[1]), expectedResolutions);
 });

@@ -166,7 +166,7 @@ class VolumeLayer {
     return this.getContourList().length === 0;
   }
 
-  getVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
+  getFillingVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
     if (this.isEmpty() || this.minCoord == null) {
       return VoxelBuffer2D.empty();
     }
@@ -176,6 +176,24 @@ class VolumeLayer {
       return VoxelBuffer2D.empty();
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
+
+    if (mode === VolumeToolEnum.BRUSH) {
+      // If the brush is used, only perform the "filling" operation
+      // when start- and end coordinate are close enough to each other
+      const contourList = this.getContourList();
+      if (contourList.length < 2) {
+        return VoxelBuffer2D.empty();
+      }
+
+      const startEndDist = V3.length(V3.sub(contourList[0], contourList[contourList.length - 1]));
+
+      const state = Store.getState();
+      const { brushSize } = state.userConfiguration;
+      const radius = Math.round(brushSize / 2);
+      if (startEndDist > 2 * radius) {
+        return VoxelBuffer2D.empty();
+      }
+    }
 
     // The maximum area is scaled by 3 as the min and maxCoord will always be three slices apart,
     // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
@@ -209,9 +227,9 @@ class VolumeLayer {
     // area if you consider narrow shapes.
     // Also, it will be very clear where to start the filling
     // algorithm.
-    this.drawOutlineVoxels((x, y) => setMap(x, y, 0), mode);
+    this.drawOutlineVoxels((x, y) => setMap(x, y, 0));
     this.fillOutsideArea(map, width, height);
-    this.drawOutlineVoxels(setMap, mode);
+    this.drawOutlineVoxels(setMap);
 
     const buffer2D = new VoxelBuffer2D(
       map,
@@ -397,42 +415,15 @@ class VolumeLayer {
     return buffer2D;
   }
 
-  drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {
+  drawOutlineVoxels(setMap: (number, number) => void): void {
     const contourList = this.getContourList();
-    const state = Store.getState();
-    const dimIndices = Dimensions.getIndices(this.plane);
-    const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(state.dataset.dataSource.scale),
-    );
-    const { brushSize } = state.userConfiguration;
-    const radius = Math.round(brushSize / 2);
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {
       p1 = this.get2DCoordinate(contourList[i]);
       p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
-      if (mode === VolumeToolEnum.TRACE) {
-        Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
-      } else if (mode === VolumeToolEnum.BRUSH) {
-        // we don't want to connect the last and the first circle with a rectangle
-        if (i !== contourList.length - 1) {
-          // const [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(p1, p2, radius, [
-          //   scaleX / this.activeResolution[dimIndices[0]],
-          //   scaleY / this.activeResolution[dimIndices[1]],
-          // ]);
-          // if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
-          //   Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
-          // }
-        }
-        Drawing.fillCircle(
-          p1[0],
-          p1[1],
-          radius,
-          scaleX / this.activeResolution[dimIndices[0]],
-          scaleY / this.activeResolution[dimIndices[1]],
-          setMap,
-        );
-      }
+
+      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
     }
   }
 

@@ -624,7 +624,7 @@ export function* finishLayer(
   if (activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH) {
     yield* call(
       labelWithVoxelBuffer2D,
-      layer.getVoxelBuffer2D(activeTool),
+      layer.getFillingVoxelBuffer2D(activeTool),
       contourTracingMode,
       overwriteMode,
       labeledZoomStep,

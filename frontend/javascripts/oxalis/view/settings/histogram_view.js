@@ -136,11 +136,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     this.drawYAxis(ctx);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
-    // Here we normalize all values to the interval of 0 - 9 and then add 1
-    // to gain an interval reaching from 1 - 10, since values between 0 and 1 would be negative, otherwise.
-    const downscalingFactor = 9 / maxValue;
+    const maxLogarithmicValue = Math.log10(maxValue + 1);
+    // Here we apply the logarithm to all elements and divide by the highest logarithmic value to have an interval from [0,1].
+    // Then we scale this up to the whole height of the histogram canvas.
+    // Note: We add the 1 as otherwise a value of zero would lead to negative infinity and not 0.
     const downscaledData = elementCounts.map(
-      value => Math.log10(downscalingFactor * value + 1) * canvasHeight,
+      value => (Math.log10(value + 1) / maxLogarithmicValue) * canvasHeight,
     );
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);

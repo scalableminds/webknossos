@@ -304,12 +304,6 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
-  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    for {
-      teamManagerTeamIds <- userService.teamManagerTeamIdsFor(user._id)
-      result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
-    } yield result
-
   def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(Option[String], Option[String])] =
@@ -428,7 +422,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       volumeTracingIdBox: Box[Option[String]],
       dataSetId: ObjectId,
       description: Option[String]
-  )(implicit ctx: DBAccessContext) =
+  )(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       task <- taskFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
@@ -445,7 +439,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                   description.getOrElse(""),
                                   typ = AnnotationType.TracingBase)
       _ <- annotationDAO.insertOne(annotationBase)
-    } yield true
+    } yield ()
 
   def createFrom(user: User,
                  dataSet: DataSet,

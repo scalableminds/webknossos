@@ -153,9 +153,13 @@ class VolumeLayer {
     return difference[0] * difference[1] * difference[2];
   }
 
-  getContourList() {
+  getContourList(useGlobalCoords: boolean = false) {
     const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
     const globalContourList = volumeTracing.contourList;
+
+    if (useGlobalCoords) {
+      return globalContourList;
+    }
 
     return globalContourList.map<Vector3>(point =>
       scaleGlobalPositionWithResolutionFloat(point, this.activeResolution),
@@ -163,7 +167,7 @@ class VolumeLayer {
   }
 
   isEmpty(): boolean {
-    return this.getContourList().length === 0;
+    return this.getContourList(true).length === 0;
   }
 
   getFillingVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
@@ -180,12 +184,14 @@ class VolumeLayer {
     if (mode === VolumeToolEnum.BRUSH) {
       // If the brush is used, only perform the "filling" operation
       // when start- and end coordinate are close enough to each other
-      const contourList = this.getContourList();
-      if (contourList.length < 2) {
+      const globalContourList = this.getContourList(true);
+      if (globalContourList.length < 2) {
         return VoxelBuffer2D.empty();
       }
 
-      const startEndDist = V3.length(V3.sub(contourList[0], contourList[contourList.length - 1]));
+      const startEndDist = V3.length(
+        V3.sub(globalContourList[0], globalContourList[globalContourList.length - 1]),
+      );
 
       const state = Store.getState();
       const { brushSize } = state.userConfiguration;
@@ -484,9 +490,10 @@ class VolumeLayer {
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (let i = 0; i < this.getContourList().length - 1; i++) {
-      const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
-      const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
+    const contourList = this.getContourList();
+    for (let i = 0; i < contourList.length - 1; i++) {
+      const [x, y] = this.get2DCoordinate(contourList[i]);
+      const [x1, y1] = this.get2DCoordinate(contourList[i + 1]);
       sumArea += x * y1 - x1 * y;
       sumCx += (x + x1) * (x * y1 - x1 * y);
       sumCy += (y + y1) * (x * y1 - x1 * y);

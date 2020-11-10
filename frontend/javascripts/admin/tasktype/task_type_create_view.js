@@ -64,8 +64,8 @@ function getMagnificationAdaptedSettings(rawSettings) {
   };
 
   if (
-    resolutionRestrictions.min !== null &&
-    resolutionRestrictions.max !== null &&
+    resolutionRestrictions.min != null &&
+    resolutionRestrictions.max != null &&
     resolutionRestrictions.min > resolutionRestrictions.max
   ) {
     Toast.error("Minimum resolution must not be greater than maximum resolution.");
@@ -115,8 +115,8 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
     formValues.settings.resolutionRestrictionsForm = {
       shouldRestrict:
-        formValues.settings.resolutionRestrictions.min !== null ||
-        formValues.settings.resolutionRestrictions.max !== null,
+        formValues.settings.resolutionRestrictions.min != null ||
+        formValues.settings.resolutionRestrictions.max != null,
       min: formValues.settings.resolutionRestrictions.min || 1,
       max: formValues.settings.resolutionRestrictions.max || 512,
     };

@@ -24,7 +24,7 @@ const initialAnnotationInfo = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     resolutionRestrictions: {
       min: null,
-      max: null
+      max: null,
     },
   },
   visibility: "Internal",

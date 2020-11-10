@@ -235,8 +235,8 @@ export type APISettings = {|
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
   +resolutionRestrictions: {
-    min?: number,
-    max?: number,
+    min: ?number,
+    max: ?number,
   },
 |};
 

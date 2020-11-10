@@ -107,6 +107,10 @@ export const annotation: APIAnnotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    resolutionRestrictions: {
+      min: null,
+      max: null,
+    },
   },
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,

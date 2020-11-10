@@ -41,7 +41,7 @@ test("createTaskType and deleteTaskType", async t => {
       resolutionRestrictions: {
         min: null,
         max: null,
-      }
+      },
     },
     recommendedConfiguration: null,
     tracingType: "skeleton",

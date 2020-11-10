@@ -3,48 +3,35 @@ package controllers
 import java.io.File
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
+import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import javax.inject.Inject
-import models.annotation.nml.NmlService
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO}
-import models.project.{Project, ProjectDAO}
+import models.annotation.nml.NmlService
+import models.project.ProjectDAO
 import models.task._
-import models.team.{Team, TeamDAO}
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.security.WkEnv
-import oxalis.telemetry.SlackNotificationService.SlackNotificationService
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
-import utils.{ObjectId, WkConf}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import utils.ObjectId
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class TaskController @Inject()(taskCreationService: TaskCreationService,
                                annotationService: AnnotationService,
-                               scriptDAO: ScriptDAO,
                                projectDAO: ProjectDAO,
                                taskTypeDAO: TaskTypeDAO,
-                               dataSetDAO: DataSetDAO,
-                               userTeamRolesDAO: UserTeamRolesDAO,
                                userService: UserService,
-                               tracingStoreService: TracingStoreService,
-                               teamDAO: TeamDAO,
                                taskDAO: TaskDAO,
                                taskService: TaskService,
                                nmlService: NmlService,
-                               slackNotificationService: SlackNotificationService,
-                               conf: WkConf,
                                sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with ResultBox
@@ -69,7 +56,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
           taskParameters)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
           .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
-        result <- createTasks((taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
+        result <- taskCreationService.createTasks((taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
         })
       } yield Ok(Json.toJson(result))
@@ -149,7 +136,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
           }
       }
 
-      result <- createTasks(taskParams)
+      result <- taskCreationService.createTasks(taskParams)
     } yield {
       Ok(Json.toJson(result))
     }

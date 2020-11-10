@@ -56,13 +56,17 @@ function isValidMagnification(rule, value, callback) {
 }
 
 function getMagnificationAdaptedSettings(rawSettings) {
-  const { allowedMagnifications, ...settingsWithoutMagnifications } = rawSettings;
+  const { resolutionRestrictionsForm, ...settingsWithoutMagnifications } = rawSettings;
+
+  const resolutionRestrictions = {
+    min: resolutionRestrictionsForm.shouldRestrict ? resolutionRestrictionsForm.min : null,
+    max: resolutionRestrictionsForm.shouldRestrict ? resolutionRestrictionsForm.max : null,
+  };
 
   if (
-    allowedMagnifications.shouldRestrict &&
-    allowedMagnifications.min != null &&
-    allowedMagnifications.max != null &&
-    allowedMagnifications.min > allowedMagnifications.max
+    resolutionRestrictions.min !== null &&
+    resolutionRestrictions.max !== null &&
+    resolutionRestrictions.min > resolutionRestrictions.max
   ) {
     Toast.error("Minimum resolution must not be greater than maximum resolution.");
     return null;
@@ -70,7 +74,7 @@ function getMagnificationAdaptedSettings(rawSettings) {
 
   return {
     ...settingsWithoutMagnifications,
-    allowedMagnifications,
+    resolutionRestrictions,
   };
 }
 
@@ -93,10 +97,9 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         mergerMode: false,
         preferredMode: null,
-        allowedMagnifications: {
-          shouldRestrict: false,
-          min: 1,
-          max: 512,
+        resolutionRestrictions: {
+          min: null,
+          max: null,
         },
       },
       recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
@@ -110,8 +113,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
-    formValues.settings.allowedMagnificationsmin = formValues.settings.allowedMagnifications.min;
-    formValues.settings.allowedMagnificationsmax = formValues.settings.allowedMagnifications.max;
+    formValues.settings.resolutionRestrictionsForm = {
+      shouldRestrict:
+        formValues.settings.resolutionRestrictions.min !== null ||
+        formValues.settings.resolutionRestrictions.max !== null,
+      min: formValues.settings.resolutionRestrictions.min || 1,
+      max: formValues.settings.resolutionRestrictions.max || 512,
+    };
 
     this.props.form.setFieldsValue(formValues);
 
@@ -297,7 +305,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </div>
 
             <FormItem style={{ marginBottom: 6 }}>
-              {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
+              {getFieldDecorator("settings.resolutionRestrictionsForm.shouldRestrict", {
                 valuePropName: "checked",
               })(
                 <Checkbox disabled={isEditingMode}>
@@ -316,7 +324,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               style={{
                 marginLeft: 24,
                 display: this.props.form.getFieldValue(
-                  "settings.allowedMagnifications.shouldRestrict",
+                  "settings.resolutionRestrictionsForm.shouldRestrict",
                 )
                   ? "block"
                   : "none",
@@ -325,7 +333,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <div>
                 <FormItem hasFeedback style={{ marginBottom: 6 }}>
                   Minimum:{" "}
-                  {getFieldDecorator("settings.allowedMagnifications.min", {
+                  {getFieldDecorator("settings.resolutionRestrictionsForm.min", {
                     rules: [{ validator: isValidMagnification }],
                   })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>
@@ -333,7 +341,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <div>
                 <FormItem hasFeedback>
                   Maximum:{" "}
-                  {getFieldDecorator("settings.allowedMagnifications.max", {
+                  {getFieldDecorator("settings.resolutionRestrictionsForm.max", {
                     rules: [{ validator: isValidMagnification }],
                   })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>

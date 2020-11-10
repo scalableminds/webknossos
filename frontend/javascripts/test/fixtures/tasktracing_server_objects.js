@@ -61,10 +61,7 @@ export const annotation: APIAnnotation = {
         allowedModes: ["orthogonal", "oblique", "flight"],
         branchPointsAllowed: true,
         somaClickingAllowed: true,
-        resolutionRestrictions: {
-          min: null,
-          max: null,
-        },
+        resolutionRestrictions: {},
       },
       recommendedConfiguration: null,
       tracingType: "skeleton",
@@ -100,10 +97,7 @@ export const annotation: APIAnnotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    resolutionRestrictions: {
-      min: null,
-      max: null,
-    },
+    resolutionRestrictions: {},
   },
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],

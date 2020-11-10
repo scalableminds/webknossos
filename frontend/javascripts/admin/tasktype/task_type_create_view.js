@@ -97,10 +97,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         mergerMode: false,
         preferredMode: null,
-        resolutionRestrictions: {
-          min: null,
-          max: null,
-        },
+        resolutionRestrictions: {},
       },
       recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
     };

@@ -377,6 +377,7 @@ class MappingInfoView extends React.Component<Props, State> {
           <Option
             key={packMappingNameAndCategory(optionString, category)}
             value={packMappingNameAndCategory(optionString, category)}
+            title={optionString}
           >
             {optionString}
           </Option>

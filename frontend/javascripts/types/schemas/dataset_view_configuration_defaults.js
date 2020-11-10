@@ -5,7 +5,11 @@ import {
   getDefaultLayerViewConfiguration,
   defaultDatasetViewConfiguration,
 } from "types/schemas/dataset_view_configuration.schema";
-import { type APIDataset, type APIDataLayer } from "types/api_flow_types";
+import {
+  type APIDataset,
+  type APIMaybeUnimportedDataset,
+  type APIDataLayer,
+} from "types/api_flow_types";
 import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
 import { validateObjectWithType } from "types/validation";
 
@@ -35,7 +39,7 @@ export const getSpecificDefaultsForLayers = (dataset: APIDataset, layer: APIData
 
 export const enforceValidatedDatasetViewConfiguration = (
   datasetViewConfiguration: Object,
-  dataset: APIDataset,
+  maybeUnimportedDataset: APIMaybeUnimportedDataset,
   isOptional: boolean = false,
 ) => {
   const validationErrors = validateObjectWithType(
@@ -46,24 +50,30 @@ export const enforceValidatedDatasetViewConfiguration = (
 
   const { layers } = datasetViewConfiguration;
   const newLayerConfig = {};
-  dataset.dataSource.dataLayers.forEach(layer => {
-    const layerConfigDefault = getDefaultLayerViewConfiguration(
-      getSpecificDefaultsForLayers(dataset, layer),
-    );
 
-    const existingLayerConfig = layers[layer.name];
-    if (existingLayerConfig) {
-      const layerErrors = validateObjectWithType(
-        isOptional ? "types::OptionalLayerViewConfiguration" : "types::LayerViewConfiguration",
-        existingLayerConfig,
+  if (maybeUnimportedDataset.dataSource.dataLayers != null) {
+    // $FlowFixMe[incompatible-type]
+    const dataset: APIDataset = maybeUnimportedDataset;
+    dataset.dataSource.dataLayers.forEach(layer => {
+      const layerConfigDefault = getDefaultLayerViewConfiguration(
+        getSpecificDefaultsForLayers(dataset, layer),
       );
-      eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
-      newLayerConfig[layer.name] = existingLayerConfig;
-    } else {
-      newLayerConfig[layer.name] = isOptional
-        ? {}
-        : _.pickBy(layerConfigDefault, value => value !== null);
-    }
-  });
+
+      const existingLayerConfig = layers[layer.name];
+      if (existingLayerConfig) {
+        const layerErrors = validateObjectWithType(
+          isOptional ? "types::OptionalLayerViewConfiguration" : "types::LayerViewConfiguration",
+          existingLayerConfig,
+        );
+        eliminateErrors(existingLayerConfig, layerErrors, layerConfigDefault);
+        newLayerConfig[layer.name] = existingLayerConfig;
+      } else {
+        newLayerConfig[layer.name] = isOptional
+          ? {}
+          : _.pickBy(layerConfigDefault, value => value !== null);
+      }
+    });
+  }
+
   datasetViewConfiguration.layers = newLayerConfig;
 };

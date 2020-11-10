@@ -1,7 +1,7 @@
-/**
- * mjs.js
- * @flow
- */
+// @flow
+// See
+//   https://github.com/imbcmdth/mjs/blob/master/index.js
+// for all functions in M4x4, V2 and V3.
 
 import _ from "lodash";
 

@@ -16,4 +16,5 @@ and (settings_allowedmagnifications is null or settings_allowedmagnifications::j
 
 ### Postgres Evolutions:
 - [057-add-layer-specific-view-configs.sql](conf/evolutions/056-add-layer-specific-view-configs.sql)
-- [058-add-onlyAllowedOrganization.sql](conf/evolutions/057-add-onlyAllowedOrganization.sql) 
+- [058-add-onlyAllowedOrganization.sql](conf/evolutions/058-add-onlyAllowedOrganization.sql)
+- [059-resolution-restrictions.sql](conf/evolutions/059-resolution-restrictions.sql)

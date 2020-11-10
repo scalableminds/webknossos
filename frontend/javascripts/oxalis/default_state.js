@@ -22,6 +22,10 @@ const initialAnnotationInfo = {
     somaClickingAllowed: false,
     mergerMode: false,
     allowedModes: ["orthogonal", "oblique", "flight"],
+    resolutionRestrictions: {
+      min: null,
+      max: null
+    },
   },
   visibility: "Internal",
   tags: [],

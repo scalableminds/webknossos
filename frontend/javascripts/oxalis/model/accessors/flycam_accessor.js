@@ -294,9 +294,9 @@ export function getValidTaskZoomRange(
   respectRestriction: boolean = false,
 ): [number, number] {
   const defaultRange = [userSettings.zoom.minimum, Infinity];
-  const { allowedMagnifications } = state.tracing.restrictions;
+  const { resolutionRestrictions } = state.tracing.restrictions;
 
-  if (!respectRestriction || !allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+  if (!respectRestriction || !resolutionRestrictions) {
     return defaultRange;
   }
 
@@ -312,24 +312,20 @@ export function getValidTaskZoomRange(
     );
   }
 
-  const min = getMinMax(allowedMagnifications.min, true);
-  const max = getMinMax(allowedMagnifications.max, false);
+  const min = getMinMax(resolutionRestrictions.min, true);
+  const max = getMinMax(resolutionRestrictions.max, false);
 
   return [min, max];
 }
 
 export function isMagRestrictionViolated(state: OxalisState): boolean {
-  const { allowedMagnifications } = state.tracing.restrictions;
-
-  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
-    return false;
-  }
+  const { resolutionRestrictions } = state.tracing.restrictions;
 
   const zoomStep = getRequestLogZoomStep(state);
-  if (allowedMagnifications.min != null && zoomStep < Math.log2(allowedMagnifications.min)) {
+  if (resolutionRestrictions.min != null && zoomStep < Math.log2(resolutionRestrictions.min)) {
     return true;
   }
-  if (allowedMagnifications.max != null && zoomStep > Math.log2(allowedMagnifications.max)) {
+  if (resolutionRestrictions.max != null && zoomStep > Math.log2(resolutionRestrictions.max)) {
     return true;
   }
   return false;

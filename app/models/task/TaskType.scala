@@ -141,8 +141,8 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                            settings_branchPointsAllowed = ${t.settings.branchPointsAllowed},
                            settings_somaClickingAllowed = ${t.settings.somaClickingAllowed},
                            settings_mergerMode = ${t.settings.mergerMode},
-                           settings_allowedMagnifications_min = #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
-                           settings_allowedMagnifications_max = #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
+                           settings_resolutionRestrictions_min = #${optionLiteral(t.settings.resolutionRestrictions.min.map(_.toString))},
+                           settings_resolutionRestrictions_max = #${optionLiteral(t.settings.resolutionRestrictions.max.map(_.toString))},
                            recommendedConfiguration = #${optionLiteral(
         t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))},
                            isDeleted = ${t.isDeleted}

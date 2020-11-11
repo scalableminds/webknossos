@@ -110,6 +110,8 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
+    // The format of settings.resolutionRestrictions does not match the form precisely.
+    // It is replaced here by resolutionRestrictionsForm, wich has a shouldRestrict boolean
     formValues.settings.resolutionRestrictionsForm = {
       shouldRestrict:
         formValues.settings.resolutionRestrictions.min != null ||
@@ -117,6 +119,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       min: formValues.settings.resolutionRestrictions.min || 1,
       max: formValues.settings.resolutionRestrictions.max || 512,
     };
+    delete formValues.settings.resolutionRestrictions;
 
     this.props.form.setFieldsValue(formValues);
 

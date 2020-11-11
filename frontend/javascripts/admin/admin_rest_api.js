@@ -762,6 +762,12 @@ export async function getDatasets(
   const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
   assertResponseLimit(datasets);
 
+  datasets.forEach(dataset => {
+    if (dataset.isActive && dataset.dataSource.dataLayers == null) {
+      dataset.dataSource.dataLayers = [];
+    }
+  });
+
   return datasets;
 }
 

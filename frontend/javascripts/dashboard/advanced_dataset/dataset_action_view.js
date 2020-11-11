@@ -1,5 +1,5 @@
 // @flow
-import { Button, Dropdown, Menu, Icon, Tooltip } from "antd";
+import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 

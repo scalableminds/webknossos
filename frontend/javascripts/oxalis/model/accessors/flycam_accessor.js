@@ -296,7 +296,7 @@ export function getValidTaskZoomRange(
   const defaultRange = [userSettings.zoom.minimum, Infinity];
   const { resolutionRestrictions } = state.tracing.restrictions;
 
-  if (!respectRestriction || !resolutionRestrictions) {
+  if (!respectRestriction) {
     return defaultRange;
   }
 

@@ -317,6 +317,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         .map(_.unzip)
 
   // used in createFromFiles route
+  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
   def combineParamsWithTracings(fullParams: List[Box[TaskParameters]],
                                 skeletonBases: List[Box[SkeletonTracing]],
                                 volumeBases: List[Box[(VolumeTracing, Option[File])]])

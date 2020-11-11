@@ -42,9 +42,10 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     if (doesSupportVolumeWithFallback(dataset)) {
       return (
         <Menu>
+          {buildMenuItem("hybrid", false, "New Hybrid Annotation (without existing Segmentation)")}
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "with existing Segmentation", true)}
+            {buildMenuItem("volume", true, "with existing Segmentation")}
             {buildMenuItem("volume", false, "without existing Segmentation")}
           </Menu.SubMenu>
         </Menu>
@@ -52,10 +53,9 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     } else {
       return (
         <Menu>
-          {buildMenuItem("hybrid", false, "New Hybrid Annotation (without existing Segmentation)")}
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "with existing Segmentation")}
+            {buildMenuItem("volume", true, "with existing Segmentation", true)}
             {buildMenuItem("volume", false, "without existing Segmentation")}
           </Menu.SubMenu>
         </Menu>
@@ -210,15 +210,15 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   Edit
                 </LinkWithDisabled>
                 {!dataset.isForeign ? (
-                  <Button
+                  <a
                     onClick={() => this.clearCache(dataset)}
                     title="Reload Dataset"
-                    disabled={isReloading}
+                    style={disabledWhenReloadingStyle}
                     type="link"
                   >
                     {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
                     Reload
-                  </Button>
+                  </a>
                 ) : null}
               </React.Fragment>
             ) : null}

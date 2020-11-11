@@ -11,7 +11,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TaskCreationResult(tasks: List[JsObject], warnings: List[String])
 
 object TaskCreationResult extends JsonResultAttribues with Status {
-  implicit val jsonFormat: OFormat[TaskCreationResult] = Format[TaskCreationResult]
+  implicit val jsonFormat: Format[TaskCreationResult] = Json.format[TaskCreationResult]
 
   def fromTaskJsFoxes(taskJsons: List[Fox[JsObject]], warnings: List[String])(
       implicit ec: ExecutionContext): Future[TaskCreationResult] = {

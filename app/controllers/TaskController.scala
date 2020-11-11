@@ -11,11 +11,12 @@ import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import javax.inject.Inject
 import models.annotation._
+import models.annotation.nml.NmlResults.TracingBoxContainer
 import models.annotation.nml.NmlService
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Full}
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -51,18 +52,19 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     implicit request =>
       for {
         _ <- taskCreationService.assertBatchLimit(request.body.length, request.body.map(_.taskTypeId))
-        taskParameters <- taskCreationService.duplicateAllBaseTracings(request.body, request.identity._organization)
+        taskParameters <- taskCreationService.createTracingsFromBaseAnnotations(request.body,
+                                                                                request.identity._organization)
         skeletonBaseOpts: List[Option[SkeletonTracing]] <- taskCreationService.createTaskSkeletonTracingBases(
           taskParameters)
         volumeBaseOpts: List[Option[(VolumeTracing, Option[File])]] <- taskCreationService
           .createTaskVolumeTracingBases(taskParameters, request.identity._organization)
-        result <- taskCreationService.createTasks((taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
+        paramsWithTracings = (taskParameters, skeletonBaseOpts, volumeBaseOpts).zipped.map {
           case (params, skeletonOpt, volumeOpt) => Full((params, skeletonOpt, volumeOpt))
-        })
+        }
+        result <- taskCreationService.createTasks(paramsWithTracings, request.identity)
       } yield Ok(Json.toJson(result))
   }
 
-  @SuppressWarnings(Array("OptionGet")) // We can safely call get on the Option because we check that one of the failures is defined
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       body <- request.body.asMultipartFormData ?~> "binary.payload.invalid"
@@ -80,85 +82,40 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       extractedFiles = nmlService.extractFromFiles(inputFiles.map(f => (f.ref.path.toFile, f.filename)),
                                                    useZipName = false,
                                                    isTaskUpload = true)
-      successes <- Fox.sequence(extractedFiles.parseResults.map(_.toSuccessFox)) ?~> "task.create.failed"
-      skeletonBaseBoxes: List[Box[SkeletonTracing]] = successes.map {
-        case Full(success) =>
-          success.skeletonTracing match {
-            case Some(value) => Full(value)
-            case None        => Empty
-          }
-        case f: Failure => f
-        case _          => Failure("")
-      }
-      volumeBaseBoxes: List[Box[(VolumeTracing, Option[File])]] = successes.map {
-        case Full(success) =>
-          success.volumeTracingWithDataLocation match {
-            case Some((tracing, name)) => Full((tracing, extractedFiles.otherFiles.get(name).map(_.path.toFile)))
-            case None                  => Empty
-          }
-        case f: Failure => f
-        case _          => Failure("")
-      }
-      fullParams = (successes, skeletonBaseBoxes, volumeBaseBoxes).zipped.map {
-        case (s, skeletonBox, volumeBox) =>
-          taskCreationService.buildFullParamsFromFiles(params,
-                                                       skeletonBox,
-                                                       volumeBox.map(_._1),
-                                                       s.map(_.fileName),
-                                                       s.map(_.description))
-      }
-      (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracingBases(skeletonBaseBoxes,
-                                                                                    volumeBaseBoxes,
-                                                                                    fullParams,
-                                                                                    taskType,
-                                                                                    request.identity._organization)
-      taskParams: List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]] = (fullParams,
-                                                                                                                 skeletonBases,
-                                                                                                                 volumeBases).zipped.map {
-        case (paramBox, skeletonBox, volumeBox) =>
-          paramBox match {
-            case Full(params) =>
-              val skeletonFailure = skeletonBox match {
-                case f: Failure => Some(f)
-                case _          => None
-              }
-              val volumeFailure = volumeBox match {
-                case f: Failure => Some(f)
-                case _          => None
-              }
+      extractedTracingBoxes: List[TracingBoxContainer] = extractedFiles.toBoxes
+      fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
+                                                                                           extractedTracingBoxes)
+      (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(extractedTracingBoxes.map(_.skeleton),
+                                                                                extractedTracingBoxes.map(_.volume),
+                                                                                fullParams,
+                                                                                taskType,
+                                                                                request.identity._organization)
 
-              if (skeletonFailure.isDefined || volumeFailure.isDefined)
-                skeletonFailure.orElse(volumeFailure).get
-              else
-                Full(params, skeletonBox.toOption, volumeBox.toOption)
-            case f: Failure => f
-            case _          => Failure("")
-          }
-      }
-
-      result <- taskCreationService.createTasks(taskParams)
+      fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
+      result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)
     } yield {
       Ok(Json.toJson(result))
     }
   }
 
-  def update(taskId: String) = sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
-    val params = request.body
-    for {
-      taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
-      task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
-      project <- projectDAO.findOne(task._project)
-      _ <- Fox
-        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
-      _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
-      updatedTask <- taskDAO.findOne(taskIdValidated)
-      json <- taskService.publicWrites(updatedTask)
-    } yield {
-      JsonOk(json, Messages("task.editSuccess"))
-    }
+  def update(taskId: String): Action[TaskParameters] = sil.SecuredAction.async(validateJson[TaskParameters]) {
+    implicit request =>
+      val params = request.body
+      for {
+        taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
+        task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
+        project <- projectDAO.findOne(task._project)
+        _ <- Fox
+          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- taskDAO.updateTotalInstances(task._id, task.totalInstances + params.openInstances - task.openInstances)
+        updatedTask <- taskDAO.findOne(taskIdValidated)
+        json <- taskService.publicWrites(updatedTask)
+      } yield {
+        JsonOk(json, Messages("task.editSuccess"))
+      }
   }
 
-  def delete(taskId: String) = sil.SecuredAction.async { implicit request =>
+  def delete(taskId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskIdValidated <- ObjectId.parse(taskId) ?~> "task.id.invalid"
       task <- taskDAO.findOne(taskIdValidated) ?~> "task.notFound" ~> NOT_FOUND
@@ -171,7 +128,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     }
   }
 
-  def listTasksForType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
+  def listTasksForType(taskTypeId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
       tasks <- taskDAO.findAllByTaskType(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
@@ -181,7 +138,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     }
   }
 
-  def listTasks = sil.SecuredAction.async(parse.json) { implicit request =>
+  def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse)
       projectNameOpt = (request.body \ "project").asOpt[String]
@@ -200,7 +157,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     }
   }
 
-  def request = sil.SecuredAction.async { implicit request =>
+  def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log {
       val user = request.identity
       for {
@@ -218,7 +175,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     }
   }
 
-  def peekNext = sil.SecuredAction.async { implicit request =>
+  def peekNext: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     val user = request.identity
     for {
       teamIds <- userService.teamIdsFor(user._id)
@@ -228,7 +185,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(taskJson)
   }
 
-  def listExperienceDomains = sil.SecuredAction.async { implicit request =>
+  def listExperienceDomains: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       experienceDomains <- taskDAO.listExperienceDomains
     } yield Ok(Json.toJson(experienceDomains))

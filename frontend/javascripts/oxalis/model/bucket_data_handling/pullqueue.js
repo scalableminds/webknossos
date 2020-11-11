@@ -27,6 +27,9 @@ export const PullQueueConstants = {
 
 const BATCH_SIZE = 3;
 
+// $FlowIssue[cannot-resolve-name] Flow doesn't know DOMException (https://developer.mozilla.org/en-US/docs/Web/API/DOMException/DOMException)
+const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
+
 class PullQueue {
   cube: DataCube;
   priorityQueue: PriorityQueue<PullQueueItem>;
@@ -94,13 +97,12 @@ class PullQueue {
     const { signal } = this.abortController;
     try {
       const bucketBuffers = await new Promise(async (resolve, reject) => {
-        // $FlowIssue[cannot-resolve-name] Flow doesn't know DOMException (https://developer.mozilla.org/en-US/docs/Web/API/DOMException/DOMException)
-        const abortionError = new DOMException("Aborted by the user.", "AbortError");
-        const abort = () => reject(abortionError);
-        signal.addEventListener("abort", abort);
+        const abort = () => reject(PULL_ABORTION_ERROR);
 
+        signal.addEventListener("abort", abort);
         const buffers = await requestWithFallback(layerInfo, batch);
         signal.removeEventListener("abort", abort);
+
         resolve(buffers);
       });
       this.connectionInfo.log(

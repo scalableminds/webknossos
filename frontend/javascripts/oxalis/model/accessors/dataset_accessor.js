@@ -412,7 +412,7 @@ export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
   inVoxel: boolean = true,
 ): string {
-  if (!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive) {
+  if (!dataset.isActive) {
     return "";
   }
   const importedDataset = ((dataset: any): APIDataset);
@@ -507,7 +507,11 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
+export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
+  if (!dataset.isActive) {
+    return null;
+  }
+
   // $FlowIssue[incompatible-type]
   // $FlowIssue[prop-missing]
   const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
@@ -521,6 +525,21 @@ export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer
 
 export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayer(dataset) != null;
+}
+
+export function doesSupportVolumeWithFallback(dataset: APIMaybeUnimportedDataset): boolean {
+  if (!dataset.isActive) {
+    return false;
+  }
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (!segmentationLayer) {
+    return false;
+  }
+
+  const isUint64 =
+    segmentationLayer.elementClass === "uint64" || segmentationLayer.elementClass === "int64";
+  const isFallbackSupported = !isUint64;
+  return isFallbackSupported;
 }
 
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {

@@ -1,7 +1,8 @@
 // @flow
-import { Alert, Dropdown } from "antd";
+import { Alert } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
+import _ from "lodash";
 
 import type {
   APIDataset,
@@ -10,6 +11,7 @@ import type {
   TracingType,
 } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
+import { doesSupportVolumeWithFallback } from "oxalis/model/accessors/dataset_accessor";
 import {
   layoutEmitter,
   deleteLayout,
@@ -19,6 +21,7 @@ import {
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
+import AuthenticationModal from "admin/auth/authentication_modal";
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
@@ -30,8 +33,6 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import AuthenticationModal from "admin/auth/authentication_modal";
-import { createTracingOverlayMenuWithCallback } from "dashboard/advanced_dataset/dataset_action_view";
 
 const VersionRestoreWarning = (
   <Alert
@@ -60,14 +61,12 @@ type Props = {| ...OwnProps, ...StateProps |};
 type State = {
   isNewLayoutModalVisible: boolean,
   isAuthenticationModalVisible: boolean,
-  useExistingSegmentation: boolean,
 };
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state = {
     isNewLayoutModalVisible: false,
     isAuthenticationModalVisible: false,
-    useExistingSegmentation: true,
   };
 
   handleResetLayout = () => {
@@ -94,8 +93,12 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async (dataset: APIMaybeUnimportedDataset, useExistingSegmentation: boolean) => {
-    const annotation = await createExplorational(dataset, "hybrid", useExistingSegmentation);
+  createTracing = async (dataset: APIMaybeUnimportedDataset) => {
+    // If the dataset supports creating an annotation with a fallback segmentation,
+    // use it (as the fallback can always be removed later)
+    const withFallback = doesSupportVolumeWithFallback(dataset);
+
+    const annotation = await createExplorational(dataset, "hybrid", withFallback);
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${
       location.hash
@@ -105,44 +108,24 @@ class ActionBarView extends React.PureComponent<Props, State> {
   renderStartTracingButton(): React.Node {
     const { activeUser, dataset } = this.props;
     const needsAuthentication = activeUser == null;
-    const hasSegmentationLayer = dataset.dataSource.dataLayers.some(
-      layer => layer.category === "segmentation",
-    );
 
-    const handleCreateTracing = async (
-      _dataset: APIMaybeUnimportedDataset,
-      _type: TracingType,
-      useExistingSegmentation: boolean,
-    ) => {
+    const handleCreateTracing = async (_dataset: APIMaybeUnimportedDataset, _type: TracingType) => {
       if (needsAuthentication) {
-        this.setState({ isAuthenticationModalVisible: true, useExistingSegmentation });
+        this.setState({ isAuthenticationModalVisible: true });
       } else {
-        this.createTracing(dataset, useExistingSegmentation);
+        this.createTracing(dataset);
       }
     };
 
-    if (hasSegmentationLayer) {
-      return (
-        <Dropdown
-          overlay={createTracingOverlayMenuWithCallback(dataset, "hybrid", handleCreateTracing)}
-          trigger={["click"]}
-        >
-          <ButtonComponent style={{ marginLeft: 12 }} type="primary">
-            Create Annotation
-          </ButtonComponent>
-        </Dropdown>
-      );
-    } else {
-      return (
-        <ButtonComponent
-          style={{ marginLeft: 12 }}
-          type="primary"
-          onClick={() => handleCreateTracing(dataset, "hybrid", false)}
-        >
-          Create Annotation
-        </ButtonComponent>
-      );
-    }
+    return (
+      <ButtonComponent
+        style={{ marginLeft: 12 }}
+        type="primary"
+        onClick={() => handleCreateTracing(dataset, "hybrid")}
+      >
+        Create Annotation
+      </ButtonComponent>
+    );
   }
 
   render() {
@@ -195,7 +178,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         <AuthenticationModal
           onLoggedIn={() => {
             this.setState({ isAuthenticationModalVisible: false });
-            this.createTracing(dataset, this.state.useExistingSegmentation);
+            this.createTracing(dataset);
           }}
           onCancel={() => this.setState({ isAuthenticationModalVisible: false })}
           visible={this.state.isAuthenticationModalVisible}

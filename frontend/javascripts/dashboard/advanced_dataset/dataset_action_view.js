@@ -1,62 +1,128 @@
 // @flow
-import { Dropdown, Menu, Icon, Tooltip } from "antd";
+import { Button, Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, TracingType } from "types/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIDataset } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
+import {
+  getSegmentationLayer,
+  doesSupportVolumeWithFallback,
+} from "oxalis/model/accessors/dataset_accessor";
 import Toast from "libs/toast";
 import messages from "messages";
 
-const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
-  const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
-  return (
-    <Menu>
+const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) => {
+  if (!maybeUnimportedDataset.isActive) {
+    // The dataset isn't imported. This menu won't be shown, anyway.
+    return <Menu />;
+  }
+  const dataset: APIDataset = maybeUnimportedDataset;
+
+  const buildMenuItem = (type, useFallback, label, disabled = false) => {
+    const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+    return (
       <Menu.Item key="existing">
-        <Link
-          to={`/datasets/${dataset.owningOrganization}/${
-            dataset.name
-          }/createExplorative/${type}/true`}
+        <LinkWithDisabled
+          to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/${type}/${
+            useFallback ? "true" : "false"
+          }`}
           title={`Create ${typeCapitalized} Annotation`}
+          disabled={disabled}
         >
-          Use Existing Segmentation Layer
-        </Link>
+          {label}
+        </LinkWithDisabled>
       </Menu.Item>
-      <Menu.Item key="new">
-        <Link
-          to={`/datasets/${dataset.owningOrganization}/${
-            dataset.name
-          }/createExplorative/${type}/false`}
-          title={`Create ${typeCapitalized} Annotation`}
-        >
-          Use a New Segmentation Layer
-        </Link>
-      </Menu.Item>
-    </Menu>
-  );
+    );
+  };
+
+  const segmentationLayer = getSegmentationLayer(dataset);
+
+  if (segmentationLayer != null) {
+    if (doesSupportVolumeWithFallback(dataset)) {
+      return (
+        <Menu>
+          {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
+          <Menu.SubMenu title="New Volume-only Annotation">
+            {buildMenuItem("volume", true, "with existing Segmentation", true)}
+            {buildMenuItem("volume", false, "without existing Segmentation")}
+          </Menu.SubMenu>
+        </Menu>
+      );
+    } else {
+      return (
+        <Menu>
+          {buildMenuItem("hybrid", false, "New Hybrid Annotation (without existing Segmentation)")}
+          {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
+          <Menu.SubMenu title="New Volume-only Annotation">
+            {buildMenuItem("volume", true, "with existing Segmentation")}
+            {buildMenuItem("volume", false, "without existing Segmentation")}
+          </Menu.SubMenu>
+        </Menu>
+      );
+    }
+  } else {
+    return (
+      <Menu>
+        {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
+        {buildMenuItem("volume", true, "New Volume-only Annotation")}
+      </Menu>
+    );
+  }
 };
 
-export const createTracingOverlayMenuWithCallback = (
-  dataset: APIMaybeUnimportedDataset,
-  type: TracingType,
-  onClick: (APIMaybeUnimportedDataset, TracingType, boolean) => Promise<void>,
-) => {
-  const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+const disabledStyle = { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" };
+function getDisabledWhenReloadingStyle(isReloading) {
+  return isReloading ? disabledStyle : null;
+}
+
+function NewAnnotationLink({ dataset, isReloading }) {
+  const newTracingMenu = getNewTracingMenu(dataset);
+  const withFallback = doesSupportVolumeWithFallback(dataset) ? "true" : "false";
+
   return (
-    <Menu>
-      <Menu.Item key="existing" onClick={() => onClick(dataset, type, true)}>
-        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
-          Use Existing Segmentation Layer
-        </a>
-      </Menu.Item>
-      <Menu.Item key="new" onClick={() => onClick(dataset, type, false)}>
-        <a href="#" title={`Create ${typeCapitalized} Annotation`}>
-          Use a New Segmentation Layer
-        </a>
-      </Menu.Item>
-    </Menu>
+    <React.Fragment>
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${
+          dataset.name
+        }/createExplorative/hybrid/${withFallback}`}
+        style={{ display: "inline-block" }}
+        title="Create Hybrid Annotation"
+        disabled={isReloading}
+      >
+        <Icon type="swap" />
+        New Hybrid Annotation
+      </LinkWithDisabled>
+      {isReloading ? null : (
+        <Dropdown overlay={newTracingMenu}>
+          <a
+            className="ant-dropdown-link"
+            onClick={e => e.preventDefault()}
+            style={{ display: "inline-block", marginLeft: 2 }}
+          >
+            <Icon type="down" />
+          </a>
+        </Dropdown>
+      )}
+    </React.Fragment>
   );
-};
+}
+
+function ImportLink({ dataset }) {
+  return (
+    <div>
+      <Link
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+        className="import-dataset"
+      >
+        <Icon type="plus-circle-o" />
+        Import
+      </Link>
+
+      <div className="text-danger">{dataset.dataSource.status}</div>
+    </div>
+  );
+}
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
@@ -65,6 +131,28 @@ type Props = {
 type State = {
   isReloading: boolean,
 };
+
+function LinkWithDisabled({
+  disabled,
+  ...rest
+}: {
+  disabled?: boolean,
+  style?: Object,
+  to: string,
+}) {
+  const maybeDisabledStyle = disabled ? disabledStyle : null;
+  const adaptedStyle =
+    rest.style != null
+      ? {
+          ...rest.style,
+          ...maybeDisabledStyle,
+        }
+      : maybeDisabledStyle;
+
+  return (
+    <Link {...rest} style={adaptedStyle} onClick={e => (disabled ? e.preventDefault() : null)} />
+  );
+}
 
 class DatasetActionView extends React.PureComponent<Props, State> {
   state = {
@@ -85,130 +173,55 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   render() {
     const { dataset } = this.props;
     const { isReloading } = this.state;
-    const centerBackgroundImageStyle: { verticalAlign: string, filter?: string } = {
-      verticalAlign: "middle",
-    };
-    if (isReloading) {
-      // We need to explicitly grayscale the images when the dataset is being reloaded.
-      centerBackgroundImageStyle.filter = "grayscale(100%) opacity(25%)";
-    }
-    const disabledWhenReloadingStyle = isReloading
-      ? { pointerEvents: "none", color: "rgba(0, 0, 0, 0.25)" }
-      : null;
-    const disabledWhenReloadingAction = e => (isReloading ? e.preventDefault() : null);
 
-    const volumeTracingMenu = (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "volume")}
-        trigger={["click"]}
-        disabled={isReloading}
-      >
-        <a href="#" title="Create Volume Annotation">
-          <img
-            src="/assets/images/volume.svg"
-            alt="volume icon"
-            style={centerBackgroundImageStyle}
-          />{" "}
-          Start Volume Annotation
-        </a>
-      </Dropdown>
-    );
-
-    const hybridTracingMenu = (
-      <Dropdown
-        overlay={createTracingOverlayMenu(dataset, "hybrid")}
-        trigger={["click"]}
-        disabled={isReloading}
-      >
-        <a href="#" title="Create Hybrid (Skeleton + Volume) Annotation">
-          <Icon type="swap" />
-          Start Hybrid Annotation
-        </a>
-      </Dropdown>
-    );
+    const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
 
     return (
       <div>
-        {dataset.isEditable && dataset.dataSource.dataLayers == null ? (
-          <div>
-            <Link
-              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-              className="import-dataset"
-            >
-              <Icon type="plus-circle-o" />
-              Import
-            </Link>
-
-            <div className="text-danger">{dataset.dataSource.status}</div>
-          </div>
-        ) : null}
+        {dataset.isEditable && !dataset.isActive ? <ImportLink dataset={dataset} /> : null}
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
-            {dataset.isEditable ? (
-              <React.Fragment>
-                <Link
-                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                  title="Edit Dataset"
-                  style={disabledWhenReloadingStyle}
-                  onClick={disabledWhenReloadingAction}
-                >
-                  <Icon type="edit" />
-                  Edit
-                </Link>
-                {!dataset.isForeign ? (
-                  <a
-                    href="#"
-                    onClick={() => this.clearCache(dataset)}
-                    title="Reload Dataset"
-                    style={disabledWhenReloadingStyle}
-                  >
-                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
-                    Reload
-                  </a>
-                ) : null}
-              </React.Fragment>
-            ) : null}
-            <Link
-              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-              title="View Dataset"
-              style={disabledWhenReloadingStyle}
-              onClick={disabledWhenReloadingAction}
-            >
-              <Icon type="eye-o" />
-              View
-            </Link>
             {!dataset.isForeign ? (
-              <React.Fragment>
-                <Link
-                  to={`/datasets/${dataset.owningOrganization}/${
-                    dataset.name
-                  }/createExplorative/skeleton/false`}
-                  style={disabledWhenReloadingStyle}
-                  onClick={e => {
-                    if (isReloading) {
-                      e.preventDefault();
-                    }
-                  }}
-                  title="Create Skeleton Annotation"
-                >
-                  <img
-                    src="/assets/images/skeleton.svg"
-                    alt="skeleton icon"
-                    style={centerBackgroundImageStyle}
-                  />{" "}
-                  Start Skeleton Annotation
-                </Link>
-                {volumeTracingMenu}
-                {hybridTracingMenu}
-              </React.Fragment>
+              <NewAnnotationLink dataset={dataset} isReloading={isReloading} />
             ) : (
               <p style={disabledWhenReloadingStyle}>
-                Start Annotation &nbsp;
+                New Annotation &nbsp;
                 <Tooltip title="Cannot create annotations for read-only datasets">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />
                 </Tooltip>
               </p>
             )}
+            <LinkWithDisabled
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+              title="View Dataset"
+              disabled={isReloading}
+            >
+              <Icon type="eye-o" />
+              View
+            </LinkWithDisabled>
+            {dataset.isEditable ? (
+              <React.Fragment>
+                <LinkWithDisabled
+                  to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+                  title="Edit Dataset"
+                  disabled={isReloading}
+                >
+                  <Icon type="edit" />
+                  Edit
+                </LinkWithDisabled>
+                {!dataset.isForeign ? (
+                  <Button
+                    onClick={() => this.clearCache(dataset)}
+                    title="Reload Dataset"
+                    disabled={isReloading}
+                    type="link"
+                  >
+                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
+                    Reload
+                  </Button>
+                ) : null}
+              </React.Fragment>
+            ) : null}
           </div>
         ) : null}
       </div>

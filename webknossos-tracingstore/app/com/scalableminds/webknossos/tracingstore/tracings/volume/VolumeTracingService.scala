@@ -17,7 +17,13 @@ import com.scalableminds.webknossos.datastore.models.{
   UnsignedIntegerArray,
   WebKnossosIsosurfaceRequest
 }
-import com.scalableminds.webknossos.datastore.services.{BinaryDataService, DataConverter, _}
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataService,
+  DataFinder,
+  IsosurfaceRequest,
+  IsosurfaceService,
+  IsosurfaceServiceHolder
+}
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
@@ -251,85 +257,10 @@ class VolumeTracingService @Inject()(
 
     val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
     for {
-      _ <- mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
+      _ <- mergedVolume.withAllBuckets { (bucketPosition, bucketBytes) =>
+        saveBucket(destinationDataLayer, bucketPosition, bucketBytes, tracing.version)
+      }
     } yield mergedVolume.presentResolutions
-  }
-
-  class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0) extends DataConverter {
-    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
-    private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
-    private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
-    var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
-    def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
-
-    private def prepareLabelMaps(): Unit =
-      if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
-        ()
-      } else {
-        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
-        if (initialLargestSegmentId > 0) {
-          labelMaps += mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
-          i = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
-        }
-        labelSets.toList.foreach { labelSet =>
-          var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
-          labelSet.foreach { label =>
-            i = i.increment
-            labelMap += ((label, i))
-          }
-          labelMaps += labelMap
-        }
-        largestSegmentId = i
-      }
-
-    def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
-      if (data.length > 1) { // skip reverted buckets
-        val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
-        prepareLabelMaps()
-        if (mergedVolume.contains(bucketPosition)) {
-          val mutableBucketData = mergedVolume(bucketPosition)
-          dataTyped.zipWithIndex.foreach {
-            case (valueTyped, index) =>
-              if (!valueTyped.isZero) {
-                val byteValueMapped =
-                  if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
-                  else labelMaps(sourceVolumeIndex)(valueTyped)
-                mutableBucketData(index) = byteValueMapped
-              }
-          }
-          mergedVolume += ((bucketPosition, mutableBucketData))
-        } else {
-          if (labelMaps.isEmpty) {
-            mergedVolume += ((bucketPosition, dataTyped))
-          } else {
-            val dataMapped = dataTyped.map { byteValue =>
-              if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-                byteValue
-              else
-                labelMaps(sourceVolumeIndex)(byteValue)
-            }
-            mergedVolume += ((bucketPosition, dataMapped))
-          }
-        }
-      }
-
-    def saveTo(layer: VolumeTracingLayer, version: Long, toCache: Boolean): Fox[Unit] =
-      for {
-        _ <- Fox.combined(mergedVolume.map {
-          case (bucketPosition, bucketData) =>
-            saveBucket(layer,
-                       bucketPosition,
-                       UnsignedIntegerArray.toByteArray(bucketData, elementClass),
-                       version,
-                       toCache)
-        }.toList)
-      } yield ()
-
-    def presentResolutions: Set[Point3D] =
-      mergedVolume.map {
-        case (bucketPosition: BucketPosition, _) => bucketPosition.resolution
-      }.toSet
-
   }
 
   def initializeWithData(tracingId: String,
@@ -633,7 +564,9 @@ class VolumeTracingService @Inject()(
       }
       val destinationDataLayer = volumeTracingLayer(newId, newTracing)
       for {
-        _ <- mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
+        _ <- mergedVolume.withAllBuckets { (bucketPosition, bucketBytes) =>
+          saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
+        }
         _ <- updateResolutionList(newId, newTracing, mergedVolume.presentResolutions)
       } yield ()
     }
@@ -709,7 +642,9 @@ class VolumeTracingService @Inject()(
       None)
 
     for {
-      _ <- mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+      _ <- mergedVolume.withAllBuckets { (bucketPosition, bucketBytes) =>
+        saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
+      }
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
     } yield mergedVolume.largestSegmentId.toSignedLong
   }

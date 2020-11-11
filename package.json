@@ -20,7 +20,8 @@
     "@babel/preset-flow": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.0.0",
-    "ava": "^3.8.0",
+    "abort-controller": "^3.0.0",
+    "ava": "^3.13.0",
     "babel-eslint": "^9.0.0",
     "babel-loader": "^8.0.0",
     "babel-plugin-import": "^1.9.1",
@@ -29,6 +30,7 @@
     "coveralls": "^3.0.2",
     "css-loader": "^2.1.0",
     "documentation": "^9.3.0",
+    "domexception": "^2.0.1",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "eslint": "^5.7.0",
@@ -198,6 +200,9 @@
   "ava": {
     "files": [
       "./public/test-bundle/**/*.{js,jsx}"
+    ],
+    "require": [
+      "./frontend/javascripts/test/_ava_polyfill_provider.js"
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8

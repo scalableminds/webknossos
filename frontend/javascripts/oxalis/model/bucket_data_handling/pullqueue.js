@@ -98,12 +98,14 @@ class PullQueue {
     try {
       const bucketBuffers = await new Promise(async (resolve, reject) => {
         const abort = () => reject(PULL_ABORTION_ERROR);
-
         signal.addEventListener("abort", abort);
-        const buffers = await requestWithFallback(layerInfo, batch);
+        try {
+          const buffers = await requestWithFallback(layerInfo, batch);
+          resolve(buffers);
+        } catch (error) {
+          reject(error);
+        }
         signal.removeEventListener("abort", abort);
-
-        resolve(buffers);
       });
       this.connectionInfo.log(
         this.layerName,

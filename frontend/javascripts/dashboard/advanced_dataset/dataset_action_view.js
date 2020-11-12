@@ -27,7 +27,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
           to={`/datasets/${dataset.owningOrganization}/${dataset.name}/createExplorative/${type}/${
             useFallback ? "true" : "false"
           }`}
-          title={`Create ${typeCapitalized} Annotation`}
+          title={`New ${typeCapitalized} Annotation`}
           disabled={disabled}
         >
           {label}
@@ -42,7 +42,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     if (doesSupportVolumeWithFallback(dataset)) {
       return (
         <Menu>
-          {buildMenuItem("hybrid", false, "New Hybrid Annotation (without existing Segmentation)")}
+          {buildMenuItem("hybrid", false, "New Annotation (without existing Segmentation)")}
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
             {buildMenuItem("volume", true, "with existing Segmentation")}
@@ -82,26 +82,20 @@ function NewAnnotationLink({ dataset, isReloading }) {
 
   return (
     <React.Fragment>
-      <LinkWithDisabled
-        to={`/datasets/${dataset.owningOrganization}/${
-          dataset.name
-        }/createExplorative/hybrid/${withFallback}`}
-        style={{ display: "inline-block" }}
-        title="Create Hybrid Annotation"
-        disabled={isReloading}
-      >
-        <Icon type="swap" />
-        New Hybrid Annotation
-      </LinkWithDisabled>
       {isReloading ? null : (
         <Dropdown overlay={newTracingMenu}>
-          <a
-            className="ant-dropdown-link"
-            onClick={e => e.preventDefault()}
-            style={{ display: "inline-block", marginLeft: 2 }}
+          <LinkWithDisabled
+            to={`/datasets/${dataset.owningOrganization}/${
+              dataset.name
+            }/createExplorative/hybrid/${withFallback}`}
+            style={{ display: "inline-block" }}
+            title="New Annotation (Skeleton + Volume)"
+            disabled={isReloading}
           >
-            <Icon type="down" />
-          </a>
+            <Icon type="plus" />
+            New Annotation
+            <Icon type="down" style={{ marginLeft: 4 }} />
+          </LinkWithDisabled>
         </Dropdown>
       )}
     </React.Fragment>
@@ -203,11 +197,11 @@ class DatasetActionView extends React.PureComponent<Props, State> {
               <React.Fragment>
                 <LinkWithDisabled
                   to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                  title="Edit Dataset"
+                  title="Open Dataset Settings"
                   disabled={isReloading}
                 >
-                  <Icon type="edit" />
-                  Edit
+                  <Icon type="setting" />
+                  Settings
                 </LinkWithDisabled>
                 {!dataset.isForeign ? (
                   <a
@@ -216,7 +210,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                     style={disabledWhenReloadingStyle}
                     type="link"
                   >
-                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
+                    {isReloading ? <Icon type="loading" /> : <Icon type="reload" />}
                     Reload
                   </a>
                 ) : null}

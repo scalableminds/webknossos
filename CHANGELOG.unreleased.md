@@ -27,6 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a rare error in the agglomerate mapping for large datasets. [#4904](https://github.com/scalableminds/webknossos/pull/4904)
 - Fixed a bug where in volume annotation zip upload some buckets were discarded. [#4914](https://github.com/scalableminds/webknossos/pull/4914)
 - Fixed the Dataset import which was broken temporarily. [#4932](https://github.com/scalableminds/webknossos/pull/4932)
+- Fixed the upload of multiple volume annotations with similar data zip names. [#4915](https://github.com/scalableminds/webknossos/pull/4915)
 
 ### Removed
 -

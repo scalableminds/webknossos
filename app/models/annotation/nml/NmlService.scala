@@ -5,7 +5,6 @@ import java.nio.file.{Files, StandardCopyOption}
 
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, TreeGroup}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
@@ -32,8 +31,9 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
   def extractFromNml(inputStream: InputStream,
                      name: String,
                      overwritingDataSetName: Option[String],
-                     isTaskUpload: Boolean)(implicit m: MessagesProvider): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload) match {
+                     isTaskUpload: Boolean,
+                     basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
+    NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
       case Full((skeletonTracing, volumeTracingWithDataLocation, description)) =>
         NmlParseSuccess(name, skeletonTracing, volumeTracingWithDataLocation, description)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
@@ -49,14 +49,15 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
 
-    ZipIO.withUnziped(file) { (filename, file) =>
+    ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
-        val result = extractFromNml(file, filename.toString, overwritingDataSetName, isTaskUpload)
+        val result =
+          extractFromNml(inputStream, filename.toString, overwritingDataSetName, isTaskUpload, Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile = temporaryFileCreator.create(filename.toString)
-        Files.copy(file, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
-        otherFiles += (filename.toString -> tempFile)
+        Files.copy(inputStream, tempFile.path, StandardCopyOption.REPLACE_EXISTING)
+        otherFiles += (file.getPath + filename.toString -> tempFile)
       }
     }
     ZipParseResult(parseResults, otherFiles)

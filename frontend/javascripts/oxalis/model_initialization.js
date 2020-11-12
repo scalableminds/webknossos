@@ -22,10 +22,9 @@ import {
   getBoundaries,
   getColorLayers,
   getDatasetCenter,
-  getMostExtensiveResolutions,
+  getResolutionUnion,
   getSegmentationLayer,
   isElementClassSupported,
-  convertToDenseResolution,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeServerTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
@@ -337,15 +336,11 @@ function initializeDataset(
 }
 
 export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-  const mostExtensiveResolutions = convertToDenseResolution(getMostExtensiveResolutions(dataset));
-
-  for (const layer of dataset.dataSource.dataLayers) {
-    const denseResolutions = convertToDenseResolution(layer.resolutions, mostExtensiveResolutions);
-    for (const resolution of denseResolutions) {
-      if (mostExtensiveResolutions.find(element => _.isEqual(resolution, element)) == null) {
-        Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
-      }
-    }
+  try {
+    getResolutionUnion(dataset, true);
+  } catch (exception) {
+    console.warn(exception);
+    Toast.error(messages["dataset.resolution_mismatch"], { sticky: true });
   }
 }
 

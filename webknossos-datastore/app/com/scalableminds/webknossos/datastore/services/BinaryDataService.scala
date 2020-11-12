@@ -16,10 +16,7 @@ import net.liftweb.common.Full
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-class BinaryDataService(dataBaseDir: Path,
-                        loadTimeout: FiniteDuration,
-                        maxCacheSize: Int,
-                        val agglomerateService: AgglomerateService)
+class BinaryDataService(dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
     extends FoxImplicits
     with LazyLogging {
 
@@ -80,7 +77,7 @@ class BinaryDataService(dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
 
-      request.dataLayer.bucketProvider.load(readInstruction, cache, loadTimeout)
+      request.dataLayer.bucketProvider.load(readInstruction, cache)
     } else {
       Fox.empty
     }

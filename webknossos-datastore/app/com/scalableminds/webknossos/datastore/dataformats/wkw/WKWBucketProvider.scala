@@ -4,12 +4,9 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty}
-
-import scala.concurrent.ExecutionContext
 
 class WKWCube(wkwFile: WKWFile) extends Cube {
 
@@ -25,14 +22,9 @@ class WKWCube(wkwFile: WKWFile) extends Cube {
     wkwFile.close()
 }
 
-class WKWBucketProvider(layer: WKWLayer)
-    extends BucketProvider
-    with WKWDataFormatHelper
-    with FoxImplicits
-    with LazyLogging {
+class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[WKWCube] = {
-
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = {
     val wkwFile = wkwFilePath(
       readInstruction.cube,
       Some(readInstruction.dataSource.id),

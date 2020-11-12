@@ -415,12 +415,11 @@ export function getDatasetExtentAsString(
   if (!dataset.isActive) {
     return "";
   }
-  const importedDataset = ((dataset: any): APIDataset);
   if (inVoxel) {
-    const extentInVoxel = getDatasetExtentInVoxel(importedDataset);
+    const extentInVoxel = getDatasetExtentInVoxel(dataset);
     return `${formatExtentWithLength(extentInVoxel, x => `${x}`)} voxel³`;
   }
-  const extent = getDatasetExtentInLength(importedDataset);
+  const extent = getDatasetExtentInLength(dataset);
   return formatExtentWithLength(extent, formatNumberToLength);
 }
 

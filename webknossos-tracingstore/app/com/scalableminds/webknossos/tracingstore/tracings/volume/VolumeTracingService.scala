@@ -221,10 +221,7 @@ class VolumeTracingService @Inject()(
         saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
       }
     }
-
-    for {
-      _ <- unzipResult
-    } yield savedResolutions.toSet
+    unzipResult.map(_ => savedResolutions.toSet)
   }
 
   def allDataEnumerator(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] =

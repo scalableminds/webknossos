@@ -34,9 +34,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
             }
         }
     }
-    for {
-      _ <- unzipResult
-    } yield ()
+    unzipResult.map(_ => ())
   }
 
   protected def resolutionSetFromZipfile(zipFile: File)(implicit ec: ExecutionContext): Set[Point3D] = {

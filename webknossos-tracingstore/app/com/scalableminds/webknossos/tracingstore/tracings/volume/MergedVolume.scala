@@ -18,9 +18,9 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     with ByteUtils
     with VolumeDataZipHelper
     with ProtoGeometryImplicits {
-  private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
-  private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
-  private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
+  private val mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
+  private val labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
+  private val labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
   var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
 
   def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Box[Unit] = {
@@ -57,20 +57,20 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
       ()
     } else {
-      var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
+      var segmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
       if (initialLargestSegmentId > 0) {
         labelMaps += mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
-        i = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
+        segmentId = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
       }
-      labelSets.toList.foreach { labelSet =>
-        var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
+      labelSets.foreach { labelSet =>
+        val labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
         labelSet.foreach { label =>
-          i = i.increment
-          labelMap += ((label, i))
+          segmentId = segmentId.increment
+          labelMap += ((label, segmentId))
         }
         labelMaps += labelMap
       }
-      largestSegmentId = i
+      largestSegmentId = segmentId
     }
 
   def addFromBucketStream(sourceVolumeIndex: Int,
@@ -88,36 +88,35 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
       add(sourceVolumeIndex, bucketPosition, bytes)
     }
 
-  def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
-    if (data.length > 1) { // skip reverted buckets
-      val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
-      prepareLabelMaps()
-      if (mergedVolume.contains(bucketPosition)) {
-        val mutableBucketData = mergedVolume(bucketPosition)
-        dataTyped.zipWithIndex.foreach {
-          case (valueTyped, index) =>
-            if (!valueTyped.isZero) {
-              val byteValueMapped =
-                if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
-                else labelMaps(sourceVolumeIndex)(valueTyped)
-              mutableBucketData(index) = byteValueMapped
-            }
-        }
-        mergedVolume += ((bucketPosition, mutableBucketData))
-      } else {
-        if (labelMaps.isEmpty) {
-          mergedVolume += ((bucketPosition, dataTyped))
-        } else {
-          val dataMapped = dataTyped.map { byteValue =>
-            if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-              byteValue
-            else
-              labelMaps(sourceVolumeIndex)(byteValue)
+  def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
+    val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
+    prepareLabelMaps()
+    if (mergedVolume.contains(bucketPosition)) {
+      val mutableBucketData = mergedVolume(bucketPosition)
+      dataTyped.zipWithIndex.foreach {
+        case (valueTyped, index) =>
+          if (!valueTyped.isZero) {
+            val byteValueMapped =
+              if (labelMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)) valueTyped
+              else labelMaps(sourceVolumeIndex)(valueTyped)
+            mutableBucketData(index) = byteValueMapped
           }
-          mergedVolume += ((bucketPosition, dataMapped))
+      }
+      mergedVolume += ((bucketPosition, mutableBucketData))
+    } else {
+      if (labelMaps.isEmpty) {
+        mergedVolume += ((bucketPosition, dataTyped))
+      } else {
+        val dataMapped = dataTyped.map { byteValue =>
+          if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
+            byteValue
+          else
+            labelMaps(sourceVolumeIndex)(byteValue)
         }
+        mergedVolume += ((bucketPosition, dataMapped))
       }
     }
+  }
 
   def withMergedBuckets(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {

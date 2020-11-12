@@ -42,6 +42,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     if (doesSupportVolumeWithFallback(dataset)) {
       return (
         <Menu>
+          <Menu.ItemGroup title="Other Options:" />
           {buildMenuItem("hybrid", false, "New Annotation (without existing Segmentation)")}
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
@@ -53,6 +54,7 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
     } else {
       return (
         <Menu>
+          <Menu.ItemGroup title="Other Options:" />
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
             {buildMenuItem("volume", true, "with existing Segmentation", true)}
@@ -64,6 +66,8 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
   } else {
     return (
       <Menu>
+        <Menu.ItemGroup title="Other Options:" />
+        {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
         {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
         {buildMenuItem("volume", true, "New Volume-only Annotation")}
       </Menu>

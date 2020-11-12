@@ -30,7 +30,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
       Some(readInstruction.dataSource.id),
       Some(readInstruction.dataLayer.name),
       readInstruction.baseDir,
-      resolutionAsTriple = false
+      resolutionAsTriple = Some(false)
     ).toFile
 
     if (wkwFile.exists()) {
@@ -41,7 +41,7 @@ class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataForm
         Some(readInstruction.dataSource.id),
         Some(readInstruction.dataLayer.name),
         readInstruction.baseDir,
-        resolutionAsTriple = true
+        resolutionAsTriple = Some(true)
       ).toFile
       if (wkwFileAnisotropic.exists) {
         WKWFile(wkwFileAnisotropic).map(new WKWCube(_))

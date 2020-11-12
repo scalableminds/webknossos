@@ -5,6 +5,7 @@ import * as React from "react";
 import { ArbitraryViewport, type Rect, type Viewport } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
+import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 
@@ -89,6 +90,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
           className={`inputcatcher ${viewportID}`}
           style={{ position: "relative" }}
         >
+          <ViewportStatusIndicator />
           {this.props.displayScalebars && viewportID !== "arbitraryViewport" ? (
             <Scalebar viewportID={viewportID} />
           ) : null}

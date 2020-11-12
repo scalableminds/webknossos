@@ -37,6 +37,6 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
       _.cutOutBucket(readInstruction.dataLayer, readInstruction.bucket))
   }
 
-  def bucketStream(resolution: Int, version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+  def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     Iterator.empty
 }

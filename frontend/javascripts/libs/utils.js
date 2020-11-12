@@ -34,6 +34,20 @@ export function map3<A, B>(fn: (A, number) => B, tuple: [A, A, A]): [B, B, B] {
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
 }
 
+export function iterateThroughBounds(
+  minVoxel: Vector3,
+  maxVoxel: Vector3,
+  fn: (number, number, number) => void,
+): void {
+  for (let x = minVoxel[0]; x < maxVoxel[0]; x++) {
+    for (let y = minVoxel[1]; y < maxVoxel[1]; y++) {
+      for (let z = minVoxel[2]; z < maxVoxel[2]; z++) {
+        fn(x, y, z);
+      }
+    }
+  }
+}
+
 function swap(arr, a, b) {
   let tmp;
   if (arr[a] > arr[b]) {
@@ -105,8 +119,8 @@ export function jsonStringify(json: Object) {
   return JSON.stringify(json, null, "  ");
 }
 
-export function clamp(a: number, x: number, b: number): number {
-  return Math.max(a, Math.min(b, x));
+export function clamp(min: number, value: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function zeroPad(num: number, zeros: number = 0): string {

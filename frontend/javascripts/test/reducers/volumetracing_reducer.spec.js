@@ -261,14 +261,17 @@ test("VolumeTracing should update its lastCentroid", t => {
   });
 });
 
-test("VolumeTracing should add values to the contourList", t => {
+const prepareContourListTest = (t, state) => {
   const contourList = [[4, 6, 9], [1, 2, 3], [9, 3, 2]];
   const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
-
-  // Add positions to the contourList
-  let newState = VolumeTracingReducer(initialState, addToLayerActionFn(contourList[0]));
+  let newState = VolumeTracingReducer(state, addToLayerActionFn(contourList[0]));
   newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
   newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
+  return { newState, contourList };
+};
+
+test("VolumeTracing should add values to the contourList", t => {
+  const { newState, contourList } = prepareContourListTest(t, initialState);
 
   t.not(newState, initialState);
   getVolumeTracing(newState.tracing).map(tracing => {
@@ -276,9 +279,7 @@ test("VolumeTracing should add values to the contourList", t => {
   });
 });
 
-test("VolumeTracing should not add values to the contourList if getRequestLogZoomStep(zoomStep) > 1", t => {
-  const contourList = [[4, 6, 9], [1, 2, 3], [9, 3, 2]];
-  const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
+test("VolumeTracing should add values to the contourList even if getRequestLogZoomStep(zoomStep) > 1", t => {
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 3 },
@@ -287,12 +288,11 @@ test("VolumeTracing should not add values to the contourList if getRequestLogZoo
 
   t.true(getRequestLogZoomStep(alteredState) > 1);
 
-  // Try to add positions to the contourList
-  let newState = VolumeTracingReducer(alteredState, addToLayerActionFn(contourList[0]));
-  newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
-  newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
-
-  t.is(newState, alteredState);
+  const { newState, contourList } = prepareContourListTest(t, alteredState);
+  t.not(newState, initialState);
+  getVolumeTracing(newState.tracing).map(tracing => {
+    t.deepEqual(tracing.contourList, contourList);
+  });
 });
 
 test("VolumeTracing should not add values to the contourList if volumetracing is not allowed", t => {

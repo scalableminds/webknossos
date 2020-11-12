@@ -7,6 +7,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import { createNanoEvents } from "nanoevents";
 
+import { mod } from "libs/utils";
 import {
   bucketPositionToGlobalAddress,
   zoomedAddressToAnotherZoomStep,
@@ -16,7 +17,12 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import Constants, { type Vector2, type Vector4, type BoundingBoxType } from "oxalis/constants";
+import Constants, {
+  type Vector2,
+  type Vector3,
+  type Vector4,
+  type BoundingBoxType,
+} from "oxalis/constants";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import window from "libs/window";
 import { type ElementClass } from "types/api_flow_types";
@@ -163,14 +169,13 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const min = bucketPositionToGlobalAddress(
-      this.zoomedAddress,
-      getResolutions(Store.getState().dataset),
-    );
+    const resolutions = getResolutions(Store.getState().dataset);
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    const bucketResolution = resolutions[this.zoomedAddress[3]];
     const max = [
-      min[0] + Constants.BUCKET_WIDTH,
-      min[1] + Constants.BUCKET_WIDTH,
-      min[2] + Constants.BUCKET_WIDTH,
+      min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
+      min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
+      min[2] + Constants.BUCKET_WIDTH * bucketResolution[2],
     ];
     return { min, max };
   }
@@ -207,6 +212,10 @@ export class DataBucket {
     return this.state === BucketStateEnum.MISSING;
   }
 
+  getAddress(): Vector3 {
+    return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
+  }
+
   is2DVoxelInsideBucket = (voxel: Vector2, dimensionIndices: DimensionMap, zoomStep: number) => {
     const neighbourBucketAddress = [
       this.zoomedAddress[0],
@@ -215,23 +224,18 @@ export class DataBucket {
       zoomStep,
     ];
     let isVoxelOutside = false;
-    const adjustedVoxel = voxel;
+    const adjustedVoxel = [voxel[0], voxel[1]];
     for (const dimensionIndex of [0, 1]) {
       const dimension = dimensionIndices[dimensionIndex];
-      if (voxel[dimensionIndex] < 0) {
+      if (voxel[dimensionIndex] < 0 || voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
         isVoxelOutside = true;
-        neighbourBucketAddress[dimension] -= Math.ceil(
-          -voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-        );
-        // Add a full bucket width to the coordinate below 0 to avoid error's
-        // caused by the modulo operation used in getVoxelOffset.
-        adjustedVoxel[dimensionIndex] += Constants.BUCKET_WIDTH;
-      } else if (voxel[dimensionIndex] >= Constants.BUCKET_WIDTH) {
-        isVoxelOutside = true;
-        neighbourBucketAddress[dimension] += Math.floor(
-          voxel[dimensionIndex] / Constants.BUCKET_WIDTH,
-        );
+        const sign = Math.sign(voxel[dimensionIndex]);
+        const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
+        // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
+        // bucket address
+        neighbourBucketAddress[dimension] += sign * offset;
       }
+      adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);
     }
     return { isVoxelOutside, neighbourBucketAddress, adjustedVoxel };
   };
@@ -247,11 +251,11 @@ export class DataBucket {
     const bucketData = this.getOrCreateData();
     this.markAndAddBucketForUndo();
     labelFunc(bucketData);
-    this.dirty = true;
     this.throttledTriggerLabeled();
   }
 
   markAndAddBucketForUndo() {
+    this.dirty = true;
     if (!bucketsAlreadyInUndoState.has(this)) {
       bucketsAlreadyInUndoState.add(this);
       Store.dispatch(addBucketToUndoAction(this.zoomedAddress, this.getCopyOfData()));

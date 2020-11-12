@@ -157,6 +157,9 @@ object Fox extends FoxImplicits {
       Fox.successful(None)
     }
 
+  def runIfOptionTrue[B](condition: Option[Boolean])(f: => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
+    runIf(condition.getOrElse(false))(f)
+
   def fillOption[A](input: Option[A])(f: => Fox[A])(implicit ec: ExecutionContext): Fox[A] =
     input match {
       case Some(a) => Fox.successful(a)

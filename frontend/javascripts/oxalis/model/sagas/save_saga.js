@@ -379,7 +379,6 @@ function getRetryWaitTime(retryCount: number) {
 export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<void> {
   const fullSaveQueue = yield* select(state => state.save.queue[tracingType]);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
-
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version, type, tracingId } = yield* select(state =>
     Maybe.fromNullable(state.tracing[tracingType]).get(),

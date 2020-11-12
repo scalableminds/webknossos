@@ -4,8 +4,8 @@ import { type Saga, _all, _call, _cancel, fork, take } from "oxalis/model/sagas/
 import { alert } from "libs/window";
 import {
   editVolumeLayerAsync,
+  ensureNoTraceToolInLowResolutions,
   floodFill,
-  disallowVolumeTracingWarning,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
 import {
@@ -15,7 +15,7 @@ import {
   toggleErrorHighlighting,
 } from "oxalis/model/sagas/save_saga";
 import {
-  warnAboutSegmentationOpacity,
+  warnAboutSegmentationZoom,
   watchAnnotationAsync,
 } from "oxalis/model/sagas/annotation_saga";
 import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
@@ -25,7 +25,7 @@ import handleMeshChanges from "oxalis/model/sagas/handle_mesh_changes";
 import isosurfaceSaga from "oxalis/model/sagas/isosurface_saga";
 import { watchMaximumRenderableLayers } from "oxalis/model/sagas/dataset_saga";
 import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
-import watchTasksAsync from "oxalis/model/sagas/task_saga";
+import watchTasksAsync, { warnAboutMagRestriction } from "oxalis/model/sagas/task_saga";
 import loadHistogramData from "oxalis/model/sagas/load_histogram_data_saga";
 
 export default function* rootSaga(): Saga<void> {
@@ -39,15 +39,16 @@ export default function* rootSaga(): Saga<void> {
 function* restartableSaga(): Saga<void> {
   try {
     yield _all([
-      _call(warnAboutSegmentationOpacity),
+      _call(warnAboutSegmentationZoom),
+      _call(warnAboutMagRestriction),
       _call(watchPushSettingsAsync),
       _call(watchSkeletonTracingAsync),
       _call(collectUndoStates),
       _call(saveTracingAsync),
       _call(pushAnnotationAsync),
       _call(editVolumeLayerAsync),
+      _call(ensureNoTraceToolInLowResolutions),
       _call(floodFill),
-      _call(disallowVolumeTracingWarning),
       _call(watchVolumeTracingAsync),
       _call(watchAnnotationAsync),
       _call(loadHistogramData),

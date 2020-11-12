@@ -134,6 +134,12 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 
+// A LabeledVoxelsMap maps from a bucket address
+// to a 2D slice of labeled voxels. These labeled voxels
+// are stored in a Uint8Array in a binary way (which cell
+// id the voxels should be changed to is not encoded).
+export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 
@@ -148,6 +154,11 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
+  // The area of the maximum radius (pi * 300 ^ 2) is 282690.
+  // We multiply this with 5, since the labeling is not done
+  // during mouse movement, but afterwards. So, a bit of a
+  // waiting time should be acceptable.
+  AUTO_FILL_AREA_LIMIT: 5 * 282690,
 
   // The amount of buckets which is required per layer can be customized
   // via the settings. The value which we expose for customization is a factor

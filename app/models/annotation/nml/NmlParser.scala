@@ -39,8 +39,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
             nmlInputStream: InputStream,
             overwritingDataSetName: Option[String],
             isTaskUpload: Boolean,
-            basePath: Option[String] = None)(implicit m: MessagesProvider)
-    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] =
+            basePath: Option[String] = None)(
+      implicit m: MessagesProvider): Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] =
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -92,7 +92,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                  0,
                  zoomLevel,
                  None,
-                 userBoundingBoxes
+                 userBoundingBoxes,
+                 organizationName
                ),
                basePath.getOrElse("") + volumes.head.location)
             )
@@ -113,11 +114,12 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 version = 0,
                 None,
                 treeGroupsAfterSplit,
-                userBoundingBoxes
+                userBoundingBoxes,
+                organizationName
               )
             )
 
-        (skeletonTracing, volumeTracingWithDataLocation, description, organizationName)
+        (skeletonTracing, volumeTracingWithDataLocation, description)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>

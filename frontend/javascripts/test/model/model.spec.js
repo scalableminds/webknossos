@@ -74,18 +74,6 @@ test.beforeEach(t => {
   User.prototype.fetch.returns(Promise.resolve());
 });
 
-// TODO: fix for Store-based model
-// describe("Successful initialization", () => {
-//   it("should resolve", (done) => {
-//     model.fetch()
-//       .then(done)
-//       .catch((error) => {
-//         fail(error);
-//         done();
-//       });
-//   });
-// });
-
 test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", t => {
   t.plan(1);
   const { model } = t.context;

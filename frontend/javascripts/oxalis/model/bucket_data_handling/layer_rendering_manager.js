@@ -19,6 +19,9 @@ import {
   getByteCount,
   getElementClass,
   isLayerVisible,
+  getLayerByName,
+  getResolutionInfo,
+  getDatasetResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -163,14 +166,22 @@ export default class LayerRenderingManager {
     const { dataset, datasetConfiguration } = state;
     const isAnchorPointNew = this.maybeUpdateAnchorPoint(position, logZoomStep);
 
-    if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
+    const layer = getLayerByName(dataset, this.name);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+    const maximumResolutionIndex = resolutionInfo.getHighestResolutionIndex();
+
+    if (logZoomStep > maximumResolutionIndex) {
       // Don't render anything if the zoomStep is too high
       this.textureBucketManager.setActiveBuckets([], this.cachedAnchorPoint, isAnchorPointNew);
       return this.cachedAnchorPoint;
     }
 
     const resolutions = getResolutions(dataset);
-    const subBucketLocality = getSubBucketLocality(position, resolutions[logZoomStep]);
+    const subBucketLocality = getSubBucketLocality(
+      position,
+      resolutionInfo.getResolutionByIndexWithFallback(logZoomStep, datasetResolutionInfo),
+    );
     const areas = getAreasFromState(state);
 
     const matrix = getZoomedMatrix(state.flycam);
@@ -244,7 +255,7 @@ export default class LayerRenderingManager {
           // In general, pull buckets which are not available but should be sent to the GPU
           const missingBuckets = bucketsWithPriorities
             .filter(({ bucket }) => !bucket.hasData())
-            .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_ZOOM_STEP)
+            .filter(({ bucket }) => resolutionInfo.hasIndex(bucket.zoomedAddress[3]))
             .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
 
           this.pullQueue.addAll(missingBuckets);
@@ -263,8 +274,14 @@ export default class LayerRenderingManager {
 
   maybeUpdateAnchorPoint(position: Vector3, logZoomStep: number): boolean {
     const state = Store.getState();
-    const resolutions = getResolutions(state.dataset);
-    const resolution = resolutions[logZoomStep];
+    const layer = getLayerByName(state.dataset, this.name);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const datasetResolutionInfo = getDatasetResolutionInfo(state.dataset);
+
+    const resolution = resolutionInfo.getResolutionByIndexWithFallback(
+      logZoomStep,
+      datasetResolutionInfo,
+    );
     const addressSpaceDimensions = getAddressSpaceDimensions(
       state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
     );

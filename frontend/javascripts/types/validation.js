@@ -43,6 +43,10 @@ export const validateObjectWithType = (type: string, json: Object) => {
 };
 
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
+export const isDatasourceJSONValid = (json: Object) =>
+  validator.validate(json, {
+    $ref: "#/definitions/types::DatasourceConfiguration",
+  }).valid;
 export const validateUserSettingsJSON = validateWithSchema("types::UserSettings");
 export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",

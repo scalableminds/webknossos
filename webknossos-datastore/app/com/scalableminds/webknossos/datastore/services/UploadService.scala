@@ -33,7 +33,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   val savedUploadChunks: mutable.HashMap[String, (Long, mutable.HashSet[Int])] = mutable.HashMap.empty
 
-  def isKnownUpload(uploadId: String): Boolean = savedUploadChunks.contains(uploadId)
+  cleanUpOrphanFileChunks()
+
+  def isKnownUpload(uploadId: String): Boolean = savedUploadChunks.synchronized(savedUploadChunks.contains(uploadId))
 
   def handleUploadChunk(uploadId: String,
                         datasourceId: DataSourceId,
@@ -129,4 +131,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       }
     } yield (dataSourceId, uploadInformation.initialTeams)
   }
+
+  def cleanUpOrphanFileChunks() =
+    PathUtils
+      .listFiles(dataBaseDir, PathUtils.fileExtensionFilter("temp"))
+      .map { tempUploadFiles =>
+        tempUploadFiles.map { uploadFile =>
+          val uploadId = uploadFile.getFileName.toString.replaceFirst(".temp", "")
+          if (!isKnownUpload(uploadId)) {
+            uploadFile.toFile.delete()
+          }
+        }
+      }
+      .map(_ => ())
 }

@@ -19,7 +19,9 @@ import {
   triggerIsosurfaceDownloadAction,
   updateLocalMeshMetaDataAction,
   updateRemoteMeshMetaDataAction,
+  removeIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
+import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
@@ -136,6 +138,9 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
   };
 
   render() {
+    const moveToIsosurface = (seedPosition: Vector3) => {
+      Store.dispatch(setPositionAction(seedPosition));
+    };
     const downloadButton = (segmentId: number) => (
       <Tooltip title="download isosurface">
         <Icon
@@ -145,22 +150,39 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         />
       </Tooltip>
     );
+    const deleteButton = (segmentId: number) => (
+      <Tooltip title="delete isosurface">
+        <Icon
+          key="delete-button"
+          type="delete"
+          onClick={() => Store.dispatch(removeIsosurfaceAction(segmentId))}
+        />
+      </Tooltip>
+    );
     const convertHSLAToCSSString = ([h, s, l, a]) =>
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
-    const renderListItem = (cellId: number) => (
-      <List.Item actions={[downloadButton(cellId)]} style={{ marginBottom: -15 }}>
-        <span
-          className="circle"
-          style={{
-            backgroundColor: convertCellIdToCSS(cellId),
-          }}
-        />{" "}
-        Segment {cellId}
-      </List.Item>
-    );
+    const renderListItem = (isosurface: Object) => {
+      const { segmentId, seedPosition } = isosurface;
+      return (
+        <List.Item
+          actions={[downloadButton(segmentId), deleteButton(segmentId)]}
+          style={{ marginBottom: -15 }}
+        >
+          <div onClick={() => moveToIsosurface(seedPosition)}>
+            <span
+              className="circle"
+              style={{
+                backgroundColor: convertCellIdToCSS(segmentId),
+              }}
+            />{" "}
+            Segment {segmentId}
+          </div>
+        </List.Item>
+      );
+    };
 
     return (
       <div className="padded-tab-content">
@@ -191,7 +213,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         </ButtonGroup>
 
         <List
-          dataSource={Object.keys(this.props.isosurfaces)}
+          dataSource={Object.values(this.props.isosurfaces)}
           size="small"
           split={false}
           renderItem={renderListItem}

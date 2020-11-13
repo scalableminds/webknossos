@@ -152,6 +152,7 @@ function* ensureSuitableIsosurface(
   if (!layer) {
     return;
   }
+  const clickedPosition = seedPosition;
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const { resolutions } = layer;
@@ -169,6 +170,7 @@ function* ensureSuitableIsosurface(
     clippedPosition,
     zoomStep,
     resolutions,
+    clickedPosition,
     removeExistingIsosurface,
   );
 }
@@ -180,11 +182,14 @@ function* loadIsosurfaceWithNeighbors(
   clippedPosition: Vector3,
   zoomStep: number,
   resolutions: Array<Vector3>,
+  segmentPosition: Vector3,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
   let positionsToRequest = [clippedPosition];
-  yield* put(addIsosurfaceAction(segmentId));
+  if (segmentPosition) {
+    yield* put(addIsosurfaceAction(segmentId, segmentPosition));
+  }
   while (positionsToRequest.length > 0) {
     const position = positionsToRequest.shift();
     const neighbors = yield* call(

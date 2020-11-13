@@ -191,7 +191,7 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         </ButtonGroup>
 
         <List
-          dataSource={this.props.isosurfaces}
+          dataSource={Object.keys(this.props.isosurfaces)}
           size="small"
           split={false}
           renderItem={renderListItem}

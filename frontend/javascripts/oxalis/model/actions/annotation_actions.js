@@ -6,6 +6,7 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
 import type { UserBoundingBox } from "oxalis/store";
 
 type InitializeAnnotationAction = {
@@ -101,6 +102,7 @@ export type RemoveIsosurfaceAction = {
 export type AddIsosurfaceAction = {
   type: "ADD_ISOSURFACE",
   cellId: number,
+  seedPosition: Vector3,
 };
 
 export type AnnotationActionTypes =
@@ -241,7 +243,11 @@ export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction =
   cellId,
 });
 
-export const addIsosurfaceAction = (cellId: number): AddIsosurfaceAction => ({
+export const addIsosurfaceAction = (
+  cellId: number,
+  seedPosition: Vector3,
+): AddIsosurfaceAction => ({
   type: "ADD_ISOSURFACE",
   cellId,
+  seedPosition,
 });

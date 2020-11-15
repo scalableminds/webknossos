@@ -268,14 +268,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       organization <- organizationDAO.findOneByName(source.id.team)
       defaultViewConfiguration: Option[String] = source.defaultViewConfiguration.map(Json.toJson(_).toString)
       q = sqlu"""update webknossos.dataSets
-                    set _dataStore = ${dataStoreName},
+                    set _dataStore = $dataStoreName,
                         _organization = ${organization._id.id},
                         inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
                         defaultViewConfiguration = #${optionLiteral(defaultViewConfiguration)},
-                        isUsable = ${isUsable},
+                        isUsable = $isUsable,
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
                         status = ${source.statusOpt.getOrElse("").take(1024)}
-                   where _id = ${id}"""
+                   where _id = $id"""
       _ <- run(q)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
@@ -302,7 +302,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] =
     for {
       resolution <- Point3D.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
@@ -321,20 +320,19 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
   def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = ${_dataSet.id}"
     val insertQueries = dataLayersOpt match {
-      case Some(dataLayers: List[DataLayer]) => {
-        dataLayers.map { layer =>
+      case Some(dataLayers: List[DataLayer]) =>
+        dataLayers.flatMap { layer =>
           layer.resolutions.map { resolution =>
             {
               sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
                        values(${_dataSet.id}, ${layer.name}, '#${writeStructTuple(resolution.toList.map(_.toString))}')"""
             }
           }
-        }.flatten
-      }
+        }
       case _ => List()
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
+      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable))
     } yield ()
   }
 
@@ -445,10 +443,11 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         dataLayers.map(d => sanitize(d.name)))}"
     val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
 
+    // TODO if we redefine dataSet.usable, this can be changed back
     val queries = source.toUsable match {
-      case Some(usable) =>
+      case Some(usable) if usable.dataLayers.nonEmpty =>
         getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(_dataSet, _))
-      case None => List(clearQuery)
+      case _ => List(clearQuery)
     }
     for {
       _ <- run(DBIO.sequence(queries))

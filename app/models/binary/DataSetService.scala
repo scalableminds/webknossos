@@ -64,7 +64,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       dataSource: InboxDataSource,
       publication: Option[ObjectId] = None
   ): Fox[ObjectId] = {
-    implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")

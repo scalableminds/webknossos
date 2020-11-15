@@ -132,14 +132,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     } yield (dataSourceId, uploadInformation.initialTeams)
   }
 
-  def cleanUpOrphanFileChunks() =
+  def cleanUpOrphanFileChunks(): Box[Unit] =
     PathUtils
       .listFiles(dataBaseDir, PathUtils.fileExtensionFilter("temp"))
       .map { tempUploadFiles =>
         tempUploadFiles.map { uploadFile =>
-          val uploadId = uploadFile.getFileName.toString.replaceFirst(".temp", "")
+          // file name format is .${uploadId}.temp
+          val uploadId = uploadFile.getFileName.toString.drop(1).dropRight(5)
           if (!isKnownUpload(uploadId)) {
-            uploadFile.toFile.delete()
+            try {
+              uploadFile.toFile.delete()
+            }
           }
         }
       }

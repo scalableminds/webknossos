@@ -38,6 +38,7 @@ test("createTaskType and deleteTaskType", async t => {
       branchPointsAllowed: true,
       mergerMode: false,
       allowedModes: ["orthogonal"],
+      resolutionRestrictions: {},
     },
     recommendedConfiguration: null,
     tracingType: "skeleton",

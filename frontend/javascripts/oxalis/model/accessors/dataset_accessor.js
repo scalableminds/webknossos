@@ -179,18 +179,39 @@ function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
 
-export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
-  return _.chain(dataset.dataSource.dataLayers)
-    .map(dataLayer => dataLayer.resolutions)
-    .sortBy(resolutions => resolutions.length)
-    .last()
+export function getResolutionUnion(
+  dataset: APIDataset,
+  shouldThrow: boolean = false,
+): Array<Vector3> {
+  const resolutionUnionDict = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      const key = _.max(resolution);
+
+      if (resolutionUnionDict[key] == null) {
+        resolutionUnionDict[key] = resolution;
+      } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
+        // the same resolution was already picked up
+      } else if (shouldThrow) {
+        throw new Error(
+          `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
+            "-",
+          )} != ${resolution.join("-")}.`,
+        );
+      } else {
+        // The resolutions don't match, but shouldThrow is false
+      }
+    }
+  }
+
+  return _.chain(resolutionUnionDict)
+    .values()
+    .sortBy(_.max)
     .valueOf();
 }
 
-export function convertToDenseResolution(
-  resolutions: Array<Vector3>,
-  fallbackDenseResolutions?: Array<Vector3>,
-): Array<Vector3> {
+export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
   // Each resolution entry can be characterized by it's greatest resolution dimension.
   // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
   // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
@@ -204,31 +225,25 @@ export function convertToDenseResolution(
   }
   const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
   const resolutionsLookUp = _.keyBy(resolutions, _.max);
-  const fallbackResolutionsLookUp = _.keyBy(fallbackDenseResolutions || [], _.max);
 
   return _.range(0, paddedResolutionCount).map(exp => {
     const resPower = 2 ** exp;
     // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
-    const fallback = fallbackResolutionsLookUp[resPower] || [resPower, resPower, resPower];
+    const fallback = [resPower, resPower, resPower];
     return resolutionsLookUp[resPower] || fallback;
   });
 }
 
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
-  // unequal resolutions will result in undefined behavior.
-  // However, if resolutions are subset of each other, everything should be fine.
-  // For that case, returning the longest resolutions array should suffice
+  // mismatching resolutions will result in undefined behavior (rather than
+  // causing a hard error). During the model initialization, an error message
+  // will be shown, though.
 
   // In the long term, getResolutions should not be used anymore.
   // Instead, all the code should use the ResolutionInfo class which represents
-  // exactly which resolutions exist.
-  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
-  if (!mostExtensiveResolutions) {
-    return [];
-  }
-
-  return convertToDenseResolution(mostExtensiveResolutions);
+  // exactly which resolutions exist per layer.
+  return convertToDenseResolution(getResolutionUnion(dataset));
 }
 
 // _getResolutions itself is not very performance intensive, but other functions which rely

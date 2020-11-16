@@ -135,9 +135,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const xOffset = histogramMin - minRange;
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
-    // Here we apply the logarithm to all elements and divide by the highest logarithmic value to have an interval from [0,1].
-    // Then we scale this up to the whole height of the histogram canvas.
-    // Note: We add the 1 as otherwise a value of zero would lead to negative infinity and not 0.
+    // Scale data to the height of the histogram canvas
     const downscaledData = elementCounts.map(value => (value / maxValue) * canvasHeight);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);

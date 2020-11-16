@@ -654,11 +654,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         layerName => layers[layerName].isDisabled || layers[layerName].alpha === 0,
       ) != null;
     return (
-      <Collapse
-        bordered={false}
-        defaultActiveKey={["1", "2", "3", "4"]}
-        className="ant-collapse-with-content-overflow"
-      >
+      <Collapse bordered={false} defaultActiveKey={["1", "2", "3", "4"]}>
         <Panel header={this.renderPanelHeader(hasInvisibleLayers)} key="1">
           {layerSettings}
         </Panel>

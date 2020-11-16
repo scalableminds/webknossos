@@ -39,6 +39,7 @@ type HistogramState = {
 const uint24Colors = [[255, 65, 54], [46, 204, 64], [24, 144, 255]];
 const canvasHeight = 100;
 const canvasWidth = 300;
+const additionalLeftMargin = 28;
 
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
@@ -73,10 +74,11 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       return;
     }
     const ctx = this.canvasRef.getContext("2d");
-    ctx.translate(0, canvasHeight);
+    ctx.translate(additionalLeftMargin, canvasHeight);
     ctx.scale(1, -1);
     ctx.lineWidth = 1;
     ctx.lineJoin = "round";
+    ctx.font = "10px Arial";
     this.updateCanvas();
   }
 
@@ -133,7 +135,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const histogramLength = histogramMax - histogramMin;
     const fullLength = maxRange - minRange;
     const xOffset = histogramMin - minRange;
-    this.drawYAxis(ctx);
+    this.drawYAxis(ctx, maxValue);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     // Here we apply the logarithm to all elements and divide by the highest logarithmic value to have an interval from [0,1].
@@ -162,19 +164,32 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.fill(activeRegion);
   };
 
-  drawYAxis = (ctx: CanvasRenderingContext2D) => {
+  drawYAxis = (ctx: CanvasRenderingContext2D, maxValue: number) => {
     // Maximum value of the y axis is always 10. Therefore the axis is independent from any data.
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(0, canvasHeight);
     const numberOfScaleLines = 5;
     const lineWidth = 8;
-    const intervalSize = 2;
-    for (let interval = 1; interval <= numberOfScaleLines; interval++) {
+    const offset = 0.5;
+    const textHeightOffset = 4;
+    for (let lineNumber = 0; lineNumber < numberOfScaleLines; lineNumber++) {
       // We use canvasHeight - 1 because else half of the top line would be cut off.
-      const lineHeight = Math.round(Math.log10(intervalSize * interval) * (canvasHeight - 1));
+      const indexValue = (lineNumber + offset) / numberOfScaleLines;
+      const lineHeight = indexValue * canvasHeight;
+      const value = (indexValue / numberOfScaleLines) * maxValue;
       ctx.moveTo(0, lineHeight);
       ctx.lineTo(lineWidth, lineHeight);
+
+      if (lineNumber % 2 === 0) {
+        const valueAsString = value.toExponential(0);
+        // Scale the canvas back to how it should be because otherwise the text would be updated down.
+        ctx.scale(1, -1);
+        ctx.translate(-additionalLeftMargin, 0);
+        ctx.fillText(valueAsString, 0, -lineHeight + textHeightOffset);
+        ctx.translate(additionalLeftMargin, 0);
+        ctx.scale(1, -1);
+      }
     }
   };
 
@@ -222,8 +237,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           ref={ref => {
             this.canvasRef = ref;
           }}
-          width={canvasWidth}
+          width={canvasWidth + additionalLeftMargin}
           height={canvasHeight}
+          style={{ marginLeft: -additionalLeftMargin }}
         />
         <Slider
           range

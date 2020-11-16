@@ -107,6 +107,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       let dataSourceMessages = [];
       if (dataset.isForeign) {
         dataSource = await readDatasetDatasource(dataset);
+        this.setState({ savedDataSourceOnServer: dataSource });
       } else {
         let savedDataSourceOnServer;
         let inferredDataSource;
@@ -213,8 +214,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         ),
       });
     }
-    // todo: Show better error, when datasource json is invalid. Make it more alerting.
-    // If thats the case, then the json cannot be shown. Thus do not offer this option. it would only contain a status string.
 
     let message;
     let type = "info";
@@ -359,7 +358,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   handleSubmit = (e: SyntheticEvent<>) => {
-    // TODO: Adjust me so I only send updates to the backend with the datasource properties json if that option did change compared to whats currently saved.
     e.preventDefault();
     // Ensure that all form fields are in sync
     this.syncDataSourceFields();
@@ -389,14 +387,19 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       await updateDatasetTeams(dataset, teamIds);
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
+      const didDatasourceChange =
+        _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
       if (
         this.state.dataset != null &&
         !this.state.dataset.isForeign &&
-        !this.state.dataset.dataStore.isConnector
+        !this.state.dataset.dataStore.isConnector &&
+        didDatasourceChange
       ) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
-        // TODO: fix this.
-        this.setState({ savedDataSourceOnServer: null, differenceBetweenDatasources: null });
+        this.setState({
+          savedDataSourceOnServer: dataSource,
+          differenceBetweenDatasources: {},
+        });
       }
 
       const verb = this.props.isEditingMode ? "updated" : "imported";

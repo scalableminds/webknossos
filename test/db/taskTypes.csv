@@ -1,3 +1,3 @@
-_id,_team,summary,description,settings_allowedModes,settings_preferredMode,settings_branchPointsAllowed,settings_somaClickingAllowed,settings_mergerMode,settings_allowedMagnifications,recommendedConfiguration,tracingType,created,isDeleted
-'570b9f4c2a7c0e4c008da6ee','570b9f4b2a7c0e3b008da6ec','ek_0563_BipolarCells','Check those cells out!','{orthogonal,oblique,flight}',,t,t,f,,,'skeleton','2016-04-11T12:57:48.000Z',f
-'570b9f4c2a7c0e4c008da6ff','69882b370d889b84020efd4f','ek_0674_BipolarCells','Check those cells out!','{orthogonal,oblique,flight}',,t,t,f,,,'skeleton','2016-04-11T12:57:48.000Z',f
+_id,_team,summary,description,settings_allowedModes,settings_preferredMode,settings_branchPointsAllowed,settings_somaClickingAllowed,settings_mergerMode,settings_resolutionRestrictions_min,settings_resolutionRestrictions_ax,recommendedConfiguration,tracingType,created,isDeleted
+'570b9f4c2a7c0e4c008da6ee','570b9f4b2a7c0e3b008da6ec','ek_0563_BipolarCells','Check those cells out!','{orthogonal,oblique,flight}',,t,t,f,,,,'skeleton','2016-04-11T12:57:48.000Z',f
+'570b9f4c2a7c0e4c008da6ff','69882b370d889b84020efd4f','ek_0674_BipolarCells','Check those cells out!','{orthogonal,oblique,flight}',,t,t,f,,,,'skeleton','2016-04-11T12:57:48.000Z',f

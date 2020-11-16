@@ -160,15 +160,6 @@ object ZipIO extends LazyLogging {
   def forallZipEntries(zip: ZipFile, includeHiddenFiles: Boolean = false)(f: ZipEntry => Boolean): Boolean =
     zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).forall(f(_))
 
-  def withUnziped[A](inputStream: InputStream)(f: (Path, InputStream) => A)(
-      implicit ec: ExecutionContext): Box[List[A]] = {
-    val tempFile = File.createTempFile("data", "zip")
-    tempFile.deleteOnExit()
-    val out = new FileOutputStream(tempFile)
-    IOUtils.copy(inputStream, out)
-    withUnziped(tempFile)(f)
-  }
-
   def withUnziped[A](file: File)(f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(withUnziped(_)((name, is) => Full(f(name, is))))
 

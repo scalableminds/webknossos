@@ -133,7 +133,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const histogramLength = histogramMax - histogramMin;
     const fullLength = maxRange - minRange;
     const xOffset = histogramMin - minRange;
-    this.drawYAxis(ctx);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
     // Here we apply the logarithm to all elements and divide by the highest logarithmic value to have an interval from [0,1].
@@ -160,22 +159,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
-  };
-
-  drawYAxis = (ctx: CanvasRenderingContext2D) => {
-    // Maximum value of the y axis is always 10. Therefore the axis is independent from any data.
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, canvasHeight);
-    const numberOfScaleLines = 5;
-    const lineWidth = 8;
-    const intervalSize = 2;
-    for (let interval = 1; interval <= numberOfScaleLines; interval++) {
-      // We use canvasHeight - 1 because else half of the top line would be cut off.
-      const lineHeight = Math.round(Math.log10(intervalSize * interval) * (canvasHeight - 1));
-      ctx.moveTo(0, lineHeight);
-      ctx.lineTo(lineWidth, lineHeight);
-    }
   };
 
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {

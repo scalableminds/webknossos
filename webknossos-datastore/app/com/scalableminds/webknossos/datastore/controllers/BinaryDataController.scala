@@ -63,9 +63,18 @@ class BinaryDataController @Inject()(
   ) = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
+        val t = System.currentTimeMillis()
         for {
           (dataSource, dataLayer) <- getDataSourceAndDataLayer(organizationName, dataSetName, dataLayerName)
           (data, indices) <- requestData(dataSource, dataLayer, request.body)
+          duration = System.currentTimeMillis() - t
+          _ = if (duration > 10000)
+            logger.info(
+              s"Complete data request took $duration ms.\n"
+                + s"  dataSource: $organizationName/$dataSetName\n"
+                + s"  dataLayer: $dataLayerName\n"
+                + s"  requestCount: ${request.body.size}"
+                + s"  requestHead: ${request.body.headOption}")
         } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
       }
     }

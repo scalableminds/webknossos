@@ -529,6 +529,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_TREE_COLOR": {
+          const { color, treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                tracing: { skeleton: { trees: { [tree.treeId]: { color: { $set: color } } } } },
+              }),
+            )
+            .getOrElse(state);
+        }
+
         case "SHUFFLE_TREE_COLOR": {
           return getTree(skeletonTracing, action.treeId)
             .chain(tree => shuffleTreeColor(skeletonTracing, tree))

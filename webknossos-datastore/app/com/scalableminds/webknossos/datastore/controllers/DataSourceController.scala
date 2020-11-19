@@ -1,18 +1,20 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import java.io.File
-import java.nio.file.Files
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  InboxDataSource,
+  InboxDataSourceLike,
+  UnusableInboxDataSource
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
-import play.api.data.Forms.{nonEmptyText, tuple, boolean}
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
 import play.api.mvc.PlayBodyParsers
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -160,11 +162,19 @@ class DataSourceController @Inject()(
             "dataSource.notFound") ~> 404
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
                                                                         previousDataSource.toUsable)
+          previousDataSourceJson = previousDataSource match {
+            case usableDataSource: DataSource => Json.toJson(usableDataSource)
+            case unusableDataSource: UnusableInboxDataSource =>
+              unusableDataSource.existingDataSourceProperties match {
+                case Some(existingConfig) => existingConfig
+                case None                 => Json.toJson(unusableDataSource)
+              }
+          }
         } yield {
           Ok(
             Json.obj(
               "dataSource" -> dataSource,
-              "previousDataSource" -> previousDataSource,
+              "previousDataSource" -> previousDataSourceJson,
               "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
             ))
         }

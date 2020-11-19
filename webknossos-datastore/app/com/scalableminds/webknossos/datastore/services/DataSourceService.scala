@@ -19,9 +19,9 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
-import org.joda.time.format.ISODateTimeFormat
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -212,7 +212,9 @@ class DataSourceService @Inject()(
         case Full(dataSource) =>
           dataSource.copy(id)
         case e =>
-          UnusableDataSource(id, s"Error: Invalid json format in $propertiesFile: $e")
+          UnusableDataSource(id,
+                             s"Error: Invalid json format in $propertiesFile: $e",
+                             existingDataSourceProperties = JsonHelper.jsonFromFile(propertiesFile, path).toOption)
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")

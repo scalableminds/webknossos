@@ -136,15 +136,19 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     PathUtils
       .listFiles(dataBaseDir, PathUtils.fileExtensionFilter("temp"))
       .map { tempUploadFiles =>
-        tempUploadFiles.map { uploadFile =>
+        val uploadIds = tempUploadFiles.map { uploadFile =>
           // file name format is .${uploadId}.temp
           val uploadId = uploadFile.getFileName.toString.drop(1).dropRight(5)
           if (!isKnownUpload(uploadId)) {
             try {
               uploadFile.toFile.delete()
+            } catch {
+              case _: Exception => println(s"Could not delete file $uploadId")
             }
           }
-        }
+          uploadId
+        }.mkString(", ")
+        if (uploadIds != "") println(s"Deleted the following $uploadIds")
       }
       .map(_ => ())
 }

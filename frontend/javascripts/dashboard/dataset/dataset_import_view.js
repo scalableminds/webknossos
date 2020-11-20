@@ -116,7 +116,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           messages: dataSourceMessages,
           previousDataSource: savedDataSourceOnServer,
         } = await getDatasetDatasource(dataset));
-        if (isDatasourceJSONValid(savedDataSourceOnServer)) {
+        const didParsingTheSavedDataSourceJSONSucceed =
+          savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
+        if (didParsingTheSavedDataSourceJSONSucceed) {
           dataSource = savedDataSourceOnServer;
         } else {
           // If the current datasource json is invalid, the inferred version should be used automatically.
@@ -219,51 +221,55 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     let type = "info";
     const didParsingTheSavedDataSourceJSONSucceed = savedDataSourceOnServer.status == null;
     if (!didParsingTheSavedDataSourceJSONSucceed) {
+      // If the datasource-properties.json on the server is an invalid JSON.
       message = (
         <div>
-          The current datasource-properties.json on the server seems to be invalid and webKnossos
-          could not parse this file. The settings below are suggested by webKnossos and should be
-          adjusted. <br />
+          The current datasource-properties.json on the server seems to be in an invalid JSON format
+          and webKnossos could not parse this file. The settings below are suggested by webKnossos
+          and should be adjusted. <br />
           Be aware that webKnossos cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
       );
       type = "warning";
     } else if (!isDatasourceJSONValid(savedDataSourceOnServer)) {
-      // TODO: why it this never the case? Shall this case be removed?
+      // If the datasource-properties.json on the server has invalid or missing properties but is a valid JSON.
       message = (
         <div>
-          The current datasource-properties.json on the server seems to be invalid. Thus the
-          datasource-properties.json settings below were suggested by webKnossos. The current
-          content of the datasource-properties.json can be viewed{" "}
+          The current datasource-properties.json on the server seems to have invalid or missing
+          properties. <br />
           <a
             href="#"
             onClick={() =>
               showJSONModal(
                 "Current and invalid datasource-properties.json",
-                this.state.savedDataSourceOnServer,
+                this.state.inferredDataSource,
               )
             }
           >
-            here
-          </a>
-          . The JSON-encoded difference between the invalid and the suggested version can be
-          inspected{" "}
+            Here
+          </a>{" "}
+          are suggested settings from webKnossos. But be aware that properties like the voxel size
+          or the largest segment id cannot be detected correctly. <br />
+          If you want to apply those settings, click{" "}
           <a
             href="#"
-            onClick={() =>
-              showJSONModal(
-                "Difference to the suggested datasource-properties.json",
-                this.state.differenceBetweenDatasources,
-              )
-            }
+            onClick={() => {
+              this.props.form.setFieldsValue({
+                dataSourceJson: jsonStringify(inferredDataSource),
+              });
+              this.setState({
+                didApplyDifferenceBetweenDatasources: true,
+              });
+            }}
           >
             here
           </a>
+          .
         </div>
       );
     } else if (didApplyDifferenceBetweenDatasources === false && inferredDataSource != null) {
-      // The datasource-properties.json saved on the server is valid and the user merged the suggested settings.
+      // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
           A datasource-properties.json file was found for this dataset. However, webKnossos found
@@ -357,13 +363,32 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
+  didDatasourceChange(dataSource: Object) {
+    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
+  }
+
+  isOnlyDatasourceIncorrectAndNotEdited() {
+    const validationSummary = this.getFormValidationSummary();
+    if (_.size(validationSummary) === 1 && validationSummary.data) {
+      try {
+        const dataSource = JSON.parse(this.props.form.getFieldValue("dataSourceJson"));
+        const didNotEditDatasource = !this.didDatasourceChange(dataSource);
+        return didNotEditDatasource;
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
   handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
     // Ensure that all form fields are in sync
     this.syncDataSourceFields();
     this.props.form.validateFields(async (err, formValues: FormData) => {
       const { dataset, datasetDefaultConfiguration } = this.state;
-      if (err || !dataset) {
+      const isOnlyDatasourceIncorrectAndNotEdited = this.isOnlyDatasourceIncorrectAndNotEdited();
+      if ((err && !isOnlyDatasourceIncorrectAndNotEdited) || !dataset) {
         this.switchToProblematicTab();
         Toast.warning(messages["dataset.import.invalid_fields"]);
         return;
@@ -387,13 +412,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       await updateDatasetTeams(dataset, teamIds);
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
-      const didDatasourceChange =
-        _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
       if (
         this.state.dataset != null &&
         !this.state.dataset.isForeign &&
         !this.state.dataset.dataStore.isConnector &&
-        didDatasourceChange
+        this.didDatasourceChange(dataSource)
       ) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
         this.setState({
@@ -403,7 +426,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       }
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
-      Toast.success(`Successfully ${verb} ${this.props.datasetId.name}`);
+      Toast.success(`Successfully ${verb} ${this.props.datasetId.name}.`);
       datasetCache.clear();
       trackAction(`Dataset ${verb}`);
       this.props.onComplete();

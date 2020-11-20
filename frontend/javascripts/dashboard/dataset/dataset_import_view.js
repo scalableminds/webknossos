@@ -139,6 +139,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         throw new Error("No datasource received from server.");
       }
       if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
+        // If the datasource-properties.json could not be parsed due to schema errors,
+        // we replace it with version that is at least parsable.
         const datasetClone = (_.cloneDeep(dataset): any);
         datasetClone.dataSource = _.cloneDeep(dataSource);
         dataset = (datasetClone: APIDataset);
@@ -241,10 +243,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           <a
             href="#"
             onClick={() =>
-              showJSONModal(
-                "Current and invalid datasource-properties.json",
-                this.state.inferredDataSource,
-              )
+              showJSONModal("Current and invalid datasource-properties.json", inferredDataSource)
             }
           >
             Here
@@ -281,7 +280,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             onClick={() =>
               showJSONModal(
                 "Difference to suggested datasource-properties.json",
-                this.state.differenceBetweenDatasources,
+                differenceBetweenDatasources,
               )
             }
           >
@@ -305,10 +304,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           <a
             href="#"
             onClick={() =>
-              showJSONModal(
-                "The suggested datasource-properties.json",
-                this.state.inferredDataSource,
-              )
+              showJSONModal("The suggested datasource-properties.json", inferredDataSource)
             }
           >
             these settings
@@ -413,9 +409,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
       const dataSource = JSON.parse(formValues.dataSourceJson);
       if (
-        this.state.dataset != null &&
-        !this.state.dataset.isForeign &&
-        !this.state.dataset.dataStore.isConnector &&
+        dataset != null &&
+        !dataset.isForeign &&
+        !dataset.dataStore.isConnector &&
         this.didDatasourceChange(dataSource)
       ) {
         await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
@@ -437,8 +433,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (this.state.dataset == null) {
       return null;
     }
-    const messageElements = [];
     const { status } = this.state.dataset.dataSource;
+    const messageElements = [];
     if (status != null) {
       messageElements.push(
         // This status is only used, when the dataSource.json is missing.
@@ -459,7 +455,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 <br />
                 Status:
                 <br />
-                {this.state.dataset.dataSource.status}
+                {status}
               </span>
             }
             type="error"

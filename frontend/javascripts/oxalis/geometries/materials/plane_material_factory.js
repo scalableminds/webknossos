@@ -25,6 +25,7 @@ import {
   getElementClass,
   getBoundaries,
   getEnabledLayers,
+  getUnrenderableLayersForCurrentZoom,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getRequestLogZoomStep, getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -212,11 +213,18 @@ class PlaneMaterialFactory {
       const layerName = sanitizeName(dataLayer.name);
       this.uniforms[`${layerName}_maxZoomStep`] = {
         type: "f",
-        value: dataLayer.cube.MAX_ZOOM_STEP,
+        value: dataLayer.cube.resolutionInfo.getHighestResolutionIndex(),
       };
       this.uniforms[`${layerName}_alpha`] = {
         type: "f",
         value: 1,
+      };
+      // If the `_unrenderable` uniform is true, the layer
+      // cannot (and should not) be rendered in the
+      // current mag.
+      this.uniforms[`${layerName}_unrenderable`] = {
+        type: "f",
+        value: 0,
       };
     }
 
@@ -328,6 +336,22 @@ class PlaneMaterialFactory {
         storeState => getRequestLogZoomStep(storeState),
         zoomStep => {
           this.uniforms.zoomStep.value = zoomStep;
+        },
+        true,
+      ),
+    );
+
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getUnrenderableLayersForCurrentZoom(storeState),
+        unrenderableLayers => {
+          const unrenderableLayerNames = unrenderableLayers.map(l => l.name);
+          for (const dataLayer of Model.getAllLayers()) {
+            const sanitizedName = sanitizeName(dataLayer.name);
+            this.uniforms[`${sanitizedName}_unrenderable`].value = unrenderableLayerNames.includes(
+              dataLayer.name,
+            );
+          }
         },
         true,
       ),

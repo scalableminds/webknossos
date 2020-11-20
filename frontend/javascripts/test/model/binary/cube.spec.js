@@ -10,6 +10,7 @@ import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
+import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -54,7 +55,8 @@ test.beforeEach(t => {
   const mockedLayer = {
     resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
   };
-  const cube = new Cube([100, 100, 100], 3, "uint32", mockedLayer);
+  const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
+  const cube = new Cube([100, 100, 100], resolutionInfo, "uint32", false);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -98,7 +100,7 @@ test("GetBucket should only create one bucket on getOrCreateBucket()", t => {
 
 test("Voxel Labeling should request buckets when temporal buckets are created", t => {
   const { cube, pullQueue } = t.context;
-  cube.labelVoxel([1, 1, 1], 42);
+  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
 
   t.plan(2);
   return runAsync([
@@ -116,7 +118,7 @@ test("Voxel Labeling should request buckets when temporal buckets are created", 
 
 test("Voxel Labeling should push buckets after they were pulled", t => {
   const { cube, pushQueue } = t.context;
-  cube.labelVoxel([1, 1, 1], 42);
+  cube.labelVoxelInResolution([1, 1, 1], 42, 0);
 
   t.plan(3);
   let bucket;
@@ -142,7 +144,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   bucket.pull();
   bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
 
-  cube.labelVoxel([0, 0, 0], 42);
+  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
 
   t.plan(1);
   return runAsync([
@@ -155,9 +157,9 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
 test("Voxel Labeling should only create one temporal bucket", t => {
   const { cube } = t.context;
   // Creates temporal bucket
-  cube.labelVoxel([0, 0, 0], 42);
+  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
   // Uses existing temporal bucket
-  cube.labelVoxel([1, 0, 0], 43);
+  cube.labelVoxelInResolution([1, 0, 0], 43, 0);
 
   const data = cube.getBucket([0, 0, 0, 0]).getData();
 
@@ -175,7 +177,7 @@ test("Voxel Labeling should merge incoming buckets", t => {
   // Second voxel should be merged into new data
   oldData[1] = 67890;
 
-  cube.labelVoxel([0, 0, 0], 424242);
+  cube.labelVoxelInResolution([0, 0, 0], 424242, 0);
 
   bucket.pull();
   bucket.receiveData(new Uint8Array(oldData.buffer));
@@ -188,15 +190,15 @@ test("Voxel Labeling should merge incoming buckets", t => {
 test("getDataValue() should return the raw value without a mapping", t => {
   const { cube } = t.context;
   const value = 1 * (1 << 16) + 2 * (1 << 8) + 3;
-  cube.labelVoxel([0, 0, 0], value);
+  cube.labelVoxelInResolution([0, 0, 0], value, 0);
 
   t.is(cube.getDataValue([0, 0, 0]), value);
 });
 
 test("getDataValue() should return the mapping value if available", t => {
   const { cube } = t.context;
-  cube.labelVoxel([0, 0, 0], 42);
-  cube.labelVoxel([1, 1, 1], 43);
+  cube.labelVoxelInResolution([0, 0, 0], 42, 0);
+  cube.labelVoxelInResolution([1, 1, 1], 43, 0);
 
   const mapping = [];
   mapping[42] = 1;

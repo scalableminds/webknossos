@@ -9,20 +9,21 @@ import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{
-  BucketPosition,
-  UnsignedInteger,
-  UnsignedIntegerArray,
-  WebKnossosIsosurfaceRequest
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosIsosurfaceRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  BinaryDataService,
+  DataFinder,
+  IsosurfaceRequest,
+  IsosurfaceService,
+  IsosurfaceServiceHolder
 }
-import com.scalableminds.webknossos.datastore.services._
-import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
+import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreWkRpcClient}
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
-import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
@@ -36,8 +37,9 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class VolumeTracingService @Inject()(
-    tracingDataStore: TracingDataStore,
-    isosurfaceServiceHolder: IsosurfaceServiceHolder,
+    val tracingDataStore: TracingDataStore,
+    val tracingStoreWkRpcClient: TracingStoreWkRpcClient,
+    val isosurfaceServiceHolder: IsosurfaceServiceHolder,
     implicit val temporaryTracingStore: TemporaryTracingStore[VolumeTracing],
     implicit val volumeDataCache: TemporaryVolumeDataStore,
     val handledGroupIdStore: RedisTemporaryStore,
@@ -46,8 +48,10 @@ class VolumeTracingService @Inject()(
     val temporaryFileCreator: TemporaryFileCreator
 ) extends TracingService[VolumeTracing]
     with VolumeTracingBucketHelper
+    with VolumeTracingDownsampling
     with WKWDataFormatHelper
     with DataFinder
+    with VolumeDataZipHelper
     with ProtoGeometryImplicits
     with FoxImplicits
     with LazyLogging {
@@ -67,7 +71,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  val binaryDataService = new BinaryDataService(Paths.get(""), 10 seconds, 100, null)
+  val binaryDataService = new BinaryDataService(Paths.get(""), 100, null)
 
   isosurfaceServiceHolder.tracingStoreIsosurfaceConfig = (binaryDataService, 30 seconds, 1)
   val isosurfaceService: IsosurfaceService = isosurfaceServiceHolder.tracingStoreIsosurfaceService
@@ -86,10 +90,7 @@ class VolumeTracingService @Inject()(
           case Full(t) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                val resolution = math.pow(2, a.zoomStep).toInt
-                val bucket =
-                  BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
-                saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data, updateGroup.version).map(_ => t)
+                updateBucket(tracingId, t, a, updateGroup.version)
               case a: UpdateTracingVolumeAction =>
                 Fox.successful(
                   t.copy(
@@ -121,13 +122,34 @@ class VolumeTracingService @Inject()(
         updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
     } yield Fox.successful(())
 
+  private def updateBucket(tracingId: String,
+                           volumeTracing: VolumeTracing,
+                           action: UpdateBucketVolumeAction,
+                           updateGroupVersion: Long): Fox[VolumeTracing] =
+    for {
+      resolution <- lookUpVolumeResolution(volumeTracing, action.zoomStep)
+      bucket = BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
+      _ <- saveBucket(volumeTracingLayer(tracingId, volumeTracing), bucket, action.data, updateGroupVersion)
+    } yield volumeTracing
+
+  private def lookUpVolumeResolution(tracing: VolumeTracing, zoomStep: Int): Fox[Point3D] =
+    if (tracing.resolutions.nonEmpty) {
+      tracing.resolutions
+        .find(r => r.maxDim == math.pow(2, zoomStep))
+        .map(point3DFromProto)
+        .toFox ?~> s"Received bucket with zoomStep ($zoomStep), no matching resolution found in tracing (has ${tracing.resolutions})"
+    } else {
+      val isotropicResolution = math.pow(2, zoomStep).toInt
+      Fox.successful(Point3D(isotropicResolution, isotropicResolution, isotropicResolution))
+    }
+
   private def revertToVolumeVersion(tracingId: String,
                                     sourceVersion: Long,
                                     newVersion: Long,
                                     tracing: VolumeTracing): Fox[VolumeTracing] = {
     val sourceTracing = find(tracingId, Some(sourceVersion))
     val dataLayer = volumeTracingLayer(tracingId, tracing)
-    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion(1)
+    val bucketStream = dataLayer.volumeBucketProvider.bucketStreamWithVersion()
 
     bucketStream.foreach {
       case (bucketPosition, _, version) =>
@@ -153,154 +175,54 @@ class VolumeTracingService @Inject()(
     Fox.successful(tracing.withUserBoundingBoxes(updateUserBoundingBoxes()))
   }
 
-  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
-    if (tracing.version != 0L) {
-      return Failure("Tracing has already been edited.")
+  def initializeWithDataMultiple(tracingId: String, tracing: VolumeTracing, initialData: File): Fox[Set[Point3D]] = {
+    if (tracing.version != 0L) return Failure("Tracing has already been edited.")
+
+    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    withZipsFromMultiZip(initialData) { (_, dataZip) =>
+      val resolutionSet = resolutionSetFromZipfile(dataZip)
+      if (resolutionSet.nonEmpty) resolutionSets.add(resolutionSet)
     }
+    // if none of the tracings contained any volume data. do not save buckets, use full resolution list
+    if (resolutionSets.isEmpty) return getRequiredMags(tracing).map(_.toSet)
+
+    val resolutionsDoMatch = resolutionSets.headOption.forall { head =>
+      resolutionSets.forall(_ == head)
+    }
+    if (!resolutionsDoMatch) return Fox.failure("annotation.volume.resolutionsDoNotMatch")
+
     val mergedVolume = new MergedVolume(tracing.elementClass)
-
-    ZipIO.withUnziped(initialData) {
-      case (_, is) =>
-        val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-        ZipIO.withUnziped(is) {
-          case (_, is) =>
-            WKWFile.read(is) {
-              case (header, buckets) =>
-                if (header.numBlocksPerCube == 1) {
-                  val dataTyped =
-                    UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
-                  val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-                  labelSet ++= nonZeroData
-                }
-            }
-        }
-        mergedVolume.addLabelSet(labelSet)
-    }
-
-    var sourceVolumeIndex = 0 //order must be deterministic, same as label set order
-    ZipIO.withUnziped(initialData) {
-      case (_, is) =>
-        ZipIO.withUnziped(is) {
-          case (fileName, is) =>
-            WKWFile.read(is) {
-              case (header, buckets) =>
-                if (header.numBlocksPerCube == 1) {
-                  parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                    val data = buckets.next()
-                    if (!isAllZero(data)) {
-                      mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
-                    }
-                  }
-                }
-            }
-        }
-        sourceVolumeIndex += 1
-    }
-
-    val destinationDataLayer = volumeTracingLayer(tracingId, tracing)
-    mergedVolume.saveTo(destinationDataLayer, tracing.version, toCache = false)
+    for {
+      _ <- withZipsFromMultiZip(initialData)((_, dataZip) => mergedVolume.addLabelSetFromDataZip(dataZip)).toFox
+      _ <- withZipsFromMultiZip(initialData)((index, dataZip) => mergedVolume.addFromDataZip(index, dataZip)).toFox
+      destinationDataLayer = volumeTracingLayer(tracingId, tracing)
+      _ <- mergedVolume.withMergedBuckets { (bucketPosition, bytes) =>
+        saveBucket(destinationDataLayer, bucketPosition, bytes, tracing.version)
+      }
+    } yield mergedVolume.presentResolutions
   }
 
-  class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0) extends DataConverter {
-    private var mergedVolume = mutable.HashMap.empty[BucketPosition, Array[UnsignedInteger]]
-    private var labelSets = mutable.ListBuffer[mutable.Set[UnsignedInteger]]()
-    private var labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
-    var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
-    def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
-
-    private def prepareLabelMaps(): Unit =
-      if (labelSets.isEmpty || labelMaps.nonEmpty) {
-        ()
-      } else {
-        var i: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
-        if (initialLargestSegmentId > 0) {
-          labelMaps += mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
-          i = UnsignedInteger.fromLongWithElementClass(initialLargestSegmentId, elementClass)
-        }
-        labelSets.toList.foreach { labelSet =>
-          var labelMap = mutable.HashMap.empty[UnsignedInteger, UnsignedInteger]
-          labelSet.foreach { label =>
-            i = i.increment
-            labelMap += ((label, i))
-          }
-          labelMaps += labelMap
-        }
-        largestSegmentId = i
-      }
-
-    def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit =
-      if (data.length > 1) { // skip reverted buckets
-        val dataTyped: Array[UnsignedInteger] = UnsignedIntegerArray.fromByteArray(data, elementClass)
-        prepareLabelMaps()
-        if (mergedVolume.contains(bucketPosition)) {
-          val mutableBucketData = mergedVolume(bucketPosition)
-          dataTyped.zipWithIndex.foreach {
-            case (valueTyped, index) =>
-              if (!valueTyped.isZero) {
-                val byteValueMapped =
-                  if (labelMaps.isEmpty || initialLargestSegmentId > 0 && sourceVolumeIndex == 0) valueTyped
-                  else labelMaps(sourceVolumeIndex)(valueTyped)
-                mutableBucketData(index) = byteValueMapped
-              }
-          }
-          mergedVolume += ((bucketPosition, mutableBucketData))
-        } else {
-          if (labelMaps.isEmpty) {
-            mergedVolume += ((bucketPosition, dataTyped))
-          } else {
-            val dataMapped = dataTyped.map { byteValue =>
-              if (byteValue.isZero || initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
-                byteValue
-              else
-                labelMaps(sourceVolumeIndex)(byteValue)
-            }
-            mergedVolume += ((bucketPosition, dataMapped))
-          }
-        }
-      }
-
-    def saveTo(layer: VolumeTracingLayer, version: Long, toCache: Boolean): Fox[Unit] =
-      for {
-        _ <- Fox.combined(mergedVolume.map {
-          case (bucketPosition, bucketData) =>
-            saveBucket(layer,
-                       bucketPosition,
-                       UnsignedIntegerArray.toByteArray(bucketData, elementClass),
-                       version,
-                       toCache)
-        }.toList)
-      } yield ()
-  }
-
-  def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
+  def initializeWithData(tracingId: String,
+                         tracing: VolumeTracing,
+                         initialData: File,
+                         resolutionRestrictions: ResolutionRestrictions): Box[Set[Point3D]] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
+    val savedResolutions = new mutable.HashSet[Point3D]()
 
-    ZipIO.withUnziped(initialData) {
-      case (fileName, is) =>
-        WKWFile.read(is) {
-          case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
-              parseWKWFilePath(fileName.toString).map { bucket =>
-                val data = buckets.next()
-                if (isAllZero(data)) {
-                  Fox.successful(())
-                } else {
-                  saveBucket(dataLayer, bucket, data, tracing.version)
-                }
-              }
-            }
-        }
+    val unzipResult = withBucketsFromZip(initialData) { (bucketPosition, bytes) =>
+      if (resolutionRestrictions.isForbidden(bucketPosition.resolution)) {
+        Fox.successful(())
+      } else {
+        savedResolutions.add(bucketPosition.resolution)
+        saveBucket(dataLayer, bucketPosition, bytes, tracing.version)
+      }
     }
+    unzipResult.map(_ => savedResolutions.toSet)
   }
-
-  private def isAllZero(data: Array[Byte]): Boolean =
-    data.forall { byte: Byte =>
-      byte == 0
-    }
 
   def allDataEnumerator(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] =
     Enumerator.outputStream { os =>
@@ -316,7 +238,7 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String, tracing: VolumeTracing, os: OutputStream): Future[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] =
-      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1, Some(tracing.version)))
+      new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(Some(tracing.version)))
 
     val zipResult = ZipIO.zip(buckets, os)
 
@@ -342,25 +264,41 @@ class VolumeTracingService @Inject()(
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
-  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
+  def unlinkFallback(tracing: VolumeTracing, dataSource: DataSourceLike): VolumeTracing =
+    tracing.copy(
+      activeSegmentId = None,
+      largestSegmentId = 0L,
+      fallbackLayer = None,
+      version = 0L,
+      resolutions = VolumeTracingDownsampling.resolutionsForVolumeTracing(dataSource, None).map(point3DToProto)
+    )
+
   def duplicate(tracingId: String,
-                tracing: VolumeTracing,
+                sourceTracing: VolumeTracing,
                 fromTask: Boolean,
-                dataSetBoundingBox: Option[BoundingBox]): Fox[String] = {
-    val newTaskTracing = if (fromTask && dataSetBoundingBox.isDefined) {
+                dataSetBoundingBox: Option[BoundingBox],
+                resolutionRestrictions: ResolutionRestrictions): Fox[(String, VolumeTracing)] = {
+    val tracingWithBB = addBoundingBoxFromTaskIfRequired(sourceTracing, fromTask, dataSetBoundingBox)
+    val tracingWithResolutionRestrictions = restrictMagList(tracingWithBB, resolutionRestrictions)
+    val newTracing = tracingWithResolutionRestrictions.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
+    for {
+      _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
+      newId <- save(newTracing, None, newTracing.version)
+      _ <- duplicateData(tracingId, sourceTracing, newId, newTracing)
+    } yield (newId, newTracing)
+  }
+
+  @SuppressWarnings(Array("OptionGet")) //We suppress this warning because we check the option beforehand
+  private def addBoundingBoxFromTaskIfRequired(tracing: VolumeTracing,
+                                               fromTask: Boolean,
+                                               dataSetBoundingBox: Option[BoundingBox]): VolumeTracing =
+    if (fromTask && dataSetBoundingBox.isDefined) {
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       tracing
         .addUserBoundingBoxes(
           NamedBoundingBox(newId, Some("task bounding box"), Some(true), Some(getRandomColor()), tracing.boundingBox))
         .withBoundingBox(dataSetBoundingBox.get)
     } else tracing
-
-    val newTracing = newTaskTracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
-    for {
-      newId <- save(newTracing, None, newTracing.version)
-      _ <- duplicateData(tracingId, tracing, newId, newTracing)
-    } yield newId
-  }
 
   def duplicateData(sourceId: String,
                     sourceTracing: VolumeTracing,
@@ -369,22 +307,27 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- isTemporaryTracing(sourceId)
       sourceDataLayer = volumeTracingLayer(sourceId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream(1)
+      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceDataLayer.bucketProvider.bucketStream()
       destinationDataLayer = volumeTracingLayer(destinationId, destinationTracing)
       _ <- Fox.combined(buckets.map {
         case (bucketPosition, bucketData) =>
-          saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+          if (destinationTracing.resolutions.contains(point3DToProto(bucketPosition.resolution))) {
+            saveBucket(destinationDataLayer, bucketPosition, bucketData, destinationTracing.version)
+          } else Fox.successful(())
       }.toList)
     } yield ()
 
   private def volumeTracingLayer(tracingId: String,
                                  tracing: VolumeTracing,
                                  isTemporaryTracing: Boolean = false): VolumeTracingLayer =
-    VolumeTracingLayer(tracingId,
-                       tracing.boundingBox,
-                       tracing.elementClass,
-                       tracing.largestSegmentId,
-                       isTemporaryTracing)
+    VolumeTracingLayer(
+      tracingId,
+      tracing.boundingBox,
+      tracing.elementClass,
+      tracing.largestSegmentId,
+      isTemporaryTracing,
+      volumeResolutions = tracing.resolutions.map(point3DFromProto).toList
+    )
 
   def updateActionLog(tracingId: String): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[CompactVolumeUpdateAction])): JsObject =
@@ -399,6 +342,25 @@ class VolumeTracingService @Inject()(
       updateActionGroupsJs = volumeTracings.map(versionedTupleToJson)
     } yield Json.toJson(updateActionGroupsJs)
   }
+
+  def updateResolutionList(tracingId: String,
+                           tracing: VolumeTracing,
+                           resolutions: Set[Point3D],
+                           toCache: Boolean = false): Fox[String] =
+    for {
+      _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
+      _ <- bool2Fox(resolutions.nonEmpty) ?~> "Resolution restrictions result in zero resolutions"
+      id <- save(tracing.copy(resolutions = resolutions.toList.sortBy(_.maxDim).map(point3DToProto)),
+                 Some(tracingId),
+                 tracing.version,
+                 toCache)
+    } yield id
+
+  def downsample(tracingId: String, tracing: VolumeTracing): Fox[Unit] =
+    for {
+      resultingResolutions <- downsampleWithLayer(tracingId, tracing, volumeTracingLayer(tracingId, tracing))
+      _ <- updateResolutionList(tracingId, tracing, resultingResolutions.toSet)
+    } yield ()
 
   def createIsosurface(tracingId: String, request: WebKnossosIsosurfaceRequest): Fox[(Array[Float], List[Int])] =
     for {
@@ -421,7 +383,7 @@ class VolumeTracingService @Inject()(
     for {
       tracing <- find(tracingId) ?~> "tracing.notFound"
       volumeLayer = volumeTracingLayer(tracingId, tracing)
-      bucketStream = volumeLayer.bucketProvider.bucketStream(1, Some(tracing.version))
+      bucketStream = volumeLayer.bucketProvider.bucketStream(Some(tracing.version))
       bucketPosOpt = if (bucketStream.hasNext) {
         val bucket = bucketStream.next()
         val bucketPos = bucket._1
@@ -455,98 +417,91 @@ class VolumeTracingService @Inject()(
     )
   }
 
+  private def bucketStreamFromSelector(selector: TracingSelector,
+                                       tracing: VolumeTracing): Iterator[(BucketPosition, Array[Byte])] = {
+    val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
+    dataLayer.bucketProvider.bucketStream(Some(tracing.version))
+  }
+
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[VolumeTracing],
                       newId: String,
                       newTracing: VolumeTracing,
                       toCache: Boolean): Fox[Unit] = {
     val elementClass = tracings.headOption.map(_.elementClass).getOrElse(ElementClass.uint8)
+
+    val resolutionSets = new mutable.HashSet[Set[Point3D]]()
+    tracingSelectors.zip(tracings).foreach {
+      case (selector, tracing) =>
+        val resolutionSet = new mutable.HashSet[Point3D]()
+        bucketStreamFromSelector(selector, tracing).foreach {
+          case (bucketPosition, _) =>
+            resolutionSet.add(bucketPosition.resolution)
+        }
+        if (resolutionSet.nonEmpty) { // empty tracings should have no impact in this check
+          resolutionSets.add(resolutionSet.toSet)
+        }
+    }
+
+    // If none of the tracings contained any volume data. Do not save buckets, do not touch resolution list
+    if (resolutionSets.isEmpty) return Fox.successful(())
+
+    val resolutionsIntersection: Set[Point3D] = resolutionSets.headOption.map { head =>
+      resolutionSets.foldLeft(head) { (acc, element) =>
+        acc.intersect(element)
+      }
+    }.getOrElse(Set.empty)
+
     val mergedVolume = new MergedVolume(elementClass)
 
     tracingSelectors.zip(tracings).foreach {
       case (selector, tracing) =>
-        val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
-        val labelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-        val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
-          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
-        bucketStream.foreach {
-          case (_, data) =>
-            val dataTyped = UnsignedIntegerArray.fromByteArray(data, elementClass)
-            val nonZeroData: Array[UnsignedInteger] = UnsignedIntegerArray.filterNonZero(dataTyped)
-            labelSet ++= nonZeroData
-        }
-        mergedVolume.addLabelSet(labelSet)
+        val bucketStream = bucketStreamFromSelector(selector, tracing)
+        mergedVolume.addLabelSetFromBucketStream(bucketStream, resolutionsIntersection)
     }
 
     tracingSelectors.zip(tracings).zipWithIndex.foreach {
       case ((selector, tracing), sourceVolumeIndex) =>
-        val dataLayer = volumeTracingLayer(selector.tracingId, tracing)
-        val bucketStream: Iterator[(BucketPosition, Array[Byte])] =
-          dataLayer.bucketProvider.bucketStream(1, Some(tracing.version))
-        bucketStream.foreach {
-          case (bucketPosition, data) =>
-            mergedVolume.add(sourceVolumeIndex, bucketPosition, data)
-        }
+        val bucketStream = bucketStreamFromSelector(selector, tracing)
+        mergedVolume.addFromBucketStream(sourceVolumeIndex, bucketStream, Some(resolutionsIntersection))
     }
     val destinationDataLayer = volumeTracingLayer(newId, newTracing)
-    mergedVolume.saveTo(destinationDataLayer, newTracing.version, toCache)
+    for {
+      _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
+        saveBucket(destinationDataLayer, bucketPosition, bucketBytes, newTracing.version, toCache)
+      }
+      _ <- updateResolutionList(newId, newTracing, mergedVolume.presentResolutions)
+    } yield ()
   }
 
   def importVolumeData(tracingId: String, tracing: VolumeTracing, zipFile: File, currentVersion: Int): Fox[Long] = {
     if (currentVersion != tracing.version) return Fox.failure("version.mismatch")
 
+    val resolutionSet = resolutionSetFromZipfile(zipFile)
+    val resolutionsDoMatch =
+      resolutionSet.isEmpty || resolutionSet == resolveLegacyResolutionList(tracing.resolutions)
+        .map(point3DFromProto)
+        .toSet
+
+    if (!resolutionsDoMatch) return Fox.failure("annotation.volume.resolutionsDoNotMatch")
+
     val volumeLayer = volumeTracingLayer(tracingId, tracing)
     val mergedVolume = new MergedVolume(tracing.elementClass, tracing.largestSegmentId)
-
-    val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
-    ZipIO.withUnziped(zipFile) {
-      case (_, is) =>
-        WKWFile.read(is) {
-          case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
-              val dataTyped =
-                UnsignedIntegerArray.fromByteArray(buckets.next(), elementClassFromProto(tracing.elementClass))
-              val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-              importLabelSet ++= nonZeroData
-            }
-        }
-    }
-    mergedVolume.addLabelSet(importLabelSet)
-
-    volumeLayer.bucketProvider.bucketStream(1).foreach {
-      case (position, bytes) =>
-        if (!isAllZero(bytes)) {
-          mergedVolume.add(0, position, bytes)
-        }
-    }
-
-    ZipIO.withUnziped(zipFile) {
-      case (fileName, is) =>
-        WKWFile.read(is) {
-          case (header, buckets) =>
-            if (header.numBlocksPerCube == 1) {
-              parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
-                val data = buckets.next()
-                if (!isAllZero(data)) {
-                  mergedVolume.add(1, bucketPosition, data)
-                }
-              }
-            }
-        }
-    }
-
-    val updateGroup = UpdateActionGroup[VolumeTracing](
-      tracing.version + 1,
-      System.currentTimeMillis(),
-      List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
-      None,
-      None,
-      None,
-      None,
-      None)
-
     for {
-      _ <- mergedVolume.saveTo(volumeLayer, tracing.version + 1, toCache = false)
+      _ <- mergedVolume.addLabelSetFromDataZip(zipFile).toFox
+      _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
+      _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile).toFox
+      _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
+        saveBucket(volumeLayer, bucketPosition, bucketBytes, tracing.version + 1)
+      }
+      updateGroup = UpdateActionGroup[VolumeTracing](tracing.version + 1,
+                                                     System.currentTimeMillis(),
+                                                     List(ImportVolumeData(mergedVolume.largestSegmentId.toSignedLong)),
+                                                     None,
+                                                     None,
+                                                     None,
+                                                     None,
+                                                     None)
       _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version)
     } yield mergedVolume.largestSegmentId.toSignedLong
   }

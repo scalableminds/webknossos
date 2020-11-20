@@ -58,6 +58,8 @@ export type APISegmentationLayer = {|
   +mappings?: Array<string>,
   +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
+  // eslint-disable-next-line no-use-before-define
+  +fallbackLayerInfo?: APIDataLayer,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
@@ -232,8 +234,7 @@ export type APISettings = {|
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +allowedMagnifications?: {
-    shouldRestrict: boolean,
+  +resolutionRestrictions: {
     min?: number,
     max?: number,
   },
@@ -608,6 +609,7 @@ export type ServerSkeletonTracing = {|
   boundingBox?: ServerBoundingBox,
   trees: Array<ServerSkeletonTracingTree>,
   treeGroups: ?Array<TreeGroup>,
+  organizationName?: string,
 |};
 
 export type ServerVolumeTracing = {|
@@ -617,6 +619,12 @@ export type ServerVolumeTracing = {|
   elementClass: ElementClass,
   fallbackLayer?: string,
   largestSegmentId: number,
+  // `resolutions` will be undefined for legacy annotations
+  // which were created before the multi-resolution capabilities
+  // were added to volume tracings. Also see:
+  // https://github.com/scalableminds/webknossos/pull/4755
+  resolutions?: Array<Point3>,
+  organizationName?: string,
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

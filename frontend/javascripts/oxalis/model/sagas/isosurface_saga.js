@@ -2,6 +2,7 @@
 import { saveAs } from "file-saver";
 
 import type { APIDataset } from "types/api_flow_types";
+import { ResolutionInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   changeActiveIsosurfaceCellAction,
   type ChangeActiveIsosurfaceCellAction,
@@ -31,7 +32,7 @@ import { stlIsosurfaceConstants } from "oxalis/view/right-menu/meshes_view";
 import { computeIsosurface } from "admin/admin_rest_api";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
 import ThreeDMap from "libs/ThreeDMap";
@@ -71,8 +72,12 @@ function removeMapForSegment(segmentId: number): void {
   isosurfacesMap.delete(segmentId);
 }
 
-function getZoomedCubeSize(zoomStep: number, resolutions: Array<Vector3>): Vector3 {
-  const [x, y, z] = zoomedAddressToAnotherZoomStep([...cubeSize, 0], resolutions, zoomStep);
+function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+  const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
+    [...cubeSize, 0],
+    resolutionInfo,
+    zoomStep,
+  );
   // Drop the last element of the Vector4;
   return [x, y, z];
 }
@@ -80,9 +85,9 @@ function getZoomedCubeSize(zoomStep: number, resolutions: Array<Vector3>): Vecto
 function clipPositionToCubeBoundary(
   position: Vector3,
   zoomStep: number,
-  resolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutions);
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
   const currentCube = Utils.map3((el, idx) => Math.floor(el / zoomedCubeSize[idx]), position);
   const clippedPosition = Utils.map3((el, idx) => el * zoomedCubeSize[idx], currentCube);
   return clippedPosition;
@@ -92,12 +97,12 @@ function getNeighborPosition(
   clippedPosition: Vector3,
   neighborId: number,
   zoomStep: number,
-  resolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
 ): Vector3 {
   // front_xy, front_xz, front_yz, back_xy, back_xz, back_yz
   const neighborLookup = [[0, 0, -1], [0, -1, 0], [-1, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0]];
 
-  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutions);
+  const zoomedCubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
   const neighborMultiplier = neighborLookup[neighborId];
   const neighboringPosition = [
     clippedPosition[0] + neighborMultiplier[0] * zoomedCubeSize[0],
@@ -158,11 +163,12 @@ function* ensureSuitableIsosurface(
   const clickedPosition = seedPosition;
   const position =
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
-  const { resolutions } = layer;
-  const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
-  const zoomStep = Math.min(preferredZoomStep, resolutions.length - 1);
+  const resolutionInfo = getResolutionInfo(layer.resolutions);
 
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutions);
+  const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
+  const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
+
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(
@@ -172,8 +178,8 @@ function* ensureSuitableIsosurface(
     segmentId,
     clippedPosition,
     zoomStep,
-    resolutions,
     clickedPosition,
+    resolutionInfo,
     removeExistingIsosurface,
   );
 }
@@ -184,8 +190,8 @@ function* loadIsosurfaceWithNeighbors(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-  resolutions: Array<Vector3>,
   segmentPosition: Vector3,
+  resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
@@ -202,7 +208,7 @@ function* loadIsosurfaceWithNeighbors(
       segmentId,
       position,
       zoomStep,
-      resolutions,
+      resolutionInfo,
       removeExistingIsosurface && isInitialRequest,
     );
     isInitialRequest = false;
@@ -222,7 +228,7 @@ function* maybeLoadIsosurface(
   segmentId: number,
   clippedPosition: Vector3,
   zoomStep: number,
-  resolutions: Array<Vector3>,
+  resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<Array<Vector3>> {
   const threeDMap = getMapForSegment(segmentId);
@@ -276,7 +282,7 @@ function* maybeLoadIsosurface(
   getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
 
   return neighbors.map(neighbor =>
-    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutions),
+    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
   );
 }
 

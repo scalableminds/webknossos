@@ -43,4 +43,5 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
       } yield { Ok(Json.toJson(js)) }
     }
   }
+
 }

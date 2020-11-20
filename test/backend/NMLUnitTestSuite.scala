@@ -27,7 +27,7 @@ class NMLUnitTestSuite extends FlatSpec {
   def getObjectId = ObjectId.generate
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])] = {
+    : Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)] = {
     val nmlEnumarator =
       new NmlWriter().toNmlStream(Some(skeletonTracing), None, None, None, None, "testOrganization", None, None)
     val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
@@ -36,11 +36,11 @@ class NMLUnitTestSuite extends FlatSpec {
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String, Option[String])]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracing], Option[(VolumeTracing, String)], String)]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {
-          case (Some(_), _, _, _) => true
+          case (Some(_), _, _) => true
           case _                  => false
         }
       case _ => false
@@ -52,9 +52,8 @@ class NMLUnitTestSuite extends FlatSpec {
     writeAndParseTracing(dummyTracing) match {
       case Full(tuple) =>
         tuple match {
-          case (Some(tracing), _, _, _) => {
+          case (Some(tracing), _, _) =>
             assert(tracing == dummyTracing)
-          }
           case _ => throw new Exception
         }
       case _ => throw new Exception

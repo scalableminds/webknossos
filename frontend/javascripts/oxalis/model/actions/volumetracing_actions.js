@@ -46,7 +46,6 @@ export type InferSegmentationInViewportAction = {
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position: Vector3,
 };
-export type RemoveFallbackLayerAction = { type: "REMOVE_FALLBACK_LAYER" };
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 
@@ -70,7 +69,6 @@ export type VolumeTracingAction =
   | SetContourTracingModeAction
   | SetOverwriteModeAction
   | AddBucketToUndoAction
-  | RemoveFallbackLayerAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
 
@@ -79,7 +77,6 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
-  "REMOVE_FALLBACK_LAYER",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -178,10 +175,6 @@ export const inferSegmentationInViewportAction = (
 ): InferSegmentationInViewportAction => ({
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position,
-});
-
-export const removeFallbackLayerAction = (): RemoveFallbackLayerAction => ({
-  type: "REMOVE_FALLBACK_LAYER",
 });
 
 export const importVolumeTracingAction = (): ImportVolumeTracingAction => ({

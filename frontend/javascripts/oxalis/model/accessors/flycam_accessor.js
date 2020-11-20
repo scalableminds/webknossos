@@ -246,6 +246,12 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   return Math.min(zoomStep, maxLogZoomStep);
 }
 
+export function getCurrentResolution(state: OxalisState): Vector3 {
+  const resolutions = getResolutions(state.dataset);
+  const logZoomStep = getRequestLogZoomStep(state);
+  return resolutions[logZoomStep] || [1, 1, 1];
+}
+
 export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
   const lastZoomStep = _.last(maximumZoomSteps);
@@ -283,11 +289,14 @@ export function getZoomValue(flycam: Flycam): number {
   return flycam.zoomStep;
 }
 
-function getValidTaskZoomRange(state: OxalisState): [number, number] {
+export function getValidTaskZoomRange(
+  state: OxalisState,
+  respectRestriction: boolean = false,
+): [number, number] {
   const defaultRange = [userSettings.zoom.minimum, Infinity];
-  const { allowedMagnifications } = state.tracing.restrictions;
+  const { resolutionRestrictions } = state.tracing.restrictions;
 
-  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+  if (!respectRestriction) {
     return defaultRange;
   }
 
@@ -303,10 +312,23 @@ function getValidTaskZoomRange(state: OxalisState): [number, number] {
     );
   }
 
-  const min = getMinMax(allowedMagnifications.min, true);
-  const max = getMinMax(allowedMagnifications.max, false);
+  const min = getMinMax(resolutionRestrictions.min, true);
+  const max = getMinMax(resolutionRestrictions.max, false);
 
   return [min, max];
+}
+
+export function isMagRestrictionViolated(state: OxalisState): boolean {
+  const { resolutionRestrictions } = state.tracing.restrictions;
+
+  const zoomStep = getRequestLogZoomStep(state);
+  if (resolutionRestrictions.min != null && zoomStep < Math.log2(resolutionRestrictions.min)) {
+    return true;
+  }
+  if (resolutionRestrictions.max != null && zoomStep > Math.log2(resolutionRestrictions.max)) {
+    return true;
+  }
+  return false;
 }
 
 export function getPlaneScalingFactor(

@@ -49,7 +49,6 @@ import {
   createTreeAction,
   deleteTreeAction,
   deleteTreeAsUserAction,
-  shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
@@ -107,7 +106,6 @@ type OwnProps = {|
   portalKey: string,
 |};
 type StateProps = {|
-  onShuffleTreeColor: number => void,
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
   onSelectNextTreeForward: () => void,
@@ -232,7 +230,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setVersionNumberAction(oldVolumeTracing.version + 1, "volume"));
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
-            api.data.reloadBuckets(oldVolumeTracing.tracingId);
+            await api.data.reloadBuckets(oldVolumeTracing.tracingId);
             window.needsRerender = true;
           }
         }
@@ -446,15 +444,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  shuffleTreeColor = () => {
-    if (!this.props.skeletonTracing) {
-      return;
-    }
-    getActiveTree(this.props.skeletonTracing).map(activeTree =>
-      this.props.onShuffleTreeColor(activeTree.treeId),
-    );
-  };
-
   shuffleAllTreeColors = () => {
     this.props.onShuffleAllTreeColors();
   };
@@ -611,13 +600,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     return (
       <Menu>
         <Menu.Item
-          key="shuffleTreeColor"
-          onClick={this.shuffleTreeColor}
-          title="Shuffle Tree Color"
-        >
-          <i className="fas fa-adjust" /> Shuffle Tree Color
-        </Menu.Item>
-        <Menu.Item
           key="shuffleAllTreeColors"
           onClick={this.shuffleAllTreeColors}
           title="Shuffle All Tree Colors"
@@ -633,14 +615,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
           <Icon type="upload" /> Import NML
-        </Menu.Item>
-
-        <Menu.Item
-          key="measureSkeleton"
-          onClick={this.handleMeasureSkeletonLength}
-          title="Measure Skeleton Length"
-        >
-          <i className="fas fa-ruler" /> Measure Skeleton Length
         </Menu.Item>
         <Menu.Item
           key="measureAllSkeletons"
@@ -667,26 +641,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
         }
       />
     ) : null;
-
-  handleMeasureSkeletonLength = () => {
-    const { skeletonTracing } = this.props;
-    if (!skeletonTracing) {
-      return;
-    }
-
-    const notificationText = getActiveTree(skeletonTracing)
-      .map(tree => api.tracing.measureTreeLength(tree.treeId))
-      .map(
-        length =>
-          `The currently active tree has a total length of ${formatNumberToLength(length)}.`,
-      )
-      .getOrElse("Please ensure that a tree is selected.");
-
-    notification.open({
-      message: notificationText,
-      icon: <i className="fas fa-ruler" />,
-    });
-  };
 
   handleMeasureAllSkeletonsLength = () => {
     const totalLength = api.tracing.measureAllTrees();
@@ -838,9 +792,6 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  onShuffleTreeColor(treeId) {
-    dispatch(shuffleTreeColorAction(treeId));
-  },
   onShuffleAllTreeColors() {
     dispatch(shuffleAllTreeColorsAction());
   },

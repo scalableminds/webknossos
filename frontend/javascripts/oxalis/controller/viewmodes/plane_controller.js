@@ -69,11 +69,17 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
+type OwnProps = {| showNodeContextMenuAt: (number, number, number) => void |};
+
 type StateProps = {|
   tracing: Tracing,
   is2d: boolean,
 |};
-type Props = {| ...StateProps |};
+
+type Props = {|
+  ...StateProps,
+  ...OwnProps,
+|};
 
 export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
@@ -173,7 +179,7 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls
     } =
       this.props.tracing.skeleton != null
-        ? skeletonController.getPlaneMouseControls(this.planeView)
+        ? skeletonController.getPlaneMouseControls(this.planeView, this.props.showNodeContextMenuAt)
         : emptyDefaultHandler;
 
     const {
@@ -625,4 +631,4 @@ export function mapStateToProps(state: OxalisState): StateProps {
 }
 
 export { PlaneController as PlaneControllerClass };
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(PlaneController);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);

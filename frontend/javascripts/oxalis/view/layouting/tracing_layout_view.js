@@ -22,6 +22,7 @@ import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view"
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import NodeContextMenu from "oxalis/view/node_context_menu";
 import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -75,6 +76,8 @@ type State = {
   activeLayout: string,
   hasError: boolean,
   status: ControllerStatus,
+  nodeContextMenuPosition: ?[number, number],
+  nodeContextMenuNodeId: ?number,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -120,6 +123,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayout: lastActiveLayout,
       hasError: false,
       status: "loading",
+      nodeContextMenuPosition: null,
+      nodeContextMenuNodeId: null,
     };
   }
 
@@ -143,6 +148,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     // collected and all events are canceled, etc.
     location.reload();
   }
+
+  showNodeContextMenuAt = (xPos: number, yPos: number, nodeId: number) => {
+    this.setState({ nodeContextMenuPosition: [xPos, yPos], nodeContextMenuNodeId: nodeId });
+  };
+
+  hideNodeContextMenu = () => {
+    this.setState({ nodeContextMenuPosition: null, nodeContextMenuNodeId: null });
+  };
 
   handleSettingsCollapse = () => {
     this.setState(prevState => ({
@@ -193,6 +206,14 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
+    const {
+      nodeContextMenuNodeId,
+      nodeContextMenuPosition,
+      status,
+      isSettingsCollapsed,
+      activeLayout,
+    } = this.state;
+
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
@@ -220,29 +241,43 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         <OxalisController
           initialAnnotationType={this.props.initialAnnotationType}
           initialCommandType={this.props.initialCommandType}
-          controllerStatus={this.state.status}
-          setControllerStatus={(status: ControllerStatus) => this.setState({ status })}
+          controllerStatus={status}
+          setControllerStatus={(newStatus: ControllerStatus) =>
+            this.setState({ status: newStatus })
+          }
+          showNodeContextMenuAt={this.showNodeContextMenuAt}
         />
         <CrossOriginApi />
+        {nodeContextMenuNodeId != null && nodeContextMenuPosition != null ? (
+          <NodeContextMenu
+            hideNodeContextMenu={this.hideNodeContextMenu}
+            nodeContextMenuNodeId={nodeContextMenuNodeId}
+            nodeContextMenuPosition={nodeContextMenuPosition}
+          />
+        ) : null}
         <Layout className="tracing-layout">
           <RenderToPortal portalId="navbarTracingSlot">
-            {this.state.status === "loaded" ? (
+            {status === "loaded" ? (
               <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
                 <ButtonComponent
-                  className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
+                  className={isSettingsCollapsed ? "" : "highlight-togglable-button"}
                   onClick={this.handleSettingsCollapse}
                   shape="circle"
                 >
                   <Icon
                     type="setting"
                     className="withoutMargin"
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   />
                 </ButtonComponent>
                 <ActionBarView
                   layoutProps={{
                     storedLayoutNamesForView: currentLayoutNames,
-                    activeLayout: this.state.activeLayout,
+                    activeLayout,
                     layoutKey: layoutType,
                     setCurrentLayout: layoutName => {
                       this.setState({ activeLayout: layoutName });
@@ -280,12 +315,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             <Sider
               collapsible
               trigger={null}
-              collapsed={this.state.isSettingsCollapsed}
+              collapsed={isSettingsCollapsed}
               collapsedWidth={0}
               width={360}
-              style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
+              style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}
             >
-              <SettingsView dontRenderContents={this.state.isSettingsCollapsed} />
+              <SettingsView dontRenderContents={isSettingsCollapsed} />
             </Sider>
             <MergerModeController />
             <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
@@ -294,7 +329,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 id="layoutContainer"
                 style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                 layoutKey={layoutType}
-                activeLayoutName={this.state.activeLayout}
+                activeLayoutName={activeLayout}
                 onLayoutChange={this.onLayoutChange}
               >
                 {/*

@@ -119,6 +119,19 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey2(state, "isosurfaces", cellId.toString(), {
         segmentId: cellId,
         seedPosition,
+      });
+    }
+
+    case "START_REFRESHING_ISOSURFACE": {
+      const { cellId } = action;
+      return updateKey2(state, "isosurfaces", cellId.toString(), {
+        isLoading: true,
+      });
+    }
+
+    case "FINISHED_REFRESHING_ISOSURFACE": {
+      const { cellId } = action;
+      return updateKey2(state, "isosurfaces", cellId.toString(), {
         isLoading: false,
       });
     }

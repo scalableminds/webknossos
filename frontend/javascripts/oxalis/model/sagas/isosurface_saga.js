@@ -12,8 +12,11 @@ import {
   removeIsosurfaceAction,
   addIsosurfaceAction,
   finishedRefreshingIsosurfacesAction,
+  startRefreshingIsosurfaceAction,
+  finishedRefreshingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
+  type RefreshIsosurfaceAction,
   type TriggerIsosurfaceDownloadAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
@@ -387,6 +390,34 @@ function* refreshIsosurfaces(): Saga<void> {
   yield* put(finishedRefreshingIsosurfacesAction());
 }
 
+function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
+  const { cellId } = action;
+  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
+  if (!renderIsosurfaces) {
+    return;
+  }
+
+  const threeDMap = isosurfacesMap.get(cellId);
+  const isosurfacePositions = threeDMap
+    ? threeDMap.entries().filter(([value, _position]) => value)
+    : [];
+  if (isosurfacePositions.length === 0) {
+    return;
+  }
+  yield* put(startRefreshingIsosurfaceAction(cellId));
+  // Removing Isosurface from cache.
+  yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
+  // The isosurface should only be removed once after re-fetching the isosurface first position.
+  let shouldBeRemoved = true;
+  for (const [, position] of isosurfacePositions) {
+    // Reload the Isosurface at the given position if it isn't already loaded there.
+    // This is done to ensure that every voxel of the isosurface is reloaded.
+    yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
+    shouldBeRemoved = false;
+  }
+  yield* put(finishedRefreshingIsosurfaceAction(cellId));
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
@@ -396,5 +427,6 @@ export default function* isosurfaceSaga(): Saga<void> {
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
+  yield _takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

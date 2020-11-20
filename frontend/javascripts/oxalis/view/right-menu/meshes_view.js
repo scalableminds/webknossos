@@ -20,6 +20,7 @@ import {
   updateLocalMeshMetaDataAction,
   updateRemoteMeshMetaDataAction,
   removeIsosurfaceAction,
+  refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
@@ -150,6 +151,17 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         />
       </Tooltip>
     );
+    const refreshButton = (segmentId: number, isLoading: boolean) => (
+      <Tooltip title="reload isosurface">
+        <Icon
+          key="refresh-button"
+          type={isLoading ? "loading" : "reload"}
+          onClick={() => {
+            Store.dispatch(refreshIsosurfaceAction(segmentId));
+          }}
+        />
+      </Tooltip>
+    );
     const deleteButton = (segmentId: number) => (
       <Tooltip title="delete isosurface">
         <Icon
@@ -165,10 +177,14 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
 
     const renderListItem = (isosurface: Object) => {
-      const { segmentId, seedPosition } = isosurface;
+      const { segmentId, seedPosition, isLoading } = isosurface;
       return (
         <List.Item
-          actions={[downloadButton(segmentId), deleteButton(segmentId)]}
+          actions={[
+            downloadButton(segmentId),
+            refreshButton(segmentId, isLoading),
+            deleteButton(segmentId),
+          ]}
           style={{ marginBottom: -15 }}
         >
           <div onClick={() => moveToIsosurface(seedPosition)}>

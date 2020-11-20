@@ -88,6 +88,18 @@ export type RefreshIsosurfacesAction = {
 export type FinishedRefreshingIsosurfacesAction = {
   type: "FINISHED_REFRESHING_ISOSURFACES",
 };
+export type RefreshIsosurfaceAction = {
+  type: "REFRESH_ISOSURFACE",
+  cellId: number,
+};
+export type StartRefreshingIsosurfaceAction = {
+  type: "START_REFRESHING_ISOSURFACE",
+  cellId: number,
+};
+export type FinishedRefreshingIsosurfaceAction = {
+  type: "FINISHED_REFRESHING_ISOSURFACE",
+  cellId: number,
+};
 
 export type ImportIsosurfaceFromStlAction = {
   type: "IMPORT_ISOSURFACE_FROM_STL",
@@ -122,6 +134,9 @@ export type AnnotationActionTypes =
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
+  | RefreshIsosurfaceAction
+  | StartRefreshingIsosurfaceAction
+  | FinishedRefreshingIsosurfaceAction
   | ImportIsosurfaceFromStlAction
   | RemoveIsosurfaceAction
   | AddIsosurfaceAction;
@@ -229,6 +244,25 @@ export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
 
 export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurfacesAction => ({
   type: "FINISHED_REFRESHING_ISOSURFACES",
+});
+
+export const refreshIsosurfaceAction = (cellId: number): RefreshIsosurfaceAction => ({
+  type: "REFRESH_ISOSURFACE",
+  cellId,
+});
+
+export const startRefreshingIsosurfaceAction = (
+  cellId: number,
+): StartRefreshingIsosurfaceAction => ({
+  type: "START_REFRESHING_ISOSURFACE",
+  cellId,
+});
+
+export const finishedRefreshingIsosurfaceAction = (
+  cellId: number,
+): FinishedRefreshingIsosurfaceAction => ({
+  type: "FINISHED_REFRESHING_ISOSURFACE",
+  cellId,
 });
 
 export const importIsosurfaceFromStlAction = (

@@ -18,6 +18,7 @@ import {
   deleteBranchPoint,
   createNode,
   createTree,
+  createEdge,
   deleteTree,
   deleteNode,
   deleteEdge,
@@ -150,6 +151,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     },
                   },
                 });
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "CREATE_EDGE": {
+          const { sourceNodeId, targetNodeId } = action;
+
+          if (sourceNodeId === targetNodeId) {
+            return state;
+          }
+
+          return createEdge(skeletonTracing, sourceNodeId, targetNodeId, restrictions)
+            .map(trees =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: { $set: trees },
+                  },
+                },
               }),
             )
             .getOrElse(state);

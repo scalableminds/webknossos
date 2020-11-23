@@ -4,7 +4,12 @@ import { Menu } from "antd";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import { deleteEdgeAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  createEdgeAction,
+  deleteEdgeAction,
+  mergeTreesAction,
+  deleteNodeAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 
 type OwnProps = {|
@@ -14,7 +19,10 @@ type OwnProps = {|
 |};
 
 type DispatchProps = {|
-  deleteEdgeBetweenNodesAction: (number, number) => void,
+  deleteEdge: (number, number) => void,
+  createEdge: (number, number) => void,
+  mergeTrees: (number, number) => void,
+  deleteNode: (number, number) => void,
 |};
 
 type StateProps = {| skeletonTracing: ?SkeletonTracing |};
@@ -28,7 +36,10 @@ function NodeContextMenu({
   nodeContextMenuNodeId,
   nodeContextMenuPosition,
   hideNodeContextMenu,
-  deleteEdgeBetweenNodesAction,
+  deleteEdge,
+  createEdge,
+  mergeTrees,
+  deleteNode,
 }: Props) {
   if (!skeletonTracing) {
     return null;
@@ -45,42 +56,72 @@ function NodeContextMenu({
     );
   }
   return (
-    <Menu
-      style={{
-        zIndex: 100,
-        position: "absolute",
-        left: nodeContextMenuPosition[0],
-        top: nodeContextMenuPosition[1] - NAVBAR_HEIGHT,
-      }}
+    <div
+      style={{ width: "100%", height: "100%", position: "absolute", zIndex: 99 }}
       onClick={hideNodeContextMenu}
     >
-      <Menu.Item
-        key="create-edge"
-        disabled={!areInSameTree || isTheSameNode || areNodesConnected}
-        onClick={() => {
-          console.log("First awesome method");
+      <Menu
+        style={{
+          zIndex: 100,
+          position: "absolute",
+          left: nodeContextMenuPosition[0],
+          top: nodeContextMenuPosition[1] - NAVBAR_HEIGHT,
+          borderRadius: 4,
         }}
+        onClick={hideNodeContextMenu}
       >
-        Create Edge To This Node
-      </Menu.Item>
-      <Menu.Item
-        key="delete-edge"
-        disabled={!areNodesConnected}
-        onClick={() =>
-          activeNodeId != null
-            ? deleteEdgeBetweenNodesAction(activeNodeId, nodeContextMenuNodeId)
-            : null
-        }
-      >
-        Delete Edge To This Node
-      </Menu.Item>
-    </Menu>
+        {areInSameTree ? (
+          <Menu.Item
+            key="create-edge"
+            disabled={!areInSameTree || isTheSameNode || areNodesConnected}
+            onClick={() =>
+              activeNodeId != null ? createEdge(nodeContextMenuNodeId, activeNodeId) : null
+            }
+          >
+            Create Edge To This Node
+          </Menu.Item>
+        ) : (
+          <Menu.Item
+            key="merge-trees"
+            onClick={() =>
+              activeNodeId != null ? mergeTrees(nodeContextMenuNodeId, activeNodeId) : null
+            }
+          >
+            Create Edge & Merge With This Tree
+          </Menu.Item>
+        )}
+        <Menu.Item
+          key="delete-edge"
+          disabled={!areNodesConnected}
+          onClick={() =>
+            activeNodeId != null ? deleteEdge(activeNodeId, nodeContextMenuNodeId) : null
+          }
+        >
+          Delete Edge To This Node
+        </Menu.Item>
+        <Menu.Item
+          key="delete-node"
+          onClick={() => deleteNode(nodeContextMenuNodeId, nodeContextTree.treeId)}
+        >
+          Delete This Node
+        </Menu.Item>
+      </Menu>
+    </div>
   );
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  deleteEdgeBetweenNodesAction(firstNodeId: number, secondNodeId: number) {
+  deleteEdge(firstNodeId: number, secondNodeId: number) {
     dispatch(deleteEdgeAction(firstNodeId, secondNodeId));
+  },
+  createEdge(firstNodeId: number, secondNodeId: number) {
+    dispatch(createEdgeAction(firstNodeId, secondNodeId));
+  },
+  mergeTrees(sourceNodeId: number, targetNodeId: number) {
+    dispatch(mergeTreesAction(sourceNodeId, targetNodeId));
+  },
+  deleteNode(nodeId: number, treeId: number) {
+    dispatch(deleteNodeAction(nodeId, treeId));
   },
 });
 

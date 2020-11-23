@@ -633,12 +633,43 @@ export function deleteTree(
   });
 }
 
+export function createEdge(
+  skeletonTracing: SkeletonTracing,
+  sourceNodeId: number,
+  targetNodeId: number,
+  restrictions: RestrictionsAndSettings,
+): Maybe<TreeMap> {
+  const { allowUpdate } = restrictions;
+  const { trees } = skeletonTracing;
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
+  const targetTree = findTreeByNodeId(trees, targetNodeId).get();
+  if (!allowUpdate || !sourceTree || !targetTree || sourceTree !== targetTree) {
+    return Maybe.Nothing();
+  }
+
+  const newEdge: Edge = {
+    source: sourceNodeId,
+    target: targetNodeId,
+  };
+
+  const newTrees = update(trees, {
+    [targetTree.treeId]: {
+      edges: {
+        $set: targetTree.edges.addEdges(sourceTree.edges.asArray().concat(newEdge)),
+      },
+      comments: { $set: targetTree.comments.concat(sourceTree.comments) },
+      branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },
+    },
+  });
+  return Maybe.Just(newTrees);
+}
+
 export function mergeTrees(
   skeletonTracing: SkeletonTracing,
   sourceNodeId: number,
   targetNodeId: number,
   restrictions: RestrictionsAndSettings,
-): Maybe<[Tree, number, number]> {
+): Maybe<[TreeMap, number, number]> {
   const { allowUpdate } = restrictions;
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();

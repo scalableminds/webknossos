@@ -111,7 +111,7 @@ function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDowns
         {magsToDownsample.map(mag => mag.join("-")).join(", ")}.
       </p>
 
-      <p>
+      <div>
         The cause for the missing resolutions can be one of the following:
         <ul>
           <li>
@@ -121,13 +121,13 @@ function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDowns
           <li>The annotation was created in a task that was restricted to certain resolutions.</li>
           <li>The dataset was mutated to have more resolutions.</li>
         </ul>
-      </p>
+      </div>
 
       <p style={{ fontWeight: "bold" }}>
         Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
         Also, the version history of the volume data will be reset.
       </p>
-      <div style={{ display: "flex", "justify-content": "center", marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
         <AsyncButton onClick={handleTriggerDownsampling} type="primary">
           Downsample
         </AsyncButton>
@@ -585,7 +585,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       return [];
     }
     const segmentationLayer = Model.getSegmentationLayer();
-    const fallbackLayerInfo = segmentationLayer.fallbackLayerInfo;
+    const { fallbackLayerInfo } = segmentationLayer;
     const volumeTargetResolutions =
       fallbackLayerInfo != null
         ? fallbackLayerInfo.resolutions

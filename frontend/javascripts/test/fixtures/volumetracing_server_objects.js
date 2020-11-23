@@ -44,6 +44,7 @@ export const annotation: APIAnnotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    resolutionRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,

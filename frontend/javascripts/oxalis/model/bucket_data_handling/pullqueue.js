@@ -12,6 +12,7 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import { type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import Store, { type DataStoreInfo } from "oxalis/store";
+import { asAbortable } from "libs/utils";
 
 export type PullQueueItem = {
   priority: number,
@@ -94,19 +95,12 @@ class PullQueue {
 
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
-    const { signal } = this.abortController;
     try {
-      const bucketBuffers = await new Promise(async (resolve, reject) => {
-        const abort = () => reject(PULL_ABORTION_ERROR);
-        signal.addEventListener("abort", abort);
-        try {
-          const buffers = await requestWithFallback(layerInfo, batch);
-          resolve(buffers);
-        } catch (error) {
-          reject(error);
-        }
-        signal.removeEventListener("abort", abort);
-      });
+      const bucketBuffers = await asAbortable(
+        requestWithFallback(layerInfo, batch),
+        this.abortController.signal,
+        PULL_ABORTION_ERROR,
+      );
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,
@@ -127,8 +121,6 @@ class PullQueue {
         }
       }
     } catch (error) {
-      // This will still execute the finally block
-      if (error.name === "AbortError") return;
       for (const bucketAddress of batch) {
         const bucket = this.cube.getBucket(bucketAddress);
         if (bucket.type === "data") {
@@ -141,7 +133,10 @@ class PullQueue {
           }
         }
       }
-      console.error(error);
+      if (error.name !== "AbortError") {
+        // AbortErrors are deliberate. Don't show them on the console.
+        console.error(error);
+      }
     } finally {
       this.batchCount--;
       this.pull();

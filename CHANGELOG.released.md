@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.11.0...20.12.0)
 
 ### Highlights
-- Added multi-resolution volume annotations. As a result, volume tracings can be viewed even when zooming out to downsampled magnifications. Note that already existing volume tracings will still only contain data in the first magnification. If you want to migrate an old volume tracing, you can download and re-import it. [#4755](https://github.com/scalableminds/webknossos/pull/4755)
+- Added multi-resolution volume annotations. As a result, volume tracings can be viewed even when zooming out to downsampled magnifications. Note that already existing volume tracings will still only contain data in the first magnification. If you want to migrate an old volume tracing, you can explicitly trigger the downsampling in the sidebar's layer settings. [#4755](https://github.com/scalableminds/webknossos/pull/4755)
 - Improved performance of volume annotations (brush and trace tool). [#4848](https://github.com/scalableminds/webknossos/pull/4848)
 
 ### Added

@@ -37,6 +37,7 @@ import {
 import {
   findTreeByNodeId,
   getNodeAndTree,
+  getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
   getTree,
@@ -100,6 +101,7 @@ import Store, {
   type VolumeTracing,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
+import PriorityQueue from "js-priority-queue";
 import UrlManager from "oxalis/controller/url_manager";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
@@ -629,6 +631,60 @@ class TracingApi {
     );
 
     return totalLength;
+  }
+
+  measureLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
+      skeletonTracing,
+      sourceNodeId,
+    );
+    const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
+      skeletonTracing,
+      targetNodeId,
+    );
+    if (
+      sourceNode == null ||
+      targetNode == null ||
+      sourceTree == null ||
+      sourceTree !== targetTree
+    ) {
+      return 0;
+    }
+    const firstScaledPosition = new Float32Array([0, 0, 0]);
+    const secondScaledPosition = new Float32Array([0, 0, 0]);
+    const diffVector = new Float32Array([0, 0, 0]);
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+    // We use the Dijkstra algorithm to get the shortest path between the nodes.
+    const distanceMap = {};
+    for (const node of sourceTree.nodes.values()) {
+      distanceMap[node.id] = Number.POSITIVE_INFINITY;
+    }
+    distanceMap[sourceNode.id] = 0;
+    // The priority queue saves node id and distance tuples.
+    const priorityQueue = new PriorityQueue<[number, number]>({
+      comparator: ([_first, firstDistance], [_second, secondDistance]) =>
+        firstDistance <= secondDistance ? -1 : 1,
+    });
+    priorityQueue.queue([sourceNodeId, 0]);
+    while (priorityQueue.length > 0) {
+      const [nextNodeId, distance] = priorityQueue.dequeue();
+      const nextNodePosition = sourceTree.nodes.get(nextNodeId).position;
+      V3.scale3(nextNodePosition, datasetScale, firstScaledPosition);
+      // Calculate the distance to all neighbours and update the distances.
+      for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
+        const neighbourNodeId = source === nextNodeId ? target : source;
+        const neightbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        V3.scale3(neightbourPosition, datasetScale, secondScaledPosition);
+        V3.sub(firstScaledPosition, secondScaledPosition, diffVector);
+        const neighbourDistance = distance + V3.length(diffVector);
+        if (neighbourDistance < distanceMap[neighbourNodeId]) {
+          distanceMap[neighbourNodeId] = neighbourDistance;
+          priorityQueue.queue([neighbourNodeId, neighbourDistance]);
+        }
+      }
+    }
+    return distanceMap[targetNodeId];
   }
 
   /**

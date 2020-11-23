@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Menu } from "antd";
+import { Menu, notification } from "antd";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
@@ -10,7 +10,10 @@ import {
   mergeTreesAction,
   deleteNodeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import api from "oxalis/api/internal_api";
+import messages from "messages";
 import { findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import { formatNumberToLength } from "libs/format_utils";
 
 type OwnProps = {|
   nodeContextMenuPosition: [number, number],
@@ -30,6 +33,22 @@ type StateProps = {| skeletonTracing: ?SkeletonTracing |};
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 
 const NAVBAR_HEIGHT = 48;
+
+function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
+  const length = api.tracing.measureLengthBetweenNodes(sourceNodeId, targetNodeId);
+  notification.open({
+    message: `The shortest length between the nodes is ${formatNumberToLength(length)}.`,
+    icon: <i className="fas fa-ruler" />,
+  });
+}
+
+function measureAndShowFullTreeLength(treeId: number, treeName: string) {
+  const length = api.tracing.measureTreeLength(treeId);
+  notification.open({
+    message: messages["tracing.tree_length_notification"](treeName, formatNumberToLength(length)),
+    icon: <i className="fas fa-ruler" />,
+  });
+}
 
 function NodeContextMenu({
   skeletonTracing,
@@ -104,6 +123,24 @@ function NodeContextMenu({
           onClick={() => deleteNode(nodeContextMenuNodeId, nodeContextTree.treeId)}
         >
           Delete This Node
+        </Menu.Item>
+        <Menu.Item
+          key="measure-length"
+          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+          onClick={() =>
+            activeNodeId != null
+              ? measureAndShowLengthBetweenNodes(activeNodeId, nodeContextMenuNodeId)
+              : null
+          }
+        >
+          Measure Length To This Node
+        </Menu.Item>
+        <Menu.Item
+          key="measure-length"
+          disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
+          onClick={() => measureAndShowFullTreeLength(nodeContextTree.treeId, nodeContextTree.name)}
+        >
+          Measure Length Of This Tree
         </Menu.Item>
       </Menu>
     </div>

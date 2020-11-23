@@ -372,8 +372,10 @@ function onRightClick(
   const { volume } = state.tracing;
   if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
     // We avoid creating nodes when in brushing mode.
-    const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
-    if (nodeId != null && nodeId > 0) {
+    const nodeId = event.shiftKey
+      ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
+      : null;
+    if (event.shiftKey && nodeId != null && nodeId > 0) {
       showNodeContextMenuAt(event.pageX, event.pageY, nodeId);
     } else {
       setWaypoint(calculateGlobalPos(position), ctrlPressed);

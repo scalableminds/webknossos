@@ -32,6 +32,7 @@ import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import { createTracingOverlayMenuWithCallback } from "dashboard/advanced_dataset/dataset_action_view";
+import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 
 const VersionRestoreWarning = (
   <Alert
@@ -51,6 +52,7 @@ type StateProps = {|
   hasSkeleton: boolean,
   showVersionRestore: boolean,
   isReadOnly: boolean,
+  is2d: boolean,
 |};
 type OwnProps = {|
   layoutProps: LayoutProps,
@@ -184,7 +186,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
           {!isReadOnly && hasVolume && isVolumeSupported ? <VolumeActionsView /> : null}
-          {isArbitrarySupported ? <ViewModesView /> : null}
+          {isArbitrarySupported && !this.props.is2d ? <ViewModesView /> : null}
           {isTraceMode ? null : this.renderStartTracingButton()}
         </div>
         <AddNewLayoutModal
@@ -214,6 +216,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasVolumeFallback: state.tracing.volume != null && state.tracing.volume.fallbackLayer != null,
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
+  is2d: is2dDataset(state.dataset),
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(ActionBarView);

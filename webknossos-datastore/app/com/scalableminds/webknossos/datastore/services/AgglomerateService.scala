@@ -139,13 +139,14 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val agglomerate_to_segments_offsets = reader.`object`().openDataSet("/agglomerate_to_segments_offsets")
-    val range: Array[Long] = reader.uint64().readArrayBlockWithOffset(agglomerate_to_segments_offsets, 2, agglomerateId)
+    val positionsRange: Array[Long] = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+    val positions: Array[Array[Long]] = reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", (positionsRange(1) - positionsRange(0)).toInt, 3, positionsRange(0), 0)
+    val edgesRange: Array[Long] = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+    val edges: Array[Array[Long]] = reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", (edgesRange(1) - edgesRange(0)).toInt, 2, edgesRange(0), 0)
 
-    //val agglomerate_to_positions = reader.`object`().openDataSet("")
-    //val positions: MDLongArray = reader.uint64().readMDArrayBlockWithOffset("/agglomerate_to_positions", List((range(1) - range(0)).toInt, 0).toArray, List(range(0), 0).toArray)
-    //val positionsFormatted = positions.dimensions.mkString(",")
+    val positionsFormatted = positions.map(p => p.mkString(",") ).mkString("; ")
+    val edgesFormatted = edges.map(p => p.mkString(",") ).mkString("; ")
 
-    Fox.successful(s"here comes the skeleton. segments offsets ${range(0)} to ${range(1)}")
+    Fox.successful(s"here comes the skeleton. positions: ${positionsFormatted}. edges: $edgesFormatted")
   }
 }

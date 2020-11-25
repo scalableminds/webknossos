@@ -49,7 +49,7 @@ import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import viewLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -336,7 +336,7 @@ function onClick(
       Store.dispatch(setActiveNodeAction(nodeId));
     }
   } else if (shiftPressed && event != null) {
-    isosurfaceLeftClick(position, plane, event);
+    viewLeftClick(position, plane, event);
   }
 }
 

@@ -1,7 +1,7 @@
 package models.annotation.nml
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.Files.TemporaryFile

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.util.geometry.{Point3D, Vector3D}

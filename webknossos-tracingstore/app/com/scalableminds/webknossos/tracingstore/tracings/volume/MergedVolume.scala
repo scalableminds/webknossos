@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import net.liftweb.common.Box
 

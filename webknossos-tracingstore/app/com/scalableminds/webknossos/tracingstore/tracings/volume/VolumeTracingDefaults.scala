@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.tracingstore.geometry.Vector3D
+import com.scalableminds.webknossos.datastore.geometry.Vector3D
 
 object VolumeTracingDefaults {
 

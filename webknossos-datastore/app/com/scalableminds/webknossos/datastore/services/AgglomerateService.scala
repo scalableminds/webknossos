@@ -8,6 +8,8 @@ import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileCache, AgglomerateIdCache, BoundingBoxCache, CachedAgglomerateFile, CumsumParser}
 import com.typesafe.scalalogging.LazyLogging
@@ -16,6 +18,8 @@ import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.concurrent.ExecutionContext
+
+
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   val agglomerateDir = "agglomerates"
@@ -127,7 +131,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long
-                      )(implicit ec: ExecutionContext): Fox[String] = {
+                      ): SkeletonTracing = {
 
     val hdfFile =
       dataBaseDir
@@ -139,13 +143,32 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         .toFile
 
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val agglomerate_to_segments_offsets = reader.`object`().openDataSet("/agglomerate_to_segments_offsets")
-    val range: Array[Long] = reader.uint64().readArrayBlockWithOffset(agglomerate_to_segments_offsets, 2, agglomerateId)
+    val positionsRange: Array[Long] = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+    val positions: Array[Array[Long]] = reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", (positionsRange(1) - positionsRange(0)).toInt, 3, positionsRange(0), 0)
+    val edgesRange: Array[Long] = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+    val edges: Array[Array[Long]] = reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", (edgesRange(1) - edgesRange(0)).toInt, 2, edgesRange(0), 0)
 
-    //val agglomerate_to_positions = reader.`object`().openDataSet("")
-    //val positions: MDLongArray = reader.uint64().readMDArrayBlockWithOffset("/agglomerate_to_positions", List((range(1) - range(0)).toInt, 0).toArray, List(range(0), 0).toArray)
-    //val positionsFormatted = positions.dimensions.mkString(",")
+    val positionsFormatted = positions.map(p => p.mkString(",") ).mkString("; ")
+    val edgesFormatted = edges.map(p => p.mkString(",") ).mkString("; ")
 
-    Fox.successful(s"here comes the skeleton. segments offsets ${range(0)} to ${range(1)}")
+    val nodes = positions.zipWithIndex.map { case (pos, idx) =>
+      Node(id=idx, position = Point3D(pos(0).toInt, pos(1).toInt, pos(2).toInt), rotation = Vector3D(0,0,0), viewport=0, resolution = 1, bitDepth = 0, interpolation = false, radius = 120, createdTimestamp = System.currentTimeMillis())
+    }
+
+    val skeletonEdges = edges.map { e =>
+      Edge(source = e(0).toInt, target = e(1).toInt)
+    }
+
+    val trees = Seq(Tree(treeId = 1, createdTimestamp = System.currentTimeMillis(), nodes=nodes, edges=skeletonEdges, name=s"agglomerate ${agglomerateId}"))
+
+    val skeleton = SkeletonTracing(dataSetName = dataSetName, trees=trees,
+      createdTimestamp = System.currentTimeMillis(), editPosition = Point3D(0,0,0),
+      editRotation = Vector3D(0,0,0),
+      zoomLevel = 1,
+      version = 0,
+      organizationName = Some(organizationName)
+    )
+
+    skeleton
   }
 }

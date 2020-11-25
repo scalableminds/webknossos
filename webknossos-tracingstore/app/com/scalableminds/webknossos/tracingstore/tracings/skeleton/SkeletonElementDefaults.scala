@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{Node, SkeletonTracing}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
 import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 

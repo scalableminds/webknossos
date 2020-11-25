@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.geometry.Color
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.geometry.Color
 
 trait SkeletonUpdateActionHelper {
 

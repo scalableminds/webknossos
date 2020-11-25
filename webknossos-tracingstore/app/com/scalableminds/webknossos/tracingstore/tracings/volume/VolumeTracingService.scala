@@ -20,9 +20,9 @@ import com.scalableminds.webknossos.datastore.services.{
   IsosurfaceServiceHolder
 }
 import com.scalableminds.webknossos.tracingstore.{RedisTemporaryStore, TracingStoreWkRpcClient}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.ElementClass
-import com.scalableminds.webknossos.tracingstore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -408,8 +408,8 @@ class VolumeTracingService @Inject()(
       version = 0L,
       largestSegmentId = largestSegmentId,
       boundingBox = mergedBoundingBox.getOrElse(
-        com.scalableminds.webknossos.tracingstore.geometry.BoundingBox(
-          com.scalableminds.webknossos.tracingstore.geometry.Point3D(0, 0, 0),
+        com.scalableminds.webknossos.datastore.geometry.BoundingBox(
+          com.scalableminds.webknossos.datastore.geometry.Point3D(0, 0, 0),
           0,
           0,
           0)), // should never be empty for volumes

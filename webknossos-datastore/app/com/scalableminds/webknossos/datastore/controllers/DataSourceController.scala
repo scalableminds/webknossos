@@ -200,6 +200,39 @@ class DataSourceController @Inject()(
     }
   }
 
+  def generateAgglomerateSkeleton(
+                                   organizationName: String,
+                                   dataSetName: String,
+                                   dataLayerName: String,
+                                   mappingName: String,
+                                   agglomerateId: Long
+                                 ) = Action.async { implicit request =>
+    accessTokenService.validateAccess(
+      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+      AllowRemoteOrigin {
+        for {
+          skeletonTracing <- binaryDataServiceHolder.binaryDataService.agglomerateService.
+            generateSkeleton(organizationName, dataSetName, dataLayerName, mappingName, agglomerateId)
+        } yield Ok(skeletonTracing)
+      }
+    }
+  }
+
+  def generateAgglomerateSkeletonUnsafe(
+                                   organizationName: String,
+                                   dataSetName: String,
+                                   dataLayerName: String,
+                                   mappingName: String,
+                                   agglomerateId: Long
+                                 ) = Action.async { implicit request =>
+    AllowRemoteOrigin {
+      for {
+        skeletonTracing <- binaryDataServiceHolder.binaryDataService.agglomerateService.
+          generateSkeleton(organizationName, dataSetName, dataLayerName, mappingName, agglomerateId)
+      } yield Ok(skeletonTracing)
+    }
+  }
+
   def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {
     implicit request =>
       accessTokenService

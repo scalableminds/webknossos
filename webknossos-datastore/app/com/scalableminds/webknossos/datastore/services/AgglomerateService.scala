@@ -182,11 +182,13 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
 
     val trees = Seq(
-      Tree(treeId = 1,
-           createdTimestamp = System.currentTimeMillis(),
-           nodes = nodes,
-           edges = skeletonEdges,
-           name = s"agglomerate ${agglomerateId} (${mappingName})"))
+      Tree(
+        treeId = agglomerateId,
+        createdTimestamp = System.currentTimeMillis(),
+        nodes = nodes,
+        edges = skeletonEdges,
+        name = s"agglomerate ${agglomerateId} (${mappingName})"
+      ))
 
     val skeleton = SkeletonTracing(
       dataSetName = dataSetName,

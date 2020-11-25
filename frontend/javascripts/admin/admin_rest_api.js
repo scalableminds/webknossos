@@ -1405,11 +1405,11 @@ export function getAgglomerateSkeleton(
   mappingId: string,
   agglomerateId: number,
 ): Promise<ArrayBuffer> {
-  return doWithToken(async token => {
-    return (await Request.receiveArraybuffer(
+  return doWithToken(token =>
+    Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
-    )).text();
-  });
+    ),
+  );
 }

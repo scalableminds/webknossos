@@ -34,6 +34,9 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
   if (cellId > 0) {
     const layerName = segmentation.name;
     const mappingId = state.temporaryConfiguration.activeMapping.mappingName;
+
+    if (mappingId == null) return;
+
     const { dataset } = state;
     const result = await getAgglomerateSkeleton(
       dataset.dataStore.url,
@@ -45,6 +48,13 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
 
     const nmlProtoBuffer = result;
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
+
+    if (!parsedTracing.trees) {
+      // This check is only for flow to realize that we have a skeleton tracing
+      // on our hands.
+      throw new Error("Skeleton tracing doesn't contain trees");
+    }
+
     Store.dispatch(
       addTreesAndGroupsAction(
         createMutableTreeMapFromTreeArray(parsedTracing.trees),

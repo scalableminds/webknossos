@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat

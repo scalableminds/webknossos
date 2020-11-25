@@ -8,6 +8,8 @@ import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileCache, AgglomerateIdCache, BoundingBoxCache, CachedAgglomerateFile, CumsumParser}
 import com.typesafe.scalalogging.LazyLogging
@@ -16,6 +18,8 @@ import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
 import scala.concurrent.ExecutionContext
+
+
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   val agglomerateDir = "agglomerates"
@@ -127,7 +131,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long
-                      )(implicit ec: ExecutionContext): Fox[String] = {
+                      ): SkeletonTracing = {
 
     val hdfFile =
       dataBaseDir
@@ -147,6 +151,24 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val positionsFormatted = positions.map(p => p.mkString(",") ).mkString("; ")
     val edgesFormatted = edges.map(p => p.mkString(",") ).mkString("; ")
 
-    Fox.successful(s"here comes the skeleton. positions: ${positionsFormatted}. edges: $edgesFormatted")
+    val nodes = positions.zipWithIndex.map { case (pos, idx) =>
+      Node(id=idx, position = Point3D(pos(0).toInt, pos(1).toInt, pos(2).toInt), rotation = Vector3D(0,0,0), viewport=0, resolution = 1, bitDepth = 0, interpolation = false, radius = 120, createdTimestamp = System.currentTimeMillis())
+    }
+
+    val skeletonEdges = edges.map { e =>
+      Edge(source = e(0).toInt, target = e(1).toInt)
+    }
+
+    val trees = Seq(Tree(treeId = 1, createdTimestamp = System.currentTimeMillis(), nodes=nodes, edges=skeletonEdges, name=s"agglomerate ${agglomerateId}"))
+
+    val skeleton = SkeletonTracing(dataSetName = dataSetName, trees=trees,
+      createdTimestamp = System.currentTimeMillis(), editPosition = Point3D(0,0,0),
+      editRotation = Vector3D(0,0,0),
+      zoomLevel = 1,
+      version = 0,
+      organizationName = Some(organizationName)
+    )
+
+    skeleton
   }
 }

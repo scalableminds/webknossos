@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
 

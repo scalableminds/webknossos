@@ -11,7 +11,8 @@ import { requestWithFallback } from "oxalis/model/bucket_data_handling/wkstore_a
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import { type Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Store, { type DataStoreInfo, type DataLayerType } from "oxalis/store";
+import Store, { type DataStoreInfo } from "oxalis/store";
+import { asAbortable } from "libs/utils";
 
 export type PullQueueItem = {
   priority: number,
@@ -27,6 +28,9 @@ export const PullQueueConstants = {
 
 const BATCH_SIZE = 3;
 
+// $FlowIssue[cannot-resolve-name] Flow doesn't know DOMException (https://developer.mozilla.org/en-US/docs/Web/API/DOMException/DOMException)
+const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");
+
 class PullQueue {
   cube: DataCube;
   priorityQueue: PriorityQueue<PullQueueItem>;
@@ -34,6 +38,7 @@ class PullQueue {
   layerName: string;
   connectionInfo: ConnectionInfo;
   datastoreInfo: DataStoreInfo;
+  abortController: AbortController;
 
   constructor(
     cube: DataCube,
@@ -50,6 +55,7 @@ class PullQueue {
       comparator: (b, a) => b.priority - a.priority,
     });
     this.batchCount = 0;
+    this.abortController = new AbortController();
   }
 
   pull(): Array<Promise<void>> {
@@ -74,6 +80,11 @@ class PullQueue {
     return promises;
   }
 
+  abortRequests() {
+    this.abortController.abort();
+    this.abortController = new AbortController();
+  }
+
   async pullBatch(batch: Array<Vector4>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
@@ -85,7 +96,11 @@ class PullQueue {
     const { renderMissingDataBlack } = Store.getState().datasetConfiguration;
 
     try {
-      const bucketBuffers = await requestWithFallback(layerInfo, batch);
+      const bucketBuffers = await asAbortable(
+        requestWithFallback(layerInfo, batch),
+        this.abortController.signal,
+        PULL_ABORTION_ERROR,
+      );
       this.connectionInfo.log(
         this.layerName,
         roundTripBeginTime,
@@ -102,7 +117,7 @@ class PullQueue {
         if (bucketBuffer == null && !renderMissingDataBlack) {
           bucket.markAsFailed(true);
         } else {
-          this.handleBucket(layerInfo, bucketAddress, bucketBuffer);
+          this.handleBucket(bucketAddress, bucketBuffer);
         }
       }
     } catch (error) {
@@ -118,14 +133,17 @@ class PullQueue {
           }
         }
       }
-      console.error(error);
+      if (error.name !== "AbortError") {
+        // AbortErrors are deliberate. Don't show them on the console.
+        console.error(error);
+      }
     } finally {
       this.batchCount--;
       this.pull();
     }
   }
 
-  handleBucket(layerInfo: DataLayerType, bucketAddress: Vector4, bucketData: ?Uint8Array): void {
+  handleBucket(bucketAddress: Vector4, bucketData: ?Uint8Array): void {
     const bucket = this.cube.getBucket(bucketAddress);
     if (bucket.type === "data") {
       bucket.receiveData(bucketData);

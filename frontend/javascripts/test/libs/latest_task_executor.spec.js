@@ -74,7 +74,7 @@ test("LatestTaskExecutor: three interleaving tasks", async t => {
   await scheduledPromise1.then(result => {
     t.is(result, 1);
   });
-  t.throwsAsync(scheduledPromise2, SKIPPED_TASK_REASON);
+  t.throwsAsync(scheduledPromise2, { message: SKIPPED_TASK_REASON });
   await scheduledPromise3.then(result => {
     t.is(result, 3);
   });

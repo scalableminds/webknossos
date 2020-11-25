@@ -1397,3 +1397,19 @@ export function computeIsosurface(
     return { buffer, neighbors };
   });
 }
+
+export function getAgglomerateSkeleton(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken(token =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
+    ),
+  );
+}

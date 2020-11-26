@@ -7,7 +7,7 @@ export type ProgressCallback = (isDone: boolean, progressState: string) => Promi
 
 // This function returns another function which can be called within a longer running
 // process to update the UI with progress information. Example usage:
-// const progressCallback = createProgressCallback({ pauseDelay: 100, successDelayMessage: 5000 });
+// const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 5000 });
 // await progressCallback(false, "Beginning work...")
 // ... long running code
 // await progressCallback(false, "First part done...")

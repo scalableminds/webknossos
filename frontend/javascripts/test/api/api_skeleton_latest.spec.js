@@ -148,7 +148,7 @@ test.serial.cb("Utils Api: sleep should sleep", t => {
   });
   t.false(bool);
   setTimeout(() => {
-    t.true(bool, true);
+    t.true(bool);
     t.end();
   }, 400);
 });

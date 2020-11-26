@@ -152,7 +152,7 @@ class Mappings {
 
   async fetchMappings(mappingName: string, fetchedMappings: APIMappings): Promise<void> {
     const mapping = await this.fetchMapping(mappingName);
-    if (mapping == null) return Promise.reject();
+    if (mapping == null) return Promise.reject(new Error("Mapping was null."));
     fetchedMappings[mappingName] = mapping;
     if (mapping.parent != null) {
       return this.fetchMappings(mapping.parent, fetchedMappings);

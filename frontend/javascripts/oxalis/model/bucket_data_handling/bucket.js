@@ -329,7 +329,107 @@ export class DataBucket {
     }
   }
 
+  testZfp(bucketData) {
+    const cube_length = 32;
+    const precision = 10;
+    const [width, height, depth] = [32, 32, 32];
+
+    const maximum_byte_size = Module.ccall(
+        "zfp_wrapped_estimate_maximum_byte_size", // name of C function
+        "number", // return type
+        ["number", "number"], // argument types
+        [cube_length, precision] // arguments
+    );
+
+    console.log("maximum_byte_size", maximum_byte_size);
+
+    const originalImageBuffer = bucketData;
+    const byte_count_uint8 = originalImageBuffer.BYTES_PER_ELEMENT;
+    const byte_count_uint32 = 4;
+    console.log(originalImageBuffer);
+
+    console.log("Compression task size:", width * height * depth);
+    console.log("Input buffer size:", originalImageBuffer.length);
+
+    const buf = Module._malloc(originalImageBuffer.length * byte_count_uint8);
+    Module.HEAPU8.set(originalImageBuffer, buf / byte_count_uint8);
+
+    const compressedBufAddress = Module._malloc(
+        // maximum_byte_size // originalImageBuffer.length // * byte_count_uint32
+        originalImageBuffer.length * byte_count_uint32
+    );
+
+    const tolerance = 1; // 28;
+    const compressedSize =
+        Module.ccall(
+            "compress", // "zfp_wrapped_compress", // "compress", // name of C function
+            "number", // return type
+            ["number", "number", "int", "int", "int", "double"], // argument types
+            [buf, compressedBufAddress, width, height, depth, tolerance] // arguments
+        );
+
+    console.log(
+        "size after compression",
+        compressedSize,
+        `(${100 * compressedSize / (originalImageBuffer.length * byte_count_uint8)} %)`
+    );
+    console.log(
+        "(size after compression) / 4",
+        compressedSize / 4,
+        `(${100 * compressedSize / 4 / (originalImageBuffer.length * byte_count_uint8)} %)`
+    );
+
+    const compressedBuffer = Module.HEAP32.subarray(
+        compressedBufAddress / byte_count_uint32,
+        (compressedBufAddress + compressedSize) / byte_count_uint32
+    );
+
+    console.log("compressedBuffer", compressedBuffer);
+
+
+    // for (let index = 0; index < compressedBuffer.length; ++index) {
+    //   // demote to uint8
+    //   compressedBuffer[index] = Math.min(255, Math.max(0, (compressedBuffer[index] >> 23) + 0x80));
+    //   // promote to int32 again
+    //   compressedBuffer[index] = (compressedBuffer[index] - 0x80) << 23;
+    // }
+
+    const decompressedBufAddress = Module._malloc(
+        originalImageBuffer.length * byte_count_uint8 * 4 // todo: remove additional multiplier
+    );
+    // Decompress
+
+    console.time("Decompress");
+    Module.ccall(
+        "decompress", // name of C function
+        "number", // return type
+        ["number", "number", "int", "int", "int", "double"], // argument types
+        [
+            decompressedBufAddress,
+            compressedBufAddress,
+            width,
+            height,
+            depth,
+            tolerance
+        ] // arguments
+    );
+    console.timeEnd("Decompress");
+
+    const decompressedBuffer = Module.HEAPU8.subarray(
+        decompressedBufAddress / byte_count_uint8,
+        decompressedBufAddress / byte_count_uint8 + originalImageBuffer.length
+    );
+    console.log("decompressedBuffer", decompressedBuffer);
+    console.log("decompressedBuffer.length", decompressedBuffer.length);
+
+    return decompressedBuffer.slice();
+  }
+
   receiveData(arrayBuffer: ?Uint8Array): void {
+    if (arrayBuffer != null) {
+      arrayBuffer = this.testZfp(arrayBuffer)
+    }
+
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
     const data =
       arrayBuffer != null

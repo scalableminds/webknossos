@@ -36,6 +36,7 @@ module.exports = function(env = {}) {
     new CopyWebpackPlugin(
       [
         { from: "./public/tf-models/**", to: "tf-models", flatten: true },
+        { from: "./public/speed-src.wasm", to: "speed-src.wasm", flatten: true },
         // { from: "./public/tf-models/speed-src.*", to: "*", flatten: true },
       ],
       {
@@ -145,6 +146,9 @@ module.exports = function(env = {}) {
         {
           test: /speed-src\.js$/,
           loader: "exports-loader",
+          options: {
+            exports: "Module"
+          }
         },
       ],
     },

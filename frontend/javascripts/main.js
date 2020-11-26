@@ -71,20 +71,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 import zfp from "speed-src.js";
-import zfpModule from "speed-src.wasm";
+// import zfpModule from "speed-src.wasm";
 
 // Since webpack will change the name and potentially the path of the
 // `.wasm` file, we have to provide a `locateFile()` hook to redirect
 // to the appropriate URL.
 // More details: https://kripken.github.io/emscripten-site/docs/api_reference/module.html
-const module = zfp({
-  locateFile(path) {
-    if (path.endsWith(".wasm")) {
-      return zfpModule;
-    }
-    return path;
-  },
-});
+console.log("zfp", zfp)
+// const module = zfp({
+//   locateFile(path) {
+//     console.log("path", path)
+//     if (path.endsWith(".wasm")) {
+//       // return zfpModule;
+//     }
+//     return path;
+//   },
+// });
+
+window.Module = zfp.exports;
 
 module.onRuntimeInitialized = () => {
   console.log(module._fib(12));

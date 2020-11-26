@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, Json, Writes}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
 import scala.concurrent.ExecutionContext
 

@@ -10,8 +10,9 @@ import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import javax.inject.Inject
 import models.annotation.nml.NmlService
 import models.annotation._

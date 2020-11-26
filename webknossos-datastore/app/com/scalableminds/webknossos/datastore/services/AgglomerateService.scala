@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.storage.{
   AgglomerateFileCache,
@@ -23,7 +24,11 @@ import javax.inject.Inject
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
+import scala.concurrent.ExecutionContext
+
+class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+    extends DataConverter
+    with LazyLogging {
   val agglomerateDir = "agglomerates"
   val agglomerateFileExtension = "hdf5"
   val datasetName = "/segment_to_agglomerate"
@@ -130,77 +135,73 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
                        dataSetName: String,
                        dataLayerName: String,
                        mappingName: String,
-                       agglomerateId: Long): SkeletonTracing = {
+                       agglomerateId: Long): Fox[SkeletonTracing] =
+    try {
+      val startTime = System.nanoTime()
+      val hdfFile =
+        dataBaseDir
+          .resolve(organizationName)
+          .resolve(dataSetName)
+          .resolve(dataLayerName)
+          .resolve(agglomerateDir)
+          .resolve(s"${mappingName}.${agglomerateFileExtension}")
+          .toFile
 
-    val hdfFile =
-      dataBaseDir
-        .resolve(organizationName)
-        .resolve(dataSetName)
-        .resolve(dataLayerName)
-        .resolve(agglomerateDir)
-        .resolve(s"${mappingName}.${agglomerateFileExtension}")
-        .toFile
+      val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+      val positionsRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
+      val edgesRange: Array[Long] =
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
 
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val positionsRange: Array[Long] =
-      reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
-    val edgesRange: Array[Long] =
-      reader.uint64().readArrayBlockWithOffset("/agglomerate_to_edges_offsets", 2, agglomerateId)
+      val nodeCount = positionsRange(1) - positionsRange(0)
+      val edgeCount = edgesRange(1) - edgesRange(0)
+      if (nodeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
+        throw new Exception(
+          s"Agglomerate has too many nodes ($nodeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
+      }
+      if (edgeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
+        throw new Exception(
+          s"Agglomerate has too many edges ($edgeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
+      }
+      val positions: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
+      val edges: Array[Array[Long]] =
+        reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
 
-    val nodeCount = positionsRange(1) - positionsRange(0)
-    val edgeCount = edgesRange(1) - edgesRange(0)
-    if (nodeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
-      throw new Exception(
-        s"Agglomerate has too many nodes ($nodeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
+      val nodes = positions.zipWithIndex.map {
+        case (pos, idx) =>
+          NodeDefaults.createInstance.copy(
+            id = idx,
+            position = Point3D(pos(0).toInt, pos(1).toInt, pos(2).toInt)
+          )
+      }
+
+      val skeletonEdges = edges.map { e =>
+        Edge(source = e(0).toInt, target = e(1).toInt)
+      }
+
+      val trees = Seq(
+        Tree(
+          treeId = agglomerateId.toInt,
+          createdTimestamp = System.currentTimeMillis(),
+          nodes = nodes,
+          edges = skeletonEdges,
+          name = s"agglomerate ${agglomerateId} (${mappingName})"
+        ))
+
+      val skeleton = SkeletonTracingDefaults.createInstance.copy(
+        dataSetName = dataSetName,
+        trees = trees,
+        organizationName = Some(organizationName)
+      )
+      val duration = System.nanoTime() - startTime
+      if (duration > 100 * 1e6) {
+        logger.debug(s"Generating skeleton from agglomerate file took ${math
+          .round(duration / 1e6)} ms (${skeletonEdges.length} edges, ${nodes.length} nodes).")
+      }
+
+      Fox.successful(skeleton)
+    } catch {
+      case e: Exception => Fox.failure(e.getMessage)
     }
-    if (edgeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
-      throw new Exception(
-        s"Agglomerate has too many edges ($edgeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
-    }
-    val positions: Array[Array[Long]] =
-      reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)
-    val edges: Array[Array[Long]] =
-      reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_edges", edgeCount.toInt, 2, edgesRange(0), 0)
-
-    val nodes = positions.zipWithIndex.map {
-      case (pos, idx) =>
-        Node(
-          id = idx,
-          position = Point3D(pos(0).toInt, pos(1).toInt, pos(2).toInt),
-          rotation = Vector3D(0, 0, 0),
-          viewport = 0,
-          resolution = 1,
-          bitDepth = 0,
-          interpolation = false,
-          radius = 120,
-          createdTimestamp = System.currentTimeMillis()
-        )
-    }
-
-    val skeletonEdges = edges.map { e =>
-      Edge(source = e(0).toInt, target = e(1).toInt)
-    }
-
-    val trees = Seq(
-      Tree(
-        treeId = agglomerateId.toInt,
-        createdTimestamp = System.currentTimeMillis(),
-        nodes = nodes,
-        edges = skeletonEdges,
-        name = s"agglomerate ${agglomerateId} (${mappingName})"
-      ))
-
-    val skeleton = SkeletonTracing(
-      dataSetName = dataSetName,
-      trees = trees,
-      createdTimestamp = System.currentTimeMillis(),
-      editPosition = Point3D(0, 0, 0),
-      editRotation = Vector3D(0, 0, 0),
-      zoomLevel = 1,
-      version = 0,
-      organizationName = Some(organizationName)
-    )
-
-    skeleton
-  }
 }

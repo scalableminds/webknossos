@@ -8,11 +8,11 @@ import com.scalableminds.webknossos.tracingstore.TracingStoreWkRpcClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
-  ProtoGeometryImplicits,
   TracingDataStore,
   VersionedKeyValuePair
 }
 import com.scalableminds.webknossos.datastore.geometry.{Point3D => ProtoPoint3D}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import play.api.libs.json.{Format, Json}
 
 import scala.collection.mutable

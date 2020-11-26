@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
 import play.api.libs.json._
 
 case class CreateTreeSkeletonAction(id: Int,

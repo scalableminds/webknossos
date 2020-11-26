@@ -332,7 +332,11 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
       case _ => List()
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable))
+      _ <- run(
+        DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
   }
 
@@ -443,7 +447,6 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         dataLayers.map(d => sanitize(d.name)))}"
     val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
 
-    // TODO if we redefine dataSet.usable, this can be changed back
     val queries = source.toUsable match {
       case Some(usable) if usable.dataLayers.nonEmpty =>
         getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(_dataSet, _))

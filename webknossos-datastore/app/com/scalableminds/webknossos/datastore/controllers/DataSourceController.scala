@@ -221,25 +221,6 @@ class DataSourceController @Inject()(
     }
   }
 
-  def generateAgglomerateSkeletonUnsafe(
-      organizationName: String,
-      dataSetName: String,
-      dataLayerName: String,
-      mappingName: String,
-      agglomerateId: Long
-  ) = Action.async { implicit request =>
-    AllowRemoteOrigin {
-      for {
-        skeleton <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateSkeleton(
-          organizationName,
-          dataSetName,
-          dataLayerName,
-          mappingName,
-          agglomerateId) ?~> "agglomerateSkeleton.failed"
-      } yield Ok(skeleton.toByteArray).as("application/x-protobuf")
-    }
-  }
-
   def update(organizationName: String, dataSetName: String) = Action.async(validateJson[DataSource]) {
     implicit request =>
       accessTokenService

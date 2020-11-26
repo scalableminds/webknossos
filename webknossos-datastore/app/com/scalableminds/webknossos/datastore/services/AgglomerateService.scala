@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 }
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
@@ -135,7 +136,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
                        dataSetName: String,
                        dataLayerName: String,
                        mappingName: String,
-                       agglomerateId: Long): Fox[SkeletonTracing] =
+                       agglomerateId: Long): Box[SkeletonTracing] =
     try {
       val startTime = System.nanoTime()
       val hdfFile =
@@ -200,8 +201,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
           .round(duration / 1e6)} ms (${skeletonEdges.length} edges, ${nodes.length} nodes).")
       }
 
-      Fox.successful(skeleton)
+      Full(skeleton)
     } catch {
-      case e: Exception => Fox.failure(e.getMessage)
+      case e: Exception => Failure(e.getMessage)
     }
 }

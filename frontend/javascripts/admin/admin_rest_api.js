@@ -1410,6 +1410,7 @@ export function getAgglomerateSkeleton(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
         datasetId.name
       }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
+      { useWebworkerForArrayBuffer: false },
     ),
   );
 }

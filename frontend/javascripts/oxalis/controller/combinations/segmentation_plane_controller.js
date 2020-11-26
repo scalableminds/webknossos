@@ -8,7 +8,10 @@ import { getAgglomerateSkeleton } from "admin/admin_rest_api";
 import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import createProgressCallback from "libs/progress_callback";
 import Store from "oxalis/store";
+import Toast from "libs/toast";
+import messages from "messages";
 
 function viewLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
   if (!event.shiftKey) {
@@ -17,9 +20,9 @@ function viewLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
 
   if (event.ctrlKey) {
     agglomerateSkeletonLeftClick(pos);
+  } else {
+    isosurfaceLeftClick(pos);
   }
-
-  isosurfaceLeftClick(pos);
 }
 
 async function agglomerateSkeletonLeftClick(pos: Point2) {
@@ -33,16 +36,31 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
   const cellId = segmentation.cube.getMappedDataValue(position, getRequestLogZoomStep(state));
   if (cellId > 0) {
     const layerName = segmentation.name;
-    const mappingId = state.temporaryConfiguration.activeMapping.mappingName;
+    const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
 
-    if (mappingId == null) return;
+    if (mappingName == null) {
+      Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
+      return;
+    }
+
+    if (mappingType !== "HDF5") {
+      Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+      return;
+    }
 
     const { dataset } = state;
+
+    const progressCallback = createProgressCallback({ pauseDelay: 100, successDelayMessage: 5000 });
+    await progressCallback(
+      false,
+      `Loading skeleton for agglomerate ${cellId} with mapping ${mappingName}`,
+    );
+
     const result = await getAgglomerateSkeleton(
       dataset.dataStore.url,
       dataset,
       layerName,
-      mappingId,
+      mappingName,
       cellId,
     );
 
@@ -61,6 +79,8 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
         parsedTracing.treeGroups,
       ),
     );
+
+    await progressCallback(true, "Skeleton generation done.");
   }
 }
 

@@ -10,14 +10,22 @@ import messages from "messages";
 
 const createTracingOverlayMenu = (dataset: APIMaybeUnimportedDataset, type: TracingType) => {
   const typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+
+  const hasSegmentationLayer =
+    dataset.dataSource.dataLayers != null
+      ? dataset.dataSource.dataLayers.find(layer => layer.category === "segmentation") != null
+      : false;
+  const disabledLinkStyle = { pointerEvents: "none", color: "rgb(173, 173, 173)" };
+
   return (
     <Menu>
-      <Menu.Item key="existing">
+      <Menu.Item key="existing" disabled={!hasSegmentationLayer}>
         <Link
           to={`/datasets/${dataset.owningOrganization}/${
             dataset.name
           }/createExplorative/${type}/true`}
           title={`Create ${typeCapitalized} Annotation`}
+          style={hasSegmentationLayer ? {} : disabledLinkStyle}
         >
           Use Existing Segmentation Layer
         </Link>

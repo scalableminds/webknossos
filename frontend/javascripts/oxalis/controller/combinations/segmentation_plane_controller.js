@@ -50,7 +50,7 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
 
     const { dataset } = state;
 
-    const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 5000 });
+    const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
     await progressCallback(
       false,
       `Loading skeleton for agglomerate ${cellId} with mapping ${mappingName}`,

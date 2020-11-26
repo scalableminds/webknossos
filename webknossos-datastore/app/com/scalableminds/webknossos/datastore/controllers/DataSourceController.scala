@@ -207,13 +207,16 @@ class DataSourceController @Inject()(
       mappingName: String,
       agglomerateId: Long
   ) = Action.async { implicit request =>
-    accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
-        Ok(
-          binaryDataServiceHolder.binaryDataService.agglomerateService
-            .generateSkeleton(organizationName, dataSetName, dataLayerName, mappingName, agglomerateId)
-            .toByteArray).as("application/x-protobuf")
+        for {
+          skeleton <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateSkeleton(
+            organizationName,
+            dataSetName,
+            dataLayerName,
+            mappingName,
+            agglomerateId) ?~> "agglomerateSkeleton.failed"
+        } yield Ok(skeleton.toByteArray).as("application/x-protobuf")
       }
     }
   }
@@ -224,12 +227,16 @@ class DataSourceController @Inject()(
       dataLayerName: String,
       mappingName: String,
       agglomerateId: Long
-  ) = Action { implicit request =>
+  ) = Action.async { implicit request =>
     AllowRemoteOrigin {
-      Ok(
-        binaryDataServiceHolder.binaryDataService.agglomerateService
-          .generateSkeleton(organizationName, dataSetName, dataLayerName, mappingName, agglomerateId)
-          .toByteArray).as("application/x-protobuf")
+      for {
+        skeleton <- binaryDataServiceHolder.binaryDataService.agglomerateService.generateSkeleton(
+          organizationName,
+          dataSetName,
+          dataLayerName,
+          mappingName,
+          agglomerateId) ?~> "agglomerateSkeleton.failed"
+      } yield Ok(skeleton.toByteArray).as("application/x-protobuf")
     }
   }
 

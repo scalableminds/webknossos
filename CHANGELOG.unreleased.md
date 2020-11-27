@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Datasets without any layer are now considered unimported. [#4959](https://github.com/scalableminds/webknossos/pull/4959)
 
 ### Changed
--
+- For 2d-only datasets the view mode toggle is hidden. [#4952](https://github.com/scalableminds/webknossos/pull/4952)
 
 ### Fixed
 -

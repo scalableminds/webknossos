@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/20.12.0...HEAD)
 
 ### Added
--
+- Datasets without any layer are now considered unimported. [#4959](https://github.com/scalableminds/webknossos/pull/4959)
 
 ### Changed
 -

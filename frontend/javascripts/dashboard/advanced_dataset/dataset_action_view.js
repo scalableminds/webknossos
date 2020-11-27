@@ -3,7 +3,7 @@ import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, TracingType } from "types/api_flow_types";
+import type { APIMaybeUnimportedDataset, TracingType, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -68,6 +68,7 @@ export const createTracingOverlayMenuWithCallback = (
 
 type Props = {
   dataset: APIMaybeUnimportedDataset,
+  updateDataset: APIDatasetId => Promise<void>,
 };
 
 type State = {
@@ -82,6 +83,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({ isReloading: true });
     await clearCache(dataset);
+    await this.props.updateDataset(dataset);
     Toast.success(
       messages["dataset.clear_cache_success"]({
         datasetName: dataset.name,
@@ -135,18 +137,32 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       </Dropdown>
     );
 
+    const reloadOption = !dataset.isForeign ? (
+      <a
+        href="#"
+        onClick={() => this.clearCache(dataset)}
+        title="Reload Dataset"
+        style={disabledWhenReloadingStyle}
+      >
+        {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
+        Reload
+      </a>
+    ) : null;
+
     return (
       <div>
         {dataset.isEditable && dataset.dataSource.dataLayers == null ? (
-          <div>
-            <Link
-              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-              className="import-dataset"
-            >
-              <Icon type="plus-circle-o" />
-              Import
-            </Link>
-
+          <div className="dataset-actions">
+            <React.Fragment>
+              <Link
+                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+                className="import-dataset"
+              >
+                <Icon type="plus-circle-o" />
+                Import
+              </Link>
+              {reloadOption}
+            </React.Fragment>
             <div className="text-danger">{dataset.dataSource.status}</div>
           </div>
         ) : null}
@@ -163,17 +179,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   <Icon type="edit" />
                   Edit
                 </Link>
-                {!dataset.isForeign ? (
-                  <a
-                    href="#"
-                    onClick={() => this.clearCache(dataset)}
-                    title="Reload Dataset"
-                    style={disabledWhenReloadingStyle}
-                  >
-                    {isReloading ? <Icon type="loading" /> : <Icon type="retweet" />}
-                    Reload
-                  </a>
-                ) : null}
+                {reloadOption}
               </React.Fragment>
             ) : null}
             <Link
@@ -192,11 +198,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                     dataset.name
                   }/createExplorative/skeleton/false`}
                   style={disabledWhenReloadingStyle}
-                  onClick={e => {
-                    if (isReloading) {
-                      e.preventDefault();
-                    }
-                  }}
+                  onClick={disabledWhenReloadingAction}
                   title="Create Skeleton Annotation"
                 >
                   <img

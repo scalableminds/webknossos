@@ -2,8 +2,8 @@
 import React, { createContext, useState, type Node } from "react";
 
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
-import type { APIMaybeUnimportedDataset } from "types/api_flow_types";
-import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import type { APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
+import { getDatastores, triggerDatasetCheck, getDatasets, getDataset } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
@@ -18,6 +18,7 @@ type Context = {
   isLoading: boolean,
   checkDatasets: () => Promise<void>,
   fetchDatasets: (options?: Options) => Promise<void>,
+  updateDataset: (datasetId: APIDatasetId) => Promise<void>,
 };
 
 const wkDatasetsCacheKey = "wk.datasets";
@@ -38,6 +39,7 @@ export const DatasetCacheContext = createContext<Context>({
   isLoading: false,
   fetchDatasets: async () => {},
   checkDatasets: async () => {},
+  updateDataset: async () => {},
 });
 
 export default function DatasetCacheProvider({ children }: { children: Node }) {
@@ -89,8 +91,34 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       setIsLoading(false);
     }
   }
+
+  async function updateDataset(datasetId: APIDatasetId) {
+    if (isLoading) return;
+    try {
+      setIsLoading(true);
+      const updateIdx = datasets.findIndex(
+        dataset =>
+          dataset.name === datasetId.name &&
+          dataset.owningOrganization === datasetId.owningOrganization,
+      );
+      if (updateIdx !== -1) {
+        const updatedDataset = await getDataset(datasetId);
+        // TODO is this bad practice?
+        datasets[updateIdx] = updatedDataset;
+        // this is unnecessary, but maybe more expressive
+        setDatasets(datasets);
+      }
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <DatasetCacheContext.Provider value={{ datasets, isLoading, checkDatasets, fetchDatasets }}>
+    <DatasetCacheContext.Provider
+      value={{ datasets, isLoading, checkDatasets, fetchDatasets, updateDataset }}
+    >
       {children}
     </DatasetCacheContext.Provider>
   );

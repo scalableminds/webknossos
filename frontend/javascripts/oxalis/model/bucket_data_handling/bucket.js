@@ -331,7 +331,8 @@ export class DataBucket {
 
   testZfp(bucketData) {
     const cube_length = 32;
-    const precision = 10;
+    const precision = 0; // 9;
+    const rate = window.compressionRate || 4;
     const [width, height, depth] = [32, 32, 32];
 
     const maximum_byte_size = Module.ccall(
@@ -354,63 +355,57 @@ export class DataBucket {
     const buf = Module._malloc(originalImageBuffer.length * byte_count_uint8);
     Module.HEAPU8.set(originalImageBuffer, buf / byte_count_uint8);
 
+    const compressedBufferSize = maximum_byte_size; // originalImageBuffer.length * byte_count_uint32;
     const compressedBufAddress = Module._malloc(
         // maximum_byte_size // originalImageBuffer.length // * byte_count_uint32
-        originalImageBuffer.length * byte_count_uint32
+        compressedBufferSize
     );
 
-    const tolerance = 1; // 28;
-    const compressedSize =
+    const compressedBytes =
         Module.ccall(
-            "compress", // "zfp_wrapped_compress", // "compress", // name of C function
+            "zfp_wrapped_compress", // "compress", // name of C function
             "number", // return type
             ["number", "number", "int", "int", "int", "double"], // argument types
-            [buf, compressedBufAddress, width, height, depth, tolerance] // arguments
+            [buf, compressedBufAddress, compressedBufferSize, width, precision, rate] // arguments
         );
 
     console.log(
         "size after compression",
-        compressedSize,
-        `(${100 * compressedSize / (originalImageBuffer.length * byte_count_uint8)} %)`
+        compressedBytes,
+        `(${100 * compressedBytes / (originalImageBuffer.length * byte_count_uint8)} %)`
     );
-    console.log(
-        "(size after compression) / 4",
-        compressedSize / 4,
-        `(${100 * compressedSize / 4 / (originalImageBuffer.length * byte_count_uint8)} %)`
-    );
+    // console.log(
+    //     "(size after compression) / 4",
+    //     compressedBytes / 4,
+    //     `(${100 * compressedBytes / 4 / (originalImageBuffer.length * byte_count_uint8)} %)`
+    // );
 
     const compressedBuffer = Module.HEAP32.subarray(
         compressedBufAddress / byte_count_uint32,
-        (compressedBufAddress + compressedSize) / byte_count_uint32
+        (compressedBufAddress + compressedBytes) / byte_count_uint32
     );
 
     console.log("compressedBuffer", compressedBuffer);
 
-
-    // for (let index = 0; index < compressedBuffer.length; ++index) {
-    //   // demote to uint8
-    //   compressedBuffer[index] = Math.min(255, Math.max(0, (compressedBuffer[index] >> 23) + 0x80));
-    //   // promote to int32 again
-    //   compressedBuffer[index] = (compressedBuffer[index] - 0x80) << 23;
-    // }
-
     const decompressedBufAddress = Module._malloc(
-        originalImageBuffer.length * byte_count_uint8 * 4 // todo: remove additional multiplier
+        originalImageBuffer.length * byte_count_uint8 // * 4 // todo: remove additional multiplier
     );
     // Decompress
 
     console.time("Decompress");
+    // size_t EMSCRIPTEN_KEEPALIVE zfp_wrapped_decompress(int32 * compressed_array, uint8 * decompressed_array, size_t num_compressed_elements, size_t cube_length, uint precision){
+
     Module.ccall(
-        "decompress", // name of C function
+        "zfp_wrapped_decompress", // "decompress", // name of C function
         "number", // return type
         ["number", "number", "int", "int", "int", "double"], // argument types
         [
-            decompressedBufAddress,
             compressedBufAddress,
+            decompressedBufAddress,
+            compressedBytes,
             width,
-            height,
-            depth,
-            tolerance
+            precision,
+            rate
         ] // arguments
     );
     console.timeEnd("Decompress");
@@ -426,7 +421,8 @@ export class DataBucket {
   }
 
   receiveData(arrayBuffer: ?Uint8Array): void {
-    if (arrayBuffer != null) {
+    const COMPRESS = true;
+    if (COMPRESS && arrayBuffer != null && !window.dontCompress) {
       arrayBuffer = this.testZfp(arrayBuffer)
     }
 

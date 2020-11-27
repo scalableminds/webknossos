@@ -65,6 +65,11 @@ class PullQueue {
       const batch = [];
       while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
         const address = this.priorityQueue.dequeue().bucket;
+
+        const SKIP_MAG_1 = false;
+        if (SKIP_MAG_1 && address[3] === 0) {
+          continue;
+        }
         const bucket = this.cube.getOrCreateBucket(address);
 
         if (bucket.type === "data" && bucket.needsRequest()) {

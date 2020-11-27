@@ -160,15 +160,10 @@ function* ensureSuitableIsosurface(
   if (!layer) {
     return;
   }
-  const clickedPosition = seedPosition;
-  const position =
-    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
-
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(
@@ -176,9 +171,8 @@ function* ensureSuitableIsosurface(
     dataset,
     layer,
     segmentId,
-    clippedPosition,
+    seedPosition,
     zoomStep,
-    clickedPosition,
     resolutionInfo,
     removeExistingIsosurface,
   );
@@ -188,25 +182,27 @@ function* loadIsosurfaceWithNeighbors(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
-  clippedPosition: Vector3,
+  seedPosition: ?Vector3,
   zoomStep: number,
-  segmentPosition: Vector3,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
+  const position =
+    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
-  if (segmentPosition) {
-    yield* put(addIsosurfaceAction(segmentId, segmentPosition));
+  if (seedPosition) {
+    yield* put(addIsosurfaceAction(segmentId, seedPosition));
   }
   while (positionsToRequest.length > 0) {
-    const position = positionsToRequest.shift();
+    const currentPosition = positionsToRequest.shift();
     const neighbors = yield* call(
       maybeLoadIsosurface,
       dataset,
       layer,
       segmentId,
-      position,
+      currentPosition,
       zoomStep,
       resolutionInfo,
       removeExistingIsosurface && isInitialRequest,

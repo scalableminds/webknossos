@@ -59,14 +59,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createDataSet(
-      name: String,
       dataStore: DataStore,
       owningOrganization: String,
       dataSource: InboxDataSource,
-      publication: Option[ObjectId] = None,
-      isActive: Boolean = false
+      publication: Option[ObjectId] = None
   ): Fox[ObjectId] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
@@ -102,7 +100,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       dataStore <- dataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      _ <- createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
+      _ <- createDataSet(dataStore, organizationName, foreignDataset)
     } yield ()
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
@@ -205,7 +203,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def insertNewDataSet(dataSource: InboxDataSource, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataSet(dataSource.id.name, dataStore, dataSource.id.team, dataSource, publicationId, dataSource.isUsable)
+      createDataSet(dataStore, dataSource.id.team, dataSource, publicationId)
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =

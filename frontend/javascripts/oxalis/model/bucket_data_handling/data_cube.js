@@ -285,6 +285,8 @@ class DataCube {
   }
 
   collectAllBuckets(): void {
+    this.pullQueue.clear();
+    this.pullQueue.abortRequests();
     for (const bucket of this.buckets) {
       if (bucket != null) {
         this.collectBucket(bucket);

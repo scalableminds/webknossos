@@ -2,6 +2,7 @@
 import Maybe from "data.maybe";
 import _ from "lodash";
 import naturalSort from "javascript-natural-sort";
+import { V3 } from "libs/mjs";
 
 import type { APIUser } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
@@ -331,6 +332,17 @@ export function point3ToVector3({ x, y, z }: Point3): Vector3 {
 
 export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
   return { x, y, z };
+}
+
+export function distanceBetweenVectors(
+  firstPosition: Vector3,
+  secondPosition: Vector3,
+  datasetScale: Vector3,
+): number {
+  const scaledFirstPosition = V3.scale3(firstPosition, datasetScale);
+  const scaledSecondPosition = V3.scale3(secondPosition, datasetScale);
+  const diffVector = V3.sub(scaledFirstPosition, scaledSecondPosition);
+  return V3.length(diffVector);
 }
 
 export function isUserTeamManager(user: APIUser): boolean {

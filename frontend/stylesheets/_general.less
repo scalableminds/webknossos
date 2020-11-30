@@ -35,3 +35,19 @@ p {
   filter: FlipH;
   -ms-filter: "FlipH";
 }
+
+.table-with-borders-between-columns {
+  td {
+    padding: 2px 10px;
+    border-left: 1px solid rgba(0, 0, 0, 0.65);
+  }
+
+  td:first-child {
+    padding-left: 0px;
+    border-left: none;
+  }
+
+  td:last-child {
+    padding-right: 0px;
+  }
+}

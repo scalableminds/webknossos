@@ -318,7 +318,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           <a
             href="#"
             onClick={() =>
-              showJSONModal("The suggested datasource-properties.json", inferredDataSource)
+              showJSONModal("Suggested datasource-properties.json", inferredDataSource)
             }
           >
             these settings

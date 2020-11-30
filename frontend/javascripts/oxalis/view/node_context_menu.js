@@ -11,6 +11,7 @@ import {
   mergeTreesAction,
   deleteNodeAction,
   setActiveNodeAction,
+  setTreeVisibilityAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
@@ -30,6 +31,7 @@ type DispatchProps = {|
   mergeTrees: (number, number) => void,
   deleteNode: (number, number) => void,
   setActiveNode: number => void,
+  hideTree: number => void,
 |};
 
 type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
@@ -88,6 +90,7 @@ function NodeContextMenu({
   deleteNode,
   datasetScale,
   setActiveNode,
+  hideTree,
 }: Props) {
   if (!skeletonTracing) {
     return null;
@@ -184,7 +187,7 @@ function NodeContextMenu({
             key="delete-node"
             onClick={() => deleteNode(nodeContextMenuNodeId, nodeContextTree.treeId)}
           >
-            Delete This Node
+            Delete this Node
           </Menu.Item>
           <Menu.Item
             className="node-context-menu-item"
@@ -208,6 +211,13 @@ function NodeContextMenu({
           >
             Path Length of this Tree
           </Menu.Item>
+          <Menu.Item
+            className="node-context-menu-item"
+            key="hide-tree"
+            onClick={() => hideTree(nodeContextTree.treeId)}
+          >
+            Hide this Tree
+          </Menu.Item>
         </Menu>
       </div>
     </div>
@@ -229,6 +239,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));
+  },
+  hideTree(treeId: number) {
+    dispatch(setTreeVisibilityAction(treeId, false));
   },
 });
 

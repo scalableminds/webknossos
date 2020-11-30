@@ -11,7 +11,7 @@ import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 
 import Request from "libs/request";
-import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
+import { ArbitraryViewport, type ViewMode, OrthoViews, type Vector3 } from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -78,6 +78,8 @@ type State = {
   status: ControllerStatus,
   nodeContextMenuPosition: ?[number, number],
   nodeContextMenuNodeId: ?number,
+  nodeContextMenuGlobalPosition: Vector3,
+  nodeContextMenuRotation: Vector3,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -125,6 +127,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       status: "loading",
       nodeContextMenuPosition: null,
       nodeContextMenuNodeId: null,
+      nodeContextMenuGlobalPosition: [0, 0, 0],
+      nodeContextMenuRotation: [0, 0, 0],
     };
   }
 
@@ -149,12 +153,28 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     location.reload();
   }
 
-  showNodeContextMenuAt = (xPos: number, yPos: number, nodeId: number) => {
-    this.setState({ nodeContextMenuPosition: [xPos, yPos], nodeContextMenuNodeId: nodeId });
+  showNodeContextMenuAt = (
+    xPos: number,
+    yPos: number,
+    nodeId: ?number,
+    globalPosition: Vector3,
+    rotation: Vector3,
+  ) => {
+    this.setState({
+      nodeContextMenuPosition: [xPos, yPos],
+      nodeContextMenuNodeId: nodeId,
+      nodeContextMenuGlobalPosition: globalPosition,
+      nodeContextMenuRotation: rotation,
+    });
   };
 
   hideNodeContextMenu = () => {
-    this.setState({ nodeContextMenuPosition: null, nodeContextMenuNodeId: null });
+    this.setState({
+      nodeContextMenuPosition: null,
+      nodeContextMenuNodeId: null,
+      nodeContextMenuGlobalPosition: [0, 0, 0],
+      nodeContextMenuRotation: [0, 0, 0],
+    });
   };
 
   handleSettingsCollapse = () => {
@@ -209,6 +229,8 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     const {
       nodeContextMenuNodeId,
       nodeContextMenuPosition,
+      nodeContextMenuGlobalPosition,
+      nodeContextMenuRotation,
       status,
       isSettingsCollapsed,
       activeLayout,
@@ -248,11 +270,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
           showNodeContextMenuAt={this.showNodeContextMenuAt}
         />
         <CrossOriginApi />
-        {nodeContextMenuNodeId != null && nodeContextMenuPosition != null ? (
+        {nodeContextMenuPosition != null ? (
           <NodeContextMenu
             hideNodeContextMenu={this.hideNodeContextMenu}
             nodeContextMenuNodeId={nodeContextMenuNodeId}
             nodeContextMenuPosition={nodeContextMenuPosition}
+            globalPosition={nodeContextMenuGlobalPosition}
+            rotation={nodeContextMenuRotation}
           />
         ) : null}
         <Layout className="tracing-layout">

@@ -56,9 +56,21 @@ type Props = {| ...OwnProps, ...StateProps |};
 
 type TabKey = "data" | "general" | "defaultConfig";
 
+const AppliedSuggestionsEnum = {
+  Yes: "Yes",
+  No: "No",
+  NoAvailableSuggestions: "NoAvailableSuggestions",
+};
+
+const IsJSONFormatValidEnum = {
+  Yes: "Yes",
+  No: "No",
+  BrokenFormat: "BrokenFormat",
+};
+
 type DataSourceSettingsStatus = {
-  appliedSuggestions: "YES" | "NO" | "NONE",
-  isJSONFormatValid: "YES" | "NO" | "BROKEN_FORMAT",
+  appliedSuggestions: $Keys<typeof AppliedSuggestionsEnum>,
+  isJSONFormatValid: $Keys<typeof IsJSONFormatValidEnum>,
 };
 
 type State = {
@@ -70,7 +82,7 @@ type State = {
   activeTabKey: TabKey,
   savedDataSourceOnServer: ?APIDataSource,
   inferredDataSource: ?APIDataSource,
-  differenceBetweenDataSources: ?Object,
+  differenceBetweenDataSources: Object,
   dataSourceSettingsStatus: DataSourceSettingsStatus,
 };
 
@@ -98,8 +110,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     inferredDataSource: null,
     differenceBetweenDataSources: {},
     dataSourceSettingsStatus: {
-      appliedSuggestions: "NONE",
-      isJSONFormatValid: "YES",
+      appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
+      isJSONFormatValid: IsJSONFormatValidEnum.Yes,
     },
   };
 
@@ -117,8 +129,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         this.setState({ savedDataSourceOnServer: dataSource });
       } else {
         const dataSourceSettingsStatus = {
-          appliedSuggestions: "NONE",
-          isJSONFormatValid: "NO",
+          appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
+          isJSONFormatValid: IsJSONFormatValidEnum.No,
         };
         const {
           dataSource: inferredDataSource,
@@ -130,20 +142,20 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         if (didParsingTheSavedDataSourceJSONSucceed) {
           dataSource = savedDataSourceOnServer;
           if (isDatasourceJSONValid(savedDataSourceOnServer)) {
-            dataSourceSettingsStatus.isJSONFormatValid = "YES";
+            dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
           }
 
           const diff = diffObjects(inferredDataSource, savedDataSourceOnServer);
           const areObjectsEqual = _.size(diff) === 0;
           if (!areObjectsEqual) {
-            dataSourceSettingsStatus.appliedSuggestions = "NO";
+            dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.No;
             this.setState({ differenceBetweenDataSources: diff });
           }
         } else {
           // If the current datasource json is invalid, the inferred version should be used automatically.
           dataSource = inferredDataSource;
-          dataSourceSettingsStatus.isJSONFormatValid = "BROKEN_FORMAT";
-          dataSourceSettingsStatus.appliedSuggestions = "YES";
+          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenFormat;
+          dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.Yes;
         }
         this.setState({
           savedDataSourceOnServer,
@@ -159,6 +171,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
         const datasetClone = (_.cloneDeep(dataset): any);
+        ("YES");
         datasetClone.dataSource = _.cloneDeep(dataSource);
         dataset = (datasetClone: APIDataset);
       }
@@ -215,8 +228,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     // No info shown, when:
     // - The parsing succedded
     if (
-      (isJSONFormatValid === "YES" && appliedSuggestions !== "NO") ||
-      (isJSONFormatValid === "NO" && appliedSuggestions === "YES")
+      (isJSONFormatValid === IsJSONFormatValidEnum.Yes &&
+        appliedSuggestions !== AppliedSuggestionsEnum.No) ||
+      (isJSONFormatValid === IsJSONFormatValidEnum.No &&
+        appliedSuggestions === AppliedSuggestionsEnum.Yes)
     ) {
       return null;
     }
@@ -240,13 +255,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataSourceJson: jsonStringify(inferredDataSource),
       });
       this.setState(currentState => {
-        const updatedStatus = _.cloneDeep(currentState.dataSourceSettingsStatus);
-        updatedStatus.appliedSuggestions = "YES";
+        const updatedStatus = {
+          ...currentState.dataSourceSettingsStatus,
+          appliedSuggestions: AppliedSuggestionsEnum.Yes,
+        };
         return { dataSourceSettingsStatus: updatedStatus };
       });
     };
 
-    if (isJSONFormatValid === "BROKEN_FORMAT") {
+    if (isJSONFormatValid === IsJSONFormatValidEnum.BrokenFormat) {
       // If the datasource-properties.json on the server is an invalid JSON.
       message = (
         <div>
@@ -258,7 +275,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         </div>
       );
       type = "warning";
-    } else if (isJSONFormatValid === "NO" && appliedSuggestions === "NO") {
+    } else if (
+      isJSONFormatValid === IsJSONFormatValidEnum.No &&
+      appliedSuggestions === AppliedSuggestionsEnum.No
+    ) {
       // If the datasource-properties.json on the server has invalid or missing properties but is a valid JSON and the server has suggestions.
       message = (
         <div>
@@ -281,7 +301,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           .
         </div>
       );
-    } else if (isJSONFormatValid === "NO" && appliedSuggestions === "NONE") {
+    } else if (
+      isJSONFormatValid === IsJSONFormatValidEnum.No &&
+      appliedSuggestions === AppliedSuggestionsEnum.NoAvailableSuggestions
+    ) {
       // If the datasource-properties.json on the server has invalid or missing properties but is a valid JSON but the server has NO suggestions.
       message = (
         <div>
@@ -289,7 +312,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           properties. Please fix them.
         </div>
       );
-    } else if (isJSONFormatValid === "YES" && appliedSuggestions === "NO") {
+    } else if (
+      isJSONFormatValid === IsJSONFormatValidEnum.Yes &&
+      appliedSuggestions === AppliedSuggestionsEnum.No
+    ) {
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>

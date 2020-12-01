@@ -11,7 +11,6 @@ import type {
   TracingType,
 } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
-import { doesSupportVolumeWithFallback } from "oxalis/model/accessors/dataset_accessor";
 import {
   layoutEmitter,
   deleteLayout,
@@ -33,7 +32,7 @@ import TracingActionsView, {
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
-import { is2dDataset } from "oxalis/model/accessors/dataset_accessor";
+import { is2dDataset, doesSupportVolumeWithFallback } from "oxalis/model/accessors/dataset_accessor";
 
 const VersionRestoreWarning = (
   <Alert

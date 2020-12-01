@@ -1,5 +1,5 @@
 // @flow
-import { Dropdown, Menu, Icon, Tooltip } from "antd";
+import { Button, Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
@@ -43,11 +43,11 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
       return (
         <Menu>
           <Menu.ItemGroup title="Other Options:" />
-          {buildMenuItem("hybrid", false, "New Annotation (without existing Segmentation)")}
+          {buildMenuItem("hybrid", false, "New Annotation (Without Existing Segmentation)")}
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "with existing Segmentation")}
-            {buildMenuItem("volume", false, "without existing Segmentation")}
+            {buildMenuItem("volume", true, "With Existing Segmentation")}
+            {buildMenuItem("volume", false, "Without Existing Segmentation")}
           </Menu.SubMenu>
         </Menu>
       );
@@ -57,8 +57,8 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
           <Menu.ItemGroup title="Other Options:" />
           {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
           <Menu.SubMenu title="New Volume-only Annotation">
-            {buildMenuItem("volume", true, "with existing Segmentation", true)}
-            {buildMenuItem("volume", false, "without existing Segmentation")}
+            {buildMenuItem("volume", true, "With existing Segmentation", true)}
+            {buildMenuItem("volume", false, "Without Existing Segmentation")}
           </Menu.SubMenu>
         </Menu>
       );
@@ -87,7 +87,7 @@ function NewAnnotationLink({ dataset, isReloading }) {
   return (
     <React.Fragment>
       {isReloading ? null : (
-        <Dropdown overlay={newTracingMenu}>
+        <div>
           <LinkWithDisabled
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
@@ -98,9 +98,18 @@ function NewAnnotationLink({ dataset, isReloading }) {
           >
             <Icon type="plus" />
             New Annotation
-            <Icon type="down" style={{ marginLeft: 4 }} />
           </LinkWithDisabled>
-        </Dropdown>
+          <span style={{
+              color: "#abadaf",
+              marginLeft: 8,
+              marginRight: 8,
+          }}>|</span>
+          <Dropdown overlay={newTracingMenu}>
+            <a className="ant-dropdown-link" onClick={e => e.preventDefault()}>
+              <Icon type="down" style={{color: "#56a1e7"}} />
+            </a>
+          </Dropdown>
+        </div>
       )}
     </React.Fragment>
   );

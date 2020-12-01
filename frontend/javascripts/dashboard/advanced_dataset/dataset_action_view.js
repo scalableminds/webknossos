@@ -99,14 +99,18 @@ function NewAnnotationLink({ dataset, isReloading }) {
             <Icon type="plus" />
             New Annotation
           </LinkWithDisabled>
-          <span style={{
+          <span
+            style={{
               color: "#abadaf",
               marginLeft: 8,
               marginRight: 8,
-          }}>|</span>
+            }}
+          >
+            |
+          </span>
           <Dropdown overlay={newTracingMenu}>
             <a className="ant-dropdown-link" onClick={e => e.preventDefault()}>
-              <Icon type="down" style={{color: "#56a1e7"}} />
+              <Icon type="down" style={{ color: "#56a1e7" }} />
             </a>
           </Dropdown>
         </div>

@@ -115,6 +115,24 @@ export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<?T> {
   }
 }
 
+export function asAbortable<T>(
+  promise: Promise<T>,
+  signal: AbortSignal,
+  abortError: Error,
+): Promise<T> {
+  return new Promise(async (resolve, reject) => {
+    const abort = () => reject(abortError);
+    signal.addEventListener("abort", abort);
+    try {
+      const value = await promise;
+      resolve(value);
+    } catch (error) {
+      reject(error);
+    }
+    signal.removeEventListener("abort", abort);
+  });
+}
+
 export function jsonStringify(json: Object) {
   return JSON.stringify(json, null, "  ");
 }

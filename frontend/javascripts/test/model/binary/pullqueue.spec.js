@@ -107,7 +107,9 @@ test.serial("Successful pulling: should receive the correct data", t => {
 
 function prepare() {
   WkstoreAdapterMock.requestWithFallback = sinon.stub();
-  WkstoreAdapterMock.requestWithFallback.onFirstCall().returns(Promise.reject());
+  WkstoreAdapterMock.requestWithFallback
+    .onFirstCall()
+    .returns(Promise.reject(new Error("Expected promise rejection in tests. Can be ignored.")));
   WkstoreAdapterMock.requestWithFallback
     .onSecondCall()
     .returns(Promise.resolve([new Uint8Array(32 * 32 * 32)]));

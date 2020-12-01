@@ -68,7 +68,6 @@ const getNewTracingMenu = (maybeUnimportedDataset: APIMaybeUnimportedDataset) =>
       <Menu>
         <Menu.ItemGroup title="Other Options:" />
         {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
-        {buildMenuItem("skeleton", false, "New Skeleton-only Annotation")}
         {buildMenuItem("volume", true, "New Volume-only Annotation")}
       </Menu>
     );

@@ -233,8 +233,7 @@ export type APISettings = {|
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +allowedMagnifications?: {
-    shouldRestrict: boolean,
+  +resolutionRestrictions: {
     min?: number,
     max?: number,
   },

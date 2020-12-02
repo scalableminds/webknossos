@@ -241,22 +241,20 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None, skipResolutions: Boolean = false)(
       implicit ctx: DBAccessContext): Fox[InboxDataSource] =
-    for {
+    (for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
-      dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions).futureBox
+      dataLayers <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions)
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
-      dataLayersBox match {
-        case Full(dataLayers) if (dataLayers.nonEmpty) =>
-          for {
-            scale <- dataSet.scale
-          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-        case _ =>
-          Some(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
-      }
-    }
+      if (dataSet.isUsable)
+        for {
+          scale <- dataSet.scale.toFox ?~> "dataSet.source.usableButNoScale"
+        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+      else
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
+    }).flatten
 
   def logoUrlFor(dataSet: DataSet, organization: Option[Organization]): Fox[String] =
     dataSet.logoUrl match {

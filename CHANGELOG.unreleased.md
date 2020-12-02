@@ -19,7 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Persist the selected overwrite behavior for hybrid and volume annotations. [#4962](https://github.com/scalableminds/webknossos/pull/4962)
 
 ### Fixed
--
+- Fix crash for trees with high comment count (> 100000 nodes). [#4965](https://github.com/scalableminds/webknossos/pull/4965)
 
 ### Removed
 -

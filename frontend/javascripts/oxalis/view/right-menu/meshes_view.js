@@ -4,6 +4,7 @@ import { Button, Checkbox, Icon, Input, List, Modal, Spin, Tooltip, Upload } fro
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React from "react";
+import _ from "lodash";
 
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
@@ -22,14 +23,15 @@ import {
   removeIsosurfaceAction,
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
+import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
+import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-
 const ButtonGroup = Button.Group;
 
 export const stlIsosurfaceConstants = {
@@ -83,12 +85,16 @@ const mapStateToProps = (state: OxalisState) => ({
   isImporting: state.uiInformation.isImportingMesh,
   isHybrid: state.tracing.volume != null && state.tracing.skeleton != null,
   isosurfaces: state.isosurfaces,
+  datasetConfiguration: state.datasetConfiguration,
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   updateRemoteMeshMetadata(id: string, meshMetaData: $Shape<RemoteMeshMetaData>) {
     dispatch(updateRemoteMeshMetaDataAction(id, meshMetaData));
+  },
+  onChangeDatasetSettings(propertyName, value) {
+    dispatch(updateDatasetSettingAction(propertyName, value));
   },
   deleteMesh(id: string) {
     dispatch(deleteMeshAction(id));
@@ -133,17 +139,22 @@ const getCheckboxStyle = isLoaded =>
         color: "#989898",
       };
 
-class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMetaData }> {
+class MeshesView extends React.Component<
+  Props,
+  { currentlyEditedMesh: ?MeshMetaData, activeCellId: ?number, hoveredListItem: ?number },
+> {
   state = {
     currentlyEditedMesh: null,
+    activeCellId: null,
+    hoveredListItem: null,
   };
 
   render() {
     const moveToIsosurface = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition));
     };
-    const downloadButton = (segmentId: number) => (
-      <Tooltip title="download isosurface">
+    const getDownloadButton = (segmentId: number) => (
+      <Tooltip title="Download Isosurface">
         <Icon
           key="download-button"
           type="vertical-align-bottom"
@@ -151,8 +162,8 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         />
       </Tooltip>
     );
-    const refreshButton = (segmentId: number, isLoading: boolean) => (
-      <Tooltip title="reload isosurface">
+    const getRefreshButton = (segmentId: number, isLoading: boolean) => (
+      <Tooltip title="Refresh Isosurface">
         <Icon
           key="refresh-button"
           type={isLoading ? "loading" : "reload"}
@@ -162,8 +173,8 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
         />
       </Tooltip>
     );
-    const deleteButton = (segmentId: number) => (
-      <Tooltip title="delete isosurface">
+    const getDeleteButton = (segmentId: number) => (
+      <Tooltip title="Delete Isosurface">
         <Icon
           key="delete-button"
           type="delete"
@@ -178,19 +189,38 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
 
     const renderListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
+      const isActiveCell = segmentId === this.state.activeCellId;
+      const visibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
         <List.Item
           actions={[
-            downloadButton(segmentId),
-            refreshButton(segmentId, isLoading),
-            deleteButton(segmentId),
+            <div key="actions" style={{ visibility }}>
+              {getDownloadButton(segmentId)}
+              {getRefreshButton(segmentId, isLoading)}
+              {getDeleteButton(segmentId)}
+            </div>,
           ]}
-          style={{ marginBottom: -15 }}
+          style={{
+            padding: 0,
+            backgroundColor: isActiveCell ? "lightgrey" : "white",
+            cursor: "pointer",
+          }}
+          onMouseEnter={() => {
+            this.setState({ hoveredListItem: segmentId });
+          }}
+          onMouseLeave={() => {
+            this.setState({ hoveredListItem: null });
+          }}
+          onClick={() => {
+            moveToIsosurface(seedPosition);
+            this.setState({ activeCellId: segmentId });
+          }}
         >
-          <div onClick={() => moveToIsosurface(seedPosition)}>
+          <div style={{ paddingLeft: 5 }}>
             <span
               className="circle"
               style={{
+                paddingLeft: "10px",
                 backgroundColor: convertCellIdToCSS(segmentId),
               }}
             />{" "}
@@ -227,15 +257,23 @@ class MeshesView extends React.Component<Props, { currentlyEditedMesh: ?MeshMeta
             </Tooltip>
           )}
         </ButtonGroup>
-
-        <List
-          dataSource={Object.values(this.props.isosurfaces)}
-          size="small"
-          split={false}
-          renderItem={renderListItem}
-          locale={{ emptyText: " " }}
+        <SwitchSetting
+          label="Isosurfaces "
+          value={this.props.datasetConfiguration.renderIsosurfaces}
+          onChange={_.partial(this.props.onChangeDatasetSettings, "renderIsosurfaces")}
         />
-
+        {this.props.datasetConfiguration.renderIsosurfaces && (
+          <List
+            dataSource={Object.values(this.props.isosurfaces)}
+            size="small"
+            split={false}
+            renderItem={renderListItem}
+            locale={{
+              emptyText:
+                "There are no Isosurfaces. You can render one by holding shift and left clicking on a cell.",
+            }}
+          />
+        )}
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}

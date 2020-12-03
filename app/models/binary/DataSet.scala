@@ -448,7 +448,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
 
     val queries = source.toUsable match {
-      case Some(usable) if usable.dataLayers.nonEmpty =>
+      case Some(usable) =>
         getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(_dataSet, _))
       case _ => List(clearQuery)
     }

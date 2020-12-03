@@ -1,21 +1,19 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.DBAccessContext
-import javax.inject.Inject
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
-import play.api.libs.json.{Reads, _}
+import play.api.libs.json._
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,

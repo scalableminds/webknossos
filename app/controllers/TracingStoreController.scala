@@ -1,17 +1,14 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.FoxImplicits
-import javax.inject.Inject
 import models.annotation.{TracingStore, TracingStoreDAO, TracingStoreService}
-import net.liftweb.common.Empty
 import oxalis.security.WkEnv
-import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
 class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
                                        tracingStoreDAO: TracingStoreDAO,

@@ -1,20 +1,17 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.io.File
-import java.nio.file.Files
-
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
-import play.api.data.Forms.{nonEmptyText, tuple, boolean}
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
 import play.api.mvc.PlayBodyParsers
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceController @Inject()(

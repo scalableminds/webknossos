@@ -1,18 +1,18 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
-import slick.jdbc.PostgresProfile.api._
 import play.api.libs.json._
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class TaskType(

@@ -1,37 +1,34 @@
 package controllers
 
-import java.net.URLEncoder
-
 import akka.actor.ActorSystem
-import javax.inject.Inject
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail._
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Empty, EmptyBox, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
-import play.api._
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.Messages
 import play.api.libs.json._
-import play.api.libs.ws.WSResponse
 import play.api.mvc._
-
-import scala.concurrent.{ExecutionContext, Future}
 import utils.{ObjectId, WkConf}
+
+import java.net.URLEncoder
+import javax.inject.Inject
+import scala.concurrent.{ExecutionContext, Future}
 
 object AuthForms {
 

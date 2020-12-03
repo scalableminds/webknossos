@@ -2,11 +2,10 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.Cube
 import com.scalableminds.webknossos.datastore.models.datasource.AbstractDataLayerMapping
-import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceMappingRequest}
+import com.scalableminds.webknossos.datastore.models.requests.DataServiceMappingRequest
 import com.scalableminds.webknossos.datastore.storage
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

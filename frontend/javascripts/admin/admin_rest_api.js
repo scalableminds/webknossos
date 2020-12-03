@@ -761,7 +761,6 @@ export async function getDatasets(
   const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
   const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
   assertResponseLimit(datasets);
-
   return datasets;
 }
 

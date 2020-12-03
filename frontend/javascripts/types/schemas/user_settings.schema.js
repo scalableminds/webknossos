@@ -1,5 +1,5 @@
 // @flow
-
+import { OverwriteModeEnum } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export const userSettings = {
@@ -32,6 +32,10 @@ export const userSettings = {
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },
   segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
+  overwriteMode: {
+    type: "string",
+    enum: [OverwriteModeEnum.OVERWRITE_ALL, OverwriteModeEnum.OVERWRITE_EMPTY],
+  },
   ...baseDatasetViewConfiguration,
 };
 

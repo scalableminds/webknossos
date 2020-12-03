@@ -31,16 +31,6 @@ trait Controller
       })
     )
 
-  def bulk2StatusJson(results: List[Box[JsObject]]): Seq[JsObject] =
-    results.map {
-      case Full(s) =>
-        Json.obj("status" -> OK, jsonSuccess -> s)
-      case ParamFailure(msg, _, _, errorCode: Int) =>
-        Json.obj("status" -> errorCode, jsonError -> msg)
-      case Failure(msg, _, _) =>
-        Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
-    }
-
   def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A],
                                              request: Request[JsValue],
                                              m: MessagesProvider,

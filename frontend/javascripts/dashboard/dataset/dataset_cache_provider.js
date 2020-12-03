@@ -11,6 +11,7 @@ import * as Utils from "libs/utils";
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode,
   applyUpdatePredicate?: (datasets: Array<APIMaybeUnimportedDataset>) => boolean,
+  isCalledFromCheckDatasets?: boolean,
 };
 
 type Context = {
@@ -46,8 +47,11 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
   const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   async function fetchDatasets(options?: Options = {}): Promise<void> {
+    const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;
     const datasetFilteringMode = options.datasetFilteringMode || "onlyShowReported";
     const applyUpdatePredicate = options.applyUpdatePredicate || (_datasets => true);
+
+    if (isLoading && !isCalledFromCheckDatasets) return;
 
     try {
       setIsLoading(true);
@@ -84,7 +88,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
             triggerDatasetCheck(datastore.url).catch(() => {}),
           ),
       );
-      await fetchDatasets();
+      await fetchDatasets({ isCalledFromCheckDatasets: true });
     } catch (error) {
       handleGenericError(error);
     } finally {
@@ -103,10 +107,9 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       );
       if (updateIdx !== -1) {
         const updatedDataset = await getDataset(datasetId);
-        // TODO is this bad practice?
-        datasets[updateIdx] = updatedDataset;
-        // this is unnecessary, but maybe more expressive
-        setDatasets(datasets);
+        const newDatasets = datasets.slice();
+        newDatasets[updateIdx] = updatedDataset;
+        setDatasets(newDatasets);
       }
     } catch (error) {
       handleGenericError(error);

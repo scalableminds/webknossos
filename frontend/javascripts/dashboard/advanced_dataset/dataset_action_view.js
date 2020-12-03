@@ -153,16 +153,14 @@ class DatasetActionView extends React.PureComponent<Props, State> {
       <div>
         {dataset.isEditable && dataset.dataSource.dataLayers == null ? (
           <div className="dataset-actions">
-            <React.Fragment>
-              <Link
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-                className="import-dataset"
-              >
-                <Icon type="plus-circle-o" />
-                Import
-              </Link>
-              {reloadOption}
-            </React.Fragment>
+            <Link
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+              className="import-dataset"
+            >
+              <Icon type="plus-circle-o" />
+              Import
+            </Link>
+            {reloadOption}
             <div className="text-danger">{dataset.dataSource.status}</div>
           </div>
         ) : null}

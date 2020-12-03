@@ -27,7 +27,7 @@ case class TaskType(
     isDeleted: Boolean = false
 )
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
+class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext) {
 
   def fromForm(
       summary: String,
@@ -53,6 +53,16 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
         "recommendedConfiguration" -> taskType.recommendedConfiguration,
         "tracingType" -> taskType.tracingType
       )
+
+  def containsVolumeOrHybridTaskType(taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Boolean] =
+    Fox
+      .serialCombined(taskTypeIds) { taskTypeId =>
+        for {
+          taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+          taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
+      }
+      .map(_.exists(_ == true))
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

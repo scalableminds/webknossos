@@ -22,7 +22,7 @@ type Context = {
   updateDataset: (datasetId: APIDatasetId) => Promise<void>,
 };
 
-const wkDatasetsCacheKey = "wk.datasets";
+const wkDatasetsCacheKey = "wk.datasets-v2";
 export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
     UserLocalStorage.setItem(wkDatasetsCacheKey, JSON.stringify(datasets));

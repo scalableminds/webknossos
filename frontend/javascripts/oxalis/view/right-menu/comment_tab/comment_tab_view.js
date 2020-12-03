@@ -117,8 +117,13 @@ const memoizedDeriveData = memoizeOne(
     for (const tree of sortedTrees) {
       data.push(tree);
       const isCollapsed = state.collapsedTreeIds[tree.treeId];
-      if (!isCollapsed) {
-        data.push(...tree.comments.slice().sort(commentSorter));
+      if (!isCollapsed && tree.comments.length > 0) {
+        const sortedComments = tree.comments.slice().sort(commentSorter);
+
+        // Don't use concat to avoid creating a new `data` array for each tree
+        for (const comment of sortedComments) {
+          data.push(comment);
+        }
       }
     }
 

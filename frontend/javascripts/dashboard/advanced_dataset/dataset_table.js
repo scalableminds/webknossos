@@ -89,7 +89,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const filterByHasLayers = datasets =>
       this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
-        : datasets.filter(dataset => dataset.dataSource.dataLayers != null);
+        : datasets.filter(dataset => dataset.isActive && dataset.dataSource.dataLayers.length > 0);
 
     return filterByQuery(filterByMode(filterByHasLayers(this.props.datasets)));
   }
@@ -190,7 +190,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="scale"
           width={230}
           render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
+            `${
+              dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
+            }  ${getDatasetExtentAsString(dataset)}`
           }
         />
         <Column
@@ -249,7 +251,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <div style={{ maxWidth: 300 }}>
-              {(dataset.dataSource.dataLayers || []).map(layer => (
+              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>

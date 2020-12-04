@@ -69,13 +69,13 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
   }
 
   const [x, y, z] = getPosition(Store.getState().flycam);
-  setWaypoint([x + 1, y + 1, z], [0, 0, 0], false);
+  setWaypoint([x + 1, y + 1, z], OrthoViews.PLANE_XY, false);
   _.defer(() => simulateTracing(nodesPerTree, nodesAlreadySet + 1));
 }
 
 export function getPlaneMouseControls(
   planeView: PlaneView,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, Vector3) => void,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
 ) {
   return {
     leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
@@ -354,7 +354,7 @@ function onRightClick(
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, Vector3) => void,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
 ) {
   const state = Store.getState();
   if (isMagRestrictionViolated(state)) {
@@ -379,19 +379,23 @@ function onRightClick(
     const nodeId = event.shiftKey
       ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
       : null;
-    const rotation = getRotationOrtho(activeViewport);
     const globalPosition = calculateGlobalPos(position);
     if (event.shiftKey) {
-      showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, rotation);
+      showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
     } else {
-      setWaypoint(globalPosition, rotation, ctrlPressed);
+      setWaypoint(globalPosition, activeViewport, ctrlPressed);
     }
   }
 }
 
-export function setWaypoint(position: Vector3, rotation: Vector3, ctrlPressed: boolean): void {
+export function setWaypoint(
+  position: Vector3,
+  activeViewport: OrthoView,
+  ctrlPressed: boolean,
+): void {
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   const activeNodeMaybe = getActiveNode(skeletonTracing);
+  const rotation = getRotationOrtho(activeViewport);
 
   // set the new trace direction
   activeNodeMaybe.map(activeNode =>

@@ -1,12 +1,12 @@
 // @flow
 import * as React from "react";
 import { Menu, notification, Icon, Divider, Popover } from "antd";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
+import { V3 } from "libs/mjs";
 import {
-  createEdgeAction,
   deleteEdgeAction,
   mergeTreesAction,
   deleteNodeAction,
@@ -19,19 +19,17 @@ import api from "oxalis/api/internal_api";
 import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength } from "libs/format_utils";
-import { distanceBetweenVectors } from "libs/utils";
 
 type OwnProps = {|
   nodeContextMenuPosition: [number, number],
-  nodeContextMenuNodeId: ?number,
+  clickedNodeId: ?number,
   globalPosition: Vector3,
-  rotation: Vector3,
+  viewport: OrthoView,
   hideNodeContextMenu: () => void,
 |};
 
 type DispatchProps = {|
   deleteEdge: (number, number) => void,
-  createEdge: (number, number) => void,
   mergeTrees: (number, number) => void,
   deleteNode: (number, number) => void,
   setActiveNode: number => void,
@@ -42,10 +40,8 @@ type DispatchProps = {|
 type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
-type NodeContextMenuOptionsProps = {| ...Props, nodeContextMenuNodeId: number |};
-type NoneNodeContextMenuProps = {| ...Props |};
-
-const NAVBAR_HEIGHT = 48;
+type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
+type NoNodeContextMenuProps = {| ...Props |};
 
 const interactionHints = (
   <table className="table-with-borders-between-columns">
@@ -71,7 +67,7 @@ const interactionHints = (
 );
 
 function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const length = api.tracing.measureLengthBetweenNodes(sourceNodeId, targetNodeId);
+  const length = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(length)}.`,
     icon: <i className="fas fa-ruler" />,
@@ -88,10 +84,9 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
 
 function NodeContextMenuOptions({
   skeletonTracing,
-  nodeContextMenuNodeId,
+  clickedNodeId,
   hideNodeContextMenu,
   deleteEdge,
-  createEdge,
   mergeTrees,
   deleteNode,
   setActiveNode,
@@ -101,14 +96,14 @@ function NodeContextMenuOptions({
     return null;
   }
   const { activeTreeId, trees, activeNodeId } = skeletonTracing;
-  const nodeContextTree = findTreeByNodeId(trees, nodeContextMenuNodeId).get();
-  const areInSameTree = activeTreeId === nodeContextTree.treeId;
-  const isTheSameNode = activeNodeId === nodeContextMenuNodeId;
+  const clickedTree = findTreeByNodeId(trees, clickedNodeId).get();
+  const areInSameTree = activeTreeId === clickedTree.treeId;
+  const isTheSameNode = activeNodeId === clickedNodeId;
   let areNodesConnected = false;
   if (areInSameTree && !isTheSameNode && activeNodeId != null) {
-    const activeTreeEdges = nodeContextTree.edges.getEdgesForNode(activeNodeId);
+    const activeTreeEdges = clickedTree.edges.getEdgesForNode(activeNodeId);
     areNodesConnected = activeTreeEdges.some(
-      edge => edge.source === nodeContextMenuNodeId || edge.target === nodeContextMenuNodeId,
+      edge => edge.source === clickedNodeId || edge.target === clickedNodeId,
     );
   }
   return (
@@ -117,46 +112,30 @@ function NodeContextMenuOptions({
         className="node-context-menu-item"
         key="set-node-active"
         disabled={isTheSameNode}
-        onClick={() => setActiveNode(nodeContextMenuNodeId)}
+        onClick={() => setActiveNode(clickedNodeId)}
       >
         Select this Node
       </Menu.Item>
-      {areInSameTree ? (
-        <Menu.Item
-          className="node-context-menu-item"
-          key="create-edge"
-          disabled={!areInSameTree || isTheSameNode || areNodesConnected}
-          onClick={() =>
-            activeNodeId != null ? createEdge(nodeContextMenuNodeId, activeNodeId) : null
-          }
-        >
-          Create Edge to this Node
-        </Menu.Item>
-      ) : (
-        <Menu.Item
-          className="node-context-menu-item"
-          key="merge-trees"
-          onClick={() =>
-            activeNodeId != null ? mergeTrees(nodeContextMenuNodeId, activeNodeId) : null
-          }
-        >
-          Create Edge & Merge with this Tree
-        </Menu.Item>
-      )}
+      <Menu.Item
+        className="node-context-menu-item"
+        key="merge-trees"
+        disabled={areInSameTree}
+        onClick={() => (activeNodeId != null ? mergeTrees(clickedNodeId, activeNodeId) : null)}
+      >
+        Create Edge & Merge with this Tree
+      </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
         key="delete-edge"
         disabled={!areNodesConnected}
-        onClick={() =>
-          activeNodeId != null ? deleteEdge(activeNodeId, nodeContextMenuNodeId) : null
-        }
+        onClick={() => (activeNodeId != null ? deleteEdge(activeNodeId, clickedNodeId) : null)}
       >
         Delete Edge to this Node
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
         key="delete-node"
-        onClick={() => deleteNode(nodeContextMenuNodeId, nodeContextTree.treeId)}
+        onClick={() => deleteNode(clickedNodeId, clickedTree.treeId)}
       >
         Delete this Node
       </Menu.Item>
@@ -166,7 +145,7 @@ function NodeContextMenuOptions({
         disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
         onClick={() =>
           activeNodeId != null
-            ? measureAndShowLengthBetweenNodes(activeNodeId, nodeContextMenuNodeId)
+            ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
             : null
         }
       >
@@ -175,15 +154,14 @@ function NodeContextMenuOptions({
       <Menu.Item
         className="node-context-menu-item"
         key="measure-whole-tree-length"
-        disabled={activeNodeId == null || !areInSameTree || isTheSameNode}
-        onClick={() => measureAndShowFullTreeLength(nodeContextTree.treeId, nodeContextTree.name)}
+        onClick={() => measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name)}
       >
         Path Length of this Tree
       </Menu.Item>
       <Menu.Item
         className="node-context-menu-item"
         key="hide-tree"
-        onClick={() => hideTree(nodeContextTree.treeId)}
+        onClick={() => hideTree(clickedTree.treeId)}
       >
         Hide this Tree
       </Menu.Item>
@@ -191,18 +169,18 @@ function NodeContextMenuOptions({
   );
 }
 
-function NoneNodeContextMenu({
+function NoNodeContextMenuOptions({
   hideNodeContextMenu,
   globalPosition,
-  rotation,
+  viewport,
   createTree,
-}: NoneNodeContextMenuProps) {
+}: NoNodeContextMenuProps) {
   return (
     <Menu onClick={hideNodeContextMenu} style={{ borderRadius: 6 }}>
       <Menu.Item
         className="node-context-menu-item"
         key="create-node"
-        onClick={() => setWaypoint(globalPosition, rotation, false)}
+        onClick={() => setWaypoint(globalPosition, viewport, false)}
       >
         Create Node here (Right Click)
       </Menu.Item>
@@ -211,7 +189,7 @@ function NoneNodeContextMenu({
         key="create-node-with-tree"
         onClick={() => {
           createTree();
-          setWaypoint(globalPosition, rotation, false);
+          setWaypoint(globalPosition, viewport, false);
         }}
       >
         Create new Tree here
@@ -223,7 +201,7 @@ function NoneNodeContextMenu({
 function NodeContextMenu(props: Props) {
   const {
     skeletonTracing,
-    nodeContextMenuNodeId,
+    clickedNodeId,
     nodeContextMenuPosition,
     hideNodeContextMenu,
     datasetScale,
@@ -233,30 +211,35 @@ function NodeContextMenu(props: Props) {
     return null;
   }
   const { activeTreeId, activeNodeId } = skeletonTracing;
-  const nodeContextMenuNode = getNodeAndTree(skeletonTracing, nodeContextMenuNodeId).get()[1];
+  const nodeContextMenuNode = getNodeAndTree(skeletonTracing, clickedNodeId).get()[1];
   const positionToMeasureDistanceTo =
-    nodeContextMenuNodeId != null ? nodeContextMenuNode.position : globalPosition;
+    clickedNodeId != null ? nodeContextMenuNode.position : globalPosition;
   const activeNode = getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1];
   const distanceToSelection = formatNumberToLength(
-    distanceBetweenVectors(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+    V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
   );
 
   return (
-    <div
-      style={{ width: "100%", height: "100%", position: "absolute", zIndex: 99 }}
-      onClick={hideNodeContextMenu}
-    >
+    <React.Fragment>
+      <div
+        style={{ width: "100%", height: "100%", position: "absolute", zIndex: 99 }}
+        onClick={hideNodeContextMenu}
+      />
       <div
         style={{
           position: "absolute",
           left: nodeContextMenuPosition[0],
-          top: nodeContextMenuPosition[1] - NAVBAR_HEIGHT,
+          top: nodeContextMenuPosition[1],
         }}
         className="node-context-menu"
       >
+        {clickedNodeId != null
+          ? NodeContextMenuOptions({ ...props, clickedNodeId })
+          : NoNodeContextMenuOptions({ ...props })}
+        <Divider style={{ margin: "4px 0px" }} />
         <div className="node-context-menu-item">
           <Icon type="info-circle" /> {distanceToSelection} to this{" "}
-          {nodeContextMenuNodeId != null ? "Node" : "Position"}
+          {clickedNodeId != null ? "Node" : "Position"}
         </div>
         <div className="node-context-menu-item" style={{ cursor: "help" }}>
           <Popover
@@ -268,21 +251,14 @@ function NodeContextMenu(props: Props) {
             <Icon type="bulb" /> Show possible interactions
           </Popover>
         </div>
-        <Divider style={{ margin: "4px 0px" }} />
-        {nodeContextMenuNodeId != null
-          ? NodeContextMenuOptions({ ...props, nodeContextMenuNodeId })
-          : NoneNodeContextMenu({ ...props })}
       </div>
-    </div>
+    </React.Fragment>
   );
 }
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   deleteEdge(firstNodeId: number, secondNodeId: number) {
     dispatch(deleteEdgeAction(firstNodeId, secondNodeId));
-  },
-  createEdge(firstNodeId: number, secondNodeId: number) {
-    dispatch(createEdgeAction(firstNodeId, secondNodeId));
   },
   mergeTrees(sourceNodeId: number, targetNodeId: number) {
     dispatch(mergeTreesAction(sourceNodeId, targetNodeId));

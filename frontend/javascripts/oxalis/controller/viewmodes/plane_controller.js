@@ -69,7 +69,7 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
-type OwnProps = {| showNodeContextMenuAt: (number, number, ?number, Vector3, Vector3) => void |};
+type OwnProps = {| showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void |};
 
 type StateProps = {|
   tracing: Tracing,

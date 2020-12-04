@@ -33,11 +33,6 @@ type CreateNodeAction = {
   treeId?: ?number,
   dontActivate?: boolean,
 };
-type CreateEdgeAction = {
-  type: "CREATE_EDGE",
-  sourceNodeId: number,
-  targetNodeId: number,
-};
 type DeleteNodeAction = {
   type: "DELETE_NODE",
   nodeId?: number,
@@ -133,7 +128,6 @@ type NoAction = { type: "NONE" };
 export type SkeletonTracingAction =
   | InitializeSkeletonTracingAction
   | CreateNodeAction
-  | CreateEdgeAction
   | DeleteNodeAction
   | DeleteEdgeAction
   | SetActiveNodeAction
@@ -237,12 +231,6 @@ export const createNodeAction = (
   treeId,
   dontActivate,
   timestamp,
-});
-
-export const createEdgeAction = (sourceNodeId: number, targetNodeId: number): CreateEdgeAction => ({
-  type: "CREATE_EDGE",
-  sourceNodeId,
-  targetNodeId,
 });
 
 export const deleteNodeAction = (

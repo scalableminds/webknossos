@@ -39,7 +39,12 @@ import * as Utils from "libs/utils";
 import type { APIUser } from "types/api_flow_types";
 
 import app from "app";
-import constants, { ControlModeEnum, type ViewMode, type Vector3 } from "oxalis/constants";
+import constants, {
+  ControlModeEnum,
+  type ViewMode,
+  type Vector3,
+  type OrthoView,
+} from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
@@ -49,7 +54,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
   controllerStatus: ControllerStatus,
   setControllerStatus: ControllerStatus => void,
-  showNodeContextMenuAt: (number, number, ?number, Vector3, Vector3) => void,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
 |};
 type StateProps = {|
   viewMode: ViewMode,

@@ -54,7 +54,7 @@ M4x4.transformPointsAffine = function transformPointsAffine(
   const m32 = m[14];
 
   // DO NOT CHANGE to let compound assignment (+=) as V8 cannot optimize this
-  for (let i = 0; i < points.length; i = i + 3) {
+  for (let i = 0; i < points.length; i += 3) {
     const v0 = points[i];
     const v1 = points[i + 1];
     const v2 = points[i + 2];
@@ -215,6 +215,11 @@ V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   V3.sub(a, b, _tmpVec);
   V3.scale3(_tmpVec, scale, _tmpVec);
   return V3.lengthSquared(_tmpVec);
+};
+
+V3.scaledDist = function scaledDist(a, b, scale) {
+  const squaredDist = V3.scaledSquaredDist(a, b, scale);
+  return Math.sqrt(squaredDist);
 };
 
 V3.toArray = function(vec) {

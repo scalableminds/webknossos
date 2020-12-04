@@ -106,7 +106,4 @@ trait PathUtils extends LazyLogging {
     }
   }
 
-  def deleteDirectoryWithContents(directory: Path): Unit =
-    Files.walk(directory).iterator().asScala.toList.reverse.foreach(_.toFile.delete())
-
 }

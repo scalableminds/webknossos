@@ -124,8 +124,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
         case e =>
-          // TODO check whether this is too aggressive
-          PathUtils.deleteDirectoryWithContents(dataSourceDir)
           val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
           logger.warn(errorMsg)
           Fox.failure(errorMsg)

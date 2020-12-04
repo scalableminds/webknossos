@@ -2,9 +2,10 @@ package oxalis.telemetry.SlackNotificationService
 
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 import utils.WkConf
+
+import javax.inject.Inject
 
 class SlackNotificationService @Inject()(rpc: RPC, conf: WkConf) extends LazyLogging {
 

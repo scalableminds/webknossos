@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, InjectedController}
-import play.api.mvc.Results._
+import play.api.mvc.InjectedController
 
 class StandaloneTracingstore extends InjectedController {
 

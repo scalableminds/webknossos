@@ -1,15 +1,12 @@
 package models.annotation.nml
 
-import java.io.File
-
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.TemporaryFile
 
-import scala.concurrent.ExecutionContext
+import java.io.File
 
 object NmlResults extends LazyLogging {
 

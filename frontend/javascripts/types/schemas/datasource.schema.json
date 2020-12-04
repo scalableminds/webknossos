@@ -125,7 +125,11 @@
           "additionalProperties": false,
           "required": ["name", "team"]
         },
-        "dataLayers": { "type": "array", "items": { "$ref": "#/definitions/types::DataLayer" } },
+        "dataLayers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/types::DataLayer" }
+        },
         "scale": {
           "type": "array",
           "items": { "type": "number", "minimum": 0, "exclusiveMinimum": true },

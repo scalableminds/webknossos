@@ -1,13 +1,11 @@
 package com.scalableminds.webknossos.datastore.services
 
 import akka.actor.{Actor, ActorSystem, Props}
-import akka.pattern.{AskTimeoutException, ask, pipe}
+import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
-import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D, Vector3I}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
@@ -15,11 +13,10 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceMappingRequest,
   DataServiceRequestSettings
 }
+import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import net.liftweb.common.{Box, Failure}
+
 import java.nio._
-
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}

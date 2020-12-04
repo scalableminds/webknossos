@@ -1,34 +1,27 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWSegmentationLayer
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractSegmentationLayer,
-  DataSourceId,
-  ElementClass,
-  GenericDataSource,
-  inbox,
-  DataLayerLike => DataLayer
-}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
 }
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Failure, Full}
-import oxalis.security.{CompactRandomIDGenerator, URLSharing}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.i18n.Messages.Implicits._
+import net.liftweb.common.{Box, Full}
+import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
-import play.api.libs.ws.WSResponse
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,
@@ -59,14 +52,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createDataSet(
-      name: String,
       dataStore: DataStore,
       owningOrganization: String,
       dataSource: InboxDataSource,
-      publication: Option[ObjectId] = None,
-      isActive: Boolean = false
+      publication: Option[ObjectId] = None
   ): Fox[ObjectId] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
     val details =
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
@@ -102,7 +93,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       dataStore <- dataStoreDAO.findOneByName(dataStoreName)
       foreignDataset <- getForeignDataSet(dataStore.url, dataSetName)
-      _ <- createDataSet(dataSetName, dataStore, organizationName, foreignDataset)
+      _ <- createDataSet(dataStore, organizationName, foreignDataset)
     } yield ()
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
@@ -205,7 +196,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def insertNewDataSet(dataSource: InboxDataSource, dataStore: DataStore) =
     publicationForFirstDataset.flatMap { publicationId: Option[ObjectId] =>
-      createDataSet(dataSource.id.name, dataStore, dataSource.id.team, dataSource, publicationId, dataSource.isUsable)
+      createDataSet(dataStore, dataSource.id.team, dataSource, publicationId)
     }.futureBox
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
@@ -243,22 +234,20 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None, skipResolutions: Boolean = false)(
       implicit ctx: DBAccessContext): Fox[InboxDataSource] =
-    for {
+    (for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
-      dataLayersBox <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions).futureBox
+      dataLayers <- dataSetDataLayerDAO.findAllForDataSet(dataSet._id, skipResolutions)
       dataSourceId = DataSourceId(dataSet.name, organization.name)
     } yield {
-      dataLayersBox match {
-        case Full(dataLayers) if (dataLayers.nonEmpty) =>
-          for {
-            scale <- dataSet.scale
-          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-        case _ =>
-          Some(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
-      }
-    }
+      if (dataSet.isUsable)
+        for {
+          scale <- dataSet.scale.toFox ?~> "dataSet.source.usableButNoScale"
+        } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+      else
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataSet.status, dataSet.scale))
+    }).flatten
 
   def logoUrlFor(dataSet: DataSet, organization: Option[Organization]): Fox[String] =
     dataSet.logoUrl match {

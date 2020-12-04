@@ -1,25 +1,25 @@
 package controllers
 
-import javax.inject.Inject
 import akka.util.Timeout
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
+import models.team.{OrganizationDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import models.team.{OrganizationDAO, TeamService}
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 

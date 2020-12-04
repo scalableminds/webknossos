@@ -1,12 +1,12 @@
 package oxalis.security
 
-import com.mohiva.play.silhouette.api.{AuthInfo, LoginInfo}
 import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.util.PasswordInfo
+import com.mohiva.play.silhouette.api.{AuthInfo, LoginInfo}
+import models.user.UserService
+
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
-import models.user.{User, UserService}
-
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 

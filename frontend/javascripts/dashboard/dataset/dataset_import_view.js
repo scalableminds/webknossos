@@ -65,7 +65,7 @@ const AppliedSuggestionsEnum = {
 const IsJSONFormatValidEnum = {
   Yes: "Yes",
   No: "No",
-  BrokenFormat: "BrokenFormat",
+  BrokenJson: "BrokenJson",
 };
 
 type DataSourceSettingsStatus = {
@@ -154,7 +154,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         } else {
           // If the current datasource json is invalid, the inferred version should be used automatically.
           dataSource = inferredDataSource;
-          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenFormat;
+          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenJson;
           dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.Yes;
         }
         this.setState({
@@ -171,7 +171,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
         const datasetClone = (_.cloneDeep(dataset): any);
-        ("YES");
         datasetClone.dataSource = _.cloneDeep(dataSource);
         dataset = (datasetClone: APIDataset);
       }
@@ -263,7 +262,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       });
     };
 
-    if (isJSONFormatValid === IsJSONFormatValidEnum.BrokenFormat) {
+    if (isJSONFormatValid === IsJSONFormatValidEnum.BrokenJson) {
       // If the datasource-properties.json on the server is an invalid JSON.
       message = (
         <div>

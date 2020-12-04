@@ -1,6 +1,5 @@
 import com.google.inject.AbstractModule
 import controllers.{InitialDataService, JobService}
-import com.scalableminds.webknossos.datastore.services.DataSourceService
 import models.annotation.AnnotationStore
 import models.binary.DataSetService
 import models.task.TaskService

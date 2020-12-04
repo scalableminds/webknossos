@@ -4,14 +4,13 @@ import com.mohiva.play.silhouette.api.util.Clock
 import com.mohiva.play.silhouette.api.{Env, Environment, EventBus, RequestProvider}
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticatorSettings, CookieAuthenticatorSettings}
 import com.mohiva.play.silhouette.impl.util.DefaultFingerprintGenerator
-import javax.inject.Inject
 import models.user.{User, UserService}
-import play.api.i18n.MessagesApi
 import play.api.mvc.{Cookie, CookieHeaderEncoding}
 import utils.WkConf
 
-import scala.concurrent.duration._
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 trait WkEnv extends Env {
   type I = User

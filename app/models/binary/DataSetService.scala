@@ -1,34 +1,27 @@
 package models.binary
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWSegmentationLayer
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AbstractSegmentationLayer,
-  DataSourceId,
-  ElementClass,
-  GenericDataSource,
-  inbox,
-  DataLayerLike => DataLayer
-}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   UnusableDataSource,
   InboxDataSourceLike => InboxDataSource
 }
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSourceId,
+  GenericDataSource,
+  DataLayerLike => DataLayer
+}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Failure, Full}
-import oxalis.security.{CompactRandomIDGenerator, URLSharing}
-import play.api.i18n.{Messages, MessagesApi}
-import play.api.i18n.Messages.Implicits._
+import net.liftweb.common.{Box, Full}
+import oxalis.security.CompactRandomIDGenerator
 import play.api.libs.json.{JsObject, Json}
-import play.api.libs.ws.WSResponse
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetService @Inject()(organizationDAO: OrganizationDAO,

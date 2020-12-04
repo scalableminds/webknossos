@@ -1,12 +1,13 @@
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import play.api.OptionalDevContext
 import play.api.http._
 import play.api.mvc.Results._
-import play.api.mvc.{Action, AnyContent, Handler, InjectedController, RequestHeader, Result}
+import play.api.mvc.{Handler, InjectedController, RequestHeader, Result}
 import play.api.routing.Router
-import play.core.{DefaultWebCommands, WebCommands}
+import play.core.WebCommands
+
+import javax.inject.Inject
 
 trait AdditionalHeaders {
   def options(request: RequestHeader): Result =

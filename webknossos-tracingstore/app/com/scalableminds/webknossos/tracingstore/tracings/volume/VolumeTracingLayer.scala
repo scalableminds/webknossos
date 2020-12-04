@@ -17,7 +17,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 

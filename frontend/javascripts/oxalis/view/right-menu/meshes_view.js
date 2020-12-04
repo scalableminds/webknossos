@@ -202,7 +202,7 @@ class MeshesView extends React.Component<
           ]}
           style={{
             padding: 0,
-            backgroundColor: isActiveCell ? "lightgrey" : "white",
+            backgroundColor: isActiveCell ? "#91d5ff" : "white",
             cursor: "pointer",
           }}
           onMouseEnter={() => {

@@ -107,9 +107,9 @@ function ensureValidScaleOnInferredDataSource(
   ) {
     const inferredDataSourceClone = (_.cloneDeep(inferredDataSource): any);
     inferredDataSourceClone.scale = savedDataSourceOnServer.scale;
-    return inferredDataSource;
+    return inferredDataSourceClone;
   }
-  return savedDataSourceOnServer;
+  return inferredDataSource;
 }
 
 class DatasetImportView extends React.PureComponent<Props, State> {

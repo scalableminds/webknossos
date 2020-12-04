@@ -210,7 +210,9 @@ class DataSourceService @Inject()(
     if (new File(propertiesFile.toString).exists()) {
       JsonHelper.validatedJsonFromFile[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
-          dataSource.copy(id)
+          if (dataSource.dataLayers.nonEmpty) dataSource.copy(id)
+          else
+            UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
         case e =>
           UnusableDataSource(id,
                              s"Error: Invalid json format in $propertiesFile: $e",

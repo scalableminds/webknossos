@@ -2,12 +2,11 @@ package controllers
 
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
-import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.util.tools.{Converter, Fox}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
-import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
@@ -30,16 +29,6 @@ trait Controller
           case (js, e) => js ++ Json.obj("error" -> Messages(e.message))
       })
     )
-
-  def bulk2StatusJson(results: List[Box[JsObject]]): Seq[JsObject] =
-    results.map {
-      case Full(s) =>
-        Json.obj("status" -> OK, jsonSuccess -> s)
-      case ParamFailure(msg, _, _, errorCode: Int) =>
-        Json.obj("status" -> errorCode, jsonError -> msg)
-      case Failure(msg, _, _) =>
-        Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
-    }
 
   def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A],
                                              request: Request[JsValue],

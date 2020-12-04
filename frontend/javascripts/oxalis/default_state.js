@@ -1,7 +1,7 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
-import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -73,6 +73,7 @@ const defaultState: OxalisState = {
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
+    overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

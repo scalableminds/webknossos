@@ -1,7 +1,5 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import java.io.File
-
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
@@ -17,6 +15,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceController @Inject()(

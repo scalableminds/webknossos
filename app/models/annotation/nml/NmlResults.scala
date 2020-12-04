@@ -2,11 +2,11 @@ package models.annotation.nml
 
 import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files.TemporaryFile
 
-import scala.concurrent.ExecutionContext
+import java.io.File
 
 object NmlResults extends LazyLogging {
 
@@ -19,13 +19,13 @@ object NmlResults extends LazyLogging {
 
     def succeeded: Boolean
 
-    def toSuccessFox(implicit ec: ExecutionContext): Fox[NmlParseSuccess] = this match {
+    def toSuccessBox: Box[NmlParseSuccess] = this match {
       case NmlParseFailure(fileName, error) =>
-        Fox.failure(s"Couldn’t parse file: $fileName. $error")
+        Failure(s"Couldn’t parse file: $fileName. $error")
       case success: NmlParseSuccess =>
-        Fox.successful(success)
+        Full(success)
       case _ =>
-        Fox.failure(s"Couldn’t parse file: $fileName")
+        Failure(s"Couldn’t parse file: $fileName")
     }
 
     def withName(name: String): NmlParseResult = this
@@ -38,9 +38,10 @@ object NmlResults extends LazyLogging {
       extends NmlParseResult {
     def succeeded = true
 
-    override def bothTracingOpts = Some((skeletonTracing, volumeTracingWithDataLocation))
+    override def bothTracingOpts: Option[(Option[SkeletonTracing], Option[(VolumeTracing, String)])] =
+      Some((skeletonTracing, volumeTracingWithDataLocation))
 
-    override def description = Some(_description)
+    override def description: Option[String] = Some(_description)
 
     override def withName(name: String): NmlParseResult = this.copy(fileName = name)
   }
@@ -53,19 +54,49 @@ object NmlResults extends LazyLogging {
     def succeeded = false
   }
 
-  case class ZipParseResult(parseResults: List[NmlParseResult] = Nil,
-                            otherFiles: Map[String, TemporaryFile] = Map.empty) {
-    def combineWith(other: ZipParseResult) =
-      ZipParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
+  case class MultiNmlParseResult(parseResults: List[NmlParseResult] = Nil,
+                                 otherFiles: Map[String, TemporaryFile] = Map.empty) {
 
-    def containsNoSuccesses =
+    def combineWith(other: MultiNmlParseResult): MultiNmlParseResult =
+      MultiNmlParseResult(parseResults ::: other.parseResults, other.otherFiles ++ otherFiles)
+
+    def containsNoSuccesses: Boolean =
       !parseResults.exists(_.succeeded)
 
-    def containsFailure =
+    def containsFailure: Boolean =
       parseResults.exists {
         case _: NmlParseFailure => true
         case _                  => false
       }
+
+    def toBoxes: List[TracingBoxContainer] =
+      parseResults.map { parseResult =>
+        val successBox = parseResult.toSuccessBox
+        val skeletonBox = successBox match {
+          case Full(success) =>
+            success.skeletonTracing match {
+              case Some(skeleton) => Full(skeleton)
+              case None           => Empty
+            }
+          case f: Failure => f
+          case _          => Failure("")
+        }
+        val volumeBox = successBox match {
+          case Full(success) =>
+            success.volumeTracingWithDataLocation match {
+              case Some((tracing, name)) => Full((tracing, otherFiles.get(name).map(_.path.toFile)))
+              case None                  => Empty
+            }
+          case f: Failure => f
+          case _          => Failure("")
+        }
+        TracingBoxContainer(successBox.map(_.fileName), successBox.map(_.description), skeletonBox, volumeBox)
+      }
   }
+
+  case class TracingBoxContainer(fileName: Box[String],
+                                 description: Box[Option[String]],
+                                 skeleton: Box[SkeletonTracing],
+                                 volume: Box[(VolumeTracing, Option[File])])
 
 }

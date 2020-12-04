@@ -2,7 +2,6 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
@@ -11,14 +10,14 @@ import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.{URLSharing, WkEnv}
-import play.api.cache.SyncCacheApi
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,

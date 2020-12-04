@@ -1,18 +1,16 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
-import com.scalableminds.util.tools.Fox
-import javax.inject.Inject
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfigurationService, UserConfiguration}
-import models.user.{UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO, UserService}
+import models.user.UserService
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject}
+import play.api.libs.json.JsObject
 import play.api.libs.json.Json._
 import play.api.mvc.PlayBodyParsers
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(

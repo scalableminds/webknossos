@@ -42,7 +42,6 @@ const volumeTracing: VolumeTracing = {
   userBoundingBoxes: [],
   lastCentroid: null,
   contourTracingMode: ContourModeEnum.DRAW,
-  overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
 };
 
 const initialState = update(defaultState, {

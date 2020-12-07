@@ -114,7 +114,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                teamDAO: TeamDAO,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
-                               userDAO: UserDAO,
+                               multiUserDAO: MultiUserDAO,
                                defaultMails: DefaultMails,
                                rpc: RPC,
                                conf: WkConf,
@@ -264,16 +264,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  def autoLogin = Action.async { implicit request =>
-    for {
-      _ <- bool2Fox(conf.Application.Authentication.enableDevAutoLogin) ?~> "error.notInDev"
-      user <- userService.defaultUser
-      authenticator <- combinedAuthenticatorService.create(user.loginInfo)
-      value <- combinedAuthenticatorService.init(authenticator)
-      result <- combinedAuthenticatorService.embed(value, Ok)
-    } yield result
-  }
-
   def switchTo(email: String) = sil.SecuredAction.async { implicit request =>
     implicit val ctx = GlobalAccessContext
     if (request.identity.isSuperUser) {
@@ -319,7 +309,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- userDAO.updatePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -329,12 +319,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  // a user who is logged in can change his password
+  // Users who are logged in can change their password. The old password has to be validated again.
   def changePassword = sil.SecuredAction.async { implicit request =>
     changePasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val credentials = Credentials(request.identity.email, passwords.oldPassword)
+        val credentials = Credentials(request.identity._id.id, passwords.oldPassword)
         credentialsProvider
           .authenticate(credentials)
           .flatMap {
@@ -343,12 +333,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                 case None =>
                   Future.successful(NotFound(Messages("error.noUser")))
                 case Some(user) =>
-                  val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
                   for {
-                    _ <- userService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
+                    _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                     _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)
+                    userEmail <- userService.emailFor(user)
                   } yield {
-                    Mailer ! Send(defaultMails.changePasswordMail(user.name, request.identity.email))
+                    Mailer ! Send(defaultMails.changePasswordMail(user.name, userEmail))
                     Ok
                   }
               }
@@ -410,10 +400,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
           for {
             nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
             returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+            userEmail <- userService.emailFor(user)
           } yield {
             val returnPayload =
               s"nonce=$nonce&" +
-                s"email=${URLEncoder.encode(user.email, "UTF-8")}&" +
+                s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
                 s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
                 s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
                 s"name=${URLEncoder.encode(user.name, "UTF-8")}"
@@ -476,7 +467,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                        email.toLowerCase,
                                                        request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isDemoInstance) {
-                      Mailer ! Send(defaultMails.newAdminWKOrgMail(user.firstName, user.email))
+                      Mailer ! Send(defaultMails.newAdminWKOrgMail(user.firstName, email))
                     }
                     Ok
                   }
@@ -489,12 +480,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]) = {
+  private def creatingOrganizationsIsAllowed(requestingUser: Option[User]): Fox[Unit] = {
     val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
     val activatedInConfig = bool2Fox(conf.Features.isDemoInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = bool2Fox(requestingUser.exists(_.isSuperUser))
+    val userIsSuperUser = requestingUser.toFox.flatMap(user => multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
 
-    Fox.sequenceOfFulls(List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
+    Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }
 
   private def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String) =

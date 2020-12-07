@@ -121,7 +121,7 @@ Samplecountry
       _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
-  def assertNoOrganizationsPresent =
+  def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"

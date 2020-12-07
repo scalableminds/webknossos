@@ -146,9 +146,6 @@ class UserService @Inject()(conf: WkConf,
       passwordInfo
     }
 
-  def findOneByEmail(email: String): Fox[User] =
-    userDAO.findOneByEmail(email)(GlobalAccessContext)
-
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       userCache.invalidateUser(user._id)

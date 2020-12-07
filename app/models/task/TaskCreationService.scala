@@ -406,7 +406,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   private def assertEachHasEitherSkeletonOrVolume(
       requestedTasks: List[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])])
-    : Fox[Boolean] =
+    : Fox[Unit] =
     bool2Fox(
       requestedTasks.forall(tuple => tuple._1.baseAnnotation.isDefined || tuple._2.isDefined || tuple._3.isDefined))
 

@@ -107,7 +107,13 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "SET_MAX_CELL": {
-          return setMaxCellReducer(state, volumeTracing, action.cellId);
+          return setMaxCellReducer(state, action.cellId);
+        }
+
+        case "FINISH_ANNOTATION_STROKE": {
+          // Possibly update the maxCellId after volume annotation
+          const { activeCellId, maxCellId } = volumeTracing;
+          return setMaxCellReducer(state, Math.max(activeCellId, maxCellId));
         }
 
         default:

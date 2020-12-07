@@ -144,6 +144,8 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId): Fox[User] = ??? // TODO
+
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
@@ -159,7 +161,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] = ???
+  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] = ??? // TODO
 
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -192,12 +194,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname,
-       row.lastname,
-       row.isadmin,
-       row.isdatasetmanager,
-       row.isdeactivated,
-       row.lasttasktypeid)
+      (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))

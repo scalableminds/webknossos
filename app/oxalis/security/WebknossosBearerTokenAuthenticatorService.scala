@@ -5,7 +5,11 @@ import com.mohiva.play.silhouette.api.exceptions.{AuthenticatorCreationException
 import com.mohiva.play.silhouette.api.services.AuthenticatorService.{CreateError, InitError}
 import com.mohiva.play.silhouette.api.util.{Clock, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
-import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator, BearerTokenAuthenticatorService, BearerTokenAuthenticatorSettings}
+import com.mohiva.play.silhouette.impl.authenticators.{
+  BearerTokenAuthenticator,
+  BearerTokenAuthenticatorService,
+  BearerTokenAuthenticatorSettings
+}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
@@ -25,7 +29,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
     with FoxImplicits {
 
-  private val resetPasswordExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
+  private val resetPasswordExpiry: FiniteDuration =
+    conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
   val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
   def create(loginInfo: LoginInfo, tokenType: TokenType)(

@@ -18,12 +18,15 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
 
-  def registerAdminNotifyerMail(user: User, brainDBResult: Option[String], organization: Organization) =
+  def registerAdminNotifyerMail(name: String,
+                                email: String,
+                                brainDBResult: Option[String],
+                                organization: Organization) =
     Mail(
       from = defaultSender,
       subject =
-        s"webKnossos | A new user (${user.name}, ${user.email}) registered on $uri for ${organization.displayName} (${organization.name})",
-      bodyHtml = html.mail.notifyAdminNewUser(user, brainDBResult, uri).body,
+        s"webKnossos | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
+      bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri).body,
       recipients = List(organization.newUserMailingList)
     )
 

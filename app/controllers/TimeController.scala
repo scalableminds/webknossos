@@ -38,7 +38,11 @@ class TimeController @Inject()(userService: UserService,
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
     sil.SecuredAction.async { implicit request =>
       for {
-        users <- Fox.combined(userString.split(",").toList.map(email => userDAO.findOneByEmailAndOrganization(email, organizationId))) ?~> "user.email.invalid"
+        users <- Fox.combined(
+          userString
+            .split(",")
+            .toList
+            .map(email => userDAO.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
       } yield {

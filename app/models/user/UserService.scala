@@ -138,15 +138,14 @@ class UserService @Inject()(conf: WkConf,
     } yield updated
   }
 
-  def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) =
+  def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
-      user <- findOneByEmail(loginInfo.providerKey)
-      _ <- multiUserDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
-    } yield {
-      passwordInfo
-    }
+      userIdValidated <- ObjectId.parse(loginInfo.providerKey)
+      user <- findOneById(userIdValidated, useCache = true)(GlobalAccessContext)
+      _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
+    } yield passwordInfo
 
-  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) =
+  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       userCache.invalidateUser(user._id)
       result
@@ -157,7 +156,7 @@ class UserService @Inject()(conf: WkConf,
       dataSetName: String,
       organizationName: String,
       dataSetConfiguration: DataSetViewConfiguration,
-      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider) =
+      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",

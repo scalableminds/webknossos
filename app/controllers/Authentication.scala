@@ -217,12 +217,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, user.email, organization.enableAutoVerify))
+                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, email, organization.enableAutoVerify))
                 } else {
                   Mailer ! Send(
-                    defaultMails.newUserMail(user.name, user.email, brainDBResult, organization.enableAutoVerify))
+                    defaultMails.newUserMail(user.name, email, brainDBResult, organization.enableAutoVerify))
                 }
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, brainDBResult, organization))
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, email, brainDBResult, organization))
                 Ok
               }
             }
@@ -238,11 +238,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       signInData => {
         val email = signInData.email.toLowerCase
         val userFopt: Future[Option[User]] = userService.findOneByEmail(email).futureBox.map(_.toOption)
-        val idF = userFopt
-         .map( userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
-        idF
-          .map{id => logger.info(f"id: $id"); Credentials(id, signInData.password)}
-          .flatMap(credentials => credentialsProvider.authenticate(credentials))
+        val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
+        idF.map { id =>
+          logger.info(f"id: $id"); Credentials(id, signInData.password)
+        }.flatMap(credentials => credentialsProvider.authenticate(credentials))
           .flatMap {
             loginInfo =>
               userService.retrieve(loginInfo).flatMap {
@@ -309,7 +308,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(
+                GlobalAccessContext)
               _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
@@ -483,7 +483,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   private def creatingOrganizationsIsAllowed(requestingUser: Option[User]): Fox[Unit] = {
     val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
     val activatedInConfig = bool2Fox(conf.Features.isDemoInstance) ?~> "allowOrganizationCreation.notEnabled"
-    val userIsSuperUser = requestingUser.toFox.flatMap(user => multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
+    val userIsSuperUser = requestingUser.toFox.flatMap(user =>
+      multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
 
     Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
   }

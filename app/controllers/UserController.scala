@@ -276,14 +276,15 @@ class UserController @Inject()(userService: UserService,
       true
     else issuingUser.isAdminOf(user)
 
-  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) Fox.successful(())
-    else for {
-      count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
-      issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
-      _ <- bool2Fox(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
-    } yield ()
-  }
+    else
+      for {
+        count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
+        issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
+        _ <- bool2Fox(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
+      } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
     if (user.isAdmin && !isAdmin) {

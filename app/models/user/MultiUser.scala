@@ -11,20 +11,18 @@ import utils.{ObjectId, SQLClient, SQLDAO}
 
 import scala.concurrent.ExecutionContext
 
-
 case class MultiUser(
-                 _id: ObjectId,
-                 email: String,
-                 passwordInfo: PasswordInfo,
-                 isSuperUser: Boolean,
-                 lastLoggedInIdentity: Option[ObjectId] = None,
-                 created: Long = System.currentTimeMillis(),
-                 isDeleted: Boolean = false
-               )
-
+    _id: ObjectId,
+    email: String,
+    passwordInfo: PasswordInfo,
+    isSuperUser: Boolean,
+    lastLoggedInIdentity: Option[ObjectId] = None,
+    created: Long = System.currentTimeMillis(),
+    isDeleted: Boolean = false
+)
 
 class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
-  extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
+    extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
   val collection = Multiusers
 
   def idColumn(x: Multiusers): Rep[String] = x._Id
@@ -79,16 +77,10 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       parsed
     }
 
-
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      idList <- run(
-        sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[Int])
+      idList <- run(sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[Int])
     } yield idList.isEmpty
 
 }
-
-
-
-

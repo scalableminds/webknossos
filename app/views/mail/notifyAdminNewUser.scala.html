@@ -1,9 +1,9 @@
-@( user: models.user.User, brainDBresult: Option[String], uri: String )
+@( username: String, brainDBresult: Option[String], uri: String )
 
 @emailBaseTemplate() {
   <p>Hi,</p>
 
-  <p>A new user - @user.name - just registered a webKnossos account for your <a href="@uri">organization.</a></p>
+  <p>A new user - @username - just registered a webKnossos account for your <a href="@uri">organization.</a></p>
   <p>
     Please, remember to activate and verify new user accounts and assign them to a team within your organization. Visit  <a href="@{uri}/users">@{uri}/users</a> to activate the account.
   </p>

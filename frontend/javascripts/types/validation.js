@@ -2,7 +2,7 @@
 
 import jsonschema from "jsonschema";
 
-import DatasourceSchema from "types/schemas/datasource.schema.json";
+import DatasourceSchema from "types/schemas/datasource.schema";
 import UserSettingsSchema from "types/schemas/user_settings.schema";
 import ViewConfigurationSchema from "types/schemas/dataset_view_configuration.schema";
 

@@ -33,7 +33,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_DESCRIPTION = ""
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
-  private val DEFAULT_NODE_RADIUS = 30.0
+  private val DEFAULT_NODE_RADIUS: Float = 30.0f
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
   def parse(name: String,

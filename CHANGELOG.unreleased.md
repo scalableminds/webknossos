@@ -17,6 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The menu for viewing, editing and creating annotations for a dataset in the dashboard was cleaned up a bit. Creating a hybrid (skeleton + volume) annotation is now the default way of annotating a dataset. The other options are still available via a dropdown. [#4939](https://github.com/scalableminds/webknossos/pull/4939)
 - For 2d-only datasets the view mode toggle is hidden. [#4952](https://github.com/scalableminds/webknossos/pull/4952)
 - Persist the selected overwrite behavior for hybrid and volume annotations. [#4962](https://github.com/scalableminds/webknossos/pull/4962)
+- Backend NML parser now allows NML nodes without radius attribute. Instead, their radius now defaults to a value of 30. [#4982](https://github.com/scalableminds/webknossos/pull/4982)
 
 ### Fixed
 - Fix crash for trees with high comment count (> 100000 nodes). [#4965](https://github.com/scalableminds/webknossos/pull/4965)

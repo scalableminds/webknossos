@@ -26,6 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
+                            multiUserDAO: MultiUserDAO,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
@@ -46,7 +47,7 @@ class UserService @Inject()(conf: WkConf,
 
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
 
-  def defaultUser =
+  def defaultUser: Fox[User] =
     userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
 
   def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
@@ -67,24 +68,31 @@ class UserService @Inject()(conf: WkConf,
              loginInfo: LoginInfo,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean = false): Fox[User] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
+      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
+      multiUserId = ObjectId.generate
+      multiUser = MultiUser(
+        multiUserId,
+        email,
+        passwordInfo,
+        isSuperUser = false
+      )
+      _ <- multiUserDAO.insertOne(multiUser)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
       orgTeam <- teamDAO.findOne(organizationTeamId)
-      teamMemberships = List(TeamMembership(orgTeam._id, false))
+      teamMemberships = List(TeamMembership(orgTeam._id, isTeamManager = false))
       user = User(
         ObjectId.generate,
+        multiUserId,
         _organization,
-        email,
         firstName,
         lastName,
         System.currentTimeMillis(),
         Json.toJson(UserConfiguration.default),
         loginInfo,
-        passwordInfo,
         isAdmin,
         isDatasetManager = false,
-        isSuperUser = false,
         isDeactivated = !isActive,
         lastTaskTypeId = None
       )
@@ -92,6 +100,11 @@ class UserService @Inject()(conf: WkConf,
       _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
     } yield user
   }
+
+  def emailFor(user: User)(implicit ctx: DBAccessContext): Fox[String] =
+    for {
+      multiUser <- multiUserDAO.findOne(user._multiUser)
+    } yield multiUser.email
 
   def update(user: User,
              firstName: String,
@@ -105,13 +118,14 @@ class UserService @Inject()(conf: WkConf,
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
-      Mailer ! Send(defaultMails.activatedMail(user.name, user.email))
+      Mailer ! Send(defaultMails.activatedMail(user.name, email))
     }
     for {
+      oldEmail <- emailFor(user)
+      _ <- multiUserDAO.updateEmail(user._multiUser, email)
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,
-                                email,
                                 isAdmin,
                                 isDatasetManager,
                                 isDeactivated = !activated,
@@ -119,7 +133,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
       _ = userCache.invalidateUser(user._id)
-      _ <- if (user.email == email) Fox.successful(()) else tokenDAO.updateEmail(user.email, email)
+      _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
       updated <- userDAO.findOne(user._id)
     } yield updated
   }
@@ -127,7 +141,7 @@ class UserService @Inject()(conf: WkConf,
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) =
     for {
       user <- findOneByEmail(loginInfo.providerKey)
-      _ <- userDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
+      _ <- multiUserDAO.updatePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
       passwordInfo
     }
@@ -175,7 +189,7 @@ class UserService @Inject()(conf: WkConf,
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
+    findOneById(ObjectId(loginInfo.providerKey), useCache = false)(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(userId: ObjectId): LoginInfo =
     LoginInfo(CredentialsProvider.ID, userId.id)
@@ -240,12 +254,13 @@ class UserService @Inject()(conf: WkConf,
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
+      email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
     } yield {
       Json.obj(
         "id" -> user._id.toString,
-        "email" -> user.email,
+        "email" -> email,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
         "isAdmin" -> user.isAdmin,
@@ -267,11 +282,12 @@ class UserService @Inject()(conf: WkConf,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       teamMemberships <- teamMembershipsFor(user._id)
+      email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
     } yield {
       Json.obj(
         "id" -> user._id.toString,
-        "email" -> user.email,
+        "email" -> email,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
         "isAdmin" -> user.isAdmin,

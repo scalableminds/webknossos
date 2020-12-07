@@ -58,6 +58,7 @@ user.lastAdmin=Cannot remove admin privileges from the only admin in the organiz
 user.resetPassword.failed=Invalid old password
 user.resetPassword.success=Your password was successfully changed
 user.email.alreadyInUse=This email address is already in use
+user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts
 user.firstName.empty=Please enter your first name
 user.lastName.empty=Please enter your last name
 user.firstName.invalid=Please check your first name for any special characters

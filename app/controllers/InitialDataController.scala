@@ -34,6 +34,7 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
+                                   multiUserDAO: MultiUserDAO,
                                    userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
@@ -67,19 +68,24 @@ Samplecountry
                  "Sample Organization")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
   val userId = ObjectId.generate
+  val multiUserId = ObjectId.generate
+  val defaultMultiUser = MultiUser(
+    multiUserId,
+    defaultUserEmail,
+    userService.createPasswordInfo(defaultUserPassword),
+    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
+  )
   val defaultUser = User(
     userId,
+    multiUserId,
     defaultOrganization._id,
-    defaultUserEmail,
     "SCM",
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
     userService.createLoginInfo(userId),
-    userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
     isDatasetManager = true,
-    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false,
     lastTaskTypeId = None
   )
@@ -126,6 +132,7 @@ Samplecountry
       case Full(_) => Fox.successful(())
       case _ =>
         for {
+          _ <- multiUserDAO.insertOne(defaultMultiUser)
           _ <- userDAO.insertOne(defaultUser)
           _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
           _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))

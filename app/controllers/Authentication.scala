@@ -254,7 +254,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
                   } yield result
-                case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
+                case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
               }
           }
           .recover {
@@ -277,6 +277,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def switchTo(email: String) = sil.SecuredAction.async { implicit request =>
     implicit val ctx = GlobalAccessContext
     if (request.identity.isSuperUser) {
+      // TODO find target user id, use that
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- userService.findOneByEmail(email) ?~> "user.notFound" ~> NOT_FOUND

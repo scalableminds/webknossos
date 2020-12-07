@@ -75,7 +75,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.lastname,
         r.lastactivity.getTime,
         Json.parse(r.userconfiguration),
-        LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
+        LoginInfo(r.logininfoProviderid, r._Id),
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
         r.isadmin,
         r.isdatasetmanager,
@@ -174,11 +174,10 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
-                     loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isDatasetManager, isSuperUser, created, isDeleted)
+        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isDatasetManager, isSuperUser, created, isDeleted)
                      values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
           u.lastActivity)},
-                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}',
                      '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isSuperUser},
                      ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)

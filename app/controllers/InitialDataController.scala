@@ -66,15 +66,16 @@ Samplecountry
                  "/assets/images/oxalis.svg",
                  "Sample Organization")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
+  val userId = ObjectId.generate
   val defaultUser = User(
-    ObjectId.generate,
+    userId,
     defaultOrganization._id,
     defaultUserEmail,
     "SCM",
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    userService.createLoginInfo(defaultUserEmail),
+    userService.createLoginInfo(userId),
     userService.createPasswordInfo(defaultUserPassword),
     isAdmin = true,
     isDatasetManager = true,

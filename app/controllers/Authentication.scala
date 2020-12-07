@@ -232,14 +232,17 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  def authenticate = Action.async { implicit request =>
+  def authenticate: Action[AnyContent] = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signInData => {
         val email = signInData.email.toLowerCase
-        val credentials = Credentials(email, signInData.password)
-        credentialsProvider
-          .authenticate(credentials)
+        val userFopt: Future[Option[User]] = userService.findOneByEmail(email).futureBox.map(_.toOption)
+        val idF = userFopt
+         .map( userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
+        idF
+          .map{id => logger.info(f"id: $id"); Credentials(id, signInData.password)}
+          .flatMap(credentials => credentialsProvider.authenticate(credentials))
           .flatMap {
             loginInfo =>
               userService.retrieve(loginInfo).flatMap {
@@ -255,7 +258,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               }
           }
           .recover {
-            case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
+            case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
           }
       }
     )

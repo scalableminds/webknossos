@@ -177,8 +177,8 @@ class UserService @Inject()(conf: WkConf,
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
     findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
 
-  def createLoginInfo(email: String): LoginInfo =
-    LoginInfo(CredentialsProvider.ID, email)
+  def createLoginInfo(userId: ObjectId): LoginInfo =
+    LoginInfo(CredentialsProvider.ID, userId.id)
 
   def createPasswordInfo(pw: String): PasswordInfo =
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))

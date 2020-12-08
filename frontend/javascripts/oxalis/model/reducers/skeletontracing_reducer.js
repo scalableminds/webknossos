@@ -18,7 +18,6 @@ import {
   deleteBranchPoint,
   createNode,
   createTree,
-  createEdge,
   deleteTree,
   deleteNode,
   deleteEdge,

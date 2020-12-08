@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Menu, notification, Icon, Divider, Popover } from "antd";
+import { Menu, notification, Icon, Divider, Popover, Tooltip } from "antd";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
@@ -16,6 +16,8 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setWaypoint } from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import api from "oxalis/api/internal_api";
+import Toast from "libs/toast";
+import Clipboard from "clipboard-js";
 import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength } from "libs/format_utils";
@@ -65,6 +67,21 @@ const interactionHints = (
     </tbody>
   </table>
 );
+
+function copyIconWithTooltip(value: string | number, title: string) {
+  return (
+    <Tooltip title={title}>
+      <Icon
+        type="copy"
+        style={{ margin: "0 0 0 5px" }}
+        onClick={async () => {
+          await Clipboard.copy(value);
+          Toast.success(`"${value}" copied to clipboard`);
+        }}
+      />
+    </Tooltip>
+  );
+}
 
 function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
   const length = api.tracing.measurePathLengthBetweenNodes(sourceNodeId, targetNodeId);
@@ -211,14 +228,30 @@ function NodeContextMenu(props: Props) {
     return null;
   }
   const { activeTreeId, activeNodeId } = skeletonTracing;
-  const nodeContextMenuNode = getNodeAndTree(skeletonTracing, clickedNodeId).get()[1];
+  let nodeContextMenuTree = null;
+  let nodeContextMenuNode = null;
+  if (clickedNodeId != null) {
+    getNodeAndTree(skeletonTracing, clickedNodeId).map(([tree, node]) => {
+      nodeContextMenuNode = node;
+      nodeContextMenuTree = tree;
+    });
+  }
   const positionToMeasureDistanceTo =
-    clickedNodeId != null ? nodeContextMenuNode.position : globalPosition;
-  const activeNode = getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1];
-  const distanceToSelection = formatNumberToLength(
-    V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
-  );
-
+    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+  const activeNode =
+    activeNodeId != null
+      ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
+      : null;
+  const distanceToSelection =
+    activeNode != null
+      ? formatNumberToLength(
+          V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+        )
+      : null;
+  const nodePositionAsString =
+    nodeContextMenuNode != null
+      ? nodeContextMenuNode.position.map(value => value.toFixed(2)).join(", ")
+      : "";
   return (
     <React.Fragment>
       <div
@@ -237,10 +270,24 @@ function NodeContextMenu(props: Props) {
           ? NodeContextMenuOptions({ ...props, clickedNodeId })
           : NoNodeContextMenuOptions({ ...props })}
         <Divider style={{ margin: "4px 0px" }} />
-        <div className="node-context-menu-item">
-          <Icon type="info-circle" /> {distanceToSelection} to this{" "}
-          {clickedNodeId != null ? "Node" : "Position"}
-        </div>
+        {clickedNodeId != null && nodeContextMenuTree != null ? (
+          <div className="node-context-menu-item">
+            Node with Id {clickedNodeId} in tree {nodeContextMenuTree.treeId}
+          </div>
+        ) : null}
+        {nodeContextMenuNode != null ? (
+          <div className="node-context-menu-item">
+            Position: {nodePositionAsString}
+            {copyIconWithTooltip(nodePositionAsString, "Copy node position")}
+          </div>
+        ) : null}
+        {distanceToSelection != null ? (
+          <div className="node-context-menu-item">
+            <Icon type="info-circle" /> {distanceToSelection} to this{" "}
+            {clickedNodeId != null ? "Node" : "Position"}
+            {copyIconWithTooltip(distanceToSelection, "Copy the distance")}
+          </div>
+        ) : null}
         <div className="node-context-menu-item" style={{ cursor: "help" }}>
           <Popover
             placement="right"

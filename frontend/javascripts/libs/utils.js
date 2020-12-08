@@ -777,6 +777,10 @@ export function getIsInIframe() {
   }
 }
 
+export function getIsUsingFirefox() {
+  return navigator.userAgent.indexOf("Firefox") > -1;
+}
+
 export function getWindowBounds(): [number, number] {
   // Function taken from https://stackoverflow.com/questions/3333329/javascript-get-browser-height.
   let width = 0;

@@ -118,7 +118,7 @@ test("VolumeTracing should set active but not create a cell 0", t => {
 });
 
 test("VolumeTracing should not create a cell 0", t => {
-  const createCellAction = VolumeTracingActions.createCellAction(0);
+  const createCellAction = VolumeTracingActions.setActiveCellAction(0);
 
   // Try to create cell 0
   const newState = VolumeTracingReducer(initialState, createCellAction);
@@ -126,17 +126,17 @@ test("VolumeTracing should not create a cell 0", t => {
 });
 
 test("VolumeTracing should create a cell and set it as the activeCell", t => {
-  const createCellAction = VolumeTracingActions.createCellAction(4);
+  const createCellAction = VolumeTracingActions.createCellAction();
 
   // Create cell
   const newState = VolumeTracingReducer(initialState, createCellAction);
   getVolumeTracingOrFail(newState.tracing).map(tracing => {
-    t.is(tracing.activeCellId, 4);
+    t.is(tracing.activeCellId, 1);
   });
 });
 
 test("VolumeTracing should create a non-existing cell and not update the maxCellId", t => {
-  const createCellAction = VolumeTracingActions.createCellAction(4);
+  const createCellAction = VolumeTracingActions.createCellAction();
 
   // Create a cell with an id that is higher than the maxCellId
   const newState = VolumeTracingReducer(initialState, createCellAction);
@@ -146,7 +146,7 @@ test("VolumeTracing should create a non-existing cell and not update the maxCell
 });
 
 test("VolumeTracing should create an existing cell and not update the maxCellId", t => {
-  const createCellAction = VolumeTracingActions.createCellAction(2);
+  const createCellAction = VolumeTracingActions.createCellAction();
   const alteredState = update(initialState, {
     tracing: {
       volume: { maxCellId: { $set: 5 } },

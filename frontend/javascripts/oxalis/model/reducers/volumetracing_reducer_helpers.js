@@ -46,7 +46,7 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
   });
 }
 
-export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: ?number) {
+export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id?: number) {
   if (id === 0) {
     // cellId 0 means there is no annotation, so there must not be a cell with id 0
     return state;
@@ -59,17 +59,27 @@ export function createCellReducer(state: OxalisState, volumeTracing: VolumeTraci
     id = Math.max(activeCellId, maxCellId) + 1;
   }
 
-  // Create the new VolumeCell
-  const cell: VolumeCell = { id };
+  if (volumeTracing.cells[id] == null) {
+    // Create the new VolumeCell
+    const cell: VolumeCell = { id };
 
-  return update(state, {
-    tracing: {
-      volume: {
-        activeCellId: { $set: cell.id },
-        cells: { [cell.id]: { $set: cell } },
+    return update(state, {
+      tracing: {
+        volume: {
+          activeCellId: { $set: id },
+          cells: { [id]: { $set: cell } },
+        },
       },
-    },
-  });
+    });
+  } else {
+    return update(state, {
+      tracing: {
+        volume: {
+          activeCellId: { $set: id },
+        },
+      },
+    });
+  }
 }
 
 export function updateDirectionReducer(

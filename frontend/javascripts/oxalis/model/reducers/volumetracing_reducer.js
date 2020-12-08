@@ -83,7 +83,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "CREATE_CELL": {
-          return createCellReducer(state, volumeTracing, action.cellId);
+          return createCellReducer(state, volumeTracing);
         }
 
         case "UPDATE_DIRECTION": {

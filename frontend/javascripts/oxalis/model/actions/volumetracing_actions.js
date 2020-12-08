@@ -17,7 +17,7 @@ type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
 };
-type CreateCellAction = { type: "CREATE_CELL", cellId: ?number };
+type CreateCellAction = { type: "CREATE_CELL" };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
 type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
@@ -86,9 +86,8 @@ export const initializeVolumeTracingAction = (
   tracing,
 });
 
-export const createCellAction = (cellId: ?number): CreateCellAction => ({
+export const createCellAction = (): CreateCellAction => ({
   type: "CREATE_CELL",
-  cellId,
 });
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView): StartEditingAction => ({

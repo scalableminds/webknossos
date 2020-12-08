@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 import { getVolumeTracingOrFail } from "../reducers/volumetracing_reducer.spec";
 
 const {
-  createCellAction,
+  setActiveCellAction,
   floodFillAction,
   copySegmentationLayerAction,
   startEditingAction,
@@ -34,7 +34,7 @@ test.serial("Executing a floodfill with a new segment id should update the maxCe
   const oldMaxCellId = volumeTracing.maxCellId;
 
   const newCellId = 13371337;
-  Store.dispatch(createCellAction(newCellId));
+  Store.dispatch(setActiveCellAction(newCellId));
 
   // maxCellId should not have changed since no voxel was annotated yet
   getVolumeTracingOrFail(Store.getState().tracing).map(tracing => {
@@ -53,7 +53,7 @@ test.serial(
   "Executing copySegmentationLayer with a new segment id should update the maxCellId",
   t => {
     const newCellId = 13371338;
-    Store.dispatch(createCellAction(newCellId));
+    Store.dispatch(setActiveCellAction(newCellId));
     Store.dispatch(copySegmentationLayerAction());
 
     // maxCellId should be updated after copySegmentationLayer
@@ -65,7 +65,7 @@ test.serial(
 
 test.serial("Brushing/Tracing with a new segment id should update the maxCellId", t => {
   const newCellId = 13371339;
-  Store.dispatch(createCellAction(newCellId));
+  Store.dispatch(setActiveCellAction(newCellId));
   Store.dispatch(startEditingAction([12, 12, 12], OrthoViews.PLANE_XY));
   Store.dispatch(finishEditingAction());
 

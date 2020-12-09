@@ -144,7 +144,27 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId): Fox[User] = ??? // TODO
+  def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      accessQuery <- readAccessQuery
+      resultList <- run(sql"""select #${columns} from #${existingCollectionName}
+                              where _multiUser = $multiUserId and _organization = $organizationId
+                              and #${accessQuery}
+                               limit 1""".as[UsersRow])
+      result <- resultList.headOption.toFox
+      parsed <- parse(result)
+    } yield parsed
+
+  def findFirstByMultiUser(multiUserId: ObjectId)(implicit tx: DBAccessContext): Fox[User] =
+    for {
+      accessQuery <- readAccessQuery
+      resultList <- run(sql"""select #${columns} from #${existingCollectionName}
+                              where _multiUser = ${multiUserId} and #${accessQuery}
+                               limit 1""".as[UsersRow])
+      result <- resultList.headOption.toFox
+      parsed <- parse(result)
+    } yield parsed
 
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
@@ -161,15 +181,19 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] = ??? // TODO
+  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(sql"select count(_id) from #${existingCollectionName} where _multiUser = $multiUserId".as[Int])
+      result <- resultList.headOption
+    } yield result
 
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity, userConfiguration, isDeactivated, isAdmin, isDatasetManager, created, isDeleted)
-                     values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
-          u.lastActivity)},
-                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}',
+      _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
+                                            userConfiguration, isDeactivated, isAdmin, isDatasetManager, created, isDeleted)
+                     values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
+                            ${new java.sql.Timestamp(u.lastActivity)}, '#${sanitize(
+        Json.toJson(u.userConfiguration).toString)}',
                      ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()

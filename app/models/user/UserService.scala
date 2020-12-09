@@ -48,7 +48,33 @@ class UserService @Inject()(conf: WkConf,
   val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
 
   def defaultUser: Fox[User] =
-    userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
+    userFromMultiUserEmail(defaultUserEmail)(GlobalAccessContext)
+
+  def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      multiUser <- multiUserDAO.findOneByEmail(email)(GlobalAccessContext)
+      user <- disambiguateUserFromMultiUser(multiUser)
+    } yield user
+
+  def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] = {
+    val lastLoggedInIdentity: Option[ObjectId] = multiUser._lastLoggedInIdentity
+    lastLoggedInIdentity match {
+      case Some(userId) => userDAO.findOne(userId)
+      case None         => userDAO.findFirstByMultiUser(multiUser._id)
+    }
+  }
+
+  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      multiUser <- multiUserDAO.findOneByEmail(email)
+      user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
+    } yield user
+
+  def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      userBox <- userDAO.findOneByOrgaAndMultiUser(multiUserId, organizationId).futureBox
+      _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
+    } yield ()
 
   def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
     if (useCache)
@@ -59,13 +85,12 @@ class UserService @Inject()(conf: WkConf,
   def logActivity(_user: ObjectId, lastActivity: Long) =
     userDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext)
 
-  def insert(_organization: ObjectId,
+  def insert(organizationId: ObjectId,
              email: String,
              firstName: String,
              lastName: String,
              isActive: Boolean,
              isOrgTeamManager: Boolean = false,
-             loginInfo: LoginInfo,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean = false): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
@@ -79,18 +104,18 @@ class UserService @Inject()(conf: WkConf,
         isSuperUser = false
       )
       _ <- multiUserDAO.insertOne(multiUser)
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(_organization)
-      orgTeam <- teamDAO.findOne(organizationTeamId)
-      teamMemberships = List(TeamMembership(orgTeam._id, isTeamManager = false))
+      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
+      newUserId = ObjectId.generate
       user = User(
-        ObjectId.generate,
+        newUserId,
         multiUserId,
-        _organization,
+        organizationId,
         firstName,
         lastName,
         System.currentTimeMillis(),
         Json.toJson(UserConfiguration.default),
-        loginInfo,
+        LoginInfo(CredentialsProvider.ID, newUserId.id),
         isAdmin,
         isDatasetManager = false,
         isDeactivated = !isActive,
@@ -100,6 +125,27 @@ class UserService @Inject()(conf: WkConf,
       _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
     } yield user
   }
+
+  def joinOrganization(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      newUserId <- Fox.successful(ObjectId.generate)
+      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+      teamMemberships = List(TeamMembership(organizationTeamId, isTeamManager = false))
+      loginInfo = LoginInfo(CredentialsProvider.ID, newUserId.id)
+      user = originalUser.copy(
+        _id = newUserId,
+        _organization = organizationId,
+        loginInfo = loginInfo,
+        lastActivity = System.currentTimeMillis(),
+        isAdmin = false,
+        isDatasetManager = false,
+        isDeactivated = true,
+        lastTaskTypeId = None,
+        created = System.currentTimeMillis()
+      )
+      _ <- userDAO.insertOne(user)
+      _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
+    } yield user
 
   def emailFor(user: User)(implicit ctx: DBAccessContext): Fox[String] =
     for {

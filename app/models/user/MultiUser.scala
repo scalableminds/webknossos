@@ -16,7 +16,7 @@ case class MultiUser(
     email: String,
     passwordInfo: PasswordInfo,
     isSuperUser: Boolean,
-    lastLoggedInIdentity: Option[ObjectId] = None,
+    _lastLoggedInIdentity: Option[ObjectId] = None,
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -64,6 +64,14 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       _ <- run(sqlu"""update webknossos.multiusers set
                           email = $email,
                       where _id = $multiUserId""")
+    } yield ()
+
+  def updateLastLoggedInIdentity(multiUserId: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(multiUserId)
+      _ <- run(sqlu"""update webknossos.multiusers set
+                            _lastLoggedInIdentity = $userId
+                        where _id = $multiUserId""")
     } yield ()
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =

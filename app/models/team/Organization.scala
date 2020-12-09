@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.user.User
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -64,11 +65,19 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
+  //TODO: allow multiuser indirection
 
   override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(a) => "true"
     case _       => "false"
   }
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[OrganizationsRow])
+      parsed <- Fox.serialCombined(rList.toList)(r => parse(r))
+    } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {

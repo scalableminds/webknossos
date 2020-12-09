@@ -13,10 +13,12 @@ DELETE        /maintenance                                                      
 
 # Authentication
 POST          /auth/register                                                    controllers.Authentication.handleRegistration
+POST          /auth/joinOrganization/:organizationName                          controllers.Authentication.joinOrganization(organizationName: String, inviteToken: String)
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/token                                                       controllers.Authentication.getToken
 DELETE        /auth/token                                                       controllers.Authentication.deleteToken
-GET           /auth/switch                                                      controllers.Authentication.switchTo(to: String)
+GET           /auth/switch                                                      controllers.Authentication.switchMultiUser(to: String)
+GET           /auth/switchOrganization/:organizationName                        controllers.Authentication.switchOrganization(organizationName: String)
 POST          /auth/startResetPassword                                          controllers.Authentication.handleStartResetPassword
 POST          /auth/changePassword                                              controllers.Authentication.changePassword
 POST          /auth/resetPassword                                               controllers.Authentication.handleResetPassword
@@ -173,6 +175,7 @@ GET           /statistics/webknossos                                            
 GET           /statistics/users                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
+GET           /organizations                                                    controllers.OrganizationController.list
 GET           /organizations/default                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)

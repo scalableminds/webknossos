@@ -25,9 +25,12 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc._
 import utils.{ObjectId, WkConf}
-
 import java.net.URLEncoder
+
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import javax.inject.Inject
+
 import scala.concurrent.{ExecutionContext, Future}
 
 object AuthForms {
@@ -114,6 +117,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                teamDAO: TeamDAO,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
+                               userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
                                defaultMails: DefaultMails,
                                rpc: RPC,
@@ -184,7 +188,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val email = signUpData.email.toLowerCase
-        val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse {
           errors ::= Messages("user.firstName.invalid")
@@ -194,7 +197,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
           errors ::= Messages("user.lastName.invalid")
           ""
         }
-        userService.retrieve(loginInfo).toFox.futureBox.flatMap {
+        multiUserDAO.findOneByEmail(email)(GlobalAccessContext).toFox.futureBox.flatMap {
           case Full(_) =>
             errors ::= Messages("user.email.alreadyInUse")
             Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -212,7 +215,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            lastName,
                                            organization.enableAutoVerify,
                                            false,
-                                           loginInfo,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
@@ -222,7 +224,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                   Mailer ! Send(
                     defaultMails.newUserMail(user.name, email, brainDBResult, organization.enableAutoVerify))
                 }
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user, email, brainDBResult, organization))
+                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization))
                 Ok
               }
             }
@@ -237,22 +239,24 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signInData => {
         val email = signInData.email.toLowerCase
-        val userFopt: Future[Option[User]] = userService.findOneByEmail(email).futureBox.map(_.toOption)
+        val userFopt: Future[Option[User]] =
+          userService.userFromMultiUserEmail(email)(GlobalAccessContext).futureBox.map(_.toOption)
         val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
-        idF.map { id =>
-          logger.info(f"id: $id"); Credentials(id, signInData.password)
-        }.flatMap(credentials => credentialsProvider.authenticate(credentials))
+        idF
+          .map(id => Credentials(id, signInData.password))
+          .flatMap(credentials => credentialsProvider.authenticate(credentials))
           .flatMap {
             loginInfo =>
               userService.retrieve(loginInfo).flatMap {
-                case None =>
-                  Future.successful(BadRequest(Messages("error.noUser")))
                 case Some(user) if (!user.isDeactivated) =>
                   for {
                     authenticator <- combinedAuthenticatorService.create(loginInfo)
                     value <- combinedAuthenticatorService.init(authenticator)
                     result <- combinedAuthenticatorService.embed(value, Ok)
+                    _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
                   } yield result
+                case None =>
+                  Future.successful(BadRequest(Messages("error.noUser")))
                 case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
               }
           }
@@ -263,23 +267,47 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  def switchTo(email: String) = sil.SecuredAction.async { implicit request =>
-    implicit val ctx = GlobalAccessContext
-    if (request.identity.isSuperUser) {
-      // TODO find target user id, use that
-      val loginInfo = LoginInfo(CredentialsProvider.ID, email)
-      for {
-        _ <- userService.findOneByEmail(email) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) //to logout the admin
-        authenticator <- combinedAuthenticatorService.create(loginInfo)
-        value <- combinedAuthenticatorService.init(authenticator)
-        result <- combinedAuthenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
-      } yield result
-    } else {
-      logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
-      Future.successful(Forbidden(Messages("user.notAuthorised")))
-    }
+  def switchMultiUser(email: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
+    for {
+      requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ <- bool2Fox(requestingMultiUser.isSuperUser) ?~> Messages("user.notAuthorised") ~> FORBIDDEN
+      targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
+      result <- switchToUser(targetUser._id)
+    } yield result
   }
+
+  def switchOrganization(organizationName: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                   organizationName) ~> NOT_FOUND
+      targetUser <- userDAO
+        .findOneByOrgaAndMultiUser(request.identity._multiUser, organization._id) ?~> "user.notFound" ~> NOT_FOUND
+      result <- switchToUser(targetUser._id)
+    } yield result
+  }
+
+  private def switchToUser(targetUserId: ObjectId)(
+      implicit request: SecuredRequest[WkEnv, AnyContent]): Future[AuthenticatorResult] =
+    for {
+      _ <- combinedAuthenticatorService.discard(request.authenticator, Ok) //to logout the admin
+      loginInfo = LoginInfo(CredentialsProvider.ID, targetUserId.id)
+      authenticator <- combinedAuthenticatorService.create(loginInfo)
+      cookie <- combinedAuthenticatorService.init(authenticator)
+      result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) //to login the new user
+    } yield result
+
+  def joinOrganization(organizationName: String, inviteToken: String): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        organiaztion <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+        _ <- assertValidInviteToken(inviteToken, organiaztion._id)
+        _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
+        _ <- userService.joinOrganization(request.identity, organiaztion._id)
+      } yield Ok
+  }
+
+  private def assertValidInviteToken(inviteToken: String, organizationId: ObjectId) = Fox.successful(()) // TODO
 
   // if a user has forgotten his password
   def handleStartResetPassword = Action.async { implicit request =>
@@ -457,7 +485,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                lastName,
                                                isActive = true,
                                                isOrgTeamManager = true,
-                                               loginInfo,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"

@@ -46,6 +46,7 @@ organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
 organization.name.alreadyInUse=The chosen organization name is already in use.
+organization.alreadyJoined=Your account is already associated with the selected organization.
 
 user.activated={0} has been activated
 user.notFound=User not found

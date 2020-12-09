@@ -42,7 +42,7 @@ class TimeController @Inject()(userService: UserService,
           userString
             .split(",")
             .toList
-            .map(email => userDAO.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
+            .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
       } yield {

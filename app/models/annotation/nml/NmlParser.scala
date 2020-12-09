@@ -33,7 +33,6 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private val DEFAULT_DESCRIPTION = ""
   private val DEFAULT_INTERPOLATION = false
   private val DEFAULT_TIMESTAMP = 0L
-  private val DEFAULT_NODE_RADIUS: Float = 30.0f
 
   @SuppressWarnings(Array("TraversableHead")) //We check if volumes are empty before accessing the head
   def parse(name: String,
@@ -386,7 +385,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     val nodeIdText = getSingleAttribute(node, "id")
     for {
       id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
-      radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(DEFAULT_NODE_RADIUS)
+      radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
       position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)

@@ -4,7 +4,6 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.user.User
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -25,7 +24,7 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
+class OrganizationService @Inject()()(implicit ec: ExecutionContext) {
 
   def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] =
     Fox.successful(
@@ -64,8 +63,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
     )
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
-  //TODO: allow multiuser indirection
+    s"(_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))"
 
   override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(a) => "true"
@@ -87,9 +85,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
           .as[OrganizationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def insertOne(o: Organization)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

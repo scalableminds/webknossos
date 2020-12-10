@@ -1,19 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio._
-
-import com.google.inject.Inject
-import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Math}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
-import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
-import net.liftweb.common.Full
-import play.api.i18n.MessagesProvider
-import play.api.libs.json.Json
+import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import spire.math._
 
-import scala.concurrent.ExecutionContext
+import java.nio._
 import scala.reflect.ClassTag
 
 trait DataConverter extends FoxImplicits {

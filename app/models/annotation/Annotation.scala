@@ -2,13 +2,10 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
-import javax.inject.Inject
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
-import models.user.User
-import oxalis.security.UserSharingTokenContainer
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
@@ -16,6 +13,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class Annotation(

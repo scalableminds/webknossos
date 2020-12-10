@@ -2,12 +2,11 @@ package controllers
 
 import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
-import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.util.tools.{Converter, Fox}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
-import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security.{UserAwareRequestLogging, WkEnv}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._

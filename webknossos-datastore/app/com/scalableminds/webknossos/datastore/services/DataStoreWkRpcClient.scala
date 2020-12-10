@@ -3,18 +3,17 @@ package com.scalableminds.webknossos.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String)

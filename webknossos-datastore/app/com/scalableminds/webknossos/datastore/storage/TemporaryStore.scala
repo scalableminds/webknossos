@@ -1,12 +1,10 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import akka.actor.{Actor, ActorLogging, ActorSystem}
-import akka.agent.Agent
-import javax.inject.Inject
+import akka.actor.ActorSystem
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.stm.Ref
 
 class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 

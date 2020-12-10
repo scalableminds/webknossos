@@ -165,7 +165,9 @@ object ZipIO extends LazyLogging {
                      excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A])(
       implicit ec: ExecutionContext): Box[List[A]] = {
 
-    def stripPathFrom(path: Path, excludeFromPrefix: List[String]): Path = {
+    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
+
+    def cutOffPathAtLastOccurrenceOf(path: Path, excludeFromPrefix: List[String]): Path = {
       var lastExcludedIndex = -1
       path.iterator().asScala.zipWithIndex.foreach {
         case (subPath, idx) =>
@@ -185,13 +187,12 @@ object ZipIO extends LazyLogging {
 
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
-    //color, mask, segmentation are the values for dataSet layer categories and a folder only has one category
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
-      val strippedPrefix = stripPathFrom(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
+      val strippedPrefix = cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
       // if only one file is in the zip and no layer name is given as prefix, do not remove file name as common prefix
       zipEntries match {
-        case head :: tl if tl.isEmpty && strippedPrefix.endsWith(Paths.get(head.getName).getFileName) =>
+        case head :: tl if tl.isEmpty && isFileNameInPrefix(strippedPrefix, head.getName) =>
           strippedPrefix.subpath(0, strippedPrefix.getNameCount - 1)
         case _ => strippedPrefix
       }

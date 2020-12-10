@@ -281,9 +281,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     for {
       organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                    organizationName) ~> NOT_FOUND
-      targetUser <- userDAO
-        .findOneByOrgaAndMultiUser(request.identity._multiUser, organization._id) ?~> "user.notFound" ~> NOT_FOUND
+      _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
+      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
+        GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
+      _ <- bool2Fox(!targetUser.isDeactivated) ?~> "user.deactivated"
       result <- switchToUser(targetUser._id)
+      _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
   }
 
@@ -305,6 +308,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
         _ <- userService.joinOrganization(request.identity, organiaztion._id)
       } yield Ok
+  }
+
+  def sendInvites = sil.SecuredAction.async { implicit request =>
+    for {
+      organization <- organizationDAO.findOne(request.identity._organization)
+    } yield Ok
   }
 
   private def assertValidInviteToken(inviteToken: String, organizationId: ObjectId) = Fox.successful(()) // TODO

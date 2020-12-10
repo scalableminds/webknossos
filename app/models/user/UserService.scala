@@ -20,8 +20,9 @@ import oxalis.user.UserCache
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
-
 import javax.inject.Inject
+import net.liftweb.common.Box
+
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
@@ -72,7 +73,7 @@ class UserService @Inject()(conf: WkConf,
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      userBox <- userDAO.findOneByOrgaAndMultiUser(multiUserId, organizationId).futureBox
+      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId).futureBox
       _ <- bool2Fox(userBox.isEmpty) ?~> "organization.alreadyJoined"
     } yield ()
 
@@ -126,7 +127,17 @@ class UserService @Inject()(conf: WkConf,
     } yield user
   }
 
-  def joinOrganization(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+  def fillSuperUserIdentity(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      multiUser <- multiUserDAO.findOne(originalUser._multiUser)
+      existingIdentiy: Box[User] <- userDAO.findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser).futureBox
+      _ <- if (multiUser.isSuperUser && existingIdentiy.isEmpty) {
+        joinOrganization(originalUser, organizationId, isAdmin = true)
+      } else Fox.successful(())
+    } yield ()
+
+  def joinOrganization(originalUser: User, organizationId: ObjectId, isAdmin: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
       organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
@@ -137,7 +148,7 @@ class UserService @Inject()(conf: WkConf,
         _organization = organizationId,
         loginInfo = loginInfo,
         lastActivity = System.currentTimeMillis(),
-        isAdmin = false,
+        isAdmin = isAdmin,
         isDatasetManager = false,
         isDeactivated = true,
         lastTaskTypeId = None,

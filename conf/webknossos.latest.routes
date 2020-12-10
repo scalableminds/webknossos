@@ -13,12 +13,13 @@ DELETE        /maintenance                                                      
 
 # Authentication
 POST          /auth/register                                                    controllers.Authentication.handleRegistration
-POST          /auth/joinOrganization/:organizationName                          controllers.Authentication.joinOrganization(organizationName: String, inviteToken: String)
+GET           /auth/joinOrganization/:organizationName                          controllers.Authentication.joinOrganization(organizationName: String, inviteToken: String)
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/token                                                       controllers.Authentication.getToken
 DELETE        /auth/token                                                       controllers.Authentication.deleteToken
 GET           /auth/switch                                                      controllers.Authentication.switchMultiUser(to: String)
 GET           /auth/switchOrganization/:organizationName                        controllers.Authentication.switchOrganization(organizationName: String)
+POST          /auth/sendInvites                                                 controllers.Authentication.sendInvites
 POST          /auth/startResetPassword                                          controllers.Authentication.handleStartResetPassword
 POST          /auth/changePassword                                              controllers.Authentication.changePassword
 POST          /auth/resetPassword                                               controllers.Authentication.handleResetPassword

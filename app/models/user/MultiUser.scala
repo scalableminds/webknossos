@@ -62,7 +62,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(sqlu"""update webknossos.multiusers set
-                          email = $email,
+                          email = $email
                       where _id = $multiUserId""")
     } yield ()
 

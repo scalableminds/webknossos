@@ -62,8 +62,9 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       )
     )
 
-  override def readAccessQ(requestingUserId: ObjectId) =
-    s"(_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))"
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))" +
+      s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))"
 
   override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(a) => "true"

@@ -1,14 +1,12 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import java.util.UUID
-
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.RedisTemporaryStore
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 

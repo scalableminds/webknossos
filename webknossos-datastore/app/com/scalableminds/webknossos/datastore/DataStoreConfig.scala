@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.ConfigReader
 import play.api.Configuration
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {

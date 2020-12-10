@@ -28,7 +28,7 @@ type Props = {
   isUserTeamManager: boolean,
   isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
-  updateDataset: APIDatasetId => Promise<void>,
+  updateDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
 };
 
 type State = {
@@ -66,6 +66,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       sortedInfo: sorter,
     });
   };
+
+  updateSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+    this.props.updateDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
     const filterByMode = datasets => {
@@ -114,7 +117,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const { isUserAdmin, isUserTeamManager, updateDataset } = this.props;
+    const { isUserAdmin, isUserTeamManager } = this.props;
     const filteredDataSource = this.getFilteredDatasets();
 
     const { sortedInfo } = this.state;
@@ -266,7 +269,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} updateDataset={updateDataset} />
+            <DatasetActionView dataset={dataset} updateDataset={this.updateSingleDataset} />
           )}
         />
       </FixedExpandableTable>

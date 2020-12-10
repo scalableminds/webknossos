@@ -19,7 +19,10 @@ type Context = {
   isLoading: boolean,
   checkDatasets: () => Promise<void>,
   fetchDatasets: (options?: Options) => Promise<void>,
-  updateDataset: (datasetId: APIDatasetId) => Promise<void>,
+  updateDataset: (
+    datasetId: APIDatasetId,
+    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+  ) => Promise<void>,
 };
 
 const wkDatasetsCacheKey = "wk.datasets-v2";
@@ -96,20 +99,41 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     }
   }
 
-  async function updateDataset(datasetId: APIDatasetId) {
+  async function updateDataset(
+    datasetId: APIDatasetId,
+    datasetsToUpdate?: Array<APIMaybeUnimportedDataset>,
+  ) {
     if (isLoading) return;
     try {
       setIsLoading(true);
-      const updateIdx = datasets.findIndex(
+      const optionalUpdateIndex = datasetsToUpdate
+        ? datasetsToUpdate.findIndex(
+            dataset =>
+              dataset.name === datasetId.name &&
+              dataset.owningOrganization === datasetId.owningOrganization,
+          )
+        : -1;
+      const internalUpdateIndex = datasets.findIndex(
         dataset =>
           dataset.name === datasetId.name &&
           dataset.owningOrganization === datasetId.owningOrganization,
       );
-      if (updateIdx !== -1) {
+
+      if (optionalUpdateIndex !== -1 || internalUpdateIndex !== -1) {
         const updatedDataset = await getDataset(datasetId);
-        const newDatasets = datasets.slice();
-        newDatasets[updateIdx] = updatedDataset;
-        setDatasets(newDatasets);
+
+        if (optionalUpdateIndex !== -1 && datasetsToUpdate) {
+          const newDatasets = datasetsToUpdate.slice();
+          newDatasets[optionalUpdateIndex] = updatedDataset;
+          setDatasets(newDatasets);
+        }
+
+        if (internalUpdateIndex !== -1) {
+          const newDatasets = datasets.slice();
+          newDatasets[internalUpdateIndex] = updatedDataset;
+          datasetCache.set(newDatasets);
+          if (!datasetsToUpdate) setDatasets(newDatasets);
+        }
       }
     } catch (error) {
       handleGenericError(error);

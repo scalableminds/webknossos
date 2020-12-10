@@ -365,6 +365,16 @@ CREATE TABLE webknossos.jobs(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.invites(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  tokenValue Text NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  autoActivate BOOLEAN NOT NULL,
+  expirationDateTime TIMESTAMPTZ NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
@@ -384,6 +394,7 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
 
@@ -410,6 +421,7 @@ CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
+CREATE INDEX ON webknossos.invites(token);
 
 ALTER TABLE webknossos.analytics
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;

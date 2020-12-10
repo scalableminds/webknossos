@@ -2,9 +2,11 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import javax.inject.Inject
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
+import models.user.InviteDAO
+import org.joda.time.DateTime
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsNull, Json}
 import play.api.mvc.{Action, AnyContent}
@@ -14,6 +16,7 @@ import scala.concurrent.ExecutionContext
 
 class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
                                        organizationService: OrganizationService,
+                                       inviteDAO: InviteDAO,
                                        conf: WkConf,
                                        sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
@@ -54,6 +57,16 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       else
         Ok(Json.toJson(js))
     }
+  }
+
+  def getByInvite(inviteToken: String): Action[AnyContent] = Action.async { implicit request =>
+    implicit val ctx: DBAccessContext = GlobalAccessContext
+    for {
+      invite <- inviteDAO.findOneByTokenValue(inviteToken)
+      _ <- bool2Fox(invite.expirationDateTime.isAfterNow)
+      organization <- organizationDAO.findOne(invite._organization)
+      organizationJson <- organizationService.publicWrites(organization)
+    } yield Ok(organizationJson)
   }
 
   def getOperatorData: Action[AnyContent] = Action { implicit request =>

@@ -33,6 +33,7 @@ image.create.failed=Failed to create image
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 auth.token.noUser=Could not determine user for access token
+auth.invite.invalidToken=The invite token is invalid or expired.
 
 team.created=Team was created
 team.notAllowed=You are not part of this team. Project can’t be created.

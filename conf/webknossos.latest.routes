@@ -177,6 +177,7 @@ GET           /statistics/users                                                 
 
 #Organizations
 GET           /organizations                                                    controllers.OrganizationController.list
+GET           /organizations/byInvite/:inviteToken                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)

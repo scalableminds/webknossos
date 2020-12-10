@@ -115,6 +115,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                userService: UserService,
                                dataStoreDAO: DataStoreDAO,
                                teamDAO: TeamDAO,
+                               inviteService: InviteService,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
                                userDAO: UserDAO,
@@ -304,21 +305,22 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     implicit request =>
       for {
         organiaztion <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-        _ <- assertValidInviteToken(inviteToken, organiaztion._id)
+        _ <- inviteService.assertValidInvite(inviteToken, organiaztion._id) ?~> "invite.invalidToken"
         _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
         _ <- userService.joinOrganization(request.identity, organiaztion._id)
       } yield Ok
   }
 
   def sendInvites = sil.SecuredAction.async { implicit request =>
+    val recipients = List("mail@example.org")
+    val autoActivate = false
     for {
-      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- Fox.serialCombined(recipients)(recipient =>
+        inviteService.inviteOneRecipient(recipient, request.identity, autoActivate))
     } yield Ok
   }
 
-  private def assertValidInviteToken(inviteToken: String, organizationId: ObjectId) = Fox.successful(()) // TODO
-
-  // if a user has forgotten his password
+  // If a user has forgotten their password
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
@@ -337,7 +339,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     )
   }
 
-  // if a user has forgotten his password
+  // If a user has forgotten their password
   def handleResetPassword = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),

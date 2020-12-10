@@ -22,6 +22,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
         val isSuperUser = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey = get[String]("application.authentication.ssoKey")
+      val inviteExpiry = get[Duration]("application.authentication.inviteExpiry")
       val children = List(DefaultUser)
     }
     val children = List(Authentication)

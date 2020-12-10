@@ -11,9 +11,11 @@ import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
-
 import java.io.File
+
 import javax.inject._
+import models.user.InviteService
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -26,6 +28,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
                         annotationDAO: AnnotationDAO,
                         wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                         lifecycle: ApplicationLifecycle,
+                        inviteService: InviteService,
                         sqlClient: SQLClient,
                         slackNotificationService: SlackNotificationService)
     extends LazyLogging {
@@ -37,6 +40,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
     tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+  }
+
+  cleanUpService.register("deletion of expired invites", 1 day) {
+    inviteService.removeExpiredInvites(GlobalAccessContext)
   }
 
   cleanUpService.register("deletion of old annotations in initializing state", 1 day) {

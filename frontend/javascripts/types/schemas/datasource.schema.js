@@ -87,6 +87,9 @@ export default {
                 "int64",
               ],
             },
+            defaultViewConfiguration: {
+              $ref: "#/definitions/types::OptionalLayerViewConfiguration",
+            },
           },
           required: ["name", "category", "elementClass"],
         },

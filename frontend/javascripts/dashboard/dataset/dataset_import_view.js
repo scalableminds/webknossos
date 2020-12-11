@@ -101,15 +101,31 @@ function ensureValidScaleOnInferredDataSource(
   if (savedDataSourceOnServer == null || inferredDataSource == null) {
     return null;
   }
+  const inferredDataSourceClone = (_.cloneDeep(inferredDataSource): any);
   if (
     _.isEqual(inferredDataSource.scale, [0, 0, 0]) &&
     !_.isEqual(savedDataSourceOnServer.scale, [0, 0, 0])
   ) {
-    const inferredDataSourceClone = (_.cloneDeep(inferredDataSource): any);
     inferredDataSourceClone.scale = savedDataSourceOnServer.scale;
-    return inferredDataSourceClone;
   }
-  return inferredDataSource;
+  // Trying to use the saved value for largestSegmentId instead of 0.
+  if (savedDataSourceOnServer.dataLayers != null && inferredDataSourceClone.dataLayers != null) {
+    const segmentationLayerSettings = inferredDataSourceClone.dataLayers.find(
+      layer => layer.category === "segmentation",
+    );
+    const savedSegmentationLayerSettings = savedDataSourceOnServer.dataLayers.find(
+      layer => layer.category === "segmentation",
+    );
+    if (
+      segmentationLayerSettings != null &&
+      savedSegmentationLayerSettings != null &&
+      segmentationLayerSettings.largestSegmentId === 0 &&
+      savedSegmentationLayerSettings.category === "segmentation"
+    ) {
+      segmentationLayerSettings.largestSegmentId = savedSegmentationLayerSettings.largestSegmentId;
+    }
+  }
+  return inferredDataSourceClone;
 }
 
 class DatasetImportView extends React.PureComponent<Props, State> {

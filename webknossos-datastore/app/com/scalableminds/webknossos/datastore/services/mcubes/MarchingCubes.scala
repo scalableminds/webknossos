@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mcubes
 
 import com.scalableminds.util.geometry.{BoundingBox, Vector3D, Vector3I}
-import com.scalableminds.webknossos.datastore.services.DataTypeFunctors
 
 import scala.collection.mutable
 

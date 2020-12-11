@@ -1,22 +1,20 @@
 package com.scalableminds.webknossos.datastore.dataformats.knossos
 
-import java.io.{FileInputStream, FileNotFoundException, RandomAccessFile}
-import java.nio.MappedByteBuffer
-import java.nio.channels.FileChannel
-import java.nio.file.Path
-
+import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
+import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedRandomAccessFile
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.lang3.reflect.FieldUtils
 
-import scala.concurrent.ExecutionContext
+import java.io.{FileInputStream, FileNotFoundException, RandomAccessFile}
+import java.nio.MappedByteBuffer
+import java.nio.channels.FileChannel
+import java.nio.file.Path
 
 class KnossosCube(mappedData: MappedByteBuffer, channel: FileChannel, raf: RandomAccessFile)
     extends Cube
@@ -120,8 +118,7 @@ object KnossosCube {
 
 class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with FoxImplicits with LazyLogging {
 
-  override def loadFromUnderlying(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[KnossosCube] =
+  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[KnossosCube] =
     for {
       section <- layer.sections.find(_.doesContainCube(readInstruction.cube))
       knossosFile <- loadKnossosFile(readInstruction, section)

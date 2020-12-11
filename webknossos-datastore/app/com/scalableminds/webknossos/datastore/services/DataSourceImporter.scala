@@ -1,15 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.nio.file.Path
-
 import com.scalableminds.util.geometry.{Point3D, Scale}
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
 import com.scalableminds.webknossos.datastore.models.datasource._
 import net.liftweb.common.Box
-import com.scalableminds.util.tools.ExtendedTypes._
-import org.apache.commons.io.FilenameUtils
 
+import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
 case class DataSourceImportReport[A](ctx: A, messages: ArrayBuffer[(String, String)] = ArrayBuffer.empty) {

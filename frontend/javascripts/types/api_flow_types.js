@@ -79,10 +79,7 @@ type APIDataSourceBase = {
   +status?: string,
 };
 
-export type APIMaybeUnimportedDataSource = APIDataSourceBase & {
-  +dataLayers?: Array<APIDataLayer>,
-  +scale?: ?Vector3,
-};
+type APIUnimportedDatasource = APIDataSourceBase;
 
 export type APIDataSource = APIDataSourceBase & {
   +dataLayers: Array<APIDataLayer>,
@@ -147,15 +144,17 @@ type APIDatasetBase = APIDatasetId & {
   +publication: ?APIPublication,
 };
 
-export type APIMaybeUnimportedDataset = APIDatasetBase & {
-  +dataSource: APIMaybeUnimportedDataSource,
-  +isActive: boolean,
-};
-
 export type APIDataset = APIDatasetBase & {
   +dataSource: APIDataSource,
   +isActive: true,
 };
+
+type APIUnimportedDataset = APIDatasetBase & {
+  +dataSource: APIUnimportedDatasource,
+  +isActive: false,
+};
+
+export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
 
 export type APISampleDataset = {
   +name: string,
@@ -234,8 +233,7 @@ export type APISettings = {|
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +allowedMagnifications?: {
-    shouldRestrict: boolean,
+  +resolutionRestrictions: {
     min?: number,
     max?: number,
   },

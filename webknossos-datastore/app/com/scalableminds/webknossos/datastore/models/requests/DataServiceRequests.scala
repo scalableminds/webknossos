@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import java.nio.file.Path
-
-import com.scalableminds.util.geometry.{Point3D, Vector3I}
+import com.scalableminds.util.geometry.Vector3I
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+
+import java.nio.file.Path
 
 case class DataServiceRequestSettings(halfByte: Boolean,
                                       appliedAgglomerate: Option[String] = None,

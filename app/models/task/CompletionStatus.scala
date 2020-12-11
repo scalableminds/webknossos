@@ -1,15 +1,11 @@
 package models.task
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 case class CompletionStatus(open: Long, active: Long, finished: Long) {
-  def total = open + active + finished
+  def total: Long = open + active + finished
 }
 
 object CompletionStatus {
-  implicit val completionStatusFormat = Json.format[CompletionStatus]
-
-  def combine(a: CompletionStatus, b: CompletionStatus) =
-    CompletionStatus(a.open + b.open, a.active + b.active, a.finished + b.finished)
-
+  implicit val jsonFormat: OFormat[CompletionStatus] = Json.format[CompletionStatus]
 }

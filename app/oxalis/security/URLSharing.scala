@@ -1,14 +1,9 @@
 package oxalis.security
 
-import java.security.SecureRandom
-
-import com.scalableminds.util.accesscontext.{
-  AuthorizedAccessContext,
-  DBAccessContext,
-  DBAccessContextPayload,
-  UnAuthorizedAccessContext
-}
+import com.scalableminds.util.accesscontext.{DBAccessContext, DBAccessContextPayload}
 import models.user.User
+
+import java.security.SecureRandom
 
 case class SharingTokenContainer(sharingToken: String) extends DBAccessContextPayload {
   def toStringAnonymous: String =

@@ -17,7 +17,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
@@ -29,7 +28,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer) extends AbstractVol
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
   val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     loadBucket(layer, readInstruction.bucket, readInstruction.version)
 
@@ -46,7 +45,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer) extends Ab
   val volumeDataCache: TemporaryVolumeDataStore = layer.volumeDataCache
   val temporaryTracingStore: TemporaryTracingStore[VolumeTracing] = layer.temporaryTracingStore
 
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache, timeout: FiniteDuration)(
+  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       _ <- assertTracingStillInCache(layer)

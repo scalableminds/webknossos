@@ -1,14 +1,9 @@
 package models.annotation
 
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingDownsampling}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.annotation.AnnotationSettings._
-import models.binary.DataSet
 import play.api.libs.json._
-
-object AllowedMagnifications {
-  implicit val format: Format[AllowedMagnifications] = Json.format[AllowedMagnifications]
-}
 
 case class AnnotationSettings(
     allowedModes: List[String] = SKELETON_MODES,
@@ -16,16 +11,8 @@ case class AnnotationSettings(
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
     mergerMode: Boolean = false,
-    allowedMagnifications: Option[AllowedMagnifications] = None
-) {
-  def resolutionRestrictions: ResolutionRestrictions =
-    allowedMagnifications match {
-      case None => ResolutionRestrictions.empty
-      case Some(allowedMags) =>
-        if (allowedMags.shouldRestrict) ResolutionRestrictions(Some(allowedMags.min), Some(allowedMags.max))
-        else ResolutionRestrictions.empty
-    }
-}
+    resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
+)
 
 object AnnotationSettings {
   val ORTHOGONAL = "orthogonal"
@@ -57,15 +44,4 @@ object AnnotationSettings {
       .filter(JsonValidationError("annotation.mode.invalid")) { a =>
         a.allowedModes.forall(ALL_MODES.contains)
       }
-}
-
-case class AllowedMagnifications(
-    shouldRestrict: Boolean,
-    min: Int,
-    max: Int
-) {
-  def toQueryString: String =
-    if (shouldRestrict)
-      s"minResolution=$min&maxResolution=$max"
-    else ""
 }

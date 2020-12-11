@@ -21,7 +21,7 @@ import React, { type Node } from "react";
 
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
-import { getDatastores } from "admin/admin_rest_api";
+import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -202,6 +202,10 @@ export class InviteUsersPopover extends React.Component<{
     Toast.success("Registration link copied to clipboard.");
   };
 
+  sendInvite = () => {
+    sendInvitesForOrganization(["scmboy@scalableminds.com"], true);
+  };
+
   getContent() {
     return (
       <React.Fragment>
@@ -212,6 +216,12 @@ export class InviteUsersPopover extends React.Component<{
           <Input style={{ width: "85%" }} value={this.getRegistrationHotLink()} readOnly />
           <Button style={{ width: "15%" }} onClick={this.copyRegistrationCopyLink} icon="copy" />
         </Input.Group>
+        <hr />
+
+        <Input />
+        <Button onClick={this.sendInvite} type="primary">
+          Send Invites
+        </Button>
       </React.Fragment>
     );
   }

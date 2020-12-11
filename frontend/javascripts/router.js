@@ -6,6 +6,7 @@ import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
 
+import AcceptInviteView from "admin/auth/accept_invite_view";
 import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { Imprint, Privacy } from "components/legal";
@@ -406,6 +407,14 @@ class ReactRouter extends React.Component<Props> {
                 component={ChangePasswordView}
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/invite/:token"
+                render={({ match }: ContextRouter) => (
+                  <AcceptInviteView token={match.params.token || ""} />
+                )}
+              />
+
               <Route path="/register" render={() => <Redirect to="/auth/register" />} />
               <Route
                 path="/auth/login"

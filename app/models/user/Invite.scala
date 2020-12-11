@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.team.OrganizationDAO
 import org.joda.time.DateTime
@@ -30,7 +31,8 @@ class InviteService @Inject()(conf: WkConf,
                               defaultMails: DefaultMails,
                               organizationDAO: OrganizationDAO,
                               inviteDAO: InviteDAO)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
   private val tokenValueGenerator = new CompactRandomIDGenerator
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -58,7 +60,10 @@ class InviteService @Inject()(conf: WkConf,
   private def sendInviteMail(recipient: String, invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
-    } yield Mailer ! defaultMails.inviteMail(recipient, invite.tokenValue, organization.name, organization.displayName)
+      _ = logger.info(
+        f"Hello $recipient, you have been invited to join the “${organization.displayName}” organization in webKnossos at http://localhost:9000/invite/${invite.tokenValue}")
+    } yield
+      () // Mailer ! defaultMails.inviteMail(recipient, invite.tokenValue, organization.name, organization.displayName)
 
   def removeExpiredInvites(implicit ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteAllExpired

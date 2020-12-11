@@ -20,6 +20,7 @@ import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.api.data.validation.Constraints._
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -43,7 +44,8 @@ object AuthForms {
                         email: String,
                         firstName: String,
                         lastName: String,
-                        password: String)
+                        password: String,
+                        inviteToken: Option[String])
 
   def signUpForm(implicit messages: Messages) =
     Form(
@@ -56,9 +58,10 @@ object AuthForms {
           "password2" -> nonEmptyText
         ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
         "firstName" -> nonEmptyText,
-        "lastName" -> nonEmptyText
-      )((organization, organizationDisplayName, email, password, firstName, lastName) =>
-        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1))(
+        "lastName" -> nonEmptyText,
+        "inviteToken" -> optional(nonEmptyText),
+      )((organization, organizationDisplayName, email, password, firstName, lastName, inviteToken) =>
+        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1, inviteToken))(
         signUpData =>
           Some(
             (signUpData.organization,
@@ -66,7 +69,8 @@ object AuthForms {
              signUpData.email,
              ("", ""),
              signUpData.firstName,
-             signUpData.lastName))))
+             signUpData.lastName,
+             signUpData.inviteToken))))
 
   // Sign in
   case class SignInData(email: String, password: String)
@@ -124,7 +128,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                rpc: RPC,
                                conf: WkConf,
                                wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                               sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -184,7 +188,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       Some(finalName)
   }
 
-  def handleRegistration = Action.async { implicit request =>
+  def handleRegistration: Action[AnyContent] = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
@@ -311,13 +315,12 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       } yield Ok
   }
 
-  def sendInvites = sil.SecuredAction.async { implicit request =>
-    val recipients = List("mail@example.org")
-    val autoActivate = false
-    for {
-      _ <- Fox.serialCombined(recipients)(recipient =>
-        inviteService.inviteOneRecipient(recipient, request.identity, autoActivate))
-    } yield Ok
+  def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
+    implicit request =>
+      for {
+        _ <- Fox.serialCombined(request.body.recipients)(recipient =>
+          inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
+      } yield Ok
   }
 
   // If a user has forgotten their password
@@ -570,4 +573,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     }
   }
 
+}
+
+case class InviteParameters(
+    recipients: List[String],
+    autoActivate: Boolean
+)
+
+object InviteParameters {
+  implicit val jsonFormat: Format[InviteParameters] = Json.format[InviteParameters]
 }

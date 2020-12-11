@@ -421,7 +421,7 @@ CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
-CREATE INDEX ON webknossos.invites(token);
+CREATE INDEX ON webknossos.invites(tokenValue);
 
 ALTER TABLE webknossos.analytics
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;

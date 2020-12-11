@@ -316,7 +316,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)(GlobalAccessContext) ?~> "invite.invalidToken"
-      organiaztion <- organizationDAO.findOne(invite._id)(GlobalAccessContext) ?~> "invite.invalidToken"
+      organiaztion <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
       _ <- userService.joinOrganization(request.identity, organiaztion._id)
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)

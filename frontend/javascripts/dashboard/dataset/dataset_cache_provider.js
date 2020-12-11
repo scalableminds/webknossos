@@ -7,6 +7,7 @@ import { getDatastores, triggerDatasetCheck, getDatasets, getDataset } from "adm
 import { handleGenericError } from "libs/error_handling";
 import UserLocalStorage from "libs/user_local_storage";
 import * as Utils from "libs/utils";
+import _ from "lodash";
 
 type Options = {
   datasetFilteringMode?: DatasetFilteringMode,
@@ -122,17 +123,19 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       if (optionalUpdateIndex !== -1 || internalUpdateIndex !== -1) {
         const updatedDataset = await getDataset(datasetId);
 
-        if (optionalUpdateIndex !== -1 && datasetsToUpdate) {
-          const newDatasets = datasetsToUpdate.slice();
-          newDatasets[optionalUpdateIndex] = updatedDataset;
-          setDatasets(newDatasets);
-        }
-
         if (internalUpdateIndex !== -1) {
           const newDatasets = datasets.slice();
           newDatasets[internalUpdateIndex] = updatedDataset;
           datasetCache.set(newDatasets);
           if (!datasetsToUpdate) setDatasets(newDatasets);
+        }
+
+        if (optionalUpdateIndex !== -1 && datasetsToUpdate) {
+          const newDatasets = datasetsToUpdate.slice();
+          const copyOfUpdatedDataset = (_.cloneDeep(updatedDataset): any);
+          copyOfUpdatedDataset.lastUsedByUser = newDatasets[optionalUpdateIndex].lastUsedByUser;
+          newDatasets[optionalUpdateIndex] = (copyOfUpdatedDataset: APIMaybeUnimportedDataset);
+          setDatasets(newDatasets);
         }
       }
     } catch (error) {

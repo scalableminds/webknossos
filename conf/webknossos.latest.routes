@@ -13,7 +13,7 @@ DELETE        /maintenance                                                      
 
 # Authentication
 POST          /auth/register                                                    controllers.Authentication.handleRegistration
-GET           /auth/joinOrganization/:organizationName                          controllers.Authentication.joinOrganization(organizationName: String, inviteToken: String)
+GET           /auth/joinOrganization/:inviteToken                               controllers.Authentication.joinOrganization(inviteToken: String)
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/token                                                       controllers.Authentication.getToken
 DELETE        /auth/token                                                       controllers.Authentication.deleteToken

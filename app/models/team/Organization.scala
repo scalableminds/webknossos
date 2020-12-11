@@ -1,9 +1,10 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.user.Invite
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -24,7 +25,8 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationService @Inject()()(implicit ec: ExecutionContext) {
+class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] =
     Fox.successful(
@@ -35,6 +37,17 @@ class OrganizationService @Inject()()(implicit ec: ExecutionContext) {
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
       ))
+
+  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
+    inviteOpt match {
+      case Some(invite) => organizationDAO.findOne(invite._organization)
+      case None =>
+        for {
+          allOrganizations <- organizationDAO.findAll
+          _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          defaultOrganization <- allOrganizations.headOption
+        } yield defaultOrganization
+    }
 
 }
 

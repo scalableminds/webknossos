@@ -11,6 +11,7 @@ import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.typesafe.scalalogging.LazyLogging
 import models.binary.DataSetDAO
 import models.configuration.UserConfiguration
 import models.team._
@@ -41,6 +42,7 @@ class UserService @Inject()(conf: WkConf,
                             userCache: UserCache,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
+    with LazyLogging
     with IdentityService[User] {
 
   lazy val Mailer =
@@ -91,7 +93,6 @@ class UserService @Inject()(conf: WkConf,
              firstName: String,
              lastName: String,
              isActive: Boolean,
-             isOrgTeamManager: Boolean = false,
              passwordInfo: PasswordInfo,
              isAdmin: Boolean = false): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
@@ -156,6 +157,8 @@ class UserService @Inject()(conf: WkConf,
       )
       _ <- userDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(userTeamRolesDAO.insertTeamMembership(user._id, _)))
+      _ = logger.info(
+        s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user
 
   def emailFor(user: User)(implicit ctx: DBAccessContext): Fox[String] =

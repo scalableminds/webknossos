@@ -73,6 +73,9 @@ class InviteService @Inject()(conf: WkConf,
       invite <- inviteDAO.findOneByTokenValue(tokenValue)
       _ <- bool2Fox(invite._organization == organizationId)
     } yield ()
+
+  def deactivateUsedInvite(invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
+    inviteDAO.deleteOne(invite._id)
 }
 
 class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

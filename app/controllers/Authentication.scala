@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import models.binary.{DataStore, DataStoreDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
@@ -31,6 +31,7 @@ import java.net.URLEncoder
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import javax.inject.Inject
+import slick.lifted.Functions.user
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -119,7 +120,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                userService: UserService,
                                dataStoreDAO: DataStoreDAO,
                                teamDAO: TeamDAO,
+                               organizationService: OrganizationService,
                                inviteService: InviteService,
+                               inviteDAO: InviteDAO,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
                                userDAO: UserDAO,
@@ -211,23 +214,28 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                organization <- organizationDAO
-                  .findOneByName(signUpData.organization)(GlobalAccessContext) ?~> Messages("organization.notFound",
-                                                                                            signUpData.organization)
+                inviteBox: Box[Invite] <- inviteDAO
+                  .findOneByTokenValue(signUpData.inviteToken.getOrElse("noToken"))(GlobalAccessContext)
+                  .futureBox
+                organization <- organizationService
+                  .findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext) ?~> Messages(
+                  "organization.notFound",
+                  signUpData.organization)
+                autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
                 user <- userService.insert(organization._id,
                                            email,
                                            firstName,
                                            lastName,
-                                           organization.enableAutoVerify,
-                                           false,
+                                           autoActivate,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
+                _ <- Fox.runOptional(inviteBox.toOption)(i =>
+                  inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
               } yield {
                 if (conf.Features.isDemoInstance) {
-                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, email, organization.enableAutoVerify))
+                  Mailer ! Send(defaultMails.newUserWKOrgMail(user.name, email, autoActivate))
                 } else {
-                  Mailer ! Send(
-                    defaultMails.newUserMail(user.name, email, brainDBResult, organization.enableAutoVerify))
+                  Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
                 Mailer ! Send(defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization))
                 Ok
@@ -305,14 +313,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       result <- combinedAuthenticatorService.embed(cookie, Redirect("/dashboard")) //to login the new user
     } yield result
 
-  def joinOrganization(organizationName: String, inviteToken: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        organiaztion <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-        _ <- inviteService.assertValidInvite(inviteToken, organiaztion._id) ?~> "invite.invalidToken"
-        _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
-        _ <- userService.joinOrganization(request.identity, organiaztion._id)
-      } yield Ok
+  def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      invite <- inviteDAO.findOneByTokenValue(inviteToken)(GlobalAccessContext) ?~> "invite.invalidToken"
+      organiaztion <- organizationDAO.findOne(invite._id)(GlobalAccessContext) ?~> "invite.invalidToken"
+      _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
+      _ <- userService.joinOrganization(request.identity, organiaztion._id)
+      _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
+    } yield Ok
   }
 
   def sendInvites: Action[InviteParameters] = sil.SecuredAction.async(validateJson[InviteParameters]) {
@@ -498,7 +506,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                firstName,
                                                lastName,
                                                isActive = true,
-                                               isOrgTeamManager = true,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
                     _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"

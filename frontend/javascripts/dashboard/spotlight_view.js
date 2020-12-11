@@ -31,6 +31,7 @@ const WelcomeHeader = ({ history }) => (
   <div
     style={{
       backgroundImage: "url(/assets/images/cover.jpg)",
+      backgroundSize: "cover",
     }}
   >
     <div

@@ -1270,6 +1270,32 @@ export async function getDefaultOrganization(): Promise<?APIOrganization> {
   return Request.receiveJSON("/api/organizations/default");
 }
 
+export function joinOrganization(inviteToken: string): Promise<void> {
+  return Request.receiveJSON(`/api/auth/joinOrganization/${inviteToken}`);
+}
+
+export function switchToOrganization(organizationName: string): Promise<void> {
+  return Request.receiveJSON(`/api/auth/switchOrganization/${organizationName}`);
+}
+
+export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {
+  return Request.receiveJSON(`/api/organizations/`);
+}
+
+export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`);
+}
+
+export function sendInvitesForOrganization(
+  recipients: Array<string>,
+  autoActivate: boolean,
+): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
+    method: "POST",
+    data: { recipients, autoActivate },
+  });
+}
+
 export function getOrganization(organizationName: string): Promise<APIOrganization> {
   return Request.receiveJSON(`/api/organizations/${organizationName}`);
 }

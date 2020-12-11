@@ -82,7 +82,7 @@
     "terser-webpack-plugin": "^1.1.0",
     "tmp": "0.0.33",
     "url-loader": "^1.0.1",
-    "webpack": "^4.27.0",
+    "webpack": "^4.44.1",
     "webpack-cli": "^3.1.0",
     "webpack-dev-server": "^3.2.1"
   },
@@ -136,7 +136,7 @@
     "@tensorflow/tfjs": "^1.0.0",
     "Enumjs": "https://github.com/ryan953/Enumjs#master",
     "airbrake-js": "^1.4.0",
-    "antd": "3.18.2",
+    "antd": "3.26.19",
     "autodll-webpack-plugin": "^0.4.2",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",

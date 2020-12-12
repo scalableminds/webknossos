@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon } from "antd";
+import { Tooltip, Icon, Menu, Divider } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import _ from "lodash";
@@ -50,6 +50,10 @@ type DispatchProps = {|
 |};
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
+
+type State = {
+  activeSubMenu: string,
+};
 
 const shortcuts = [
   {
@@ -136,6 +140,14 @@ const shortcuts = [
   },
 ];
 
+const subMenus = {
+  datasetSubmenu: "dataset-info",
+  skeletonSubmenu: "skeleton-info",
+  volumeSubmenu: "volume-info",
+  meshesSubmenu: "meshes-info",
+  boundingBoxSubmenu: "bounding-box-info",
+};
+
 export function convertPixelsToNm(
   lengthInPixel: number,
   zoomValue: number,
@@ -144,7 +156,11 @@ export function convertPixelsToNm(
   return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
 }
 
-class DatasetInfoTabView extends React.PureComponent<Props> {
+class DatasetInfoTabView extends React.PureComponent<Props, State> {
+  state = {
+    activeSubMenu: "dataset-info",
+  };
+
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
   };
@@ -153,11 +169,19 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     this.props.setAnnotationDescription(newDescription);
   };
 
-  wrapStatistics(title: string, content: Node) {
+  wrapStatistics(title: string, entries: Array<[string, string | number | Node]>) {
     return (
-      <div className="info-tab-block">
-        <div className="info-tab-category-title">{title}</div>
-        {content}
+      <div className="padded-tab-content">
+        <h4>{title}</h4>
+        <table>
+          <tbody>
+            {entries.map(([name, value]) => (
+              <tr key={name}>
+                <td>{name}:</td> <td>{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }
@@ -165,42 +189,14 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
   getSkeletonTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
     return this.props.tracing.skeleton != null
-      ? this.wrapStatistics(
-          "Skeleton Statistics:",
-          <div>
-            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(0)}</p>
-            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(0)}</p>
-            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(0)}</p>
-            <p>
-              Number of Branch Points:{" "}
-              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(0)}
-            </p>
-            <p>Active Node ID: {statsMaybe.map(stats => stats.activeNodeId).getOrElse("None")}</p>
-          </div>,
-        )
+      ? this.wrapStatistics("Skeleton Statistics:", [
+          ["Trees", statsMaybe.map(stats => stats.treeCount).getOrElse(0)],
+          ["Nodes", statsMaybe.map(stats => stats.nodeCount).getOrElse(0)],
+          ["Edges", statsMaybe.map(stats => stats.edgeCount).getOrElse(0)],
+          ["Branch Points", statsMaybe.map(stats => stats.branchPointCount).getOrElse(0)],
+          ["Active Node ID", statsMaybe.map(stats => stats.activeNodeId).getOrElse(0)],
+        ])
       : null;
-  }
-
-  getVolumeTracingStatistics() {
-    const volumeTracing = this.props.tracing.volume;
-    const segmentationLayer = Model.getSegmentationLayer();
-    if (volumeTracing == null || segmentationLayer == null) {
-      return null;
-    }
-    const { activeCellId } = volumeTracing;
-    const { mappings } = segmentationLayer;
-    const availableMappings = mappings != null ? mappings.getMappingNames() : [];
-    return this.wrapStatistics(
-      "Volume Statistics:",
-      <div>
-        <p>Mappings available: {availableMappings.length}</p>
-        <p>
-          Active Mapping:{" "}
-          {segmentationLayer.activeMapping != null ? segmentationLayer.activeMapping : "None"}
-        </p>
-        <p>Active Cell ID: {activeCellId}</p>
-      </div>,
-    );
   }
 
   getLayerVisibilityStatus() {
@@ -216,7 +212,8 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     return { numberOfVisibleLayers, numberOfLayers };
   }
 
-  getLayerStatistics() {
+  getVolumeStatistics() {
+    // First adding information about the dataset layers.
     const { layerConfigurations } = this.props;
     const { numberOfLayers, numberOfVisibleLayers } = this.getLayerVisibilityStatus();
     const colorLayers = Model.getColorLayers();
@@ -227,30 +224,55 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
       ) : (
         <i className="far fa-eye fa-sm" />
       );
-    return this.wrapStatistics(
-      `Layer Statistics: (${numberOfVisibleLayers} out of ${numberOfLayers} visible)`,
-      <div>
-        Color Layers:
-        {colorLayers.map(({ name }) => (
-          <p key={name}>
-            {getVisibilityIcon(name)}
-            {name}
-          </p>
-        ))}
-        {segmentationLayerName != null ? (
+    let entries = [
+      ["Layer Visibility", `${numberOfVisibleLayers} out of ${numberOfLayers} Layers are visible`],
+      [
+        "Color Layers",
+        <React.Fragment key="Color Layers wrapper">
+          {colorLayers.map(({ name }) => (
+            <p key={name}>
+              {getVisibilityIcon(name)}
+              {name}
+            </p>
+          ))}
+        </React.Fragment>,
+      ],
+      [
+        "Segmentation Layer",
+        segmentationLayerName != null ? (
           <p style={{ marginTop: 4 }}>
             {getVisibilityIcon(segmentationLayerName)} Segmentation Layer
           </p>
-        ) : null}
-      </div>,
-    );
+        ) : (
+          "None"
+        ),
+      ],
+    ];
+
+    const volumeTracing = this.props.tracing.volume;
+    const segmentationLayer = Model.getSegmentationLayer();
+    if (volumeTracing != null && segmentationLayer != null) {
+      const { activeCellId } = volumeTracing;
+      const { mappings } = segmentationLayer;
+      const availableMappings = mappings != null ? mappings.getMappingNames() : [];
+      entries = [
+        ...entries,
+        ["Mappings available", availableMappings.length],
+        [
+          "Active Mapping",
+          segmentationLayer.activeMapping != null ? segmentationLayer.activeMapping : "None",
+        ],
+        ["Active Cell ID", activeCellId],
+      ];
+    }
+
+    return this.wrapStatistics("Volume Statistics:", entries);
   }
 
   getAdditionalStatistics() {
-    return this.wrapStatistics(
-      "Additional Statistics:",
-      <div>Meshes: {this.props.tracing.meshes.length}</div>,
-    );
+    return this.wrapStatistics("Additional Statistics:", [
+      ["Meshes", this.props.tracing.meshes.length],
+    ]);
   }
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
@@ -317,6 +339,14 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     }
 
     return <p>Dataset: {datasetName}</p>;
+  }
+
+  getTracingNameAsString() {
+    const { annotationType } = this.props.tracing;
+    if (this.props.task != null) {
+      return `${annotationType} : ${this.props.task.id}`;
+    }
+    return "Explorational Tracing";
   }
 
   getTracingName(isDatasetViewMode: boolean) {
@@ -450,7 +480,7 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     return null;
   }
 
-  render() {
+  getDatasetInfoSubmenu() {
     const { dataset, activeResolution } = this.props;
     const isDatasetViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
@@ -458,7 +488,6 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
     const extentInVoxel = getDatasetExtentAsString(dataset, true);
     const extentInLength = getDatasetExtentAsString(dataset, false);
     const resolutions = getResolutions(dataset);
-
     const resolutionInfo =
       activeResolution != null ? (
         <Tooltip
@@ -490,7 +519,6 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
           </tr>
         </Tooltip>
       ) : null;
-
     return (
       <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
         <div className="info-tab-block">
@@ -533,14 +561,56 @@ class DatasetInfoTabView extends React.PureComponent<Props> {
             </tbody>
           </table>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap" }}>
-          {this.getSkeletonTracingStatistics()}
-          {this.getVolumeTracingStatistics()}
-          {this.getLayerStatistics()}
-          {this.getAdditionalStatistics()}
-        </div>
         {this.getKeyboardShortcuts(isDatasetViewMode)}
         {this.getOrganisationLogo(isDatasetViewMode)}
+      </div>
+    );
+  }
+
+  render() {
+    const { dataset, tracing } = this.props;
+    const statsMaybe = getStats(this.props.tracing);
+    const { name: datasetName, displayName } = dataset;
+    const hasSkeleton = tracing.skeleton != null;
+    let subMenu = null;
+    switch (this.state.activeSubMenu) {
+      case subMenus.skeletonSubmenu:
+        subMenu = this.getSkeletonTracingStatistics();
+        break;
+      case subMenus.volumeSubmenu:
+        subMenu = this.getVolumeStatistics();
+        break;
+      default:
+        subMenu = this.getDatasetInfoSubmenu();
+    }
+
+    return (
+      <div className="flex-overflow padded-tab-content" style={{ padding: 8, paddingLeft: 20 }}>
+        <div className="info-tab-block">
+          <h4 style={{ marginBottom: 0 }}>{this.getTracingNameAsString()}</h4>
+          <Menu
+            className="info-tab-menu"
+            selectedKeys={[this.state.activeSubMenu]}
+            style={{ marginLeft: 16 }}
+            onClick={element => {
+              this.setState({ activeSubMenu: element.key });
+            }}
+          >
+            <Menu.Item key={subMenus.datasetSubmenu}>
+              Dataset: {datasetName || displayName}
+            </Menu.Item>
+            {hasSkeleton ? (
+              <Menu.Item key={subMenus.skeletonSubmenu}>
+                Skeletons ({statsMaybe.map(stats => stats.treeCount).getOrElse(0)})
+              </Menu.Item>
+            ) : null}
+            <Menu.Item key={subMenus.volumeSubmenu}>Volume Layer</Menu.Item>
+            <Menu.Item key={subMenus.meshesSubmenu}>Meshes</Menu.Item>
+            <Menu.Item key={subMenus.boundingBoxSubmenu}>Bounding Box</Menu.Item>
+          </Menu>
+        </div>
+        <Divider />
+        {subMenu}
       </div>
     );
   }

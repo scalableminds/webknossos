@@ -1271,11 +1271,13 @@ export async function getDefaultOrganization(): Promise<?APIOrganization> {
 }
 
 export function joinOrganization(inviteToken: string): Promise<void> {
-  return Request.receiveJSON(`/api/auth/joinOrganization/${inviteToken}`);
+  return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, { method: "POST" });
 }
 
 export function switchToOrganization(organizationName: string): Promise<void> {
-  return Request.receiveJSON(`/api/auth/switchOrganization/${organizationName}`);
+  return Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+    method: "POST",
+  });
 }
 
 export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {
@@ -1290,7 +1292,7 @@ export function sendInvitesForOrganization(
   recipients: Array<string>,
   autoActivate: boolean,
 ): Promise<void> {
-  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
+  return Request.triggerRequest("/api/auth/sendInvites", {
     method: "POST",
     data: { recipients, autoActivate },
   });

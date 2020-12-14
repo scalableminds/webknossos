@@ -1279,7 +1279,7 @@ export function switchToOrganization(organizationName: string): Promise<void> {
 }
 
 export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON(`/api/organizations/`);
+  return Request.receiveJSON(`/api/organizations`);
 }
 
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {

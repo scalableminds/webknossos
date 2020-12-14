@@ -6,7 +6,11 @@ import React from "react";
 
 import type { APIUser } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { getBuildInfo } from "admin/admin_rest_api";
+import {
+  getBuildInfo,
+  getSwitchableOrganizations,
+  switchToOrganization,
+} from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
@@ -244,7 +248,20 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName, organization } = activeUser;
+  const { firstName, lastName, organization: organizationName } = activeUser;
+
+  const switchableOrganizations = useFetch(getSwitchableOrganizations, [], []);
+
+  const activeOrganization = switchableOrganizations.find(org => org.name === organizationName);
+  const orgDisplayName =
+    activeOrganization != null
+      ? activeOrganization.displayName || activeOrganization.name
+      : organizationName;
+
+  const switchTo = async org => {
+    await switchToOrganization(org.name);
+  };
+
   return (
     <NavbarMenuItem>
       <SubMenu
@@ -257,10 +274,19 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="userName">
           {`${firstName} ${lastName}`}
         </Menu.Item>
-        <Menu.Item disabled key="organization">{`${organization}`}</Menu.Item>
+        <Menu.Item disabled key="organization">
+          {orgDisplayName}
+        </Menu.Item>
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
+        <Menu.SubMenu title="Switch Organization">
+          {switchableOrganizations.map(org => (
+            <Menu.Item key={org.name} onClick={() => switchTo(org)}>
+              {org.displayName || org.name}
+            </Menu.Item>
+          ))}
+        </Menu.SubMenu>
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>

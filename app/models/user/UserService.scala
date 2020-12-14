@@ -45,13 +45,11 @@ class UserService @Inject()(conf: WkConf,
     with LazyLogging
     with IdentityService[User] {
 
-  lazy val Mailer =
+  private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  val defaultUserEmail = conf.Application.Authentication.DefaultUser.email
-
   def defaultUser: Fox[User] =
-    userFromMultiUserEmail(defaultUserEmail)(GlobalAccessContext)
+    userFromMultiUserEmail(conf.Application.Authentication.DefaultUser.email)(GlobalAccessContext)
 
   def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
     for {
@@ -84,9 +82,6 @@ class UserService @Inject()(conf: WkConf,
       userCache.findUser(userId)
     else
       userCache.store(userId, userDAO.findOne(userId))
-
-  def logActivity(_user: ObjectId, lastActivity: Long) =
-    userDAO.updateLastActivity(_user, lastActivity)(GlobalAccessContext)
 
   def insert(organizationId: ObjectId,
              email: String,
@@ -131,7 +126,9 @@ class UserService @Inject()(conf: WkConf,
   def fillSuperUserIdentity(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
-      existingIdentiy: Box[User] <- userDAO.findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser).futureBox
+      existingIdentiy: Box[User] <- userDAO
+        .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
+        .futureBox
       _ <- if (multiUser.isSuperUser && existingIdentiy.isEmpty) {
         joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true)
       } else Fox.successful(())
@@ -238,7 +235,7 @@ class UserService @Inject()(conf: WkConf,
                                                                                    dataSetConfiguration)
     } yield ()
 
-  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
       userCache.invalidateUser(user._id)
       result
@@ -264,7 +261,7 @@ class UserService @Inject()(conf: WkConf,
       teamMemberships <- teamMembershipsFor(_user)
     } yield teamMemberships.filter(_.isTeamManager)
 
-  def teamManagerTeamIdsFor(_user: ObjectId) =
+  def teamManagerTeamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =
     for {
       teamManagerMemberships <- teamManagerMembershipsFor(_user)
     } yield teamManagerMemberships.map(_.teamId)
@@ -278,34 +275,34 @@ class UserService @Inject()(conf: WkConf,
     for {
       otherUserTeamIds <- teamIdsFor(otherUser._id)
       teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
-    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser))
+    } yield otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser)
 
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {
       team <- teamDAO.findOne(_team)(GlobalAccessContext)
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
-    } yield (teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization))) ?~> "team.admin.notAllowed"
+    } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
 
   def isTeamManagerInOrg(user: User,
                          _organization: ObjectId,
                          teamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     for {
       teamManagerMemberships <- Fox.fillOption(teamManagerMemberships)(teamManagerMembershipsFor(user._id))
-    } yield (teamManagerMemberships.nonEmpty && _organization == user._organization)
+    } yield teamManagerMemberships.nonEmpty && _organization == user._organization
 
   def isTeamManagerOrAdminOfOrg(user: User, _organization: ObjectId): Fox[Boolean] =
     for {
       isTeamManager <- isTeamManagerInOrg(user, _organization)
-    } yield (isTeamManager || user.isAdminOf(_organization))
+    } yield isTeamManager || user.isAdminOf(_organization)
 
   def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
     for {
       otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
       teamMemberships <- teamMembershipsFor(possibleEditee._id)
-    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
+    } yield otherIsTeamManagerOrAdmin || teamMemberships.isEmpty
 
   def publicWrites(user: User, requestingUser: User): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)

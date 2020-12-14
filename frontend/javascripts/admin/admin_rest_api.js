@@ -1292,7 +1292,7 @@ export function sendInvitesForOrganization(
   recipients: Array<string>,
   autoActivate: boolean,
 ): Promise<void> {
-  return Request.triggerRequest("/api/auth/sendInvites", {
+  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
     method: "POST",
     data: { recipients, autoActivate },
   });

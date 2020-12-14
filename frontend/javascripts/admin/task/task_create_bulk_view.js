@@ -304,7 +304,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                   <TextArea
                     className="input-monospace"
                     placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
-                    autosize={{ minRows: 6 }}
+                    autoSize={{ minRows: 6 }}
                     style={{
                       fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
                     }}

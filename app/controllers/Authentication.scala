@@ -481,7 +481,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         creatingOrganizationsIsAllowed(request.identity).futureBox.flatMap {
           case Full(_) =>
             val email = signUpData.email.toLowerCase
-            val loginInfo = LoginInfo(CredentialsProvider.ID, email)
             var errors = List[String]()
             val firstName = normalizeName(signUpData.firstName).getOrElse {
               errors ::= Messages("user.firstName.invalid")
@@ -491,7 +490,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               errors ::= Messages("user.lastName.invalid")
               ""
             }
-            userService.retrieve(loginInfo).toFox.futureBox.flatMap {
+            multiUserDAO.findOneByEmail(email).toFox.futureBox.flatMap {
               case Full(_) =>
                 errors ::= Messages("user.email.alreadyInUse")
                 Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
@@ -511,7 +510,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                isActive = true,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
-                    _ <- createOrganizationFolder(organization.name, loginInfo) ?~> "organization.folderCreation.failed"
+                    _ <- createOrganizationFolder(organization.name, user.loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(
                       defaultMails.newOrganizationMail(organization.displayName,

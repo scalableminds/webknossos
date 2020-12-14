@@ -24,6 +24,7 @@ const LayoutSettings = {
   showPopoutIcon: false,
   showCloseIcon: false,
   showMaximiseIcon: true,
+  selectionEnabled: true,
 };
 
 // While the first parameter to `Pane` is the title of the pane, the second one is an id

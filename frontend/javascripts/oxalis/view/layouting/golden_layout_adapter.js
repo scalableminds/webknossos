@@ -95,10 +95,10 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     this.unbindListeners = [];
   }
 
-  rebuildLayout() {
+  rebuildLayout(newConfig = null) {
     this.unbind();
     this.gl.destroy();
-    this.setupLayout();
+    this.setupLayout(newConfig);
   }
 
   onStateChange() {
@@ -154,8 +154,9 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     return () => keyboardNoLoop.destroy();
   }
 
-  setupLayout() {
-    const activeLayout = getLayoutConfig(this.props.layoutKey, this.props.activeLayoutName);
+  setupLayout(newConfig = null) {
+    const activeLayout =
+      newConfig || getLayoutConfig(this.props.layoutKey, this.props.activeLayoutName);
     const gl = new GoldenLayout(activeLayout, `#${this.props.id}`);
     this.gl = gl;
     gl.registerComponent("PortalTarget", PortalTarget);
@@ -167,6 +168,32 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
     const unbindResetListener = layoutEmitter.on("resetLayout", () => {
       resetDefaultLayouts();
       this.rebuildLayout();
+    });
+    const unbindHighlightListener = layoutEmitter.on("highlightTab", () => {
+      const config = this.gl.toConfig();
+      console.log(config);
+      // console.log(this.gl.getComponent("Trees"));
+      // console.log(this.gl.getComponent("Tree"));
+      const findTabToHighlight = currentContainer => {
+        if (currentContainer.type === "component") {
+          return;
+        }
+        const indexOfTabToHighlight = currentContainer.content.findIndex(childContent => {
+          const a = childContent.type === "component" && childContent.title === "Trees";
+          return a;
+        });
+        if (indexOfTabToHighlight >= 0) {
+          console.log("found at", indexOfTabToHighlight);
+          if (currentContainer.type === "stack") {
+            // We can only bring forth a tab within a stack, not within a row.
+            currentContainer.activeItemIndex = indexOfTabToHighlight;
+          }
+        } else if (currentContainer.type !== "component") {
+          currentContainer.content.forEach(childContent => findTabToHighlight(childContent));
+        }
+      };
+      findTabToHighlight(config);
+      this.rebuildLayout(config);
     });
     const unbindChangedScaleListener = listenToStoreProperty(
       store => store.userConfiguration.layoutScaleValue,
@@ -184,6 +211,7 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
       unbindChangedScaleListener,
       unbindResizeListener,
       unbindMaximizeListener,
+      unbindHighlightListener,
     ];
 
     updateSize();

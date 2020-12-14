@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Dispatch } from "redux";
-import { Tooltip, Icon, Menu, Divider } from "antd";
+import { Tooltip, Icon, Menu, Divider, Button } from "antd";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
 import _ from "lodash";
@@ -22,6 +22,7 @@ import {
   setAnnotationNameAction,
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
+import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
 import ButtonComponent from "oxalis/view/components/button_component";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import Model from "oxalis/model";
@@ -177,7 +178,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <tbody>
             {entries.map(([name, value]) => (
               <tr key={name}>
-                <td>{name}:</td> <td>{value}</td>
+                <td>{`${name}:`}</td> <td>{value}</td>
               </tr>
             ))}
           </tbody>
@@ -269,10 +270,14 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return this.wrapStatistics("Volume Statistics:", entries);
   }
 
-  getAdditionalStatistics() {
-    return this.wrapStatistics("Additional Statistics:", [
+  getMeshesStatistics() {
+    return this.wrapStatistics("Meshes Statistics:", [
       ["Meshes", this.props.tracing.meshes.length],
     ]);
+  }
+
+  getBoundingBoxStatistics() {
+    return this.wrapStatistics("Bounding Box Statistics:", [["TODO", "TODO"]]);
   }
 
   getKeyboardShortcuts(isDatasetViewMode: boolean) {
@@ -580,6 +585,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       case subMenus.volumeSubmenu:
         subMenu = this.getVolumeStatistics();
         break;
+      case subMenus.meshesSubmenu:
+        subMenu = this.getMeshesStatistics();
+        break;
+      case subMenus.boundingBoxSubmenu:
+        subMenu = this.getBoundingBoxStatistics();
+        break;
       default:
         subMenu = this.getDatasetInfoSubmenu();
     }
@@ -601,11 +612,16 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             </Menu.Item>
             {hasSkeleton ? (
               <Menu.Item key={subMenus.skeletonSubmenu}>
-                Skeletons ({statsMaybe.map(stats => stats.treeCount).getOrElse(0)})
+                Skeletons ({statsMaybe.map(stats => stats.treeCount).getOrElse(0)}){" "}
+                <Button onClick={() => layoutEmitter.emit("highlightTab", "skeleton")}>
+                  Switch to Skeleton Tab
+                </Button>
               </Menu.Item>
             ) : null}
             <Menu.Item key={subMenus.volumeSubmenu}>Volume Layer</Menu.Item>
-            <Menu.Item key={subMenus.meshesSubmenu}>Meshes</Menu.Item>
+            <Menu.Item key={subMenus.meshesSubmenu}>
+              Meshes ({this.props.tracing.meshes.length})
+            </Menu.Item>
             <Menu.Item key={subMenus.boundingBoxSubmenu}>Bounding Box</Menu.Item>
           </Menu>
         </div>

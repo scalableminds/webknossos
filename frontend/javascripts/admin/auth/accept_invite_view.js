@@ -28,7 +28,26 @@ import { getOrganizationByInvite, joinOrganization } from "admin/admin_rest_api"
 const { Header, Content, Footer, Sider } = Layout;
 
 export default function AcceptInviteView({ token }) {
-  const targetOrganization = useFetch(() => getOrganizationByInvite(token), null, [token]);
+  const [targetOrganization, exception] = useFetch(
+    async () => {
+      try {
+        return [await getOrganizationByInvite(token), null];
+      } catch (exception) {
+        return [null, exception];
+      }
+    },
+    [null, null],
+    [token],
+  );
+
+  if (exception != null) {
+    return (
+      <Result
+        status="warning"
+        title={<div>An error occurred. The link you clicked might have expired.</div>}
+      />
+    );
+  }
 
   const onClickJoin = () => joinOrganization(token);
 

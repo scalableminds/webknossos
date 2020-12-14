@@ -133,11 +133,11 @@ class UserService @Inject()(conf: WkConf,
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
       existingIdentiy: Box[User] <- userDAO.findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser).futureBox
       _ <- if (multiUser.isSuperUser && existingIdentiy.isEmpty) {
-        joinOrganization(originalUser, organizationId, isAdmin = true)
+        joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true)
       } else Fox.successful(())
     } yield ()
 
-  def joinOrganization(originalUser: User, organizationId: ObjectId, isAdmin: Boolean = false)(
+  def joinOrganization(originalUser: User, organizationId: ObjectId, autoActivate: Boolean, isAdmin: Boolean = false)(
       implicit ctx: DBAccessContext): Fox[User] =
     for {
       newUserId <- Fox.successful(ObjectId.generate)
@@ -151,7 +151,7 @@ class UserService @Inject()(conf: WkConf,
         lastActivity = System.currentTimeMillis(),
         isAdmin = isAdmin,
         isDatasetManager = false,
-        isDeactivated = true,
+        isDeactivated = !autoActivate,
         lastTaskTypeId = None,
         created = System.currentTimeMillis()
       )

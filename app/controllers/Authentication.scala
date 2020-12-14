@@ -317,7 +317,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       invite <- inviteDAO.findOneByTokenValue(inviteToken)(GlobalAccessContext) ?~> "invite.invalidToken"
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
-      _ <- userService.joinOrganization(request.identity, organization._id)
+      _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
       userEmail <- userService.emailFor(request.identity)
       _ = Mailer ! Send(defaultMails.registerAdminNotifyerMail(request.identity.name, userEmail, None, organization))
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)

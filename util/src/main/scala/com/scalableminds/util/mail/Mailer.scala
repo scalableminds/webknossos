@@ -1,9 +1,8 @@
 package com.scalableminds.util.mail
 
-import javax.mail.internet.InternetAddress
 import akka.actor._
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
+import javax.mail.internet.InternetAddress
 import org.apache.commons.mail._
 
 case class Send(mail: Mail)
@@ -31,6 +30,8 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
   def receive: Receive = {
     case Send(mail) =>
       send(mail)
+    case unknownMessage =>
+      logger.warn(s"Mailer received unknown message: $unknownMessage")
   }
 
   private def send(mail: Mail) =

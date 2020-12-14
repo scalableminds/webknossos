@@ -2,6 +2,7 @@ package models.user
 
 import akka.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
@@ -57,11 +58,14 @@ class InviteService @Inject()(conf: WkConf,
         new DateTime(System.currentTimeMillis() + conf.Application.Authentication.inviteExpiry.toMillis)
       )
 
-  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
-      _ = Mailer ! defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.displayName, sender.name)
+      _ = Mailer ! Send(
+        defaultMails
+          .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.displayName, sender.name))
     } yield ()
 
   def removeExpiredInvites(implicit ctx: DBAccessContext): Fox[Unit] =

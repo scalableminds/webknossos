@@ -142,13 +142,13 @@ Samplecountry
 
   def insertToken = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
-    tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val newToken = Token(
           ObjectId.generate,
           "secretScmBoyToken",
-          LoginInfo("credentials", defaultUserEmail),
+          LoginInfo("credentials", defaultUser._id.id),
           new DateTime(System.currentTimeMillis()),
           new DateTime(System.currentTimeMillis() + expiryTime),
           None,

@@ -49,8 +49,7 @@ object Token {
         b.expirationDateTime,
         b.idleTimeout,
         tokenType,
-        System.currentTimeMillis(),
-        false
+        System.currentTimeMillis()
       ))
 }
 

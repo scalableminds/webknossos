@@ -44,7 +44,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
-    implicit messages: Messages): Mail =
+      implicit messages: Messages): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to webKnossos",
@@ -70,15 +70,15 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def activatedMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-      subject = "webKnossos | Account activated",
-      bodyHtml = html.mail.validateUser(name, uri).body,
-      recipients = List(receiver))
+         subject = "webKnossos | Account activated",
+         bodyHtml = html.mail.validateUser(name, uri).body,
+         recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-      subject = "webKnossos | Password changed",
-      bodyHtml = html.mail.passwordChanged(name, uri).body,
-      recipients = List(receiver))
+         subject = "webKnossos | Password changed",
+         bodyHtml = html.mail.passwordChanged(name, uri).body,
+         recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String): Mail =
     Mail(

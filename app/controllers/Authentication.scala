@@ -336,8 +336,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def handleStartResetPassword: Action[AnyContent] = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-      email =>
-        userService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
+      email => {
+        val userFopt: Future[Option[User]] =
+          userService.userFromMultiUserEmail(email.toLowerCase)(GlobalAccessContext).futureBox.map(_.toOption)
+        val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
+        idF.flatMap(id => userService.retrieve(LoginInfo(CredentialsProvider.ID, id))).flatMap {
           case None => Future.successful(NotFound(Messages("error.noUser")))
           case Some(user) =>
             for {
@@ -347,6 +350,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Ok
             }
         }
+      }
     )
   }
 
@@ -567,16 +571,6 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       datastores <- dataStoreDAO.findAll(GlobalAccessContext)
       _ <- Future.sequence(datastores.map(sendRPCToDataStore(_, token)))
     } yield ()
-  }
-
-  def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
-    val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
-    for {
-      authenticator <- combinedAuthenticatorService.create(loginInfo)
-      value <- combinedAuthenticatorService.init(authenticator)
-    } yield {
-      value
-    }
   }
 
 }

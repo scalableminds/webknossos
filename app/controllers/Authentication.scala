@@ -31,7 +31,6 @@ import java.net.URLEncoder
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import javax.inject.Inject
-import slick.lifted.Functions.user
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -48,7 +47,7 @@ object AuthForms {
                         password: String,
                         inviteToken: Option[String])
 
-  def signUpForm(implicit messages: Messages) =
+  def signUpForm(implicit messages: Messages): Form[SignUpData] =
     Form(
       mapping(
         "organization" -> text,
@@ -76,19 +75,19 @@ object AuthForms {
   // Sign in
   case class SignInData(email: String, password: String)
 
-  val signInForm = Form(
+  val signInForm: Form[SignInData] = Form(
     mapping(
       "email" -> email,
       "password" -> nonEmptyText
     )(SignInData.apply)(SignInData.unapply))
 
   // Start password recovery
-  val emailForm = Form(single("email" -> email))
+  val emailForm: Form[String] = Form(single("email" -> email))
 
   // Password recovery
   case class ResetPasswordData(token: String, password1: String, password2: String)
 
-  def resetPasswordForm(implicit messages: Messages) =
+  def resetPasswordForm(implicit messages: Messages): Form[ResetPasswordData] =
     Form(
       mapping(
         "token" -> text,
@@ -101,7 +100,7 @@ object AuthForms {
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
 
-  def changePasswordForm(implicit messages: Messages) =
+  def changePasswordForm(implicit messages: Messages): Form[ChangePasswordData] =
     Form(
       mapping(
         "oldPassword" -> nonEmptyText,
@@ -137,8 +136,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   import AuthForms._
 
-  val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
-  val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
+  private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
+  private val bearerTokenAuthenticatorService = combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
@@ -191,7 +190,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       Some(finalName)
   }
 
-  def handleRegistration: Action[AnyContent] = Action.async { implicit request =>
+  def register: Action[AnyContent] = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
@@ -261,7 +260,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
           .flatMap {
             loginInfo =>
               userService.retrieve(loginInfo).flatMap {
-                case Some(user) if (!user.isDeactivated) =>
+                case Some(user) if !user.isDeactivated =>
                   for {
                     authenticator <- combinedAuthenticatorService.create(loginInfo)
                     value <- combinedAuthenticatorService.init(authenticator)
@@ -316,9 +315,11 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)(GlobalAccessContext) ?~> "invite.invalidToken"
-      organiaztion <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
-      _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organiaztion._id)
-      _ <- userService.joinOrganization(request.identity, organiaztion._id)
+      organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
+      _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
+      _ <- userService.joinOrganization(request.identity, organization._id)
+      userEmail <- userService.emailFor(request.identity)
+      _ = Mailer ! Send(defaultMails.registerAdminNotifyerMail(request.identity.name, userEmail, None, organization))
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
     } yield Ok
   }
@@ -332,26 +333,25 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   }
 
   // If a user has forgotten their password
-  def handleStartResetPassword = Action.async { implicit request =>
+  def handleStartResetPassword: Action[AnyContent] = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       email =>
         userService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
           case None => Future.successful(NotFound(Messages("error.noUser")))
-          case Some(user) => {
+          case Some(user) =>
             for {
               token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
             } yield {
               Mailer ! Send(defaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
               Ok
             }
-          }
-      }
+        }
     )
   }
 
   // If a user has forgotten their password
-  def handleResetPassword = Action.async { implicit request =>
+  def handleResetPassword: Action[AnyContent] = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
@@ -370,7 +370,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
   }
 
   // Users who are logged in can change their password. The old password has to be validated again.
-  def changePassword = sil.SecuredAction.async { implicit request =>
+  def changePassword: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     changePasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
@@ -394,13 +394,13 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               }
           }
           .recover {
-            case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
+            case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
           }
       }
     )
   }
 
-  def getToken = sil.SecuredAction.async { implicit request =>
+  def getToken: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] =
       combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
         case Some(token) => Future.successful(Ok(Json.obj("token" -> token.id)))
@@ -415,7 +415,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     } yield result
   }
 
-  def deleteToken = sil.SecuredAction.async { implicit request =>
+  def deleteToken(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] =
       combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
         case Some(token) =>
@@ -429,14 +429,14 @@ class Authentication @Inject()(actorSystem: ActorSystem,
     } yield result
   }
 
-  def logout = sil.UserAwareAction.async { implicit request =>
+  def logout: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     request.authenticator match {
       case Some(authenticator) => combinedAuthenticatorService.discard(authenticator, Ok)
       case _                   => Future.successful(Ok)
     }
   }
 
-  def singleSignOn(sso: String, sig: String) = sil.UserAwareAction.async { implicit request =>
+  def singleSignOn(sso: String, sig: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (ssoKey == "")
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
@@ -468,10 +468,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         }
       case None => Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org")) // not logged in
     }
-
   }
 
-  def createOrganizationWithAdmin = sil.UserAwareAction.async { implicit request =>
+  def createOrganizationWithAdmin: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {

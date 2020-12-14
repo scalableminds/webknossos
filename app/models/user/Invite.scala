@@ -42,7 +42,7 @@ class InviteService @Inject()(conf: WkConf,
     for {
       invite <- generateInvite(sender._organization, autoActivate)
       _ <- inviteDAO.insertOne(invite)
-      _ <- sendInviteMail(recipient, invite)
+      _ <- sendInviteMail(recipient, sender, invite)
     } yield ()
 
   private def generateInvite(organizationID: ObjectId, autoActivate: Boolean): Future[Invite] =
@@ -57,13 +57,12 @@ class InviteService @Inject()(conf: WkConf,
         new DateTime(System.currentTimeMillis() + conf.Application.Authentication.inviteExpiry.toMillis)
       )
 
-  private def sendInviteMail(recipient: String, invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
-      _ = logger.info(
-        f"Hello $recipient, you have been invited to join the “${organization.displayName}” organization in webKnossos at http://localhost:9000/invite/${invite.tokenValue}")
-    } yield
-      () // Mailer ! defaultMails.inviteMail(recipient, invite.tokenValue, organization.name, organization.displayName)
+      _ = logger.info("sending invite mail")
+      _ = Mailer ! defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.displayName, sender.name)
+    } yield ()
 
   def removeExpiredInvites(implicit ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteAllExpired

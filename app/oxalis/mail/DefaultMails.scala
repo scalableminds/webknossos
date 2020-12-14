@@ -1,5 +1,7 @@
 package oxalis.mail
 
+import java.net.URL
+
 import com.scalableminds.util.mail.Mail
 import javax.inject.Inject
 import models.user.User
@@ -7,6 +9,8 @@ import models.team.Organization
 import play.api.i18n.Messages
 import utils.WkConf
 import views._
+
+import scala.util.Try
 
 class DefaultMails @Inject()(conf: WkConf) {
 
@@ -40,7 +44,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
 
   def newUserMail(name: String, receiver: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
-      implicit messages: Messages): Mail =
+    implicit messages: Messages): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to webKnossos",
@@ -66,15 +70,15 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def activatedMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-         subject = "webKnossos | Account activated",
-         bodyHtml = html.mail.validateUser(name, uri).body,
-         recipients = List(receiver))
+      subject = "webKnossos | Account activated",
+      bodyHtml = html.mail.validateUser(name, uri).body,
+      recipients = List(receiver))
 
   def changePasswordMail(name: String, receiver: String): Mail =
     Mail(from = defaultSender,
-         subject = "webKnossos | Password changed",
-         bodyHtml = html.mail.passwordChanged(name, uri).body,
-         recipients = List(receiver))
+      subject = "webKnossos | Password changed",
+      bodyHtml = html.mail.passwordChanged(name, uri).body,
+      recipients = List(receiver))
 
   def resetPasswordMail(name: String, receiver: String, token: String): Mail =
     Mail(
@@ -94,7 +98,15 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def inviteMail(receiver: String,
                  inviteTokenValue: String,
-                 organizationName: String,
-                 organizationDisplayName: String): Mail =
-    ???
+                 autoVerify: Boolean,
+                 organizationDisplayName: String,
+                 senderName: String): Mail = {
+    val host = Try { new URL(uri) }.toOption.getOrElse(uri)
+    Mail(
+      from = defaultSender,
+      subject = s"$senderName invited you to join their webKnossos organization at ${host}",
+      bodyHtml = html.mail.invite(senderName, organizationDisplayName, inviteTokenValue, uri, autoVerify).body,
+      recipients = List(receiver)
+    )
+  }
 }

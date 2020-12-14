@@ -12,7 +12,7 @@ POST          /maintenance                                                      
 DELETE        /maintenance                                                      controllers.MaintenanceController.closeMaintenance
 
 # Authentication
-POST          /auth/register                                                    controllers.Authentication.handleRegistration
+POST          /auth/register                                                    controllers.Authentication.register
 GET           /auth/joinOrganization/:inviteToken                               controllers.Authentication.joinOrganization(inviteToken: String)
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/token                                                       controllers.Authentication.getToken

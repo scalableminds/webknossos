@@ -35,6 +35,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Mail {
     val enabled = get[Boolean]("mail.enabled")
+    val logToStdout = get[Boolean]("mail.logToStdout")
     object Smtp {
       val host = get[String]("mail.smtp.host")
       val port = get[Int]("mail.smtp.port")

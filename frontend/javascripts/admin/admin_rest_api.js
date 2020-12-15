@@ -1274,10 +1274,11 @@ export function joinOrganization(inviteToken: string): Promise<void> {
   return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, { method: "POST" });
 }
 
-export function switchToOrganization(organizationName: string): Promise<void> {
-  return Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+export async function switchToOrganization(organizationName: string): Promise<void> {
+  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
     method: "POST",
   });
+  location.reload();
 }
 
 export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {

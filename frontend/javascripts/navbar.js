@@ -1,11 +1,10 @@
 // @flow
 import { Avatar, Icon, Layout, Menu, Popover } from "antd";
-import { Link, withRouter, type RouterHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
 import Toast from "libs/toast";
-import { location } from "libs/window";
 import type { APIUser } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import {
@@ -34,10 +33,6 @@ type StateProps = {|
   hasOrganizations: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
-type PropsWithRouter = {|
-  ...Props,
-  history: RouterHistory,
-|};
 
 export const navbarHeight = 48;
 
@@ -251,7 +246,6 @@ function DashboardSubMenu({ collapse, ...other }) {
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName, organization: organizationName } = activeUser;
-
   const switchableOrganizations = useFetch(getSwitchableOrganizations, [], []);
 
   const activeOrganization = switchableOrganizations.find(org => org.name === organizationName);
@@ -263,7 +257,6 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const switchTo = async org => {
     Toast.info(`Switching to ${org.displayName || org.name}`);
     await switchToOrganization(org.name);
-    location.reload();
   };
 
   return (
@@ -324,13 +317,8 @@ async function getAndTrackVersion() {
   return version;
 }
 
-function Navbar({
-  activeUser,
-  isAuthenticated,
-  history,
-  isInAnnotationView,
-  hasOrganizations,
-}: PropsWithRouter) {
+function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizations }: Props) {
+  const history = useHistory();
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -467,4 +455,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar);

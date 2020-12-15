@@ -6,9 +6,14 @@ import { AsyncButton } from "components/async_clickables";
 import React, { useState } from "react";
 import AuthenticationModal from "admin/auth/authentication_modal";
 import { useFetch } from "libs/react_helpers";
-import { getOrganizationByInvite, joinOrganization } from "admin/admin_rest_api";
+import {
+  getOrganizationByInvite,
+  joinOrganization,
+  switchToOrganization,
+} from "admin/admin_rest_api";
 import { type APIUser } from "types/api_flow_types";
 import Toast from "libs/toast";
+import { location } from "libs/window";
 
 const { Content } = Layout;
 
@@ -42,11 +47,22 @@ export default function AcceptInviteView({
     );
   }
   const targetOrganizationName =
-    targetOrganization != null ? targetOrganization.displayName : "unknown";
+    targetOrganization != null
+      ? targetOrganization.displayName || targetOrganization.name
+      : "unknown";
 
-  const onSuccessfulJoin = () => {
-    Toast.success(`You successfully joined ${targetOrganizationName}`);
+  const onSuccessfulJoin = (userJustRegistered?: boolean = false) => {
     history.push("/dashboard");
+    if (userJustRegistered) {
+      // Since the user just registered, the organization is already active.
+      Toast.success(`You successfully joined ${targetOrganizationName}.`);
+      location.reload();
+    } else {
+      Toast.success(`You successfully joined ${targetOrganizationName}. Switching to it now...`);
+      if (targetOrganization) {
+        switchToOrganization(targetOrganization.name);
+      }
+    }
   };
   const onClickJoin = async () => {
     await joinOrganization(token);
@@ -77,9 +93,9 @@ export default function AcceptInviteView({
           if (!userJustRegistered) {
             await onClickJoin();
           } else {
-            // The user already joined the organization when they registered. Just
-            // notify them.
-            onSuccessfulJoin();
+            // The user already joined the organization when they registered. All that is
+            // left to do is to notify them and reload the page.
+            onSuccessfulJoin(userJustRegistered);
           }
         }}
         onCancel={() => setIsAuthenticationModalVisible(false)}

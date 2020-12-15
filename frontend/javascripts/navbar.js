@@ -249,6 +249,9 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const switchableOrganizations = useFetch(getSwitchableOrganizations, [], []);
 
   const activeOrganization = switchableOrganizations.find(org => org.name === organizationName);
+  const switchableOrganizationsWithoutActive = switchableOrganizations.filter(
+    org => org.name !== organizationName,
+  );
   const orgDisplayName =
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
@@ -274,16 +277,18 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="organization">
           {orgDisplayName}
         </Menu.Item>
+        {switchableOrganizationsWithoutActive.length === 0 ? null : (
+          <Menu.SubMenu title="Switch Organization">
+            {switchableOrganizationsWithoutActive.map(org => (
+              <Menu.Item key={org.name} onClick={() => switchTo(org)}>
+                {org.displayName || org.name}
+              </Menu.Item>
+            ))}
+          </Menu.SubMenu>
+        )}
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
-        <Menu.SubMenu title="Switch Organization">
-          {switchableOrganizations.map(org => (
-            <Menu.Item key={org.name} onClick={() => switchTo(org)}>
-              {org.displayName || org.name}
-            </Menu.Item>
-          ))}
-        </Menu.SubMenu>
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>

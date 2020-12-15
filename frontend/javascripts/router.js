@@ -407,11 +407,14 @@ class ReactRouter extends React.Component<Props> {
                 component={ChangePasswordView}
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
+
+              <Route
                 path="/invite/:token"
                 render={({ match }: ContextRouter) => (
-                  <AcceptInviteView token={match.params.token || ""} />
+                  <AcceptInviteView
+                    activeUser={this.props.activeUser}
+                    token={match.params.token || ""}
+                  />
                 )}
               />
 

@@ -210,10 +210,7 @@ export class InviteUsersModal extends React.Component<
   };
 
   sendInvite = async () => {
-    console.log("this.state.inviteesString", this.state.inviteesString);
-
     const addresses = this.state.inviteesString.split(/[,\s]+/);
-
     const incorrectAddresses = addresses.filter(address => !address.includes("@"));
 
     if (incorrectAddresses.length > 0) {
@@ -406,8 +403,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     >
       <RegistrationForm
         hidePrivacyStatement
-        createOrganization
-        organizationName={this.state.organizationName}
+        organizationNameToCreate={this.state.organizationName}
         onRegistered={() => {
           // Update the entered organization to the normalized name of the organization received by the backend.
           // This is needed for further requests.

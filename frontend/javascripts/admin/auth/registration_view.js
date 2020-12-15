@@ -4,15 +4,20 @@ import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
+import {
+  getOrganization,
+  getDefaultOrganization,
+  getOrganizationByInvite,
+} from "admin/admin_rest_api";
 import features from "features";
 import RegistrationForm from "./registration_form";
 
 type Props = {
   organizationName?: string,
+  inviteToken?: ?string,
 };
 
-function RegistrationView({ organizationName }: Props) {
+function RegistrationView({ organizationName, inviteToken }: Props) {
   const history = useHistory();
   const [organization, setOrganization] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +26,9 @@ function RegistrationView({ organizationName }: Props) {
     (async () => {
       setIsLoading(true);
       try {
-        if (organizationName != null) {
+        if (inviteToken != null) {
+          setOrganization(await getOrganizationByInvite(inviteToken));
+        } else if (organizationName != null) {
           setOrganization(await getOrganization(organizationName));
         } else {
           const defaultOrg = await getDefaultOrganization();
@@ -31,7 +38,7 @@ function RegistrationView({ organizationName }: Props) {
         setIsLoading(false);
       }
     })();
-  }, [organizationName]);
+  }, [organizationName, inviteToken]);
 
   let content = null;
   if (isLoading) {
@@ -46,7 +53,7 @@ function RegistrationView({ organizationName }: Props) {
           // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
           key={organization.name}
-          organizationName={organization.name}
+          targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
               history.goBack();
@@ -54,10 +61,6 @@ function RegistrationView({ organizationName }: Props) {
               Toast.success(messages["auth.account_created"]);
               history.push("/auth/login");
             }
-          }}
-          onOrganizationNameNotFound={() => {
-            Toast.error(messages["auth.invalid_organization_name"]);
-            history.push("/auth/register");
           }}
         />
       </>

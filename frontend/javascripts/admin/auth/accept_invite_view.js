@@ -1,6 +1,7 @@
 // @flow
 
 import { Button, Icon, Result, Layout, Spin } from "antd";
+import { useHistory } from "react-router-dom";
 import { AsyncButton } from "components/async_clickables";
 import React, { useState } from "react";
 import AuthenticationModal from "admin/auth/authentication_modal";
@@ -18,6 +19,7 @@ export default function AcceptInviteView({
   token: string,
   activeUser: ?APIUser,
 }) {
+  const history = useHistory();
   const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {
@@ -44,6 +46,7 @@ export default function AcceptInviteView({
 
   const onSuccessfulJoin = () => {
     Toast.success(`You successfully joined ${targetOrganizationName}`);
+    history.push("/dashboard");
   };
   const onClickJoin = async () => {
     await joinOrganization(token);
@@ -51,18 +54,17 @@ export default function AcceptInviteView({
   };
 
   const authenticateMessage =
-    activeUser != null ? null : "Please log in or register to join this organization.";
+    activeUser != null ? null : <p>Please log in or register to join this organization.</p>;
 
   const primaryButton =
     activeUser != null ? (
-      <AsyncButton type="primary" onClick={onClickJoin}>
+      <AsyncButton type="primary" onClick={onClickJoin} size="large">
         Join this Organization
       </AsyncButton>
     ) : (
-      <div>
-        <Button onClick={() => setIsAuthenticationModalVisible(true)}>Log in</Button>
-        <Button onClick={() => setIsAuthenticationModalVisible(true)}>Register</Button>
-      </div>
+      <Button type="primary" onClick={() => setIsAuthenticationModalVisible(true)} size="large">
+        Log in / Register
+      </Button>
     );
 
   return (
@@ -88,8 +90,7 @@ export default function AcceptInviteView({
           icon={<Icon type="gift" theme="twoTone" />}
           title={
             <div>
-              You have been invited to the organization &ldquo;
-              {targetOrganizationName}&rdquo;!
+              You have been invited to the organization &ldquo;{targetOrganizationName}&rdquo;!
               {authenticateMessage}
             </div>
           }

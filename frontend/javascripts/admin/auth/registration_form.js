@@ -52,7 +52,8 @@ class RegistrationForm extends React.PureComponent<Props, State> {
       const { targetOrganization } = this.props;
       const autoVerified = targetOrganization != null ? targetOrganization.enableAutoVerify : false;
 
-      const tryAutoLogin = this.props.tryAutoLogin || autoVerified;
+      const tryAutoLogin =
+        this.props.tryAutoLogin || this.props.inviteToken != null || autoVerified;
       if (tryAutoLogin) {
         const user = await loginUser({
           email: formValues.email,
@@ -90,41 +91,44 @@ class RegistrationForm extends React.PureComponent<Props, State> {
     const { getFieldDecorator } = this.props.form;
     const { inviteToken, targetOrganization } = this.props;
 
-    if (inviteToken != null) {
-      return (
+    const tokenField =
+      inviteToken == null ? null : (
         <React.Fragment>
           <FormItem style={{ display: "none" }}>
             {getFieldDecorator("inviteToken", { initialValue: inviteToken })(<Input type="text" />)}
           </FormItem>
         </React.Fragment>
       );
-    }
 
+    // targetOrganizationName is not empty if the user is
+    // either creating a complete new organization OR
+    // the user is about to join an existing organization
     const targetOrganizationName =
       this.props.organizationNameToCreate ||
-      (targetOrganization != null ? targetOrganization.name : null);
+      (targetOrganization != null ? targetOrganization.name : null) ||
+      "";
 
-    if (targetOrganizationName != null) {
-      // The user is either creating a complete new organization OR
-      // the user is about to join an existing organization
+    const organizationFields = (
+      <>
+        <FormItem style={{ display: "none" }}>
+          {getFieldDecorator("organization", { initialValue: targetOrganizationName })(
+            <Input type="text" />,
+          )}
+        </FormItem>
+        <FormItem style={{ display: "none" }}>
+          {getFieldDecorator("organizationDisplayName", {
+            initialValue: targetOrganizationName,
+          })(<Input type="text" />)}
+        </FormItem>
+      </>
+    );
 
-      return (
-        <>
-          <FormItem style={{ display: "none" }}>
-            {getFieldDecorator("organization", { initialValue: targetOrganizationName })(
-              <Input type="text" />,
-            )}
-          </FormItem>
-          <FormItem style={{ display: "none" }}>
-            {getFieldDecorator("organizationDisplayName", {
-              initialValue: targetOrganizationName,
-            })(<Input type="text" />)}
-          </FormItem>
-        </>
-      );
-    }
-
-    return null;
+    return (
+      <>
+        {tokenField}
+        {organizationFields}
+      </>
+    );
   }
 
   render() {

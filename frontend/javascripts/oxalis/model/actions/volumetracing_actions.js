@@ -17,7 +17,7 @@ type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
 };
-type CreateCellAction = { type: "CREATE_CELL", cellId: ?number };
+type CreateCellAction = { type: "CREATE_CELL" };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
 type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
@@ -74,6 +74,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
+  "FINISH_ANNOTATION_STROKE",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -85,9 +86,8 @@ export const initializeVolumeTracingAction = (
   tracing,
 });
 
-export const createCellAction = (cellId: ?number): CreateCellAction => ({
+export const createCellAction = (): CreateCellAction => ({
   type: "CREATE_CELL",
-  cellId,
 });
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView): StartEditingAction => ({

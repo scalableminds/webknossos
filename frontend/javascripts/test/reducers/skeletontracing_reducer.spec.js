@@ -112,7 +112,7 @@ test("SkeletonTracing should add a new node", t => {
     viewport,
     resolution,
     id: 1,
-    radius: 50,
+    radius: 1,
   });
 });
 

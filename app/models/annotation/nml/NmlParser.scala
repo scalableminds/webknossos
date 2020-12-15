@@ -385,7 +385,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
     val nodeIdText = getSingleAttribute(node, "id")
     for {
       id <- nodeIdText.toIntOpt ?~ Messages("nml.node.id.invalid", "", nodeIdText)
-      radius <- getSingleAttribute(node, "radius").toFloatOpt ?~ Messages("nml.node.attribute.invalid", "radius", id)
+      radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
       position <- parsePoint3D(node) ?~ Messages("nml.node.attribute.invalid", "position", id)
     } yield {
       val viewport = parseViewport(node)

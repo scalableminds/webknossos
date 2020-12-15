@@ -38,15 +38,21 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit e
         "displayName" -> organization.displayName
       ))
 
-  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
+      implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
-        for {
-          allOrganizations <- organizationDAO.findAll
-          _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
-          defaultOrganization <- allOrganizations.headOption
-        } yield defaultOrganization
+        organizatioNameOpt match {
+          case Some(organizationName) => organizationDAO.findOneByName(organizationName)
+          case None =>
+            for {
+              allOrganizations <- organizationDAO.findAll
+              _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
+              defaultOrganization <- allOrganizations.headOption
+            } yield defaultOrganization
+        }
+
     }
 
 }

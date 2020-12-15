@@ -216,10 +216,10 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                 inviteBox: Box[Invite] <- inviteDAO
                   .findOneByTokenValue(signUpData.inviteToken.getOrElse("noToken"))(GlobalAccessContext)
                   .futureBox
-                organization <- organizationService
-                  .findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext) ?~> Messages(
-                  "organization.notFound",
-                  signUpData.organization)
+                organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
+                organization <- organizationService.findOneByInviteByNameOrDefault(
+                  inviteBox.toOption,
+                  organizationName)(GlobalAccessContext) ?~> Messages("organization.notFound", signUpData.organization)
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
                 user <- userService.insert(organization._id,
                                            email,

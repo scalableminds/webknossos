@@ -288,6 +288,7 @@ CREATE TABLE webknossos.users(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
 );
 

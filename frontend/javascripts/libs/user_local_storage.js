@@ -4,7 +4,7 @@ import Store from "oxalis/store";
 
 function prefixKey(key) {
   const { activeUser } = Store.getState();
-  const prefix = !activeUser ? "Anonymous" : activeUser.email;
+  const prefix = !activeUser ? "Anonymous" : `${activeUser.email}-${activeUser.organization}`;
   return `${prefix}-${key}`;
 }
 

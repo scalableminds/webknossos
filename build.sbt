@@ -12,8 +12,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
-  "-language:postfixOps"//,
-  //"-Xlint:unused"
+  "-language:postfixOps",
+  "-Xlint:unused"
 )
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")

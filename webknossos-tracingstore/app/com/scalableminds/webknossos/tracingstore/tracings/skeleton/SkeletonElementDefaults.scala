@@ -33,7 +33,7 @@ object NodeDefaults extends ProtoGeometryImplicits {
   val id = 0
   val rotation = Vector3D(0, 0, 0)
   val position = Point3D(0, 0, 0)
-  val radius = 120
+  val radius = 1.0f
   val viewport = 1
   val resolution = 1
   val bitDepth = 0

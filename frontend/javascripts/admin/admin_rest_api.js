@@ -1281,7 +1281,7 @@ export async function switchToOrganization(organizationName: string): Promise<vo
   location.reload();
 }
 
-export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {
+export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
   return Request.receiveJSON("/api/organizations");
 }
 

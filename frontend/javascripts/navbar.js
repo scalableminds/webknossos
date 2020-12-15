@@ -7,11 +7,7 @@ import React from "react";
 import Toast from "libs/toast";
 import type { APIUser } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import {
-  getBuildInfo,
-  getSwitchableOrganizations,
-  switchToOrganization,
-} from "admin/admin_rest_api";
+import { getBuildInfo, getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
@@ -54,16 +50,35 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser }) {
+function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <Avatar
-      className="hover-effect-via-opacity"
-      style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
-    >
-      {initialOf(firstName) + initialOf(lastName)}
-    </Avatar>
+    <div style={{ position: "relative" }}>
+      <Avatar
+        className="hover-effect-via-opacity"
+        style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+      >
+        {initialOf(firstName) + initialOf(lastName)}
+      </Avatar>
+      {isMultiMember ? (
+        <Icon
+          style={{
+            position: "absolute",
+            top: 2,
+            right: -5,
+            marginRight: 0,
+            minWidth: 12,
+            height: 12,
+            lineHeight: "12px",
+            fontSize: 12,
+            color: "#75df4a",
+          }}
+          type="swap"
+          title="You are member of multiple organizations. Click the avatar to switch between them."
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -246,9 +261,10 @@ function DashboardSubMenu({ collapse, ...other }) {
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
   const { firstName, lastName, organization: organizationName } = activeUser;
-  const switchableOrganizations = useFetch(getSwitchableOrganizations, [], []);
+  const usersOrganizations = useFetch(getUsersOrganizations, [], []);
 
-  const activeOrganization = switchableOrganizations.find(org => org.name === organizationName);
+  const activeOrganization = usersOrganizations.find(org => org.name === organizationName);
+  const switchableOrganizations = usersOrganizations.filter(org => org.name !== organizationName);
   const orgDisplayName =
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
@@ -259,11 +275,13 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
     await switchToOrganization(org.name);
   };
 
+  const isMultiMember = switchableOrganizations.length > 0;
+
   return (
     <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
-        title={<UserInitials activeUser={activeUser} />}
+        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
         style={{ padding: 0 }}
         className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
@@ -274,16 +292,19 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="organization">
           {orgDisplayName}
         </Menu.Item>
+        {isMultiMember ? (
+          /* The explicit width is a workaround for a layout bug (probably in antd) */
+          <Menu.SubMenu title="Switch Organization" style={{ width: 180 }}>
+            {switchableOrganizations.map(org => (
+              <Menu.Item key={org.name} onClick={() => switchTo(org)}>
+                {org.displayName || org.name}
+              </Menu.Item>
+            ))}
+          </Menu.SubMenu>
+        ) : null}
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
-        <Menu.SubMenu title="Switch Organization">
-          {switchableOrganizations.map(org => (
-            <Menu.Item key={org.name} onClick={() => switchTo(org)}>
-              {org.displayName || org.name}
-            </Menu.Item>
-          ))}
-        </Menu.SubMenu>
         <Menu.Item key="token">
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>

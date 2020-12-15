@@ -149,7 +149,7 @@ export default function RecommendedConfigurationView({
               })(
                 <Input.TextArea
                   spellCheck={false}
-                  autosize={{ minRows: 20 }}
+                  autoSize={{ minRows: 20 }}
                   style={jsonEditStyle}
                 />,
               )}

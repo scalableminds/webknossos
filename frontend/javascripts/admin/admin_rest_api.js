@@ -1281,7 +1281,7 @@ export function switchToOrganization(organizationName: string): Promise<void> {
 }
 
 export function getSwitchableOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON(`/api/organizations`);
+  return Request.receiveJSON("/api/organizations");
 }
 
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
@@ -1292,7 +1292,7 @@ export function sendInvitesForOrganization(
   recipients: Array<string>,
   autoActivate: boolean,
 ): Promise<void> {
-  return Request.triggerRequest("/api/auth/sendInvites", {
+  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
     method: "POST",
     data: { recipients, autoActivate },
   });

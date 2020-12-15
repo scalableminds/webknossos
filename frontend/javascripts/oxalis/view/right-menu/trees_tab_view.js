@@ -103,6 +103,7 @@ type TreeOrTreeGroup = {
 };
 
 type OwnProps = {|
+  // eslint-disable-next-line react/no-unused-prop-types
   portalKey: string,
 |};
 type StateProps = {|
@@ -113,7 +114,6 @@ type StateProps = {|
   onCreateTree: () => void,
   onDeleteTree: () => void,
   onSetTreeGroup: (?number, number) => void,
-  onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onChangeTreeName: string => void,
   onBatchActions: (Array<Action>, string) => void,
   annotation: Tracing,
@@ -815,9 +815,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetTreeGroup(groupId, treeId) {
     dispatch(setTreeGroupAction(groupId, treeId));
-  },
-  onUpdateTreeGroups(treeGroups) {
-    dispatch(setTreeGroupsAction(treeGroups));
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

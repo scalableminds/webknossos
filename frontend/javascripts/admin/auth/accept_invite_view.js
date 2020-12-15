@@ -1,39 +1,20 @@
 // @flow
 
-import {
-  Result,
-  Layout,
-  Form,
-  Popover,
-  Modal,
-  Input,
-  Button,
-  Row,
-  Col,
-  Steps,
-  Icon,
-  Card,
-  AutoComplete,
-  Alert,
-  Spin,
-} from "antd";
+import { Icon, Result, Layout, Spin } from "antd";
 import { AsyncButton } from "components/async_clickables";
-import { type RouterHistory, Link, withRouter } from "react-router-dom";
-import { connect } from "react-redux";
-import Clipboard from "clipboard-js";
-import React, { type Node } from "react";
+import React from "react";
 import { useFetch } from "libs/react_helpers";
 import { getOrganizationByInvite, joinOrganization } from "admin/admin_rest_api";
 
-const { Header, Content, Footer, Sider } = Layout;
+const { Content } = Layout;
 
-export default function AcceptInviteView({ token }) {
+export default function AcceptInviteView({ token }: { token: string }) {
   const [targetOrganization, exception] = useFetch(
     async () => {
       try {
         return [await getOrganizationByInvite(token), null];
-      } catch (exception) {
-        return [null, exception];
+      } catch (exc) {
+        return [null, exc];
       }
     },
     [null, null],

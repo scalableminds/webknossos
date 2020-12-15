@@ -1,8 +1,8 @@
 // @flow
 
 import {
+  Divider,
   Form,
-  Popover,
   Modal,
   Input,
   Button,
@@ -45,7 +45,8 @@ type State = {
   datastores: Array<APIDataStore>,
   organizationName: string,
   datasetNameToImport: ?string,
-  showDatasetUploadModal: boolean,
+  isDatasetUploadModalVisible: boolean,
+  isInviteModalVisible: boolean,
 };
 
 export function WhatsNextBanner() {
@@ -185,12 +186,18 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   );
 }
 
-export class InviteUsersPopover extends React.Component<{
-  organizationName: string,
-  visible?: boolean,
-  handleVisibleChange?: Function,
-  children: Node,
-}> {
+export class InviteUsersModal extends React.Component<
+  {
+    organizationName: string,
+    visible?: boolean,
+    handleVisibleChange: Function,
+  },
+  { inviteesString: string },
+> {
+  state = {
+    inviteesString: "",
+  };
+
   getRegistrationHotLink(): string {
     return `${location.origin}/auth/register?organizationName=${encodeURIComponent(
       this.props.organizationName,
@@ -202,41 +209,64 @@ export class InviteUsersPopover extends React.Component<{
     Toast.success("Registration link copied to clipboard.");
   };
 
-  sendInvite = () => {
-    sendInvitesForOrganization(["scmboy@scalableminds.com"], true);
+  sendInvite = async () => {
+    console.log("this.state.inviteesString", this.state.inviteesString);
+
+    const addresses = this.state.inviteesString.split(/[,\s]+/);
+
+    const incorrectAddresses = addresses.filter(address => !address.includes("@"));
+
+    if (incorrectAddresses.length > 0) {
+      Toast.error(`Couldn't recognize this email address: ${incorrectAddresses[0]}`);
+      return;
+    }
+
+    await sendInvitesForOrganization(addresses, true);
+    Toast.success("An invitation was sent to provided email addresses.");
+    this.setState({ inviteesString: "" });
+    this.props.handleVisibleChange(false);
   };
 
   getContent() {
     return (
       <React.Fragment>
         <div style={{ marginBottom: 8 }}>
-          Share the following link to let users join your organization:
+          Share the following link to let users join your organization (needs explicit approval):
         </div>
         <Input.Group compact>
           <Input style={{ width: "85%" }} value={this.getRegistrationHotLink()} readOnly />
           <Button style={{ width: "15%" }} onClick={this.copyRegistrationCopyLink} icon="copy" />
         </Input.Group>
-        <hr />
-
-        <Input />
-        <Button onClick={this.sendInvite} type="primary">
-          Send Invites
-        </Button>
+        <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>or</Divider>
+        Send invites to the following email addresses. Multiple addresses should be separated with a
+        comma, a space or a new line:
+        <Input.TextArea
+          spellCheck={false}
+          autoSize={{ minRows: 6 }}
+          onChange={evt => {
+            this.setState({ inviteesString: evt.target.value });
+          }}
+          value={this.state.inviteesString}
+        />
       </React.Fragment>
     );
   }
 
   render() {
     return (
-      <Popover
-        trigger="click"
+      <Modal
         visible={this.props.visible}
-        onVisibleChange={this.props.handleVisibleChange}
         title="Invite Users"
-        content={this.getContent()}
+        width={600}
+        footer={
+          <Button onClick={this.sendInvite} type="primary">
+            Send Invites
+          </Button>
+        }
+        onCancel={() => this.props.handleVisibleChange(false)}
       >
-        {this.props.children}
-      </Popover>
+        {this.getContent()}
+      </Modal>
     );
   }
 }
@@ -280,18 +310,16 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
         </Col>
         <Col span={6}>
           <FormItem>
-            {
-              <Button
-                size="large"
-                type="primary"
-                icon="plus"
-                style={{ width: "100%" }}
-                htmlType="submit"
-                disabled={hasErrors(getFieldsError())}
-              >
-                Create
-              </Button>
-            }
+            <Button
+              size="large"
+              type="primary"
+              icon="plus"
+              style={{ width: "100%" }}
+              htmlType="submit"
+              disabled={hasErrors(getFieldsError())}
+            >
+              Create
+            </Button>
           </FormItem>
         </Col>
       </Row>
@@ -304,7 +332,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
     currentStep: 0,
     datastores: [],
     organizationName: "",
-    showDatasetUploadModal: false,
+    isDatasetUploadModalVisible: false,
+    isInviteModalVisible: false,
     datasetNameToImport: null,
   };
 
@@ -325,7 +354,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
   advanceStep = () => {
     this.setState(prevState => ({
       currentStep: prevState.currentStep + 1,
-      showDatasetUploadModal: false,
+      isDatasetUploadModalVisible: false,
+      isInviteModalVisible: false,
       datasetNameToImport: null,
     }));
   };
@@ -403,20 +433,20 @@ class OnboardingView extends React.PureComponent<Props, State> {
       }
       icon={<Icon type="file-add" className="icon-big" />}
     >
-      {this.state.showDatasetUploadModal && (
+      {this.state.isDatasetUploadModalVisible && (
         <Modal
           visible
           width="85%"
           footer={null}
           maskClosable={false}
-          onCancel={() => this.setState({ showDatasetUploadModal: false })}
+          onCancel={() => this.setState({ isDatasetUploadModalVisible: false })}
         >
           <DatasetUploadView
             datastores={this.state.datastores}
             onUploaded={async (_organization: string, datasetName: string) => {
               this.setState({
                 datasetNameToImport: datasetName,
-                showDatasetUploadModal: false,
+                isDatasetUploadModalVisible: false,
               });
             }}
             withoutCard
@@ -441,7 +471,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           header="Upload Dataset"
           icon={<Icon type="cloud-upload-o" />}
           action={
-            <Button onClick={() => this.setState({ showDatasetUploadModal: true })}>
+            <Button onClick={() => this.setState({ isDatasetUploadModalVisible: true })}>
               Upload your dataset
             </Button>
           }
@@ -505,13 +535,16 @@ class OnboardingView extends React.PureComponent<Props, State> {
           formats and upload processes webKnossos supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-          <InviteUsersPopover
+          <a onClick={() => this.setState({ isInviteModalVisible: true })} href="#">
+            Invite users
+          </a>{" "}
+          <InviteUsersModal
+            visible={this.state.isInviteModalVisible}
+            handleVisibleChange={isInviteModalVisible => this.setState({ isInviteModalVisible })}
             organizationName={
               this.props.activeUser != null ? this.props.activeUser.organization : ""
             }
-          >
-            <a href="#">Invite users</a>{" "}
-          </InviteUsersPopover>
+          />
           and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
           permissions and task assignments.
         </FeatureCard>

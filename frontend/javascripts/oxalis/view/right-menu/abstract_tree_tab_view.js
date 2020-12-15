@@ -16,6 +16,7 @@ import AbstractTreeRenderer, {
 import window from "libs/window";
 
 type OwnProps = {|
+  // eslint-disable-next-line react/no-unused-prop-types
   portalKey: string,
 |};
 type StateProps = {|

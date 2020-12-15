@@ -3,7 +3,6 @@
 import {
   Divider,
   Form,
-  Popover,
   Modal,
   Input,
   Button,
@@ -34,7 +33,6 @@ import renderIndependently from "libs/render_independently";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
-const TextArea = { Input };
 
 type StateProps = {|
   activeUser: ?APIUser,
@@ -48,6 +46,7 @@ type State = {
   organizationName: string,
   datasetNameToImport: ?string,
   isDatasetUploadModalVisible: boolean,
+  isInviteModalVisible: boolean,
 };
 
 export function WhatsNextBanner() {
@@ -187,12 +186,14 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   );
 }
 
-export class InviteUsersModal extends React.Component<{
-  organizationName: string,
-  visible?: boolean,
-  handleVisibleChange?: Function,
-  children: Node,
-}> {
+export class InviteUsersModal extends React.Component<
+  {
+    organizationName: string,
+    visible?: boolean,
+    handleVisibleChange: Function,
+  },
+  { inviteesString: string },
+> {
   state = {
     inviteesString: "",
   };
@@ -216,7 +217,7 @@ export class InviteUsersModal extends React.Component<{
     const incorrectAddresses = addresses.filter(address => !address.includes("@"));
 
     if (incorrectAddresses.length > 0) {
-      Toast.error(`Couldn't recognize this email address: ${incorrectAddresses}`);
+      Toast.error(`Couldn't recognize this email address: ${incorrectAddresses[0]}`);
       return;
     }
 
@@ -309,18 +310,16 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
         </Col>
         <Col span={6}>
           <FormItem>
-            {
-              <Button
-                size="large"
-                type="primary"
-                icon="plus"
-                style={{ width: "100%" }}
-                htmlType="submit"
-                disabled={hasErrors(getFieldsError())}
-              >
-                Create
-              </Button>
-            }
+            <Button
+              size="large"
+              type="primary"
+              icon="plus"
+              style={{ width: "100%" }}
+              htmlType="submit"
+              disabled={hasErrors(getFieldsError())}
+            >
+              Create
+            </Button>
           </FormItem>
         </Col>
       </Row>

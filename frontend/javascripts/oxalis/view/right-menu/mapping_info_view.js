@@ -1,7 +1,5 @@
-/**
- * mapping_info_view.js
- * @flow
- */
+// @flow
+
 import { Icon, Select, Switch, Table, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";

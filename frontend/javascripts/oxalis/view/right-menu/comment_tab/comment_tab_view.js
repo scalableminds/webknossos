@@ -78,6 +78,7 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
 }
 
 type OwnProps = {|
+  // eslint-disable-next-line react/no-unused-prop-types
   portalKey: string,
 |};
 type StateProps = {|

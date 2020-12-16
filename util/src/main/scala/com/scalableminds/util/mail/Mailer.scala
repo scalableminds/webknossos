@@ -38,8 +38,6 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
     if (conf.enabled && mail.recipients.exists(_.trim != "")) {
       if (conf.logToStdout) {
         logger.info(s"Sending mail: $mail")
-      } else {
-        logger.info("hello?")
       }
 
       val multiPartMail: MultiPartEmail = createEmail(mail)

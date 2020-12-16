@@ -22,12 +22,13 @@ class DefaultMails @Inject()(conf: WkConf) {
   def registerAdminNotifyerMail(name: String,
                                 email: String,
                                 brainDBResult: Option[String],
-                                organization: Organization): Mail =
+                                organization: Organization,
+                                autoActivate: Boolean): Mail =
     Mail(
       from = defaultSender,
       subject =
         s"webKnossos | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
-      bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri).body,
+      bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri, autoActivate).body,
       recipients = List(organization.newUserMailingList)
     )
 

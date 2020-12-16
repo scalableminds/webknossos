@@ -236,7 +236,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                 } else {
                   Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult, autoActivate))
                 }
-                Mailer ! Send(defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization))
+                Mailer ! Send(
+                  defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult, organization, autoActivate))
                 Ok
               }
             }
@@ -319,7 +320,9 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.registerAdminNotifyerMail(request.identity.name, userEmail, None, organization))
+      _ = Mailer ! Send(
+        defaultMails
+          .registerAdminNotifyerMail(request.identity.name, userEmail, None, organization, invite.autoActivate))
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
     } yield Ok
   }

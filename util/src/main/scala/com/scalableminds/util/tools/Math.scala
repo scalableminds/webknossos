@@ -1,8 +1,6 @@
 package com.scalableminds.util.tools
 
-import java.nio.{ByteBuffer, ByteOrder}
-
-import Numeric.Implicits._
+import scala.Numeric.Implicits._
 
 object Math {
   val RotationMatrixSize3D = 16

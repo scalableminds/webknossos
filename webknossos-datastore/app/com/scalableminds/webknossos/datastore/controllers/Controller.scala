@@ -27,16 +27,16 @@ trait RemoteOriginHelpers {
   def AllowRemoteOrigin(f: => Future[Result])(implicit ec: ExecutionContext): Future[Result] =
     f.map(addHeadersToResult)
 
-  def AllowRemoteOrigin(f: => Result)(implicit ec: ExecutionContext): Result =
+  def AllowRemoteOrigin(f: => Result): Result =
     addHeadersToResult(f)
 
-  def addHeadersToResult(result: Result)(implicit ec: ExecutionContext): Result =
+  def addHeadersToResult(result: Result): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
 
   case class AllowRemoteOrigin[A](action: Action[A])(implicit val executionContext: ExecutionContext)
       extends Action[A] {
 
-    lazy val parser = action.parser
+    lazy val parser: BodyParser[A] = action.parser
 
     def apply(request: Request[A]): Future[Result] =
       AllowRemoteOrigin(action(request))
@@ -45,13 +45,13 @@ trait RemoteOriginHelpers {
 
 trait ValidationHelpers {
 
-  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext) = bodyParsers.json.validate(
+  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext): BodyParser[A] = bodyParsers.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
 
   def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers,
                                                            companion: GeneratedMessageCompanion[A],
-                                                           ec: ExecutionContext) =
+                                                           ec: ExecutionContext): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())

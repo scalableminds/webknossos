@@ -143,11 +143,10 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
     PathUtils.listFiles(dataDirectory, knossosFileFilter).flatMap(_.headOption).flatMap { file =>
       try {
         logger.trace(s"Accessing file: ${file.toAbsolutePath}")
-        val t = System.currentTimeMillis
         val r = new RandomAccessFile(file.toString, "r")
         Full(r)
       } catch {
-        case e: FileNotFoundException =>
+        case _: FileNotFoundException =>
           logger.info(s"DataStore couldn't find file: ${file.toAbsolutePath}")
           Empty
         case e: Exception =>

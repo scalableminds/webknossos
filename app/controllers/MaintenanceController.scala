@@ -6,16 +6,16 @@ import javax.inject.Inject
 import models.user.MultiUserDAO
 import oxalis.security.WkEnv
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.{SQLClient, SimpleSQLDAO}
+import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
+import utils.{SQLClient, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
 
 class MaintenanceController @Inject()(
     sil: Silhouette[WkEnv],
     maintenanceDAO: MaintenanceDAO,
-    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

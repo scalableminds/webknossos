@@ -160,6 +160,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
+  "tracing.agglomerate_skeleton.no_cell":
+    "Clicked on the background. Please click on a cell to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
     "Please activate an agglomerate file mapping to load a skeleton for a cell.",
   "tracing.agglomerate_skeleton.no_agglomerate_file":

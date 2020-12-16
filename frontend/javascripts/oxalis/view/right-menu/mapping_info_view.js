@@ -17,7 +17,6 @@ import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admi
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayer,
-  getResolutions,
   getResolutionInfoOfSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
@@ -154,29 +153,17 @@ class MappingInfoView extends React.Component<Props, State> {
     }
 
     const flycamPosition = position;
-    const resolutions = getResolutions(dataset);
+
     // While render missing data black is not active and there is no segmentation for the current zoom step,
     // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
     // displayed segmentation data to get the correct segment ids for the camera and the mouse position.
-    const getNextUsableZoomStepForPosition = pos => {
-      let usableZoomStep = zoomStep;
-      while (
-        pos &&
-        usableZoomStep < resolutions.length - 1 &&
-        !cube.hasDataAtPositionAndZoomStep(pos, usableZoomStep)
-      ) {
-        usableZoomStep++;
-      }
-      return usableZoomStep;
-    };
-
     const usableZoomStepForCameraPosition = renderMissingDataBlack
       ? zoomStep
-      : getNextUsableZoomStepForPosition(flycamPosition);
+      : cube.getNextUsableZoomStepForPosition(flycamPosition, zoomStep);
     const usableZoomStepForMousePosition =
       renderMissingDataBlack || globalMousePosition == null
         ? zoomStep
-        : getNextUsableZoomStepForPosition(globalMousePosition);
+        : cube.getNextUsableZoomStepForPosition(globalMousePosition, zoomStep);
 
     const getResolutionOfZoomStepAsString = usedZoomStep => {
       const usedResolution = getResolutionInfoOfSegmentationLayer(dataset).getResolutionByIndex(

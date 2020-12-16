@@ -33,29 +33,45 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
     return;
   }
   const state = Store.getState();
-  const cellId = segmentation.cube.getMappedDataValue(position, getRequestLogZoomStep(state));
-  if (cellId > 0) {
-    const layerName = segmentation.name;
-    const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const zoomStep = getRequestLogZoomStep(state);
 
-    if (mappingName == null) {
-      Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
-      return;
-    }
+  // While render missing data black is not active and there is no segmentation for the current zoom step,
+  // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
+  // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
+  const usableZoomStep = renderMissingDataBlack
+    ? zoomStep
+    : segmentation.cube.getNextUsableZoomStepForPosition(position, zoomStep);
 
-    if (mappingType !== "HDF5") {
-      Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
-      return;
-    }
+  const cellId = segmentation.cube.getMappedDataValue(position, usableZoomStep);
 
-    const { dataset } = state;
+  if (cellId === 0) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
+    return;
+  }
 
-    const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
-    await progressCallback(
-      false,
-      `Loading skeleton for agglomerate ${cellId} with mapping ${mappingName}`,
-    );
+  const layerName = segmentation.name;
+  const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
 
+  if (mappingName == null) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
+    return;
+  }
+
+  if (mappingType !== "HDF5") {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+    return;
+  }
+
+  const { dataset } = state;
+
+  const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
+  const { hideFn } = await progressCallback(
+    false,
+    `Loading skeleton for agglomerate ${cellId} with mapping ${mappingName}`,
+  );
+
+  try {
     const result = await getAgglomerateSkeleton(
       dataset.dataStore.url,
       dataset,
@@ -79,9 +95,13 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
         parsedTracing.treeGroups,
       ),
     );
-
-    await progressCallback(true, "Skeleton generation done.");
+  } catch (e) {
+    console.error(e);
+    hideFn();
+    return;
   }
+
+  await progressCallback(true, "Skeleton generation done.");
 }
 
 function isosurfaceLeftClick(pos: Point2) {

@@ -171,6 +171,9 @@ class Request {
         },
         useWebworkerForArrayBuffer: true,
       }),
+      // Usually the webworker reads the arrayBuffer, but if no worker should be used
+      // the arrayBuffer must still be read from the response
+      options.useWebworkerForArrayBuffer === false ? response => response.arrayBuffer() : null,
     );
 
   // IN:  JSON

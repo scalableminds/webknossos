@@ -43,7 +43,8 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 class FossilDBClient(collection: String, config: TracingStoreConfig) extends FoxImplicits with LazyLogging {
   private val address = config.Tracingstore.Fossildb.address
   private val port = config.Tracingstore.Fossildb.port
-  private val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
+  private val channel =
+    NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 

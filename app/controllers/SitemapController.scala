@@ -8,8 +8,7 @@ import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.mvc.{Action, AnyContent}
 import utils.SitemapWriter
 
-class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv])
-    extends Controller {
+class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[WkEnv]) extends Controller {
 
   def getSitemap(prefix: Option[String] = None): Action[AnyContent] = sil.UserAwareAction {
     val downloadStream = sitemapWriter.toSitemapStream(prefix)

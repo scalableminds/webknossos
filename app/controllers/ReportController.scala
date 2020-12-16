@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationType}
@@ -27,7 +27,9 @@ case class ProjectProgressEntry(projectName: String,
                                 finishedInstances: Int,
                                 activeInstances: Int,
                                 billedMilliseconds: Long)
-object ProjectProgressEntry { implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry] }
+object ProjectProgressEntry {
+  implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
+}
 
 class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
@@ -142,12 +144,11 @@ class ReportController @Inject()(reportDAO: ReportDAO,
       team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND
       users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
       nonAdminUsers <- Fox.filterNot(users)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
-      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)
     } yield Ok(Json.toJson(entries))
   }
 
-  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(
-      implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
+  private def getAllAvailableTaskCountsAndProjects(users: Seq[User]): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
         assignmentCountsByProject <- reportDAO.getAssignmentsByProjectsFor(user._id)

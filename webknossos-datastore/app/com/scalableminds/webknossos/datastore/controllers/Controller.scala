@@ -45,9 +45,10 @@ trait RemoteOriginHelpers {
 
 trait ValidationHelpers {
 
-  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext): BodyParser[A] = bodyParsers.json.validate(
-    _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
-  )
+  def validateJson[A: Reads](implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext): BodyParser[A] =
+    bodyParsers.json.validate(
+      _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
+    )
 
   def validateProto[A <: GeneratedMessage with Message[A]](implicit bodyParsers: PlayBodyParsers,
                                                            companion: GeneratedMessageCompanion[A],

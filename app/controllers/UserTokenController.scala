@@ -4,7 +4,12 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  AccessMode,
+  AccessResourceType,
+  UserAccessAnswer,
+  UserAccessRequest
+}
 import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
@@ -45,16 +50,16 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] = Action.async(validateJson[UserAccessRequest]) {
-    implicit request =>
-      dataStoreService.validateAccess(name) { dataStore =>
+  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] =
+    Action.async(validateJson[UserAccessRequest]) { implicit request =>
+      dataStoreService.validateAccess(name) { _ =>
         validateUserAccess(request.body, token)
       }
-  }
+    }
 
   def validateAccessViaTracingstore(name: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      tracingStoreService.validateAccess(name) { tracingStore =>
+      tracingStoreService.validateAccess(name) { _ =>
         validateUserAccess(request.body, token)
       }
     }
@@ -157,7 +162,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
       allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
     } yield {
-      if (allowed) UserAccessAnswer(granted = true) else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
+      if (allowed) UserAccessAnswer(granted = true)
+      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
 }

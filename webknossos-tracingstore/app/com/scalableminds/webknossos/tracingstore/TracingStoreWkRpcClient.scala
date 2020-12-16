@@ -4,7 +4,12 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest, WkRpcClient}
+import com.scalableminds.webknossos.datastore.services.{
+  AccessTokenService,
+  UserAccessAnswer,
+  UserAccessRequest,
+  WkRpcClient
+}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.cache.SyncCacheApi
 import play.api.inject.ApplicationLifecycle

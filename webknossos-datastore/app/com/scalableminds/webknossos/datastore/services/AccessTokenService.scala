@@ -22,7 +22,8 @@ object AccessResourceType extends Enumeration {
 
   val datasource, tracing, webknossos = Value
 
-  implicit val jsonFormat: Format[AccessResourceType.Value] = Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
+  implicit val jsonFormat: Format[AccessResourceType.Value] =
+    Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
@@ -89,7 +90,8 @@ trait AccessTokenService {
     }
   }
 
-  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer, block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer,
+                                              block: => Future[Result]): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block

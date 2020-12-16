@@ -35,7 +35,11 @@ class TimeController @Inject()(userService: UserService,
     }
 
   //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
+  def getWorkingHoursOfUsers(userString: String,
+                             year: Int,
+                             month: Int,
+                             startDay: Option[Int],
+                             endDay: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         users <- Fox.combined(
@@ -50,8 +54,8 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
+  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId)
         user <- userService.findOneById(userIdValidated, useCache = false) ?~> "user.notFound" ~> NOT_FOUND
@@ -61,7 +65,7 @@ class TimeController @Inject()(userService: UserService,
       } yield {
         Ok(js)
       }
-  }
+    }
 
   //helper methods
 

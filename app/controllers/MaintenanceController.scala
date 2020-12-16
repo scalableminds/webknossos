@@ -12,10 +12,9 @@ import utils.{SQLClient, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
 
-class MaintenanceController @Inject()(
-    sil: Silhouette[WkEnv],
-    maintenanceDAO: MaintenanceDAO,
-    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
+class MaintenanceController @Inject()(sil: Silhouette[WkEnv],
+                                      maintenanceDAO: MaintenanceDAO,
+                                      multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 

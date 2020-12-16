@@ -1,7 +1,6 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
@@ -14,9 +13,9 @@ import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
-import slick.jdbc.PostgresProfile.api._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -153,8 +152,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runCubingJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
+  def runCubingJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
@@ -167,6 +166,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
-  }
+    }
 
 }

@@ -340,8 +340,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
-                                                                                        m: MessagesProvider) = {
+  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)

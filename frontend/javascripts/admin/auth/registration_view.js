@@ -4,20 +4,15 @@ import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import {
-  getOrganization,
-  getDefaultOrganization,
-  getOrganizationByInvite,
-} from "admin/admin_rest_api";
+import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationForm from "./registration_form";
 
 type Props = {
   organizationName?: string,
-  inviteToken?: ?string,
 };
 
-function RegistrationView({ organizationName, inviteToken }: Props) {
+function RegistrationView({ organizationName }: Props) {
   const history = useHistory();
   const [organization, setOrganization] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,9 +21,7 @@ function RegistrationView({ organizationName, inviteToken }: Props) {
     (async () => {
       setIsLoading(true);
       try {
-        if (inviteToken != null) {
-          setOrganization(await getOrganizationByInvite(inviteToken));
-        } else if (organizationName != null) {
+        if (organizationName != null) {
           setOrganization(await getOrganization(organizationName));
         } else {
           const defaultOrg = await getDefaultOrganization();
@@ -38,7 +31,7 @@ function RegistrationView({ organizationName, inviteToken }: Props) {
         setIsLoading(false);
       }
     })();
-  }, [organizationName, inviteToken]);
+  }, [organizationName]);
 
   let content = null;
   if (isLoading) {

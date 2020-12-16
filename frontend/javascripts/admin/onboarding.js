@@ -187,7 +187,9 @@ export class InviteUsersModal extends React.Component<
     const incorrectAddresses = addresses.filter(address => !address.includes("@"));
 
     if (incorrectAddresses.length > 0) {
-      Toast.error(`Couldn't recognize this email address: ${incorrectAddresses[0]}`);
+      Toast.error(
+        `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
+      );
       return;
     }
 

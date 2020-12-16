@@ -219,7 +219,7 @@ export class InviteUsersModal extends React.Component<
     }
 
     await sendInvitesForOrganization(addresses, true);
-    Toast.success("An invitation was sent to provided email addresses.");
+    Toast.success("An invitation was sent to the provided email addresses.");
     this.setState({ inviteesString: "" });
     this.props.handleVisibleChange(false);
   };

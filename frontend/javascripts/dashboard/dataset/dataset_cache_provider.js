@@ -116,6 +116,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
             dataset.owningOrganization === datasetId.owningOrganization
           ) {
             const { lastUsedByUser } = dataset;
+            // $FlowFixMe[incompatible-type]
             return {
               ...updatedDataset,
               lastUsedByUser,

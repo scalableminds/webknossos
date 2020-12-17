@@ -158,11 +158,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
       val edgeCount = edgesRange(1) - edgesRange(0)
       if (nodeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
         throw new Exception(
-          s"Agglomerate has too many nodes ($nodeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
+          s"Agglomerate has too many nodes ($nodeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit})")
       }
       if (edgeCount > config.Braingames.Binary.agglomerateSkeletonEdgeLimit) {
         throw new Exception(
-          s"Agglomerate has too many edges ($edgeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit}")
+          s"Agglomerate has too many edges ($edgeCount > ${config.Braingames.Binary.agglomerateSkeletonEdgeLimit})")
       }
       val positions: Array[Array[Long]] =
         reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", nodeCount.toInt, 3, positionsRange(0), 0)

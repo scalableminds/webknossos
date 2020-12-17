@@ -11,7 +11,6 @@ import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
-import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3 } from "oxalis/constants";
 import { Vector3Input } from "libs/vector_input";
 import {
@@ -35,8 +34,7 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-
-const ButtonGroup = Button.Group;
+import { capitalize } from "libs/utils";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -153,29 +151,27 @@ const getCheckboxStyle = isLoaded =>
 
 class MeshesView extends React.Component<
   Props,
-  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number, selectedListCellId: ?number },
+  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number },
 > {
   state = {
     currentlyEditedMesh: null,
     hoveredListItem: null,
-    selectedListCellId: null,
   };
 
-  getSegmentationCube(): Cube {
-    const layer = Model.getSegmentationLayer();
-    if (!layer) {
-      throw new Error("No segmentation layer found");
-    }
-    return layer.cube;
-  }
-
   render() {
-    const getIdForPos = pos =>
-      this.getSegmentationCube().getDataValue(pos, null, this.props.zoomStep);
+    const getSegmentationCube = () => {
+      const layer = Model.getSegmentationLayer();
+      if (!layer) {
+        throw new Error("No segmentation layer found");
+      }
+      return layer.cube;
+    };
+    const getIdForPos = pos => getSegmentationCube().getDataValue(pos, null, this.props.zoomStep);
 
-    const moveToIsosurface = (seedPosition: Vector3) => {
+    const moveTo = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition));
     };
+
     const getDownloadButton = (segmentId: number) => (
       <Tooltip title="Download Isosurface">
         <Icon
@@ -201,7 +197,12 @@ class MeshesView extends React.Component<
         <Icon
           key="delete-button"
           type="delete"
-          onClick={() => Store.dispatch(removeIsosurfaceAction(segmentId))}
+          onClick={() => {
+            // does not work properly for imported isosurfaces
+            Store.dispatch(removeIsosurfaceAction(segmentId));
+            // reset the active isosurface id so the deleted one is not reloaded immediately
+            this.props.changeActiveIsosurface(0, [0, 0, 0]);
+          }}
         />
       </Tooltip>
     );
@@ -209,6 +210,7 @@ class MeshesView extends React.Component<
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
+
     const getImportButton = () => (
       <React.Fragment>
         <Upload
@@ -218,13 +220,13 @@ class MeshesView extends React.Component<
             this.props.onStlUpload(file);
           }}
           showUploadList={false}
-          style={{ fontSize: 16, color: "#2a3a48" }}
+          style={{ fontSize: 16, color: "#2a3a48", cursor: "pointer" }}
           disabled={this.props.isImporting}
         >
           <Tooltip
             title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
           >
-            <Icon type="plus-square" />
+            <Icon type={this.props.isImporting ? "loading" : "plus-square"} />
           </Tooltip>
         </Upload>
       </React.Fragment>
@@ -241,45 +243,33 @@ class MeshesView extends React.Component<
     const getMeshesHeader = () => (
       <React.Fragment>
         Meshes{" "}
-        <Tooltip title="Meshes.">
+        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport.">
           <Icon type="info-circle" />
         </Tooltip>
         {getImportButton()}
       </React.Fragment>
     );
 
-    const getLoadIsosurfaceForActiveCellButton = () => (
-      <Button
-        onClick={() => {
-          this.props.changeActiveIsosurfaceId(
-            this.props.activeCellId,
-            getPosition(this.props.flycam),
-          );
-        }}
-      >
-        Load Isosurface for Active Cell
-      </Button>
-    );
-
-    const getLoadIsosurfaceForCenteredCellButton = () => (
+    const getLoadIsosurfaceCellButton = (type: string) => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
-          this.props.changeActiveIsosurfaceId(getIdForPos(pos), pos);
+          const id = type === "active" ? this.props.activeCellId : getIdForPos(pos);
+          Store.dispatch(changeActiveIsosurfaceCellAction(id, pos));
         }}
       >
-        Load Isosurface for Centered Cell
+        Load Isosurface for {capitalize(type)} Cell
       </Button>
     );
 
     const renderListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
-      const isActiveCell = segmentId === this.state.selectedListCellId;
-      const visibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
+      const centeredCell = getIdForPos(getPosition(this.props.flycam));
+      const actionVisibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
         <List.Item
           actions={[
-            <div key="actions" style={{ visibility }}>
+            <div key="actions" style={{ actionVisibility }}>
               {getDownloadButton(segmentId)}
               {getRefreshButton(segmentId, isLoading)}
               {getDeleteButton(segmentId)}
@@ -287,7 +277,7 @@ class MeshesView extends React.Component<
           ]}
           style={{
             padding: 0,
-            backgroundColor: isActiveCell ? "#91d5ff" : "white",
+            backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
             cursor: "pointer",
           }}
           onMouseEnter={() => {
@@ -296,12 +286,13 @@ class MeshesView extends React.Component<
           onMouseLeave={() => {
             this.setState({ hoveredListItem: null });
           }}
-          onClick={() => {
-            moveToIsosurface(seedPosition);
-            this.setState({ selectedListCellId: segmentId });
-          }}
         >
-          <div style={{ paddingLeft: 5 }}>
+          <div
+            style={{ paddingLeft: 5 }}
+            onClick={() => {
+              moveTo(seedPosition);
+            }}
+          >
             <span
               className="circle"
               style={{
@@ -318,10 +309,8 @@ class MeshesView extends React.Component<
     return (
       <div className="padded-tab-content">
         {getIsosurfacesHeader()}
-        <ButtonGroup>
-          {getLoadIsosurfaceForCenteredCellButton()}
-          {this.props.activeCellId != null && getLoadIsosurfaceForActiveCellButton()}
-        </ButtonGroup>
+        {getLoadIsosurfaceCellButton("centered")}
+        {this.props.activeCellId != null && getLoadIsosurfaceCellButton("active")}
         <List
           dataSource={Object.values(this.props.isosurfaces)}
           size="small"

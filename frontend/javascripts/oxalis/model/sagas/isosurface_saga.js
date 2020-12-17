@@ -126,7 +126,7 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-
+  console.log("change");
   yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
 }
 
@@ -151,7 +151,8 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
-  yield* loadIsosurfaceForSegmentId(segmentId, seedPosition, removeExistingIsosurface);
+  console.log("ensure", cellId, seedPosition, maybeFlycamAction);
+  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
 function* getInfoForIsosurfaceLoading(): Saga<{
@@ -176,13 +177,9 @@ function* loadIsosurfaceForSegmentId(
   seedPosition: ?Vector3,
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
-  const {
-    renderIsosurfaces,
-    dataset,
-    layer,
-    zoomStep,
-    resolutionInfo,
-  } = yield* getInfoForIsosurfaceLoading();
+  const { renderIsosurfaces, dataset, layer, zoomStep, resolutionInfo } = yield* call(
+    getInfoForIsosurfaceLoading,
+  );
 
   if (!renderIsosurfaces) {
     return;
@@ -345,6 +342,7 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const geometry = yield* call(parseStlBuffer, buffer);
   getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
   yield* put(setImportingMeshStateAction(false));
+  yield* put(addIsosurfaceAction(segmentId, [0, 0, 0])); // TODO: use good position as seed
 }
 
 function* removeIsosurface(

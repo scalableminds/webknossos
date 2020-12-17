@@ -13,7 +13,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 
-function viewLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
+function segmentationLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
   if (!event.shiftKey) {
     return;
   }
@@ -25,16 +25,29 @@ function viewLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
   }
 }
 
-async function agglomerateSkeletonLeftClick(pos: Point2) {
-  const position = calculateGlobalPos(pos);
-
+export async function agglomerateSkeletonLeftClick(pos: Point2) {
   const segmentation = Model.getSegmentationLayer();
   if (!segmentation) {
     return;
   }
   const state = Store.getState();
+
+  const layerName =
+    segmentation.fallbackLayer != null ? segmentation.fallbackLayer : segmentation.name;
+
+  const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
+  if (mappingName == null) {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
+    return;
+  }
+  if (mappingType !== "HDF5") {
+    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+    return;
+  }
+
   const { renderMissingDataBlack } = state.datasetConfiguration;
   const zoomStep = getRequestLogZoomStep(state);
+  const position = calculateGlobalPos(pos);
 
   // While render missing data black is not active and there is no segmentation for the current zoom step,
   // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
@@ -44,22 +57,8 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
     : segmentation.cube.getNextUsableZoomStepForPosition(position, zoomStep);
 
   const cellId = segmentation.cube.getMappedDataValue(position, usableZoomStep);
-
   if (cellId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return;
-  }
-
-  const layerName = segmentation.name;
-  const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
-
-  if (mappingName == null) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
-    return;
-  }
-
-  if (mappingType !== "HDF5") {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
     return;
   }
 
@@ -104,7 +103,7 @@ async function agglomerateSkeletonLeftClick(pos: Point2) {
   await progressCallback(true, "Skeleton generation done.");
 }
 
-function isosurfaceLeftClick(pos: Point2) {
+export function isosurfaceLeftClick(pos: Point2) {
   let cellId = 0;
   const position = calculateGlobalPos(pos);
   const volumeTracingMaybe = Store.getState().tracing.volume;
@@ -125,4 +124,4 @@ function isosurfaceLeftClick(pos: Point2) {
   }
 }
 
-export default viewLeftClick;
+export default segmentationLeftClick;

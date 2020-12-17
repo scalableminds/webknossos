@@ -32,7 +32,6 @@ import type {
   ServerNode,
   ServerBranchPoint,
 } from "types/api_flow_types";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
@@ -46,6 +45,8 @@ import Constants, { NODE_ID_REF_REGEX, type Vector3 } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
+
+export const DEFAULT_NODE_RADIUS = 1.0;
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -132,8 +133,9 @@ export function createNode(
 
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * getBaseVoxel(state.dataset.dataSource.scale);
-    const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
+    const radius = activeNodeMaybe
+      .map(activeNode => activeNode.radius)
+      .getOrElse(DEFAULT_NODE_RADIUS);
 
     // Find new node id by increasing the max node id.
     const nextNewId = skeletonTracing.cachedMaxNodeId + 1;

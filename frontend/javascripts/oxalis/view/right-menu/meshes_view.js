@@ -28,11 +28,8 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
-import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-const ButtonGroup = Button.Group;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -223,7 +220,11 @@ class MeshesView extends React.Component<
         </Tooltip>
         {getImportButton()}
       </React.Fragment>
-    );
+    ); /* 
+    const getLoadIsosurfaceForActiveCellButton = () => {
+      <Button onClick={isosurface}> Load Isosurface for Active Cell </Button>;
+    };
+    const getLoadIsosurfaceForCenteredCellButton = () => {}; */
 
     const renderListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;

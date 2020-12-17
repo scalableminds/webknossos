@@ -14,8 +14,11 @@ export type IsosurfaceAction = ChangeActiveIsosurfaceCellAction;
 export const changeActiveIsosurfaceCellAction = (
   cellId: number,
   seedPosition: Vector3,
-): ChangeActiveIsosurfaceCellAction => ({
-  type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
-  cellId,
-  seedPosition,
-});
+): ChangeActiveIsosurfaceCellAction => {
+  console.log("change active cell", cellId, seedPosition);
+  return {
+    type: "CHANGE_ACTIVE_ISOSURFACE_CELL",
+    cellId,
+    seedPosition,
+  };
+};

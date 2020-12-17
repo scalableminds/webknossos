@@ -151,19 +151,45 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
+  yield* loadIsosurfaceForSegmentId(segmentId, seedPosition, removeExistingIsosurface);
+}
+
+function* getInfoForIsosurfaceLoading(): Saga<{
+  renderIsosurfaces: boolean,
+  dataset: APIDataset,
+  layer: ?DataLayer,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+}> {
   const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
-    return;
-  }
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
-  if (!layer) {
-    return;
-  }
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
+  return { renderIsosurfaces, dataset, layer, zoomStep, resolutionInfo };
+}
+
+function* loadIsosurfaceForSegmentId(
+  segmentId: number,
+  seedPosition: ?Vector3,
+  removeExistingIsosurface: boolean = false,
+): Saga<void> {
+  const {
+    renderIsosurfaces,
+    dataset,
+    layer,
+    zoomStep,
+    resolutionInfo,
+  } = yield* getInfoForIsosurfaceLoading();
+
+  if (!renderIsosurfaces) {
+    return;
+  }
+  if (!layer) {
+    return;
+  }
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(

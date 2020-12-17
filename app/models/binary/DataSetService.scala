@@ -41,7 +41,6 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
-
   val unreportedStatus = "No longer available on datastore."
   val initialTeamsTimeoutMs: Long = 5 * 60 * 1000
 
@@ -50,6 +49,11 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def assertNewDataSetName(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
+
+  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore) = {
+    val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), unreportedStatus)
+    createDataSet(dataStore, organizationName, unreportedDatasource)
+  }
 
   def createDataSet(
       dataStore: DataStore,

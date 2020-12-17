@@ -2,10 +2,10 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{AccessDeniedException, Files, Path}
-
 import com.google.inject.Inject
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
@@ -27,6 +27,7 @@ object UploadInformation {
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSourceService: DataSourceService)
     extends LazyLogging
+    with DataSetDeleter
     with FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
@@ -79,6 +80,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
+    val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
 
     def ensureDirectory(dir: Path) =
       try {
@@ -94,7 +96,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     }
 
     val dataSourceDir =
-      if (uploadInformation.needsConversion.getOrElse(false))
+      if (datasetNeedsConversion)
         dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
@@ -119,12 +121,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       _ = this.synchronized { zipFile.delete() }
       _ <- unzipResult match {
         case Full(_) =>
-          if (uploadInformation.needsConversion.getOrElse(false))
+          if (datasetNeedsConversion)
             Fox.successful(())
           else
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
         case e =>
+          deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion)
+          dataSourceRepository.cleanupDataSource(dataSourceId)
           val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
           logger.warn(errorMsg)
           Fox.failure(errorMsg)

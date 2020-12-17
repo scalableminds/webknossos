@@ -81,6 +81,7 @@ PUT           /datastores/:name/datasources                                     
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
 POST          /datastores/:name/addInitialTeams                                 controllers.WKDataStoreController.addDataSetInitialTeams(name: String, token: String, dataSetName: String)
+POST          /datastores/:name/deleteErroneous                                 controllers.WKDataStoreController.deleteErroneous(name: String)
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                       controllers.DataStoreController.create
 DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)

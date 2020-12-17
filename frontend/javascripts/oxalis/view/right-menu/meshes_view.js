@@ -10,6 +10,8 @@ import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
+import Model from "oxalis/model";
+import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3 } from "oxalis/constants";
 import { Vector3Input } from "libs/vector_input";
 import {
@@ -24,12 +26,17 @@ import {
   refreshIsosurfaceAction,
 } from "oxalis/model/actions/annotation_actions";
 import { updateDatasetSettingAction } from "oxalis/model/actions/settings_actions";
+import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { isIsosurfaceStl } from "oxalis/model/sagas/isosurface_saga";
 import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+
+const ButtonGroup = Button.Group;
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -84,6 +91,10 @@ const mapStateToProps = (state: OxalisState) => ({
   isosurfaces: state.isosurfaces,
   datasetConfiguration: state.datasetConfiguration,
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
+  flycam: state.flycam,
+  activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
+  segmentationLayer: getSegmentationLayer(state.dataset),
+  zoomStep: getRequestLogZoomStep(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -114,6 +125,10 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   downloadIsosurface() {
     dispatch(triggerActiveIsosurfaceDownloadAction());
   },
+  changeActiveIsosurfaceId(cellId: ?number, seedPosition: Vector3) {
+    if (cellId == null) return;
+    dispatch(changeActiveIsosurfaceCellAction(cellId, seedPosition));
+  },
 });
 
 type OwnProps = {|
@@ -138,15 +153,26 @@ const getCheckboxStyle = isLoaded =>
 
 class MeshesView extends React.Component<
   Props,
-  { currentlyEditedMesh: ?MeshMetaData, activeCellId: ?number, hoveredListItem: ?number },
+  { currentlyEditedMesh: ?MeshMetaData, hoveredListItem: ?number, selectedListCellId: ?number },
 > {
   state = {
     currentlyEditedMesh: null,
-    activeCellId: null,
     hoveredListItem: null,
+    selectedListCellId: null,
   };
 
+  getSegmentationCube(): Cube {
+    const layer = Model.getSegmentationLayer();
+    if (!layer) {
+      throw new Error("No segmentation layer found");
+    }
+    return layer.cube;
+  }
+
   render() {
+    const getIdForPos = pos =>
+      this.getSegmentationCube().getDataValue(pos, null, this.props.zoomStep);
+
     const moveToIsosurface = (seedPosition: Vector3) => {
       Store.dispatch(setPositionAction(seedPosition));
     };
@@ -209,7 +235,7 @@ class MeshesView extends React.Component<
         <Tooltip title="Isosurfaces are the 3D representation of a cell.">
           <Icon type="info-circle" />
         </Tooltip>
-        {getImportButton()}
+        {getImportButton()} <br />
       </React.Fragment>
     );
     const getMeshesHeader = () => (
@@ -220,15 +246,35 @@ class MeshesView extends React.Component<
         </Tooltip>
         {getImportButton()}
       </React.Fragment>
-    ); /* 
-    const getLoadIsosurfaceForActiveCellButton = () => {
-      <Button onClick={isosurface}> Load Isosurface for Active Cell </Button>;
-    };
-    const getLoadIsosurfaceForCenteredCellButton = () => {}; */
+    );
+
+    const getLoadIsosurfaceForActiveCellButton = () => (
+      <Button
+        onClick={() => {
+          this.props.changeActiveIsosurfaceId(
+            this.props.activeCellId,
+            getPosition(this.props.flycam),
+          );
+        }}
+      >
+        Load Isosurface for Active Cell
+      </Button>
+    );
+
+    const getLoadIsosurfaceForCenteredCellButton = () => (
+      <Button
+        onClick={() => {
+          const pos = getPosition(this.props.flycam);
+          this.props.changeActiveIsosurfaceId(getIdForPos(pos), pos);
+        }}
+      >
+        Load Isosurface for Centered Cell
+      </Button>
+    );
 
     const renderListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
-      const isActiveCell = segmentId === this.state.activeCellId;
+      const isActiveCell = segmentId === this.state.selectedListCellId;
       const visibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
         <List.Item
@@ -252,7 +298,7 @@ class MeshesView extends React.Component<
           }}
           onClick={() => {
             moveToIsosurface(seedPosition);
-            this.setState({ activeCellId: segmentId });
+            this.setState({ selectedListCellId: segmentId });
           }}
         >
           <div style={{ paddingLeft: 5 }}>
@@ -272,18 +318,20 @@ class MeshesView extends React.Component<
     return (
       <div className="padded-tab-content">
         {getIsosurfacesHeader()}
-        {this.props.datasetConfiguration.renderIsosurfaces && (
-          <List
-            dataSource={Object.values(this.props.isosurfaces)}
-            size="small"
-            split={false}
-            renderItem={renderListItem}
-            locale={{
-              emptyText:
-                "There are no Isosurfaces. You can render one by holding shift and left clicking on a cell.",
-            }}
-          />
-        )}
+        <ButtonGroup>
+          {getLoadIsosurfaceForCenteredCellButton()}
+          {this.props.activeCellId != null && getLoadIsosurfaceForActiveCellButton()}
+        </ButtonGroup>
+        <List
+          dataSource={Object.values(this.props.isosurfaces)}
+          size="small"
+          split={false}
+          renderItem={renderListItem}
+          locale={{
+            emptyText: "There are no Isosurfaces.",
+          }}
+        />
+
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}

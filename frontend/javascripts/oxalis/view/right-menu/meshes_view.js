@@ -186,6 +186,44 @@ class MeshesView extends React.Component<
       `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
     const convertCellIdToCSS = id =>
       convertHSLAToCSSString(jsConvertCellIdToHSLA(id, this.props.mappingColors));
+    const getImportButton = () => (
+      <React.Fragment>
+        <Upload
+          accept=".stl"
+          beforeUpload={() => false}
+          onChange={file => {
+            this.props.onStlUpload(file);
+          }}
+          showUploadList={false}
+          style={{ fontSize: 16, color: "#2a3a48" }}
+          disabled={this.props.isImporting}
+        >
+          <Tooltip
+            title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
+          >
+            <Icon type="plus-square" />
+          </Tooltip>
+        </Upload>
+      </React.Fragment>
+    );
+    const getIsosurfacesHeader = () => (
+      <React.Fragment>
+        Isosurfaces{" "}
+        <Tooltip title="Isosurfaces are the 3D representation of a cell.">
+          <Icon type="info-circle" />
+        </Tooltip>
+        {getImportButton()}
+      </React.Fragment>
+    );
+    const getMeshesHeader = () => (
+      <React.Fragment>
+        Meshes{" "}
+        <Tooltip title="Meshes.">
+          <Icon type="info-circle" />
+        </Tooltip>
+        {getImportButton()}
+      </React.Fragment>
+    );
 
     const renderListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
@@ -232,36 +270,7 @@ class MeshesView extends React.Component<
 
     return (
       <div className="padded-tab-content">
-        <ButtonGroup style={{ marginBottom: 12 }}>
-          <Upload
-            accept=".stl"
-            beforeUpload={() => false}
-            onChange={file => {
-              this.props.onStlUpload(file);
-            }}
-            showUploadList={false}
-          >
-            <ButtonComponent
-              title="Import STL Mesh"
-              loading={this.props.isImporting}
-              faIcon="fas fa-plus"
-            >
-              Import
-            </ButtonComponent>
-          </Upload>
-          {this.props.isHybrid ? null : (
-            <Tooltip title="Download the isosurface of the currently active cell as STL.">
-              <ButtonComponent icon="download" onClick={this.props.downloadIsosurface}>
-                Download
-              </ButtonComponent>
-            </Tooltip>
-          )}
-        </ButtonGroup>
-        <SwitchSetting
-          label="Isosurfaces "
-          value={this.props.datasetConfiguration.renderIsosurfaces}
-          onChange={_.partial(this.props.onChangeDatasetSettings, "renderIsosurfaces")}
-        />
+        {getIsosurfacesHeader()}
         {this.props.datasetConfiguration.renderIsosurfaces && (
           <List
             dataSource={Object.values(this.props.isosurfaces)}
@@ -284,7 +293,7 @@ class MeshesView extends React.Component<
             onCancel={() => this.setState({ currentlyEditedMesh: null })}
           />
         ) : null}
-
+        {getMeshesHeader()}
         {this.props.meshes.map(mesh => {
           // Coerce nullable isLoading to a proper boolean
           const isLoading = mesh.isLoading === true;

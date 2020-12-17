@@ -1,28 +1,13 @@
 // @flow
 
-import {
-  Divider,
-  Form,
-  Modal,
-  Input,
-  Button,
-  Row,
-  Col,
-  Steps,
-  Icon,
-  Card,
-  AutoComplete,
-  Alert,
-} from "antd";
+import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card, AutoComplete, Alert } from "antd";
 import { type RouterHistory, Link, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import Clipboard from "clipboard-js";
 import React, { type Node } from "react";
 
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import Store, { type OxalisState } from "oxalis/store";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
-import { location } from "libs/window";
 import DatasetImportView from "dashboard/dataset/dataset_import_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import RegistrationForm from "admin/auth/registration_form";
@@ -188,7 +173,6 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
 
 export class InviteUsersModal extends React.Component<
   {
-    organizationName: string,
     visible?: boolean,
     handleVisibleChange: Function,
   },
@@ -198,28 +182,19 @@ export class InviteUsersModal extends React.Component<
     inviteesString: "",
   };
 
-  getRegistrationHotLink(): string {
-    return `${location.origin}/auth/register?organizationName=${encodeURIComponent(
-      this.props.organizationName,
-    )}`;
-  }
-
-  copyRegistrationCopyLink = async () => {
-    await Clipboard.copy(this.getRegistrationHotLink());
-    Toast.success("Registration link copied to clipboard.");
-  };
-
   sendInvite = async () => {
     const addresses = this.state.inviteesString.split(/[,\s]+/);
     const incorrectAddresses = addresses.filter(address => !address.includes("@"));
 
     if (incorrectAddresses.length > 0) {
-      Toast.error(`Couldn't recognize this email address: ${incorrectAddresses[0]}`);
+      Toast.error(
+        `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
+      );
       return;
     }
 
     await sendInvitesForOrganization(addresses, true);
-    Toast.success("An invitation was sent to provided email addresses.");
+    Toast.success("An invitation was sent to the provided email addresses.");
     this.setState({ inviteesString: "" });
     this.props.handleVisibleChange(false);
   };
@@ -227,14 +202,6 @@ export class InviteUsersModal extends React.Component<
   getContent() {
     return (
       <React.Fragment>
-        <div style={{ marginBottom: 8 }}>
-          Share the following link to let users join your organization (needs explicit approval):
-        </div>
-        <Input.Group compact>
-          <Input style={{ width: "85%" }} value={this.getRegistrationHotLink()} readOnly />
-          <Button style={{ width: "15%" }} onClick={this.copyRegistrationCopyLink} icon="copy" />
-        </Input.Group>
-        <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>or</Divider>
         Send invites to the following email addresses. Multiple addresses should be separated with a
         comma, a space or a new line:
         <Input.TextArea
@@ -243,6 +210,7 @@ export class InviteUsersModal extends React.Component<
           onChange={evt => {
             this.setState({ inviteesString: evt.target.value });
           }}
+          placeholder={"jane@example.com\njoe@example.com"}
           value={this.state.inviteesString}
         />
       </React.Fragment>
@@ -537,9 +505,6 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <InviteUsersModal
             visible={this.state.isInviteModalVisible}
             handleVisibleChange={isInviteModalVisible => this.setState({ isInviteModalVisible })}
-            organizationName={
-              this.props.activeUser != null ? this.props.activeUser.organization : ""
-            }
           />
           and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
           permissions and task assignments.

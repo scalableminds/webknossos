@@ -6,9 +6,9 @@
   <p>A new user - @username - just registered a webKnossos account for your <a href="@uri">organization.</a></p>
   <p>
     @if(autoActivate) {
-    Please, remember to activate and verify new user accounts and assign them to a team within your organization. Visit  <a href="@{uri}/users">@{uri}/users</a> to activate the account.
-    } else {
     As this user joined via invite link, they are automatically activated. To manage their permissions and assign them to a team within your organization, visit  <a href="@{uri}/users">@{uri}/users</a>.
+    } else {
+    Please, remember to activate and verify new user accounts and assign them to a team within your organization. Visit  <a href="@{uri}/users">@{uri}/users</a> to activate the account.
     }
   </p>
 

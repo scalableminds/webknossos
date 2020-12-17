@@ -4,7 +4,6 @@ import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.binary._
 import models.configuration.UserConfiguration
@@ -15,10 +14,10 @@ import models.user._
 import net.liftweb.common.{Box, Full}
 import org.joda.time.DateTime
 import oxalis.security._
-import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class InitialDataController @Inject()(initialDataService: InitialDataService, sil: Silhouette[WkEnv])(

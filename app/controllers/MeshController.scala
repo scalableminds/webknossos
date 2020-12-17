@@ -1,16 +1,14 @@
 package controllers
 
-import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import javax.inject.Inject
+import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}
 import oxalis.security.WkEnv
-import play.api.mvc.{AnyContent, PlayBodyParsers, RawBuffer}
+import play.api.mvc.PlayBodyParsers
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class MeshController @Inject()(meshDAO: MeshDAO,

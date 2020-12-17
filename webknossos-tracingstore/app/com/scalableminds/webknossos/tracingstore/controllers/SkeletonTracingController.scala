@@ -2,15 +2,10 @@ package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.JsonHelper.optionFormat
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.PlayBodyParsers

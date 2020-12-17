@@ -1,15 +1,15 @@
 package models.configuration
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayerLike}
-import javax.inject.Inject
 import models.binary.{DataSet, DataSetDAO, DataSetDataLayerDAO, DataSetService}
 import models.user.{User, UserDataSetConfigurationDAO, UserDataSetLayerConfigurationDAO}
 import play.api.libs.json._
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class DataSetConfigurationService @Inject()(dataSetService: DataSetService,

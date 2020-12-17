@@ -1,8 +1,7 @@
 package models.user.time
 
+import org.joda.time.{DateTime, DateTimeConstants}
 import play.api.libs.json.Json
-import java.util.Calendar
-import org.joda.time.{DateTimeConstants, DateTime}
 
 trait Interval {
   def start: DateTime

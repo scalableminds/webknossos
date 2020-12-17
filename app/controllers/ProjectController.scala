@@ -1,6 +1,8 @@
 package controllers
-import javax.inject.Inject
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.mohiva.play.silhouette.api.Silhouette
+import com.mohiva.play.silhouette.api.actions.SecuredRequest
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.tools.DefaultConverters.BoolToOption
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
@@ -8,13 +10,11 @@ import models.task._
 import models.user.UserService
 import net.liftweb.common.Empty
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
-import com.scalableminds.util.tools.DefaultConverters.BoolToOption
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.Messages
 import play.api.libs.json.Json
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class ProjectController @Inject()(projectService: ProjectService,

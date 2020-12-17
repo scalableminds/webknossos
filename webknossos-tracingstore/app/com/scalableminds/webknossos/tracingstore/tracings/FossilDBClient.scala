@@ -3,20 +3,17 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import io.grpc.{Status, StatusRuntimeException}
-import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.health.v1._
-import net.liftweb.common.{Box, Empty, Full, ParamFailure}
+import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
+import io.grpc.{Status, StatusRuntimeException}
+import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
-import play.api.Configuration
 import play.api.libs.json.{Json, Reads, Writes}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 trait KeyValueStoreImplicits extends BoxImplicits {
 

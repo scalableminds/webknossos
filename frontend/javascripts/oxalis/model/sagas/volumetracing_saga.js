@@ -108,7 +108,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const contourTracingMode = yield* select(
       state => enforceVolumeTracing(state.tracing).contourTracingMode,
     );
-    const overwriteMode = yield* select(state => enforceVolumeTracing(state.tracing).overwriteMode);
+    const overwriteMode = yield* select(state => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);

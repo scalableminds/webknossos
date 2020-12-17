@@ -1,18 +1,18 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
-import javax.inject.Inject
 import models.annotation.AnnotationSettings
 import models.team.TeamDAO
-import slick.jdbc.PostgresProfile.api._
 import play.api.libs.json._
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class TaskType(
@@ -27,7 +27,7 @@ case class TaskType(
     isDeleted: Boolean = false
 )
 
-class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
+class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext) {
 
   def fromForm(
       summary: String,
@@ -53,6 +53,16 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO)(implicit ec: ExecutionContext)
         "recommendedConfiguration" -> taskType.recommendedConfiguration,
         "tracingType" -> taskType.tracingType
       )
+
+  def containsVolumeOrHybridTaskType(taskTypeIds: List[String])(implicit ctx: DBAccessContext): Fox[Boolean] =
+    Fox
+      .serialCombined(taskTypeIds) { taskTypeId =>
+        for {
+          taskTypeIdValidated <- ObjectId.parse(taskTypeId) ?~> "taskType.id.invalid"
+          taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
+        } yield taskType.tracingType == TracingType.volume || taskType.tracingType == TracingType.hybrid
+      }
+      .map(_.exists(_ == true))
 }
 
 class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

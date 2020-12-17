@@ -44,7 +44,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
                      zipFileName: Option[String] = None,
                      useZipName: Boolean,
                      overwritingDataSetName: Option[String],
-                     isTaskUpload: Boolean)(implicit m: MessagesProvider): ZipParseResult = {
+                     isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, TemporaryFile]
     var parseResults = List.empty[NmlParseResult]
@@ -60,7 +60,7 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
         otherFiles += (file.getPath + filename.toString -> tempFile)
       }
     }
-    ZipParseResult(parseResults, otherFiles)
+    MultiNmlParseResult(parseResults, otherFiles)
   }
 
   def wrapOrPrefixTrees(parseResults: List[NmlParseResult],
@@ -107,8 +107,8 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
   def extractFromFiles(files: Seq[(File, String)],
                        useZipName: Boolean,
                        overwritingDataSetName: Option[String] = None,
-                       isTaskUpload: Boolean = false)(implicit m: MessagesProvider): ZipParseResult =
-    files.foldLeft(NmlResults.ZipParseResult()) {
+                       isTaskUpload: Boolean = false)(implicit m: MessagesProvider): MultiNmlParseResult =
+    files.foldLeft(NmlResults.MultiNmlParseResult()) {
       case (acc, (file, name)) =>
         if (name.endsWith(".zip"))
           tryo(new java.util.zip.ZipFile(file)).map(ZipIO.forallZipEntries(_)(_.getName.endsWith(".zip"))) match {
@@ -131,14 +131,14 @@ class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit 
                       fileName: String,
                       useZipName: Boolean,
                       overwritingDataSetName: Option[String],
-                      isTaskUpload: Boolean)(implicit m: MessagesProvider): ZipParseResult =
+                      isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
       extractFromZip(file, Some(fileName), useZipName, overwritingDataSetName, isTaskUpload)
     } else {
       logger.trace("Extracting from Nml file")
       val parseResult = extractFromNml(file, fileName, overwritingDataSetName, isTaskUpload)
-      ZipParseResult(List(parseResult), Map.empty)
+      MultiNmlParseResult(List(parseResult), Map.empty)
     }
 
 }

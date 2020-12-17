@@ -40,6 +40,7 @@ export const settings = {
   mergerMode: "Enable Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
+  overwriteMode: "Volume Annotation Overwrite Mode",
 };
 
 export const layerViewConfigurations = {

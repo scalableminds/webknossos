@@ -3,7 +3,6 @@ package utils
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
@@ -12,15 +11,13 @@ import play.api.Configuration
 import play.api.libs.json.{Json, JsonValidationError, Reads}
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
-import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
-import scala.collection.JavaConverters._
-import scala.util.{Failure, Success, Try}
-import play.api.data.validation.ValidationError
-
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success, Try}
 
 class SQLClient @Inject()(configuration: Configuration, slackNotificationService: SlackNotificationService) {
   lazy val db: PostgresProfile.backend.Database = Database.forConfig("slick.db", configuration.underlying)

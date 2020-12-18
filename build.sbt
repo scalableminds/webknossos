@@ -1,9 +1,9 @@
 import play.routes.compiler.InjectedRoutesGenerator
-import play.sbt.routes.RoutesKeys.routesGenerator
+import play.sbt.routes.RoutesKeys.{routesGenerator, routesImport}
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.12.7"
+ThisBuild / scalaVersion := "2.12.12"
 ThisBuild / scapegoatVersion := "1.3.8"
 ThisBuild / scalacOptions ++= Seq(
   "-Xmax-classfile-name",
@@ -13,7 +13,16 @@ ThisBuild / scalacOptions ++= Seq(
   "-deprecation",
   "-language:implicitConversions",
   "-language:postfixOps",
-  "-Xlint:unused"
+  "-Xlint:unused",
+ s"-P:silencer:sourceRoots=${baseDirectory.value.getCanonicalPath}",
+  "-P:silencer:pathFilters=(.*target/.*/routes/.*/(ReverseRoutes\\.scala|Routes\\.scala|routes\\.java|JavaScriptReverseRoutes.scala)|.*target/.*\\.template\\.scala)"
+)
+
+ThisBuild / routesImport := Seq.empty
+
+ThisBuild / libraryDependencies ++= Seq(
+  compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.7.0" cross CrossVersion.full),
+  "com.github.ghik" % "silencer-lib" % "1.7.0" % Provided cross CrossVersion.full
 )
 
 PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")

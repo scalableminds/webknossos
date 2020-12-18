@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
+import com.github.ghik.silencer.silent
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
 
 package object datasource {
@@ -40,8 +41,10 @@ package object datasource {
   }
 
   object GenericDataSource {
-    implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] =
+    @silent // Suppress unused warning. The passed Format[T] is expanded to more than what is really used. It can not be omitted, though.
+    implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] = {
       Json.format[GenericDataSource[T]]
+    }
   }
 
   type DataSource = GenericDataSource[DataLayer]

@@ -305,7 +305,6 @@ export type UserConfiguration = {|
   +newNodeNewTree: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
-  +radius: number,
   +rotateValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,

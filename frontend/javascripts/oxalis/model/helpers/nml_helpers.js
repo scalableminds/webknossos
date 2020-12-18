@@ -1,6 +1,6 @@
 // @flow
 
-import Saxophone from "@scalableminds/saxophone";
+import Saxophone from "saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "types/api_flow_types";

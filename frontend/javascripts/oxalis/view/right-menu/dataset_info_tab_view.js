@@ -613,16 +613,32 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
             {hasSkeleton ? (
               <Menu.Item key={subMenus.skeletonSubmenu}>
                 Skeletons ({statsMaybe.map(stats => stats.treeCount).getOrElse(0)}){" "}
-                <Button onClick={() => layoutEmitter.emit("highlightTab", "skeleton")}>
+                <Button size="small" onClick={() => layoutEmitter.emit("highlightTab", "Trees")}>
                   Switch to Skeleton Tab
                 </Button>
               </Menu.Item>
             ) : null}
-            <Menu.Item key={subMenus.volumeSubmenu}>Volume Layer</Menu.Item>
-            <Menu.Item key={subMenus.meshesSubmenu}>
-              Meshes ({this.props.tracing.meshes.length})
+            <Menu.Item key={subMenus.volumeSubmenu}>
+              Volume Layer{" "}
+              <Button
+                size="small"
+                onClick={() => layoutEmitter.emit("highlightTab", "Segmentation")}
+              >
+                Switch to Segmentation Tab{" "}
+              </Button>
             </Menu.Item>
-            <Menu.Item key={subMenus.boundingBoxSubmenu}>Bounding Box</Menu.Item>
+            <Menu.Item key={subMenus.meshesSubmenu}>
+              Meshes ({this.props.tracing.meshes.length}){" "}
+              <Button size="small" onClick={() => layoutEmitter.emit("highlightTab", "Meshes")}>
+                Switch to Meshes Tab
+              </Button>
+            </Menu.Item>
+            <Menu.Item key={subMenus.boundingBoxSubmenu}>
+              Bounding Box{" "}
+              <Button size="small" title="has no functionality">
+                TODO
+              </Button>
+            </Menu.Item>
           </Menu>
         </div>
         <Divider />

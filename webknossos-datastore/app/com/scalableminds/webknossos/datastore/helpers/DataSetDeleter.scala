@@ -10,8 +10,10 @@ import scala.concurrent.ExecutionContext
 trait DataSetDeleter extends LazyLogging {
   def dataBaseDir: Path
 
-  def deleteOnDisk(organizationName: String, dataSetName: String, isInConversion: Boolean = false)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+  def deleteOnDisk(organizationName: String,
+                   dataSetName: String,
+                   isInConversion: Boolean = false,
+                   reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataSourcePath =
       if (isInConversion) dataBaseDir.resolve(organizationName).resolve(".forConversion").resolve(dataSetName)
       else dataBaseDir.resolve(organizationName).resolve(dataSetName)
@@ -19,7 +21,9 @@ trait DataSetDeleter extends LazyLogging {
     val targetPath = trashPath.resolve(dataSetName)
     new File(trashPath.toString).mkdirs()
 
-    logger.info(s"Deleting dataset by moving it from $dataSourcePath to $targetPath...")
+    logger.info(
+      s"Deleting dataset by moving it from $dataSourcePath to $targetPath${if (reason.isDefined) s" because ${reason.getOrElse("")}"
+      else "..."}")
 
     try {
       val path = Files.move(

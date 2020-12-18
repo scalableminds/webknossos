@@ -201,7 +201,7 @@ class MeshesView extends React.Component<
             // does not work properly for imported isosurfaces
             Store.dispatch(removeIsosurfaceAction(segmentId));
             // reset the active isosurface id so the deleted one is not reloaded immediately
-            this.props.changeActiveIsosurface(0, [0, 0, 0]);
+            this.props.changeActiveIsosurfaceId(0, [0, 0, 0]);
           }}
         />
       </Tooltip>
@@ -255,7 +255,7 @@ class MeshesView extends React.Component<
         onClick={() => {
           const pos = getPosition(this.props.flycam);
           const id = type === "active" ? this.props.activeCellId : getIdForPos(pos);
-          Store.dispatch(changeActiveIsosurfaceCellAction(id, pos));
+          this.props.changeActiveIsosurfaceId(id, pos);
         }}
       >
         Load Isosurface for {capitalize(type)} Cell
@@ -269,7 +269,7 @@ class MeshesView extends React.Component<
       return (
         <List.Item
           actions={[
-            <div key="actions" style={{ actionVisibility }}>
+            <div key="actions" style={{ visibility: actionVisibility }}>
               {getDownloadButton(segmentId)}
               {getRefreshButton(segmentId, isLoading)}
               {getDeleteButton(segmentId)}

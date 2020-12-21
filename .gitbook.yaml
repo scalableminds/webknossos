@@ -1,5 +1,0 @@
-root: ./
-structure:
-  readme: docs/hello.md
-  summary: docs/index.md
-

@@ -1,2 +1,0 @@
--> /api/      webknossos.versioned.Routes
--> /data/     com.scalableminds.webknossos.datastore.Routes

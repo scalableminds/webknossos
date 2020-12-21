@@ -1,6 +1,0 @@
-_id,_organization,name,created,isOrganizationTeam,isDeleted
-'570b9f4b2a7c0e3b008da6ec','5ab0c6a674d0af7b003b23ac','team_X1','2016-04-11T12:57:47.000Z',t,f
-'59882b370d889b84020efd3f','5ab0c6a674d0af7b003b23ac','team_X3','2017-08-07T08:56:23.000Z',f,f
-'59882b370d889b84020efd6f','5ab0c6a674d0af7b003b23ac','team_X4','2017-08-07T08:56:23.000Z',f,f
-'69882b370d889b84020efd4f','5ab0c6a674d0af7b003b23ac','team_X2','2017-08-07T08:56:23.000Z',f,f
-'70882b370d889b84020efd5f','6bb0c6a674d0af7b003b23bd','team_Y1','2017-08-07T08:56:23.000Z',t,f

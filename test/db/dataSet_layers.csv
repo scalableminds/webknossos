@@ -1,6 +1,0 @@
-_dataSet,name,category,elementClass,boundingBox,largestSegmentId,mappings,defaultViewConfiguration,adminViewConfiguration
-'59e9cfbdba632ac2ab8b23b3','color_1','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b3','color_2','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b3','color_3','color','uint8','(0,0,0,512,512,256)',,,,
-'59e9cfbdba632ac2ab8b23b5','color','color','uint8','(4480,4736,1920,512,512,512)',,,,
-'59e9cfbdba632ac2ab8b23b5','segmentation','segmentation','uint16','(4480,4736,1920,512,512,512)',10000,'{}',,

@@ -1,3 +1,0 @@
-_id,name,additionalinformation,logoUrl,displayName,newusermailinglist,overtimemailinglist,enableautoverify,created,isdeleted
-'5ab0c6a674d0af7b003b23ac','Organization_X','lorem ipsum','/assets/images/mpi-logos.svg','Organization_X','','',f,'2018-03-20 09:30:31.91+01',f
-'6bb0c6a674d0af7b003b23bd','Organization_Y','foo bar','/assets/images/mpi-logos.svg','Organization_Y','','',f,'2018-03-24 09:30:31.91+01',f

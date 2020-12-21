@@ -1,3 +1,0 @@
--> /api/      webknossos.versioned.Routes
--> /data/     com.scalableminds.webknossos.datastore.Routes
--> /tracings/ com.scalableminds.webknossos.tracingstore.Routes

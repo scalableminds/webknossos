@@ -1,5 +1,0 @@
-_id,_project,_script,_taskType,neededExperience_domain,neededExperience_value,totalInstances,openInstances,tracingTime,boundingBox,editPosition,editRotation,creationInfo,created,isDeleted
-'58135c192faeb34c0081c058','58135bfd2faeb3190181c057',,'570b9f4c2a7c0e4c008da6ee','abc',0,10,9,,,'(0,0,0)','(0,0,0)',,'2016-10-28T14:09:29.000Z',f
-'581367a82faeb37a008a5352','58135bfd2faeb3190181c057',,'570b9f4c2a7c0e4c008da6ee','abc',0,10,10,,,'(0,0,0)','(0,0,0)',,'2016-10-28T14:58:48.000Z',f
-'581367a82faeb37a008a5354','68135bfd2faeb3190181c058',,'570b9f4c2a7c0e4c008da6ff','abc',0,10,10,,,'(0,0,0)','(0,0,0)',,'2016-10-28T14:58:48.000Z',f
-'681367a82faeb37a008a5354','78135bfd2faeb3190181c058',,'570b9f4c2a7c0e4c008da6ff','abc',0,10,10,,,'(0,0,0)','(0,0,0)',,'2016-10-28T14:58:48.000Z',f

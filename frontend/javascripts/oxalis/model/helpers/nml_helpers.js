@@ -791,7 +791,7 @@ export function parseNml(
             break;
         }
       })
-      .on("end", () => {
+      .on("finish", () => {
         // Split potentially unconnected trees
         const originalTreeIds = Object.keys(trees);
         let maxTreeId = getMaximumTreeId(trees);

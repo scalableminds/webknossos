@@ -32,6 +32,8 @@ import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
 import DataLayer from "oxalis/model/data_layer";
 import api from "oxalis/api/internal_api";
+import { AsyncButton } from "components/async_clickables";
+import { loadAgglomerateSkeletonAtPosition } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const { Option, OptGroup } = Select;
 
@@ -386,6 +388,12 @@ class MappingInfoView extends React.Component<Props, State> {
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
 
+    const { mappingName, mappingType } = this.props;
+    const isAgglomerateMapping = mappingType === "HDF5";
+    // Only show the option to import a skeleton from an agglomerate file if an agglomerate file mapping is activated.
+    const renderAgglomerateSkeletonButton =
+      this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
+
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
         {this.renderIdTable()}
@@ -435,6 +443,11 @@ class MappingInfoView extends React.Component<Props, State> {
                 loading={this.state.isRefreshingMappingList}
               />
             </label>
+          ) : null}
+          {renderAgglomerateSkeletonButton ? (
+            <AsyncButton onClick={() => loadAgglomerateSkeletonAtPosition(this.props.position)}>
+              Import Skeleton for Centered Cell
+            </AsyncButton>
           ) : null}
         </div>
       </div>

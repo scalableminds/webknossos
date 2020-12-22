@@ -524,14 +524,18 @@ export function addTreesAndGroups(
 
     if (allowUpdate) {
       // Assign a new tree name for trees without a name
-      for (const treeId of Object.keys(trees)) {
-        const tree = trees[Number(treeId)];
+      const treeIds = Object.keys(trees).map(treeId => Number(treeId));
+      for (const treeId of treeIds) {
+        const tree = trees[treeId];
         if (tree.name === "") {
           tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
         }
       }
 
-      const needsReassignedIds = Object.keys(skeletonTracing.trees).length > 0;
+      // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
+      const hasTreeIdsLargerThanMaximum = treeIds.filter(treeId => treeId > 1048576);
+      const needsReassignedIds =
+        Object.keys(skeletonTracing.trees).length > 0 || hasTreeIdsLargerThanMaximum;
 
       if (!needsReassignedIds) {
         // Without reassigning ids, the code is considerably faster.
@@ -563,8 +567,8 @@ export function addTreesAndGroups(
       }
 
       const newTrees = {};
-      for (const treeId of Object.keys(trees)) {
-        const tree = trees[Number(treeId)];
+      for (const treeId of treeIds) {
+        const tree = trees[treeId];
 
         const newNodes = new DiffableMap();
         for (const node of tree.nodes.values()) {

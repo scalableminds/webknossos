@@ -1,5 +1,5 @@
 // @flow
-import { type OrthoView, type Point2 } from "oxalis/constants";
+import type { OrthoView, Point2, Vector3 } from "oxalis/constants";
 import Model from "oxalis/model";
 import { changeActiveIsosurfaceCellAction } from "oxalis/model/actions/segmentation_actions";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -26,18 +26,21 @@ function segmentationLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent)
   }
 }
 
-export async function agglomerateSkeletonLeftClick(pos: Point2) {
+export async function agglomerateSkeletonLeftClick(clickPosition: Point2) {
+  const globalPosition = calculateGlobalPos(clickPosition);
+  loadAgglomerateSkeletonAtPosition(globalPosition);
+}
+
+export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   const segmentation = Model.getSegmentationLayer();
   if (!segmentation) {
     return;
   }
+
   const state = Store.getState();
 
-  const layerName =
-    segmentation.fallbackLayer != null ? segmentation.fallbackLayer : segmentation.name;
-
-  const { mappingName, mappingType } = state.temporaryConfiguration.activeMapping;
-  if (mappingName == null) {
+  const { mappingName, mappingType, isMappingEnabled } = state.temporaryConfiguration.activeMapping;
+  if (mappingName == null || !isMappingEnabled) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_mapping"]);
     return;
   }
@@ -46,7 +49,6 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
     return;
   }
 
-  const position = calculateGlobalPos(pos);
   const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
 
   const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
@@ -56,6 +58,8 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
   }
 
   const { dataset } = state;
+  const layerName =
+    segmentation.fallbackLayer != null ? segmentation.fallbackLayer : segmentation.name;
 
   const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 2000 });
   const { hideFn } = await progressCallback(

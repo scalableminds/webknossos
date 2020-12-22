@@ -12,6 +12,7 @@ import createProgressCallback from "libs/progress_callback";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
+import api from "oxalis/api/internal_api";
 
 function segmentationLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
   if (!event.shiftKey) {
@@ -45,18 +46,10 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
     return;
   }
 
-  const { renderMissingDataBlack } = state.datasetConfiguration;
-  const zoomStep = getRequestLogZoomStep(state);
   const position = calculateGlobalPos(pos);
+  const renderedZoomStep = api.data.getRenderedZoomStepAtPosition(segmentation.name, position);
 
-  // While render missing data black is not active and there is no segmentation for the current zoom step,
-  // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
-  // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
-  const usableZoomStep = renderMissingDataBlack
-    ? zoomStep
-    : segmentation.cube.getNextUsableZoomStepForPosition(position, zoomStep);
-
-  const cellId = segmentation.cube.getMappedDataValue(position, usableZoomStep);
+  const cellId = segmentation.cube.getMappedDataValue(position, renderedZoomStep);
   if (cellId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
     return;
@@ -93,9 +86,9 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
       ),
     );
   } catch (e) {
-    console.error(e);
+    // Hide the progress notification and rethrow the error to allow for error handling/reporting
     hideFn();
-    return;
+    throw e;
   }
 
   await progressCallback(true, "Skeleton generation done.");

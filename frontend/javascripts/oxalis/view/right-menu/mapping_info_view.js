@@ -14,7 +14,7 @@ import { type OrthoView, OrthoViews, type Vector2, type Vector3 } from "oxalis/c
 import type { OxalisState, Mapping, MappingType } from "oxalis/store";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getMappingsForDatasetLayer, getAgglomeratesForDatasetLayer } from "admin/admin_rest_api";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayer,
   getResolutionInfoOfSegmentationLayer,
@@ -30,6 +30,8 @@ import Model from "oxalis/model";
 import message from "messages";
 import * as Utils from "libs/utils";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
+import DataLayer from "oxalis/model/data_layer";
+import api from "oxalis/api/internal_api";
 
 const { Option, OptGroup } = Select;
 
@@ -40,7 +42,6 @@ type StateProps = {|
   dataset: APIDataset,
   segmentationLayer: ?APISegmentationLayer,
   position: Vector3,
-  zoomStep: number,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
   mapping: ?Mapping,
@@ -54,7 +55,6 @@ type StateProps = {|
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
-  renderMissingDataBlack: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -121,12 +121,17 @@ class MappingInfoView extends React.Component<Props, State> {
     this.forceUpdate();
   }, 100);
 
-  getSegmentationCube(): Cube {
+  getSegmentationLayer(): DataLayer {
     const layer = Model.getSegmentationLayer();
     if (!layer) {
       throw new Error("No segmentation layer found");
     }
-    return layer.cube;
+    return layer;
+  }
+
+  getSegmentationCube(): Cube {
+    const segmentationLayer = this.getSegmentationLayer();
+    return segmentationLayer.cube;
   }
 
   renderIdTable() {
@@ -136,11 +141,9 @@ class MappingInfoView extends React.Component<Props, State> {
       mappingColors,
       activeViewport,
       mousePosition,
-      zoomStep,
       position,
       dataset,
       segmentationLayer,
-      renderMissingDataBlack,
     } = this.props;
     const cube = this.getSegmentationCube();
     const hasMapping = mapping != null;
@@ -153,17 +156,16 @@ class MappingInfoView extends React.Component<Props, State> {
     }
 
     const flycamPosition = position;
+    const segmentationLayerName = this.getSegmentationLayer().name;
 
-    // While render missing data black is not active and there is no segmentation for the current zoom step,
-    // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
-    // displayed segmentation data to get the correct segment ids for the camera and the mouse position.
-    const usableZoomStepForCameraPosition = renderMissingDataBlack
-      ? zoomStep
-      : cube.getNextUsableZoomStepForPosition(flycamPosition, zoomStep);
-    const usableZoomStepForMousePosition =
-      renderMissingDataBlack || globalMousePosition == null
-        ? zoomStep
-        : cube.getNextUsableZoomStepForPosition(globalMousePosition, zoomStep);
+    const renderedZoomStepForCameraPosition = api.data.getRenderedZoomStepAtPosition(
+      segmentationLayerName,
+      flycamPosition,
+    );
+    const renderedZoomStepForMousePosition = api.data.getRenderedZoomStepAtPosition(
+      segmentationLayerName,
+      globalMousePosition,
+    );
 
     const getResolutionOfZoomStepAsString = usedZoomStep => {
       const usedResolution = getResolutionInfoOfSegmentationLayer(dataset).getResolutionByIndex(
@@ -186,8 +188,8 @@ class MappingInfoView extends React.Component<Props, State> {
       {
         name: "ID at the center",
         key: "current",
-        unmapped: getIdForPos(flycamPosition, usableZoomStepForCameraPosition),
-        resolution: getResolutionOfZoomStepAsString(usableZoomStepForCameraPosition),
+        unmapped: getIdForPos(flycamPosition, renderedZoomStepForCameraPosition),
+        resolution: getResolutionOfZoomStepAsString(renderedZoomStepForCameraPosition),
       },
       {
         name: (
@@ -204,9 +206,9 @@ class MappingInfoView extends React.Component<Props, State> {
           </span>
         ),
         key: "mouse",
-        unmapped: getIdForPos(globalMousePosition, usableZoomStepForMousePosition),
+        unmapped: getIdForPos(globalMousePosition, renderedZoomStepForMousePosition),
         resolution: globalMousePosition
-          ? getResolutionOfZoomStepAsString(usableZoomStepForMousePosition)
+          ? getResolutionOfZoomStepAsString(renderedZoomStepForMousePosition)
           : "Not available",
       },
     ]
@@ -450,7 +452,6 @@ function mapStateToProps(state: OxalisState) {
   return {
     dataset: state.dataset,
     position: getPosition(state.flycam),
-    zoomStep: getRequestLogZoomStep(state),
     hideUnmappedIds: state.temporaryConfiguration.activeMapping.hideUnmappedIds,
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
@@ -464,7 +465,6 @@ function mapStateToProps(state: OxalisState) {
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
-    renderMissingDataBlack: state.datasetConfiguration.renderMissingDataBlack,
   };
 }
 

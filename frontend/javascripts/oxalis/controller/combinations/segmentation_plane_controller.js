@@ -14,19 +14,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 
-function segmentationLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
-  if (!event.shiftKey) {
-    return;
-  }
-
-  if (event.ctrlKey) {
-    agglomerateSkeletonLeftClick(pos);
-  } else {
-    isosurfaceLeftClick(pos);
-  }
-}
-
-export async function agglomerateSkeletonLeftClick(clickPosition: Point2) {
+export async function agglomerateSkeletonMiddleClick(clickPosition: Point2) {
   const globalPosition = calculateGlobalPos(clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition);
 }
@@ -98,7 +86,11 @@ export async function loadAgglomerateSkeletonAtPosition(position: Vector3) {
   await progressCallback(true, "Skeleton generation done.");
 }
 
-export function isosurfaceLeftClick(pos: Point2) {
+export function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseEvent) {
+  if (!event.shiftKey) {
+    return;
+  }
+
   let cellId = 0;
   const position = calculateGlobalPos(pos);
   const volumeTracingMaybe = Store.getState().tracing.volume;
@@ -118,5 +110,3 @@ export function isosurfaceLeftClick(pos: Point2) {
     Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
   }
 }
-
-export default segmentationLeftClick;

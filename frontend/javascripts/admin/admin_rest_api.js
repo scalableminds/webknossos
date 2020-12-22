@@ -1286,7 +1286,9 @@ export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
 }
 
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
-  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`);
+  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
+    showErrorToast: false,
+  });
 }
 
 export function sendInvitesForOrganization(

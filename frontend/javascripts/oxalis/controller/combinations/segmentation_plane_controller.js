@@ -50,7 +50,7 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
   const position = calculateGlobalPos(pos);
 
   // While render missing data black is not active and there is no segmentation for the current zoom step,
-  // the segmentation of a higher zoom step is shown. Here we determine the the next zoom step of the
+  // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
   // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
   const usableZoomStep = renderMissingDataBlack
     ? zoomStep
@@ -71,15 +71,13 @@ export async function agglomerateSkeletonLeftClick(pos: Point2) {
   );
 
   try {
-    const result = await getAgglomerateSkeleton(
+    const nmlProtoBuffer = await getAgglomerateSkeleton(
       dataset.dataStore.url,
       dataset,
       layerName,
       mappingName,
       cellId,
     );
-
-    const nmlProtoBuffer = result;
     const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
     if (!parsedTracing.trees) {

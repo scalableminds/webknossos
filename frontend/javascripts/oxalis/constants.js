@@ -180,7 +180,7 @@ const Constants = {
   MIN_NODE_ID: 1,
 
   // Maximum of how many buckets will be held in RAM (per layer)
-  MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
+  MAXIMUM_BUCKET_COUNT_PER_LAYER: 100,
 };
 
 export default Constants;

@@ -533,7 +533,7 @@ export function addTreesAndGroups(
       }
 
       // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
-      const hasTreeIdsLargerThanMaximum = treeIds.filter(treeId => treeId > 1048576);
+      const hasTreeIdsLargerThanMaximum = treeIds.some(treeId => treeId > 1048576);
       const needsReassignedIds =
         Object.keys(skeletonTracing.trees).length > 0 || hasTreeIdsLargerThanMaximum;
 

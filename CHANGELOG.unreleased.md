@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fix crash for trees with high comment count (> 100000 nodes). [#4965](https://github.com/scalableminds/webknossos/pull/4965)
 - Fix the upload of single file datasets. [#4977](https://github.com/scalableminds/webknossos/pull/4977)
+- Fix a bug where importing NMLs failed if they had unescaped greater-than signs inside of attributes. [#5003](https://github.com/scalableminds/webknossos/pull/5003)
 
 ### Removed
 -

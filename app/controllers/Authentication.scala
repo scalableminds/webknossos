@@ -213,8 +213,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                inviteBox: Box[Invite] <- inviteDAO
-                  .findOneByTokenValue(signUpData.inviteToken.getOrElse("noToken"))(GlobalAccessContext)
+                inviteBox: Box[Invite] <- inviteService
+                  .findInviteByTokenOpt(signUpData.inviteToken)(GlobalAccessContext)
                   .futureBox
                 organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByNameOrDefault(
@@ -342,7 +342,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       email => {
         val userFopt: Future[Option[User]] =
           userService.userFromMultiUserEmail(email.toLowerCase)(GlobalAccessContext).futureBox.map(_.toOption)
-        val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below.
+        val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below to unify error handling.
         idF.flatMap(id => userService.retrieve(LoginInfo(CredentialsProvider.ID, id))).flatMap {
           case None => Future.successful(NotFound(Messages("error.noUser")))
           case Some(user) =>

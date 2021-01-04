@@ -126,10 +126,10 @@ class UserService @Inject()(conf: WkConf,
   def fillSuperUserIdentity(originalUser: User, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
-      existingIdentiy: Box[User] <- userDAO
+      existingIdentity: Box[User] <- userDAO
         .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
         .futureBox
-      _ <- if (multiUser.isSuperUser && existingIdentiy.isEmpty) {
+      _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
         joinOrganization(originalUser, organizationId, autoActivate = true, isAdmin = true)
       } else Fox.successful(())
     } yield ()

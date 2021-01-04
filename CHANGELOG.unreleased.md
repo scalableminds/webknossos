@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Fixed
--
+- Fixed a bug where importing NMLs failed if they had unescaped greater-than signs inside of attributes. [#5003](https://github.com/scalableminds/webknossos/pull/5003)
 
 ### Removed
 -

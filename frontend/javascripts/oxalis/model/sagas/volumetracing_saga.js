@@ -33,7 +33,7 @@ import { V3 } from "libs/mjs";
 import type { VolumeTracing, Flycam } from "oxalis/store";
 import {
   enforceVolumeTracing,
-  isVolumeTraceToolDisallowed,
+  isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getPosition,
@@ -113,8 +113,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
     // The trace tool is not allowed for too high zoom steps.
-    const isZoomStepTooHighForTraceTool = yield* select(isVolumeTraceToolDisallowed);
-    if (isZoomStepTooHighForTraceTool && activeTool === VolumeToolEnum.TRACE) {
+    const isZoomStepTooHighForAnnotating = yield* select(state =>
+      isVolumeAnnotationDisallowedForZoom(activeTool, state),
+    );
+    if (isZoomStepTooHighForAnnotating) {
       continue;
     }
 
@@ -358,7 +360,9 @@ function* copySegmentationLayer(action: CopySegmentationLayerAction): Saga<void>
   // to avoid large performance lags.
   // This restriction should be soften'ed when https://github.com/scalableminds/webknossos/issues/4639
   // is solved.
-  const isResolutionTooLow = yield* select(state => isVolumeTraceToolDisallowed(state));
+  const isResolutionTooLow = yield* select(state =>
+    isVolumeAnnotationDisallowedForZoom(VolumeToolEnum.TRACE, state),
+  );
   if (isResolutionTooLow) {
     Toast.warning(
       'The "copy segmentation"-feature is not supported at this zoom level. Please zoom in further.',
@@ -639,12 +643,14 @@ export function* ensureNoTraceToolInLowResolutions(): Saga<*> {
   yield* take("INITIALIZE_VOLUMETRACING");
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isResolutionTooLowForTraceTool = yield* select(state =>
-      isVolumeTraceToolDisallowed(state),
-    );
-    const isTraceToolActive = yield* select(
-      state => enforceVolumeTracing(state.tracing).activeTool === VolumeToolEnum.TRACE,
-    );
+    const isResolutionTooLowForTraceTool = yield* select(state => {
+      const { activeTool } = enforceVolumeTracing(state.tracing);
+      return isVolumeAnnotationDisallowedForZoom(activeTool, state);
+    });
+    const isTraceToolActive = yield* select(state => {
+      const { activeTool } = enforceVolumeTracing(state.tracing);
+      return activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH;
+    });
     if (isResolutionTooLowForTraceTool && isTraceToolActive) {
       yield* put(setToolAction(VolumeToolEnum.MOVE));
     }

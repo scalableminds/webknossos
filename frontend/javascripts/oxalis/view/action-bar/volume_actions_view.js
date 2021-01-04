@@ -14,7 +14,7 @@ import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 import { document } from "libs/window";
 import {
   enforceVolumeTracing,
-  isVolumeTraceToolDisallowed,
+  isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
@@ -25,7 +25,10 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 
-const isZoomStepTooHighForTraceTool = () => isVolumeTraceToolDisallowed(Store.getState());
+const zoomInToUseToolMessage =
+  "Your zoom is too low to use this tool. Please zoom in further to use it.";
+
+const isZoomStepTooHighFor = tool => isVolumeAnnotationDisallowedForZoom(tool, Store.getState());
 
 function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed): ?string {
   if (activeTool !== VolumeToolEnum.MOVE) {
@@ -169,7 +172,7 @@ const mapId = id => {
 
 const getExplanationForDisabledVolume = (
   isInMergerMode,
-  isLabelingPossible,
+  isSegmentationVisibleForMag,
   isZoomInvalidForTracing,
 ) => {
   if (isZoomInvalidForTracing) {
@@ -180,7 +183,7 @@ const getExplanationForDisabledVolume = (
     return "Volume annotation is disabled while the merger mode is active.";
   }
 
-  if (!isLabelingPossible) {
+  if (!isSegmentationVisibleForMag) {
     return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
   }
 
@@ -204,9 +207,15 @@ export default function VolumeActionsView() {
   const maybeResolutionWithZoomStep = useSelector(getRenderableResolutionForSegmentation);
   const labeledResolution =
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
-  const isLabelingPossible = labeledResolution != null;
+  const isSegmentationVisibleForMag = labeledResolution != null;
 
   const isZoomInvalidForTracing = useSelector(isMagRestrictionViolated);
+
+  const disabledVolumeExplanation = getExplanationForDisabledVolume(
+    isInMergerMode,
+    isSegmentationVisibleForMag,
+    isZoomInvalidForTracing,
+  );
 
   const hasResolutionWithHigherDimension = (labeledResolution || []).some(val => val > 1);
 
@@ -215,21 +224,31 @@ export default function VolumeActionsView() {
       <i className="fas fa-layer-group" style={{ marginLeft: 4 }} />
     </Tooltip>
   ) : null;
-  const isTraceToolImpossible = isZoomStepTooHighForTraceTool();
-  const isTraceToolDisabled = isInMergerMode || isTraceToolImpossible || !isLabelingPossible;
-  const traceToolDisabledTooltip = isTraceToolImpossible
-    ? "Your zoom is too low to use the trace tool. Please zoom in further to use it."
-    : "";
+
+  const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(VolumeToolEnum.BRUSH);
+  const isBrushToolDisabled =
+    isZoomStepTooHighForBrushing || isInMergerMode || !isSegmentationVisibleForMag;
+
+  const brushToolDisabledTooltip = isZoomStepTooHighForBrushing
+    ? zoomInToUseToolMessage
+    : disabledVolumeExplanation;
+
+  const isZoomStepTooHighForTracing = isZoomStepTooHighFor(VolumeToolEnum.TRACE);
+  const isTraceToolDisabled =
+    isInMergerMode || isZoomStepTooHighForTracing || !isSegmentationVisibleForMag;
+  const traceToolDisabledTooltip = isZoomStepTooHighForTracing
+    ? zoomInToUseToolMessage
+    : disabledVolumeExplanation;
 
   // Ensure that no volume-tool is selected when being in merger mode.
   // Even though, the volume toolbar is disabled, the user can still cycle through
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   useEffect(() => {
-    if (isInMergerMode || !isLabelingPossible || isZoomInvalidForTracing) {
+    if (isInMergerMode || !isSegmentationVisibleForMag || isZoomInvalidForTracing) {
       Store.dispatch(setToolAction(VolumeToolEnum.MOVE));
     }
-  }, [isInMergerMode, activeTool, isLabelingPossible, isZoomInvalidForTracing]);
+  }, [isInMergerMode, activeTool, isSegmentationVisibleForMag, isZoomInvalidForTracing]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlPressed = useKeyPress("Control");
@@ -251,12 +270,6 @@ export default function VolumeActionsView() {
     ? getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
     : null;
   const previousMoveToolHint = usePrevious(moveToolHint);
-
-  const disabledVolumeExplanation = getExplanationForDisabledVolume(
-    isInMergerMode,
-    isLabelingPossible,
-    isZoomInvalidForTracing,
-  );
 
   const moveToolDescription = `Pointer – Use left-click to move around${
     hasSkeleton ? " and right-click to create new skeleton nodes" : ""
@@ -287,8 +300,8 @@ export default function VolumeActionsView() {
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Brush – Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-          disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode || !isLabelingPossible}
+          disabledTitle={brushToolDisabledTooltip}
+          disabled={isBrushToolDisabled}
           style={narrowButtonStyle}
           value={VolumeToolEnum.BRUSH}
         >
@@ -297,7 +310,7 @@ export default function VolumeActionsView() {
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Trace – Draw outlines around the voxel you would like to label."
-          disabledTitle={traceToolDisabledTooltip || disabledVolumeExplanation}
+          disabledTitle={traceToolDisabledTooltip}
           disabled={isTraceToolDisabled}
           style={narrowButtonStyle}
           value={VolumeToolEnum.TRACE}
@@ -313,7 +326,7 @@ export default function VolumeActionsView() {
         <RadioButtonWithTooltip
           title="Fill Tool – Flood-fill the clicked region."
           disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode || !isLabelingPossible}
+          disabled={isInMergerMode || !isSegmentationVisibleForMag}
           style={narrowButtonStyle}
           value={VolumeToolEnum.FILL_CELL}
         >
@@ -322,7 +335,7 @@ export default function VolumeActionsView() {
         <RadioButtonWithTooltip
           title="Cell Picker – Click on a voxel to make its cell id the active cell id."
           disabledTitle={disabledVolumeExplanation}
-          disabled={isInMergerMode || !isLabelingPossible}
+          disabled={isInMergerMode || !isSegmentationVisibleForMag}
           style={narrowButtonStyle}
           value={VolumeToolEnum.PICK_CELL}
         >

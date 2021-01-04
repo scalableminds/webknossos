@@ -1,11 +1,10 @@
 package com.scalableminds.util.io
 
-import java.io.File
-import java.nio.file.{Path, _}
-
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 
+import java.io.File
+import java.nio.file.{Path, _}
 import scala.collection.JavaConverters._
 
 object PathUtils extends PathUtils
@@ -106,4 +105,5 @@ trait PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
   }
+
 }

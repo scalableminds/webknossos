@@ -1,26 +1,22 @@
 package com.scalableminds.util.io
 
-import java.io._
-import java.nio.file.{Files, Path, Paths}
-import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-
-import akka.stream.{ActorMaterializer, scaladsl}
-import akka.stream.javadsl.{Sink, StreamConverters}
+import akka.stream.ActorMaterializer
+import akka.stream.javadsl.StreamConverters
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.tools.TextUtils
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
-
-import scala.concurrent.duration._
 import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
-import play.api.libs.iteratee.{Enumerator, Iteratee}
+import play.api.libs.iteratee.Enumerator
 
+import java.io._
+import java.nio.file.{Files, Path, Paths}
+import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
+import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
-import collection.JavaConverters._
 
 object ZipIO extends LazyLogging {
 
@@ -169,30 +165,36 @@ object ZipIO extends LazyLogging {
                      excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A])(
       implicit ec: ExecutionContext): Box[List[A]] = {
 
-    def stripPathFrom(path: Path, string: String): Option[Path] = {
-      def stripPathHelper(i: Int): Option[Path] =
-        if (i >= path.getNameCount)
-          None
-        else if (path.subpath(i, i + 1).toString.contains(string)) //sample paths: "test/test/color_1", "segmentation"
-          if (i == 0) // path.subpath(0,0) is invalid and means that there is no commonPrefix which isn't started with a layer
-            Some(Paths.get(""))
-          else // this is the common prefix but stripped from the layer
-            Some(path.subpath(0, i))
-        else
-          stripPathHelper(i + 1)
+    def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
 
-      stripPathHelper(0)
+    def cutOffPathAtLastOccurrenceOf(path: Path, excludeFromPrefix: List[String]): Path = {
+      var lastExcludedIndex = -1
+      path.iterator().asScala.zipWithIndex.foreach {
+        case (subPath, idx) =>
+          excludeFromPrefix.foreach(e => {
+            if (subPath.toString.contains(e)) {
+              lastExcludedIndex = idx
+            }
+          })
+      }
+      lastExcludedIndex match {
+        case -1 => path
+        // subpath(0, 0) is forbidden, therefore we handle this special case ourselves
+        case 0 => Paths.get("")
+        case i => path.subpath(0, i)
+      }
     }
 
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
-    //color, mask, segmentation are the values for dataSet layer categories and a folder only has one category
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
-      val strippedPaths = excludeFromPrefix.getOrElse(List()).flatMap(stripPathFrom(commonPrefixNotFixed, _))
-      strippedPaths.headOption match {
-        case Some(path) => path
-        case None       => commonPrefixNotFixed
+      val strippedPrefix = cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
+      // if only one file is in the zip and no layer name is given as prefix, do not remove file name as common prefix
+      zipEntries match {
+        case head :: tl if tl.isEmpty && isFileNameInPrefix(strippedPrefix, head.getName) =>
+          strippedPrefix.subpath(0, strippedPrefix.getNameCount - 1)
+        case _ => strippedPrefix
       }
     } else {
       Paths.get("")

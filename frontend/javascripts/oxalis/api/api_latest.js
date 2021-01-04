@@ -49,7 +49,11 @@ import {
   getLayerByName,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotation,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -980,6 +984,25 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return cube.getDataValue(position, null, zoomStep);
+  }
+
+  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+
+    if (position == null) return zoomStep;
+
+    const { renderMissingDataBlack } = state.datasetConfiguration;
+    const cube = this.model.getCubeByLayerName(layerName);
+
+    // While render missing data black is not active and there is no segmentation for the current zoom step,
+    // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
+    // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
+    const renderedZoomStep = renderMissingDataBlack
+      ? zoomStep
+      : cube.getNextUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {

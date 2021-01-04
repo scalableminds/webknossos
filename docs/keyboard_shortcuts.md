@@ -98,3 +98,10 @@ The following bindings only work if isosurface rendering is activated in the set
 | Shift + Click on a segment in the 3D viewport          | Change the active position to the clicked position          |
 | Ctrl + Click on a segment in the 3D viewport           | Remove the isosurface of the clicked cell                   |
 
+## Agglomerate File Mapping Skeleton
+
+The following binding only works in skeleton/hybrid annotations and if an agglomerate file mapping is activated.
+
+| Key Binding                     | Operation                                 |
+| ------------------------------- | ----------------------------------------- |
+| SHIFT + Middle Click            | Import Skeleton for Selected Segment      |

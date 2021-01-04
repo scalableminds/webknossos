@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import org.scalatest.FlatSpec

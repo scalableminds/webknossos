@@ -161,6 +161,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
+  "tracing.agglomerate_skeleton.no_cell":
+    "Clicked on the background. Please click on a cell to load a skeleton.",
+  "tracing.agglomerate_skeleton.no_mapping":
+    "Please activate an agglomerate file mapping to load a skeleton for a cell.",
+  "tracing.agglomerate_skeleton.no_agglomerate_file":
+    "Loading a skeleton for a cell only works with agglomerate file mappings.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -189,7 +195,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.content":
     "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
-    "Can not parse task specification. It includes at least one invalid task. (Note that the obsolete “team” column was recently removed, are you still using the old format?)",
+    "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",

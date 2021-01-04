@@ -2,8 +2,8 @@ package backend
 
 import java.io.ByteArrayInputStream
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import javax.inject.Inject
 import models.annotation.nml.{NmlParser, NmlWriter}
 import net.liftweb.common.{Box, Full}

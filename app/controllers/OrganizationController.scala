@@ -1,11 +1,12 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import javax.inject.Inject
 import models.team._
 import models.user.InviteDAO
+import org.joda.time.DateTime
 import oxalis.security.WkEnv
 import play.api.libs.json.{JsNull, Json}
 import play.api.mvc.{Action, AnyContent}
@@ -68,7 +69,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     } yield Ok(organizationJson)
   }
 
-  def getOperatorData: Action[AnyContent] = Action {
+  def getOperatorData: Action[AnyContent] = Action { implicit request =>
     Ok(Json.toJson(conf.operatorData))
   }
 }

@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import play.api.cache.SyncCacheApi
-import play.api.libs.json.{Format, Json, OFormat, Reads, Writes}
+import play.api.libs.json.{Format, Json, Reads, Writes}
 import play.api.mvc.Results.Forbidden
 import play.api.mvc.{Request, Result}
 
@@ -15,15 +15,14 @@ object AccessMode extends Enumeration {
 
   val administrate, list, read, write, delete = Value
 
-  implicit val jsonFormat: Format[AccessMode.Value] = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
+  implicit val jsonFormat = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
 }
 
 object AccessResourceType extends Enumeration {
 
   val datasource, tracing, webknossos = Value
 
-  implicit val jsonFormat: Format[AccessResourceType.Value] =
-    Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
+  implicit val jsonFormat = Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
 }
 
 case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
@@ -31,28 +30,28 @@ case class UserAccessRequest(resourceId: DataSourceId, resourceType: AccessResou
 }
 
 case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
-object UserAccessAnswer { implicit val jsonFormat: OFormat[UserAccessAnswer] = Json.format[UserAccessAnswer] }
+object UserAccessAnswer { implicit val jsonFormat = Json.format[UserAccessAnswer] }
 
 object UserAccessRequest {
-  implicit val jsonFormat: OFormat[UserAccessRequest] = Json.format[UserAccessRequest]
+  implicit val jsonFormat = Json.format[UserAccessRequest]
 
-  def deleteDataSource(dataSourceId: DataSourceId): UserAccessRequest =
+  def deleteDataSource(dataSourceId: DataSourceId) =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.delete)
-  def administrateDataSources: UserAccessRequest =
+  def administrateDataSources =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.administrate)
-  def listDataSources: UserAccessRequest =
+  def listDataSources =
     UserAccessRequest(DataSourceId("", ""), AccessResourceType.datasource, AccessMode.list)
-  def readDataSources(dataSourceId: DataSourceId): UserAccessRequest =
+  def readDataSources(dataSourceId: DataSourceId) =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.read)
-  def writeDataSource(dataSourceId: DataSourceId): UserAccessRequest =
+  def writeDataSource(dataSourceId: DataSourceId) =
     UserAccessRequest(dataSourceId, AccessResourceType.datasource, AccessMode.write)
 
-  def readTracing(tracingId: String): UserAccessRequest =
+  def readTracing(tracingId: String) =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.read)
-  def writeTracing(tracingId: String): UserAccessRequest =
+  def writeTracing(tracingId: String) =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
-  def webknossos: UserAccessRequest =
+  def webknossos =
     UserAccessRequest(DataSourceId("webknossos", ""), AccessResourceType.webknossos, AccessMode.administrate)
 }
 
@@ -75,7 +74,8 @@ trait AccessTokenService {
       result <- executeBlockOnPositiveAnswer(userAccessAnswer, block)
     } yield result
 
-  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A]): Fox[UserAccessAnswer] = {
+  private def hasUserAccess[A](accessRequest: UserAccessRequest, request: Request[A])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
     val tokenOpt = tokenFromRequest(request)
     hasUserAccess(accessRequest, tokenOpt)
   }
@@ -83,15 +83,16 @@ trait AccessTokenService {
   def tokenFromRequest[A](request: Request[A]): Option[String] =
     request.getQueryString("token").flatMap(token => if (token.isEmpty) None else Some(token))
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String]): Fox[UserAccessAnswer] = {
+  private def hasUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
+      implicit ec: ExecutionContext): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
     cache.getOrElseUpdate(key, AccessExpiration) {
       webKnossosServer.requestUserAccess(token, accessRequest)
     }
   }
 
-  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer,
-                                              block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer[A](userAccessAnswer: UserAccessAnswer, block: => Future[Result])(
+      implicit request: Request[A]): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block

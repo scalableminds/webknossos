@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
@@ -12,10 +13,9 @@ import net.liftweb.common.{Failure, Full}
 import oxalis.security.WkEnv
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import slick.jdbc.PostgresProfile.api._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -60,7 +60,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         sql"select _id from #$existingCollectionName where _id = ${_id} and _owner = ${_user}".as[String])
     } yield results.nonEmpty
 
-  def insertOne(j: Job): Fox[Unit] =
+  def insertOne(j: Job)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.jobs(_id, _owner, command, commandArgs, celeryJobId, celeryInfo, created, isDeleted)
@@ -116,7 +116,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
   def getCeleryInfo(job: Job): Fox[JsObject] =
     flowerRpc(s"/api/task/info/${job.celeryJobId}").getWithJsonResponse[JsObject]
 
-  def runJob(command: String, commandArgs: JsObject, owner: User): Fox[Job] =
+  def runJob(command: String, commandArgs: JsObject, owner: User)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "jobs.disabled"
       result <- flowerRpc(s"/api/task/async-apply/tasks.$command")
@@ -136,7 +136,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
                                organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends Controller {
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list = sil.SecuredAction.async { implicit request =>
     for {
       _ <- jobService.updateCeleryInfos()
       jobs <- jobDAO.findAll
@@ -144,7 +144,7 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(Json.toJson(jobsJsonList))
   }
 
-  def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def get(id: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- jobService.updateCeleryInfos()
       job <- jobDAO.findOne(ObjectId(id))
@@ -152,8 +152,8 @@ class JobsController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
-  def runCubingJob(organizationName: String, dataSetName: String, scale: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def runCubingJob(organizationName: String, dataSetName: String, scale: String) = sil.SecuredAction.async {
+    implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                      organizationName)
@@ -166,6 +166,6 @@ class JobsController @Inject()(jobDAO: JobDAO,
         job <- jobService.runJob(command, commandArgs, request.identity) ?~> "job.couldNotRunCubing"
         js <- jobService.publicWrites(job)
       } yield Ok(js)
-    }
+  }
 
 }

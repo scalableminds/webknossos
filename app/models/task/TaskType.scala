@@ -109,7 +109,8 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasktypesRow])
+        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
+          .as[TasktypesRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -117,11 +118,12 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasktypesRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TasktypesRow])
       parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
     } yield parsed
 
-  def insertOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val allowedModes = writeArrayTuple(t.settings.allowedModes)
     for {
       _ <- run(
         sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,
@@ -134,6 +136,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           t.recommendedConfiguration.map(c => sanitize(Json.toJson(c).toString)))}, '#${t.tracingType.toString}',
                                 ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
+  }
 
   def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that t.created is skipped

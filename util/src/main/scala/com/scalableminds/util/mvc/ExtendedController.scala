@@ -1,12 +1,15 @@
 package com.scalableminds.util.mvc
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import net.liftweb.common.{Full, _}
 import play.api.http.Status._
-import play.api.http.{HttpEntity, Status, Writeable}
+import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import play.api.mvc.{ResponseHeader, Result}
+import play.api.mvc.{Request, ResponseHeader, Result}
 import play.twirl.api._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -18,7 +21,7 @@ trait ResultBox extends I18nSupport with Formatter {
       result
     case ParamFailure(msg, _, chain, statusCode: Int) =>
       new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
-    case ParamFailure(_, _, _, msgs: JsArray) =>
+    case ParamFailure(msg, _, _, msgs: JsArray) =>
       new JsonResult(BAD_REQUEST)(jsonMessages(msgs))
     case Failure(msg, _, chain) =>
       new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
@@ -27,8 +30,8 @@ trait ResultBox extends I18nSupport with Formatter {
   }
 
   def formatChainOpt(chain: Box[Failure])(implicit messages: MessagesProvider): Option[String] = chain match {
-    case Full(_) => Some(formatChain(chain))
-    case _       => None
+    case Full(failure) => Some(formatChain(chain))
+    case _             => None
   }
 
   private def formatChain(chain: Box[Failure], includeTime: Boolean = true)(
@@ -39,7 +42,7 @@ trait ResultBox extends I18nSupport with Formatter {
     case _ => ""
   }
 
-  def jsonMessages(msgs: JsArray): JsObject =
+  def jsonMessages(msgs: JsArray)(implicit messages: MessagesProvider): JsObject =
     Json.obj("messages" -> msgs)
 }
 
@@ -75,22 +78,22 @@ class JsonResult(status: Int)
     extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity)
     with JsonResultAttribues {
 
-  val isSuccess: Boolean = List(OK) contains status
+  val isSuccess = List(OK) contains status
 
-  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]): Result =
+  def createResult(content: JsObject)(implicit writeable: Writeable[JsObject]) =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
-  private def messageTypeFromStatus =
+  def messageTypeFromStatus =
     if (isSuccess)
       jsonSuccess
     else
       jsonError
 
-  def apply(json: JsObject): Result =
+  def apply(json: JsObject) =
     createResult(json)
 
-  def apply(json: JsObject, messages: Seq[(String, String)]): Result =
+  def apply(json: JsObject, messages: Seq[(String, String)]) =
     createResult(json ++ jsonMessages(messages))
 
   def apply(messages: Seq[(String, String)]): Result =
@@ -117,7 +120,7 @@ class JsonResult(status: Int)
   def apply(message: String, chain: Option[String] = None): Result =
     apply(Html(""), message, chain)
 
-  private def namedChain(chainOpt: Option[String]) = chainOpt match {
+  def namedChain(chainOpt: Option[String]) = chainOpt match {
     case None        => None
     case Some(chain) => Some("chain" -> chain)
   }
@@ -147,6 +150,14 @@ trait JsonResultAttribues {
   val jsonError = "error"
 }
 
+trait PostRequestHelpers {
+  def postParameter(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter).flatMap(_.headOption)
+
+  def postParameterList(parameter: String)(implicit request: Request[Map[String, Seq[String]]]) =
+    request.body.get(parameter)
+}
+
 trait ExtendedController
     extends JsonResults
     with BoxImplicits
@@ -154,5 +165,6 @@ trait ExtendedController
     with ResultImplicits
     with Status
     with WithHighlightableResult
+    with PostRequestHelpers
     with WithFilters
     with I18nSupport

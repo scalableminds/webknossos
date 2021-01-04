@@ -448,7 +448,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                  volumeTracingId: Option[String],
                  annotationType: AnnotationType,
                  name: Option[String],
-                 description: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
+                 description: String)(implicit m: MessagesProvider, ctx: DBAccessContext): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(ObjectId.generate,
@@ -479,7 +479,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield teams
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
-      implicit
+      implicit m: MessagesProvider,
       ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)

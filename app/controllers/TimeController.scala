@@ -3,14 +3,14 @@ package controllers
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
-import models.user._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.time.TimeSpanDAO
+import models.user._
 import oxalis.security.WkEnv
+import com.mohiva.play.silhouette.api.Silhouette
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -23,7 +23,7 @@ class TimeController @Inject()(userService: UserService,
     with FoxImplicits {
 
   //all users with working hours > 0
-  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
+  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
     sil.SecuredAction.async { implicit request =>
       for {
         users <- userDAO.findAll
@@ -35,11 +35,7 @@ class TimeController @Inject()(userService: UserService,
     }
 
   //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String,
-                             year: Int,
-                             month: Int,
-                             startDay: Option[Int],
-                             endDay: Option[Int]): Action[AnyContent] =
+  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
     sil.SecuredAction.async { implicit request =>
       for {
         users <- Fox.combined(
@@ -54,18 +50,18 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
-  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = sil.SecuredAction.async {
+    implicit request =>
       for {
         userIdValidated <- ObjectId.parse(userId)
-        user <- userService.findOneById(userIdValidated, useCache = false) ?~> "user.notFound" ~> NOT_FOUND
+        user <- userService.findOneById(userIdValidated, false) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user == request.identity) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
       } yield {
         Ok(js)
       }
-    }
+  }
 
   //helper methods
 
@@ -73,7 +69,7 @@ class TimeController @Inject()(userService: UserService,
                                    year: Int,
                                    month: Int,
                                    startDay: Option[Int],
-                                   endDay: Option[Int]): Fox[JsValue] = {
+                                   endDay: Option[Int])(implicit ctx: DBAccessContext): Fox[JsValue] = {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
@@ -98,7 +94,8 @@ class TimeController @Inject()(userService: UserService,
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
   }
 
-  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long): Fox[JsValue] = {
+  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long)(
+      implicit ctx: DBAccessContext): Fox[JsValue] = {
     lazy val sDate = Calendar.getInstance()
     lazy val eDate = Calendar.getInstance()
 
@@ -108,7 +105,7 @@ class TimeController @Inject()(userService: UserService,
     getUserHours(user, sDate, eDate)
   }
 
-  def getUserHours(user: User, startDate: Calendar, endDate: Calendar): Fox[JsObject] =
+  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       userJs <- userService.compactWrites(user)
       timeJs <- timeSpanDAO.findAllByUserWithTask(user._id,

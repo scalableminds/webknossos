@@ -12,13 +12,13 @@ import scala.collection.mutable.ArrayBuffer
 
 case class DataSourceImportReport[A](ctx: A, messages: ArrayBuffer[(String, String)] = ArrayBuffer.empty) {
 
-  def error(msg: A => String): Unit = messages.append("error" -> msg(ctx))
+  def error(msg: A => String) = messages.append("error" -> msg(ctx))
 
-  def warning(msg: A => String): Unit = messages.append("warning" -> msg(ctx))
+  def warning(msg: A => String) = messages.append("warning" -> msg(ctx))
 
-  def info(msg: A => String): Unit = messages.append("info" -> msg(ctx))
+  def info(msg: A => String) = messages.append("info" -> msg(ctx))
 
-  def withContext(f: A => A): DataSourceImportReport[A] = DataSourceImportReport(f(ctx), messages)
+  def withContext(f: A => A) = DataSourceImportReport(f(ctx), messages)
 }
 
 trait DataSourceImporter {
@@ -47,11 +47,15 @@ trait DataSourceImporter {
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(
       implicit report: DataSourceImportReport[Path]): Category.Value = {
     val ColorRx = ".*color.*".r
+    val MaskRx = ".*mask.*".r
     val SegmentationRx = ".*segmentation.*".r
 
     layerName match {
       case ColorRx() =>
         Category.color
+      // TODO enable as soon as client has mask support
+      //case MaskRx() =>
+      //  Category.mask
       case SegmentationRx() =>
         Category.segmentation
       case _ =>
@@ -63,17 +67,18 @@ trait DataSourceImporter {
   protected def parseResolutionName(path: Path): Option[Either[Int, Point3D]] =
     path.getFileName.toString.toIntOpt match {
       case Some(resolutionInt) => Some(Left(resolutionInt))
-      case None =>
+      case None => {
         val pattern = """(\d+)-(\d+)-(\d+)""".r
         path.getFileName.toString match {
           case pattern(x, y, z) => Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
           case _                => None
         }
+      }
     }
 
   protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
 
-  protected def resolutionDirSortingKey(path: Path): Int =
+  protected def resolutionDirSortingKey(path: Path) =
     parseResolutionName(path).get match {
       case Left(int)    => int
       case Right(point) => point.maxDim

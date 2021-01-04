@@ -159,7 +159,8 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   // Used in create (without files). If base annotations were used, this does nothing.
   def createTaskSkeletonTracingBases(paramsList: List[TaskParameters])(
-      implicit ctx: DBAccessContext): Fox[List[Option[SkeletonTracing]]] =
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[List[Option[SkeletonTracing]]] =
     Fox.serialCombined(paramsList) { params =>
       for {
         taskTypeIdValidated <- ObjectId.parse(params.taskTypeId) ?~> "taskType.id.invalid"

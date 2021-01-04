@@ -2,19 +2,20 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.tools.{Fox, FoxImplicits, Math}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.models.{DataRequest, VoxelPosition}
+import com.scalableminds.util.tools.Math
 import net.liftweb.common.Full
-import play.api.libs.json.{Json, OFormat}
+import play.api.i18n.MessagesProvider
+import play.api.libs.json.Json
 import spire.math._
 
-import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Double, max: Double)
-object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[Histogram] }
+object Histogram { implicit val jsonFormat = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
     extends DataConverter
@@ -57,7 +58,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
   private def createPositions(dataLayer: DataLayer, iterationCount: Int = 4) = {
 
-    @tailrec
     def positionCreationIter(remainingRuns: List[Int], currentPositions: List[Point3D]): List[Point3D] = {
 
       def createPositionsFromExponent(exponent: Int) = {
@@ -131,12 +131,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     resolutionIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
-  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer): Fox[Option[(Point3D, Point3D)]] =
+  def findPositionWithData(dataSource: DataSource, dataLayer: DataLayer)(
+      implicit m: MessagesProvider): Fox[Option[(Point3D, Point3D)]] =
     for {
       positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
     } yield positionAndResolutionOpt
 
-  def meanAndStdDev(dataSource: DataSource, dataLayer: DataLayer): Fox[(Double, Double)] = {
+  def meanAndStdDev(dataSource: DataSource, dataLayer: DataLayer)(
+      implicit m: MessagesProvider): Fox[(Double, Double)] = {
 
     def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] =
       convertData(data, elementClass, filterZeroes = true) match {
@@ -147,7 +149,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         case d: Array[Float]  => d.map(_.toDouble)
       }
 
-    def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D): Fox[(Double, Double)] =
+    def meanAndStdDevForPositions(positions: List[Point3D], resolution: Point3D)(
+        implicit m: MessagesProvider): Fox[(Double, Double)] =
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
         dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
@@ -161,11 +164,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     } yield meanAndStdDev
   }
 
-  def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
+  def createHistogram(dataSource: DataSource, dataLayer: DataLayer) = {
 
     def calculateHistogramValues(data: Array[_ >: UByte with UShort with UInt with ULong with Float],
                                  bytesPerElement: Int,
-                                 isUint24: Boolean) = {
+                                 isUint24: Boolean = false) = {
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
       var extrema: (Double, Double) = (0, math.pow(256, bytesPerElement) - 1)
 

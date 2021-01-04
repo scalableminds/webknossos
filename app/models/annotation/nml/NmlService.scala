@@ -13,7 +13,10 @@ import net.liftweb.util.Helpers.tryo
 import play.api.i18n.MessagesProvider
 import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
 
-class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator) extends LazyLogging {
+import scala.concurrent.ExecutionContext
+
+class NmlService @Inject()(temporaryFileCreator: TemporaryFileCreator)(implicit ec: ExecutionContext)
+    extends LazyLogging {
 
   def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
       implicit m: MessagesProvider): NmlParseResult =

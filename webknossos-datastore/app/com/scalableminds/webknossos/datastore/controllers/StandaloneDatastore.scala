@@ -1,12 +1,14 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import javax.inject.Inject
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, InjectedController}
+import play.api.mvc.InjectedController
 
-class StandaloneDatastore @Inject()() extends InjectedController with RemoteOriginHelpers {
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
-  def buildInfo: Action[AnyContent] = Action {
+class StandaloneDatastore @Inject()(implicit ec: ExecutionContext) extends InjectedController with RemoteOriginHelpers {
+
+  def buildInfo = Action { implicit request =>
     AllowRemoteOrigin {
       Ok(
         Json.obj(

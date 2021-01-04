@@ -3,13 +3,14 @@ package com.scalableminds.webknossos.datastore.services
 import java.io._
 import java.nio.file.Path
 
-import com.google.gson.JsonParseException
-import com.google.gson.stream.JsonReader
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import com.google.gson.JsonParseException
+import com.google.gson.stream.JsonReader
 
 import scala.collection.mutable
+import scala.reflect.ClassTag
 
 object MappingParser extends LazyLogging {
 
@@ -69,11 +70,11 @@ object MappingParser extends LazyLogging {
 
     jsonReader.beginArray()
 
-    while (jsonReader.hasNext) {
+    while (jsonReader.hasNext()) {
       jsonReader.beginArray()
       var firstIdOpt: Option[T] = None
 
-      while (jsonReader.hasNext) {
+      while (jsonReader.hasNext()) {
         val currentId = fromLongFn(jsonReader.nextLong())
         firstIdOpt match {
           case Some(firstId) =>

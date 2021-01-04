@@ -77,7 +77,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     for {
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
       _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
-      idValidated <- ObjectId.parse(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.tokenNoId" // TODO readable message, warning that token may be old format (or support old format with disambiguation?)
+      idValidated <- ObjectId.parse(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
       user <- userService.findOneById(idValidated, useCache = true)
     } yield user
 

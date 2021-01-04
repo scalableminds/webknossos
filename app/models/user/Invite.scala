@@ -79,6 +79,13 @@ class InviteService @Inject()(conf: WkConf,
 
   def deactivateUsedInvite(invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteOne(invite._id)
+
+  def findInviteByTokenOpt(tokenValueOpt: Option[String])(implicit ctx: DBAccessContext): Fox[Invite] =
+    tokenValueOpt match {
+      case Some(tokenValue) => inviteDAO.findOneByTokenValue(tokenValue)
+      case None             => Fox.failure("No invite Token")
+    }
+
 }
 
 class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

@@ -161,9 +161,11 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   if (createNodeUAs != null && createNodeUAs.length > 1) {
     const createTreeUAs = groupedUpdateActions.createTree;
     if (createTreeUAs != null) {
-      const pluralS = createTreeUAs.length > 1 ? "s" : ""
+      const pluralS = createTreeUAs.length > 1 ? "s" : "";
       return {
-        description: `Added ${createTreeUAs.length} tree${pluralS} and ${createNodeUAs.length} nodes.`,
+        description: `Added ${createTreeUAs.length} tree${pluralS} and ${
+          createNodeUAs.length
+        } nodes.`,
         type: "plus",
       };
     }

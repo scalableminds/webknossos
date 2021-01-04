@@ -54,7 +54,7 @@ export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
   };
 }
 
-const noopProgressCallback = async (_a, _b): Promise<void> => {};
+const noopProgressCallback = async (_a, _b) => ({ hideFn: () => {} });
 
 class Mappings {
   baseUrl: string;

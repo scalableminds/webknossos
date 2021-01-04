@@ -4,9 +4,9 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.geometry.{BoundingBox, Color, NamedBoundingBox, Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBox, Color, NamedBoundingBox, Point3D, Vector3D}
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import javax.inject.Inject
 import models.annotation.Annotation

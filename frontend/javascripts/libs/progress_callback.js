@@ -3,11 +3,15 @@
 import { message } from "antd";
 import { sleep } from "libs/utils";
 
-export type ProgressCallback = (isDone: boolean, progressState: string) => Promise<void>;
+type HideFn = () => void;
+export type ProgressCallback = (
+  isDone: boolean,
+  progressState: string,
+) => Promise<{ hideFn: HideFn }>;
 
 // This function returns another function which can be called within a longer running
 // process to update the UI with progress information. Example usage:
-// const progressCallback = createProgressCallback({ pauseDelay: 100, successDelayMessage: 5000 });
+// const progressCallback = createProgressCallback({ pauseDelay: 100, successMessageDelay: 5000 });
 // await progressCallback(false, "Beginning work...")
 // ... long running code
 // await progressCallback(false, "First part done...")
@@ -22,7 +26,7 @@ export default function createProgressCallback(options: {
 }): ProgressCallback {
   const { pauseDelay, successMessageDelay } = options;
   let hideFn = null;
-  return async (isDone: boolean, status: string): Promise<void> => {
+  return async (isDone: boolean, status: string): Promise<{ hideFn: HideFn }> => {
     if (hideFn != null) {
       // Clear old progress message
       hideFn();
@@ -47,5 +51,8 @@ export default function createProgressCallback(options: {
         hideFn = null;
       }, successDelay);
     }
+    // hideFn seems to be awaitable, but the caller only wants to await the
+    // async progressCallback function, not the hideFn. Wrap it in an object, therefore.
+    return { hideFn };
   };
 }

@@ -3,7 +3,8 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import play.api.libs.json.Json
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.image.Color
-import com.scalableminds.webknossos.tracingstore.geometry.{NamedBoundingBox => ProtoBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBox => ProtoBoundingBox}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateActionHelper
 
 case class NamedBoundingBox(id: Int,

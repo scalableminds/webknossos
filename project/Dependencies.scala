@@ -68,6 +68,9 @@ object Dependencies {
   )
 
   val webknossosDatastoreDependencies = Seq(
+    grpc,
+    grpcServices,
+    scalapbRuntimeGrpc,
     akkaLogging,
     ehcache,
     gson,
@@ -80,10 +83,7 @@ object Dependencies {
   )
 
   val webknossosTracingstoreDependencies = Seq(
-    grpc,
-    grpcServices,
     redis,
-    scalapbRuntimeGrpc,
     jgrapht
   )
 

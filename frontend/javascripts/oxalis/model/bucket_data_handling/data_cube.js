@@ -508,6 +508,19 @@ class DataCube {
     return this.getBucket(this.positionToZoomedAddress(voxel, zoomStep)).hasData();
   }
 
+  getNextUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+    const resolutions = getResolutions(Store.getState().dataset);
+    let usableZoomStep = zoomStep;
+    while (
+      position &&
+      usableZoomStep < resolutions.length - 1 &&
+      !this.hasDataAtPositionAndZoomStep(position, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    return usableZoomStep;
+  }
+
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
     if (!this.resolutionInfo.hasIndex(zoomStep)) {
       return 0;

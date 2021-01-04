@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package com.scalableminds.webknossos.tracingstore;
+package com.scalableminds.webknossos.datastore;
 
 
 message Point3D {

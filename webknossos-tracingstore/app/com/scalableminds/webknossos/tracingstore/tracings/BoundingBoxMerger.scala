@@ -1,7 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.webknossos.tracingstore.geometry.{NamedBoundingBox => ProtoNamedBoundingBox}
-import com.scalableminds.webknossos.tracingstore.geometry.{BoundingBox => ProtoBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{NamedBoundingBox => ProtoNamedBoundingBox}
+import com.scalableminds.webknossos.datastore.geometry.{BoundingBox => ProtoBoundingBox}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 
 trait BoundingBoxMerger extends ProtoGeometryImplicits {
 

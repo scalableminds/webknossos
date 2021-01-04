@@ -36,32 +36,30 @@ case class KeyValuePair[T](key: String, value: T)
 case class VersionedKey(key: String, version: Long)
 
 case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
-
-  def key = versionedKey.key
-
-  def version = versionedKey.version
+  def key: String = versionedKey.key
+  def version: Long = versionedKey.version
 }
 
 class FossilDBClient(collection: String, config: TracingStoreConfig) extends FoxImplicits with LazyLogging {
-  val address = config.Tracingstore.Fossildb.address
-  val port = config.Tracingstore.Fossildb.port
-  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
-  val blockingStub = FossilDBGrpc.blockingStub(channel)
-  val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
+  private val address = config.Tracingstore.Fossildb.address
+  private val port = config.Tracingstore.Fossildb.port
+  private val channel =
+    NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
+  private val blockingStub = FossilDBGrpc.blockingStub(channel)
+  private val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
   def checkHealth: Fox[Unit] =
     try {
-      val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance())
+      val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance)
       val replyString = reply.getStatus.toString
       if (!(replyString == "SERVING")) throw new Exception(replyString)
       logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
       Fox.successful(())
     } catch {
-      case e: Exception => {
+      case e: Exception =>
         val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
         logger.error(errorText)
         Fox.failure(errorText)
-      }
     }
 
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
@@ -144,7 +142,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
       case e: Exception => Fox.failure("could not get multiple versions from FossilDB: " + e.getMessage)
     }
 
-  def put[T](key: String, version: Long, value: Array[Byte])(implicit toByteArray: T => Array[Byte]): Fox[Unit] =
+  def put[T](key: String, version: Long, value: Array[Byte]): Fox[Unit] =
     try {
       val reply = blockingStub.put(PutRequest(collection, key, Some(version), ByteString.copyFrom(value)))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
@@ -153,7 +151,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
       case e: Exception => Fox.failure("could not save to FossilDB: " + e.getMessage)
     }
 
-  def shutdown() = {
+  def shutdown(): Boolean = {
     channel.shutdownNow()
     channel.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS)
   }

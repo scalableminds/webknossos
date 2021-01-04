@@ -53,7 +53,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean)(implicit messages: Messages): Mail =
+  def newUserWKOrgMail(name: String, receiver: String, enableAutoVerify: Boolean): Mail =
     Mail(
       from = wkOrgSender,
       subject = "Welcome to webKnossos",
@@ -61,7 +61,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(receiver)
     )
 
-  def newAdminWKOrgMail(name: String, receiver: String)(implicit messages: Messages): Mail =
+  def newAdminWKOrgMail(name: String, receiver: String): Mail =
     Mail(
       from = wkOrgSender,
       subject = "Welcome to webKnossos",
@@ -92,7 +92,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   def newOrganizationMail(organizationDisplayName: String, creatorEmail: String, domain: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"webKnossos | New Organization created on ${domain}",
+      subject = s"webKnossos | New Organization created on $domain",
       bodyHtml = html.mail.notifyAdminNewOrganization(organizationDisplayName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )
@@ -105,7 +105,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     val host = Try { new URL(uri) }.toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
-      subject = s"$senderName invited you to join their webKnossos organization at ${host}",
+      subject = s"$senderName invited you to join their webKnossos organization at $host",
       bodyHtml = html.mail.invite(senderName, organizationDisplayName, inviteTokenValue, uri, autoVerify).body,
       recipients = List(receiver)
     )

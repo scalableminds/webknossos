@@ -110,7 +110,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       parsed <- r.headOption
     } yield parsed
 
-  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false) =
+  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean) =
     s"""
         select ${columnsWithPrefix("webknossos.tasks_.")}
            from

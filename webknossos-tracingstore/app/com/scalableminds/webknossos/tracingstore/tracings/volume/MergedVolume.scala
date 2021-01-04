@@ -23,7 +23,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
   var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
 
-  def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Box[Unit] = {
+  def addLabelSetFromDataZip(zipFile: File): Box[Unit] = {
     val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     val unzipResult = withBucketsFromZip(zipFile) { (_, bytes) =>
       val dataTyped =
@@ -83,7 +83,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
         }
     }
 
-  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Box[Unit] =
+  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File): Box[Unit] =
     withBucketsFromZip(zipFile) { (bucketPosition, bytes) =>
       add(sourceVolumeIndex, bucketPosition, bytes)
     }

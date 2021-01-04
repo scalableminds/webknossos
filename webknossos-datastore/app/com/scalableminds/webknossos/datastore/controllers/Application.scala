@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import play.api.mvc.{Action, AnyContent}
 
-class Application @Inject()(implicit ec: ExecutionContext) extends Controller {
+class Application @Inject()() extends Controller {
 
-  def health = Action { implicit request =>
+  def health: Action[AnyContent] = Action {
     AllowRemoteOrigin {
       Ok("Ok")
     }

@@ -159,18 +159,18 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
   // an NML was uploaded or an undo/redo action took place.
   const createNodeUAs = groupedUpdateActions.createNode;
   if (createNodeUAs != null && createNodeUAs.length > 1) {
-
     const createTreeUAs = groupedUpdateActions.createTree;
     if (createTreeUAs != null) {
+      const pluralS = createTreeUAs.length > 1 ? "s" : ""
       return {
-        description: `Added ${createTreeUAs.length} trees and ${createNodeUAs.length} nodes.`,
-        type: "upload",
+        description: `Added ${createTreeUAs.length} tree${pluralS} and ${createNodeUAs.length} nodes.`,
+        type: "plus",
       };
     }
 
     return {
       description: `Added ${createNodeUAs.length} nodes.`,
-      type: "upload",
+      type: "plus",
     };
   }
 

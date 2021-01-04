@@ -1,8 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}

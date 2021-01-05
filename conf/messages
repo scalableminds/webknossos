@@ -303,4 +303,6 @@ job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
 
+agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
+
 unexpectedReturn=Unexpected return of parameters

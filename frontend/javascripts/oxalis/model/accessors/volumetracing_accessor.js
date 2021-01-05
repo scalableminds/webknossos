@@ -45,17 +45,22 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
+const MAG_THRESHOLDS_FOR_ZOOM = {
+  [VolumeToolEnum.TRACE]: 1,
+  [VolumeToolEnum.BRUSH]: 3,
+};
 export function isVolumeAnnotationDisallowedForZoom(tool: VolumeTool, state: OxalisState) {
   if (state.tracing.volume == null) {
     return true;
   }
 
-  if (tool !== VolumeToolEnum.TRACE && tool !== VolumeToolEnum.BRUSH) {
-    // since the tool is neither trace or brush, it can not be disabled
+  const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool];
+
+  if (threshold == null) {
+    // If there is no threshold for the provided tool, it doesn't need to be
+    // disabled.
     return false;
   }
-
-  const threshold = tool === VolumeToolEnum.TRACE ? 1 : 3;
 
   // The current resolution is too high to allow the trace tool
   // because too many voxels could be annotated at the same time.

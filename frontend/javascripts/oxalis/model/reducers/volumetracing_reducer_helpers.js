@@ -17,16 +17,7 @@ export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing,
   if (tool === volumeTracing.activeTool) {
     return state;
   }
-  if (
-    tool === VolumeToolEnum.TRACE &&
-    isVolumeAnnotationDisallowedForZoom(VolumeToolEnum.TRACE, state)
-  ) {
-    return state;
-  }
-  if (
-    tool === VolumeToolEnum.BRUSH &&
-    isVolumeAnnotationDisallowedForZoom(VolumeToolEnum.BRUSH, state)
-  ) {
+  if (isVolumeAnnotationDisallowedForZoom(tool, state)) {
     return state;
   }
 

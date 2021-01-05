@@ -639,19 +639,15 @@ export function* finishLayer(
   yield* put(updateDirectionAction(layer.getUnzoomedCentroid()));
 }
 
-export function* ensureNoTraceToolInLowResolutions(): Saga<*> {
+export function* ensureToolIsAllowedInResolution(): Saga<*> {
   yield* take("INITIALIZE_VOLUMETRACING");
   while (true) {
     yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP"]);
-    const isResolutionTooLowForTraceTool = yield* select(state => {
+    const isResolutionTooLow = yield* select(state => {
       const { activeTool } = enforceVolumeTracing(state.tracing);
       return isVolumeAnnotationDisallowedForZoom(activeTool, state);
     });
-    const isTraceToolActive = yield* select(state => {
-      const { activeTool } = enforceVolumeTracing(state.tracing);
-      return activeTool === VolumeToolEnum.TRACE || activeTool === VolumeToolEnum.BRUSH;
-    });
-    if (isResolutionTooLowForTraceTool && isTraceToolActive) {
+    if (isResolutionTooLow) {
       yield* put(setToolAction(VolumeToolEnum.MOVE));
     }
   }

@@ -155,14 +155,24 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     }
   }
 
-  // If more than one createNode update actions are part of one batch, that is not a tree merge or split
-  // an NML was uploaded.
-  // TODO: This could've also been an undo/redo action.
+  // If more than one createNode update actions are part of one batch, that is not a tree merge or split,
+  // an NML was uploaded or an undo/redo action took place.
   const createNodeUAs = groupedUpdateActions.createNode;
   if (createNodeUAs != null && createNodeUAs.length > 1) {
+    const createTreeUAs = groupedUpdateActions.createTree;
+    if (createTreeUAs != null) {
+      const pluralS = createTreeUAs.length > 1 ? "s" : "";
+      return {
+        description: `Added ${createTreeUAs.length} tree${pluralS} and ${
+          createNodeUAs.length
+        } nodes.`,
+        type: "plus",
+      };
+    }
+
     return {
-      description: `Uploaded an NML with ${createNodeUAs.length} nodes.`,
-      type: "upload",
+      description: `Added ${createNodeUAs.length} nodes.`,
+      type: "plus",
     };
   }
 

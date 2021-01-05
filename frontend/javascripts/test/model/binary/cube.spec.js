@@ -37,6 +37,7 @@ mockRequire("libs/error_handling", {
   assert(expr) {
     if (!expr) throw new Error("Assertion failed");
   },
+  notify() {},
 });
 mockRequire("libs/toast", { error: _.noop });
 

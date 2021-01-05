@@ -45,7 +45,7 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-const MAG_THRESHOLDS_FOR_ZOOM: {[VolumeTool]: number} = {
+const MAG_THRESHOLDS_FOR_ZOOM: { [VolumeTool]: number } = {
   [VolumeToolEnum.TRACE]: 1,
   [VolumeToolEnum.BRUSH]: 3,
 };

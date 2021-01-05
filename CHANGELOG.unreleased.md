@@ -14,7 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - 
 
 ### Changed
--
+- The brush tool is disabled in low magnifications (magnification 16 and lower) to avoid performance problems when annotating. [#5017](https://github.com/scalableminds/webknossos/pull/5017)
 
 ### Fixed
 -

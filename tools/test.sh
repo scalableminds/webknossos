@@ -18,8 +18,8 @@ mkdir -p "$testBundlePath"
 function prepare {
   rm -rf "$testBundlePath" && mkdir "$testBundlePath"
   # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
-  pbjs -t json "webknossos-tracingstore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
-  pbjs -t json "webknossos-tracingstore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
+  pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
+  pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
   # --copy-files will copy files that are present in the source dir but are not transpiled (e.g.: json files)
   BABEL_ENV=test babel "$jsPath" --out-dir "$testBundlePath" --copy-files $additionalParams
 }

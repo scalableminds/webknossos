@@ -45,7 +45,7 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-const MAG_THRESHOLDS_FOR_ZOOM = {
+const MAG_THRESHOLDS_FOR_ZOOM: {[VolumeTool]: number} = {
   [VolumeToolEnum.TRACE]: 1,
   [VolumeToolEnum.BRUSH]: 3,
 };
@@ -62,7 +62,7 @@ export function isVolumeAnnotationDisallowedForZoom(tool: VolumeTool, state: Oxa
     return false;
   }
 
-  // The current resolution is too high to allow the trace tool
+  // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
   const isZoomStepTooHigh = getRequestLogZoomStep(state) > threshold;
   return isZoomStepTooHigh;

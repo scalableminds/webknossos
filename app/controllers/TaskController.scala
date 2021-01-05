@@ -6,9 +6,9 @@ import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import javax.inject.Inject
 import models.annotation._
 import models.annotation.nml.NmlResults.TracingBoxContainer

@@ -58,8 +58,7 @@ class UserService @Inject()(conf: WkConf,
     } yield user
 
   def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] = {
-    val lastLoggedInIdentity: Option[ObjectId] = multiUser._lastLoggedInIdentity
-    lastLoggedInIdentity match {
+    multiUser._lastLoggedInIdentity match {
       case Some(userId) => userDAO.findOne(userId)
       case None         => userDAO.findFirstByMultiUser(multiUser._id)
     }

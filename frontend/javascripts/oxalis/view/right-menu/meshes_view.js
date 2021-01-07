@@ -34,7 +34,6 @@ import { readFileAsArrayBuffer } from "libs/read_file";
 import { setImportingMeshStateAction } from "oxalis/model/actions/ui_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { jsConvertCellIdToHSLA } from "oxalis/shaders/segmentation.glsl";
-import { capitalize } from "libs/utils";
 
 export const stlIsosurfaceConstants = {
   isosurfaceMarker: [105, 115, 111], // ASCII codes for ISO
@@ -241,28 +240,28 @@ class MeshesView extends React.Component<
       </React.Fragment>
     );
     const getMeshesHeader = () => (
-      <React.Fragment>
+      <div style={{ marginTop: 10 }}>
         Meshes{" "}
         <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport.">
           <Icon type="info-circle" />
         </Tooltip>
         {getImportButton()}
-      </React.Fragment>
+      </div>
     );
 
-    const getLoadIsosurfaceCellButton = (type: string) => (
+    const getLoadIsosurfaceCellButton = () => (
       <Button
         onClick={() => {
           const pos = getPosition(this.props.flycam);
-          const id = type === "active" ? this.props.activeCellId : getIdForPos(pos);
+          const id = getIdForPos(pos);
           this.props.changeActiveIsosurfaceId(id, pos);
         }}
       >
-        Load Isosurface for {capitalize(type)} Cell
+        Load Isosurface for centered Cell
       </Button>
     );
 
-    const renderListItem = (isosurface: Object) => {
+    const renderIsosurfaceListItem = (isosurface: Object) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
       const centeredCell = getIdForPos(getPosition(this.props.flycam));
       const actionVisibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
@@ -277,7 +276,6 @@ class MeshesView extends React.Component<
           ]}
           style={{
             padding: 0,
-            backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
             cursor: "pointer",
           }}
           onMouseEnter={() => {
@@ -288,7 +286,11 @@ class MeshesView extends React.Component<
           }}
         >
           <div
-            style={{ paddingLeft: 5 }}
+            style={{
+              paddingLeft: 5,
+              paddingRight: 5,
+              backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
+            }}
             onClick={() => {
               moveTo(seedPosition);
             }}
@@ -305,22 +307,52 @@ class MeshesView extends React.Component<
         </List.Item>
       );
     };
+    const renderMeshListItem = (mesh: Object) => {
+      const isLoading = mesh.isLoading === true;
+      return (
+        <div key={mesh.id}>
+          <Checkbox
+            checked={mesh.isVisible}
+            onChange={(event: SyntheticInputEvent<>) => {
+              this.props.onChangeVisibility(mesh, event.target.checked);
+            }}
+            disabled={isLoading}
+            style={getCheckboxStyle(mesh.isLoaded)}
+          >
+            {mesh.description}
+          </Checkbox>
+          {mesh.isLoaded ? (
+            <React.Fragment>
+              <Icon
+                type="edit"
+                onClick={() => this.setState({ currentlyEditedMesh: mesh })}
+                style={{ cursor: "pointer" }}
+              />
+              <Icon
+                type="delete"
+                onClick={() => this.props.deleteMesh(mesh.id)}
+                style={{ cursor: "pointer" }}
+              />
+            </React.Fragment>
+          ) : null}
+          <Spin size="small" spinning={isLoading} />
+        </div>
+      );
+    };
 
     return (
       <div className="padded-tab-content">
         {getIsosurfacesHeader()}
-        {getLoadIsosurfaceCellButton("centered")}
-        {this.props.activeCellId != null && getLoadIsosurfaceCellButton("active")}
+        {getLoadIsosurfaceCellButton()}
         <List
           dataSource={Object.values(this.props.isosurfaces)}
           size="small"
           split={false}
-          renderItem={renderListItem}
+          renderItem={renderIsosurfaceListItem}
           locale={{
             emptyText: "There are no Isosurfaces.",
           }}
         />
-
         {this.state.currentlyEditedMesh != null ? (
           <EditMeshModal
             initialMesh={this.state.currentlyEditedMesh}
@@ -332,39 +364,15 @@ class MeshesView extends React.Component<
           />
         ) : null}
         {getMeshesHeader()}
-        {this.props.meshes.map(mesh => {
-          // Coerce nullable isLoading to a proper boolean
-          const isLoading = mesh.isLoading === true;
-          return (
-            <div key={mesh.id}>
-              <Checkbox
-                checked={mesh.isVisible}
-                onChange={(event: SyntheticInputEvent<>) => {
-                  this.props.onChangeVisibility(mesh, event.target.checked);
-                }}
-                disabled={isLoading}
-                style={getCheckboxStyle(mesh.isLoaded)}
-              >
-                {mesh.description}
-              </Checkbox>
-              {mesh.isLoaded ? (
-                <React.Fragment>
-                  <Icon
-                    type="edit"
-                    onClick={() => this.setState({ currentlyEditedMesh: mesh })}
-                    style={{ cursor: "pointer" }}
-                  />
-                  <Icon
-                    type="delete"
-                    onClick={() => this.props.deleteMesh(mesh.id)}
-                    style={{ cursor: "pointer" }}
-                  />
-                </React.Fragment>
-              ) : null}
-              <Spin size="small" spinning={isLoading} />
-            </div>
-          );
-        })}
+        <List
+          dataSource={this.props.meshes}
+          size="small"
+          split={false}
+          renderItem={renderMeshListItem}
+          locale={{
+            emptyText: "There are no meshes. You can import an STL file to change this. ",
+          }}
+        />
       </div>
     );
   }

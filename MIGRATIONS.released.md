@@ -5,6 +5,8 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.01.0](https://github.com/scalableminds/webknossos/releases/tag/21.01.0) - 2020-12-21
+No migrations necessary.
 
 ## [20.12.0](https://github.com/scalableminds/webknossos/releases/tag/20.12.0) - 2020-11-23
 - As volume annotations in arbitrary magnifications are now supported and the behavior of magnification restrictions of tasks has changed (allow full zoom, but disable tools unless in correct magnification), you may want to restrict all volume and hybrid task types to mag 1 to achieve the old behavior (mag1-only). NOTE: This query has to be executed BEFORE evolution 59 is performed.

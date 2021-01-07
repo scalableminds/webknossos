@@ -10,7 +10,7 @@ const PROTO_FILES = {
   skeleton: SkeletonTracingProto,
   volume: VolumeTracingProto,
 };
-const PROTO_PACKAGE = "com.scalableminds.webknossos.tracingstore";
+const PROTO_PACKAGE = "com.scalableminds.webknossos.datastore";
 const PROTO_TYPES = {
   skeleton: `${PROTO_PACKAGE}.SkeletonTracing`,
   volume: `${PROTO_PACKAGE}.VolumeTracing`,

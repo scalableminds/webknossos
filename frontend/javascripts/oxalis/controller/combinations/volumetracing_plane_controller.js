@@ -39,7 +39,7 @@ import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/acti
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;

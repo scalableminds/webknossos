@@ -3,7 +3,7 @@ import { Dropdown, Menu, Icon, Tooltip } from "antd";
 import { Link, withRouter } from "react-router-dom";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, APIDataset } from "types/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIDataset, APIDatasetId } from "types/api_flow_types";
 import { clearCache } from "admin/admin_rest_api";
 import {
   getSegmentationLayer,
@@ -118,24 +118,9 @@ function NewAnnotationLink({ dataset, isReloading }) {
   );
 }
 
-function ImportLink({ dataset }) {
-  return (
-    <div>
-      <Link
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-        className="import-dataset"
-      >
-        <Icon type="plus-circle-o" />
-        Import
-      </Link>
-
-      <div className="text-danger">{dataset.dataSource.status}</div>
-    </div>
-  );
-}
-
 type Props = {
   dataset: APIMaybeUnimportedDataset,
+  updateDataset: APIDatasetId => Promise<void>,
 };
 
 type State = {
@@ -172,6 +157,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
   clearCache = async (dataset: APIMaybeUnimportedDataset) => {
     this.setState({ isReloading: true });
     await clearCache(dataset);
+    await this.props.updateDataset(dataset);
     Toast.success(
       messages["dataset.clear_cache_success"]({
         datasetName: dataset.name,
@@ -186,9 +172,35 @@ class DatasetActionView extends React.PureComponent<Props, State> {
 
     const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
 
+    const reloadLink = !dataset.isForeign ? (
+      <a
+        onClick={() => this.clearCache(dataset)}
+        title="Reload Dataset"
+        style={disabledWhenReloadingStyle}
+        type="link"
+      >
+        {isReloading ? <Icon type="loading" /> : <Icon type="reload" />}
+        Reload
+      </a>
+    ) : null;
+
+    const importLink = (
+      <div className="dataset-actions">
+        <Link
+          to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
+          className="import-dataset"
+        >
+          <Icon type="plus-circle-o" />
+          Import
+        </Link>
+        {reloadLink}
+        <div className="text-danger">{dataset.dataSource.status}</div>
+      </div>
+    );
+
     return (
       <div>
-        {dataset.isEditable && !dataset.isActive ? <ImportLink dataset={dataset} /> : null}
+        {dataset.isEditable && !dataset.isActive ? importLink : null}
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
             {!dataset.isForeign ? (
@@ -219,17 +231,7 @@ class DatasetActionView extends React.PureComponent<Props, State> {
                   <Icon type="setting" />
                   Settings
                 </LinkWithDisabled>
-                {!dataset.isForeign ? (
-                  <a
-                    onClick={() => this.clearCache(dataset)}
-                    title="Reload Dataset"
-                    style={disabledWhenReloadingStyle}
-                    type="link"
-                  >
-                    {isReloading ? <Icon type="loading" /> : <Icon type="reload" />}
-                    Reload
-                  </a>
-                ) : null}
+                {reloadLink}
               </React.Fragment>
             ) : null}
           </div>

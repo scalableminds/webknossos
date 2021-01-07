@@ -155,6 +155,7 @@ function DatasetView(props: Props) {
         isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
+        updateDataset={context.updateDataset}
       />
     );
   }

@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import scalapb.{GeneratedMessage, Message}
 import play.api.libs.json._
 

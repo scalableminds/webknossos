@@ -10,8 +10,8 @@ module.exports = function(env = {}) {
   const CopyWebpackPlugin = require("copy-webpack-plugin");
 
   var srcPath = path.resolve(__dirname, "frontend/javascripts/");
-  var nodePath = path.join(__dirname, "node_modules/");
-  var protoPath = path.join(__dirname, "webknossos-tracingstore/proto/");
+  var nodePath = "node_modules";
+  var protoPath = path.join(__dirname, "webknossos-datastore/proto/");
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
 
@@ -133,6 +133,9 @@ module.exports = function(env = {}) {
     },
     resolve: {
       modules: [srcPath, nodePath, protoPath],
+      alias: {
+        react: path.resolve("./node_modules/react"),
+      },
     },
     optimization: {
       minimize: false,

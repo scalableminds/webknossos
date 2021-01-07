@@ -57,12 +57,11 @@ class UserService @Inject()(conf: WkConf,
       user <- disambiguateUserFromMultiUser(multiUser)
     } yield user
 
-  def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] = {
+  def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
     multiUser._lastLoggedInIdentity match {
       case Some(userId) => userDAO.findOne(userId)
       case None         => userDAO.findFirstByMultiUser(multiUser._id)
     }
-  }
 
   def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {

@@ -1,3 +1,4 @@
+/* eslint-disable operator-assignment */
 // @flow
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
@@ -54,7 +55,7 @@ M4x4.transformPointsAffine = function transformPointsAffine(
   const m32 = m[14];
 
   // DO NOT CHANGE to let compound assignment (+=) as V8 cannot optimize this
-  for (let i = 0; i < points.length; i += 3) {
+  for (let i = 0; i < points.length; i = i + 3) {
     const v0 = points[i];
     const v1 = points[i + 1];
     const v2 = points[i + 2];
@@ -86,7 +87,7 @@ M4x4.transformPoints = function transformPoints(
   if (r == null) {
     r = new Float32Array(points.length);
   }
-  for (let i = 0; i < points.length; i += 3) {
+  for (let i = 0; i < points.length; i = i + 3) {
     const v0 = points[i];
     const v1 = points[i + 1];
     const v2 = points[i + 2];

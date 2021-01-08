@@ -97,7 +97,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         case None =>
           for {
             isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-            _ <- bool2Fox(isTeamManagerOrAdminOfOrg || dataSet.isPublic)
+            _ <- bool2Fox(isTeamManagerOrAdminOfOrg || dataSet.isPublic || user.isDatasetManager)
             organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }
@@ -202,7 +202,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                                                    tracingType,
                                                    withFallback,
                                                    organization.name)
-      teamId <- selectSuitableTeam(user, dataSet)
+      teamId <- selectSuitableTeam(user, dataSet) ?~> "annotation.create.forbidden"
       annotation = Annotation(
         ObjectId.generate,
         _dataSet,

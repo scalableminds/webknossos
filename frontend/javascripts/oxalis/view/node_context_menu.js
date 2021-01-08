@@ -45,29 +45,6 @@ type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};
 type NoNodeContextMenuProps = {| ...Props |};
 
-const interactionHints = (
-  <table className="table-with-borders-between-columns">
-    <tbody>
-      <tr>
-        <td>SHIFT + Mousewheel</td>
-        <td>Change Active Node Radius</td>
-      </tr>
-      <tr>
-        <td>CTRL + .</td>
-        <td>Navigate to subsequent Active Node</td>
-      </tr>
-      <tr>
-        <td>CTRL + ,</td>
-        <td>Navigate to preceding Active Node</td>
-      </tr>
-      <tr>
-        <td>CTRL + Left Click / CTRL + Arrow Keys</td>
-        <td>Move the Active Node</td>
-      </tr>
-    </tbody>
-  </table>
-);
-
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <Tooltip title={title}>
@@ -283,21 +260,11 @@ function NodeContextMenu(props: Props) {
         ) : null}
         {distanceToSelection != null ? (
           <div className="node-context-menu-item">
-            <Icon type="info-circle" /> {distanceToSelection} to this{" "}
+            <i className="fas fa-ruler" /> {distanceToSelection} to this{" "}
             {clickedNodeId != null ? "Node" : "Position"}
             {copyIconWithTooltip(distanceToSelection, "Copy the distance")}
           </div>
         ) : null}
-        <div className="node-context-menu-item" style={{ cursor: "help" }}>
-          <Popover
-            placement="right"
-            title="Interaction Hints"
-            content={interactionHints}
-            style={{ borderRadius: 6 }}
-          >
-            <Icon type="bulb" /> Show possible interactions
-          </Popover>
-        </div>
       </div>
     </React.Fragment>
   );

@@ -1,13 +1,13 @@
-package com.scalableminds.webknossos.tracingstore.tracings
+package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing.{ElementClass => ProtoElementClass}
-import com.scalableminds.webknossos.tracingstore.geometry.{
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.{ElementClass => ProtoElementClass}
+import com.scalableminds.webknossos.datastore.geometry.{
   BoundingBox => ProtoBoundingBox,
   Point3D => ProtoPoint3D,
   Vector3D => ProtoVector3D
 }
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
 trait ProtoGeometryImplicits {
 
@@ -36,4 +36,5 @@ trait ProtoGeometryImplicits {
 
   implicit def elementClassFromProto(ec: ProtoElementClass): ElementClass.Value =
     ElementClass.guessFromBytesPerElement(ec.value).getOrElse(ElementClass.uint32)
+
 }

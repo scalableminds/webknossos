@@ -1,6 +1,6 @@
 // @flow
 
-import Saxophone from "@scalableminds/saxophone";
+import Saxophone from "saxophone";
 import _ from "lodash";
 
 import type { APIBuildInfo } from "types/api_flow_types";
@@ -791,7 +791,7 @@ export function parseNml(
             break;
         }
       })
-      .on("end", () => {
+      .on("finish", () => {
         // Split potentially unconnected trees
         const originalTreeIds = Object.keys(trees);
         let maxTreeId = getMaximumTreeId(trees);

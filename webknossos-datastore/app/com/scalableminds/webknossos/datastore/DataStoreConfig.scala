@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.ConfigReader
 import play.api.Configuration
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
@@ -30,6 +29,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val agglomerateMaxReaderRange = get[Int]("braingames.binary.agglomerateMaxReaderRange")
       val isosurfaceTimeout = get[Int]("braingames.binary.isosurfaceTimeout") seconds
       val isosurfaceActorPoolSize = get[Int](path = "braingames.binary.isosurfaceActorPoolSize")
+      val agglomerateSkeletonEdgeLimit = get[Int]("braingames.binary.agglomerateSkeletonEdgeLimit")
 
       val children = List(ChangeHandler)
     }

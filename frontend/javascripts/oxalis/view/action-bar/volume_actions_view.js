@@ -2,8 +2,6 @@
 import { Button, Radio, Tooltip, Badge } from "antd";
 import { useSelector } from "react-redux";
 import React, { useEffect } from "react";
-import { usePrevious, useKeyPress } from "libs/react_hooks";
-import Model from "oxalis/model";
 
 import {
   ToolsWithOverwriteCapabilities,
@@ -12,21 +10,20 @@ import {
   type OverwriteMode,
   OverwriteModeEnum,
 } from "oxalis/constants";
+import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 import { document } from "libs/window";
 import {
   enforceVolumeTracing,
   isVolumeTraceToolDisallowed,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import {
-  setToolAction,
-  createCellAction,
-  setOverwriteModeAction,
-} from "oxalis/model/actions/volumetracing_actions";
-import ButtonComponent from "oxalis/view/components/button_component";
 import { getRenderableResolutionForSegmentation } from "oxalis/model/accessors/dataset_accessor";
+import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
+import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
+import { usePrevious, useKeyPress } from "libs/react_hooks";
+import ButtonComponent from "oxalis/view/components/button_component";
+import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { convertCellIdToCSS } from "oxalis/view/right-menu/mapping_info_view";
 
 const isZoomStepTooHighForTraceTool = () => isVolumeTraceToolDisallowed(Store.getState());
 
@@ -115,7 +112,7 @@ const handleCreateCell = () => {
 };
 
 const handleSetOverwriteMode = (event: { target: { value: OverwriteMode } }) => {
-  Store.dispatch(setOverwriteModeAction(event.target.value));
+  Store.dispatch(updateUserSettingAction("overwriteMode", event.target.value));
 };
 
 const RadioButtonWithTooltip = ({
@@ -135,13 +132,13 @@ const RadioButtonWithTooltip = ({
 );
 
 function OverwriteModeSwitch({ isControlPressed }) {
-  const overwriteMode = useSelector(state => enforceVolumeTracing(state.tracing).overwriteMode);
+  const overwriteMode = useSelector(state => state.userConfiguration.overwriteMode);
   const previousIsControlPressed = usePrevious(isControlPressed);
   const didControlChange =
     previousIsControlPressed != null && isControlPressed !== previousIsControlPressed;
   useEffect(() => {
     if (didControlChange) {
-      Store.dispatch(setOverwriteModeAction(toggleOverwriteMode(overwriteMode)));
+      Store.dispatch(updateUserSettingAction("overwriteMode", toggleOverwriteMode(overwriteMode)));
     }
   }, [didControlChange]);
 

@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{AccessDeniedException, Files, Path}
-
 import com.google.inject.Inject
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,6 +8,8 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.libs.json.{Json, OFormat}
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{AccessDeniedException, Files, Path}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 

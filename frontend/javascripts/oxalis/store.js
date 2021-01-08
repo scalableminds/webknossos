@@ -224,9 +224,6 @@ export type VolumeTracing = {|
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
   // Stores points of the currently drawn region in global coordinates
-  // This overwrite mode is used when no modifier is pressed.
-  // Pressing the modifier, will toggle the mode
-  +overwriteMode: OverwriteMode,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
   +fallbackLayer?: string,
@@ -306,13 +303,15 @@ export type UserConfiguration = {|
   +newNodeNewTree: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
-  +radius: number,
   +rotateValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +gpuMemoryFactor: number,
+  // For volume (and hybrid) annotations, this mode specifies
+  // how volume annotations overwrite existing voxels.
+  +overwriteMode: OverwriteMode,
 |};
 
 export type RecommendedConfiguration = $Shape<{

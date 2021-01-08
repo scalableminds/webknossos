@@ -94,6 +94,7 @@ dataSet.import.impossible.name=Import impossible. Dataset name can only consist 
 dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.name.notInSamples=This dataset name is not one of the available sample datasets.
 dataSet.source.notFound=The data source for the data source couldn’t be found
+dataSet.source.usableButNoScale=Dataset {0} is marked as active but has no scale.
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
 dataSet.import.fileAccessDenied=Cannot create organization folder. Please make sure webKnossos has write permissions in the “binaryData” directory
@@ -197,6 +198,7 @@ tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
 
 annotation.create.failed=Failed to create annotation.
+annotation.create.forbidden=You do not have permission to create annotations for this dataset.
 annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.
@@ -301,5 +303,7 @@ initialData.organizationsNotEmpty=There are already organizations present in the
 job.notFound = Job with id {0} could not be found.
 job.couldNotRunCubing = Failed to start WKW conversion job.
 job.disabled = Long-running jobs are not enabled for this webKnossos instance.
+
+agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
 
 unexpectedReturn=Unexpected return of parameters

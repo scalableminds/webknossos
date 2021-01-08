@@ -1,17 +1,13 @@
 package models.task
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.schema.Tables.{profile, _}
 import javax.inject.Inject
 import models.annotation._
-import models.binary.DataSetDAO
 import models.project.ProjectDAO
-import models.team.TeamDAO
 import models.user.Experience
-import play.api.libs.json.{JsObject, Json}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
@@ -36,68 +32,12 @@ case class Task(
     isDeleted: Boolean = false
 )
 
-class TaskService @Inject()(dataSetDAO: DataSetDAO,
-                            scriptDAO: ScriptDAO,
-                            annotationDAO: AnnotationDAO,
-                            taskTypeDAO: TaskTypeDAO,
-                            teamDAO: TeamDAO,
-                            scriptService: ScriptService,
-                            taskTypeService: TaskTypeService,
-                            projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
-    extends FoxImplicits {
-
-  def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
-    for {
-      annotationBase <- annotationBaseFor(task._id)
-      dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
-      status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
-      taskTypeJs <- taskTypeService.publicWrites(taskType)
-      scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
-      scriptJs <- scriptInfo.toFox.flatMap(s => scriptService.publicWrites(s)).futureBox
-      project <- projectDAO.findOne(task._project)
-      team <- teamDAO.findOne(project._team)(GlobalAccessContext)
-    } yield {
-      Json.obj(
-        "id" -> task._id.toString,
-        "formattedHash" -> Formatter.formatHash(task._id.toString),
-        "projectName" -> project.name,
-        "team" -> team.name,
-        "type" -> taskTypeJs,
-        "dataSet" -> dataSet.name,
-        "neededExperience" -> task.neededExperience,
-        "created" -> task.created,
-        "status" -> status,
-        "script" -> scriptJs.toOption,
-        "tracingTime" -> task.tracingTime,
-        "creationInfo" -> task.creationInfo,
-        "boundingBox" -> task.boundingBox,
-        "editPosition" -> task.editPosition,
-        "editRotation" -> task.editRotation
-      )
-    }
-
-  def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    (for {
-      list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
-    } yield list.headOption.toFox).flatten
-
-  def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
-    for {
-      active <- countActiveAnnotationsFor(task._id).getOrElse(0)
-    } yield CompletionStatus(task.openInstances, active, task.totalInstances - (active + task.openInstances))
-
-  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-    annotationDAO.countActiveByTask(taskId, AnnotationType.Task)
-
-}
-
 class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   val collection = Tasks
 
-  def idColumn(x: Tasks) = x._Id
-  def isDeletedColumn(x: Tasks) = x.isdeleted
+  def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
+  def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
 
   def parse(r: TasksRow): Fox[Task] =
     for {
@@ -113,7 +53,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
         r.totalinstances,
         r.openinstances,
         r.tracingtime,
-        r.boundingbox.map(b => parseArrayTuple(b).map(_.toInt)).map(BoundingBox.fromSQL).flatten,
+        r.boundingbox.map(b => parseArrayTuple(b).map(_.toInt)).flatMap(BoundingBox.fromSQL),
         editPosition,
         editRotation,
         r.creationinfo,
@@ -137,7 +77,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasksRow])
+        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TasksRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -145,7 +85,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -156,17 +96,16 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(
-        sql"""select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}
-              order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[TasksRow])
+      r <- run(sql"""select #$columns from #$existingCollectionName where _project = ${projectId.id} and #$accessQuery
+              order by _id desc limit $limit offset ${pageNumber * limit}""".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext) =
+  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"""select count(*) from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}"""
+        sql"""select count(*) from #$existingCollectionName where _project = ${projectId.id} and #$accessQuery"""
           .as[Int])
       parsed <- r.headOption
     } yield parsed
@@ -203,7 +142,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, skeletonTracingId, volumeTracingId, description, visibility, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption
       .map(_.id)
-      .getOrElse("")}, ${userId.id}, ${dummyTracingId},
+      .getOrElse("")}, ${userId.id}, $dummyTracingId,
                     null, '', '#${AnnotationVisibility.Internal}', '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
@@ -257,7 +196,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       case Some(pName) => for { project <- projectDAO.findOneByName(pName) } yield s"(t._project = '${project._id}')"
       case _           => Fox.successful("true")
     }
-    val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")
+    val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '$ttId')").getOrElse("true")
     val taskIdsFilter = taskIdsOpt
       .map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})")
       .getOrElse("true")
@@ -266,7 +205,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       .getOrElse("")
     val userFilter = userIdOpt
       .map(uId =>
-        s"(u._id = '${uId}' and a.typ = '${AnnotationType.Task}' and a.state != '${AnnotationState.Cancelled}')")
+        s"(u._id = '$uId' and a.typ = '${AnnotationType.Task}' and a.state != '${AnnotationState.Cancelled}')")
       .getOrElse("true")
 
     for {
@@ -274,13 +213,13 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       q = sql"""select #${columnsWithPrefix("t.")}
                 from webknossos.tasks_ t
-                #${userJoin}
-                where #${projectFilter}
-                and #${taskTypeFilter}
-                and #${taskIdsFilter}
-                and #${userFilter}
-                and #${accessQuery}
-                #${orderRandom}
+                #$userJoin
+                where #$projectFilter
+                and #$taskTypeFilter
+                and #$taskIdsFilter
+                and #$userFilter
+                and #$accessQuery
+                #$orderRandom
                 limit 1000
                 offset #${pageNumber * 1000}"""
       r <- run(q.as[TasksRow])
@@ -297,7 +236,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
   def countAllOpenInstancesForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       result <- run(
-        sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where ${organizationId} in (select _organization from webknossos.users_ where _id = p._owner)"
+        sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where $organizationId in (select _organization from webknossos.users_ where _id = p._owner)"
           .as[Int])
       firstResult <- result.headOption
     } yield firstResult
@@ -334,10 +273,10 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
                    values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id},
                           ${t.neededExperience.domain}, ${t.neededExperience.value},
                           ${t.totalInstances}, ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(
-          t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
+          t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(
           t.editRotation.toList.map(_.toString))}',
-                           #${optionLiteral(t.creationInfo.map(sanitize(_)))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+                           #${optionLiteral(t.creationInfo.map(sanitize))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
         """)
     } yield ()
 
@@ -356,7 +295,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        sqlu"update webknossos.tasks set totalInstances = totalInstances + ${delta} where _project = ${projectId.id} and #${accessQuery}"
+        sqlu"update webknossos.tasks set totalInstances = totalInstances + $delta where _project = ${projectId.id} and #$accessQuery"
           .withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)

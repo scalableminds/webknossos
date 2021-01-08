@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
 
-import type { APITeam, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import type { APITeam, APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -28,6 +28,7 @@ type Props = {
   isUserTeamManager: boolean,
   isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
+  updateDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
 };
 
 type State = {
@@ -66,6 +67,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
     });
   };
 
+  updateSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+    this.props.updateDataset(datasetId, this.props.datasets);
+
   getFilteredDatasets() {
     const filterByMode = datasets => {
       const { datasetFilteringMode } = this.props;
@@ -88,7 +92,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const filterByHasLayers = datasets =>
       this.props.isUserAdmin || this.props.isUserDatasetManager
         ? datasets
-        : datasets.filter(dataset => dataset.dataSource.dataLayers != null);
+        : datasets.filter(dataset => dataset.isActive && dataset.dataSource.dataLayers.length > 0);
 
     return filterByQuery(filterByMode(filterByHasLayers(this.props.datasets)));
   }
@@ -189,7 +193,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="scale"
           width={230}
           render={(__, dataset: APIMaybeUnimportedDataset) =>
-            `${formatScale(dataset.dataSource.scale)}  ${getDatasetExtentAsString(dataset)}`
+            `${
+              dataset.isActive ? formatScale(dataset.dataSource.scale) : ""
+            }  ${getDatasetExtentAsString(dataset)}`
           }
         />
         <Column
@@ -248,7 +254,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           dataIndex="dataSource.dataLayers"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
             <div style={{ maxWidth: 300 }}>
-              {(dataset.dataSource.dataLayers || []).map(layer => (
+              {(dataset.isActive ? dataset.dataSource.dataLayers : []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>
@@ -263,7 +269,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} />
+            <DatasetActionView dataset={dataset} updateDataset={this.updateSingleDataset} />
           )}
         />
       </FixedExpandableTable>

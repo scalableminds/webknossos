@@ -1,11 +1,12 @@
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import play.api.OptionalDevContext
 import play.api.http._
-import play.api.mvc.{Action, Handler, InjectedController, RequestHeader}
+import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
 import play.core.WebCommands
+
+import javax.inject.Inject
 
 class TsRequestHandler @Inject()(webCommands: WebCommands,
                                  optionalDevContext: OptionalDevContext,

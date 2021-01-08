@@ -1,16 +1,12 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import java.io._
-import java.nio.file.Path
-import java.util
-
 import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayerMapping
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
 import spire.math.ULong
 
+import java.io._
+import java.util
 import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {

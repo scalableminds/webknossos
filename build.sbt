@@ -12,11 +12,11 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
-  "-language:postfixOps"
+  "-language:postfixOps",
+  "-Xlint:unused"
 )
 
-PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s",
-                            "play.server.http.idleTimeout" -> "10000s")
+PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala",
                              ".*/Routes.scala",
@@ -35,7 +35,7 @@ lazy val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.targets in Compile := Seq(
     scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
   ),
-  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-tracingstore/proto"))
+  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto"))
 )
 
 lazy val copyConfFilesSetting = {
@@ -55,12 +55,14 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(ProtocPlugin)
   .settings(
     name := "webknossos-datastore",
     commonSettings,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
     routesGenerator := InjectedRoutesGenerator,
+    protocolBufferSettings,
     unmanagedJars in Compile ++= {
       val libs = baseDirectory.value / "lib"
       val subs = (libs ** "*") filter { _.isDirectory }
@@ -76,13 +78,11 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
   .dependsOn(webknossosDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
-  .enablePlugins(ProtocPlugin)
   .settings(
     name := "webknossos-tracingstore",
     commonSettings,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    protocolBufferSettings,
     routesGenerator := InjectedRoutesGenerator,
     copyConfFilesSetting
   )

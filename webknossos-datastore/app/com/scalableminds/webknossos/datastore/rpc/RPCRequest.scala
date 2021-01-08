@@ -1,19 +1,17 @@
 package com.scalableminds.webknossos.datastore.rpc
 
-import java.io.File
-
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.ws._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 

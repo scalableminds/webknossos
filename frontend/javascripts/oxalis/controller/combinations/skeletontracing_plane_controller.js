@@ -49,7 +49,10 @@ import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import {
+  isosurfaceLeftClick,
+  agglomerateSkeletonMiddleClick,
+} from "oxalis/controller/combinations/segmentation_plane_controller";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -100,6 +103,11 @@ export function getPlaneMouseControls(
         event,
         showNodeContextMenuAt,
       ),
+    middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      if (event.shiftKey) {
+        agglomerateSkeletonMiddleClick(pos);
+      }
+    },
   };
 }
 

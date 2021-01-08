@@ -1,9 +1,9 @@
 package utils
 
 import com.scalableminds.util.tools.ConfigReader
-import javax.inject.Inject
 import play.api.Configuration
 
+import javax.inject.Inject
 import scala.concurrent.duration._
 
 class WkConf @Inject()(configuration: Configuration) extends ConfigReader {

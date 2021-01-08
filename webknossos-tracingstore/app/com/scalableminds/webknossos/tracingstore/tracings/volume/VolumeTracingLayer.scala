@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
   TemporaryTracingStore,
@@ -17,7 +17,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.{
 import sun.reflect.generics.reflectiveObjects.NotImplementedException
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 

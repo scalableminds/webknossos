@@ -51,8 +51,7 @@ export const enforceValidatedDatasetViewConfiguration = (
   const { layers } = datasetViewConfiguration;
   const newLayerConfig = {};
 
-  if (maybeUnimportedDataset.dataSource.dataLayers != null) {
-    // $FlowFixMe[incompatible-type]
+  if (maybeUnimportedDataset.isActive) {
     const dataset: APIDataset = maybeUnimportedDataset;
     dataset.dataSource.dataLayers.forEach(layer => {
       const layerConfigDefault = getDefaultLayerViewConfiguration(

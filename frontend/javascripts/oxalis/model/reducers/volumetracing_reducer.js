@@ -5,7 +5,7 @@
 import update from "immutability-helper";
 
 import type { OxalisState, VolumeTracing } from "oxalis/store";
-import { VolumeToolEnum, ContourModeEnum, OverwriteModeEnum } from "oxalis/constants";
+import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { VolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerBoundingBoxToFrontend,
@@ -19,7 +19,6 @@ import {
   updateDirectionReducer,
   addToLayerReducer,
   resetContourReducer,
-  setOverwriteModeModeReducer,
   hideBrushReducer,
   setContourTracingModeReducer,
   setMaxCellReducer,
@@ -40,7 +39,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         activeCellId: 0,
         lastCentroid: null,
         contourTracingMode: ContourModeEnum.DRAW,
-        overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
         contourList: [],
         maxCellId,
         cells: {},
@@ -85,7 +83,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
         }
 
         case "CREATE_CELL": {
-          return createCellReducer(state, volumeTracing, action.cellId);
+          return createCellReducer(state, volumeTracing);
         }
 
         case "UPDATE_DIRECTION": {
@@ -108,12 +106,14 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingAction): 
           return setContourTracingModeReducer(state, action.mode);
         }
 
-        case "SET_OVERWRITE_MODE": {
-          return setOverwriteModeModeReducer(state, action.mode);
+        case "SET_MAX_CELL": {
+          return setMaxCellReducer(state, action.cellId);
         }
 
-        case "SET_MAX_CELL": {
-          return setMaxCellReducer(state, volumeTracing, action.cellId);
+        case "FINISH_ANNOTATION_STROKE": {
+          // Possibly update the maxCellId after volume annotation
+          const { activeCellId, maxCellId } = volumeTracing;
+          return setMaxCellReducer(state, Math.max(activeCellId, maxCellId));
         }
 
         default:

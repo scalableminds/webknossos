@@ -32,7 +32,6 @@ import type {
   ServerNode,
   ServerBranchPoint,
 } from "types/api_flow_types";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
@@ -46,6 +45,8 @@ import Constants, { NODE_ID_REF_REGEX, type Vector3 } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
+
+export const DEFAULT_NODE_RADIUS = 1.0;
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -132,8 +133,9 @@ export function createNode(
 
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * getBaseVoxel(state.dataset.dataSource.scale);
-    const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
+    const radius = activeNodeMaybe
+      .map(activeNode => activeNode.radius)
+      .getOrElse(DEFAULT_NODE_RADIUS);
 
     // Find new node id by increasing the max node id.
     const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
@@ -522,14 +524,18 @@ export function addTreesAndGroups(
 
     if (allowUpdate) {
       // Assign a new tree name for trees without a name
-      for (const treeId of Object.keys(trees)) {
-        const tree = trees[Number(treeId)];
+      const treeIds = Object.keys(trees).map(treeId => Number(treeId));
+      for (const treeId of treeIds) {
+        const tree = trees[treeId];
         if (tree.name === "") {
           tree.name = generateTreeName(state, tree.timestamp, tree.treeId);
         }
       }
 
-      const needsReassignedIds = Object.keys(skeletonTracing.trees).length > 0;
+      // TreeIds > 1024^2 break webKnossos, see https://github.com/scalableminds/webknossos/issues/5009
+      const hasTreeIdsLargerThanMaximum = treeIds.some(treeId => treeId > 1048576);
+      const needsReassignedIds =
+        Object.keys(skeletonTracing.trees).length > 0 || hasTreeIdsLargerThanMaximum;
 
       if (!needsReassignedIds) {
         // Without reassigning ids, the code is considerably faster.
@@ -561,8 +567,8 @@ export function addTreesAndGroups(
       }
 
       const newTrees = {};
-      for (const treeId of Object.keys(trees)) {
-        const tree = trees[Number(treeId)];
+      for (const treeId of treeIds) {
+        const tree = trees[treeId];
 
         const newNodes = new DiffableMap();
         for (const node of tree.nodes.values()) {

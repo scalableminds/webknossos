@@ -50,7 +50,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;

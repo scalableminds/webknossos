@@ -1,15 +1,14 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.FiniteDuration
 
 class FallbackBucketProvider(primary: DataLayer, fallback: DataLayer) extends BucketProvider {
 

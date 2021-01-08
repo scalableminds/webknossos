@@ -112,7 +112,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
 
     const activeTool = yield* select(state => enforceVolumeTracing(state.tracing).activeTool);
-    // The trace tool is not allowed for too high zoom steps.
+    // Depending on the tool, annotation in higher zoom steps might be disallowed.
     const isZoomStepTooHighForAnnotating = yield* select(state =>
       isVolumeAnnotationDisallowedForZoom(activeTool, state),
     );

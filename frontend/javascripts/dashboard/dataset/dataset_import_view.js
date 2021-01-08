@@ -302,13 +302,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.props.form.setFieldsValue({
         dataSourceJson: jsonStringify(inferredDataSource),
       });
-      this.setState(currentState => {
-        const updatedStatus = {
-          ...currentState.dataSourceSettingsStatus,
-          appliedSuggestions: AppliedSuggestionsEnum.Yes,
-        };
-        return { dataSourceSettingsStatus: updatedStatus };
-      });
+      this.setState(
+        currentState => {
+          const updatedStatus = {
+            ...currentState.dataSourceSettingsStatus,
+            appliedSuggestions: AppliedSuggestionsEnum.Yes,
+          };
+          return { dataSourceSettingsStatus: updatedStatus };
+        },
+        // Enforce validation as antd does not do this automatically.
+        () => this.props.form.validateFields(),
+      );
     };
 
     if (isJSONFormatValid === IsJSONFormatValidEnum.BrokenJson) {

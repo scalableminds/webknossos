@@ -10,6 +10,7 @@ import type {
   APIDataSource,
   APIDataset,
   MutableAPIDataset,
+  MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
 } from "types/api_flow_types";
@@ -108,7 +109,7 @@ function ensureValidScaleOnInferredDataSource(
     // If one of the data sources is null, return the other.
     return savedDataSourceOnServer || inferredDataSource;
   }
-  const inferredDataSourceClone = (_.cloneDeep(inferredDataSource): any);
+  const inferredDataSourceClone = ((_.cloneDeep(inferredDataSource): any): MutableAPIDataSource);
   if (
     _.isEqual(inferredDataSource.scale, [0, 0, 0]) &&
     !_.isEqual(savedDataSourceOnServer.scale, [0, 0, 0])
@@ -128,7 +129,8 @@ function ensureValidScaleOnInferredDataSource(
       savedSegmentationLayerSettings != null &&
       segmentationLayerSettings.largestSegmentId === 0 &&
       // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
-      savedSegmentationLayerSettings.category === "segmentation"
+      savedSegmentationLayerSettings.category === "segmentation" &&
+      segmentationLayerSettings.category === "segmentation"
     ) {
       segmentationLayerSettings.largestSegmentId = savedSegmentationLayerSettings.largestSegmentId;
     }

@@ -6,7 +6,13 @@ import _ from "lodash";
 import moment from "moment";
 import { connect } from "react-redux";
 
-import type { APIDataSource, APIDataset, APIDatasetId, APIMessage } from "types/api_flow_types";
+import type {
+  APIDataSource,
+  APIDataset,
+  MutableAPIDataset,
+  APIDatasetId,
+  APIMessage,
+} from "types/api_flow_types";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import { diffObjects, jsonStringify } from "libs/utils";
@@ -95,11 +101,12 @@ export type FormData = {
 };
 
 function ensureValidScaleOnInferredDataSource(
-  savedDataSourceOnServer: APIDataSource | void,
-  inferredDataSource: APIDataSource | void,
-): APIDataSource | null {
+  savedDataSourceOnServer: ?APIDataSource,
+  inferredDataSource: ?APIDataSource,
+): ?APIDataSource {
   if (savedDataSourceOnServer == null || inferredDataSource == null) {
-    return null;
+    // If one of the data sources is null, return the other.
+    return savedDataSourceOnServer || inferredDataSource;
   }
   const inferredDataSourceClone = (_.cloneDeep(inferredDataSource): any);
   if (
@@ -120,6 +127,7 @@ function ensureValidScaleOnInferredDataSource(
       segmentationLayerSettings != null &&
       savedSegmentationLayerSettings != null &&
       segmentationLayerSettings.largestSegmentId === 0 &&
+      // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
       savedSegmentationLayerSettings.category === "segmentation"
     ) {
       segmentationLayerSettings.largestSegmentId = savedSegmentationLayerSettings.largestSegmentId;
@@ -208,8 +216,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
-        const datasetClone = (_.cloneDeep(dataset): any);
-        datasetClone.dataSource = (_.cloneDeep(dataSource): any);
+        const datasetClone = ((_.cloneDeep(dataset): any): MutableAPIDataset);
         // We are keeping the error message to display it to the user.
         datasetClone.dataSource.status = dataset.dataSource.status;
         dataset = (datasetClone: APIDataset);

@@ -5,6 +5,7 @@ import type {
   APIAnnotation,
   APIDatasetId,
   APIDataset,
+  MutableAPIDataset,
   APIDataLayer,
   HybridServerTracing,
   ServerVolumeTracing,
@@ -307,9 +308,10 @@ function initializeDataset(
     dataSet: dataset.dataSource.id.name,
   });
 
+  const mutableDataset = ((dataset: any): MutableAPIDataset);
   // Add the originalElementClass property to the segmentation layer if it exists.
   // Also set the elementClass to uint32 because uint64 segmentation data is truncated to uint32 by the backend.
-  const updatedDataLayers = dataset.dataSource.dataLayers.map(dataLayer => {
+  const updatedDataLayers = mutableDataset.dataSource.dataLayers.map(dataLayer => {
     const { elementClass } = dataLayer;
     if (dataLayer.category === "segmentation") {
       const adjustedElementClass = elementClass === "uint64" ? "uint32" : elementClass;
@@ -322,17 +324,15 @@ function initializeDataset(
       return dataLayer;
     }
   });
-  // $FlowExpectedError[incompatible-use] assigning the adjusted dataset layers, although this property is not writable.
-  dataset.dataSource.dataLayers = updatedDataLayers;
+  mutableDataset.dataSource.dataLayers = updatedDataLayers;
 
   serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
     const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracing);
-    // $FlowExpectedError[incompatible-use] We mutate the dataset here to avoid that an outdated version is used somewhere else
-    dataset.dataSource.dataLayers = newDataLayers;
+    mutableDataset.dataSource.dataLayers = newDataLayers;
   });
 
   ensureMatchingLayerResolutions(dataset);
-  Store.dispatch(setDatasetAction(dataset));
+  Store.dispatch(setDatasetAction((mutableDataset: APIDataset)));
 }
 
 export function ensureMatchingLayerResolutions(dataset: APIDataset): void {

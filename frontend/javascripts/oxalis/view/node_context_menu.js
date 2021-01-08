@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Menu, notification, Icon, Divider, Popover, Tooltip } from "antd";
+import { Menu, notification, Icon, Divider, Tooltip } from "antd";
 import type { Vector3, OrthoView } from "oxalis/constants";
 import type { OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Dispatch } from "redux";
@@ -249,7 +249,7 @@ function NodeContextMenu(props: Props) {
         <Divider style={{ margin: "4px 0px" }} />
         {clickedNodeId != null && nodeContextMenuTree != null ? (
           <div className="node-context-menu-item">
-            Node with Id {clickedNodeId} in tree {nodeContextMenuTree.treeId}
+            Node with Id {clickedNodeId} in Tree {nodeContextMenuTree.treeId}
           </div>
         ) : null}
         {nodeContextMenuNode != null ? (

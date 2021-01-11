@@ -27,6 +27,7 @@ import Model from "oxalis/model";
 import Store, { type OxalisState, type Task, type Tracing } from "oxalis/store";
 
 type OwnProps = {|
+  // eslint-disable-next-line react/no-unused-prop-types
   portalKey: string,
 |};
 type StateProps = {|

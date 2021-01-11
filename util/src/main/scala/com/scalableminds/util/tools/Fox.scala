@@ -39,9 +39,8 @@ trait FoxImplicits {
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
     f.futureBox
 
-  // This one is no longer implicit since that has lead to confusion. Should always be used explicitly.
-  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
-    if (b) Fox.successful(b)
+  def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+    if (b) Fox.successful(())
     else Fox.empty
 }
 

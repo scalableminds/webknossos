@@ -16,7 +16,9 @@ type OwnProps = {|
   layerName: string,
   intensityRangeMin: number,
   intensityRangeMax: number,
+  // eslint-disable-next-line react/no-unused-prop-types
   min?: number,
+  // eslint-disable-next-line react/no-unused-prop-types
   max?: number,
   isInEditMode: boolean,
   defaultMinMax: Vector2,

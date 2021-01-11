@@ -15,7 +15,7 @@ const { Password } = Input;
 
 type PropsWithoutForm = {|
   layout: "horizontal" | "vertical" | "inline",
-  onLoggedIn?: () => void,
+  onLoggedIn?: () => mixed,
   hideFooter?: boolean,
   style?: Object,
 |};

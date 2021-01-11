@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(59);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(60);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -273,27 +273,22 @@ CREATE TABLE webknossos.organizations(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _multiUser CHAR(24) NOT NULL,
   _organization CHAR(24) NOT NULL,
-  email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
-  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
-  loginInfo_providerKey VARCHAR(512) NOT NULL,
-  passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
-  passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
-  isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
 );
 
@@ -328,9 +323,20 @@ CREATE TABLE webknossos.user_dataSetLayerConfigurations(
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
+CREATE TABLE webknossos.multiUsers(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
+  passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
+  passwordInfo_password VARCHAR(512) NOT NULL,
+  isSuperUser BOOLEAN NOT NULL DEFAULT false,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
 
 
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
+CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   value Text NOT NULL,
@@ -360,6 +366,16 @@ CREATE TABLE webknossos.jobs(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.invites(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  tokenValue Text NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  autoActivate BOOLEAN NOT NULL,
+  expirationDateTime TIMESTAMPTZ NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 
 CREATE VIEW webknossos.analytics_ AS SELECT * FROM webknossos.analytics WHERE NOT isDeleted;
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
@@ -376,8 +392,10 @@ CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDele
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
+CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
+CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
 
@@ -398,11 +416,13 @@ CREATE INDEX ON webknossos.tasks(neededExperience_domain, neededExperience_value
 CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
-CREATE INDEX ON webknossos.users(email);
+CREATE INDEX ON webknossos.users(_multiUser);
+CREATE INDEX ON webknossos.multiUsers(email);
 CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
+CREATE INDEX ON webknossos.invites(tokenValue);
 
 ALTER TABLE webknossos.analytics
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE;
@@ -454,6 +474,8 @@ ALTER TABLE webknossos.user_dataSetConfigurations
 ALTER TABLE webknossos.user_dataSetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.multiUsers
+  ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
   BEGIN

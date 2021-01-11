@@ -33,6 +33,7 @@ image.create.failed=Failed to create image
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 auth.token.noUser=Could not determine user for access token
+auth.invite.invalidToken=The invite token is invalid or expired.
 
 team.created=Team was created
 team.notAllowed=You are not part of this team. Project can’t be created.
@@ -46,6 +47,7 @@ organization.notFound=Organization {0} couldn’t be found
 organization.list.failed=Failed to retrieve list of organizations.
 organization.name.invalid=The chosen organization name is invalid.
 organization.name.alreadyInUse=The chosen organization name is already in use.
+organization.alreadyJoined=Your account is already associated with the selected organization.
 
 user.activated={0} has been activated
 user.notFound=User not found
@@ -58,6 +60,7 @@ user.lastAdmin=Cannot remove admin privileges from the only admin in the organiz
 user.resetPassword.failed=Invalid old password
 user.resetPassword.success=Your password was successfully changed
 user.email.alreadyInUse=This email address is already in use
+user.email.onlySuperUserCanChange=Only super users can change emails of users with multiple organization accounts
 user.firstName.empty=Please enter your first name
 user.lastName.empty=Please enter your last name
 user.firstName.invalid=Please check your first name for any special characters

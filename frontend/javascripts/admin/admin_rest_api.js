@@ -1427,3 +1427,22 @@ export function computeIsosurface(
     return { buffer, neighbors };
   });
 }
+
+export function getAgglomerateSkeleton(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken(token =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      { useWebworkerForArrayBuffer: false },
+    ),
+  );
+}

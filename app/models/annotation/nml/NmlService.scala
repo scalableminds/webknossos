@@ -4,7 +4,7 @@ import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
 
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, TreeGroup}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._

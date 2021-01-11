@@ -1,8 +1,7 @@
-package com.scalableminds.webknossos.tracingstore.tracings.skeleton
+package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{Node, SkeletonTracing}
-import com.scalableminds.webknossos.tracingstore.tracings.ProtoGeometryImplicits
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Node, SkeletonTracing}
 
 object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   val dataSetName = ""

@@ -27,12 +27,15 @@ const localStorageKeys = {
 };
 
 function readStoredLayoutConfigs() {
-  const storedLayoutVersion = UserLocalStorage.getItem(localStorageKeys.currentLayoutVersion);
+  const storedLayoutVersion = UserLocalStorage.getItem(
+    localStorageKeys.currentLayoutVersion,
+    false,
+  );
   const defaultLayoutConfig = getCurrentDefaultLayoutConfig();
   if (getIsInIframe() || !storedLayoutVersion || disableLayoutPersistance) {
     return defaultLayoutConfig;
   }
-  const layoutString = UserLocalStorage.getItem(localStorageKeys.goldenWkLayouts);
+  const layoutString = UserLocalStorage.getItem(localStorageKeys.goldenWkLayouts, false);
   if (!layoutString) {
     return defaultLayoutConfig;
   }
@@ -111,10 +114,11 @@ function persistLayoutConfigs() {
     return;
   }
   const { storedLayouts } = Store.getState().uiInformation;
-  UserLocalStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
+  UserLocalStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts), false);
   UserLocalStorage.setItem(
     localStorageKeys.currentLayoutVersion,
     JSON.stringify(currentLayoutVersion),
+    false,
   );
 }
 

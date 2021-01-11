@@ -49,6 +49,7 @@ type OwnProps = {|
   activeTreeId: ?number,
   activeGroupId: ?number,
   treeGroups: Array<TreeGroup>,
+  // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
   selectedTrees: Array<number>,

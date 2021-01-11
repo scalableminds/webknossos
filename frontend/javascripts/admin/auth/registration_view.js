@@ -46,7 +46,7 @@ function RegistrationView({ organizationName }: Props) {
           // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
           key={organization.name}
-          organizationName={organization.name}
+          targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {
               history.goBack();
@@ -54,10 +54,6 @@ function RegistrationView({ organizationName }: Props) {
               Toast.success(messages["auth.account_created"]);
               history.push("/auth/login");
             }
-          }}
-          onOrganizationNameNotFound={() => {
-            Toast.error(messages["auth.invalid_organization_name"]);
-            history.push("/auth/register");
           }}
         />
       </>

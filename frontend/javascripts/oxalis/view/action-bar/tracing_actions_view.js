@@ -195,6 +195,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       const timeSinceFinish = Date.now() - finishedTime;
       const reopenAllowedTime = features().taskReopenAllowedInSeconds * 1000;
       if (timeSinceFinish < reopenAllowedTime) {
+        // eslint-disable-next-line react/no-did-update-set-state
         this.setState({
           isReopenAllowed: true,
         });

@@ -2,23 +2,32 @@
 
 import Store from "oxalis/store";
 
-function prefixKey(key) {
+function prefixKey(key, isOrganizationSpecific) {
   const { activeUser } = Store.getState();
-  const prefix = !activeUser ? "Anonymous" : activeUser.email;
+
+  let prefix;
+  if (!activeUser) {
+    prefix = "Anonymous";
+  } else if (isOrganizationSpecific) {
+    prefix = `${activeUser.email}-${activeUser.organization}`;
+  } else {
+    prefix = activeUser.email;
+  }
+
   return `${prefix}-${key}`;
 }
 
 const UserLocalStorage = {
-  getItem(key: string): ?string {
-    return localStorage.getItem(prefixKey(key));
+  getItem(key: string, isOrganizationSpecific: boolean = true): ?string {
+    return localStorage.getItem(prefixKey(key, isOrganizationSpecific));
   },
 
-  setItem(key: string, value: string): void {
-    return localStorage.setItem(prefixKey(key), value);
+  setItem(key: string, value: string, isOrganizationSpecific: boolean = true): void {
+    return localStorage.setItem(prefixKey(key, isOrganizationSpecific), value);
   },
 
-  removeItem(key: string): void {
-    return localStorage.removeItem(prefixKey(key));
+  removeItem(key: string, isOrganizationSpecific: boolean = true): void {
+    return localStorage.removeItem(prefixKey(key, isOrganizationSpecific));
   },
 
   clear(): void {

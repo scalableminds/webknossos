@@ -201,6 +201,7 @@ tracing=Annotation
 tracing.notFound=Tracing couldn’t be found
 
 annotation.create.failed=Failed to create annotation.
+annotation.create.forbidden=You do not have permission to create annotations for this dataset.
 annotation.volume.uint64=Creating volume annotations with uint64 fallback layer is not supported by wK yet.
 annotation.volume.resolutionRestrictionsTooTight=Task type resolution restrictions are too tight, resulting annotation has no resolutions.
 annotation.volume.resolutionsDoNotMatch=Could not merge volume annotations, as their resolutions differ. Please ensure each annotation has the same set of resolutions.

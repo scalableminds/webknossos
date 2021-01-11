@@ -55,6 +55,7 @@ type StateProps = {|
   activeViewport: OrthoView,
   activeCellId: number,
   isMergerModeEnabled: boolean,
+  allowUpdate: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
 
@@ -337,6 +338,31 @@ class MappingInfoView extends React.Component<Props, State> {
     }
   };
 
+  renderAgglomerateSkeletonButton = () => {
+    const { mappingName, mappingType } = this.props;
+    const isAgglomerateMapping = mappingType === "HDF5";
+
+    // Only show the option to import a skeleton from an agglomerate file if an agglomerate file mapping is activated.
+    const shouldRender = this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
+    const isDisabled = !this.props.allowUpdate;
+    const disabledMessage = "Skeletons cannot be imported in view mode or read-only tracings.";
+
+    return shouldRender ? (
+      <Tooltip title={isDisabled ? disabledMessage : null}>
+        {/* Workaround to fix antd bug, see https://github.com/react-component/tooltip/issues/18#issuecomment-650864750 */}
+        <span style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}>
+          <AsyncButton
+            onClick={() => loadAgglomerateSkeletonAtPosition(this.props.position)}
+            disabled={isDisabled}
+            style={isDisabled ? { pointerEvents: "none" } : {}}
+          >
+            Import Skeleton for Centered Cell
+          </AsyncButton>
+        </span>
+      </Tooltip>
+    ) : null;
+  };
+
   render() {
     if (!hasSegmentation()) {
       return "No segmentation available";
@@ -385,12 +411,6 @@ class MappingInfoView extends React.Component<Props, State> {
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
-
-    const { mappingName, mappingType } = this.props;
-    const isAgglomerateMapping = mappingType === "HDF5";
-    // Only show the option to import a skeleton from an agglomerate file if an agglomerate file mapping is activated.
-    const renderAgglomerateSkeletonButton =
-      this.props.isMappingEnabled && mappingName != null && isAgglomerateMapping;
 
     return (
       <div id="volume-mapping-info" className="padded-tab-content" style={{ maxWidth: 500 }}>
@@ -442,11 +462,7 @@ class MappingInfoView extends React.Component<Props, State> {
               />
             </label>
           ) : null}
-          {renderAgglomerateSkeletonButton ? (
-            <AsyncButton onClick={() => loadAgglomerateSkeletonAtPosition(this.props.position)}>
-              Import Skeleton for Centered Cell
-            </AsyncButton>
-          ) : null}
+          {this.renderAgglomerateSkeletonButton()}
         </div>
       </div>
     );
@@ -476,6 +492,7 @@ function mapStateToProps(state: OxalisState) {
       .map(tracing => tracing.activeCellId)
       .getOrElse(0),
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
+    allowUpdate: state.tracing.restrictions.allowUpdate,
   };
 }
 

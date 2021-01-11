@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Link } from "react-router-dom";
 import dice from "dice-coefficient";
 
-import type { APITeam, APIMaybeUnimportedDataset } from "types/api_flow_types";
+import type { APITeam, APIMaybeUnimportedDataset, APIDatasetId } from "types/api_flow_types";
 import { stringToColor, formatScale } from "libs/format_utils";
 import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
@@ -28,6 +28,7 @@ type Props = {
   isUserTeamManager: boolean,
   isUserDatasetManager: boolean,
   datasetFilteringMode: DatasetFilteringMode,
+  updateDataset: (APIDatasetId, Array<APIMaybeUnimportedDataset>) => Promise<void>,
 };
 
 type State = {
@@ -65,6 +66,9 @@ class DatasetTable extends React.PureComponent<Props, State> {
       sortedInfo: sorter,
     });
   };
+
+  updateSingleDataset = (datasetId: APIDatasetId): Promise<void> =>
+    this.props.updateDataset(datasetId, this.props.datasets);
 
   getFilteredDatasets() {
     const filterByMode = datasets => {
@@ -265,7 +269,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
           key="actions"
           fixed="right"
           render={(__, dataset: APIMaybeUnimportedDataset) => (
-            <DatasetActionView dataset={dataset} />
+            <DatasetActionView dataset={dataset} updateDataset={this.updateSingleDataset} />
           )}
         />
       </FixedExpandableTable>

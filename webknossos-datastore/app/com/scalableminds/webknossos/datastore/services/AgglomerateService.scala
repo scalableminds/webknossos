@@ -197,7 +197,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
       )
       val duration = System.nanoTime() - startTime
       if (duration > 100 * 1e6) {
-        logger.debug(s"Generating skeleton from agglomerate file took ${math
+        logger.info(s"Generating skeleton from agglomerate file took ${math
           .round(duration / 1e6)} ms (${skeletonEdges.length} edges, ${nodes.length} nodes).")
       }
 

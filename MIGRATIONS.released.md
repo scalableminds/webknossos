@@ -5,6 +5,27 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.01.0](https://github.com/scalableminds/webknossos/releases/tag/21.01.0) - 2020-12-21
+No migrations necessary.
+
+## [20.12.0](https://github.com/scalableminds/webknossos/releases/tag/20.12.0) - 2020-11-23
+- As volume annotations in arbitrary magnifications are now supported and the behavior of magnification restrictions of tasks has changed (allow full zoom, but disable tools unless in correct magnification), you may want to restrict all volume and hybrid task types to mag 1 to achieve the old behavior (mag1-only). NOTE: This query has to be executed BEFORE evolution 59 is performed.
+```
+update webknossos.tasktypes
+set settings_allowedmagnifications = '{"min":1,"max":1,"shouldRestrict":true}'
+where (tracingtype = 'volume' or tracingtype = 'hybrid')
+and (settings_allowedmagnifications is null or settings_allowedmagnifications::json->>'shouldRestrict'='false');
+```
+
+### Postgres Evolutions:
+- [057-add-layer-specific-view-configs.sql](conf/evolutions/057-add-layer-specific-view-configs.sql)
+- [058-add-onlyAllowedOrganization.sql](conf/evolutions/058-add-onlyAllowedOrganization.sql)
+- [059-resolution-restrictions.sql](conf/evolutions/059-resolution-restrictions.sql)
+
+
+## [20.11.0](https://github.com/scalableminds/webknossos/releases/tag/20.11.0) - 2020-10-26
+- [056-add-jobs.sql](conf/evolutions/056-add-jobs.sql)
+
 ## [20.10.0](https://github.com/scalableminds/webknossos/releases/tag/20.10.0) - 2020-09-21
 No migrations necessary.
 

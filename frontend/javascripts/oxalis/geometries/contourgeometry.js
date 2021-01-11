@@ -32,10 +32,7 @@ class ContourGeometry {
               // Update meshes according to the new contourList
               this.reset();
               this.color =
-                tracing.contourTracingMode === ContourModeEnum.DELETE_FROM_ANY_CELL ||
-                tracing.contourTracingMode === ContourModeEnum.DELETE_FROM_ACTIVE_CELL
-                  ? COLOR_DELETE
-                  : COLOR_NORMAL;
+                tracing.contourTracingMode === ContourModeEnum.DELETE ? COLOR_DELETE : COLOR_NORMAL;
               contourList.forEach(p => this.addEdgePoint(p));
             }
             lastContourList = contourList;

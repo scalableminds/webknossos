@@ -1,36 +1,26 @@
 package models.binary
 
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractDataLayer,
   AbstractSegmentationLayer,
   Category,
-  ColorLayerViewConfiguration,
-  DataSourceId,
   ElementClass,
-  GenericDataSource,
-  LayerViewConfiguration,
-  SegmentationLayerViewConfiguration,
-  ViewConfiguration,
   DataLayerLike => DataLayer
-}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
 }
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.configuration.DataSetConfiguration
 import models.team._
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
-import slick.sql
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
@@ -41,8 +31,8 @@ case class DataSet(
     _organization: ObjectId,
     _publication: Option[ObjectId],
     inboxSourceHash: Option[Int],
-    sourceDefaultConfiguration: Option[ViewConfiguration] = None,
-    defaultConfiguration: Option[DataSetConfiguration] = None,
+    defaultViewConfiguration: Option[DataSetViewConfiguration] = None,
+    adminViewConfiguration: Option[DataSetViewConfiguration] = None,
     description: Option[String] = None,
     displayName: Option[String] = None,
     isPublic: Boolean,
@@ -86,10 +76,10 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def parse(r: DatasetsRow): Fox[DataSet] =
     for {
       scale <- parseScaleOpt(r.scale)
-      sourceDefaultConfigurationOpt <- Fox.runOptional(r.sourcedefaultconfiguration)(
-        JsonHelper.parseJsonToFox[ViewConfiguration](_))
-      defaultConfigurationOpt <- Fox.runOptional(r.defaultconfiguration)(
-        JsonHelper.parseJsonToFox[DataSetConfiguration](_))
+      defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
+        JsonHelper.parseJsonToFox[DataSetViewConfiguration](_))
+      adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
+        JsonHelper.parseJsonToFox[DataSetViewConfiguration](_))
       details <- Fox.runOptional(r.details)(JsonHelper.parseJsonToFox[JsObject](_))
     } yield {
       DataSet(
@@ -98,8 +88,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         ObjectId(r._Organization),
         r._Publication.map(ObjectId(_)),
         r.inboxsourcehash,
-        sourceDefaultConfigurationOpt,
-        defaultConfigurationOpt,
+        defaultViewConfigurationOpt,
+        adminViewConfigurationOpt,
         r.description,
         r.displayname,
         r.ispublic,
@@ -242,25 +232,25 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     } yield ()
   }
 
-  def updateDefaultConfigurationByName(name: String, configuration: DataSetConfiguration)(
+  def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.dataSets
-                      set defaultConfiguration = '#${sanitize(Json.toJson(configuration).toString)}'
-                      where name = ${name}""")
+                      set adminViewConfiguration = '#${sanitize(Json.toJson(configuration).toString)}'
+                      where _id = $datasetId""")
     } yield ()
 
   def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val defaultConfiguration: Option[String] = d.defaultConfiguration.map(c => Json.toJson(c.configuration).toString)
-    val sourceDefaultConfiguration: Option[String] = d.sourceDefaultConfiguration.map(Json.toJson(_).toString)
+    val adminViewConfiguration: Option[String] = d.adminViewConfiguration.map(Json.toJson(_).toString)
+    val defaultViewConfiguration: Option[String] = d.defaultViewConfiguration.map(Json.toJson(_).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, sourceDefaultConfiguration, defaultConfiguration, description, displayName,
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
-          sourceDefaultConfiguration.map(sanitize))}, #${optionLiteral(defaultConfiguration.map(sanitize))},
+          defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status
           .take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.sortingKey)}, #${optionLiteral(
@@ -276,16 +266,16 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                                                 isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOneByName(source.id.team)
-      sourceDefaultConfig: Option[String] = source.defaultViewConfiguration.map(Json.toJson(_).toString)
+      defaultViewConfiguration: Option[String] = source.defaultViewConfiguration.map(Json.toJson(_).toString)
       q = sqlu"""update webknossos.dataSets
-                    set _dataStore = ${dataStoreName},
+                    set _dataStore = $dataStoreName,
                         _organization = ${organization._id.id},
                         inboxSourceHash = #${optionLiteral(Some(inboxSourceHash.toString))},
-                        sourceDefaultConfiguration = #${optionLiteral(sourceDefaultConfig)},
-                        isUsable = ${isUsable},
+                        defaultViewConfiguration = #${optionLiteral(defaultViewConfiguration)},
+                        isUsable = $isUsable,
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
                         status = ${source.statusOpt.getOrElse("").take(1024)}
-                   where _id = ${id}"""
+                   where _id = $id"""
       _ <- run(q)
       _ <- dataSetDataLayerDAO.updateLayers(id, source)
     } yield ()
@@ -312,7 +302,6 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-
   def parseRow(row: DatasetResolutionsRow): Fox[Point3D] =
     for {
       resolution <- Point3D.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
@@ -331,20 +320,23 @@ class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Executi
   def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = ${_dataSet.id}"
     val insertQueries = dataLayersOpt match {
-      case Some(dataLayers: List[DataLayer]) => {
-        dataLayers.map { layer =>
+      case Some(dataLayers: List[DataLayer]) =>
+        dataLayers.flatMap { layer =>
           layer.resolutions.map { resolution =>
             {
               sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
                        values(${_dataSet.id}, ${layer.name}, '#${writeStructTuple(resolution.toList.map(_.toString))}')"""
             }
           }
-        }.flatten
-      }
+        }
       case _ => List()
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
+      _ <- run(
+        DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
   }
 
@@ -361,11 +353,13 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
         .fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse boundingbox"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      standinResolutions: Option[List[Point3D]] = if (skipResolutions) Some(List.empty) else None
+      standinResolutions: Option[List[Point3D]] = if (skipResolutions) Some(List.empty[Point3D]) else None
       resolutions <- Fox.fillOption(standinResolutions)(
         dataSetResolutionsDAO.findDataResolutionForLayer(dataSetId, row.name) ?~> "Could not find resolution for layer")
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
-        JsonHelper.parseJsonToFox[ColorLayerViewConfiguration](_))
+        JsonHelper.parseJsonToFox[LayerViewConfiguration](_))
+      adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
+        JsonHelper.parseJsonToFox[LayerViewConfiguration](_))
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -379,7 +373,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               elementClass,
               segmentId,
               if (mappingsAsSet.isEmpty) None else Some(mappingsAsSet),
-              defaultViewConfigurationOpt.map(SegmentationLayerViewConfiguration.from)
+              defaultViewConfigurationOpt,
+              adminViewConfigurationOpt
             ))
         case (None, None) =>
           Fox.successful(
@@ -389,7 +384,8 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
               boundingBox,
               resolutions.sortBy(_.maxDim),
               elementClass,
-              defaultViewConfigurationOpt
+              defaultViewConfigurationOpt,
+              adminViewConfigurationOpt
             ))
         case _ => Fox.failure("Could not match Dataset Layer")
       }
@@ -421,32 +417,55 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     layer match {
       case s: AbstractSegmentationLayer => {
         val mappings = s.mappings.getOrElse(Set())
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration)
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
           mappings.map(sanitize(_)).toList)}', #${optionLiteral(
-          s.defaultViewConfiguration.map(d => Json.toJson(d).toString))})"""
+          s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
+          s.adminViewConfiguration.map(d => Json.toJson(d).toString))})
+          on conflict (_dataSet, name) do update set category = '#${s.category.toString}', elementClass = '#${s.elementClass.toString}',
+                     boundingBox = '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', largestSegmentId = ${s.largestSegmentId},
+                     mappings = '#${writeArrayTuple(mappings.map(sanitize(_)).toList)}',
+            defaultViewConfiguration = #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
       }
       case d: AbstractDataLayer => {
-        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration)
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
                      '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}', #${optionLiteral(
-          d.defaultViewConfiguration.map(d => Json.toJson(d).toString))})"""
+          d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
+          d.adminViewConfiguration.map(d => Json.toJson(d).toString))})
+          on conflict (_dataSet, name) do update set category = '#${d.category.toString}', elementClass = '#${d.elementClass.toString}',
+                     boundingBox = '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}',
+            defaultViewConfiguration = #${optionLiteral(d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
       }
       case _ => throw new Exception("DataLayer type mismatch")
     }
 
   def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery =
-      sqlu"delete from webknossos.dataset_layers where _dataSet = (select _id from webknossos.dataSets where _id = ${_dataSet.id})"
-    val insertQueries = source.toUsable match {
-      case Some(usable) => usable.dataLayers.map(insertLayerQuery(_dataSet, _))
-      case None         => List()
+    def getSpecificClearQuery(dataLayers: List[DataLayer]) =
+      sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet} and name not in #${writeStructTupleWithQuotes(
+        dataLayers.map(d => sanitize(d.name)))}"
+    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet}"
+
+    val queries = source.toUsable match {
+      case Some(usable) =>
+        getSpecificClearQuery(usable.dataLayers) :: usable.dataLayers.map(insertLayerQuery(_dataSet, _))
+      case _ => List(clearQuery)
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
+      _ <- run(DBIO.sequence(queries))
       _ <- dataSetResolutionsDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
     } yield ()
+  }
+
+  def updateLayerAdminViewConfiguration(_dataSet: ObjectId,
+                                        layerName: String,
+                                        adminViewConfiguration: LayerViewConfiguration): Fox[Unit] = {
+    val q =
+      sqlu"""update webknossos.dataset_layers
+            set adminViewConfiguration = '#${sanitize(Json.toJson(adminViewConfiguration).toString)}'
+            where _dataSet = ${_dataSet} and name = $layerName"""
+    run(q).map(_ => ())
   }
 }
 

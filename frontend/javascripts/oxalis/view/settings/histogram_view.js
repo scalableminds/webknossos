@@ -7,8 +7,7 @@ import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { type DatasetLayerConfiguration } from "oxalis/store";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
-import { type ElementClass } from "admin/api_flow_types";
-import type { APIHistogramData } from "admin/api_flow_types";
+import type { APIHistogramData, ElementClass } from "types/api_flow_types";
 import type { Vector3, Vector2 } from "oxalis/constants";
 import { roundTo } from "libs/utils";
 
@@ -134,15 +133,11 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     const histogramLength = histogramMax - histogramMin;
     const fullLength = maxRange - minRange;
     const xOffset = histogramMin - minRange;
-    this.drawYAxis(ctx);
     ctx.fillStyle = `rgba(${color.join(",")}, 0.1)`;
     ctx.strokeStyle = `rgba(${color.join(",")})`;
-    // Here we normalize all values to the interval of 0 - 9 and then add 1
-    // to gain an interval reaching from 1 - 10, since values between 0 and 1 would be negative, otherwise.
-    const downscalingFactor = 9 / maxValue;
-    const downscaledData = elementCounts.map(
-      value => Math.log10(downscalingFactor * value + 1) * canvasHeight,
-    );
+    ctx.beginPath();
+    // Scale data to the height of the histogram canvas.
+    const downscaledData = elementCounts.map(value => (value / maxValue) * canvasHeight);
     const activeRegion = new Path2D();
     ctx.moveTo(0, 0);
     activeRegion.moveTo(((intensityRangeMin - minRange) / fullLength) * canvasWidth, 0);
@@ -163,22 +158,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     activeRegion.lineTo(((activeRegionLeftLimit - minRange) / fullLength) * canvasWidth, 0);
     activeRegion.closePath();
     ctx.fill(activeRegion);
-  };
-
-  drawYAxis = (ctx: CanvasRenderingContext2D) => {
-    // Maximum value of the y axis is always 10. Therefore the axis is independent from any data.
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(0, canvasHeight);
-    const numberOfScaleLines = 5;
-    const lineWidth = 8;
-    const intervalSize = 2;
-    for (let interval = 1; interval <= numberOfScaleLines; interval++) {
-      // We use canvasHeight - 1 because else half of the top line would be cut off.
-      const lineHeight = Math.round(Math.log10(intervalSize * interval) * (canvasHeight - 1));
-      ctx.moveTo(0, lineHeight);
-      ctx.lineTo(lineWidth, lineHeight);
-    }
   };
 
   onThresholdChange = ([firstVal, secVal]: [number, number]) => {

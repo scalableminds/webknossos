@@ -15,6 +15,7 @@ import {
   type APIDatasetId,
   type APIFeatureToggles,
   type APIHistogramData,
+  type APIJob,
   type APIMaybeUnimportedDataset,
   type APIOpenTasksReport,
   type APIOrganization,
@@ -38,7 +39,6 @@ import {
   type APIUpdateActionBatch,
   type APIUser,
   type APIUserLoggedTime,
-  type DatasetConfig,
   type ExperienceDomainList,
   type HybridServerTracing,
   type MeshMetaData,
@@ -48,7 +48,7 @@ import {
   type ServerVolumeTracing,
   type TracingType,
   type WkConnectDatasetConfig,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { DatasetConfiguration, Tracing } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -63,6 +63,8 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
 import { saveAs } from "file-saver";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
+import ResumableJS from "resumablejs";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -703,14 +705,14 @@ export function convertToHybridTracing(annotationId: string): Promise<void> {
 export async function downloadNml(
   annotationId: string,
   annotationType: APIAnnotationType,
-  showVolumeDownloadWarning?: boolean = false,
+  showVolumeFallbackDownloadWarning?: boolean = false,
   versions?: Versions = {},
 ) {
   const possibleVersionString = Object.entries(versions)
     // $FlowIssue[incompatible-type] Flow returns val as mixed here due to the use of Object.entries
     .map(([key, val]) => `${key}Version=${val}`)
     .join("&");
-  if (showVolumeDownloadWarning) {
+  if (showVolumeFallbackDownloadWarning) {
     Toast.info(messages["annotation.no_fallback_data_included"], { timeout: 12000 });
   }
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${possibleVersionString}`;
@@ -731,6 +733,27 @@ export async function downloadNml(
   saveAs(blob, filename);
 }
 
+export async function unlinkFallbackSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/unlinkFallback`, {
+    method: "PATCH",
+  });
+}
+
+// When the annotation is open, please use the corresponding method
+// in api_latest.js. It will take care of saving the annotation and
+// reloading it.
+export async function downsampleSegmentation(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+): Promise<void> {
+  await Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/downsample`, {
+    method: "PATCH",
+  });
+}
+
 // ### Datasets
 export async function getDatasets(
   isUnreported: ?boolean,
@@ -738,8 +761,29 @@ export async function getDatasets(
   const parameters = isUnreported != null ? `?isUnreported=${String(isUnreported)}` : "";
   const datasets = await Request.receiveJSON(`/api/datasets${parameters}`);
   assertResponseLimit(datasets);
-
   return datasets;
+}
+
+export async function getJobs(): Promise<Array<APIJob>> {
+  const jobs = await Request.receiveJSON("/api/jobs");
+  assertResponseLimit(jobs);
+  return jobs.map(job => ({
+    id: job.id,
+    type: job.command,
+    datasetName: job.commandArgs.kwargs.dataset_name,
+    state: job.celeryInfo.state,
+    createdAt: job.created,
+  }));
+}
+
+export async function startJob(
+  jobName: string,
+  organization: string,
+  scale: Vector3,
+): Promise<Array<APIJob>> {
+  return Request.receiveJSON(
+    `/api/jobs/run/cubing/${organization}/${jobName}?scale=${scale.toString()}`,
+  );
 }
 
 export function getDatasetDatasource(
@@ -803,10 +847,20 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
   );
 }
 
-export function getDatasetConfiguration(datasetId: APIDatasetId): Promise<Object> {
-  return Request.receiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+export async function getDatasetViewConfiguration(
+  dataset: APIDataset,
+  displayedVolumeTracings: Array<string>,
+): Promise<DatasetConfiguration> {
+  const settings = await Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    {
+      data: displayedVolumeTracings,
+      method: "POST",
+    },
   );
+
+  enforceValidatedDatasetViewConfiguration(settings, dataset);
+  return settings;
 }
 
 export function updateDatasetConfiguration(
@@ -851,11 +905,36 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function addDataset(datasetConfig: DatasetConfig): Promise<void> {
+export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string): Promise<*> {
+  const getRandomString = () => {
+    const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
+    return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+  };
+
+  return doWithToken(
+    token =>
+      new ResumableJS({
+        testChunks: false,
+        target: `${datastoreUrl}/data/datasets?token=${token}`,
+        query: datasetId,
+        chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
+        permanentErrors: [400, 403, 404, 409, 415, 500, 501],
+        simultaneousUploads: 3,
+        chunkRetryInterval: 2000,
+        maxChunkRetries: undefined,
+        generateUniqueIdentifier: getRandomString,
+      }),
+  );
+}
+
+export function finishDatasetUpload(
+  datastoreHost: string,
+  uploadInformation: Object,
+): Promise<void> {
   return doWithToken(token =>
-    Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-      data: datasetConfig,
-      host: datasetConfig.datastore,
+    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
+      data: uploadInformation,
+      host: datastoreHost,
     }),
   );
 }
@@ -1134,7 +1213,7 @@ export function updateUserConfiguration(userConfiguration: Object): Object {
   });
 }
 
-// ### TimeTracking
+// ### Time Tracking
 export async function getTimeTrackingForUserByMonth(
   userEmail: string,
   day: moment$Moment,
@@ -1316,4 +1395,23 @@ export function computeIsosurface(
 
     return { buffer, neighbors };
   });
+}
+
+export function getAgglomerateSkeleton(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken(token =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      { useWebworkerForArrayBuffer: false },
+    ),
+  );
 }

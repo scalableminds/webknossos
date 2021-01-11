@@ -3,7 +3,7 @@ import { Input, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Clipboard from "clipboard-js";
 import React, { PureComponent } from "react";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { Vector3Input } from "libs/vector_input";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
@@ -23,6 +23,17 @@ type Props = {|
 |};
 
 const positionIconStyle = { transform: "rotate(-45deg)" };
+const warningColors = { color: "rgb(255, 155, 85)", borderColor: "rgb(241, 122, 39)" };
+const copyPositionDefaultStyle = { padding: "0 10px" };
+const copyPositionErrorStyle = {
+  ...copyPositionDefaultStyle,
+  ...warningColors,
+};
+const positionInputDefaultStyle = { textAlign: "center" };
+const positionInputErrorStyle = {
+  ...positionInputDefaultStyle,
+  ...warningColors,
+};
 
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
@@ -72,10 +83,13 @@ class DatasetPositionView extends PureComponent<Props> {
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
     const { isOutOfDatasetBounds, isOutOfTaskBounds } = this.isPositionOutOfBounds(position);
-    const maybeErrorColor =
+    const copyPositionStyle =
+      isOutOfDatasetBounds || isOutOfTaskBounds ? copyPositionErrorStyle : copyPositionDefaultStyle;
+    const positionInputStyle =
       isOutOfDatasetBounds || isOutOfTaskBounds
-        ? { color: "rgb(255, 155, 85)", borderColor: "rgb(241, 122, 39)" }
-        : {};
+        ? positionInputErrorStyle
+        : positionInputDefaultStyle;
+
     let maybeErrorMessage = null;
     if (isOutOfDatasetBounds) {
       maybeErrorMessage = message["tracing.out_of_dataset_bounds"];
@@ -91,7 +105,7 @@ class DatasetPositionView extends PureComponent<Props> {
           <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
-              style={{ padding: "0 10px", ...maybeErrorColor }}
+              style={copyPositionStyle}
               className="hide-on-small-screen"
             >
               <Icon type="pushpin" style={positionIconStyle} />
@@ -101,7 +115,7 @@ class DatasetPositionView extends PureComponent<Props> {
             value={position}
             onChange={this.handleChangePosition}
             autosize
-            style={{ textAlign: "center", ...maybeErrorColor }}
+            style={positionInputStyle}
             allowDecimals
           />
         </Input.Group>

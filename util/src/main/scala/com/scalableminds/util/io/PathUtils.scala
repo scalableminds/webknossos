@@ -1,11 +1,10 @@
 package com.scalableminds.util.io
 
-import java.io.File
-import java.nio.file.{Path, _}
-
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 
+import java.io.File
+import java.nio.file.{Path, _}
 import scala.collection.JavaConverters._
 
 object PathUtils extends PathUtils
@@ -29,7 +28,7 @@ trait PathUtils extends LazyLogging {
       Files.createFile(p)
       true
     } catch {
-      case e: FileAlreadyExistsException => !failIfExists
+      case _: FileAlreadyExistsException => !failIfExists
     }
 
   def isTheSame(p1: Path, p2: Path): Boolean =
@@ -55,11 +54,11 @@ trait PathUtils extends LazyLogging {
       directoryStream.close()
       r
     } catch {
-      case ex: AccessDeniedException =>
+      case _: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
         logger.error(errorMsg)
         Failure(errorMsg)
-      case ex: NoSuchFileException =>
+      case _: NoSuchFileException =>
         val errorMsg = s"No such directory. Directory: ${directory.toAbsolutePath}"
         logger.error(errorMsg)
         Failure(errorMsg)
@@ -106,4 +105,5 @@ trait PathUtils extends LazyLogging {
         Failure(errorMsg)
     }
   }
+
 }

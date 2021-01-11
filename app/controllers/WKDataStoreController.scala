@@ -1,23 +1,21 @@
 package controllers
 
-import javax.inject.Inject
+import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import play.api.libs.json.{JsError, JsObject, JsSuccess, JsValue}
-import models.annotation.AnnotationState._
 import models.team.{OrganizationDAO, TeamDAO}
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
-import com.mohiva.play.silhouette.api.Silhouette
 import models.user.UserService
+import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
+import play.api.libs.json.{JsError, JsSuccess, JsValue}
 import play.api.mvc.Action
-import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKDataStoreController @Inject()(dataSetService: DataSetService,
@@ -44,6 +42,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
         _ <- dataSetService
           .assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+        _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
       } yield Ok
     }
   }

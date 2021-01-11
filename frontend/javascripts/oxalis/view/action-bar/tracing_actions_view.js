@@ -4,7 +4,7 @@ import { Button, Dropdown, Icon, Menu, Modal, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "admin/api_flow_types";
+import { APIAnnotationTypeEnum, type APIAnnotationType, type APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   type LayoutKeys,
@@ -35,7 +35,7 @@ import features from "features";
 
 type OwnProps = {|
   layoutMenu: React.Node,
-  hasVolume: boolean,
+  hasVolumeFallback: boolean,
 |};
 type StateProps = {|
   annotationType: APIAnnotationType,
@@ -278,8 +278,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
 
   handleDownload = async () => {
     await Model.ensureSavedState();
-    const { annotationId, annotationType, hasVolume } = this.props;
-    downloadNml(annotationId, annotationType, hasVolume);
+    const { annotationId, annotationType, hasVolumeFallback } = this.props;
+    downloadNml(annotationId, annotationType, hasVolumeFallback);
   };
 
   handleFinishAndGetNextTask = async () => {

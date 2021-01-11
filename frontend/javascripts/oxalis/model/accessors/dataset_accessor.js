@@ -3,18 +3,21 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 
+import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
   APIAllowedMode,
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
   ElementClass,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type {
   Settings,
   DataLayerType,
   DatasetConfiguration,
   BoundingBoxObject,
+  OxalisState,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import constants, {
@@ -26,33 +29,231 @@ import constants, {
 import { aggregateBoundingBox } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
-export function getMostExtensiveResolutions(dataset: APIDataset): Array<Vector3> {
-  return _.chain(dataset.dataSource.dataLayers)
-    .map(dataLayer => dataLayer.resolutions)
-    .sortBy(resolutions => resolutions.length)
-    .last()
+export type ResolutionsMap = Map<number, Vector3>;
+
+export class ResolutionInfo {
+  resolutions: $ReadOnlyArray<Vector3>;
+  resolutionMap: $ReadOnlyMap<number, Vector3>;
+
+  constructor(resolutions: Array<Vector3>) {
+    this.resolutions = resolutions;
+    this._buildResolutionMap();
+  }
+
+  _buildResolutionMap() {
+    // Each resolution entry can be characterized by it's greatest resolution dimension.
+    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
+    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
+
+    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
+
+    const resolutions = this.resolutions;
+
+    if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+      throw new Error("Max dimension in resolutions is not unique.");
+    }
+
+    this.resolutionMap = new Map();
+    for (const resolution of resolutions) {
+      this.resolutionMap.set(_.max(resolution), resolution);
+    }
+  }
+
+  getResolutionList(): Array<Vector3> {
+    return Array.from(this.resolutionMap.entries()).map(entry => entry[1]);
+  }
+
+  getResolutionsWithIndices(): Array<[number, Vector3]> {
+    return Array.from(this.resolutionMap.entries()).map(entry => {
+      const [powerOfTwo, resolution] = entry;
+      const resolutionIndex = Math.log2(powerOfTwo);
+      return [resolutionIndex, resolution];
+    });
+  }
+
+  indexToPowerOf2(index: number): number {
+    return 2 ** index;
+  }
+
+  hasIndex(index: number): boolean {
+    const powerOfTwo = this.indexToPowerOf2(index);
+    return this.resolutionMap.has(powerOfTwo);
+  }
+
+  getResolutionByIndex(index: number): ?Vector3 {
+    const powerOfTwo = this.indexToPowerOf2(index);
+    return this.getResolutionByPowerOf2(powerOfTwo);
+  }
+
+  getResolutionByIndexOrThrow(index: number): Vector3 {
+    const resolution = this.getResolutionByIndex(index);
+    if (!resolution) {
+      throw new Error(`Resolution with index ${index} does not exist.`);
+    }
+    return resolution;
+  }
+
+  getResolutionByIndexWithFallback(
+    index: number,
+    fallbackResolutionInfo: ?ResolutionInfo,
+  ): Vector3 {
+    let resolutionMaybe = this.getResolutionByIndex(index);
+    if (resolutionMaybe) {
+      return resolutionMaybe;
+    }
+
+    resolutionMaybe =
+      fallbackResolutionInfo != null ? fallbackResolutionInfo.getResolutionByIndex(index) : null;
+    if (resolutionMaybe) {
+      return resolutionMaybe;
+    }
+
+    if (index === 0) {
+      // If the index is 0, only mag 1-1-1 can be meant.
+      return [1, 1, 1];
+    }
+
+    throw new Error(`Resolution could not be determined for index ${index}`);
+  }
+
+  getResolutionByPowerOf2(powerOfTwo: number): ?Vector3 {
+    return this.resolutionMap.get(powerOfTwo);
+  }
+
+  getHighestResolutionIndex(): number {
+    return Math.log2(this.getHighestResolutionPowerOf2());
+  }
+
+  getHighestResolutionPowerOf2(): number {
+    return _.max(Array.from(this.resolutionMap.keys()));
+  }
+
+  getClosestExistingIndex(index: number): number {
+    if (this.hasIndex(index)) {
+      return index;
+    }
+
+    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    const indicesWithDistances = indices.map(_index => {
+      const distance = index - _index;
+      if (distance >= 0) {
+        // The candidate _index is smaller than the requested index.
+        // Since webKnossos only supports rendering from higher mags,
+        // when a mag is missing, we want to prioritize "higher" mags
+        // when looking for a substitute. Therefore, we artificially
+        // downrank the smaller mag _index.
+        return [_index, distance + 0.5];
+      } else {
+        return [_index, Math.abs(distance)];
+      }
+    });
+
+    const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, entry => entry[1]));
+    return bestIndexWithDistance[0];
+  }
+
+  getIndexOrClosestHigherIndex(requestedIndex: number): ?number {
+    if (this.hasIndex(requestedIndex)) {
+      return requestedIndex;
+    }
+
+    const indices = this.getResolutionsWithIndices().map(entry => entry[0]);
+    for (const index of indices) {
+      if (index > requestedIndex) {
+        // Return the first existing index which is higher than the requestedIndex
+        return index;
+      }
+    }
+    return null;
+  }
+}
+
+function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
+  return new ResolutionInfo(resolutions);
+}
+
+// Don't use memoizeOne here, since we want to cache the resolutions for all layers
+// (which are not that many).
+export const getResolutionInfo = _.memoize(_getResolutionInfo);
+
+export function getResolutionUnion(
+  dataset: APIDataset,
+  shouldThrow: boolean = false,
+): Array<Vector3> {
+  const resolutionUnionDict = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    for (const resolution of layer.resolutions) {
+      const key = _.max(resolution);
+
+      if (resolutionUnionDict[key] == null) {
+        resolutionUnionDict[key] = resolution;
+      } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
+        // the same resolution was already picked up
+      } else if (shouldThrow) {
+        throw new Error(
+          `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
+            "-",
+          )} != ${resolution.join("-")}.`,
+        );
+      } else {
+        // The resolutions don't match, but shouldThrow is false
+      }
+    }
+  }
+
+  return _.chain(resolutionUnionDict)
+    .values()
+    .sortBy(_.max)
     .valueOf();
+}
+
+export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
+  // Each resolution entry can be characterized by it's greatest resolution dimension.
+  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
+  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
+  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
+
+  // This function returns an array of resolutions, for which each index will
+  // hold a resolution with highest_dim === 2**index.
+
+  if (resolutions.length !== _.uniqBy(resolutions.map(_.max)).length) {
+    throw new Error("Max dimension in resolutions is not unique.");
+  }
+  const paddedResolutionCount = 1 + Math.log2(_.max(resolutions.map(v => _.max(v))));
+  const resolutionsLookUp = _.keyBy(resolutions, _.max);
+
+  return _.range(0, paddedResolutionCount).map(exp => {
+    const resPower = 2 ** exp;
+    // If the resolution does not exist, use either the given fallback resolution or an isotropic fallback
+    const fallback = [resPower, resPower, resPower];
+    return resolutionsLookUp[resPower] || fallback;
+  });
 }
 
 function _getResolutions(dataset: APIDataset): Vector3[] {
   // Different layers can have different resolutions. At the moment,
-  // unequal resolutions will result in undefined behavior.
-  // However, if resolutions are subset of each other, everything should be fine.
-  // For that case, returning the longest resolutions array should suffice
+  // mismatching resolutions will result in undefined behavior (rather than
+  // causing a hard error). During the model initialization, an error message
+  // will be shown, though.
 
-  const mostExtensiveResolutions = getMostExtensiveResolutions(dataset);
-  if (!mostExtensiveResolutions) {
-    return [];
-  }
-
-  return mostExtensiveResolutions;
+  // In the long term, getResolutions should not be used anymore.
+  // Instead, all the code should use the ResolutionInfo class which represents
+  // exactly which resolutions exist per layer.
+  return convertToDenseResolution(getResolutionUnion(dataset));
 }
 
 // _getResolutions itself is not very performance intensive, but other functions which rely
 // on the returned resolutions are. To avoid busting memoization caches (which rely on references),
 // we memoize _getResolutions, as well.
 export const getResolutions = memoizeOne(_getResolutions);
+
+export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
+  return getResolutionInfo(getResolutions(dataset));
+}
 
 function _getMaxZoomStep(maybeDataset: ?APIDataset): number {
   const minimumZoomStepCount = 1;
@@ -72,6 +273,18 @@ export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
 export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }
+
+function _getResolutionInfoOfSegmentationLayer(dataset: APIDataset): ResolutionInfo {
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (!segmentationLayer) {
+    return new ResolutionInfo([]);
+  }
+  return getResolutionInfo(segmentationLayer.resolutions);
+}
+
+export const getResolutionInfoOfSegmentationLayer = memoizeOne(
+  _getResolutionInfoOfSegmentationLayer,
+);
 
 export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);
@@ -214,15 +427,14 @@ export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
   inVoxel: boolean = true,
 ): string {
-  if (!dataset.dataSource.dataLayers || !dataset.dataSource.scale || !dataset.isActive) {
+  if (!dataset.isActive) {
     return "";
   }
-  const importedDataset = ((dataset: any): APIDataset);
   if (inVoxel) {
-    const extentInVoxel = getDatasetExtentInVoxel(importedDataset);
+    const extentInVoxel = getDatasetExtentInVoxel(dataset);
     return `${formatExtentWithLength(extentInVoxel, x => `${x}`)} voxel³`;
   }
-  const extent = getDatasetExtentInLength(importedDataset);
+  const extent = getDatasetExtentInLength(dataset);
   return formatExtentWithLength(extent, formatNumberToLength);
 }
 
@@ -309,7 +521,11 @@ export function isColorLayer(dataset: APIDataset, layerName: string): boolean {
   return getLayerByName(dataset, layerName).category === "color";
 }
 
-export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer {
+export function getSegmentationLayer(dataset: APIMaybeUnimportedDataset): ?APISegmentationLayer {
+  if (!dataset.isActive) {
+    return null;
+  }
+
   // $FlowIssue[incompatible-type]
   // $FlowIssue[prop-missing]
   const segmentationLayers: Array<APISegmentationLayer> = dataset.dataSource.dataLayers.filter(
@@ -323,6 +539,21 @@ export function getSegmentationLayer(dataset: APIDataset): ?APISegmentationLayer
 
 export function hasSegmentation(dataset: APIDataset): boolean {
   return getSegmentationLayer(dataset) != null;
+}
+
+export function doesSupportVolumeWithFallback(dataset: APIMaybeUnimportedDataset): boolean {
+  if (!dataset.isActive) {
+    return false;
+  }
+  const segmentationLayer = getSegmentationLayer(dataset);
+  if (!segmentationLayer) {
+    return false;
+  }
+
+  const isUint64 =
+    segmentationLayer.elementClass === "uint64" || segmentationLayer.elementClass === "int64";
+  const isFallbackSupported = !isUint64;
+  return isFallbackSupported;
 }
 
 export function getColorLayers(dataset: APIDataset): Array<DataLayerType> {
@@ -347,6 +578,117 @@ export function getEnabledLayers(
     return settings.isDisabled === Boolean(options.invert);
   });
 }
+
+/*
+  This function returns layers which cannot be rendered (since
+  the current resolution is missing), even though they should
+  be rendered (since they are enabled). The function takes fallback
+  resolutions into account if renderMissingDataBlack is disabled.
+ */
+function _getUnrenderableLayersForCurrentZoom(state: OxalisState) {
+  const { dataset } = state;
+  const zoomStep = getRequestLogZoomStep(state);
+
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+
+  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
+    .map((layer: DataLayerType) => ({
+      layer,
+      resolutionInfo: getResolutionInfo(layer.resolutions),
+    }))
+    .filter(({ resolutionInfo }) => {
+      const isMissing = !resolutionInfo.hasIndex(zoomStep);
+      if (!isMissing) {
+        // The layer exists. Thus, it is not unrenderable.
+        return false;
+      }
+
+      if (renderMissingDataBlack) {
+        // We already know that the layer is missing. Since `renderMissingDataBlack`
+        // is enabled, the fallback resolutions don't matter. The layer cannot be
+        // rendered.
+        return true;
+      }
+
+      // The current resolution is missing and fallback rendering
+      // is activated. Thus, check whether one of the fallback
+      // zoomSteps can be rendered.
+      return !_.range(1, maxZoomStepDiff + 1).some(diff => {
+        const fallbackZoomStep = zoomStep + diff;
+        return resolutionInfo.hasIndex(fallbackZoomStep);
+      });
+    })
+    .map<DataLayerType>(({ layer }) => layer);
+  return unrenderableLayers;
+}
+
+export const getUnrenderableLayersForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayersForCurrentZoom,
+);
+
+/*
+  This function returns the resolution and zoom step in which the segmentation
+  layer is currently rendered (if it is rendered). These properties should be used
+  when labeling volume data.
+ */
+function _getRenderableResolutionForSegmentation(
+  state: OxalisState,
+): ?{ resolution: Vector3, zoomStep: number } {
+  const { dataset } = state;
+  const requestedZoomStep = getRequestLogZoomStep(state);
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
+  const resolutionInfo = getResolutionInfoOfSegmentationLayer(state.dataset);
+  const segmentationLayer = getSegmentationLayer(dataset);
+
+  if (!segmentationLayer) {
+    return null;
+  }
+
+  // Check whether the segmentation layer is enabled
+  const segmentationSettings = state.datasetConfiguration.layers[segmentationLayer.name];
+  if (segmentationSettings.isDisabled) {
+    return null;
+  }
+
+  // Check whether the requested zoom step exists
+  if (resolutionInfo.hasIndex(requestedZoomStep)) {
+    return {
+      zoomStep: requestedZoomStep,
+      resolution: resolutionInfo.getResolutionByIndexOrThrow(requestedZoomStep),
+    };
+  }
+
+  // Since `renderMissingDataBlack` is enabled, the fallback resolutions
+  // should not be considered.
+  // rendered.
+  if (renderMissingDataBlack) {
+    return null;
+  }
+
+  // The current resolution is missing and fallback rendering
+  // is activated. Thus, check whether one of the fallback
+  // zoomSteps can be rendered.
+  for (
+    let fallbackZoomStep = requestedZoomStep + 1;
+    fallbackZoomStep <= requestedZoomStep + maxZoomStepDiff;
+    fallbackZoomStep++
+  ) {
+    if (resolutionInfo.hasIndex(fallbackZoomStep)) {
+      return {
+        zoomStep: fallbackZoomStep,
+        resolution: resolutionInfo.getResolutionByIndexOrThrow(fallbackZoomStep),
+      };
+    }
+  }
+
+  return null;
+}
+
+export const getRenderableResolutionForSegmentation = reuseInstanceOnEquality(
+  _getRenderableResolutionForSegmentation,
+);
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;

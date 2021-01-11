@@ -5,7 +5,10 @@ const { spawn } = require("child_process");
 const path = require("path");
 const prefixLines = require("prefix-stream-lines");
 
-const proxy = httpProxy.createProxyServer();
+const proxy = httpProxy.createProxyServer({
+  proxyTimeout: 5 * 60 * 1000, // 5 min
+  timeout: 5 * 60 * 1000, // 5 min
+});
 const app = express();
 
 const ROOT = path.resolve(path.join(__dirname, "..", ".."));
@@ -57,7 +60,7 @@ function spawnIfNotSpecified(keyword, command, args, options) {
 function killAll() {
   for (const proc of Object.values(processes).filter(x => x)) {
     if (proc.connected) {
-      proc.kill();
+      proc.kill("SIGKILL");
     }
   }
 }

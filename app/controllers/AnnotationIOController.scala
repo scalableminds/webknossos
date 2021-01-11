@@ -1,6 +1,6 @@
 package controllers
 
-import java.io.{BufferedOutputStream, File, FileOutputStream, OutputStream}
+import java.io.File
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -8,14 +8,14 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.io.{NamedEnumeratorStream, NamedStream, ZipIO}
+import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWBucketStreamSink
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractSegmentationLayer, SegmentationLayer}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
-import com.scalableminds.webknossos.tracingstore.tracings.{ProtoGeometryImplicits, TracingType}
+import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.AnnotationState._
@@ -29,7 +29,7 @@ import models.team.OrganizationDAO
 import models.user._
 import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.Files.{TemporaryFile, TemporaryFileCreator}
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.streams.IterateeStreams
 import play.api.libs.json.Json
@@ -49,7 +49,6 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                        taskTypeDAO: TaskTypeDAO,
                                        tracingStoreService: TracingStoreService,
                                        annotationService: AnnotationService,
-                                       temporaryFileCreator: TemporaryFileCreator,
                                        sil: Silhouette[WkEnv],
                                        provider: AnnotationInformationProvider,
                                        nmlService: NmlService)(implicit ec: ExecutionContext)
@@ -67,7 +66,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDataSetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
-        val attachedFiles = request.body.files.map(f => (new File(f.ref.path.toString), f.filename))
+        val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles = nmlService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
         val tracingsProcessed = nmlService.wrapOrPrefixTrees(parsedFiles.parseResults, shouldCreateGroupForEachFile)
 
@@ -82,9 +81,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
           for {
             _ <- bool2Fox(skeletonTracings.nonEmpty || volumeTracingsWithDataLocations.nonEmpty) ?~> "nml.file.noFile"
-            dataSet <- findDataSetForUploadedAnnotations(skeletonTracings,
-                                                         volumeTracingsWithDataLocations.map(_._1),
-                                                         parseSuccesses)
+            dataSet <- findDataSetForUploadedAnnotations(skeletonTracings, volumeTracingsWithDataLocations.map(_._1))
             tracingStoreClient <- tracingStoreService.clientFor(dataSet)
             mergedVolumeTracingIdOpt <- Fox.runOptional(volumeTracingsWithDataLocations.headOption) { _ =>
               for {
@@ -120,11 +117,10 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
 
   private def findDataSetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
-      volumeTracings: List[VolumeTracing],
-      parseSuccesses: List[NmlParseResult])(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[DataSet] =
+      volumeTracings: List[VolumeTracing])(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[DataSet] =
     for {
       dataSetName <- assertAllOnSameDataSet(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
-      organizationNameOpt <- assertAllOnSameOrganization(parseSuccesses.flatMap(s => s.organizationName)) ?~> "nml.file.differentDatasets"
+      organizationNameOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
       organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
         organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
       } ?~> Messages("organization.notFound", organizationNameOpt.getOrElse("")) ~> NOT_FOUND
@@ -145,7 +141,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
   private def descriptionForNMLs(descriptions: Seq[Option[String]]) =
     if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
 
-  private def returnError(zipParseResult: NmlResults.ZipParseResult)(implicit messagesProvider: MessagesProvider) =
+  private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(implicit messagesProvider: MessagesProvider) =
     if (zipParseResult.containsFailure) {
       val errors = zipParseResult.parseResults.flatMap {
         case result: NmlResults.NmlParseFailure =>
@@ -172,14 +168,16 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       _ <- bool2Fox(volumes.forall(_.dataSetName == dataSetName))
     } yield dataSetName
 
-  private def assertAllOnSameOrganization(organizationNames: List[String]): Fox[Option[String]] =
-    if (organizationNames.isEmpty) Fox.successful(None)
-    else {
-      for {
-        organizationName <- organizationNames.headOption.toFox
-        _ <- bool2Fox(organizationNames.forall(name => name == organizationName))
-      } yield Some(organizationName)
-    }
+  private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
+                                          volumes: List[VolumeTracing]): Fox[Option[String]] =
+    for {
+      organizationName: Option[String] <- volumes.headOption
+        .map(_.organizationName)
+        .orElse(skeletons.headOption.map(_.organizationName))
+        .toFox
+      _ <- bool2Fox(skeletons.forall(_.organizationName == organizationName))
+      _ <- bool2Fox(volumes.forall(_.organizationName == organizationName))
+    } yield organizationName
 
   private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet)(
       implicit ctx: DBAccessContext): Fox[VolumeTracing] =

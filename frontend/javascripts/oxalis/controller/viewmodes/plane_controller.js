@@ -50,7 +50,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;
@@ -74,6 +74,11 @@ type StateProps = {|
   is2d: boolean,
 |};
 type Props = {| ...StateProps |};
+
+export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+  const { activeViewport } = Store.getState().viewModeData.plane;
+  Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
+};
 
 class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
@@ -144,7 +149,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): Object {
-    const defaultDragHandler = (delta: Point2) => this.movePlane([-delta.x, -delta.y, 0]);
+    const defaultDragHandler = (delta: Point2) => movePlane([-delta.x, -delta.y, 0]);
     const baseControls = {
       scroll: this.scrollPlanes.bind(this),
       over: () => {
@@ -153,11 +158,12 @@ class PlaneController extends React.PureComponent<Props> {
       pinch: delta => this.zoom(delta, true),
       mouseMove: (delta: Point2, position: Point2, id, event) => {
         if (event.altKey && !event.shiftKey) {
-          this.movePlane([-delta.x, -delta.y, 0]);
+          movePlane([-delta.x, -delta.y, 0]);
         } else {
           Store.dispatch(setMousePositionAction([position.x, position.y]));
         }
       },
+      middleDownMove: defaultDragHandler,
     };
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = { leftClick: null, leftDownMove: null };
@@ -370,17 +376,12 @@ class PlaneController extends React.PureComponent<Props> {
     getSceneController().update();
   }
 
-  movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-    const { activeViewport } = Store.getState().viewModeData.plane;
-    Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
-  };
-
   moveX = (x: number): void => {
-    this.movePlane([x, 0, 0]);
+    movePlane([x, 0, 0]);
   };
 
   moveY = (y: number): void => {
-    this.movePlane([0, y, 0]);
+    movePlane([0, y, 0]);
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
@@ -404,7 +405,7 @@ class PlaneController extends React.PureComponent<Props> {
         ),
       );
     } else {
-      this.movePlane([0, 0, z], false);
+      movePlane([0, 0, z], false);
     }
   };
 

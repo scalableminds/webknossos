@@ -129,14 +129,15 @@ object Fox extends FoxImplicits {
       }
     }
 
-  def filterNot[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext) =
+  def filterNot[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext): Fox[List[T]] =
     filter(seq, inverted = true)(f)
 
-  def filter[T](seq: List[T], inverted: Boolean = false)(f: T => Fox[Boolean])(implicit ec: ExecutionContext) =
+  def filter[T](seq: List[T], inverted: Boolean = false)(f: T => Fox[Boolean])(
+      implicit ec: ExecutionContext): Fox[List[T]] =
     for {
       results <- serialCombined(seq)(f)
       zipped = results.zip(seq)
-    } yield (zipped.filter(_._1 != inverted).map(_._2))
+    } yield zipped.filter(_._1 != inverted).map(_._2)
 
   def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
     input match {
@@ -157,6 +158,9 @@ object Fox extends FoxImplicits {
       Fox.successful(None)
     }
 
+  def runIfOptionTrue[B](condition: Option[Boolean])(f: => Fox[B])(implicit ec: ExecutionContext): Fox[Option[B]] =
+    runIf(condition.getOrElse(false))(f)
+
   def fillOption[A](input: Option[A])(f: => Fox[A])(implicit ec: ExecutionContext): Fox[A] =
     input match {
       case Some(a) => Fox.successful(a)
@@ -172,7 +176,7 @@ object Fox extends FoxImplicits {
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
-  val self = this
+  val self: Fox[A] = this
 
   def ?~>(s: String): Fox[A] =
     new Fox(futureBox.map(_ ?~! s))
@@ -182,7 +186,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
   def orElse[B >: A](fox: => Fox[B]): Fox[B] =
     new Fox(futureBox.flatMap {
-      case Full(t) => this.futureBox
+      case Full(_) => this.futureBox
       case _       => fox.futureBox
     })
 
@@ -233,9 +237,9 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
       box: Box[A] <- this.futureBox
     } yield {
       box match {
-        case Full(a)                 => Future.successful(a)
-        case Failure(msg, ex, chain) => Future.failed(new Exception(msg))
-        case Empty                   => Future.failed(new Exception("Empty"))
+        case Full(a)            => Future.successful(a)
+        case Failure(msg, _, _) => Future.failed(new Exception(msg))
+        case Empty              => Future.failed(new Exception("Empty"))
       }
     }).flatMap(identity)
 

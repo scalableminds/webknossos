@@ -3,7 +3,7 @@ import React, { memo, useContext, useState, useEffect } from "react";
 import _ from "lodash";
 import { List, Input, Spin } from "antd";
 
-import type { APIDataset, APIMaybeUnimportedDataset } from "admin/api_flow_types";
+import type { APIDataset, APIMaybeUnimportedDataset } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";

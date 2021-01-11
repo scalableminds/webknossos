@@ -2,17 +2,17 @@ package models.user
 
 import akka.actor.ActorSystem
 import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.mail.Send
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import javax.inject.Inject
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import models.binary.DataSetDAO
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.UserConfiguration
 import models.team._
 import oxalis.mail.DefaultMails
 import oxalis.security.TokenDAO
@@ -21,6 +21,7 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
@@ -28,6 +29,7 @@ class UserService @Inject()(conf: WkConf,
                             userTeamRolesDAO: UserTeamRolesDAO,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
+                            userDataSetLayerConfigurationDAO: UserDataSetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -46,9 +48,6 @@ class UserService @Inject()(conf: WkConf,
 
   def defaultUser =
     userDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
-
-  def findByTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext) =
-    userDAO.findAllByTeams(teams)
 
   def findOneById(userId: ObjectId, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] =
     if (useCache)
@@ -142,19 +141,31 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetConfiguration(
+  def updateDataSetViewConfiguration(
       user: User,
       dataSetName: String,
       organizationName: String,
-      configuration: DataSetConfiguration)(implicit ctx: DBAccessContext, m: MessagesProvider) =
+      dataSetConfiguration: DataSetViewConfiguration,
+      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider) =
     for {
       dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
         "dataSet.notFound",
         dataSetName)
+      layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
+      _ <- Fox.serialCombined(layerMap.toList) {
+        case (name, config) =>
+          config.asOpt[LayerViewConfiguration] match {
+            case Some(viewConfiguration) =>
+              userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+                                                                                                   dataSet._id,
+                                                                                                   name,
+                                                                                                   viewConfiguration)
+            case None => Fox.successful(())
+          }
+      }
       _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataSet._id,
-                                                                                   configuration.configuration)
-      _ = userCache.invalidateUser(user._id)
+                                                                                   dataSetConfiguration)
     } yield ()
 
   def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) =
@@ -253,7 +264,7 @@ class UserService @Inject()(conf: WkConf,
   }
 
   def compactWrites(user: User): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       teamMemberships <- teamMembershipsFor(user._id)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
@@ -263,6 +274,8 @@ class UserService @Inject()(conf: WkConf,
         "email" -> user.email,
         "firstName" -> user.firstName,
         "lastName" -> user.lastName,
+        "isAdmin" -> user.isAdmin,
+        "isDatasetManager" -> user.isDatasetManager,
         "isAnonymous" -> false,
         "teams" -> teamMembershipsJs
       )

@@ -2,7 +2,7 @@
 import { Modal } from "antd";
 import React from "react";
 
-import type { ServerSkeletonTracing } from "admin/api_flow_types";
+import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
@@ -30,7 +30,8 @@ type CreateNodeAction = {
   viewport: number,
   resolution: number,
   timestamp: number,
-  treeId?: number,
+  treeId?: ?number,
+  dontActivate?: boolean,
 };
 type DeleteNodeAction = {
   type: "DELETE_NODE",
@@ -104,6 +105,7 @@ type SetTreeColorIndexAction = {
   colorIndex: number,
 };
 type ShuffleTreeColorAction = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
+type SetTreeColorAction = { type: "SET_TREE_COLOR", treeId: number, color: Vector3 };
 type ShuffleAllTreeColorsAction = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentAction = {
   type: "CREATE_COMMENT",
@@ -147,6 +149,7 @@ export type SkeletonTracingAction =
   | MergeTreesAction
   | SetTreeNameAction
   | SelectNextTreeAction
+  | SetTreeColorAction
   | ShuffleTreeColorAction
   | ShuffleAllTreeColorsAction
   | SetTreeColorIndexAction
@@ -195,6 +198,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "TOGGLE_TREE_GROUP",
   "TOGGLE_ALL_TREES",
   "TOGGLE_INACTIVE_TREES",
+  "SET_TREE_COLOR",
   // Composited actions, only dispatched using `batchActions`
   "DELETE_GROUP_AND_TREES",
 ];
@@ -215,7 +219,8 @@ export const createNodeAction = (
   rotation: Vector3,
   viewport: number,
   resolution: number,
-  treeId?: number,
+  treeId?: ?number,
+  dontActivate: boolean = false,
   timestamp: number = Date.now(),
 ): CreateNodeAction => ({
   type: "CREATE_NODE",
@@ -224,6 +229,7 @@ export const createNodeAction = (
   viewport,
   resolution,
   treeId,
+  dontActivate,
   timestamp,
 });
 
@@ -413,6 +419,12 @@ export const setTreeColorIndexAction = (
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorAction => ({
   type: "SHUFFLE_TREE_COLOR",
   treeId,
+});
+
+export const setTreeColorAction = (treeId: number, color: Vector3): SetTreeColorAction => ({
+  type: "SET_TREE_COLOR",
+  treeId,
+  color,
 });
 
 export const shuffleAllTreeColorsAction = (): ShuffleAllTreeColorsAction => ({

@@ -16,7 +16,7 @@ import { type RouterHistory, withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 
-import type { APITeam } from "admin/api_flow_types";
+import type { APITeam } from "types/api_flow_types";
 import {
   getEditableTeams,
   createTaskType,
@@ -51,26 +51,30 @@ function isValidMagnification(rule, value, callback) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     callback();
   } else {
-    callback("The magnification must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
+    callback("The resolution must be stated as a power of two (e.g., 1 or 2 or 4 or 8 ...)");
   }
 }
 
 function getMagnificationAdaptedSettings(rawSettings) {
-  const { allowedMagnifications, ...settingsWithoutMagnifications } = rawSettings;
+  const { resolutionRestrictionsForm, ...settingsWithoutMagnifications } = rawSettings;
+
+  const resolutionRestrictions = {
+    min: resolutionRestrictionsForm.shouldRestrict ? resolutionRestrictionsForm.min : null,
+    max: resolutionRestrictionsForm.shouldRestrict ? resolutionRestrictionsForm.max : null,
+  };
 
   if (
-    allowedMagnifications.shouldRestrict &&
-    allowedMagnifications.min != null &&
-    allowedMagnifications.max != null &&
-    allowedMagnifications.min > allowedMagnifications.max
+    resolutionRestrictions.min != null &&
+    resolutionRestrictions.max != null &&
+    resolutionRestrictions.min > resolutionRestrictions.max
   ) {
-    Toast.error("Minimum magnification must not be greater than maximum magnification.");
+    Toast.error("Minimum resolution must not be greater than maximum resolution.");
     return null;
   }
 
   return {
     ...settingsWithoutMagnifications,
-    allowedMagnifications,
+    resolutionRestrictions,
   };
 }
 
@@ -93,11 +97,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         branchPointsAllowed: true,
         mergerMode: false,
         preferredMode: null,
-        allowedMagnifications: {
-          shouldRestrict: false,
-          min: 1,
-          max: 512,
-        },
+        resolutionRestrictions: {},
       },
       recommendedConfiguration: DEFAULT_RECOMMENDED_CONFIGURATION,
     };
@@ -110,8 +110,16 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       formValues.recommendedConfiguration = defaultValues.recommendedConfiguration;
     }
     formValues.recommendedConfiguration = jsonStringify(formValues.recommendedConfiguration);
-    formValues.settings.allowedMagnificationsmin = formValues.settings.allowedMagnifications.min;
-    formValues.settings.allowedMagnificationsmax = formValues.settings.allowedMagnifications.max;
+    // The format of settings.resolutionRestrictions does not match the form precisely.
+    // It is replaced here by resolutionRestrictionsForm, wich has a shouldRestrict boolean
+    formValues.settings.resolutionRestrictionsForm = {
+      shouldRestrict:
+        formValues.settings.resolutionRestrictions.min != null ||
+        formValues.settings.resolutionRestrictions.max != null,
+      min: formValues.settings.resolutionRestrictions.min || 1,
+      max: formValues.settings.resolutionRestrictions.max || 512,
+    };
+    delete formValues.settings.resolutionRestrictions;
 
     this.props.form.setFieldsValue(formValues);
 
@@ -297,13 +305,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </div>
 
             <FormItem style={{ marginBottom: 6 }}>
-              {getFieldDecorator("settings.allowedMagnifications.shouldRestrict", {
+              {getFieldDecorator("settings.resolutionRestrictionsForm.shouldRestrict", {
                 valuePropName: "checked",
               })(
-                <Checkbox>
-                  Restrict Magnifications{" "}
+                <Checkbox disabled={isEditingMode}>
+                  Restrict Resolutions{" "}
                   <Tooltip
-                    title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth magnifications can be addressed with 4 and 8."
+                    title="The resolutions should be specified as power-of-two numbers. For example, if users should only be able to trace in the best and second best magnification, the minimum should be 1 and the maximum should be 2. The third and fourth resolutions can be addressed with 4 and 8."
                     placement="right"
                   >
                     <Icon type="info-circle" />
@@ -316,7 +324,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               style={{
                 marginLeft: 24,
                 display: this.props.form.getFieldValue(
-                  "settings.allowedMagnifications.shouldRestrict",
+                  "settings.resolutionRestrictionsForm.shouldRestrict",
                 )
                   ? "block"
                   : "none",
@@ -325,17 +333,17 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               <div>
                 <FormItem hasFeedback style={{ marginBottom: 6 }}>
                   Minimum:{" "}
-                  {getFieldDecorator("settings.allowedMagnifications.min", {
+                  {getFieldDecorator("settings.resolutionRestrictionsForm.min", {
                     rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" />)}
+                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>
               </div>
               <div>
                 <FormItem hasFeedback>
                   Maximum:{" "}
-                  {getFieldDecorator("settings.allowedMagnifications.max", {
+                  {getFieldDecorator("settings.resolutionRestrictionsForm.max", {
                     rules: [{ validator: isValidMagnification }],
-                  })(<InputNumber min={1} size="small" />)}
+                  })(<InputNumber min={1} size="small" disabled={isEditingMode} />)}
                 </FormItem>
               </div>
             </div>

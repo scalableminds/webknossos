@@ -1,5 +1,6 @@
 // @flow
 import _ from "lodash";
+import type { Vector4 } from "oxalis/constants";
 
 export const settings = {
   clippingDistance: "Clipping Distance",
@@ -39,6 +40,18 @@ export const settings = {
   mergerMode: "Enable Merger Mode",
   gpuMemoryFactor: "Hardware Utilization",
   autoBrush: "Automatic Brush (Beta)",
+  overwriteMode: "Volume Annotation Overwrite Mode",
+};
+
+export const layerViewConfigurations = {
+  color: "Color",
+  alpha: "Layer opacity",
+  intensityRange: "Intensity Range",
+  min: "Minimum Data Value",
+  max: "Maximum Data Value",
+  isDisabled: "Disabled Layer",
+  isInverted: "Inverted Layer",
+  isInEditMode: "Configuration Mode",
 };
 
 export default {
@@ -81,6 +94,8 @@ In order to restore the current window, a reload is necessary.`,
   "data.disabled_render_missing_data_black": `You just disabled the option to render missing
 data black. This means that in case of missing data, data of lower quality is rendered
 instead. Only enable this option if you understand its effect. All layers will now be reloaded.`,
+  "sampling.could_not_get_or_create_bucket": (zoomedAddress: Vector4) =>
+    `While sampling could not get or create bucket at address ${zoomedAddress.toString()}.`,
   "tracing.unhandled_initialization_error":
     "Initialization error. Please refresh the page to retry. If the error persists, please contact an administrator.",
   "tracing.out_of_dataset_bounds":
@@ -101,12 +116,14 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
   "tracing.edit_volume_in_merger_mode":
     "The volume annotation would be changed by this action. This is not allowed while merger mode is active.",
+  "tracing.volume_resolution_mismatch":
+    "The volume annotation resolutions do not match the dataset resolutions. Was the dataset edited after creating the annotation? Consider downloading and re-uploading resolution 1 only to adapt the annotation.",
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume annotation is only fully supported at a smaller zoom level.",
   "tracing.uint64_segmentation_warning":
     "This is an unsigned 64-bit segmentation. The displayed ids are truncated to 32-bit. Thus, they might not match the ids on the server.",
   "tracing.segmentation_zoom_warning_agglomerate":
-    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this magnification. Please zoom in further.",
+    "Segmentation data which is mapped using an agglomerate file cannot be rendered in this resolution. Please zoom in further.",
   "tracing.no_access": "You are not allowed to access this annotation.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -137,11 +154,19 @@ instead. Only enable this option if you understand its effect. All layers will n
     'Click with "CTRL + Left Mouse" on the desired cell to load it\'s isosurface.',
   ],
   "tracing.confirm_remove_fallback_layer.title":
-    "Are you sure you want to unlink the dataset's original segmentation layer from this tracing?",
+    "Are you sure you want to unlink the dataset's original segmentation layer?",
   "tracing.confirm_remove_fallback_layer.explanation":
     "This dataset already contains a segmentation layer provided by its author. If you do not wish to base your work on this original segmentation, you can unlink it by confirming this dialog.",
   "tracing.confirm_remove_fallback_layer.notes":
-    "Note, that this action cannot be undone. Also note, if you already started with your annotation work based on the original segmentation layer, some small chunks of the segmentation might have already been merged into your annotation for technical reasons.",
+    "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
+  "tracing.area_to_fill_is_too_big":
+    "The area you want to fill is too big. Please annotate the area in multiple strokes.",
+  "tracing.agglomerate_skeleton.no_cell":
+    "Clicked on the background. Please click on a cell to load a skeleton.",
+  "tracing.agglomerate_skeleton.no_mapping":
+    "Please activate an agglomerate file mapping to load a skeleton for a cell.",
+  "tracing.agglomerate_skeleton.no_agglomerate_file":
+    "Loading a skeleton for a cell only works with agglomerate file mappings.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -170,7 +195,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.content":
     "If you reopen your old tracing, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
   "task.bulk_create_invalid":
-    "Can not parse task specification. It includes at least one invalid task. (Note that the obsolete “team” column was recently removed, are you still using the old format?)",
+    "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
   "dataset.clear_cache_success": _.template(
     "The dataset <%- datasetName %> was reloaded successfully.",
@@ -180,8 +205,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
+  "dataset.upload_failed": "The dataset upload failed.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
+  "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":

@@ -1,13 +1,15 @@
 package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.api.{AuthInfo, Identity, LoginInfo}
+import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSetViewConfiguration.DataSetViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
 import models.binary.DataSetDAO
-import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.configuration.UserConfiguration
 import models.team._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
@@ -118,18 +120,33 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed
     }
 
-  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
+  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(
+      implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teams.isEmpty) Fox.successful(List())
     else
       for {
         accessQuery <- readAccessQuery
-        r <- run(sql"""select u.*
+        r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #${columns} from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
                                and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})
                          order by _id""".as[UsersRow])
         parsed <- Fox.combined(r.toList.map(parse))
       } yield parsed
+
+  def findAdminsAndDatasetManagersByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columns}
+                     from #${existingCollectionName}
+                     where #${accessQuery}
+                     and (isDatasetManager
+                          or isAdmin)
+                     and not isDeactivated
+                     and _organization = $organizationId
+                     order by _id""".as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
 
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
@@ -307,66 +324,66 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
 class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO)(
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-
-  def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] =
+  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
     for {
-      rows <- run(UserDatasetconfigurations.filter(_._User === userId.id).result)
-    } yield {
-      rows.map(r => (ObjectId(r._Dataset), Json.parse(r.configuration).as[JsValue])).toMap
-    }
-
-  def findOneForUserAndDataset(userId: ObjectId, dataSetName: String)(implicit ctx: DBAccessContext): Fox[JsValue] =
-    for {
-      rows <- run(sql"""select c.configuration
-              from webknossos.user_dataSetConfigurations c
-              join webknossos.dataSets_ d on c._dataSet = d._id
-              where d.name = ${dataSetName}
-              and c._user = ${userId}
+      rows <- run(sql"""select viewConfiguration
+              from webknossos.user_dataSetConfigurations
+              where _dataSet = $dataSetId
+              and _user = $userId
           """.as[String])
-      parsed = rows.map(Json.parse(_))
-      result <- parsed.headOption.toFox
+      parsed = rows.map(Json.parse)
+      result <- parsed.headOption.map(_.validate[DataSetViewConfiguration].getOrElse(Map.empty)).toFox
     } yield result
 
   def updateDatasetConfigurationForUserAndDataset(
       userId: ObjectId,
       dataSetId: ObjectId,
-      configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] =
+      configuration: DataSetViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
       deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
-               where _user = ${userId} and _dataSet = ${dataSetId}"""
-      insertQuery = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values(${userId}, ${dataSetId}, '#${sanitize(Json.toJson(configuration).toString)}')"""
+               where _user = $userId and _dataSet = $dataSetId"""
+      insertQuery = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, viewConfiguration)
+               values($userId, $dataSetId, '#${sanitize(Json.toJson(configuration).toString)}')"""
       _ <- run(
         DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)
       )
     } yield ()
+}
 
-  def insertDatasetConfigurationsFor(userId: ObjectId, configurations: Map[String, DataSetConfiguration])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
+    extends SimpleSQLDAO(sqlClient) {
+
+  def findAllByLayerNameForUserAndDataset(layerNames: List[String], userId: ObjectId, dataSetId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[Map[String, LayerViewConfiguration]] =
     for {
-      _ <- Fox.combined(configurations.map {
-        case (dataSetName, configuration) =>
-          insertDatasetConfiguration(userId, dataSetName, configuration.configuration)
-      }.toList)
-    } yield ()
+      rows <- run(sql"""select layerName, viewConfiguration
+              from webknossos.user_dataSetLayerConfigurations
+              where _dataset = $dataSetId
+              and _user = $userId
+              and layerName in #${writeStructTupleWithQuotes(layerNames)}
+          """.as[(String, String)])
+      parsed = rows.flatMap(t => Json.parse(t._2).asOpt[LayerViewConfiguration].map((t._1, _)))
+    } yield parsed.toMap
 
-  private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      user <- userDAO.findOne(userId)
-      dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)
-      _ <- insertDatasetConfiguration(userId, dataSet._id, configuration)
-    } yield ()
-
-  private def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDatasetConfigurationForUserAndDatasetAndLayer(
+      userId: ObjectId,
+      dataSetId: ObjectId,
+      layerName: String,
+      viewConfiguration: LayerViewConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- userDAO.assertUpdateAccess(userId)
-      _ <- run(sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")
+      deleteQuery = sqlu"""delete from webknossos.user_dataSetLayerConfigurations
+               where _user = $userId and _dataSet = $dataSetId and layerName = $layerName"""
+      insertQuery = sqlu"""insert into webknossos.user_dataSetLayerConfigurations(_user, _dataSet, layerName, viewConfiguration)
+               values($userId, $dataSetId, $layerName, '#${sanitize(Json.toJson(viewConfiguration).toString)}')"""
+      _ <- run(
+        DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)
+      )
     } yield ()
-
 }

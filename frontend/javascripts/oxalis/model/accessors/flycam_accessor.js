@@ -14,7 +14,7 @@ import {
   getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   type OrthoView,
@@ -186,26 +186,26 @@ function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<num
   );
 }
 
-export function getUp(flycam: Flycam): Vector3 {
+function _getUp(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[4], matrix[5], matrix[6]];
 }
 
-export function getLeft(flycam: Flycam): Vector3 {
+function _getLeft(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[0], matrix[1], matrix[2]];
 }
 
-export function getPosition(flycam: Flycam): Vector3 {
+function _getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
 }
 
-export function getFlooredPosition(flycam: Flycam): Vector3 {
-  return map3(x => Math.floor(x), getPosition(flycam));
+function _getFlooredPosition(flycam: Flycam): Vector3 {
+  return map3(x => Math.floor(x), _getPosition(flycam));
 }
 
-export function getRotation(flycam: Flycam): Vector3 {
+function _getRotation(flycam: Flycam): Vector3 {
   const object = new THREE.Object3D();
   const matrix = new THREE.Matrix4().fromArray(flycam.currentMatrix).transpose();
   object.applyMatrix(matrix);
@@ -218,9 +218,16 @@ export function getRotation(flycam: Flycam): Vector3 {
   ];
 }
 
-export function getZoomedMatrix(flycam: Flycam): Matrix4x4 {
+function _getZoomedMatrix(flycam: Flycam): Matrix4x4 {
   return M4x4.scale1(flycam.zoomStep, flycam.currentMatrix);
 }
+
+export const getUp = memoizeOne(_getUp);
+export const getLeft = memoizeOne(_getLeft);
+export const getPosition = memoizeOne(_getPosition);
+export const getFlooredPosition = memoizeOne(_getFlooredPosition);
+export const getRotation = memoizeOne(_getRotation);
+export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
 
 export function getRequestLogZoomStep(state: OxalisState): number {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
@@ -237,6 +244,12 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   }
 
   return Math.min(zoomStep, maxLogZoomStep);
+}
+
+export function getCurrentResolution(state: OxalisState): Vector3 {
+  const resolutions = getResolutions(state.dataset);
+  const logZoomStep = getRequestLogZoomStep(state);
+  return resolutions[logZoomStep] || [1, 1, 1];
 }
 
 export function getValidZoomRangeForUser(state: OxalisState): [number, number] {
@@ -276,11 +289,14 @@ export function getZoomValue(flycam: Flycam): number {
   return flycam.zoomStep;
 }
 
-function getValidTaskZoomRange(state: OxalisState): [number, number] {
+export function getValidTaskZoomRange(
+  state: OxalisState,
+  respectRestriction: boolean = false,
+): [number, number] {
   const defaultRange = [userSettings.zoom.minimum, Infinity];
-  const { allowedMagnifications } = state.tracing.restrictions;
+  const { resolutionRestrictions } = state.tracing.restrictions;
 
-  if (!allowedMagnifications || !allowedMagnifications.shouldRestrict) {
+  if (!respectRestriction) {
     return defaultRange;
   }
 
@@ -296,10 +312,23 @@ function getValidTaskZoomRange(state: OxalisState): [number, number] {
     );
   }
 
-  const min = getMinMax(allowedMagnifications.min, true);
-  const max = getMinMax(allowedMagnifications.max, false);
+  const min = getMinMax(resolutionRestrictions.min, true);
+  const max = getMinMax(resolutionRestrictions.max, false);
 
   return [min, max];
+}
+
+export function isMagRestrictionViolated(state: OxalisState): boolean {
+  const { resolutionRestrictions } = state.tracing.restrictions;
+
+  const zoomStep = getRequestLogZoomStep(state);
+  if (resolutionRestrictions.min != null && zoomStep < Math.log2(resolutionRestrictions.min)) {
+    return true;
+  }
+  if (resolutionRestrictions.max != null && zoomStep > Math.log2(resolutionRestrictions.max)) {
+    return true;
+  }
+  return false;
 }
 
 export function getPlaneScalingFactor(

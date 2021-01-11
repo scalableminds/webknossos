@@ -10,14 +10,14 @@ import update from "immutability-helper";
 
 import { type ContourMode, type Vector3, type VolumeTool, VolumeToolEnum } from "oxalis/constants";
 import type { OxalisState, VolumeTracing, VolumeCell } from "oxalis/store";
-import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
+import { isVolumeTraceToolDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setToolReducer(state: OxalisState, volumeTracing: VolumeTracing, tool: VolumeTool) {
   if (tool === volumeTracing.activeTool) {
     return state;
   }
-  if (tool !== VolumeToolEnum.MOVE && isVolumeTracingDisallowed(state)) {
+  if (tool === VolumeToolEnum.TRACE && isVolumeTraceToolDisallowed(state)) {
     return state;
   }
 
@@ -46,31 +46,40 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
   });
 }
 
-export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: ?number) {
+export function createCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id?: number) {
   if (id === 0) {
     // cellId 0 means there is no annotation, so there must not be a cell with id 0
     return state;
   }
-  let newMaxCellId = volumeTracing.maxCellId;
+
+  // The maxCellId is only updated if a voxel using that id was annotated. Therefore, it can happen
+  // that the activeCellId is larger than the maxCellId. Choose the larger of the two ids and increase it by one.
+  const { activeCellId, maxCellId } = volumeTracing;
   if (id == null) {
-    newMaxCellId++;
-    id = newMaxCellId;
-  } else {
-    newMaxCellId = Math.max(id, newMaxCellId);
+    id = Math.max(activeCellId, maxCellId) + 1;
   }
 
-  // Create the new VolumeCell
-  const cell: VolumeCell = { id };
+  if (volumeTracing.cells[id] == null) {
+    // Create the new VolumeCell
+    const cell: VolumeCell = { id };
 
-  return update(state, {
-    tracing: {
-      volume: {
-        activeCellId: { $set: cell.id },
-        cells: { [cell.id]: { $set: cell } },
-        maxCellId: { $set: newMaxCellId },
+    return update(state, {
+      tracing: {
+        volume: {
+          activeCellId: { $set: id },
+          cells: { [id]: { $set: cell } },
+        },
       },
-    },
-  });
+    });
+  } else {
+    return update(state, {
+      tracing: {
+        volume: {
+          activeCellId: { $set: id },
+        },
+      },
+    });
+  }
 }
 
 export function updateDirectionReducer(
@@ -101,7 +110,8 @@ export function addToLayerReducer(
   position: Vector3,
 ) {
   const { allowUpdate } = state.tracing.restrictions;
-  if (!allowUpdate || isVolumeTracingDisallowed(state)) {
+  const { activeTool } = volumeTracing;
+  if (!allowUpdate || (activeTool === VolumeToolEnum.TRACE && isVolumeTraceToolDisallowed(state))) {
     return state;
   }
 
@@ -140,21 +150,11 @@ export function setContourTracingModeReducer(state: OxalisState, mode: ContourMo
   });
 }
 
-export function removeFallbackLayerReducer(state: OxalisState) {
+export function setMaxCellReducer(state: OxalisState, id: number) {
   return update(state, {
     tracing: {
       volume: {
-        $unset: ["fallbackLayer"],
-      },
-    },
-  });
-}
-
-export function setMaxCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
-  return update(state, {
-    tracing: {
-      volume: {
-        largestSegmentId: { $set: id },
+        maxCellId: { $set: id },
       },
     },
   });

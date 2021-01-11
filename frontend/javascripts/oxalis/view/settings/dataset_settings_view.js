@@ -3,42 +3,43 @@
  * @flow
  */
 
-import { Col, Collapse, Icon, Row, Select, Switch, Tag, Tooltip, Modal } from "antd";
+import { Col, Collapse, Icon, Row, Select, Switch, Tooltip, Modal } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { useState } from "react";
 import _ from "lodash";
-import { V3 } from "libs/mjs";
-import api from "oxalis/api/internal_api";
 
-import messages, { settings } from "messages";
-import type { APIDataset } from "admin/api_flow_types";
-import { AsyncIconButton } from "components/async_clickables";
+import type { APIDataset } from "types/api_flow_types";
+import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import {
   SwitchSetting,
   NumberSliderSetting,
   DropdownSetting,
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
+import { V3 } from "libs/mjs";
 import {
-  clearCache,
   findDataPositionForLayer,
+  clearCache,
   findDataPositionForVolumeTracing,
+  unlinkFallbackSegmentation,
 } from "admin/admin_rest_api";
-import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import {
+  getDefaultIntensityRangeOfLayer,
   getElementClass,
   getLayerBoundaries,
-  getDefaultIntensityRangeOfLayer,
+  getLayerByName,
+  getResolutionInfo,
+  getResolutions,
 } from "oxalis/model/accessors/dataset_accessor";
+import { getGpuFactorsWithLabels } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import { getMaxZoomValueForResolution } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction, setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateLayerSettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { removeFallbackLayerAction } from "oxalis/model/actions/volumetracing_actions";
 import Model from "oxalis/model";
 import Store, {
   type DatasetConfiguration,
@@ -47,10 +48,13 @@ import Store, {
   type UserConfiguration,
   type HistogramDataForAllLayers,
   type Tracing,
+  type Task,
 } from "oxalis/store";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
+import api from "oxalis/api/internal_api";
 import constants, { type ViewMode, type Vector3 } from "oxalis/constants";
+import messages, { settings } from "messages";
 
 import Histogram, { isHistogramSupported } from "./histogram_view";
 
@@ -72,11 +76,75 @@ type DatasetSettingsProps = {|
   onSetPosition: Vector3 => void,
   onZoomToResolution: Vector3 => number,
   onChangeUser: (key: $Keys<UserConfiguration>, value: any) => void,
-  onRemoveFallbackLayer: () => void,
+  onUnlinkFallbackLayer: Tracing => Promise<void>,
   tracing: Tracing,
+  task: ?Task,
 |};
 
-class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
+function DownsampleVolumeModal({ visible, hideDownsampleVolumeModal, magsToDownsample }) {
+  const [isDownsampling, setIsDownsampling] = useState(false);
+
+  const handleTriggerDownsampling = async () => {
+    setIsDownsampling(true);
+    await api.tracing.downsampleSegmentation();
+    setIsDownsampling(false);
+  };
+
+  return (
+    <Modal
+      title="Downsample Volume Annotation"
+      onCancel={isDownsampling ? null : hideDownsampleVolumeModal}
+      visible={visible}
+      footer={null}
+      width={800}
+      maskClosable={false}
+    >
+      <p>
+        This annotation does not have volume annotation data in all resolutions. Consequently,
+        annotation data cannot be rendered at all zoom values. By clicking &quot;Downsample&quot;,
+        webKnossos will use the best resolution of the volume data to create all dependent
+        resolutions.
+      </p>
+
+      <p>
+        The following resolutions will be added when clicking &quot;Downsample&quot;:{" "}
+        {magsToDownsample.map(mag => mag.join("-")).join(", ")}.
+      </p>
+
+      <div>
+        The cause for the missing resolutions can be one of the following:
+        <ul>
+          <li>
+            The annotation was created before webKnossos supported multi-resolution volume tracings.
+          </li>
+          <li>An old annotation was uploaded which did not include all resolutions.</li>
+          <li>The annotation was created in a task that was restricted to certain resolutions.</li>
+          <li>The dataset was mutated to have more resolutions.</li>
+        </ul>
+      </div>
+
+      <p style={{ fontWeight: "bold" }}>
+        Note that this action might take a few minutes. Afterwards, the annotation is reloaded.
+        Also, the version history of the volume data will be reset.
+      </p>
+      <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+        <AsyncButton onClick={handleTriggerDownsampling} type="primary">
+          Downsample
+        </AsyncButton>
+      </div>
+    </Modal>
+  );
+}
+
+type State = {|
+  isDownsampleVolumeModalVisible: boolean,
+|};
+
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
+  state = {
+    isDownsampleVolumeModalVisible: false,
+  };
+
   getFindDataButton = (layerName: string, isDisabled: boolean, isColorLayer: boolean) => {
     let tooltipText = isDisabled
       ? "You cannot search for data when the layer is disabled."
@@ -127,12 +195,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     );
   };
 
-  getDeleteButton = (layerName: string) => (
+  getDeleteButton = () => (
     <Tooltip title="Unlink dataset's original segmentation layer">
       <Icon
         type="stop"
         onClick={() => {
-          this.removeFallbackLayer(layerName);
+          this.removeFallbackLayer();
         }}
         style={{
           position: "absolute",
@@ -144,18 +212,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     </Tooltip>
   );
 
-  removeFallbackLayer = (layerName: string) => {
+  removeFallbackLayer = () => {
     Modal.confirm({
       title: messages["tracing.confirm_remove_fallback_layer.title"],
       content: (
         <div>
           <p>{messages["tracing.confirm_remove_fallback_layer.explanation"]}</p>
-          <p>{messages["tracing.confirm_remove_fallback_layer.notes"]}</p>
+          <p>
+            <b>{messages["tracing.confirm_remove_fallback_layer.notes"]}</b>
+          </p>
         </div>
       ),
       onOk: async () => {
-        this.props.onRemoveFallbackLayer();
-        this.reloadLayerData(layerName);
+        this.props.onUnlinkFallbackLayer(this.props.tracing);
       },
       width: 600,
     });
@@ -256,11 +325,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
       this.props.onChangeLayer(layerName, "isDisabled", !isVisible);
     };
     const onChange = (value, event) => {
-      if (!event.ctrlKey) {
+      if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
         setSingleLayerVisibility(value);
         return;
       }
-      // If ctrl is pressed, toggle between "all layers visible" and
+      // If a modifier is pressed, toggle between "all layers visible" and
       // "only selected layer visible".
       if (this.isLayerExclusivelyVisible(layerName)) {
         this.setVisibilityForAllLayers(true);
@@ -271,18 +340,41 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     };
     const hasHistogram = this.props.histogramData[layerName] != null;
 
+    const layer = getLayerByName(this.props.dataset, layerName);
+    const resolutions = getResolutionInfo(layer.resolutions).getResolutionList();
+
     return (
       <Row>
         <Col span={24}>
           {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
           <span style={{ fontWeight: 700 }}>
-            {!isColorLayer && isVolumeTracing ? "Volume Layer" : layerName}
+            {!isColorLayer && isVolumeTracing ? "Volume Annotation" : layerName}
           </span>
-          <Tag style={{ cursor: "default", marginLeft: 8 }}>{elementClass}</Tag>
+
+          <Tooltip
+            title={
+              <div>
+                Data Type: {elementClass}
+                <br />
+                Available resolutions:
+                <ul>
+                  {resolutions.map(r => (
+                    <li key={r.join()}>{r.join("-")}</li>
+                  ))}
+                </ul>
+              </div>
+            }
+            placement="left"
+          >
+            <Icon style={{ marginLeft: 4 }} type="info-circle" />
+          </Tooltip>
+
+          {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon()}
+
           {hasHistogram ? this.getEditMinMaxButton(layerName, isInEditMode) : null}
           {this.getFindDataButton(layerName, isDisabled, isColorLayer)}
           {this.getReloadDataButton(layerName)}
-          {isFallbackLayer ? this.getDeleteButton(layerName) : null}
+          {isFallbackLayer ? this.getDeleteButton() : null}
         </Col>
       </Row>
     );
@@ -449,7 +541,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
 
   reloadLayerData = async (layerName: string): Promise<void> => {
     await clearCache(this.props.dataset, layerName);
-    api.data.reloadBuckets(layerName);
+    await api.data.reloadBuckets(layerName);
     window.needsRerender = true;
     Toast.success(`Successfully reloaded data of layer ${layerName}.`);
   };
@@ -465,7 +557,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     const { layers } = this.props.datasetConfiguration;
     const reloadAllLayersPromises = Object.keys(layers).map(async layerName => {
       await clearCache(this.props.dataset, layerName);
-      api.data.reloadBuckets(layerName);
+      await api.data.reloadBuckets(layerName);
     });
     await Promise.all(reloadAllLayersPromises);
     window.needsRerender = true;
@@ -483,6 +575,70 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
     ) : (
       "Layers"
     );
+
+  getVolumeMagsToDownsample = (): Array<Vector3> => {
+    if (this.props.task != null) {
+      return [];
+    }
+    const volumeTracing = this.props.tracing.volume;
+    if (volumeTracing == null) {
+      return [];
+    }
+    const segmentationLayer = Model.getSegmentationLayer();
+    const { fallbackLayerInfo } = segmentationLayer;
+    const volumeTargetResolutions =
+      fallbackLayerInfo != null
+        ? fallbackLayerInfo.resolutions
+        : getResolutions(this.props.dataset);
+
+    const getMaxDim = resolution => Math.max(...resolution);
+
+    const volumeTracingResolutions = segmentationLayer.resolutions;
+
+    const sourceMag = _.minBy(volumeTracingResolutions, getMaxDim);
+    const possibleMags = volumeTargetResolutions.filter(
+      resolution => getMaxDim(resolution) >= getMaxDim(sourceMag),
+    );
+
+    const magsToDownsample = _.differenceWith(possibleMags, volumeTracingResolutions, _.isEqual);
+    return magsToDownsample;
+  };
+
+  getOptionalDownsampleVolumeIcon = () => {
+    const magsToDownsample = this.getVolumeMagsToDownsample();
+    const hasExtensiveResolutions = magsToDownsample.length === 0;
+
+    if (hasExtensiveResolutions) {
+      return null;
+    }
+
+    return (
+      <Tooltip title="Open Dialog to Downsample Volume Data">
+        <a href="#" onClick={this.showDownsampleVolumeModal}>
+          <img
+            src="/assets/images/icon-downsampling.svg"
+            style={{
+              width: 20,
+              height: 20,
+              filter:
+                "invert(47%) sepia(52%) saturate(1836%) hue-rotate(352deg) brightness(99%) contrast(105%)",
+              verticalAlign: "top",
+              cursor: "pointer",
+            }}
+            alt="Resolution Icon"
+          />
+        </a>
+      </Tooltip>
+    );
+  };
+
+  showDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: true });
+  };
+
+  hideDownsampleVolumeModal = () => {
+    this.setState({ isDownsampleVolumeModalVisible: false });
+  };
 
   render() {
     const { layers } = this.props.datasetConfiguration;
@@ -561,7 +717,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             label={
               <React.Fragment>
                 {settings.renderMissingDataBlack}{" "}
-                <Tooltip title="If disabled, missing data will be rendered by using poorer magnifications.">
+                <Tooltip title="If disabled, missing data will be rendered by using poorer resolutions.">
                   <Icon type="info-circle" />
                 </Tooltip>
               </React.Fragment>
@@ -570,6 +726,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             onChange={this.onChangeRenderMissingDataBlack}
           />
         </Panel>
+        <DownsampleVolumeModal
+          visible={this.state.isDownsampleVolumeModalVisible}
+          hideDownsampleVolumeModal={this.hideDownsampleVolumeModal}
+          magsToDownsample={this.getVolumeMagsToDownsample()}
+        />
       </Collapse>
     );
   }
@@ -582,6 +743,7 @@ const mapStateToProps = (state: OxalisState) => ({
   histogramData: state.temporaryConfiguration.histogramData,
   dataset: state.dataset,
   tracing: state.tracing,
+  task: state.task,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -602,8 +764,10 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(setZoomStepAction(targetZoomValue));
     return targetZoomValue;
   },
-  onRemoveFallbackLayer() {
-    dispatch(removeFallbackLayerAction());
+  async onUnlinkFallbackLayer(tracing: Tracing) {
+    const { annotationId, annotationType } = tracing;
+    await unlinkFallbackSegmentation(annotationId, annotationType);
+    await api.tracing.hardReload();
   },
 });
 

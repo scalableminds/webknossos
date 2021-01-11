@@ -1,5 +1,5 @@
 // @flow
-import type { ServerSkeletonTracing, APIAnnotation } from "admin/api_flow_types";
+import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
 
 export const tracing: ServerSkeletonTracing = {
   trees: [
@@ -61,6 +61,7 @@ export const annotation: APIAnnotation = {
         allowedModes: ["orthogonal", "oblique", "flight"],
         branchPointsAllowed: true,
         somaClickingAllowed: true,
+        resolutionRestrictions: {},
       },
       recommendedConfiguration: null,
       tracingType: "skeleton",
@@ -96,6 +97,7 @@ export const annotation: APIAnnotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    resolutionRestrictions: {},
   },
   tracingTime: null,
   tags: ["ROI2017_wkw", "skeleton"],

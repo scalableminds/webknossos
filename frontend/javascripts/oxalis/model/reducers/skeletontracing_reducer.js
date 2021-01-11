@@ -43,7 +43,7 @@ import ColorGenerator from "libs/color_generator";
 import Constants from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   const { restrictions } = state.tracing;
@@ -65,9 +65,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
             Toast.warning(
-              `This tracing was initialized with an active node ID, which does not
-              belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
-              the last tree instead.`,
+              `Annotation was initialized with active node ID ${nodeId}, which is not present in the trees. Falling back to last tree instead.`,
               { timeout: 10000 },
             );
             activeNodeId = null;
@@ -135,16 +133,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   nodes: { $set: newDiffableMap },
                   edges: { $set: edges },
                 });
+                const activeNodeId = action.dontActivate ? skeletonTracing.activeNodeId : node.id;
+                const activeTreeId = action.dontActivate
+                  ? skeletonTracing.activeTreeId
+                  : tree.treeId;
                 return update(state, {
                   tracing: {
                     skeleton: {
                       trees: {
                         [tree.treeId]: { $set: newTree },
                       },
-                      activeNodeId: { $set: node.id },
+                      activeNodeId: { $set: activeNodeId },
                       activeGroupId: { $set: null },
                       cachedMaxNodeId: { $set: node.id },
-                      activeTreeId: { $set: tree.treeId },
+                      activeTreeId: { $set: activeTreeId },
                     },
                   },
                 });
@@ -522,6 +524,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .map(([tree, treeId]) =>
               update(state, {
                 tracing: { skeleton: { trees: { [treeId]: { $set: tree } } } },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "SET_TREE_COLOR": {
+          const { color, treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map(tree =>
+              update(state, {
+                tracing: { skeleton: { trees: { [tree.treeId]: { color: { $set: color } } } } },
               }),
             )
             .getOrElse(state);

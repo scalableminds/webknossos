@@ -1,25 +1,25 @@
 package controllers
 
-import javax.inject.Inject
 import akka.util.Timeout
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSet, DataSetDAO, DataSetService}
+import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
+import models.team.{OrganizationDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import models.team.{OrganizationDAO, TeamService}
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -166,12 +166,41 @@ class AnnotationController @Inject()(
     for {
       _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
       annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- annotationService.makeAnnotationHybrid(annotation) ?~> "annotation.makeHybrid.failed"
+      organization <- organizationDAO.findOne(request.identity._organization)
+      _ <- annotationService.makeAnnotationHybrid(annotation, organization.name) ?~> "annotation.makeHybrid.failed"
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
     } yield {
       JsonOk(json)
     }
+  }
+
+  def downsample(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+      annotation <- provider.provideAnnotation(typ, id, request.identity)
+      _ <- annotationService.downsampleAnnotation(annotation) ?~> "annotation.downsample.failed"
+      updated <- provider.provideAnnotation(typ, id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield {
+      JsonOk(json)
+    }
+  }
+
+  def unlinkFallback(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.unlinkFallback.explorationalsOnly"
+      annotation <- provider.provideAnnotation(typ, id, request.identity)
+      volumeTracingId <- annotation.volumeTracingId.toFox ?~> "annotation.unlinkFallback.noVolume"
+      dataSet <- dataSetDAO
+        .findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
+      dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable) ?~> "dataSet.notImported"
+      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      newTracingId <- tracingStoreClient.unlinkFallback(volumeTracingId, dataSource)
+      _ <- annotationDAO.updateVolumeTracingId(annotation._id, newTracingId)
+      updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity)
+      js <- annotationService.publicWrites(updatedAnnotation, Some(request.identity))
+    } yield JsonOk(js)
   }
 
   private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(

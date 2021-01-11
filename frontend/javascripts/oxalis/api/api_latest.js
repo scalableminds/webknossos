@@ -32,6 +32,7 @@ import {
   finishAnnotation,
   getMappingsForDatasetLayer,
   requestTask,
+  downsampleSegmentation,
 } from "admin/admin_rest_api";
 import {
   findTreeByNodeId,
@@ -43,8 +44,16 @@ import {
   getTreeGroupsMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import { getLayerBoundaries, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getLayerBoundaries,
+  getLayerByName,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
+import {
+  getPosition,
+  getRotation,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -101,7 +110,7 @@ import * as Utils from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import UserLocalStorage from "libs/user_local_storage";
 
 type OutdatedDatasetConfigurationKeys = "segmentationOpacity" | "isSegmentationDisabled";
@@ -510,6 +519,17 @@ class TracingApi {
     UrlManager.updateUnthrottled();
   }
 
+  /**
+   * Reload tracing by reloading the entire page.
+   *
+   * @example
+   * api.tracing.hardReload()
+   */
+  async hardReload() {
+    await Model.ensureSavedState();
+    location.reload();
+  }
+
   //  SKELETONTRACING API
 
   /**
@@ -573,6 +593,46 @@ class TracingApi {
       }
     }
     return result;
+  }
+
+  measureTreeLength(treeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const tree = skeletonTracing.trees[treeId];
+    if (!tree) {
+      throw new Error(`Tree with id ${treeId} not found.`);
+    }
+
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+
+    // Pre-allocate vectors
+    const currentScaledPositionA = new Float32Array([0, 0, 0]);
+    const currentScaledPositionB = new Float32Array([0, 0, 0]);
+    const diffVector = new Float32Array([0, 0, 0]);
+
+    let lengthAcc = 0;
+    for (const edge of tree.edges.all()) {
+      const sourceNode = tree.nodes.get(edge.source);
+      const targetNode = tree.nodes.get(edge.target);
+
+      V3.scale3(sourceNode.position, datasetScale, currentScaledPositionA);
+      V3.scale3(targetNode.position, datasetScale, currentScaledPositionB);
+      V3.sub(currentScaledPositionA, currentScaledPositionB, diffVector);
+
+      lengthAcc += V3.length(diffVector);
+    }
+
+    return lengthAcc;
+  }
+
+  measureAllTrees(): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+
+    const totalLength = _.values(skeletonTracing.trees).reduce(
+      (sum, currentTree) => sum + this.measureTreeLength(currentTree.treeId),
+      0,
+    );
+
+    return totalLength;
   }
 
   /**
@@ -689,6 +749,30 @@ class TracingApi {
     }
     Store.dispatch(setToolAction(tool));
   }
+
+  /**
+   * Use this method to create a complete resolution pyramid by downsampling the lowest present mag (e.g., mag 1).
+     This method will save the current changes and then reload the page after the downsampling
+     has finished.
+     This function can only be used for non-tasks.
+
+     Note that this invoking this method will not block the UI. Thus, user actions can be performed during the
+     downsampling. The caller should prohibit this (e.g., by showing a not-closable modal during the process).
+   */
+  async downsampleSegmentation() {
+    const state = Store.getState();
+    const { annotationId, annotationType, volume } = state.tracing;
+    if (state.task != null) {
+      throw new Error("Cannot downsample segmentation for a task.");
+    }
+    if (volume == null) {
+      throw new Error("Cannot downsample segmentation for annotation without volume data.");
+    }
+
+    await this.save();
+    await downsampleSegmentation(annotationId, annotationType);
+    await this.hardReload();
+  }
 }
 
 /**
@@ -723,13 +807,20 @@ class DataApi {
   /**
    * Invalidates all downloaded buckets of the given layer so that they are reloaded.
    */
-  reloadBuckets(layerName: string): void {
-    _.forEach(this.model.dataLayers, dataLayer => {
-      if (dataLayer.name === layerName) {
-        dataLayer.cube.collectAllBuckets();
-        dataLayer.layerRenderingManager.refresh();
-      }
-    });
+  async reloadBuckets(layerName: string): Promise<void> {
+    await Promise.all(
+      Object.keys(this.model.dataLayers).map(async currentLayerName => {
+        const dataLayer = this.model.dataLayers[currentLayerName];
+        if (dataLayer.cube.isSegmentation) {
+          await Model.ensureSavedState();
+        }
+
+        if (dataLayer.name === layerName) {
+          dataLayer.cube.collectAllBuckets();
+          dataLayer.layerRenderingManager.refresh();
+        }
+      }),
+    );
   }
 
   /**
@@ -839,7 +930,11 @@ class DataApi {
   }
 
   /**
-   * Returns raw binary data for a given layer, position and zoom level.
+   * Returns raw binary data for a given layer, position and zoom level. If the zoom
+   * level is not provided, the first resolution will be used. If this
+   * resolution does not exist, the next existing resolution will be used.
+   * If the zoom level is provided and points to a not existent resolution,
+   * 0 will be returned.
    *
    * @example // Return the greyscale value for a bucket
    * const position = [123, 123, 123];
@@ -851,7 +946,20 @@ class DataApi {
    * @example // Get the segmentation id for a segmentation layer
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
-  async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
+  async getDataValue(
+    layerName: string,
+    position: Vector3,
+    _zoomStep: ?number = null,
+  ): Promise<number> {
+    let zoomStep;
+    if (_zoomStep != null) {
+      zoomStep = _zoomStep;
+    } else {
+      const layer = getLayerByName(Store.getState().dataset, layerName);
+      const resolutionInfo = getResolutionInfo(layer.resolutions);
+      zoomStep = resolutionInfo.getClosestExistingIndex(0);
+    }
+
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
     const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
@@ -876,6 +984,25 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return cube.getDataValue(position, null, zoomStep);
+  }
+
+  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+
+    if (position == null) return zoomStep;
+
+    const { renderMissingDataBlack } = state.datasetConfiguration;
+    const cube = this.model.getCubeByLayerName(layerName);
+
+    // While render missing data black is not active and there is no segmentation for the current zoom step,
+    // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
+    // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
+    const renderedZoomStep = renderMissingDataBlack
+      ? zoomStep
+      : cube.getNextUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {
@@ -1051,7 +1178,7 @@ class DataApi {
     assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      segmentationLayer.cube.labelVoxel(voxel, label);
+      segmentationLayer.cube.labelVoxelInAllResolutions(voxel, label);
     }
 
     segmentationLayer.cube.pushQueue.push();

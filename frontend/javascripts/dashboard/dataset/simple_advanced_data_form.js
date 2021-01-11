@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
+import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
 
 import {
   Hideable,
@@ -11,7 +12,6 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
-import { validateDatasourceJSON, isValidJSON, syncValidator } from "./validation";
 
 const FormItem = Form.Item;
 

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.{Tree, TreeGroup}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
 
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match

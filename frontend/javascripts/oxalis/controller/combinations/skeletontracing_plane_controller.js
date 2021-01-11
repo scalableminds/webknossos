@@ -12,7 +12,7 @@ import {
   VolumeToolEnum,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { movePlane, calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { enforce } from "libs/utils";
 import {
   enforceSkeletonTracing,
@@ -26,6 +26,7 @@ import {
   getPosition,
   getRotationOrtho,
   getRequestLogZoomStep,
+  isMagRestrictionViolated,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   setActiveNodeAction,
@@ -41,17 +42,17 @@ import {
   setNodePositionAction,
   updateNavigationListAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  setDirectionAction,
-  movePlaneFlycamOrthoAction,
-} from "oxalis/model/actions/flycam_actions";
+import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import type PlaneView from "oxalis/view/plane_view";
 import Store from "oxalis/store";
 import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import {
+  isosurfaceLeftClick,
+  agglomerateSkeletonMiddleClick,
+} from "oxalis/controller/combinations/segmentation_plane_controller";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -79,22 +80,37 @@ export function getPlaneMouseControls(planeView: PlaneView) {
   return {
     leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
       const { tracing } = Store.getState();
-      const state = Store.getState();
       if (tracing.skeleton != null && event.ctrlKey) {
         moveNode(delta.x, delta.y);
       } else {
-        const { activeViewport } = state.viewModeData.plane;
-        const v = [-delta.x, -delta.y, 0];
-        Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, true));
+        movePlane([-delta.x, -delta.y, 0]);
       }
     },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
     rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const { volume } = Store.getState().tracing;
-      if (!volume || volume.activeTool !== VolumeToolEnum.BRUSH) {
+      const state = Store.getState();
+      if (isMagRestrictionViolated(state)) {
+        // The current zoom value violates the specified magnification-restriction in the
+        // task type. Therefore, we abort the action here.
+        // Actually, one would need to handle more skeleton actions (e.g., deleting a node),
+        // but not all (e.g., deleting a tree from the tree tab should be allowed). Therefore,
+        // this solution is a bit of a shortcut. However, it should cover 90% of the use case
+        // for restricting the rendered magnification.
+        // See https://github.com/scalableminds/webknossos/pull/4891 for context and
+        // https://github.com/scalableminds/webknossos/issues/4838 for the follow-up issue.
+        return;
+      }
+
+      const { volume } = state.tracing;
+      if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
         // We avoid creating nodes when in brushing mode.
         setWaypoint(calculateGlobalPos(pos), event.ctrlKey);
+      }
+    },
+    middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      if (event.shiftKey) {
+        agglomerateSkeletonMiddleClick(pos);
       }
     },
   };
@@ -354,13 +370,10 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
   const rotation = getRotationOrtho(activeViewport);
   addNode(position, rotation, !ctrlPressed);
 
-  // Strg + Rightclick to set new not active branchpoint
+  // Ctrl + right click to set new not active branchpoint
   const { newNodeNewTree } = Store.getState().userConfiguration;
   if (ctrlPressed && !newNodeNewTree) {
     Store.dispatch(createBranchPointAction());
-    activeNodeMaybe.map(activeNode => {
-      Store.dispatch(setActiveNodeAction(activeNode.id));
-    });
   }
 }
 
@@ -384,6 +397,8 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
+      null,
+      !centered,
     ),
   );
 

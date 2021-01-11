@@ -6,7 +6,7 @@ import AirbrakeClient from "airbrake-js";
 import _ from "lodash";
 
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import window, { document, location } from "libs/window";
@@ -15,6 +15,7 @@ import window, { document, location } from "libs/window";
 const MAX_NUM_ERRORS = 50;
 const BLACKLISTED_ERROR_MESSAGES = [
   "ResizeObserver loop limit exceeded",
+  "ResizeObserver loop completed with undelivered notifications.",
   "Invariant Violation: Cannot call hover while not dragging.",
   // Errors from the sortable-tree when dragging an element onto itself
   "Uncaught Invariant Violation: Expected to find a valid target.",

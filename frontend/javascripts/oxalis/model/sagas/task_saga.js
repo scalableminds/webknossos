@@ -1,24 +1,31 @@
 // @flow
 import React from "react";
 import _ from "lodash";
+import { Button } from "antd";
 
-import type { APITaskType } from "admin/api_flow_types";
-import { type Saga, call, put, select, take } from "oxalis/model/sagas/effect-generators";
+import type { APITaskType } from "types/api_flow_types";
+import { type Saga, call, put, select, _delay, take } from "oxalis/model/sagas/effect-generators";
+import { clamp } from "libs/utils";
+import {
+  getValidTaskZoomRange,
+  isMagRestrictionViolated,
+} from "oxalis/model/accessors/flycam_accessor";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
 import {
   updateDatasetSettingAction,
   updateUserSettingAction,
   updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { setActiveUserAction } from "oxalis/model/actions/user_actions";
-import { setMergerModeEnabledAction } from "oxalis/model/actions/skeletontracing_actions";
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
+import Model from "oxalis/model";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
+import Store from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
-import Model from "oxalis/model";
 
 function* maybeShowNewTaskTypeModal(taskType: APITaskType): Saga<void> {
   // Users can acquire new tasks directly in the tracing view. Occasionally,
@@ -122,5 +129,53 @@ export default function* watchTasksAsync(): Saga<void> {
 
     const fullUser = yield* call(updateLastTaskTypeIdOfUser, activeUser.id, task.type.id);
     yield* put(setActiveUserAction(fullUser));
+  }
+}
+
+export function* warnAboutMagRestriction(): Saga<void> {
+  function* warnMaybe(): Saga<void> {
+    const { allowUpdate } = yield* select(state => state.tracing.restrictions);
+    if (!allowUpdate) {
+      // If updates are not allowed in general, we return here, since we don't
+      // want to show any warnings when the user cannot edit the annotation in the first
+      // place (e.g., when viewing the annotation of another user).
+      return;
+    }
+
+    const isViolated = yield* select(isMagRestrictionViolated);
+    const toastConfig = { sticky: true, key: "mag-restriction-warning" };
+
+    if (isViolated) {
+      const [min, max] = yield* select(storeState => getValidTaskZoomRange(storeState, true));
+      const clampZoom = () => {
+        const currentZoomStep = Store.getState().flycam.zoomStep;
+        const newZoomValue = clamp(min, currentZoomStep, max);
+        Store.dispatch(setZoomStepAction(newZoomValue));
+      };
+      const message = (
+        <React.Fragment>
+          Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
+          it is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
+          <Button type="link" onClick={clampZoom} style={{ padding: 0 }}>
+            here
+          </Button>{" "}
+          to adjust the zoom accordingly.
+        </React.Fragment>
+      );
+
+      Toast.error(message, toastConfig);
+    } else {
+      Toast.close(toastConfig.key);
+    }
+  }
+
+  yield* take("WK_READY");
+  // Wait before showing the initial warning. Due to initialization lag it may only be visible very briefly, otherwise.
+  yield _delay(5000);
+  yield* warnMaybe();
+
+  while (true) {
+    yield* take(["ZOOM_IN", "ZOOM_OUT", "ZOOM_BY_DELTA", "SET_ZOOM_STEP", "SET_STORED_LAYOUTS"]);
+    yield* warnMaybe();
   }
 }

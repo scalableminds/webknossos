@@ -1,4 +1,6 @@
 // @flow
+import { OverwriteModeEnum } from "oxalis/constants";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export const userSettings = {
   clippingDistance: { type: "number", minimum: 1, maximum: 12000 },
@@ -25,20 +27,16 @@ export const userSettings = {
   sphericalCapRadius: { type: "number", minimum: 50, maximum: 500 },
   tdViewDisplayPlanes: { type: "boolean" },
   hideTreeRemovalWarning: { type: "boolean" },
-  fourBit: { type: "boolean" },
-  interpolation: { type: "boolean" },
-  loadingStrategy: { enum: ["BEST_QUALITY_FIRST", "PROGRESSIVE_QUALITY"] },
-  segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
-  highlightHoveredCellId: { type: "boolean" },
-  zoom: { type: "number", minimum: 0.005 },
-  renderMissingDataBlack: { type: "boolean" },
-  brushSize: { type: "number", minimum: 1, maximum: 5000 },
-  segmentationPatternOpacity: { type: "number", minimum: 0, maximum: 100 },
+  brushSize: { type: "number", minimum: 1, maximum: 300 },
   layoutScaleValue: { type: "number", minimum: 1, maximum: 5 },
   autoSaveLayouts: { type: "boolean" },
   gpuMemoryFactor: { type: "number" },
-  // Deprecated keys kept for compatibility reasons
-  quality: { type: "number", enum: [0, 1, 2] },
+  segmentationOpacity: { type: "number", minimum: 0, maximum: 100 },
+  overwriteMode: {
+    type: "string",
+    enum: [OverwriteModeEnum.OVERWRITE_ALL, OverwriteModeEnum.OVERWRITE_EMPTY],
+  },
+  ...baseDatasetViewConfiguration,
 };
 
 export default {

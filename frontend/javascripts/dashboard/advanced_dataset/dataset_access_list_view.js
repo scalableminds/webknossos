@@ -3,7 +3,7 @@
 import { Spin, Tag } from "antd";
 import * as React from "react";
 
-import type { APIDataset, APIUser } from "admin/api_flow_types";
+import type { APIDataset, APIUser } from "types/api_flow_types";
 import { getDatasetAccessList } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -39,6 +39,30 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     }
   }
 
+  renderUserTags(user: APIUser): Array<React.Node> {
+    if (user.isAdmin) {
+      return [
+        <Tag key={`team_role_${user.id}`} color="red">
+          Admin
+        </Tag>,
+      ];
+    } else {
+      const managerTags = user.isDatasetManager
+        ? [
+            <Tag key={`dataset_manager_${user.id}`} color="geekblue">
+              Dataset Manager
+            </Tag>,
+          ]
+        : [];
+      const teamTags = user.teams.map(team => (
+        <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
+          {team.name}
+        </Tag>
+      ));
+      return managerTags.concat(teamTags);
+    }
+  }
+
   renderTable() {
     return (
       <div>
@@ -49,11 +73,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
               <div style={{ width: 150, display: "inline-block" }}>
                 {user.firstName} {user.lastName}
               </div>
-              {user.teams.map(team => (
-                <Tag color={stringToColor(team.name)} key={`${user.id}-${team.id}`}>
-                  {team.name}
-                </Tag>
-              ))}
+              {this.renderUserTags(user)}
             </li>
           ))}
         </ul>

@@ -4,21 +4,19 @@ import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import io.apigee.trireme.core.NodeEnvironment
-import java.io.File
-
-import javax.inject._
 import models.annotation.AnnotationDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
-import com.mohiva.play.silhouette.api.Silhouette
+import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
 
-import scala.concurrent.duration._
-import scala.concurrent.Future
+import java.io.File
+import javax.inject._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.sys.process._
 
 class Startup @Inject()(actorSystem: ActorSystem,

@@ -1,5 +1,17 @@
 // @flow
-import { Alert, Button, Dropdown, Empty, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
+import {
+  Alert,
+  Button,
+  Dropdown,
+  Empty,
+  Input,
+  Menu,
+  Icon,
+  Spin,
+  Modal,
+  Tooltip,
+  notification,
+} from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -7,6 +19,7 @@ import { saveAs } from "file-saver";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
+import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import {
   createGroupToTreesMap,
   callDeep,
@@ -36,7 +49,6 @@ import {
   createTreeAction,
   deleteTreeAction,
   deleteTreeAsUserAction,
-  shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
@@ -74,6 +86,7 @@ import * as Utils from "libs/utils";
 import api from "oxalis/api/internal_api";
 import messages from "messages";
 import JSZip from "jszip";
+import { formatNumberToLength } from "libs/format_utils";
 
 import DeleteGroupModalView from "./delete_group_modal_view";
 import AdvancedSearchPopover from "./advanced_search_popover";
@@ -93,7 +106,6 @@ type OwnProps = {|
   portalKey: string,
 |};
 type StateProps = {|
-  onShuffleTreeColor: number => void,
   onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
   onSelectNextTreeForward: () => void,
@@ -218,7 +230,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setVersionNumberAction(oldVolumeTracing.version + 1, "volume"));
             Store.dispatch(setMaxCellAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
-            api.data.reloadBuckets(oldVolumeTracing.tracingId);
+            await api.data.reloadBuckets(oldVolumeTracing.tracingId);
             window.needsRerender = true;
           }
         }
@@ -432,15 +444,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
   };
 
-  shuffleTreeColor = () => {
-    if (!this.props.skeletonTracing) {
-      return;
-    }
-    getActiveTree(this.props.skeletonTracing).map(activeTree =>
-      this.props.onShuffleTreeColor(activeTree.treeId),
-    );
-  };
-
   shuffleAllTreeColors = () => {
     this.props.onShuffleAllTreeColors();
   };
@@ -596,15 +599,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getActionsDropdown() {
     return (
       <Menu>
-        <Menu.Item key="shuffleTreeColor" onClick={this.shuffleTreeColor} title="Change Tree Color">
-          <i className="fas fa-adjust" /> Change Color
-        </Menu.Item>
         <Menu.Item
           key="shuffleAllTreeColors"
           onClick={this.shuffleAllTreeColors}
           title="Shuffle All Tree Colors"
         >
-          <i className="fas fa-random" /> Shuffle All Colors
+          <i className="fas fa-random" /> Shuffle All Tree Colors
         </Menu.Item>
         <Menu.Item
           key="handleNmlDownload"
@@ -615,6 +615,13 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </Menu.Item>
         <Menu.Item key="importNml" onClick={this.props.showDropzoneModal} title="Import NML files">
           <Icon type="upload" /> Import NML
+        </Menu.Item>
+        <Menu.Item
+          key="measureAllSkeletons"
+          onClick={this.handleMeasureAllSkeletonsLength}
+          title="Measure Length of All Skeletons"
+        >
+          <i className="fas fa-ruler" /> Measure Length of All Skeletons
         </Menu.Item>
       </Menu>
     );
@@ -634,6 +641,15 @@ class TreesTabView extends React.PureComponent<Props, State> {
         }
       />
     ) : null;
+
+  handleMeasureAllSkeletonsLength = () => {
+    const totalLength = api.tracing.measureAllTrees();
+
+    notification.open({
+      message: `The total length of all skeletons is ${formatNumberToLength(totalLength)}.`,
+      icon: <i className="fas fa-ruler" />,
+    });
+  };
 
   render() {
     const { skeletonTracing } = this.props;
@@ -661,98 +677,109 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
     return (
       <div id={treeTabId} className="padded-tab-content">
-        <Modal
-          visible={this.state.isDownloading || this.state.isUploading}
-          title={title}
-          closable={false}
-          footer={null}
-          width={200}
-          style={{ textAlign: "center" }}
-        >
-          <Spin />
-        </Modal>
-        <ButtonGroup>
-          <AdvancedSearchPopover
-            onSelect={this.handleSearchSelect}
-            data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
-            searchKey="name"
-            provideShortcut
-            targetId={treeTabId}
-          >
-            <Tooltip title="Open the search via CTRL + Shift + F">
-              <ButtonComponent>
-                <Icon type="search" />
-              </ButtonComponent>
-            </Tooltip>
-          </AdvancedSearchPopover>
-          <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
-            <i className="fas fa-plus" /> Create
-          </ButtonComponent>
-          <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
-            <i className="far fa-trash-alt" /> Delete
-          </ButtonComponent>
-          <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
-            <i className="fas fa-toggle-on" /> Toggle All
-          </ButtonComponent>
-          <ButtonComponent
-            onClick={this.toggleInactiveTrees}
-            title="Toggle Visibility of Inactive Trees"
-          >
-            <i className="fas fa-toggle-off" /> Toggle Inactive
-          </ButtonComponent>
-          <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
-            <ButtonComponent>
-              More
-              <Icon type="down" />
-            </ButtonComponent>
-          </Dropdown>
-        </ButtonGroup>
-        <InputGroup compact>
-          <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
-            <i className="fas fa-arrow-left" />
-          </ButtonComponent>
-          <InputComponent
-            onChange={this.handleChangeTreeName}
-            value={activeTreeName || activeGroupName}
-            disabled={noTreesAndGroups}
-            style={{ width: "60%" }}
-          />
-          <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
-            <i className="fas fa-arrow-right" />
-          </ButtonComponent>
-          <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
-            <ButtonComponent title="Sort">
-              <i className="fas fa-sort-alpha-down" />
-            </ButtonComponent>
-          </Dropdown>
-        </InputGroup>
-        {noTreesAndGroups ? (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                There are no trees in this tracing.
-                <br /> A new tree will be created automatically once a node is set.
-              </span>
-            }
-          />
-        ) : (
-          <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
-            <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
-            {this.getTreesComponents(orderAttribute)}
-          </ul>
-        )}
-        {groupToDelete !== null ? (
-          <DeleteGroupModalView
-            onCancel={this.hideDeleteGroupsModal}
-            onJustDeleteGroup={() => {
-              this.deleteGroupAndHideModal(groupToDelete, false);
-            }}
-            onDeleteGroupAndTrees={() => {
-              this.deleteGroupAndHideModal(groupToDelete, true);
-            }}
-          />
-        ) : null}
+        <DomVisibilityObserver targetId={treeTabId}>
+          {isVisibleInDom =>
+            !isVisibleInDom ? null : (
+              <React.Fragment>
+                <Modal
+                  visible={this.state.isDownloading || this.state.isUploading}
+                  title={title}
+                  closable={false}
+                  footer={null}
+                  width={200}
+                  style={{ textAlign: "center" }}
+                >
+                  <Spin />
+                </Modal>
+                <ButtonGroup>
+                  <AdvancedSearchPopover
+                    onSelect={this.handleSearchSelect}
+                    data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
+                    searchKey="name"
+                    provideShortcut
+                    targetId={treeTabId}
+                  >
+                    <Tooltip title="Open the search via CTRL + Shift + F">
+                      <ButtonComponent>
+                        <Icon type="search" />
+                      </ButtonComponent>
+                    </Tooltip>
+                  </AdvancedSearchPopover>
+                  <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
+                    <i className="fas fa-plus" /> Create
+                  </ButtonComponent>
+                  <ButtonComponent onClick={this.handleDelete} title="Delete Tree">
+                    <i className="far fa-trash-alt" /> Delete
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleAllTrees}
+                    title="Toggle Visibility of All Trees"
+                  >
+                    <i className="fas fa-toggle-on" /> Toggle All
+                  </ButtonComponent>
+                  <ButtonComponent
+                    onClick={this.toggleInactiveTrees}
+                    title="Toggle Visibility of Inactive Trees"
+                  >
+                    <i className="fas fa-toggle-off" /> Toggle Inactive
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
+                    <ButtonComponent>
+                      More
+                      <Icon type="down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </ButtonGroup>
+                <InputGroup compact>
+                  <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>
+                    <i className="fas fa-arrow-left" />
+                  </ButtonComponent>
+                  <InputComponent
+                    onChange={this.handleChangeTreeName}
+                    value={activeTreeName || activeGroupName}
+                    disabled={noTreesAndGroups}
+                    style={{ width: "60%" }}
+                  />
+                  <ButtonComponent onClick={this.props.onSelectNextTreeForward}>
+                    <i className="fas fa-arrow-right" />
+                  </ButtonComponent>
+                  <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
+                    <ButtonComponent title="Sort">
+                      <i className="fas fa-sort-alpha-down" />
+                    </ButtonComponent>
+                  </Dropdown>
+                </InputGroup>
+                {noTreesAndGroups ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <span>
+                        There are no trees in this tracing.
+                        <br /> A new tree will be created automatically once a node is set.
+                      </span>
+                    }
+                  />
+                ) : (
+                  <ul style={{ flex: "1 1 auto", overflow: "auto", margin: 0, padding: 0 }}>
+                    <div className="tree-hierarchy-header">{this.getSelectedTreesAlert()}</div>
+                    {this.getTreesComponents(orderAttribute)}
+                  </ul>
+                )}
+                {groupToDelete !== null ? (
+                  <DeleteGroupModalView
+                    onCancel={this.hideDeleteGroupsModal}
+                    onJustDeleteGroup={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, false);
+                    }}
+                    onDeleteGroupAndTrees={() => {
+                      this.deleteGroupAndHideModal(groupToDelete, true);
+                    }}
+                  />
+                ) : null}
+              </React.Fragment>
+            )
+          }
+        </DomVisibilityObserver>
       </div>
     );
   }
@@ -765,9 +792,6 @@ const mapStateToProps = (state: OxalisState) => ({
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
-  onShuffleTreeColor(treeId) {
-    dispatch(shuffleTreeColorAction(treeId));
-  },
   onShuffleAllTreeColors() {
     dispatch(shuffleAllTreeColorsAction());
   },

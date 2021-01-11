@@ -6,7 +6,12 @@
 import _ from "lodash";
 
 import {
-  type BoundingBoxType,
+  scaleGlobalPositionWithResolution,
+  scaleGlobalPositionWithResolutionFloat,
+  zoomedPositionToGlobalPosition,
+} from "oxalis/model/helpers/position_converter";
+import Constants, {
+  OrthoViews,
   type OrthoView,
   type Vector2,
   type Vector3,
@@ -15,94 +20,51 @@ import {
   type VolumeTool,
   Vector2Indicies,
 } from "oxalis/constants";
+import { V2, V3 } from "libs/mjs";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import Drawing from "libs/drawing";
+import messages from "messages";
+import Toast from "libs/toast";
 import Store from "oxalis/store";
 
-export class VoxelIterator {
-  hasNext: boolean = true;
-  map: boolean[][];
-  x = 0;
-  y = 0;
+/*
+  A VoxelBuffer2D instance holds a two dimensional slice
+  of painted (binary) voxels. It is used by the
+  VolumeLayer class to describe how volume operations
+  should be applied.
+ */
+export class VoxelBuffer2D {
+  map: Uint8Array;
   width: number;
   height: number;
   minCoord2d: Vector2;
   get3DCoordinate: Vector2 => Vector3;
-  boundingBox: ?BoundingBoxType;
-  next: Vector3;
+  getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void;
 
-  static finished(): VoxelIterator {
-    const iterator = new VoxelIterator([], 0, 0, [0, 0], () => [0, 0, 0]);
-    iterator.hasNext = false;
-    return iterator;
+  static empty(): VoxelBuffer2D {
+    return new VoxelBuffer2D(new Uint8Array(0), 0, 0, [0, 0], () => [0, 0, 0], () => {});
   }
 
   constructor(
-    map: boolean[][],
+    map: Uint8Array,
     width: number,
     height: number,
     minCoord2d: Vector2,
     get3DCoordinate: Vector2 => Vector3,
-    boundingBox?: ?BoundingBoxType,
+    getFast3DCoordinate: (number, number, Vector3 | Float32Array) => void,
   ) {
     this.map = map;
     this.width = width;
     this.height = height;
     this.minCoord2d = minCoord2d;
     this.get3DCoordinate = get3DCoordinate;
-    this.boundingBox = boundingBox;
-    if (!this.map || !this.map[0]) {
-      this.hasNext = false;
-    } else {
-      const firstCoordinate = this.get3DCoordinate(this.minCoord2d);
-      if (this.map[0][0] && this.isCoordinateInBounds(firstCoordinate)) {
-        this.next = firstCoordinate;
-      } else {
-        this.getNext();
-      }
-    }
+    this.getFast3DCoordinate = getFast3DCoordinate;
   }
 
-  isCoordinateInBounds(coor: Vector3): boolean {
-    if (!this.boundingBox) {
-      return true;
-    }
-    return (
-      coor[0] >= this.boundingBox.min[0] &&
-      coor[0] <= this.boundingBox.max[0] &&
-      coor[1] >= this.boundingBox.min[1] &&
-      coor[1] <= this.boundingBox.max[1] &&
-      coor[2] >= this.boundingBox.min[2] &&
-      coor[2] <= this.boundingBox.max[2]
-    );
-  }
-
-  getNext(): Vector3 {
-    const res = this.next;
-    let foundNext = false;
-    while (!foundNext) {
-      this.x = (this.x + 1) % this.width;
-      if (this.x === 0) {
-        this.y++;
-      }
-      if (this.y === this.height) {
-        foundNext = true;
-        this.hasNext = false;
-      } else if (this.map[this.x][this.y]) {
-        const currentCoordinate = this.get3DCoordinate([
-          this.x + this.minCoord2d[0],
-          this.y + this.minCoord2d[1],
-        ]);
-        // check position for beeing in bounds
-        if (this.isCoordinateInBounds(currentCoordinate)) {
-          this.next = currentCoordinate;
-          foundNext = true;
-        }
-      }
-    }
-    return res;
+  linearizeIndex(x: number, y: number): number {
+    return x * this.height + y;
   }
 }
 
@@ -136,24 +98,36 @@ export class VoxelNeighborStack2D {
 }
 
 class VolumeLayer {
+  /*
+  From the outside, the VolumeLayer accepts only global positions. Internally,
+  these are converted to the actual used resolution (activeResolution).
+  Therefore, members of this class are in the resolution space of
+  `activeResolution`.
+  */
+
   plane: OrthoView;
   thirdDimensionValue: number;
   contourList: Array<Vector3>;
   maxCoord: ?Vector3;
   minCoord: ?Vector3;
+  activeResolution: Vector3;
 
-  constructor(plane: OrthoView, thirdDimensionValue: number) {
+  constructor(plane: OrthoView, thirdDimensionValue: number, activeResolution: Vector3) {
     this.plane = plane;
-    this.thirdDimensionValue = thirdDimensionValue;
     this.maxCoord = null;
     this.minCoord = null;
+    this.activeResolution = activeResolution;
+
+    const thirdDim = Dimensions.thirdDimensionForPlane(this.plane);
+    this.thirdDimensionValue = Math.floor(thirdDimensionValue / this.activeResolution[thirdDim]);
   }
 
-  addContour(pos: Vector3): void {
-    this.updateArea(pos);
+  addContour(globalPos: Vector3): void {
+    this.updateArea(globalPos);
   }
 
-  updateArea(pos: Vector3): void {
+  updateArea(globalPos: Vector3): void {
+    const pos = scaleGlobalPositionWithResolution(globalPos, this.activeResolution);
     let [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
 
     if (maxCoord == null || minCoord == null) {
@@ -170,47 +144,81 @@ class VolumeLayer {
     this.maxCoord = maxCoord;
   }
 
-  getContourList() {
+  getArea(): number {
+    const [maxCoord, minCoord] = [this.maxCoord, this.minCoord];
+    if (maxCoord == null || minCoord == null) {
+      return 0;
+    }
+    const difference = V3.sub(maxCoord, minCoord);
+    return difference[0] * difference[1] * difference[2];
+  }
+
+  getContourList(useGlobalCoords: boolean = false) {
     const volumeTracing = enforceVolumeTracing(Store.getState().tracing);
-    return volumeTracing.contourList;
+    const globalContourList = volumeTracing.contourList;
+
+    if (useGlobalCoords) {
+      return globalContourList;
+    }
+
+    return globalContourList.map<Vector3>(point =>
+      scaleGlobalPositionWithResolutionFloat(point, this.activeResolution),
+    );
   }
 
   isEmpty(): boolean {
-    return this.getContourList().length === 0;
+    return this.getContourList(true).length === 0;
   }
 
-  getVoxelIterator(mode: VolumeTool): VoxelIterator {
-    if (this.isEmpty()) {
-      return VoxelIterator.finished();
-    }
-
-    if (this.minCoord == null) {
-      return VoxelIterator.finished();
+  getFillingVoxelBuffer2D(mode: VolumeTool): VoxelBuffer2D {
+    if (this.isEmpty() || this.minCoord == null) {
+      return VoxelBuffer2D.empty();
     }
     const minCoord2d = this.get2DCoordinate(this.minCoord);
 
     if (this.maxCoord == null) {
-      return VoxelIterator.finished();
+      return VoxelBuffer2D.empty();
     }
     const maxCoord2d = this.get2DCoordinate(this.maxCoord);
+
+    if (mode === VolumeToolEnum.BRUSH) {
+      // If the brush is used, only perform the "filling" operation
+      // when start- and end coordinate are close enough to each other
+      const globalContourList = this.getContourList(true);
+      if (globalContourList.length < 2) {
+        return VoxelBuffer2D.empty();
+      }
+
+      const startEndDist = V3.length(
+        V3.sub(globalContourList[0], globalContourList[globalContourList.length - 1]),
+      );
+
+      const state = Store.getState();
+      const { brushSize } = state.userConfiguration;
+      const radius = Math.round(brushSize / 2);
+      if (startEndDist > 2 * radius) {
+        return VoxelBuffer2D.empty();
+      }
+    }
+
+    // The maximum area is scaled by 3 as the min and maxCoord will always be three slices apart,
+    // because in `updateArea` a value of 2 is subtracted / added when the values get updated.
+    if (this.getArea() > Constants.AUTO_FILL_AREA_LIMIT * 3) {
+      Toast.info(messages["tracing.area_to_fill_is_too_big"]);
+      return VoxelBuffer2D.empty();
+    }
 
     const width = maxCoord2d[0] - minCoord2d[0] + 1;
     const height = maxCoord2d[1] - minCoord2d[1] + 1;
 
-    const map = new Array(width);
-    for (let x = 0; x < width; x++) {
-      map[x] = new Array(height);
-      for (let y = 0; y < height; y++) {
-        map[x][y] = true;
-      }
-    }
+    const map = this.createMap(width, height, 1);
 
-    const setMap = (x: number, y: number, value = true) => {
+    const setMap = (x: number, y: number, value: number = 1) => {
       x = Math.floor(x);
       y = Math.floor(y);
       // Leave a 1px border in order for fillOutsideArea to work
       if (x > minCoord2d[0] && x < maxCoord2d[0] && y > minCoord2d[1] && y < maxCoord2d[1]) {
-        map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+        map[(x - minCoord2d[0]) * height + (y - minCoord2d[1])] = value;
       }
     };
 
@@ -225,18 +233,19 @@ class VolumeLayer {
     // area if you consider narrow shapes.
     // Also, it will be very clear where to start the filling
     // algorithm.
-    this.drawOutlineVoxels((x, y) => setMap(x, y, false), mode);
+    this.drawOutlineVoxels((x, y) => setMap(x, y, 0));
     this.fillOutsideArea(map, width, height);
-    this.drawOutlineVoxels(setMap, mode);
+    this.drawOutlineVoxels(setMap);
 
-    const iterator = new VoxelIterator(
+    const buffer2D = new VoxelBuffer2D(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
+      this.getFast3DCoordinateFunction(),
     );
-    return iterator;
+    return buffer2D;
   }
 
   vector2PerpendicularVector(pos1: Vector2, pos2: Vector2): Vector2 {
@@ -248,7 +257,7 @@ class VolumeLayer {
       const gradient = (pos2[1] - pos1[1]) / dx;
       perpendicularVector = [gradient, -1];
       const norm = this.vector2Norm(perpendicularVector);
-      perpendicularVector = this.vector2ScalarMultiplication(perpendicularVector, 1 / norm);
+      perpendicularVector = V2.scale(perpendicularVector, 1 / norm);
     }
     return perpendicularVector;
   }
@@ -261,22 +270,6 @@ class VolumeLayer {
     return Math.sqrt(norm);
   }
 
-  vector2Sum(vector1: Vector2, vector2: Vector2): Vector2 {
-    const sum = [0, 0];
-    for (const i of Vector2Indicies) {
-      sum[i] = vector1[i] + vector2[i];
-    }
-    return sum;
-  }
-
-  vector2ScalarMultiplication(vector: Vector2, scalar: number): Vector2 {
-    const product = [0, 0];
-    for (const i of Vector2Indicies) {
-      product[i] = vector[i] * scalar;
-    }
-    return product;
-  }
-
   vector2DistanceWithScale(pos1: Vector2, pos2: Vector2, scale: Vector2): number {
     let distance = 0;
     for (const i of Vector2Indicies) {
@@ -285,21 +278,10 @@ class VolumeLayer {
     return Math.sqrt(distance);
   }
 
-  vector2WithScale(vector: Vector2, scale: Vector2): Vector2 {
-    const result = [0, 0];
-    for (const i of Vector2Indicies) {
-      result[i] = vector[i] * scale[i];
-    }
-    return result;
-  }
-
-  createMap(width: number, height: number): Array<Array<boolean>> {
-    const map = new Array<Array<boolean>>(width);
-    for (let x = 0; x < width; x++) {
-      map[x] = new Array<boolean>(height);
-      for (let y = 0; y < height; y++) {
-        map[x][y] = false;
-      }
+  createMap(width: number, height: number, fillValue: number = 0): Uint8Array {
+    const map = new Uint8Array(width * height);
+    if (fillValue !== 0) {
+      map.fill(fillValue);
     }
     return map;
   }
@@ -311,31 +293,37 @@ class VolumeLayer {
     scale: Vector2,
   ): [number, number, number, number, number, number, number, number] {
     const normedPerpendicularVector = this.vector2PerpendicularVector(centre1, centre2);
-    const shiftVector = this.vector2WithScale(
-      this.vector2ScalarMultiplication(normedPerpendicularVector, radius),
-      scale,
-    );
-    const negShiftVector = this.vector2ScalarMultiplication(shiftVector, -1);
+    const shiftVector = V2.scale2(normedPerpendicularVector, V2.scale(scale, radius));
+    const negShiftVector = V2.scale(shiftVector, -1);
 
     // calculate the rectangle's corners
-    const [xa, ya] = this.vector2Sum(centre2, negShiftVector);
-    const [xb, yb] = this.vector2Sum(centre2, shiftVector);
-    const [xc, yc] = this.vector2Sum(centre1, shiftVector);
-    const [xd, yd] = this.vector2Sum(centre1, negShiftVector);
+    const [xa, ya] = V2.add(centre2, negShiftVector);
+    const [xb, yb] = V2.add(centre2, shiftVector);
+    const [xc, yc] = V2.add(centre1, shiftVector);
+    const [xd, yd] = V2.add(centre1, negShiftVector);
     return [xa, ya, xb, yb, xc, yc, xd, yd];
   }
 
-  getRectangleVoxelIterator(
-    lastPosition: Vector3,
-    position: Vector3,
-    boundings?: ?BoundingBoxType,
-  ): ?VoxelIterator {
+  getRectangleVoxelBuffer2D(
+    lastUnzoomedPosition: Vector3,
+    unzoomedPosition: Vector3,
+  ): ?VoxelBuffer2D {
+    const lastPosition = scaleGlobalPositionWithResolution(
+      lastUnzoomedPosition,
+      this.activeResolution,
+    );
+    const position = scaleGlobalPositionWithResolution(unzoomedPosition, this.activeResolution);
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
 
     const radius = Math.round(brushSize / 2);
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
-    const scale = this.get2DCoordinate(getBaseVoxelFactors(state.dataset.dataSource.scale));
+    const scale = this.get2DCoordinate(
+      scaleGlobalPositionWithResolutionFloat(
+        getBaseVoxelFactors(state.dataset.dataSource.scale),
+        this.activeResolution,
+      ),
+    );
     const floatingCoord2dLastPosition = this.get2DCoordinate(lastPosition);
     const floatingCoord2dPosition = this.get2DCoordinate(position);
 
@@ -353,11 +341,11 @@ class VolumeLayer {
     );
     const minCoord2d = [Math.floor(Math.min(xa, xb, xc, xd)), Math.floor(Math.min(ya, yb, yc, yd))];
     const maxCoord2d = [Math.ceil(Math.max(xa, xb, xc, xd)), Math.ceil(Math.max(ya, yb, yc, yd))];
-    const [width, height] = maxCoord2d;
+    const [width, height] = V3.sub(maxCoord2d, minCoord2d);
     const map = this.createMap(width, height);
 
     const setMap = (x, y) => {
-      map[x][y] = true;
+      map[x * height + y] = 1;
     };
 
     // translate the coordinates so the containing box originates in (0|0)
@@ -373,29 +361,35 @@ class VolumeLayer {
 
     Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
 
-    const iterator = new VoxelIterator(
+    const voxelBuffer2D = new VoxelBuffer2D(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
-      boundings,
+      this.getFast3DCoordinateFunction(),
     );
-    return iterator;
+    return voxelBuffer2D;
   }
 
-  getCircleVoxelIterator(position: Vector3, boundings?: ?BoundingBoxType): VoxelIterator {
+  getCircleVoxelBuffer2D(position: Vector3): VoxelBuffer2D {
     const state = Store.getState();
     const { brushSize } = state.userConfiguration;
+    const dimIndices = Dimensions.getIndices(this.plane);
 
-    const radius = Math.round(brushSize / 2);
-    const width = 2 * radius;
-    const height = 2 * radius;
+    const unzoomedRadius = Math.round(brushSize / 2);
+    const width = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[0]]);
+    const height = Math.floor((2 * unzoomedRadius) / this.activeResolution[dimIndices[1]]);
 
     const map = this.createMap(width, height);
-    const floatingCoord2d = this.get2DCoordinate(position);
-    const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
-    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
+
+    const floatingCoord2d = this.get2DCoordinate(
+      scaleGlobalPositionWithResolutionFloat(position, this.activeResolution),
+    );
+    const minCoord2d = [
+      Math.floor(floatingCoord2d[0] - width / 2),
+      Math.floor(floatingCoord2d[1] - height / 2),
+    ];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
@@ -403,57 +397,47 @@ class VolumeLayer {
     );
 
     const setMap = (x, y) => {
-      map[x][y] = true;
+      map[x * height + y] = 1;
     };
-    Drawing.fillCircle(radius, radius, radius, scaleX, scaleY, setMap);
+    Drawing.fillCircle(
+      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[0]]),
+      Math.floor(unzoomedRadius / this.activeResolution[dimIndices[1]]),
+      // the unzoomedRadius is adapted to the correct resolution by the
+      // following scale parameters
+      unzoomedRadius,
+      scaleX / this.activeResolution[dimIndices[0]],
+      scaleY / this.activeResolution[dimIndices[1]],
+      setMap,
+    );
 
-    const iterator = new VoxelIterator(
+    const buffer2D = new VoxelBuffer2D(
       map,
       width,
       height,
       minCoord2d,
       this.get3DCoordinate.bind(this),
-      boundings,
+      this.getFast3DCoordinateFunction(),
     );
-    return iterator;
+    return buffer2D;
   }
 
-  drawOutlineVoxels(setMap: (number, number) => void, mode: VolumeTool): void {
+  drawOutlineVoxels(setMap: (number, number) => void): void {
     const contourList = this.getContourList();
-    const state = Store.getState();
-    const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(state.dataset.dataSource.scale),
-    );
-    const { brushSize } = state.userConfiguration;
-    const radius = Math.round(brushSize / 2);
     let p1;
     let p2;
     for (let i = 0; i < contourList.length; i++) {
       p1 = this.get2DCoordinate(contourList[i]);
       p2 = this.get2DCoordinate(contourList[(i + 1) % contourList.length]);
-      if (mode === VolumeToolEnum.TRACE) {
-        Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
-      } else if (mode === VolumeToolEnum.BRUSH) {
-        // we don't want to connect the last and the first circle with a rectangle
-        if (i !== contourList.length - 1) {
-          const [xa, ya, xb, yb, xc, yc, xd, yd] = this.getRectangleBetweenCircles(p1, p2, radius, [
-            scaleX,
-            scaleY,
-          ]);
-          if (this.vector2DistanceWithScale(p1, p2, [scaleX, scaleY]) > 1.5 * radius) {
-            Drawing.fillRectangle(xa, ya, xb, yb, xc, yc, xd, yd, setMap);
-          }
-        }
-        Drawing.fillCircle(p1[0], p1[1], radius, scaleX, scaleY, setMap);
-      }
+
+      Drawing.drawLine2d(p1[0], p1[1], p2[0], p2[1], setMap);
     }
   }
 
-  fillOutsideArea(map: boolean[][], width: number, height: number): void {
+  fillOutsideArea(map: Uint8Array, width: number, height: number): void {
     const setMap = (x, y) => {
-      map[x][y] = false;
+      map[x * height + y] = 0;
     };
-    const isEmpty = (x, y) => map[x][y] === true;
+    const isEmpty = (x, y) => map[x * height + y] === 1;
 
     // Fill everything BUT the cell
     Drawing.fillArea(0, 0, width, height, false, isEmpty, setMap);
@@ -461,42 +445,55 @@ class VolumeLayer {
 
   get2DCoordinate(coord3d: Vector3): Vector2 {
     // Throw out 'thirdCoordinate' which is equal anyways
-    const result = [];
-    for (let i = 0; i <= 2; i++) {
-      if (i !== Dimensions.thirdDimensionForPlane(this.plane)) {
-        result.push(coord3d[i]);
-      }
-    }
-    return [result[0], result[1]];
+    const transposed = Dimensions.transDim(coord3d, this.plane);
+    return [transposed[0], transposed[1]];
   }
 
   get3DCoordinate(coord2d: Vector2): Vector3 {
-    // Put thirdCoordinate back in
-    const index = Dimensions.thirdDimensionForPlane(this.plane);
-    let index2d = 0;
-    const res = [0, 0, 0];
-
-    for (let i = 0; i <= 2; i++) {
-      if (i !== index) {
-        res[i] = coord2d[index2d++];
-      } else {
-        res[i] = this.thirdDimensionValue;
-      }
-    }
-
-    return res;
+    return Dimensions.transDim([coord2d[0], coord2d[1], this.thirdDimensionValue], this.plane);
   }
 
-  getCentroid(): Vector3 {
+  getFast3DCoordinateFunction(): (
+    coordX: number,
+    coordY: number,
+    out: Vector3 | Float32Array,
+  ) => void {
+    switch (this.plane) {
+      case OrthoViews.PLANE_XY:
+        return (coordX, coordY, out) => {
+          out[0] = coordX;
+          out[1] = coordY;
+          out[2] = this.thirdDimensionValue;
+        };
+      case OrthoViews.PLANE_YZ:
+        return (coordX, coordY, out) => {
+          out[0] = this.thirdDimensionValue;
+          out[1] = coordY;
+          out[2] = coordX;
+        };
+      case OrthoViews.PLANE_XZ:
+        return (coordX, coordY, out) => {
+          out[0] = coordX;
+          out[1] = this.thirdDimensionValue;
+          out[2] = coordY;
+        };
+      default: {
+        throw new Error("Unknown plane id");
+      }
+    }
+  }
+
+  getUnzoomedCentroid(): Vector3 {
     // Formula:
     // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
 
     let sumArea = 0;
     let sumCx = 0;
     let sumCy = 0;
-    for (let i = 0; i < this.getContourList().length - 1; i++) {
-      const [x, y] = this.get2DCoordinate(this.getContourList()[i]);
-      const [x1, y1] = this.get2DCoordinate(this.getContourList()[i + 1]);
+    const contourList = this.getContourList();
+    for (let i = 0; i < contourList.length - 1; i++) {
+      const [x, y] = this.get2DCoordinate(contourList[i]);
+      const [x1, y1] = this.get2DCoordinate(contourList[i + 1]);
       sumArea += x * y1 - x1 * y;
       sumCx += (x + x1) * (x * y1 - x1 * y);
       sumCy += (y + y1) * (x * y1 - x1 * y);
@@ -506,7 +503,9 @@ class VolumeLayer {
     const cx = sumCx / 6 / area;
     const cy = sumCy / 6 / area;
 
-    return this.get3DCoordinate([cx, cy]);
+    const zoomedPosition = this.get3DCoordinate([cx, cy]);
+    const pos = zoomedPositionToGlobalPosition(zoomedPosition, this.activeResolution);
+    return pos;
   }
 }
 

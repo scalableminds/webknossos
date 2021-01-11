@@ -11,18 +11,46 @@ import type {
   UpdateTreeUpdateAction,
   DeleteTreeUpdateAction,
   RevertToVersionUpdateAction,
+  UpdateNodeUpdateAction,
+  UpdateTreeVisibilityUpdateAction,
+  UpdateTreeGroupVisibilityUpdateAction,
+  CreateEdgeUpdateAction,
+  DeleteEdgeUpdateAction,
 } from "oxalis/model/sagas/update_actions";
 import FormattedDate from "components/formatted_date";
+import { MISSING_GROUP_ID } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 type Description = { description: string, type: string };
 
+// The order in which the update actions are added to this object,
+// determines the order in which update actions are checked
+// to describe an update action batch. See also the comment
+// of the `getDescriptionForBatch` function.
 const descriptionFns = {
-  deleteTree: (action: DeleteTreeUpdateAction): Description => ({
-    description: `Deleted the tree with id ${action.value.id}.`,
+  importVolumeTracing: (): Description => ({
+    description: "Imported a volume tracing.",
+    type: "plus",
+  }),
+  createTracing: (): Description => ({
+    description: "Created the annotation.",
+    type: "rocket",
+  }),
+  updateUserBoundingBoxes: (): Description => ({
+    description: "Updated a user bounding box.",
+    type: "codepen",
+  }),
+  removeFallbackLayer: (): Description => ({
+    description: "Removed the segmentation fallback layer.",
     type: "delete",
   }),
-  deleteNode: (action: DeleteNodeUpdateAction): Description => ({
-    description: `Deleted the node with id ${action.value.nodeId}.`,
+  deleteTree: (action: DeleteTreeUpdateAction, count: number): Description => ({
+    description:
+      count > 1 ? `Deleted ${count} trees.` : `Deleted the tree with id ${action.value.id}.`,
+    type: "delete",
+  }),
+  deleteNode: (action: DeleteNodeUpdateAction, count: number): Description => ({
+    description:
+      count > 1 ? `Deleted ${count} nodes.` : `Deleted the node with id ${action.value.nodeId}.`,
     type: "delete",
   }),
   revertToVersion: (action: RevertToVersionUpdateAction): Description => ({
@@ -49,13 +77,35 @@ const descriptionFns = {
     description: "Updated the segmentation.",
     type: "picture",
   }),
-  importVolumeTracing: (): Description => ({
-    description: "Imported a Volume Tracing.",
+  updateNode: (action: UpdateNodeUpdateAction): Description => ({
+    description: `Updated the node with id ${action.value.id}.`,
+    type: "edit",
+  }),
+  updateTreeVisibility: (action: UpdateTreeVisibilityUpdateAction): Description => ({
+    description: `Updated the visibility of the tree with id ${action.value.treeId}.`,
+    type: "eye",
+  }),
+  updateTreeGroupVisibility: (action: UpdateTreeGroupVisibilityUpdateAction): Description => ({
+    description: `Updated the visibility of the group with id ${
+      action.value.treeGroupId != null ? action.value.treeGroupId : MISSING_GROUP_ID
+    }.`,
+    type: "eye",
+  }),
+  createEdge: (action: CreateEdgeUpdateAction): Description => ({
+    description: `Created the edge between node ${action.value.source} and node ${
+      action.value.target
+    }.`,
     type: "plus",
   }),
-  createTracing: (): Description => ({
-    description: "Created the annotation.",
-    type: "rocket",
+  deleteEdge: (action: DeleteEdgeUpdateAction): Description => ({
+    description: `Deleted the edge between node ${action.value.source} and node ${
+      action.value.target
+    }.`,
+    type: "delete",
+  }),
+  updateTdCamera: (): Description => ({
+    description: "Updated the 3D view.",
+    type: "code-sandbox",
   }),
 };
 
@@ -67,9 +117,20 @@ function getDescriptionForSpecificBatch(
   if (firstAction.name !== type) {
     throw new Error("Flow constraint violated");
   }
-  return descriptionFns[type](firstAction);
+  return descriptionFns[type](firstAction, actions.length);
 }
 
+// An update action batch can consist of more than one update action as a single user action
+// can lead to multiple update actions. For example, deleting a node in a tree with multiple
+// nodes will also delete an edge, so the batch contains those two update actions.
+// This particular action and many more actions modify the active node of the tracing
+// which results in an updateTracing action being part of the batch as well.
+// The key of this function is to identify the most prominent action of a batch and label the
+// batch with a description of this action.
+// The order in which the actions are checked is, therefore, important. Check for
+// "more expressive" update actions first and for more general ones later.
+// The order is determined by the order in which the update actions are added to the
+// `descriptionFns` object.
 function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description {
   const groupedUpdateActions = _.groupBy(actions, "name");
 
@@ -94,66 +155,35 @@ function getDescriptionForBatch(actions: Array<ServerUpdateAction>): Description
     }
   }
 
-  // If more than one createNode update actions are part of one batch, that is not a tree merge or split
-  // an NML was uploaded.
+  // If more than one createNode update actions are part of one batch, that is not a tree merge or split,
+  // an NML was uploaded or an undo/redo action took place.
   const createNodeUAs = groupedUpdateActions.createNode;
   if (createNodeUAs != null && createNodeUAs.length > 1) {
+    const createTreeUAs = groupedUpdateActions.createTree;
+    if (createTreeUAs != null) {
+      const pluralS = createTreeUAs.length > 1 ? "s" : "";
+      return {
+        description: `Added ${createTreeUAs.length} tree${pluralS} and ${
+          createNodeUAs.length
+        } nodes.`,
+        type: "plus",
+      };
+    }
+
     return {
-      description: `Uploaded an NML with ${createNodeUAs.length} nodes.`,
-      type: "upload",
+      description: `Added ${createNodeUAs.length} nodes.`,
+      type: "plus",
     };
   }
 
-  const deleteTreeUAs = groupedUpdateActions.deleteTree;
-  if (deleteTreeUAs != null) {
-    return getDescriptionForSpecificBatch(deleteTreeUAs, "deleteTree");
+  for (const key of Object.keys(descriptionFns)) {
+    const updateActions = groupedUpdateActions[key];
+    if (updateActions != null) {
+      return getDescriptionForSpecificBatch(updateActions, key);
+    }
   }
 
-  const deleteNodeUAs = groupedUpdateActions.deleteNode;
-  if (deleteNodeUAs != null) {
-    return getDescriptionForSpecificBatch(deleteNodeUAs, "deleteNode");
-  }
-
-  const revertToVersionUAs = groupedUpdateActions.revertToVersion;
-  if (revertToVersionUAs != null) {
-    return getDescriptionForSpecificBatch(revertToVersionUAs, "revertToVersion");
-  }
-
-  if (createNodeUAs != null) {
-    return getDescriptionForSpecificBatch(createNodeUAs, "createNode");
-  }
-
-  const createTreeUAs = groupedUpdateActions.createTree;
-  if (createTreeUAs != null) {
-    return getDescriptionForSpecificBatch(createTreeUAs, "createTree");
-  }
-
-  const updateTreeGroupsUAs = groupedUpdateActions.updateTreeGroups;
-  if (updateTreeGroupsUAs != null) {
-    return getDescriptionForSpecificBatch(updateTreeGroupsUAs, "updateTreeGroups");
-  }
-
-  const updateTreeUAs = groupedUpdateActions.updateTree;
-  if (updateTreeUAs != null) {
-    return getDescriptionForSpecificBatch(updateTreeUAs, "updateTree");
-  }
-
-  const updateBucketUAs = groupedUpdateActions.updateBucket;
-  if (updateBucketUAs != null) {
-    return getDescriptionForSpecificBatch(updateBucketUAs, "updateBucket");
-  }
-
-  const importVolumeTracingUAs = groupedUpdateActions.importVolumeTracing;
-  if (importVolumeTracingUAs != null) {
-    return getDescriptionForSpecificBatch(importVolumeTracingUAs, "importVolumeTracing");
-  }
-
-  const createTracingUAs = groupedUpdateActions.createTracing;
-  if (createTracingUAs != null) {
-    return getDescriptionForSpecificBatch(createTracingUAs, "createTracing");
-  }
-
-  // Catch-all for other update actions, currently updateNode and updateTracing.
+  // Catch-all for other update actions, currently updateTracing.
   return {
     description: "Modified the annotation.",
     type: "edit",

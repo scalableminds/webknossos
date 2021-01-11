@@ -121,7 +121,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                 <Avatar size="large" icon="file" style={{ backgroundColor: "rgb(58, 144, 255)" }} />
               }
               title={
-                <span>
+                <span style={{ wordBreak: "break-word" }}>
                   {file.name}{" "}
                   <span className="ant-list-item-meta-description">({prettyBytes(file.size)})</span>
                 </span>
@@ -187,7 +187,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     const pluralS = this.state.files.length > 1 ? "s" : "";
     return (
       <Modal
-        title={`Import ${this.state.files.length} NML file${pluralS}`}
+        title={`Import ${this.state.files.length} Annotation${pluralS}`}
         visible={this.state.files.length > 0}
         onCancel={() => this.setState({ files: [] })}
         footer={

@@ -7,7 +7,7 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import classNames from "classnames";
 
-import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "admin/api_flow_types";
+import type { APITaskWithAnnotation, APIUser, APIAnnotation } from "types/api_flow_types";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import type { OxalisState } from "oxalis/store";
 import {

@@ -19,10 +19,11 @@ import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   setViewportAction,
   setTDCameraAction,
+  setTDCameraWithoutTimeTrackingAction,
   zoomTDViewAction,
   moveTDViewXAction,
   moveTDViewYAction,
-  moveTDViewByVectorAction,
+  moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
@@ -124,10 +125,18 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
-      // write threeJS camera into store
-      Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
-    });
+    this.controls = new TrackballControls(
+      tdCamera,
+      view,
+      new THREE.Vector3(...pos),
+      (userTriggered: boolean = true) => {
+        const setCameraAction = userTriggered
+          ? setTDCameraAction
+          : setTDCameraWithoutTimeTrackingAction;
+        // write threeJS camera into store
+        Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
+      },
+    );
 
     this.controls.noZoom = true;
     this.controls.noPan = true;
@@ -225,7 +234,7 @@ class TDController extends React.PureComponent<Props> {
 
     nmVector.applyEuler(rotation);
 
-    Store.dispatch(moveTDViewByVectorAction(nmVector.x, nmVector.y));
+    Store.dispatch(moveTDViewByVectorWithoutTimeTrackingAction(nmVector.x, nmVector.y));
   }
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {

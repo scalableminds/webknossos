@@ -94,9 +94,12 @@ export type ControlMode = $Keys<typeof ControlModeEnum>;
 
 export const VolumeToolEnum = {
   MOVE: "MOVE",
-  TRACE: "TRACE",
   BRUSH: "BRUSH",
+  TRACE: "TRACE",
+  FILL_CELL: "FILL_CELL",
+  PICK_CELL: "PICK_CELL",
 };
+export const ToolsWithOverwriteCapabilities = [VolumeToolEnum.TRACE, VolumeToolEnum.BRUSH];
 export type VolumeTool = $Keys<typeof VolumeToolEnum>;
 
 export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
@@ -104,13 +107,17 @@ export function volumeToolEnumToIndex(volumeTool: ?VolumeTool): number {
 }
 
 export const ContourModeEnum = {
-  IDLE: "IDLE",
   DRAW: "DRAW",
-  DRAW_OVERWRITE: "DRAW_OVERWRITE",
-  DELETE_FROM_ACTIVE_CELL: "DELETE_FROM_ACTIVE_CELL",
-  DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
+  DELETE: "DELETE",
 };
 export type ContourMode = $Keys<typeof ContourModeEnum>;
+
+export const OverwriteModeEnum = {
+  OVERWRITE_ALL: "OVERWRITE_ALL",
+  OVERWRITE_EMPTY: "OVERWRITE_EMPTY", // In case of deleting, empty === current cell id
+};
+
+export type OverwriteMode = $Keys<typeof OverwriteModeEnum>;
 
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
@@ -127,6 +134,12 @@ export const Unicode = {
   MultiplicationSymbol: "×",
 };
 
+// A LabeledVoxelsMap maps from a bucket address
+// to a 2D slice of labeled voxels. These labeled voxels
+// are stored in a Uint8Array in a binary way (which cell
+// id the voxels should be changed to is not encoded).
+export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 
@@ -141,6 +154,11 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
+  // The area of the maximum radius (pi * 300 ^ 2) is 282690.
+  // We multiply this with 5, since the labeling is not done
+  // during mouse movement, but afterwards. So, a bit of a
+  // waiting time should be acceptable.
+  AUTO_FILL_AREA_LIMIT: 5 * 282690,
 
   // The amount of buckets which is required per layer can be customized
   // via the settings. The value which we expose for customization is a factor
@@ -160,6 +178,9 @@ const Constants = {
 
   MIN_TREE_ID: 1,
   MIN_NODE_ID: 1,
+
+  // Maximum of how many buckets will be held in RAM (per layer)
+  MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
 };
 
 export default Constants;

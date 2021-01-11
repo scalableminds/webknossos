@@ -1,7 +1,7 @@
 // @flow
 
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, Icon, Menu, Modal } from "antd";
+import { Checkbox, Dropdown, Icon, Menu, Modal, notification } from "antd";
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import * as React from "react";
@@ -9,7 +9,8 @@ import SortableTree from "react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import { type Action } from "oxalis/model/actions/actions";
-import update from "immutability-helper";
+import type { Vector3 } from "oxalis/constants";
+import * as Utils from "libs/utils";
 import {
   MISSING_GROUP_ID,
   TYPE_GROUP,
@@ -29,14 +30,19 @@ import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer
 import {
   setActiveTreeAction,
   setActiveGroupAction,
+  setTreeColorAction,
   toggleTreeAction,
   toggleTreeGroupAction,
   toggleAllTreesAction,
   setTreeGroupsAction,
+  shuffleTreeColorAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { formatNumberToLength } from "libs/format_utils";
+import api from "oxalis/api/internal_api";
 
 const CHECKBOX_STYLE = { verticalAlign: "middle" };
+const CHECKBOX_PLACEHOLDER_STYLE = { width: 24, display: "inline-block" };
 
 type OwnProps = {|
   activeTreeId: ?number,
@@ -52,10 +58,12 @@ type OwnProps = {|
 
 type Props = {
   ...OwnProps,
+  onShuffleTreeColor: number => void,
   onSetActiveTree: number => void,
   onSetActiveGroup: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
+  onSetTreeColor: (number, Vector3) => void,
   onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroup>) => void,
   onBatchActions: (Array<Action>, string) => void,
@@ -66,14 +74,16 @@ type State = {
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<TreeNode>,
   searchFocusOffset: number,
+  activeTreeDropdownId: ?number,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   state = {
-    expandedGroupIds: {},
+    expandedGroupIds: { [MISSING_GROUP_ID]: true },
     groupTree: [],
     prevProps: null,
     searchFocusOffset: 0,
+    activeTreeDropdownId: null,
   };
 
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -125,7 +135,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   onChange = (treeData: Array<TreeNode>) => {
-    this.setState({ groupTree: treeData });
+    const expandedGroupIds = {};
+    forEachTreeNode(treeData, node => {
+      if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
+    });
+    this.setState({ groupTree: treeData, expandedGroupIds });
   };
 
   onCheck = (evt: SyntheticMouseEvent<*>) => {
@@ -173,15 +187,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     } else {
       this.selectGroupById(groupId);
     }
-  };
-
-  onExpand = (params: { node: TreeNode, expanded: boolean }) => {
-    // Cannot use object destructuring in the parameters here, because the linter will complain
-    // about the Flow types
-    const { node, expanded } = params;
-    this.setState(prevState => ({
-      expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
-    }));
   };
 
   setExpansionOfAllSubgroupsTo = (groupId: number, expanded: boolean) => {
@@ -266,12 +271,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  handleTreeDropdownMenuVisibility = (treeId: number, isVisible: boolean) => {
+    if (isVisible) {
+      this.setState({ activeTreeDropdownId: treeId });
+      return;
+    }
+    this.setState({ activeTreeDropdownId: null });
+  };
+
   getNodeStyleClassForBackground = (id: number) => {
     const isTreeSelected = this.props.selectedTrees.includes(id);
     if (isTreeSelected) {
       return "selected-tree-node";
     }
     return null;
+  };
+
+  handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
+    const length = api.tracing.measureTreeLength(treeId);
+    notification.open({
+      message: `The tree ${treeName} has a total length of ${formatNumberToLength(length)}.`,
+      icon: <i className="fas fa-ruler" />,
+    });
   };
 
   renderGroupActionsDropdown = (node: TreeNode) => {
@@ -326,12 +347,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
     return (
       <div>
-        <Checkbox
-          checked={node.isChecked}
-          onChange={this.onCheck}
-          node={node}
-          style={CHECKBOX_STYLE}
-        />{" "}
+        {node.containsTrees ? (
+          <Checkbox
+            checked={node.isChecked}
+            indeterminate={node.isIndeterminate}
+            onChange={this.onCheck}
+            node={node}
+            style={CHECKBOX_STYLE}
+          />
+        ) : (
+          <span style={CHECKBOX_PLACEHOLDER_STYLE} />
+        )}
         {nameAndDropdown}
       </div>
     );
@@ -349,6 +375,65 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
+      const menu = (
+        <Menu>
+          <Menu.Item key="changeTreeColor">
+            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
+              <i
+                className="fas fa-eye-dropper fa-sm"
+                style={{
+                  cursor: "pointer",
+                }}
+              />{" "}
+              Select Tree Color
+              <input
+                type="color"
+                value={Utils.rgbToHex(Utils.map3(value => value * 255, tree.color))}
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: "100%",
+                  opacity: 0,
+                  cursor: "pointer",
+                }}
+                onChange={event => {
+                  let color = Utils.hexToRgb(event.target.value);
+                  color = Utils.map3(component => component / 255, color);
+                  this.props.onSetTreeColor(tree.treeId, color);
+                }}
+              />
+            </div>
+          </Menu.Item>
+          <Menu.Item
+            key="shuffleTreeColor"
+            onClick={() => this.props.onShuffleTreeColor(tree.treeId)}
+            title="Shuffle Tree Color"
+          >
+            <i className="fas fa-adjust" /> Shuffle Tree Color
+          </Menu.Item>
+          <Menu.Item
+            key="measureSkeleton"
+            onClick={() => this.handleMeasureSkeletonLength(tree.treeId, tree.name)}
+            title="Measure Skeleton Length"
+          >
+            <i className="fas fa-ruler" /> Measure Skeleton Length
+          </Menu.Item>
+        </Menu>
+      );
+      const dropdownMenu = (
+        <Dropdown
+          overlay={menu}
+          placement="bottomCenter"
+          visible={this.state.activeTreeDropdownId === tree.treeId}
+          onVisibleChange={isVisible =>
+            this.handleTreeDropdownMenuVisibility(tree.treeId, isVisible)
+          }
+        >
+          <Icon type="setting" className="group-actions-icon" />
+        </Dropdown>
+      );
+
       nodeProps.title = (
         <div className={styleClass}>
           <Checkbox
@@ -359,9 +444,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           />
           <div
             data-id={node.id}
-            style={{ marginLeft: 10, display: "inline" }}
+            style={{ marginLeft: 9, display: "inline" }}
             onClick={this.onSelectTree}
-          >{` (${tree.nodes.size()}) ${tree.name}`}</div>
+          >{`(${tree.nodes.size()}) ${tree.name}`}</div>
+          {dropdownMenu}
         </div>
       );
       nodeProps.className = "tree-type";
@@ -379,6 +465,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       (node.type === TYPE_TREE && node.id === searchQuery.activeTreeId) ||
       (node.type === TYPE_GROUP && node.id === searchQuery.activeGroupId)
     );
+  }
+
+  getNodeKey({ node }: { node: TreeNode }): number {
+    // The hierarchical tree contains group and tree nodes which share ids. To generate a unique
+    // id number, use the [-1, ...] range for the group ids and the [..., -2] range for the tree ids.
+    return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
   canDrop(params: { nextParent: TreeNode }) {
@@ -401,9 +493,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               treeData={this.state.groupTree}
               onChange={this.onChange}
               onMoveNode={this.onMoveNode}
-              onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
               searchQuery={{ activeTreeId, activeGroupId }}
+              getNodeKey={this.getNodeKey}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}
@@ -431,6 +523,12 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onSetActiveGroup(groupId) {
     dispatch(setActiveGroupAction(groupId));
+  },
+  onSetTreeColor(treeId, color) {
+    dispatch(setTreeColorAction(treeId, color));
+  },
+  onShuffleTreeColor(treeId) {
+    dispatch(shuffleTreeColorAction(treeId));
   },
   onToggleTree(treeId) {
     dispatch(toggleTreeAction(treeId));

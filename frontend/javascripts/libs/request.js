@@ -171,6 +171,9 @@ class Request {
         },
         useWebworkerForArrayBuffer: true,
       }),
+      // Usually the webworker reads the arrayBuffer, but if no worker should be used
+      // the arrayBuffer must still be read from the response
+      options.useWebworkerForArrayBuffer === false ? response => response.arrayBuffer() : null,
     );
 
   // IN:  JSON
@@ -265,13 +268,6 @@ class Request {
     new Promise(resolve => {
       setTimeout(() => resolve("timeout"), timeout);
     });
-
-  handleStatus = (response: Response): Promise<Response> => {
-    if (response.status >= 200 && response.status < 400) {
-      return Promise.resolve(response);
-    }
-    return Promise.reject(response);
-  };
 
   handleError = (
     requestedUrl: string,

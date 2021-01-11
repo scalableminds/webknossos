@@ -1,28 +1,24 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.{
   TracingSelector,
   TracingService,
   UpdateAction,
   UpdateActionGroup
 }
-import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.scalableminds.util.tools.JsonHelper.optionFormat
-import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
-import net.liftweb.common.Failure
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import play.api.i18n.Messages
-
-import scala.concurrent.duration._
-import play.api.libs.json.{Format, Json, Reads}
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.PlayBodyParsers
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]]
     extends Controller {
@@ -224,12 +220,12 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
             tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
             newId = tracingService.generateTracingId
             mergedTracing = tracingService.merge(tracings.flatten)
+            _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
             _ <- tracingService.mergeVolumeData(request.body.flatten,
                                                 tracings.flatten,
                                                 newId,
                                                 mergedTracing,
                                                 toCache = !persist)
-            _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
           } yield {
             Ok(Json.toJson(newId))
           }

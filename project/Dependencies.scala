@@ -4,7 +4,7 @@ import sbt._
 object Dependencies {
   val akkaVersion = "2.5.22"
   val log4jVersion = "2.13.3"
-  val webknossosWrapVersion = "1.1.7"
+  val webknossosWrapVersion = "1.1.9"
 
   val akkaAgent = "com.typesafe.akka" %% "akka-agent" % akkaVersion
   val akkaLogging = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
@@ -68,6 +68,9 @@ object Dependencies {
   )
 
   val webknossosDatastoreDependencies = Seq(
+    grpc,
+    grpcServices,
+    scalapbRuntimeGrpc,
     akkaLogging,
     ehcache,
     gson,
@@ -80,10 +83,7 @@ object Dependencies {
   )
 
   val webknossosTracingstoreDependencies = Seq(
-    grpc,
-    grpcServices,
     redis,
-    scalapbRuntimeGrpc,
     jgrapht
   )
 

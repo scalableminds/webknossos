@@ -2,7 +2,7 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { ServerVolumeTracing } from "admin/api_flow_types";
+import type { ServerVolumeTracing } from "types/api_flow_types";
 import type {
   Vector2,
   Vector3,
@@ -17,7 +17,7 @@ type InitializeVolumeTracingAction = {
   type: "INITIALIZE_VOLUMETRACING",
   tracing: ServerVolumeTracing,
 };
-type CreateCellAction = { type: "CREATE_CELL", cellId: ?number };
+type CreateCellAction = { type: "CREATE_CELL" };
 type StartEditingAction = { type: "START_EDITING", position: Vector3, planeId: OrthoView };
 type AddToLayerAction = { type: "ADD_TO_LAYER", position: Vector3 };
 type FloodFillAction = { type: "FLOOD_FILL", position: Vector3, planeId: OrthoView };
@@ -44,7 +44,6 @@ export type InferSegmentationInViewportAction = {
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position: Vector3,
 };
-export type RemoveFallbackLayerAction = { type: "REMOVE_FALLBACK_LAYER" };
 export type ImportVolumeTracingAction = { type: "IMPORT_VOLUMETRACING" };
 export type SetMaxCellAction = { type: "SET_MAX_CELL", cellId: number };
 
@@ -67,7 +66,6 @@ export type VolumeTracingAction =
   | InferSegmentationInViewportAction
   | SetContourTracingModeAction
   | AddBucketToUndoAction
-  | RemoveFallbackLayerAction
   | ImportVolumeTracingAction
   | SetMaxCellAction;
 
@@ -76,7 +74,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_ACTIVE_CELL",
   "SET_USER_BOUNDING_BOXES",
   "ADD_USER_BOUNDING_BOXES",
-  "REMOVE_FALLBACK_LAYER",
+  "FINISH_ANNOTATION_STROKE",
 ];
 
 export const VolumeTracingUndoRelevantActions = ["START_EDITING", "COPY_SEGMENTATION_LAYER"];
@@ -88,9 +86,8 @@ export const initializeVolumeTracingAction = (
   tracing,
 });
 
-export const createCellAction = (cellId: ?number): CreateCellAction => ({
+export const createCellAction = (): CreateCellAction => ({
   type: "CREATE_CELL",
-  cellId,
 });
 
 export const startEditingAction = (position: Vector3, planeId: OrthoView): StartEditingAction => ({
@@ -170,10 +167,6 @@ export const inferSegmentationInViewportAction = (
 ): InferSegmentationInViewportAction => ({
   type: "INFER_SEGMENT_IN_VIEWPORT",
   position,
-});
-
-export const removeFallbackLayerAction = (): RemoveFallbackLayerAction => ({
-  type: "REMOVE_FALLBACK_LAYER",
 });
 
 export const importVolumeTracingAction = (): ImportVolumeTracingAction => ({

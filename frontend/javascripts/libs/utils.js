@@ -3,7 +3,7 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import naturalSort from "javascript-natural-sort";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import type {
   Vector3,
@@ -32,6 +32,20 @@ export function map2<A, B>(fn: (A, number) => B, tuple: [A, A]): [B, B] {
 export function map3<A, B>(fn: (A, number) => B, tuple: [A, A, A]): [B, B, B] {
   const [x, y, z] = tuple;
   return [fn(x, 0), fn(y, 1), fn(z, 2)];
+}
+
+export function iterateThroughBounds(
+  minVoxel: Vector3,
+  maxVoxel: Vector3,
+  fn: (number, number, number) => void,
+): void {
+  for (let x = minVoxel[0]; x < maxVoxel[0]; x++) {
+    for (let y = minVoxel[1]; y < maxVoxel[1]; y++) {
+      for (let z = minVoxel[2]; z < maxVoxel[2]; z++) {
+        fn(x, y, z);
+      }
+    }
+  }
 }
 
 function swap(arr, a, b) {
@@ -101,12 +115,30 @@ export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<?T> {
   }
 }
 
+export function asAbortable<T>(
+  promise: Promise<T>,
+  signal: AbortSignal,
+  abortError: Error,
+): Promise<T> {
+  return new Promise(async (resolve, reject) => {
+    const abort = () => reject(abortError);
+    signal.addEventListener("abort", abort);
+    try {
+      const value = await promise;
+      resolve(value);
+    } catch (error) {
+      reject(error);
+    }
+    signal.removeEventListener("abort", abort);
+  });
+}
+
 export function jsonStringify(json: Object) {
   return JSON.stringify(json, null, "  ");
 }
 
-export function clamp(a: number, x: number, b: number): number {
-  return Math.max(a, Math.min(b, x));
+export function clamp(min: number, value: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 export function zeroPad(num: number, zeros: number = 0): string {

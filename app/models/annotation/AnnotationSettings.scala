@@ -1,8 +1,8 @@
 package models.annotation
 
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.annotation.AnnotationSettings._
-import play.api.data.validation.ValidationError
 import play.api.libs.json._
 
 case class AnnotationSettings(
@@ -11,7 +11,7 @@ case class AnnotationSettings(
     branchPointsAllowed: Boolean = true,
     somaClickingAllowed: Boolean = true,
     mergerMode: Boolean = false,
-    allowedMagnifications: Option[JsValue] = None
+    resolutionRestrictions: ResolutionRestrictions = ResolutionRestrictions.empty
 )
 
 object AnnotationSettings {
@@ -22,9 +22,9 @@ object AnnotationSettings {
 
   val SKELETON_MODES = List(ORTHOGONAL, OBLIQUE, FLIGHT)
   val VOLUME_MODES = List(VOLUME)
-  val ALL_MODES = SKELETON_MODES ::: VOLUME_MODES
+  val ALL_MODES: List[String] = SKELETON_MODES ::: VOLUME_MODES
 
-  def defaultFor(tracingType: TracingType.Value) = tracingType match {
+  def defaultFor(tracingType: TracingType.Value): AnnotationSettings = tracingType match {
     case TracingType.skeleton =>
       AnnotationSettings(allowedModes = SKELETON_MODES)
     case TracingType.volume =>
@@ -33,9 +33,9 @@ object AnnotationSettings {
       AnnotationSettings(allowedModes = ALL_MODES)
   }
 
-  implicit val annotationSettingsWrites = Json.writes[AnnotationSettings]
+  implicit val annotationSettingsWrites: OWrites[AnnotationSettings] = Json.writes[AnnotationSettings]
 
-  implicit val annotationSettingsReads =
+  implicit val annotationSettingsReads: Reads[AnnotationSettings] =
     Json
       .reads[AnnotationSettings]
       .filter(JsonValidationError("annotation.preferedMode.invalid")) { a =>

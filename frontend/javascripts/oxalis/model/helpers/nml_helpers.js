@@ -1,12 +1,13 @@
 // @flow
 
-import Saxophone from "@scalableminds/saxophone";
+import Saxophone from "saxophone";
 import _ from "lodash";
 
-import type { APIBuildInfo } from "admin/api_flow_types";
+import type { APIBuildInfo } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
+  DEFAULT_NODE_RADIUS,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import Date from "libs/date";
@@ -39,7 +40,6 @@ const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
 const DEFAULT_GROUP_ID = null;
-const DEFAULT_RADIUS = 30;
 const DEFAULT_USER_BOUNDING_BOX_VISIBILITY = true;
 
 // SERIALIZE NML
@@ -635,7 +635,7 @@ export function parseNml(
               bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
               viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
               resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius", DEFAULT_RADIUS),
+              radius: _parseFloat(attr, "radius", DEFAULT_NODE_RADIUS),
               timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)
@@ -791,7 +791,7 @@ export function parseNml(
             break;
         }
       })
-      .on("end", () => {
+      .on("finish", () => {
         // Split potentially unconnected trees
         const originalTreeIds = Object.keys(trees);
         let maxTreeId = getMaximumTreeId(trees);

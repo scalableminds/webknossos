@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   AccessTokenService,
   UserAccessAnswer,
@@ -38,6 +39,12 @@ class TracingStoreWkRpcClient @Inject()(
                  "statistics" -> statistics,
                  "tracingId" -> tracingId,
                  "userToken" -> userToken))
+
+  def getDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[DataSourceLike] =
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/${dataSetName}")
+      .addQueryStringOptional("organizationName", organizationNameOpt)
+      .addQueryString("key" -> tracingStoreKey)
+      .getWithJsonResponse[DataSourceLike]
 
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/validateUserAccess")

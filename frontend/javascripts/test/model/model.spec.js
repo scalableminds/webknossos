@@ -5,6 +5,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
 
+import { ControlModeEnum } from "oxalis/constants";
 import {
   tracing as TRACING,
   annotation as ANNOTATION,
@@ -22,7 +23,7 @@ function makeModelMock() {
 
 const User = makeModelMock();
 const DatasetConfiguration = makeModelMock();
-const Request = { receiveJSON: sinon.stub() };
+const Request = { receiveJSON: sinon.stub(), sendJSONReceiveJSON: sinon.stub() };
 const ErrorHandling = {
   assertExtendContext: _.noop,
 };
@@ -73,29 +74,25 @@ test.beforeEach(t => {
   User.prototype.fetch.returns(Promise.resolve());
 });
 
-// TODO: fix for Store-based model
-// describe("Successful initialization", () => {
-//   it("should resolve", (done) => {
-//     model.fetch()
-//       .then(done)
-//       .catch((error) => {
-//         fail(error);
-//         done();
-//       });
-//   });
-// });
-
 test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", t => {
   t.plan(1);
   const { model } = t.context;
   const datasetObject = _.clone(DATASET);
   delete datasetObject.dataSource.dataLayers;
   Request.receiveJSON
-    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .withArgs(`/api/datasets/${ANNOTATION.organization}/${ANNOTATION.dataSetName}`)
     .returns(Promise.resolve(_.cloneDeep(datasetObject)));
 
   return model
-    .fetch(ANNOTATION_TYPE, ANNOTATION_ID, "VIEW", true)
+    .fetch(
+      ANNOTATION_TYPE,
+      {
+        type: ControlModeEnum.VIEW,
+        name: ANNOTATION.dataSetName || "",
+        owningOrganization: ANNOTATION.organization || "",
+      },
+      true,
+    )
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })

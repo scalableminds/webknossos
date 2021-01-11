@@ -58,6 +58,8 @@ export type APISegmentationLayer = {|
   +mappings?: Array<string>,
   +agglomerates?: Array<string>,
   +fallbackLayer?: ?string,
+  // eslint-disable-next-line no-use-before-define
+  +fallbackLayerInfo?: APIDataLayer,
 |};
 
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
@@ -77,10 +79,7 @@ type APIDataSourceBase = {
   +status?: string,
 };
 
-export type APIMaybeUnimportedDataSource = APIDataSourceBase & {
-  +dataLayers?: Array<APIDataLayer>,
-  +scale?: ?Vector3,
-};
+type APIUnimportedDatasource = APIDataSourceBase;
 
 export type APIDataSource = APIDataSourceBase & {
   +dataLayers: Array<APIDataLayer>,
@@ -145,15 +144,17 @@ type APIDatasetBase = APIDatasetId & {
   +publication: ?APIPublication,
 };
 
-export type APIMaybeUnimportedDataset = APIDatasetBase & {
-  +dataSource: APIMaybeUnimportedDataSource,
-  +isActive: boolean,
-};
-
 export type APIDataset = APIDatasetBase & {
   +dataSource: APIDataSource,
   +isActive: true,
 };
+
+type APIUnimportedDataset = APIDatasetBase & {
+  +dataSource: APIUnimportedDatasource,
+  +isActive: false,
+};
+
+export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
 
 export type APISampleDataset = {
   +name: string,
@@ -232,8 +233,7 @@ export type APISettings = {|
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
   +mergerMode?: boolean,
-  +allowedMagnifications?: {
-    shouldRestrict: boolean,
+  +resolutionRestrictions: {
     min?: number,
     max?: number,
   },
@@ -402,13 +402,6 @@ export type APITaskWithAnnotation = APITask & {
   +annotation: APIAnnotation,
 };
 
-export type DatasetConfig = {
-  +name: string,
-  +organization: string,
-  +datastore: string,
-  +zipFile: File,
-};
-
 type NeuroglancerLayer = {
   // This is the source URL of the layer, should start with gs://, http:// or https://
   source: string,
@@ -527,6 +520,15 @@ export type APIFeatureToggles = {
   +isDemoInstance: boolean,
   +taskReopenAllowedInSeconds: number,
   +allowDeleteDatasets: boolean,
+  +jobsEnabled: boolean,
+};
+
+export type APIJob = {
+  +id: string,
+  +datasetName: ?string,
+  +type: string,
+  +state: string,
+  +createdAt: number,
 };
 
 // Tracing related datatypes
@@ -606,6 +608,7 @@ export type ServerSkeletonTracing = {|
   boundingBox?: ServerBoundingBox,
   trees: Array<ServerSkeletonTracingTree>,
   treeGroups: ?Array<TreeGroup>,
+  organizationName?: string,
 |};
 
 export type ServerVolumeTracing = {|
@@ -615,6 +618,12 @@ export type ServerVolumeTracing = {|
   elementClass: ElementClass,
   fallbackLayer?: string,
   largestSegmentId: number,
+  // `resolutions` will be undefined for legacy annotations
+  // which were created before the multi-resolution capabilities
+  // were added to volume tracings. Also see:
+  // https://github.com/scalableminds/webknossos/pull/4755
+  resolutions?: Array<Point3>,
+  organizationName?: string,
 |};
 
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

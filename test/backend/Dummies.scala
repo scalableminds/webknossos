@@ -1,7 +1,7 @@
 package backend
 
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing._
-import com.scalableminds.webknossos.tracingstore.geometry.{Color, Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.geometry.{Color, Point3D, Vector3D}
 
 object Dummies {
   val timestamp = 123456789
@@ -48,7 +48,9 @@ object Dummies {
                                 1.0,
                                 0,
                                 None,
-                                Seq(treeGroup1, treeGroup2))
+                                Seq(treeGroup1, treeGroup2),
+                                Seq.empty,
+                                Some("testOrganization"))
 
   //tree with two components, from tree1 and tree2
   val comp1Nodes = Seq(createDummyNode(10), createDummyNode(11), createDummyNode(12), createDummyNode(13))

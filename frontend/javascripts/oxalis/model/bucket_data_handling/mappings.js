@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import _ from "lodash";
 
-import type { APIMapping } from "admin/api_flow_types";
+import type { APIMapping } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import { doWithToken } from "admin/admin_rest_api";
@@ -54,7 +54,7 @@ export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
   };
 }
 
-const noopProgressCallback = async (_a, _b): Promise<void> => {};
+const noopProgressCallback = async (_a, _b) => ({ hideFn: () => {} });
 
 class Mappings {
   baseUrl: string;
@@ -152,7 +152,7 @@ class Mappings {
 
   async fetchMappings(mappingName: string, fetchedMappings: APIMappings): Promise<void> {
     const mapping = await this.fetchMapping(mappingName);
-    if (mapping == null) return Promise.reject();
+    if (mapping == null) return Promise.reject(new Error("Mapping was null."));
     fetchedMappings[mappingName] = mapping;
     if (mapping.parent != null) {
       return this.fetchMappings(mapping.parent, fetchedMappings);

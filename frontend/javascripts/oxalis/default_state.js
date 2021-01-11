@@ -1,7 +1,7 @@
 // @flow
 
 import type { OxalisState } from "oxalis/store";
-import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import Constants, { ControlModeEnum, OrthoViews, OverwriteModeEnum } from "oxalis/constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -22,6 +22,7 @@ const initialAnnotationInfo = {
     somaClickingAllowed: false,
     mergerMode: false,
     allowedModes: ["orthogonal", "oblique", "flight"],
+    resolutionRestrictions: {},
   },
   visibility: "Internal",
   tags: [],
@@ -40,7 +41,6 @@ const defaultState: OxalisState = {
     fourBit: false,
     interpolation: false,
     layers: {},
-    quality: 0,
     loadingStrategy: "PROGRESSIVE_QUALITY",
     highlightHoveredCellId: true,
     segmentationPatternOpacity: 40,
@@ -66,13 +66,13 @@ const defaultState: OxalisState = {
     newNodeNewTree: false,
     overrideNodeRadius: true,
     particleSize: 5,
-    radius: 5,
     rotateValue: 0.01,
     sortCommentsAsc: true,
     sortTreesByName: false,
     sphericalCapRadius: Constants.DEFAULT_SPHERICAL_CAP_RADIUS,
     tdViewDisplayPlanes: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
+    overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

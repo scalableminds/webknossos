@@ -4,7 +4,7 @@ import { Spin, Layout, Row, Col, Card, Input } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
-import type { APIMaybeUnimportedDataset, APIUser } from "admin/api_flow_types";
+import type { APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { checkAnyOrganizationExists, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";

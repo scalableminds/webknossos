@@ -8,15 +8,17 @@ import {
 import { getHistogramForLayer } from "admin/admin_rest_api";
 import DataLayer from "oxalis/model/data_layer";
 import Model from "oxalis/model";
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 
 async function fetchAllHistogramsForLayers(
   dataLayers: Array<DataLayer>,
   dataset: APIDataset,
 ): Promise<HistogramDataForAllLayers> {
   const histograms: HistogramDataForAllLayers = {};
-  const histogramPromises = dataLayers.map(async dataLayer => {
+  for (const dataLayer of dataLayers) {
     try {
+      // We send the histogram data requests sequentially so there is less blockage of bucket data requests.
+      // eslint-disable-next-line no-await-in-loop
       const data = await getHistogramForLayer(dataset.dataStore.url, dataset, dataLayer.name);
       if (Array.isArray(data) && data.length > 0) {
         histograms[dataLayer.name] = data;
@@ -24,8 +26,7 @@ async function fetchAllHistogramsForLayers(
     } catch (e) {
       console.warn(`Error: Could not fetch the histogram data for layer ${dataLayer.name}.`, e);
     }
-  });
-  await Promise.all(histogramPromises);
+  }
   return histograms;
 }
 

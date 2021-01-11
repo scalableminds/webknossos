@@ -20,7 +20,8 @@
     "@babel/preset-flow": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.0.0",
-    "ava": "^1.0.0-beta.8",
+    "abort-controller": "^3.0.0",
+    "ava": "^3.13.0",
     "babel-eslint": "^9.0.0",
     "babel-loader": "^8.0.0",
     "babel-plugin-import": "^1.9.1",
@@ -29,6 +30,7 @@
     "coveralls": "^3.0.2",
     "css-loader": "^2.1.0",
     "documentation": "^9.3.0",
+    "domexception": "^2.0.1",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "eslint": "^5.7.0",
@@ -132,7 +134,6 @@
     "@fortawesome/fontawesome-free": "^5.14.0",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
-    "@scalableminds/saxophone": "^0.5.0",
     "@tensorflow/tfjs": "^1.0.0",
     "Enumjs": "https://github.com/ryan953/Enumjs#master",
     "airbrake-js": "^1.4.0",
@@ -140,6 +141,7 @@
     "autodll-webpack-plugin": "^0.4.2",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
+    "beautiful-react-hooks": "^0.30.5",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
     "comlink": "^4.3.0",
@@ -167,7 +169,7 @@
     "mini-css-extract-plugin": "^0.4.0",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",
-    "nanoevents": "^1.0.2",
+    "nanoevents": "^5.1.8",
     "pako": "^0.2.8",
     "pretty-bytes": "^5.1.0",
     "protobufjs": "^6.8.6",
@@ -184,6 +186,8 @@
     "redux": "^3.6.0",
     "redux-batched-actions": "^0.4.1",
     "redux-saga": "^1.0.0",
+    "resumablejs": "^1.1.0",
+    "saxophone": "^0.7.1",
     "three": "^0.106.0",
     "tween.js": "^16.3.1",
     "url-join": "^4.0.0",
@@ -194,8 +198,11 @@
     "**/mini-store": "^1.1.0"
   },
   "ava": {
-    "sources": [
+    "files": [
       "./public/test-bundle/**/*.{js,jsx}"
+    ],
+    "require": [
+      "./frontend/javascripts/test/_ava_polyfill_provider.js"
     ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8

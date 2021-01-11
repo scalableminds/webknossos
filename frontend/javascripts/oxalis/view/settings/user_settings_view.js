@@ -10,7 +10,7 @@ import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
 
-import type { APIDataset } from "admin/api_flow_types";
+import type { APIDataset } from "types/api_flow_types";
 import {
   LogSliderSetting,
   NumberInputSetting,
@@ -42,7 +42,7 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "oxalis/model/actions/settings_actions";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Constants, { type ControlMode, ControlModeEnum, type ViewMode } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -461,11 +461,27 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   }
 }
 
+// Reuse last range if it's equal to the current one to avoid unnecessary
+// render() executions
+let lastValidZoomRange = null;
+function _getValidZoomRangeForUser(state) {
+  const newRange = getValidZoomRangeForUser(state);
+
+  if (
+    !lastValidZoomRange ||
+    newRange[0] !== lastValidZoomRange[0] ||
+    newRange[1] !== lastValidZoomRange[1]
+  ) {
+    lastValidZoomRange = newRange;
+  }
+  return lastValidZoomRange;
+}
+
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  validZoomRange: getValidZoomRangeForUser(state),
+  validZoomRange: _getValidZoomRangeForUser(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,

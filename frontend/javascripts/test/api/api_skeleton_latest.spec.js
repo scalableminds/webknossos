@@ -3,7 +3,7 @@ import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { setTreeGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 import Store from "oxalis/store";
 import sinon from "sinon";
 import test from "ava";
@@ -148,7 +148,7 @@ test.serial.cb("Utils Api: sleep should sleep", t => {
   });
   t.false(bool);
   setTimeout(() => {
-    t.true(bool, true);
+    t.true(bool);
     t.end();
   }, 400);
 });

@@ -1,8 +1,6 @@
 // @flow
-import _ from "lodash";
-
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, DatasetConfiguration } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import {
   updateKey,
   updateKey2,
@@ -11,8 +9,7 @@ import {
   type StateShape2,
 } from "oxalis/model/helpers/deep_update";
 import { clamp } from "libs/utils";
-import { getDefaultIntensityRangeOfLayer } from "oxalis/model/accessors/dataset_accessor";
-import { userSettings } from "libs/user_settings.schema";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 //
 // Update helpers
@@ -87,43 +84,11 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
-      const initialLayerSettings = action.initialDatasetSettings.layers || {};
-      const layerSettingsDefaults = _.transform(
-        state.dataset.dataSource.dataLayers,
-        (result, layer) => {
-          const intensityRange = getDefaultIntensityRangeOfLayer(state.dataset, layer.name);
-          result[layer.name] = Object.assign(
-            {},
-            {
-              brightness: 0,
-              contrast: 1,
-              color: [255, 255, 255],
-              alpha: layer.category === "color" ? 100 : 20,
-              intensityRange,
-              isDisabled: false,
-              isInverted: false,
-              isInEditMode: false,
-            },
-            initialLayerSettings[layer.name],
-          );
-        },
-        {},
-      );
-
-      // $FlowIssue[incompatible-exact] Flow has problems with exactness for empty objects, see https://github.com/facebook/flow/issues/2977
-      const initialDatasetSettingsWithDefaults: DatasetConfiguration = Object.assign(
-        {},
-        action.initialDatasetSettings,
-        {
-          layers: layerSettingsDefaults,
-        },
-      );
-
       return {
         ...state,
         datasetConfiguration: {
           ...state.datasetConfiguration,
-          ...initialDatasetSettingsWithDefaults,
+          ...action.initialDatasetSettings,
         },
         userConfiguration: {
           ...state.userConfiguration,

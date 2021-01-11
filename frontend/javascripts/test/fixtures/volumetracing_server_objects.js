@@ -1,5 +1,5 @@
 // @flow
-import type { ServerVolumeTracing, APIAnnotation } from "admin/api_flow_types";
+import type { ServerVolumeTracing, APIAnnotation } from "types/api_flow_types";
 
 export const tracing: ServerVolumeTracing = {
   activeSegmentId: 10000,
@@ -44,6 +44,7 @@ export const annotation: APIAnnotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
+    resolutionRestrictions: {},
   },
   tags: ["ROI2017_wkw", "volume"],
   tracingTime: 0,

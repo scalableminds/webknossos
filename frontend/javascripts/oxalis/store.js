@@ -24,7 +24,7 @@ import type {
   APIUser,
   APIUserBase,
   MeshMetaData,
-} from "admin/api_flow_types";
+} from "types/api_flow_types";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Matrix4x4 } from "libs/mjs";
 import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -33,6 +33,7 @@ import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import {
   type BoundingBoxType,
   type ContourMode,
+  type OverwriteMode,
   type ControlMode,
   ControlModeEnum,
   type ViewMode,
@@ -222,6 +223,7 @@ export type VolumeTracing = {|
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourTracingMode: ContourMode,
+  // Stores points of the currently drawn region in global coordinates
   +contourList: Array<Vector3>,
   +cells: VolumeCellMap,
   +fallbackLayer?: string,
@@ -272,7 +274,6 @@ export type DatasetConfiguration = {|
   +layers: {
     [name: string]: DatasetLayerConfiguration,
   },
-  +quality: 0 | 1 | 2,
   +highlightHoveredCellId: boolean,
   +renderIsosurfaces: boolean,
   +position?: Vector3,
@@ -302,13 +303,15 @@ export type UserConfiguration = {|
   +newNodeNewTree: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
-  +radius: number,
   +rotateValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
   +sphericalCapRadius: number,
   +tdViewDisplayPlanes: boolean,
   +gpuMemoryFactor: number,
+  // For volume (and hybrid) annotations, this mode specifies
+  // how volume annotations overwrite existing voxels.
+  +overwriteMode: OverwriteMode,
 |};
 
 export type RecommendedConfiguration = $Shape<{

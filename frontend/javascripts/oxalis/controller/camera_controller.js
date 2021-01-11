@@ -27,7 +27,7 @@ import {
   getPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
+import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Store, { type CameraData } from "oxalis/store";
 import api from "oxalis/api/internal_api";
@@ -94,7 +94,7 @@ class CameraController extends React.PureComponent<Props> {
     }
 
     Store.dispatch(
-      setTDCameraAction({
+      setTDCameraWithoutTimeTrackingAction({
         near: 0,
         far,
       }),
@@ -159,10 +159,9 @@ class CameraController extends React.PureComponent<Props> {
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
     const cPos = voxelToNm(state.dataset.dataSource.scale, gPos);
-    const cPosVec = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
-    this.props.cameras[OrthoViews.PLANE_XY].position.copy(cPosVec);
-    this.props.cameras[OrthoViews.PLANE_YZ].position.copy(cPosVec);
-    this.props.cameras[OrthoViews.PLANE_XZ].position.copy(cPosVec);
+    this.props.cameras[OrthoViews.PLANE_XY].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_YZ].position.set(cPos[0], cPos[1], cPos[2]);
+    this.props.cameras[OrthoViews.PLANE_XZ].position.set(cPos[0], cPos[1], cPos[2]);
   }
 
   bindToEvents() {
@@ -325,7 +324,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     );
 
     Store.dispatch(
-      setTDCameraAction({
+      setTDCameraWithoutTimeTrackingAction({
         position: newPosition,
         up: tweened.up,
         left,

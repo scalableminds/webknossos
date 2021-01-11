@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import type { Dispatch } from "redux";
 
-import type { APIAnnotation } from "admin/api_flow_types";
+import type { APIAnnotation } from "types/api_flow_types";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { getAnnotationInformation, getTracingForAnnotationType } from "admin/admin_rest_api";

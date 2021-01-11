@@ -7,12 +7,14 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceLike
 import com.scalableminds.webknossos.datastore.models.{WebKnossosDataRequest, WebKnossosIsosurfaceRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
+import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.tracingstore.slacknotification.SlackNotificationService
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{ResolutionRestrictions, VolumeTracingService}
+import com.scalableminds.webknossos.tracingstore.{TracingStoreAccessTokenService, TracingStoreWkRpcClient}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
@@ -41,20 +43,25 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
-  def initialData(tracingId: String) = Action.async { implicit request =>
-    log {
-      logTime(slackNotificationService.reportUnusalRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
-          AllowRemoteOrigin {
-            for {
-              initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
-              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
-            } yield Ok(Json.toJson(tracingId))
+  def initialData(tracingId: String, minResolution: Option[Int], maxResolution: Option[Int]) = Action.async {
+    implicit request =>
+      log {
+        logTime(slackNotificationService.reportUnusalRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+            AllowRemoteOrigin {
+              for {
+                initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
+                tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+                resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+                resolutions <- tracingService
+                  .initializeWithData(tracingId, tracing, initialData, resolutionRestrictions)
+                  .toFox
+                _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
+              } yield Ok(Json.toJson(tracingId))
+            }
           }
         }
       }
-    }
   }
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[VolumeTracings]) { implicit request =>
@@ -79,7 +86,8 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-              _ <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData)
+              resolutions <- tracingService.initializeWithDataMultiple(tracingId, tracing, initialData).toFox
+              _ <- tracingService.updateResolutionList(tracingId, tracing, resolutions)
             } yield Ok(Json.toJson(tracingId))
           }
         }
@@ -137,7 +145,11 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
   private def formatMissingBucketList(indices: List[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
-  def duplicate(tracingId: String, fromTask: Option[Boolean]) = Action.async { implicit request =>
+  def duplicate(tracingId: String,
+                fromTask: Option[Boolean],
+                minResolution: Option[Int],
+                maxResolution: Option[Int],
+                downsample: Option[Boolean]) = Action.async { implicit request =>
     log {
       logTime(slackNotificationService.reportUnusalRequest) {
         accessTokenService.validateAccess(UserAccessRequest.webknossos) {
@@ -145,7 +157,31 @@ class VolumeTracingController @Inject()(val tracingService: VolumeTracingService
             for {
               tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
               dataSetBoundingBox = request.body.asJson.flatMap(_.validateOpt[BoundingBox].asOpt.flatten)
-              newId <- tracingService.duplicate(tracingId, tracing, fromTask.getOrElse(false), dataSetBoundingBox)
+              resolutionRestrictions = ResolutionRestrictions(minResolution, maxResolution)
+              (newId, newTracing) <- tracingService.duplicate(tracingId,
+                                                              tracing,
+                                                              fromTask.getOrElse(false),
+                                                              dataSetBoundingBox,
+                                                              resolutionRestrictions)
+              _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, newTracing))
+            } yield {
+              Ok(Json.toJson(newId))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def unlinkFallback(tracingId: String) = Action.async(validateJson[DataSourceLike]) { implicit request =>
+    log {
+      logTime(slackNotificationService.reportUnusalRequest) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
+          AllowRemoteOrigin {
+            for {
+              tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
+              updatedTracing = tracingService.unlinkFallback(tracing, request.body)
+              newId <- tracingService.save(updatedTracing, None, 0L)
             } yield {
               Ok(Json.toJson(newId))
             }

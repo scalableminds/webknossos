@@ -1,19 +1,17 @@
 package com.scalableminds.webknossos.datastore.rpc
 
-import java.io.File
-
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.http.HeaderNames
 import play.api.http.Status._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.libs.ws._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 
+import java.io.File
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
@@ -24,6 +22,11 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def addQueryString(parameters: (String, String)*): RPCRequest = {
     request = request.addQueryStringParameters(parameters: _*)
+    this
+  }
+
+  def withBasicAuth(username: String, password: String): RPCRequest = {
+    request = request.withAuth(username, password, WSAuthScheme.BASIC)
     this
   }
 
@@ -166,9 +169,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
           Full(result)
         } else {
           val errorMsg = s"Unsuccessful WS request to $url (ID: $id)." +
-            s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(100)}"
+            s"Status: ${result.status}. Response: ${result.bodyAsBytes.map(_.toChar).mkString.take(2000)}"
           logger.error(errorMsg)
-          Failure(errorMsg)
+          Failure(errorMsg.take(400))
         }
       }
       .recover {

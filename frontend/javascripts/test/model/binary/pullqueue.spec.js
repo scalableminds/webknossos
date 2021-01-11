@@ -19,6 +19,10 @@ mockRequire("libs/request", RequestMock);
 const WkstoreAdapterMock = { requestWithFallback: sinon.stub() };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
+const mockedCube = {
+  isSegmentation: true,
+};
+
 const layer = {
   url: "url",
   name: "layername",
@@ -66,8 +70,8 @@ test.beforeEach(t => {
   const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
 
   const buckets = [
-    new DataBucket("uint8", [0, 0, 0, 0], null),
-    new DataBucket("uint8", [1, 1, 1, 1], null),
+    new DataBucket("uint8", [0, 0, 0, 0], null, mockedCube),
+    new DataBucket("uint8", [1, 1, 1, 1], null, mockedCube),
   ];
 
   for (const bucket of buckets) {
@@ -103,7 +107,9 @@ test.serial("Successful pulling: should receive the correct data", t => {
 
 function prepare() {
   WkstoreAdapterMock.requestWithFallback = sinon.stub();
-  WkstoreAdapterMock.requestWithFallback.onFirstCall().returns(Promise.reject());
+  WkstoreAdapterMock.requestWithFallback
+    .onFirstCall()
+    .returns(Promise.reject(new Error("Expected promise rejection in tests. Can be ignored.")));
   WkstoreAdapterMock.requestWithFallback
     .onSecondCall()
     .returns(Promise.resolve([new Uint8Array(32 * 32 * 32)]));

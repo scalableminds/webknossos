@@ -2,25 +2,25 @@ package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import javax.inject.Inject
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
-import models.user.{User, UserService}
+import models.user.{User, UserDAO, UserService}
 import oxalis.security.{URLSharing, WkEnv}
-import play.api.cache.SyncCacheApi
-import play.api.i18n.{Messages, MessagesApi, MessagesProvider}
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 class DataSetController @Inject()(userService: UserService,
+                                  userDAO: UserDAO,
                                   dataSetService: DataSetService,
                                   dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
                                   dataSetDataLayerDAO: DataSetDataLayerDAO,
@@ -67,10 +67,10 @@ class DataSetController @Inject()(userService: UserService,
           case Some(a) =>
             Fox.successful(a)
           case _ => {
-            val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
-            val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c =>
-              c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
+            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+              c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
+            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+              c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
             dataSetService
               .clientFor(dataSet)
               .flatMap(
@@ -176,11 +176,14 @@ class DataSetController @Inject()(userService: UserService,
 
   def accessList(organizationName: String, dataSetName: String) = sil.SecuredAction.async { implicit request =>
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-        dataSetName) ~> NOT_FOUND
+      organization <- organizationDAO.findOneByName(organizationName)
+      dataSet <- dataSetDAO
+        .findOneByNameAndOrganization(dataSetName, organization._id) ?~> notFoundMessage(dataSetName) ~> NOT_FOUND
       allowedTeams <- dataSetService.allowedTeamIdsFor(dataSet._id)
-      users <- userService.findByTeams(allowedTeams)
-      usersJs <- Fox.serialCombined(users.distinct)(u => userService.compactWrites(u))
+      usersByTeams <- userDAO.findAllByTeams(allowedTeams)
+      adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
+      usersJs <- Fox.serialCombined((usersByTeams ++ adminsAndDatasetManagers).distinct)(u =>
+        userService.compactWrites(u))
     } yield {
       Ok(Json.toJson(usersJs))
     }

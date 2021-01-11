@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package com.scalableminds.webknossos.tracingstore;
+package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
 
@@ -26,6 +26,8 @@ message VolumeTracing {
     required double zoomLevel = 11;
     optional BoundingBox userBoundingBox = 12;
     repeated NamedBoundingBox userBoundingBoxes = 13;
+    optional string organizationName = 14; // to identify the dataset (may differ from annotation orga)
+    repeated Point3D resolutions = 15;
 }
 
 message VolumeTracingOpt {

@@ -3,7 +3,7 @@ import _ from "lodash";
 
 import { document } from "libs/window";
 import constants, { type Vector3 } from "oxalis/constants";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";
 
 type GpuSpecs = {
@@ -113,7 +113,12 @@ export function getBucketCapacity(
   textureWidth: number,
   packingDegree: number,
 ): number {
-  return (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+  const theoreticalBucketCapacity =
+    (packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
+
+  // RAM-wise we already impose a limit of how many buckets should be held. This limit
+  // should not be exceeded.
+  return Math.min(constants.MAXIMUM_BUCKET_COUNT_PER_LAYER, theoreticalBucketCapacity);
 }
 
 function getNecessaryVoxelCount(requiredBucketCapacity) {

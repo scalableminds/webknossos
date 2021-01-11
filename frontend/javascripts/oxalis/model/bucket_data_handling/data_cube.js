@@ -6,6 +6,7 @@
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
+import ErrorHandling from "libs/error_handling";
 import {
   type Bucket,
   DataBucket,
@@ -14,8 +15,8 @@ import {
   NullBucket,
   type BucketDataArray,
 } from "oxalis/model/bucket_data_handling/bucket";
-import { type VoxelIterator, VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { VoxelNeighborStack2D } from "oxalis/model/volumetracing/volumelayer";
+import { getResolutions, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -25,15 +26,15 @@ import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import Store, { type Mapping } from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
-import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import constants, {
   type Vector2,
   type Vector3,
   type Vector4,
   type BoundingBoxType,
+  type LabeledVoxelsMap,
 } from "oxalis/constants";
-import { type ElementClass } from "admin/api_flow_types";
+import { type ElementClass } from "types/api_flow_types";
 import { areBoundingBoxesOverlappingOrTouching } from "libs/utils";
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -46,14 +47,12 @@ class CubeEntry {
 }
 
 class DataCube {
-  MAXIMUM_BUCKET_COUNT = 5000;
-  ZOOM_STEP_COUNT: number;
+  MAXIMUM_BUCKET_COUNT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
   bucketIterator: number = 0;
   bucketCount: number = 0;
-  MAX_ZOOM_STEP: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
   pullQueue: PullQueue;
@@ -65,6 +64,7 @@ class DataCube {
   trigger: Function;
   on: Function;
   off: Function;
+  resolutionInfo: ResolutionInfo;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -82,17 +82,14 @@ class DataCube {
 
   constructor(
     upperBoundary: Vector3,
-    resolutionsLength: number,
+    resolutionInfo: ResolutionInfo,
     elementClass: ElementClass,
     isSegmentation: boolean,
   ) {
     this.upperBoundary = upperBoundary;
     this.elementClass = elementClass;
     this.isSegmentation = isSegmentation;
-
-    this.ZOOM_STEP_COUNT = resolutionsLength;
-
-    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
+    this.resolutionInfo = resolutionInfo;
 
     _.extend(this, BackboneEvents);
 
@@ -108,15 +105,13 @@ class DataCube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
-    const resolutions = getResolutions(Store.getState().dataset);
-    for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      const resolution = resolutions[i];
+    for (const [resolutionIndex, resolution] of resolutionInfo.getResolutionsWithIndices()) {
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
         Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
-      this.cubes[i] = new CubeEntry(zoomedCubeBoundary);
+      this.cubes[resolutionIndex] = new CubeEntry(zoomedCubeBoundary);
     }
 
     const shouldBeRestrictedByTracingBoundingBox = () => {
@@ -128,14 +123,14 @@ class DataCube {
       shouldBeRestrictedByTracingBoundingBox()
         ? getSomeTracing(Store.getState().tracing).boundingBox
         : null,
-      this,
+      this.upperBoundary,
     );
 
     listenToStoreProperty(
       state => getSomeTracing(state.tracing).boundingBox,
       boundingBox => {
         if (shouldBeRestrictedByTracingBoundingBox()) {
-          this.boundingBox = new BoundingBox(boundingBox, this);
+          this.boundingBox = new BoundingBox(boundingBox, this.upperBoundary);
         }
       },
     );
@@ -193,7 +188,7 @@ class DataCube {
   }
 
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
-    if (zoomStep >= this.ZOOM_STEP_COUNT) {
+    if (this.cubes[zoomStep] == null) {
       return false;
     }
 
@@ -219,7 +214,7 @@ class DataCube {
       return this.getNullBucket(address);
     }
 
-    let bucket = this.getBucket(address);
+    let bucket = this.getBucket(address, true);
     if (bucket instanceof NullBucket) {
       bucket = this.createBucket(address);
     }
@@ -228,8 +223,8 @@ class DataCube {
   }
 
   // Returns the Bucket object if it exists, or NULL_BUCKET otherwise.
-  getBucket(address: Vector4): Bucket {
-    if (!this.isWithinBounds(address)) {
+  getBucket(address: Vector4, skipBoundsCheck: boolean = false): Bucket {
+    if (!skipBoundsCheck && !this.isWithinBounds(address)) {
       return this.getNullBucket(address);
     }
 
@@ -246,9 +241,7 @@ class DataCube {
 
   createBucket(address: Vector4): Bucket {
     const bucket = new DataBucket(this.elementClass, address, this.temporalBucketManager, this);
-    bucket.on({
-      bucketLoaded: () => this.trigger("bucketLoaded", address),
-    });
+    bucket.on("bucketLoaded", () => this.trigger("bucketLoaded", address));
     this.addBucketToGarbageCollection(bucket);
 
     const bucketIndex = this.getBucketIndex(address);
@@ -267,7 +260,7 @@ class DataCube {
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (let i = 0; i < 2 * this.bucketCount; i++) {
+      for (let i = 0; i < this.bucketCount; i++) {
         this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
         if (this.buckets[this.bucketIterator].shouldCollect()) {
           break;
@@ -275,9 +268,14 @@ class DataCube {
       }
 
       if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        console.error(
-          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.",
-        );
+        const errorMessage =
+          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
+        console.error(errorMessage);
+        ErrorHandling.notify(new Error(errorMessage), {
+          elementClass: this.elementClass,
+          isSegmentation: this.isSegmentation,
+          resolutionInfo: this.resolutionInfo,
+        });
       }
 
       this.collectBucket(this.buckets[this.bucketIterator]);
@@ -293,6 +291,8 @@ class DataCube {
   }
 
   collectAllBuckets(): void {
+    this.pullQueue.clear();
+    this.pullQueue.abortRequests();
     for (const bucket of this.buckets) {
       if (bucket != null) {
         this.collectBucket(bucket);
@@ -323,7 +323,7 @@ class DataCube {
           if (
             Math.sqrt((x - 100) * (x - 100) + (y - 100) * (y - 100) + (z - 100) * (z - 100)) <= 20
           ) {
-            this.labelVoxel([x, y, z], 5);
+            this.labelVoxelInResolution([x, y, z], 0, 5);
           }
         }
       }
@@ -332,29 +332,36 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  labelVoxels(iterator: VoxelIterator, label: number, activeCellId?: ?number = null): void {
-    while (iterator.hasNext) {
-      const voxel = iterator.getNext();
-      this.labelVoxel(voxel, label, activeCellId);
+  labelVoxelInAllResolutions(voxel: Vector3, label: number, activeCellId: ?number) {
+    // This function is only provided for the wK front-end api and should not be used internally,
+    // since it only operates on one voxel and therefore is not performance-optimized.
+    // Please make use of a LabeledVoxelsMap instead.
+    for (const [resolutionIndex] of this.resolutionInfo.getResolutionsWithIndices()) {
+      this.labelVoxelInResolution(voxel, label, resolutionIndex, activeCellId);
     }
 
     this.triggerPushQueue();
   }
 
-  labelVoxel(voxel: Vector3, label: number, activeCellId: ?number): void {
+  labelVoxelInResolution(
+    voxel: Vector3,
+    label: number,
+    zoomStep: number,
+    activeCellId: ?number,
+  ): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
     }
     if (voxelInCube) {
-      const address = this.positionToBaseAddress(voxel);
+      const address = this.positionToZoomedAddress(voxel, zoomStep);
       const bucket = this.getOrCreateBucket(address);
       if (bucket instanceof DataBucket) {
-        const voxelIndex = this.getVoxelIndex(voxel);
+        const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
         let shouldUpdateVoxel = true;
         if (activeCellId != null) {
-          const voxelValue = this.getMappedDataValue(voxel);
+          const voxelValue = this.getMappedDataValue(voxel, zoomStep);
           shouldUpdateVoxel = activeCellId === voxelValue;
         }
 
@@ -377,31 +384,37 @@ class DataCube {
   floodFill(
     seedVoxel: Vector3,
     cellId: number,
-    get3DAddress: (Vector2, Vector3) => Vector3,
+    get3DAddress: Vector2 => Vector3,
     get2DAddress: Vector3 => Vector2,
     dimensionIndices: DimensionMap,
     viewportBoundings: BoundingBoxType,
-    zoomStep: number = 0,
-  ) {
+    zoomStep: number,
+  ): ?LabeledVoxelsMap {
     // This flood-fill algorithm works in two nested levels and uses a list of buckets to flood fill.
     // On the inner level a bucket is flood-filled  and if the iteration of the buckets data
     // reaches an neighbour bucket, this bucket is added to this list of buckets to flood fill.
     // The outer level simply iterates over all  buckets in the list and triggers the bucket-wise flood fill.
+    // Additionally a map is created that saves all labeled voxels for each bucket. This map is returned at the end.
     //
-    // Note: It is possible that a bucket is multiple times added to the address. This is intended
-    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter is somewhere else.
+    // Note: It is possible that a bucket is multiple times added to the list of buckets. This is intended
+    // because a border of the "neighbour volume shape" might leave the neighbour bucket and enter it somewhere else.
     // If it would not be possible to have the same neighbour bucket in the list multiple times,
     // not all of the target area in the neighbour bucket might be filled.
-    const bucketsToAddToPushQueue = new Set();
+    const bucketsWithLabeledVoxelsMap: LabeledVoxelsMap = new Map();
     const seedBucketAddress = this.positionToZoomedAddress(seedVoxel, zoomStep);
     const seedBucket = this.getOrCreateBucket(seedBucketAddress);
     if (seedBucket.type === "null") {
-      return;
+      return null;
     }
-    const seedVoxelIndex = this.getVoxelIndex(seedVoxel);
+    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+      throw new Error(
+        `DataCube.floodFill was called with a zoomStep of ${zoomStep} which does not exist for the current resolution.`,
+      );
+    }
+    const seedVoxelIndex = this.getVoxelIndex(seedVoxel, zoomStep);
     const sourceCellId = seedBucket.getOrCreateData()[seedVoxelIndex];
     if (sourceCellId === cellId) {
-      return;
+      return null;
     }
     const bucketsToFill: Array<[DataBucket, Vector3]> = [
       [seedBucket, this.getVoxelOffset(seedVoxel, zoomStep)],
@@ -416,7 +429,7 @@ class DataCube {
         continue;
       }
       const bucketData = currentBucket.getOrCreateData();
-      const initialVoxelIndex = this.getVoxelIndex(initialVoxelInBucket, zoomStep);
+      const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialVoxelInBucket);
       if (bucketData[initialVoxelIndex] !== sourceCellId) {
         // Ignoring neighbour buckets whose cellId at the initial voxel does not match the source cell id.
         continue;
@@ -425,8 +438,18 @@ class DataCube {
       currentBucket.markAndAddBucketForUndo();
       // Mark the initial voxel.
       bucketData[initialVoxelIndex] = cellId;
+      // Create an array saving the labeled voxel of the current slice for the current bucket, if there isn't already one.
+      const currentLabeledVoxelMap =
+        bucketsWithLabeledVoxelsMap.get(currentBucket.zoomedAddress) ||
+        new Uint8Array(constants.BUCKET_WIDTH ** 2).fill(0);
+      const markVoxelOfSliceAsLabeled = ([firstCoord, secondCoord]) => {
+        currentLabeledVoxelMap[firstCoord * constants.BUCKET_WIDTH + secondCoord] = 1;
+      };
+
       // Use a VoxelNeighborStack2D to iterate over the bucket in 2d and using bucket-local addresses and not global addresses.
-      const neighbourVoxelStack = new VoxelNeighborStack2D(get2DAddress(initialVoxelInBucket));
+      const initialVoxelInSlice = get2DAddress(initialVoxelInBucket);
+      markVoxelOfSliceAsLabeled(initialVoxelInSlice);
+      const neighbourVoxelStack = new VoxelNeighborStack2D(initialVoxelInSlice);
       // Iterating over all neighbours from the initialAddress.
       while (!neighbourVoxelStack.isEmpty()) {
         const neighbours = neighbourVoxelStack.popVoxelAndGetNeighbors();
@@ -442,34 +465,35 @@ class DataCube {
             neighbourBucketAddress,
             adjustedVoxel: adjustedNeighbourVoxel,
           } = currentBucket.is2DVoxelInsideBucket(neighbourVoxel, dimensionIndices, zoomStep);
-          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel, seedVoxel);
+          const neighbourVoxel3D = get3DAddress(adjustedNeighbourVoxel);
           if (isVoxelOutside) {
             // Add the bucket to the list of buckets to flood fill.
             const neighbourBucket = this.getOrCreateBucket(neighbourBucketAddress);
             if (neighbourBucket.type !== "null") {
-              bucketsToFill.push([
-                neighbourBucket,
-                this.getVoxelOffset(neighbourVoxel3D, zoomStep),
-              ]);
+              bucketsToFill.push([neighbourBucket, neighbourVoxel3D]);
             }
           } else {
             // Label the current neighbour and add it to the neighbourVoxelStack to iterate over its neighbours.
-            const neighbourVoxelIndex = this.getVoxelIndex(neighbourVoxel3D, zoomStep);
+            const neighbourVoxelIndex = this.getVoxelIndexByVoxelOffset(neighbourVoxel3D);
             if (bucketData[neighbourVoxelIndex] === sourceCellId) {
               bucketData[neighbourVoxelIndex] = cellId;
+              markVoxelOfSliceAsLabeled(neighbourVoxel);
               neighbourVoxelStack.pushVoxel(neighbourVoxel);
             }
           }
         }
       }
-      bucketsToAddToPushQueue.add(currentBucket);
+      bucketsWithLabeledVoxelsMap.set(currentBucket.zoomedAddress, currentLabeledVoxelMap);
     }
-    Store.dispatch(finishAnnotationStrokeAction());
-    for (const bucket of bucketsToAddToPushQueue.values()) {
+    for (const bucketZoomedAddress of bucketsWithLabeledVoxelsMap.keys()) {
+      const bucket = this.getBucket(bucketZoomedAddress);
+      if (bucket.type === "null") {
+        continue;
+      }
       this.pushQueue.insert(bucket);
       bucket.trigger("bucketLabeled");
     }
-    this.triggerPushQueue();
+    return bucketsWithLabeledVoxelsMap;
   }
 
   setBucketData(zoomedAddress: Vector4, data: Uint8Array) {
@@ -490,7 +514,23 @@ class DataCube {
     return this.getBucket(this.positionToZoomedAddress(voxel, zoomStep)).hasData();
   }
 
+  getNextUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+    const resolutions = getResolutions(Store.getState().dataset);
+    let usableZoomStep = zoomStep;
+    while (
+      position &&
+      usableZoomStep < resolutions.length - 1 &&
+      !this.hasDataAtPositionAndZoomStep(position, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    return usableZoomStep;
+  }
+
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {
+    if (!this.resolutionInfo.hasIndex(zoomStep)) {
+      return 0;
+    }
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
@@ -515,14 +555,19 @@ class DataCube {
     return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null, zoomStep);
   }
 
-  getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
+  getVoxelIndexByVoxelOffset([x, y, z]: Vector3 | Float32Array): number {
     return x + y * constants.BUCKET_WIDTH + z * constants.BUCKET_WIDTH ** 2;
   }
 
+  /*
+    Given a global coordinate `voxel`, this method returns the coordinate
+    within the bucket to which `voxel` belongs.
+    So, the returned value for x, y and z will be between 0 and 32.
+   */
   getVoxelOffset(voxel: Vector3, zoomStep: number = 0): Vector3 {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
+    const resolution = this.resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
@@ -534,12 +579,12 @@ class DataCube {
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
-  positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
+  positionToZoomedAddress(position: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
     return globalPositionToBucketPosition(
       position,
       getResolutions(Store.getState().dataset),
-      resolutionIndex,
+      zoomStep,
     );
   }
 

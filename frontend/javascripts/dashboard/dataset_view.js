@@ -5,7 +5,7 @@ import { Link, useHistory } from "react-router-dom";
 import { Badge, Button, Radio, Col, Dropdown, Icon, Input, Menu, Row, Spin } from "antd";
 import { PropTypes } from "@scalableminds/prop-types";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import { OptionCard } from "admin/onboarding";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
@@ -155,6 +155,7 @@ function DatasetView(props: Props) {
         isUserTeamManager={Utils.isUserTeamManager(user)}
         isUserDatasetManager={Utils.isUserDatasetManager(user)}
         datasetFilteringMode={datasetFilteringMode}
+        updateDataset={context.updateDataset}
       />
     );
   }

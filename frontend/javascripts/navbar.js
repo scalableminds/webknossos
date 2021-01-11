@@ -4,7 +4,7 @@ import { Link, withRouter, type RouterHistory } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
-import type { APIUser } from "admin/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
@@ -108,6 +108,11 @@ function AdministrationSubMenu({ collapse, ...menuProps }) {
       <Menu.Item key="/taskTypes">
         <Link to="/taskTypes">Task Types</Link>
       </Menu.Item>
+      {features().jobsEnabled && (
+        <Menu.Item key="/jobs">
+          <Link to="/jobs">Processing Jobs</Link>
+        </Menu.Item>
+      )}
       <Menu.Item key="/scripts">
         <Link to="/scripts">Scripts</Link>
       </Menu.Item>

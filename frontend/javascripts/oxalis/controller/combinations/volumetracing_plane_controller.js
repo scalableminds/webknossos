@@ -26,8 +26,10 @@ import {
   copySegmentationLayerAction,
   inferSegmentationInViewportAction,
   setActiveCellAction,
+  resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutionInfoOfSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   getVolumeTool,
   getContourTracingMode,
@@ -37,7 +39,7 @@ import { movePlaneFlycamOrthoAction, setPositionAction } from "oxalis/model/acti
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 // TODO: Build proper UI for this
 window.isAutomaticBrushEnabled = false;
@@ -86,8 +88,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (
         (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-        (contourTracingMode === ContourModeEnum.DRAW ||
-          contourTracingMode === ContourModeEnum.DRAW_OVERWRITE)
+        contourTracingMode === ContourModeEnum.DRAW
       ) {
         Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
       }
@@ -97,25 +98,19 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-        if (event.ctrlKey) {
-          if (isAutomaticBrushEnabled()) {
-            return;
-          }
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
-        } else {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW_OVERWRITE));
+        if (event.ctrlKey && isAutomaticBrushEnabled()) {
+          return;
         }
+        Store.dispatch(setContourTracingModeAction(ContourModeEnum.DRAW));
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
     },
 
     leftMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
-
-      Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
-
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
+        Store.dispatch(resetContourAction());
       }
     },
 
@@ -127,8 +122,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
 
       if (
         (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-        (contourTracingMode === ContourModeEnum.DELETE_FROM_ACTIVE_CELL ||
-          contourTracingMode === ContourModeEnum.DELETE_FROM_ANY_CELL)
+        contourTracingMode === ContourModeEnum.DELETE
       ) {
         Store.dispatch(addToLayerAction(calculateGlobalPos(pos)));
       }
@@ -138,11 +132,7 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
       if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-        if (event.ctrlKey) {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ANY_CELL));
-        } else {
-          Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE_FROM_ACTIVE_CELL));
-        }
+        Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
         Store.dispatch(startEditingAction(calculateGlobalPos(pos), plane));
       }
     },
@@ -150,29 +140,39 @@ export function getPlaneMouseControls(_planeId: OrthoView): * {
     rightMouseUp: () => {
       const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
 
-      Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
-
       if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
         Store.dispatch(finishEditingAction());
-        Store.dispatch(setContourTracingModeAction(ContourModeEnum.IDLE));
+        Store.dispatch(resetContourAction());
       }
     },
 
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      if (event.shiftKey && !event.ctrlKey) {
+      const tool = Utils.enforce(getVolumeTool)(Store.getState().tracing.volume);
+
+      const shouldPickCell =
+        tool === VolumeToolEnum.PICK_CELL || (event.shiftKey && !event.ctrlKey);
+
+      const shouldFillCell = tool === VolumeToolEnum.FILL_CELL || (event.shiftKey && event.ctrlKey);
+
+      if (shouldPickCell) {
         const segmentation = Model.getSegmentationLayer();
         if (!segmentation) {
           return;
         }
+        const storeState = Store.getState();
+        const logZoomStep = getRequestLogZoomStep(storeState);
+        const resolutionInfo = getResolutionInfoOfSegmentationLayer(storeState.dataset);
+        const existingZoomStep = resolutionInfo.getClosestExistingIndex(logZoomStep);
+
         const cellId = segmentation.cube.getMappedDataValue(
           calculateGlobalPos(pos),
-          getRequestLogZoomStep(Store.getState()),
+          existingZoomStep,
         );
         if (cellId > 0) {
           Store.dispatch(setActiveCellAction(cellId));
           isosurfaceLeftClick(pos, plane, event);
         }
-      } else if (event.shiftKey && event.ctrlKey) {
+      } else if (shouldFillCell) {
         Store.dispatch(floodFillAction(calculateGlobalPos(pos), plane));
       } else if (event.metaKey) {
         if (isAutomaticBrushEnabled()) {

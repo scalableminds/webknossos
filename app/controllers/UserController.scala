@@ -1,6 +1,6 @@
 package controllers
 
-import javax.inject.Inject
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
@@ -9,8 +9,7 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.{UserAwareRequestLogging, WkEnv}
-import com.mohiva.play.silhouette.api.Silhouette
+import oxalis.security.WkEnv
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
@@ -18,6 +17,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class UserController @Inject()(userService: UserService,

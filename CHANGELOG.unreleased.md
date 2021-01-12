@@ -19,7 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed a bug where importing NMLs failed if they had unescaped greater-than signs inside of attributes. [#5003](https://github.com/scalableminds/webknossos/pull/5003)
-- Mitigate errors concerning localStorage quotas in the datasets dashboard. [#5038](https://github.com/scalableminds/webknossos/issues/5038)
+- Mitigate errors concerning localStorage quotas in the datasets dashboard. [#5039](https://github.com/scalableminds/webknossos/pull/5039)
 
 ### Removed
 -

@@ -71,6 +71,7 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       // The deprecated cache key can still block a considerable amount of data in the localStorage (around 2 MB
       // for some wk instances while the localStorage quota is at 5 MB for Chrome).
       UserLocalStorage.removeItem(oldWkDatasetsCacheKey);
+      UserLocalStorage.removeItem(oldWkDatasetsCacheKey, false);
       datasetCache.set(newDatasets);
       if (applyUpdatePredicate(newDatasets)) {
         setDatasets(newDatasets);

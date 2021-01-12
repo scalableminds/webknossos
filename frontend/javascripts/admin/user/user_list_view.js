@@ -9,7 +9,7 @@ import _ from "lodash";
 import moment from "moment";
 
 import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
-import { InviteUsersPopover } from "admin/onboarding";
+import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
@@ -42,7 +42,7 @@ type State = {
   selectedUserIds: Array<string>,
   isExperienceModalVisible: boolean,
   isTeamRoleModalVisible: boolean,
-  isInvitePopoverVisible: boolean,
+  isInviteModalVisible: boolean,
   singleSelectedUser: ?APIUser,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
@@ -64,7 +64,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     selectedUserIds: [],
     isExperienceModalVisible: false,
     isTeamRoleModalVisible: false,
-    isInvitePopoverVisible: false,
+    isInviteModalVisible: false,
     activationFilter: ["true"],
     searchQuery: "",
     singleSelectedUser: null,
@@ -216,7 +216,7 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
     const noUsersMessage = (
       <React.Fragment>
         {"You can "}
-        <a onClick={() => this.setState({ isInvitePopoverVisible: true })}>invite more users</a>
+        <a onClick={() => this.setState({ isInviteModalVisible: true })}>invite more users</a>
         {" to join your organization. After the users joined, you need to activate them manually."}
       </React.Fragment>
     );
@@ -298,17 +298,20 @@ class UserListView extends React.PureComponent<PropsWithRouter, State> {
           >
             Change Experience
           </Button>
-          <InviteUsersPopover
-            organizationName={this.props.activeUser.organization}
-            visible={this.state.isInvitePopoverVisible}
-            handleVisibleChange={visible => {
-              this.setState({ isInvitePopoverVisible: visible });
-            }}
+          <Button
+            icon="user-add"
+            style={marginRight}
+            onClick={() => this.setState({ isInviteModalVisible: true })}
           >
-            <Button icon="user-add" style={marginRight}>
-              Invite Users
-            </Button>
-          </InviteUsersPopover>
+            Invite Users
+          </Button>
+          <InviteUsersModal
+            organizationName={this.props.activeUser.organization}
+            visible={this.state.isInviteModalVisible}
+            handleVisibleChange={visible => {
+              this.setState({ isInviteModalVisible: visible });
+            }}
+          />
         </div>
         <div style={{ marginBottom: 20 }}>
           {activationFilterWarning}

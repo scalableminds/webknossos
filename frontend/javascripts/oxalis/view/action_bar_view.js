@@ -180,6 +180,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           onCancel={() => this.setState({ isNewLayoutModalVisible: false })}
         />
         <AuthenticationModal
+          alertMessage="You have to register or login to create an annotation."
           onLoggedIn={() => {
             this.setState({ isAuthenticationModalVisible: false });
             this.createTracing(dataset);

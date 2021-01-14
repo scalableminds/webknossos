@@ -11,7 +11,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.01.0...HEAD)
 
 ### Added
-- Added the possibility to generate skeletons from an HDF5 agglomerate file mapping on-the-fly. With an activated agglomerate file mapping, use `Shift + Middle Mouse Click` to import a skeleton of the cell into the annotation. Alternatively, use the button in the segmentation tab to import a skeleton of the centered cell into the annotation.
+- Added the possibility to generate skeletons from an HDF5 agglomerate file mapping on-the-fly. With an activated agglomerate file mapping, use `Shift + Middle Mouse Click` to import a skeleton of the cell into the annotation. Alternatively, use the button in the segmentation tab to import a skeleton of the centered cell into the annotation. [#4958](https://github.com/scalableminds/webknossos/pull/4958)
+- Added a cleanup procedure for erroneous uploads, so failed uploads can be retried without changing the dataset name. [#4999](https://github.com/scalableminds/webknossos/pull/4999)
 
 ### Changed
 - The brush tool is disabled in low magnifications (magnification 16 and lower) to avoid performance problems when annotating. [#5017](https://github.com/scalableminds/webknossos/pull/5017)

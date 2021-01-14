@@ -275,7 +275,6 @@ export type DatasetConfiguration = {|
     [name: string]: DatasetLayerConfiguration,
   },
   +highlightHoveredCellId: boolean,
-  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,

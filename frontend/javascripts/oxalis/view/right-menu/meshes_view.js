@@ -84,7 +84,6 @@ class EditMeshModal extends React.PureComponent<
 const mapStateToProps = (state: OxalisState) => ({
   meshes: state.tracing != null ? state.tracing.meshes : [],
   isImporting: state.uiInformation.isImportingMesh,
-  isHybrid: state.tracing.volume != null && state.tracing.skeleton != null,
   isosurfaces: state.isosurfaces,
   datasetConfiguration: state.datasetConfiguration,
   mappingColors: state.temporaryConfiguration.activeMapping.mappingColors,
@@ -135,7 +134,6 @@ type OwnProps = {|
 type StateProps = {|
   meshes: Array<MeshMetaData>,
   isImporting: boolean,
-  isHybrid: true,
 |};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
@@ -293,6 +291,7 @@ class MeshesView extends React.Component<
               backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
             }}
             onClick={() => {
+              this.props.changeActiveIsosurfaceId(segmentId);
               moveTo(seedPosition);
             }}
           >

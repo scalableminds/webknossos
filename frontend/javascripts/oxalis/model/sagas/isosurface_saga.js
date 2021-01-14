@@ -116,7 +116,8 @@ function getNeighborPosition(
 // (active cell id is only defined in volume annotations, mapping support
 // for datasets is limited in volume tracings etc.), we use another state
 // variable for the "active cell" in view mode. The cell can be changed via
-// shift+click (similar to the volume tracing mode).
+// shift + click on the isosurface, by clicking on its list entry in the
+// meshes tab or by clicking on the "load isosurface for centered cell" button.
 let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
@@ -126,7 +127,6 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-  console.log("change");
   yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
 }
 
@@ -151,25 +151,22 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
-  console.log("ensure", cellId, seedPosition, maybeFlycamAction);
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 
 function* getInfoForIsosurfaceLoading(): Saga<{
-  renderIsosurfaces: boolean,
   dataset: APIDataset,
   layer: ?DataLayer,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
 }> {
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
-  return { renderIsosurfaces, dataset, layer, zoomStep, resolutionInfo };
+  return { dataset, layer, zoomStep, resolutionInfo };
 }
 
 function* loadIsosurfaceForSegmentId(
@@ -177,13 +174,8 @@ function* loadIsosurfaceForSegmentId(
   seedPosition: ?Vector3,
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
-  const { renderIsosurfaces, dataset, layer, zoomStep, resolutionInfo } = yield* call(
-    getInfoForIsosurfaceLoading,
-  );
+  const { dataset, layer, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading);
 
-  if (!renderIsosurfaces) {
-    return;
-  }
   if (!layer) {
     return;
   }
@@ -376,10 +368,6 @@ function* markEditedCellAsDirty(): Saga<void> {
 }
 
 function* refreshIsosurfaces(): Saga<void> {
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
-    return;
-  }
   yield* put(saveNowAction());
   // We reload all cells that got modified till the start of reloading.
   // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
@@ -418,10 +406,6 @@ function* refreshIsosurfaces(): Saga<void> {
 
 function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
   const { cellId } = action;
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
-    return;
-  }
 
   const threeDMap = isosurfacesMap.get(cellId);
   const isosurfacePositions = threeDMap

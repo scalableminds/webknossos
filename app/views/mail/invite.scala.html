@@ -1,0 +1,15 @@
+@(senderName: String, organizationDisplayName: String, inviteTokenValue: String, uri: String, autoVerify: Boolean )
+
+@emailBaseTemplate() {
+
+  <p>Hello,</p>
+
+  <p>
+    You have been invited by @senderName to join their organization “@organizationDisplayName” in webKnossos.
+  </p>
+  <p>
+    Please visit <a href="@{uri}/invite/@inviteTokenValue">@{uri}/invite/@inviteTokenValue</a> to sign up or join them with an existing webKnossos account.
+  </p>
+
+  <p>With best regards,<br />Your webKnossos Team</p>
+}

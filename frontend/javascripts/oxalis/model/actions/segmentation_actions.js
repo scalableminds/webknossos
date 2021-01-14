@@ -1,5 +1,4 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
 
 import type { Vector3 } from "oxalis/constants";
 

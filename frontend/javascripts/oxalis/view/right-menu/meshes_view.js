@@ -129,6 +129,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 });
 
 type OwnProps = {|
+  // eslint-disable-next-line react/no-unused-prop-types
   portalKey: string,
 |};
 type StateProps = {|

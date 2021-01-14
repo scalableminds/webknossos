@@ -49,8 +49,7 @@ object Token {
         b.expirationDateTime,
         b.idleTimeout,
         tokenType,
-        System.currentTimeMillis(),
-        false
+        System.currentTimeMillis()
       ))
 }
 
@@ -135,7 +134,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for { _ <- run(q.update(true)) } yield ()
   }
 
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) =
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.tokens set
         logininfo_providerkey = ${newEmail}

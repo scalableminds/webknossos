@@ -10,6 +10,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.UserService
+import net.liftweb.common.Full
 import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
@@ -43,6 +44,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
         _ <- dataSetService
           .assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
         _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
+        _ <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.team, dataStore)
       } yield Ok
     }
   }
@@ -110,5 +112,21 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
           Fox.successful(JsonBadRequest(JsError.toJson(e)))
       }
     }
+  }
+
+  def deleteErroneous(name: String) = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name) { _ =>
+      for {
+        datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
+        existingDataset = dataSetDAO
+          .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
+          .futureBox
+        _ <- existingDataset.flatMap {
+          case Full(dataset) => dataSetDAO.deleteDataset(dataset._id)
+          case _             => Fox.successful(())
+        }
+      } yield Ok
+    }
+
   }
 }

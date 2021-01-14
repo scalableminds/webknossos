@@ -12,12 +12,14 @@ POST          /maintenance                                                      
 DELETE        /maintenance                                                      controllers.MaintenanceController.closeMaintenance
 
 # Authentication
-GET           /auth/autoLogin                                                   controllers.Authentication.autoLogin
-POST          /auth/register                                                    controllers.Authentication.handleRegistration
+POST          /auth/register                                                    controllers.Authentication.register
+POST          /auth/joinOrganization/:inviteToken                               controllers.Authentication.joinOrganization(inviteToken: String)
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/token                                                       controllers.Authentication.getToken
 DELETE        /auth/token                                                       controllers.Authentication.deleteToken
-GET           /auth/switch                                                      controllers.Authentication.switchTo(to: String)
+GET           /auth/switch                                                      controllers.Authentication.switchMultiUser(to: String)
+POST          /auth/switchOrganization/:organizationName                        controllers.Authentication.switchOrganization(organizationName: String)
+POST          /auth/sendInvites                                                 controllers.Authentication.sendInvites
 POST          /auth/startResetPassword                                          controllers.Authentication.handleStartResetPassword
 POST          /auth/changePassword                                              controllers.Authentication.changePassword
 POST          /auth/resetPassword                                               controllers.Authentication.handleResetPassword
@@ -81,6 +83,7 @@ PUT           /datastores/:name/datasources                                     
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
 POST          /datastores/:name/addInitialTeams                                 controllers.WKDataStoreController.addDataSetInitialTeams(name: String, token: String, dataSetName: String)
+POST          /datastores/:name/deleteErroneous                                 controllers.WKDataStoreController.deleteErroneous(name: String)
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                       controllers.DataStoreController.create
 DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)
@@ -174,6 +177,8 @@ GET           /statistics/webknossos                                            
 GET           /statistics/users                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 #Organizations
+GET           /organizations                                                    controllers.OrganizationController.list
+GET           /organizations/byInvite/:inviteToken                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                            controllers.OrganizationController.getDefault
 GET           /organizationsIsEmpty                                             controllers.OrganizationController.organizationsIsEmpty
 GET           /organizations/:organizationName                                  controllers.OrganizationController.get(organizationName: String)

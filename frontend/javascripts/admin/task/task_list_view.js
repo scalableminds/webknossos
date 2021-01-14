@@ -152,7 +152,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         }}
         onCancel={() => this.setState({ isAnonymousTaskLinkModalVisible: false })}
       >
-        <TextArea autosize={{ minRows: 2, maxRows: 10 }} defaultValue={tasksString} />
+        <TextArea autoSize={{ minRows: 2, maxRows: 10 }} defaultValue={tasksString} />
       </Modal>
     );
   }

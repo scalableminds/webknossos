@@ -15,7 +15,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
 import play.api.mvc.RequestHeader
-import utils.WkConf
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,8 +29,9 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     extends BearerTokenAuthenticatorService(settings, repository, idGenerator, clock)
     with FoxImplicits {
 
-  val resetPasswordExpiry = conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
-  val dataStoreExpiry = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
+  private val resetPasswordExpiry: FiniteDuration =
+    conf.Silhouette.TokenAuthenticator.resetPasswordExpiry.toMillis millis
+  val dataStoreExpiry: FiniteDuration = conf.Silhouette.TokenAuthenticator.dataStoreExpiry.toMillis millis
 
   def create(loginInfo: LoginInfo, tokenType: TokenType)(
       implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
@@ -76,7 +77,8 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     for {
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
       _ <- bool2Fox(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
-      user <- userService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
+      idValidated <- ObjectId.parse(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
+      user <- userService.findOneById(idValidated, useCache = true)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String])(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {
@@ -87,6 +89,6 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   def remove(tokenValue: String): Fox[Unit] =
     repository.remove(tokenValue)
 
-  def removeExpiredTokens(implicit ctx: DBAccessContext) =
+  def removeExpiredTokens(implicit ctx: DBAccessContext): Fox[Unit] =
     repository.deleteAllExpired
 }

@@ -5,6 +5,7 @@
 import Maybe from "data.maybe";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { Tracing, VolumeTracing, OxalisState } from "oxalis/store";
+import { VolumeToolEnum } from "oxalis/constants";
 import type { VolumeTool, ContourMode } from "oxalis/constants";
 import type { HybridServerTracing, ServerVolumeTracing } from "types/api_flow_types";
 
@@ -44,13 +45,26 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
   return contourTracingMode;
 }
 
-export function isVolumeTraceToolDisallowed(state: OxalisState) {
+const MAG_THRESHOLDS_FOR_ZOOM: { [VolumeTool]: number } = {
+  [VolumeToolEnum.TRACE]: 1,
+  [VolumeToolEnum.BRUSH]: 3,
+};
+export function isVolumeAnnotationDisallowedForZoom(tool: VolumeTool, state: OxalisState) {
   if (state.tracing.volume == null) {
     return true;
   }
-  // The current resolution is too high to allow the trace tool
+
+  const threshold = MAG_THRESHOLDS_FOR_ZOOM[tool];
+
+  if (threshold == null) {
+    // If there is no threshold for the provided tool, it doesn't need to be
+    // disabled.
+    return false;
+  }
+
+  // The current resolution is too high for the tool
   // because too many voxels could be annotated at the same time.
-  const isZoomStepTooHigh = getRequestLogZoomStep(state) > 1;
+  const isZoomStepTooHigh = getRequestLogZoomStep(state) > threshold;
   return isZoomStepTooHigh;
 }
 

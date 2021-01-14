@@ -298,6 +298,19 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
+
+  def deleteDataset(datasetId: ObjectId): Fox[Unit] = {
+    val deleteResolutionsQuery =
+      sqlu"delete from webknossos.dataSet_resolutions where _dataset = $datasetId"
+    val deleteLayersQuery =
+      sqlu"delete from webknossos.dataSet_layers where _dataset = $datasetId"
+    val deleteDatasetQuery =
+      sqlu"delete from webknossos.datasets where _id = $datasetId"
+
+    for {
+      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, deleteDatasetQuery)).transactionally)
+    } yield ()
+  }
 }
 
 class DataSetResolutionsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

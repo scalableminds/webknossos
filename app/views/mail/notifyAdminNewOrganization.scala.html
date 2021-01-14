@@ -1,10 +1,10 @@
-@( organizationName: String, creatorMail: String, domain: String )
+@( organizationDisplayName: String, creatorMail: String, domain: String )
 
 @emailBaseTemplate() {
   <p>Hi,</p>
 
   <p>
-    we noticed that @creatorMail created a new webKnossos organization named “@organizationName” on <a href="@domain">@domain</a>.
+    we noticed that @creatorMail created a new webKnossos organization named “@organizationDisplayName” on <a href="@domain">@domain</a>.
   </p>
 
   <p>With best regards,<br />Your webKnossos Team</p>

@@ -14,7 +14,7 @@ You are not allowed to see data from organizations other than your own and membe
 When creating your organization, a default team with the same name will be created.
 This team is referred to as the **organization team**.
 Users that register for your organization will, by default, be assigned to that organization team.
-An organization can contain as many teams as you like. 
+An organization can contain as many teams as you like.
 Users can be assigned to multiple teams.
 Teams are useful for managing dataset access permissions or simply to organize users into logical groups.
 
@@ -31,15 +31,15 @@ There are four different roles for webKnossos users divided into global, organiz
 
   - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, they can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their own annotations or [annotations shared with them](./sharing.md).
 
-  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove users to/from their teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those. 
+  - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove users to/from their teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those.
 
-**On an organizational level:** 
+**On an organizational level:**
 
   - __Admin:__ Manage a whole organization including full access to all datasets, teams, and projects. Admins can access all administrative settings - similiar to `Team Managers` but for all teams - and have full control over all datasets - similar to `Dataset Managers`. They can promote other users to `Admin` or to `Dataset Manager` by using the `Edit Teams and Permissions` modal at the top of the user list. Admins can access all annotations, datasets, projects, tasks, etc belonging to their respective organization.
 
   - __Dataset Manager:__ Manage all datasets of an organization. Dataset Managers have full read/write access to all datasets within their respective organizations regardless of whether a dataset has been made available only to a specific team. Use this role for power users who regularly upload datasets or who need access to all datasets regardless of who created them.
   Unlike `Admins`, Dataset Managers do NOT have access to any of the administration interfaces for users, tasks, and projects.
-  
+
 
 Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the navigation bar.
 
@@ -71,11 +71,12 @@ By default, each newly uploaded dataset can only be accessed by `Admins` and `Da
 ## Registering New Users
 
 New users can signup for webKnossos by clicking on the `Register Now` button in the navigation bar.
-In the registration form, they need to select an organization, specify some basic information, and confirm acceptance of the privacy agreement.
+In the registration form, they need to specify some basic information, and confirm acceptance of the privacy agreement.
+
+If there is just one organization in the webKnossos instance, they are assigned to that organization automatically but need to be activated by an administrator, compare below.
 
 {% hint style='info' %}
-You can invite users to your specific organization, by clicking the `Invite Users` button at the top of the user list. This will open a popup containing a customized link that you can share to invite new users to your organization.
-Users that click on this link, don't need to select an organization during registration and are automatically assigned to your organization.
+You can also invite users to your webKnossos organization, by clicking the `Invite Users` button at the top of the user list. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
 ![Send an invite link to new users](./images/users_invite.png)
 {% endhint %}
@@ -83,7 +84,7 @@ Users that click on this link, don't need to select an organization during regis
 
 ## Activating New Users
 
-Newly registered users are deactivated at first and need to be activated by an admin or a team manager.
+If newly registered users did not join via custom invite link, they are deactivated at first and need to be activated by an admin or a team manager.
 By default, the user list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to activate new users.
 However, deactivated users that registered in the last 14 days, will be shown above the user list regardless and can be activated quickly from there.
 

@@ -25,6 +25,7 @@ type Context = {
   ) => Promise<void>,
 };
 
+const oldWkDatasetsCacheKey = "wk.datasets";
 const wkDatasetsCacheKey = "wk.datasets-v2";
 export const datasetCache = {
   set(datasets: APIMaybeUnimportedDataset[]): void {
@@ -66,6 +67,11 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       const newDatasets = await getDatasets(
         mapFilterModeToUnreportedParameter[datasetFilteringMode],
       );
+      // Hotfix for https://github.com/scalableminds/webknossos/issues/5038
+      // The deprecated cache key can still block a considerable amount of data in the localStorage (around 2 MB
+      // for some wk instances while the localStorage quota is at 5 MB for Chrome).
+      UserLocalStorage.removeItem(oldWkDatasetsCacheKey);
+      UserLocalStorage.removeItem(oldWkDatasetsCacheKey, false);
       datasetCache.set(newDatasets);
       if (applyUpdatePredicate(newDatasets)) {
         setDatasets(newDatasets);

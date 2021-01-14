@@ -104,7 +104,7 @@ class DatasetAddForeignView extends React.PureComponent<Props> {
                 <TextArea
                   className="input-monospace"
                   placeholder="dataStoreName, url, dataSetName"
-                  autosize={{ minRows: 1 }}
+                  autoSize={{ minRows: 1 }}
                   style={{
                     fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
                   }}

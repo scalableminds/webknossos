@@ -34,6 +34,7 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
+                                   multiUserDAO: MultiUserDAO,
                                    userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    userDataSetConfigurationDAO: UserDataSetConfigurationDAO,
@@ -66,19 +67,25 @@ Samplecountry
                  "/assets/images/oxalis.svg",
                  "Sample Organization")
   val organizationTeam = Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, true)
-  val defaultUser = User(
-    ObjectId.generate,
-    defaultOrganization._id,
+  val userId = ObjectId.generate
+  val multiUserId = ObjectId.generate
+  val defaultMultiUser = MultiUser(
+    multiUserId,
     defaultUserEmail,
+    userService.createPasswordInfo(defaultUserPassword),
+    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
+  )
+  val defaultUser = User(
+    userId,
+    multiUserId,
+    defaultOrganization._id,
     "SCM",
     "Boy",
     System.currentTimeMillis(),
     Json.toJson(UserConfiguration.default),
-    userService.createLoginInfo(defaultUserEmail),
-    userService.createPasswordInfo(defaultUserPassword),
+    userService.createLoginInfo(userId),
     isAdmin = true,
     isDatasetManager = true,
-    isSuperUser = conf.Application.Authentication.DefaultUser.isSuperUser,
     isDeactivated = false,
     lastTaskTypeId = None
   )
@@ -114,7 +121,7 @@ Samplecountry
       _ <- bool2Fox(conf.Application.insertInitialData) ?~> "initialData.notEnabled"
     } yield ()
 
-  def assertNoOrganizationsPresent =
+  def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll
       _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
@@ -125,6 +132,7 @@ Samplecountry
       case Full(_) => Fox.successful(())
       case _ =>
         for {
+          _ <- multiUserDAO.insertOne(defaultMultiUser)
           _ <- userDAO.insertOne(defaultUser)
           _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
           _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
@@ -134,13 +142,13 @@ Samplecountry
 
   def insertToken = {
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
-    tokenDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+    tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val newToken = Token(
           ObjectId.generate,
           "secretScmBoyToken",
-          LoginInfo("credentials", defaultUserEmail),
+          LoginInfo("credentials", defaultUser._id.id),
           new DateTime(System.currentTimeMillis()),
           new DateTime(System.currentTimeMillis() + expiryTime),
           None,

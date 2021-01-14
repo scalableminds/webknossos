@@ -1,12 +1,13 @@
 // @flow
 import { Avatar, Icon, Layout, Menu, Popover } from "antd";
-import { Link, withRouter, type RouterHistory } from "react-router-dom";
+import { useHistory, Link } from "react-router-dom";
 import { connect } from "react-redux";
 import React from "react";
 
+import Toast from "libs/toast";
 import type { APIUser } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
-import { getBuildInfo } from "admin/admin_rest_api";
+import { getBuildInfo, getUsersOrganizations, switchToOrganization } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import { trackVersion } from "oxalis/model/helpers/analytics";
 import { useFetch } from "libs/react_helpers";
@@ -28,10 +29,6 @@ type StateProps = {|
   hasOrganizations: boolean,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
-type PropsWithRouter = {|
-  ...Props,
-  history: RouterHistory,
-|};
 
 export const navbarHeight = 48;
 
@@ -53,16 +50,35 @@ function NavbarMenuItem({ children, ...props }) {
   );
 }
 
-function UserInitials({ activeUser }) {
+function UserInitials({ activeUser, isMultiMember }) {
   const { firstName, lastName } = activeUser;
   const initialOf = str => str.slice(0, 1).toUpperCase();
   return (
-    <Avatar
-      className="hover-effect-via-opacity"
-      style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
-    >
-      {initialOf(firstName) + initialOf(lastName)}
-    </Avatar>
+    <div style={{ position: "relative" }}>
+      <Avatar
+        className="hover-effect-via-opacity"
+        style={{ backgroundColor: "rgb(82, 196, 26)", verticalAlign: "middle" }}
+      >
+        {initialOf(firstName) + initialOf(lastName)}
+      </Avatar>
+      {isMultiMember ? (
+        <Icon
+          style={{
+            position: "absolute",
+            top: 2,
+            right: -5,
+            marginRight: 0,
+            minWidth: 12,
+            height: 12,
+            lineHeight: "12px",
+            fontSize: 12,
+            color: "#75df4a",
+          }}
+          type="swap"
+          title="You are member of multiple organizations. Click the avatar to switch between them."
+        />
+      ) : null}
+    </div>
   );
 }
 
@@ -244,12 +260,28 @@ function DashboardSubMenu({ collapse, ...other }) {
 }
 
 function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
-  const { firstName, lastName, organization } = activeUser;
+  const { firstName, lastName, organization: organizationName } = activeUser;
+  const usersOrganizations = useFetch(getUsersOrganizations, [], []);
+
+  const activeOrganization = usersOrganizations.find(org => org.name === organizationName);
+  const switchableOrganizations = usersOrganizations.filter(org => org.name !== organizationName);
+  const orgDisplayName =
+    activeOrganization != null
+      ? activeOrganization.displayName || activeOrganization.name
+      : organizationName;
+
+  const switchTo = async org => {
+    Toast.info(`Switching to ${org.displayName || org.name}`);
+    await switchToOrganization(org.name);
+  };
+
+  const isMultiMember = switchableOrganizations.length > 0;
+
   return (
     <NavbarMenuItem>
       <SubMenu
         key="loggedMenu"
-        title={<UserInitials activeUser={activeUser} />}
+        title={<UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />}
         style={{ padding: 0 }}
         className="sub-menu-without-padding vertical-center-flex-fix"
         {...other}
@@ -257,7 +289,19 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
         <Menu.Item disabled key="userName">
           {`${firstName} ${lastName}`}
         </Menu.Item>
-        <Menu.Item disabled key="organization">{`${organization}`}</Menu.Item>
+        <Menu.Item disabled key="organization">
+          {orgDisplayName}
+        </Menu.Item>
+        {isMultiMember ? (
+          /* The explicit width is a workaround for a layout bug (probably in antd) */
+          <Menu.SubMenu title="Switch Organization" style={{ width: 180 }}>
+            {switchableOrganizations.map(org => (
+              <Menu.Item key={org.name} onClick={() => switchTo(org)}>
+                {org.displayName || org.name}
+              </Menu.Item>
+            ))}
+          </Menu.SubMenu>
+        ) : null}
         <Menu.Item key="resetpassword">
           <Link to="/auth/changePassword">Change Password</Link>
         </Menu.Item>
@@ -294,13 +338,8 @@ async function getAndTrackVersion() {
   return version;
 }
 
-function Navbar({
-  activeUser,
-  isAuthenticated,
-  history,
-  isInAnnotationView,
-  hasOrganizations,
-}: PropsWithRouter) {
+function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizations }: Props) {
+  const history = useHistory();
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -437,4 +476,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   hasOrganizations: state.uiInformation.hasOrganizations,
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(Navbar));
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(Navbar);

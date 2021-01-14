@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
@@ -14,8 +15,9 @@ import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BinaryDataService(dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
+class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
     extends FoxImplicits
+    with DataSetDeleter
     with LazyLogging {
 
   lazy val cache = new DataCubeCache(maxCacheSize)
@@ -183,26 +185,4 @@ class BinaryDataService(dataBaseDir: Path, maxCacheSize: Int, val agglomerateSer
     cache.clear(matchingPredicate)
   }
 
-  def deleteOnDisk(organizationName: String, dataSetName: String): Fox[Unit] = {
-    val dataSourcePath = dataBaseDir.resolve(organizationName).resolve(dataSetName)
-    val trashPath: Path = dataBaseDir.resolve(organizationName).resolve(".trash")
-    val targetPath = trashPath.resolve(dataSetName)
-    new File(trashPath.toString).mkdirs()
-
-    logger.info(s"Deleting dataset by moving it from $dataSourcePath to $targetPath...")
-
-    try {
-      val path = Files.move(
-        dataSourcePath,
-        targetPath
-      )
-      if (path == null) {
-        throw new Exception("Deleting dataset failed")
-      }
-      logger.info(s"Successfully moved dataset from $dataSourcePath to $targetPath...")
-      Fox.successful(())
-    } catch {
-      case e: Exception => Fox.failure(s"Deleting dataset failed: ${e.toString}", Full(e))
-    }
-  }
 }

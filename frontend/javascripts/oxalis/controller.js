@@ -113,9 +113,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       .then(() => this.modelFetchDone())
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
+        const isNotFoundError = error.status === 404;
         // Don't throw errors for errors already handled by the model
-        // or when there is no logged in user since then the initialization fails anyways.
-        if (error !== HANDLED_ERROR && this.props.user != null) {
+        // or "Not Found" errors because they are already handled elsewhere.
+        if (error !== HANDLED_ERROR && !isNotFoundError) {
           Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
             sticky: true,
           });

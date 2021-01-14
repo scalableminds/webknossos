@@ -213,7 +213,7 @@ class UserService @Inject()(conf: WkConf,
       dataSetConfiguration: DataSetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> Messages(
+      dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName)(GlobalAccessContext) ?~> Messages(
         "dataSet.notFound",
         dataSetName)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)

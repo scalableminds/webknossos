@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/21.01.0...HEAD)
 
 ### Added
+- Added a context menu via *Shift & Right Click* that provides easy access to skeleton functionalities and additional information. [#4950](https://github.com/scalableminds/webknossos/pull/4950)
 - Added the possibility to generate skeletons from an HDF5 agglomerate file mapping on-the-fly. With an activated agglomerate file mapping, use `Shift + Middle Mouse Click` to import a skeleton of the cell into the annotation. Alternatively, use the button in the segmentation tab to import a skeleton of the centered cell into the annotation. [#4958](https://github.com/scalableminds/webknossos/pull/4958)
 - Added a cleanup procedure for erroneous uploads, so failed uploads can be retried without changing the dataset name. [#4999](https://github.com/scalableminds/webknossos/pull/4999)
 

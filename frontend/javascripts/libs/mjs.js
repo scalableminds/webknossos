@@ -1,3 +1,4 @@
+/* eslint-disable operator-assignment */
 // @flow
 // See
 //   https://github.com/imbcmdth/mjs/blob/master/index.js
@@ -215,6 +216,11 @@ V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   V3.sub(a, b, _tmpVec);
   V3.scale3(_tmpVec, scale, _tmpVec);
   return V3.lengthSquared(_tmpVec);
+};
+
+V3.scaledDist = function scaledDist(a, b, scale) {
+  const squaredDist = V3.scaledSquaredDist(a, b, scale);
+  return Math.sqrt(squaredDist);
 };
 
 V3.toArray = function(vec) {

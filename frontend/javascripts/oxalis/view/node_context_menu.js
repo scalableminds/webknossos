@@ -22,6 +22,8 @@ import messages from "messages";
 import { getNodeAndTree, findTreeByNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
 import { formatNumberToLength } from "libs/format_utils";
 
+/* eslint-disable react/no-unused-prop-types */
+// The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {|
   nodeContextMenuPosition: [number, number],
   clickedNodeId: ?number,
@@ -40,6 +42,7 @@ type DispatchProps = {|
 |};
 
 type StateProps = {| skeletonTracing: ?SkeletonTracing, datasetScale: Vector3 |};
+/* eslint-enable react/no-unused-prop-types */
 
 type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type NodeContextMenuOptionsProps = {| ...Props, clickedNodeId: number |};

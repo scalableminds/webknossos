@@ -415,8 +415,8 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
-      const tracing = yield* select(state => state.tracing);
-      const isViewMode = tracing.annotationType === "View";
+      const annotationType = yield* select(state => state.tracing.annotationType);
+      const isViewMode = annotationType === "View";
       if (!isViewMode) {
         // In view only mode we do not need to show the error as it is not so important and distracts the user.
         yield* call(toggleErrorHighlighting, true);

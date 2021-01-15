@@ -415,7 +415,12 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
-      yield* call(toggleErrorHighlighting, true);
+      const tracing = yield* select(state => state.tracing);
+      const isViewMode = tracing.annotationType === "View";
+      if (!isViewMode) {
+        // In view only mode we do not need to show the error as it is not so important and distracts the user.
+        yield* call(toggleErrorHighlighting, true);
+      }
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;

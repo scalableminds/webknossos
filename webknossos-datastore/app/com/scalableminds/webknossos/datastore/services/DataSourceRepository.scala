@@ -35,4 +35,10 @@ class DataSourceRepository @Inject()(
       _ = dataSources.foreach(dataSource => insert(dataSource.id, dataSource))
       _ <- webKnossosServer.reportDataSources(dataSources)
     } yield ()
+
+  def cleanUpDataSource(dataSourceId: DataSourceId): Fox[Unit] =
+    for {
+      _ <- Fox.successful(remove(dataSourceId))
+      _ <- webKnossosServer.deleteErroneousDataSource(dataSourceId)
+    } yield ()
 }

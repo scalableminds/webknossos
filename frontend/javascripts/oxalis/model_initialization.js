@@ -331,7 +331,7 @@ function initializeDataset(
     mutableDataset.dataSource.dataLayers = newDataLayers;
   });
 
-  ensureMatchingLayerResolutions(dataset);
+  ensureMatchingLayerResolutions(mutableDataset);
   Store.dispatch(setDatasetAction((mutableDataset: APIDataset)));
 }
 

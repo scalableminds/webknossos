@@ -288,11 +288,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       Modal.info({
         title,
         width: 800,
-        content: (
-          <Input.TextArea rows={20} style={jsonEditStyle}>
-            {jsonStringify(object)}
-          </Input.TextArea>
-        ),
+        content: <Input.TextArea rows={20} style={jsonEditStyle} value={jsonStringify(object)} />,
       });
     }
 

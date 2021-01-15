@@ -168,7 +168,7 @@ export default function ShareModalView(props: Props) {
         </Col>
       </Row>
       <Divider style={{ margin: "18px 0", color: "rgba(0, 0, 0, 0.65)" }}>
-        {<i className={`fas fa-${iconMap[visibility]}`} />}
+        <i className={`fas fa-${iconMap[visibility]}`} />
         Visibility
       </Divider>
       {maybeShowWarning()}

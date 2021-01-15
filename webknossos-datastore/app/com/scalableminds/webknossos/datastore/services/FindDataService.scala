@@ -154,7 +154,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
         dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
-        _ <- Fox.bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataSet.sampledOnlyBlack"
+        _ <- bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataSet.sampledOnlyBlack"
       } yield (Math.mean(dataAsDoubles), Math.stdDev(dataAsDoubles))
 
     for {

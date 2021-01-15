@@ -30,9 +30,6 @@
       media="screen"
       href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
-    @if(conf.Application.Authentication.enableDevAutoLogin){
-    <script src="/api/auth/autoLogin"></script>
-    }
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"

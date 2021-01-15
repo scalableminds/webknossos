@@ -1,6 +1,5 @@
 package models.user
 
-import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -19,19 +18,21 @@ import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
 
+object User {
+  val default_login_provider_id: String = "credentials"
+}
+
 case class User(
     _id: ObjectId,
+    _multiUser: ObjectId,
     _organization: ObjectId,
-    email: String,
     firstName: String,
     lastName: String,
     lastActivity: Long = System.currentTimeMillis(),
     userConfiguration: JsValue,
     loginInfo: LoginInfo,
-    passwordInfo: PasswordInfo,
     isAdmin: Boolean,
     isDatasetManager: Boolean,
-    isSuperUser: Boolean,
     isDeactivated: Boolean,
     created: Long = System.currentTimeMillis(),
     lastTaskTypeId: Option[ObjectId] = None,
@@ -69,17 +70,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     Fox.successful(
       User(
         ObjectId(r._Id),
+        ObjectId(r._Multiuser),
         ObjectId(r._Organization),
-        r.email,
         r.firstname,
         r.lastname,
         r.lastactivity.getTime,
         Json.parse(r.userconfiguration),
-        LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
-        PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+        LoginInfo(User.default_login_provider_id, r._Id),
         r.isadmin,
         r.isdatasetmanager,
-        r.issuperuser,
         r.isdeactivated,
         r.created.getTime,
         r.lasttasktypeid.map(ObjectId(_)),
@@ -108,17 +107,6 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
-
-  def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where email = ${email} and #${accessQuery}".as[UsersRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
 
   def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(
       implicit ctx: DBAccessContext): Fox[List[User]] =
@@ -156,6 +144,28 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
+  def findOneByOrgaAndMultiUser(organizationId: ObjectId, multiUserId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[User] =
+    for {
+      accessQuery <- readAccessQuery
+      resultList <- run(sql"""select #${columns} from #${existingCollectionName}
+                              where _multiUser = $multiUserId and _organization = $organizationId
+                              and #${accessQuery}
+                               limit 1""".as[UsersRow])
+      result <- resultList.headOption.toFox
+      parsed <- parse(result)
+    } yield parsed
+
+  def findFirstByMultiUser(multiUserId: ObjectId)(implicit tx: DBAccessContext): Fox[User] =
+    for {
+      accessQuery <- readAccessQuery
+      resultList <- run(sql"""select #${columns} from #${existingCollectionName}
+                              where _multiUser = ${multiUserId} and #${accessQuery}
+                               limit 1""".as[UsersRow])
+      result <- resultList.headOption.toFox
+      parsed <- parse(result)
+    } yield parsed
+
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       resultList <- run(
@@ -171,30 +181,25 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
+  def countIdentitiesForMultiUser(multiUserId: ObjectId): Fox[Int] =
+    for {
+      resultList <- run(sql"select count(_id) from #${existingCollectionName} where _multiUser = $multiUserId".as[Int])
+      result <- resultList.headOption
+    } yield result
+
   def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
-                     loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isDatasetManager, isSuperUser, created, isDeleted)
-                     values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(
-          u.lastActivity)},
-                     '#${sanitize(Json.toJson(u.userConfiguration).toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
-                     '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isSuperUser},
-                     ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+      _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
+                                            userConfiguration, isDeactivated, isAdmin, isDatasetManager, created, isDeleted)
+                     values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
+                            ${new java.sql.Timestamp(u.lastActivity)}, '#${sanitize(
+        Json.toJson(u.userConfiguration).toString)}',
+                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()
 
   def updateLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
-
-  def updatePasswordInfo(userId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- assertUpdateAccess(userId)
-      _ <- run(sqlu"""update webknossos.users set
-                          passwordInfo_hasher = '#${sanitize(passwordInfo.hasher)}',
-                          passwordInfo_password = ${passwordInfo.password}
-                      where _id = ${userId}""")
-    } yield ()
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -208,23 +213,15 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def updateValues(userId: ObjectId,
                    firstName: String,
                    lastName: String,
-                   email: String,
                    isAdmin: Boolean,
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
                    lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext) = {
     val q = for { row <- Users if notdel(row) && idColumn(row) === userId.id } yield
-      (row.firstname,
-       row.lastname,
-       row.email,
-       row.logininfoProviderkey,
-       row.isadmin,
-       row.isdatasetmanager,
-       row.isdeactivated,
-       row.lasttasktypeid)
+      (row.firstname, row.lastname, row.isadmin, row.isdatasetmanager, row.isdeactivated, row.lasttasktypeid)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
+      _ <- run(q.update(firstName, lastName, isAdmin, isDatasetManager, isDeactivated, lastTaskTypeId))
     } yield ()
   }
 

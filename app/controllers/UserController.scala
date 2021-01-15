@@ -1,7 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -16,12 +16,13 @@ import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc._
 import utils.ObjectId
-
 import javax.inject.Inject
+
 import scala.concurrent.ExecutionContext
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
+                               multiUserDAO: MultiUserDAO,
                                annotationDAO: AnnotationDAO,
                                timeSpanService: TimeSpanService,
                                teamMembershipService: TeamMembershipService,
@@ -122,6 +123,7 @@ class UserController @Inject()(userService: UserService,
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
           user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+          userEmail <- userService.emailFor(user)
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           result <- timeSpanService.loggedTimeOfUser(user,
                                                      groupByAnnotationAndDay,
@@ -133,7 +135,7 @@ class UserController @Inject()(userService: UserService,
               "userId" -> user._id.toString,
               "firstName" -> user.firstName,
               "lastName" -> user.lastName,
-              "email" -> user.email
+              "email" -> userEmail
             ),
             "loggedTime" -> result.map {
               case ((annotation, day), duration) =>
@@ -268,10 +270,21 @@ class UserController @Inject()(userService: UserService,
                                     isActive: Boolean,
                                     isAdmin: Boolean,
                                     isDatasetManager: Boolean,
+                                    oldEmail: String,
                                     email: String)(issuingUser: User): Boolean =
-    if (isActive && user.isAdmin == isAdmin && user.email == email && isDatasetManager == user.isDatasetManager)
+    if (isActive && user.isAdmin == isAdmin && oldEmail == email && isDatasetManager == user.isDatasetManager)
       true
     else issuingUser.isAdminOf(user)
+
+  private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    if (oldEmail == email) Fox.successful(())
+    else
+      for {
+        count <- userDAO.countIdentitiesForMultiUser(user._multiUser)
+        issuingMultiUser <- multiUserDAO.findOne(issuingUser._multiUser)
+        _ <- bool2Fox(count <= 1 || issuingMultiUser.isSuperUser) ?~> "user.email.onlySuperUserCanChange"
+      } yield ()
 
   private def preventZeroAdmins(user: User, isAdmin: Boolean) =
     if (user.isAdmin && !isAdmin) {
@@ -302,7 +315,8 @@ class UserController @Inject()(userService: UserService,
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
           firstName = firstNameOpt.getOrElse(user.firstName)
           lastName = lastNameOpt.getOrElse(user.lastName)
-          email = emailOpt.getOrElse(user.email)
+          oldEmail <- userService.emailFor(user)
+          email = emailOpt.getOrElse(oldEmail)
           isActive = isActiveOpt.getOrElse(!user.isDeactivated)
           isAdmin = isAdminOpt.getOrElse(user.isAdmin)
           isDatasetManager = isDatasetManagerOpt.getOrElse(user.isDatasetManager)
@@ -310,7 +324,8 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))

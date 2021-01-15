@@ -1,9 +1,10 @@
 package models.team
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.user.Invite
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -24,7 +25,8 @@ case class Organization(
     isDeleted: Boolean = false
 )
 
-class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: TeamDAO)(implicit ec: ExecutionContext) {
+class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] =
     Fox.successful(
@@ -35,6 +37,23 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO, teamDAO: T
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
       ))
+
+  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
+      implicit ctx: DBAccessContext): Fox[Organization] =
+    inviteOpt match {
+      case Some(invite) => organizationDAO.findOne(invite._organization)
+      case None =>
+        organizatioNameOpt match {
+          case Some(organizationName) => organizationDAO.findOneByName(organizationName)
+          case None =>
+            for {
+              allOrganizations <- organizationDAO.findAll
+              _ <- bool2Fox(allOrganizations.length == 1) ?~> "organization.ambiguous"
+              defaultOrganization <- allOrganizations.headOption
+            } yield defaultOrganization
+        }
+
+    }
 
 }
 
@@ -62,13 +81,21 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       )
     )
 
-  override def readAccessQ(requestingUserId: ObjectId) =
-    s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))" +
+      s"or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))"
 
   override def anonymousReadAccessQ(sharingToken: Option[String]): String = sharingToken match {
     case Some(a) => "true"
     case _       => "false"
   }
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[OrganizationsRow])
+      parsed <- Fox.serialCombined(rList.toList)(r => parse(r))
+    } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
@@ -78,9 +105,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
           .as[OrganizationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   def insertOne(o: Organization)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

@@ -281,7 +281,10 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(DataSourceId(dataSetName, organizationName))) {
       AllowRemoteOrigin {
         for {
-          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName, dataSetName)
+          _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(organizationName,
+                                                                      dataSetName,
+                                                                      reason =
+                                                                        Some("the user wants to delete the dataset"))
         } yield Ok
       }
     }

@@ -55,7 +55,6 @@ Skeleton annotations consist of connected nodes forming a graph.
 Nodes are connected through edges and are organized in trees.
 
 Nodes can be placed by right-clicking (*Right Click*) in orthogonal mode or automatically when moving in flight or oblique mode.
-webKnossos uses the concept of always having an active node and an active tree.
 All (global) operations are executed on the current active node, e.g. adding a comment or node deletion.
 Most keyboard shortcuts take the active node into context.
 Operations on whole trees, e.g. splitting or merging trees, follow the same pattern.
@@ -129,6 +128,14 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 | SHIFT + CTRL + Left Click   | Delete Edge / Split Trees             |
 
 ![Trees can be hidden for a better overview over the data. Toggle the visibility of individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.png)
+
+#### The Context Menu for Easy Access to Functionalities
+webKnossos also has a context menu which can be opened via *Shift + Right Click*. This context menu takes the currently active node into context and offers functionalities plus information to the user.
+![Example of the context menu](./images/context_menu.png)
+The context menu has two modes. 
+
+- The first mode is active if the mouse was over a node when the user opened the context menu (like in the image above). In this case, the context menu offers additional information about the selected node and offers interactions with the active node. An example of possible interactions is to measure the path length of active node to the selected node. (This option is only available if both nodes are in the same tree).
+- The other mode is active if the user did not select a node with the context menu. In this mode there are no options available that require a selected node. Instead it offers the user to create a new tree or a new node at the selected position.
 
 
 ### Importing & Exporting NML Files

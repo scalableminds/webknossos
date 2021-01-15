@@ -44,7 +44,7 @@ function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPres
   }
 
   if (isShiftPressed && !isControlPressed && !isAltPressed) {
-    return "Click to select a node.";
+    return "Click to select a node. Right-click to open a contextmenu.";
   }
 
   if (!isShiftPressed && isControlPressed && !isAltPressed) {
@@ -170,7 +170,7 @@ function OverwriteModeSwitch({ isControlPressed }) {
 }
 
 const mapId = id => {
-  const cube = Model.getSegmentationLayer().cube;
+  const { cube } = Model.getSegmentationLayer();
   return cube.mapId(id);
 };
 

@@ -28,7 +28,16 @@ function* pushDatasetSettingsAsync(): Saga<void> {
 
   const dataset = yield* select(state => state.dataset);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
-  yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
+  try {
+    yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
+  } catch (error) {
+    // We catch errors in view mode as they are not that important here and may annoy the user.
+    const tracing = yield* select(state => state.tracing);
+    const isViewMode = tracing.annotationType === "View";
+    if (!isViewMode) {
+      throw error;
+    }
+  }
 }
 
 function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {

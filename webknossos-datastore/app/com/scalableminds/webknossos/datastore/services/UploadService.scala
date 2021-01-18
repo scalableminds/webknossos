@@ -1,16 +1,20 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
+
 import com.google.inject.Inject
+import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, OFormat}
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{AccessDeniedException, Files, Path}
+import scala.collection.convert.ImplicitConversions.`enumeration AsScalaIterator`
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -77,37 +81,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     Fox.successful(())
   }
 
-  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
+  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String], Boolean)] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
-    val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
-
-    def ensureDirectory(dir: Path) =
-      try {
-        Fox.successful(PathUtils.ensureDirectory(dir))
-      } catch {
-        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
-      }
-
-    def ensureAllChunksUploaded = savedUploadChunks.get(uploadId) match {
-      case Some((totalChunkNumber, set)) =>
-        if (set.size != totalChunkNumber) Fox.failure("dataSet.import.incomplete") else Fox.successful(())
-      case None => Fox.failure("dataSet.import.unknownUpload")
-    }
-
-    val dataSourceDir =
-      if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
-      else
-        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
-
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
 
-    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
-
     for {
-      _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded }
-      _ <- ensureDirectory(dataSourceDir)
+      datasetNeedsConversion <- detectNeedsConversion(zipFile)
+      dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+      _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
+      _ <- ensureDirectoryBox(dataSourceDir) ?~> "dataSet.import.fileAccessDenied"
       unzipResult = this.synchronized {
         ZipIO.unzipToFolder(
           zipFile,
@@ -133,7 +116,31 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
-    } yield (dataSourceId, uploadInformation.initialTeams)
+    } yield (dataSourceId, uploadInformation.initialTeams, datasetNeedsConversion)
+  }
+
+  private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = savedUploadChunks.get(uploadId) match {
+    case Some((totalChunkNumber, set)) =>
+      if (set.size != totalChunkNumber) Fox.failure("dataSet.import.incomplete") else Fox.successful(())
+    case None => Fox.failure("dataSet.import.unknownUpload")
+  }
+
+  private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
+    val dataSourceDir =
+      if (datasetNeedsConversion)
+        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
+      else
+        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    logger.info(s"Unpacking dataset to $dataSourceDir")
+    dataSourceDir
+  }
+
+  private def detectNeedsConversion(datasetZip: File): Fox[Boolean] = {
+    for {
+      zipFile <- tryo(new java.util.zip.ZipFile(datasetZip)) ?~> "zip.file.notFound"
+      fileList = zipFile.entries().map(_.getName())
+      needsConversion = !fileList.exists(_.toLowerCase().endsWith(".wkw"))
+    } yield needsConversion
   }
 
   def cleanUpOrphanFileChunks(): Box[Unit] =

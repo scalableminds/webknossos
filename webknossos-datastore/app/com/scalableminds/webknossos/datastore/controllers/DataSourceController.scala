@@ -9,9 +9,11 @@ import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
-
+import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
 import java.io.File
+
+import play.api.libs.Files
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceController @Inject()(
@@ -77,7 +79,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def upload = Action.async(parse.multipartFormData) { implicit request =>
+  def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) { implicit request =>
     val uploadForm = Form(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
@@ -117,11 +119,11 @@ class DataSourceController @Inject()(
     }
   }
 
-  def finishUpload = Action.async(validateJson[UploadInformation]) { implicit request =>
+  def finishUpload: Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
-          (dataSourceId, initialTeams) <- uploadService.finishUpload(request.body)
+          (dataSourceId, initialTeams, needsConversion) <- uploadService.finishUpload(request.body)
           userTokenOpt = accessTokenService.tokenFromRequest(request)
           _ <- webKnossosServer.postInitialTeams(dataSourceId, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
         } yield Ok

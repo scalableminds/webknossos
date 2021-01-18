@@ -3,38 +3,28 @@ package com.scalableminds.webknossos.datastore.services
 import java.nio._
 import java.nio.file.{Files, Paths}
 
-import ch.systemsx.cisd.base.mdarray.MDLongArray
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Node, SkeletonTracing, Tree}
-import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.geometry.Point3D
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
-import com.scalableminds.webknossos.datastore.storage.{
-  AgglomerateFileCache,
-  AgglomerateIdCache,
-  BoundingBoxCache,
-  CachedAgglomerateFile,
-  CumsumParser
-}
+import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-import scala.concurrent.ExecutionContext
-
-class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionContext)
+class AgglomerateService @Inject()(config: DataStoreConfig)
     extends DataConverter
     with LazyLogging {
-  val agglomerateDir = "agglomerates"
-  val agglomerateFileExtension = "hdf5"
-  val datasetName = "/segment_to_agglomerate"
-  val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
-  val cumsumFileName = "cumsum.json"
+  private val agglomerateDir = "agglomerates"
+  private val agglomerateFileExtension = "hdf5"
+  private val datasetName = "/segment_to_agglomerate"
+  private val dataBaseDir = Paths.get(config.Braingames.Binary.baseFolder)
+  private val cumsumFileName = "cumsum.json"
 
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Braingames.Binary.agglomerateFileCacheMaxSize)
 
@@ -104,7 +94,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
         .resolve(request.dataSource.id.name)
         .resolve(request.dataLayer.name)
         .resolve(agglomerateDir)
-        .resolve(s"${request.settings.appliedAgglomerate.get}.${agglomerateFileExtension}")
+        .resolve(s"${request.settings.appliedAgglomerate.get}.$agglomerateFileExtension")
         .toFile
 
     val cumsumPath =
@@ -145,7 +135,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
           .resolve(dataSetName)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)
-          .resolve(s"${mappingName}.${agglomerateFileExtension}")
+          .resolve(s"$mappingName.$agglomerateFileExtension")
           .toFile
 
       val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
@@ -187,7 +177,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig)(implicit ec: Executi
           createdTimestamp = System.currentTimeMillis(),
           nodes = nodes,
           edges = skeletonEdges,
-          name = s"agglomerate ${agglomerateId} (${mappingName})"
+          name = s"agglomerate $agglomerateId ($mappingName)"
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(

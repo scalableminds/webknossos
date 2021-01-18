@@ -1,5 +1,17 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
+import {
+  Form,
+  Button,
+  Spin,
+  Upload,
+  Icon,
+  Col,
+  Row,
+  Tooltip,
+  Checkbox,
+  Modal,
+  Progress,
+} from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -56,6 +68,17 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     uploadProgress: 0,
   };
 
+  static getDerivedStateFromProps(props) {
+    if (
+      props.datastores.length === 1 &&
+      props.form.getFieldValue("datastore") !== props.datastores[0].url
+    ) {
+      console.log("updating", props.form.getFieldValue("datastore"), props.datastores[0].url);
+      props.form.setFieldsValue({ datastore: props.datastores[0].url });
+    }
+    return null;
+  }
+
   isDatasetManagerOrAdmin = () =>
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
@@ -97,6 +120,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
         resumableUpload.on("fileSuccess", file => {
+          return;
           this.setState({ isFinished: true });
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
@@ -152,146 +176,187 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     });
   };
 
+  getUploadModalContent = () => {
+    let modalContent = null;
+    const { form } = this.props;
+    const { isRetrying, isFinished, uploadProgress } = this.state;
+    if (isFinished) {
+      modalContent = (
+        <React.Fragment>
+          <Icon type="folder" style={{ fontSize: 20 }} />
+          <br />
+          Converting Dataset {form.getFieldValue("name")}.
+          <br />
+          <Spin size="large" />
+        </React.Fragment>
+      );
+    } else {
+      modalContent = (
+        <React.Fragment>
+          <Icon type="folder" style={{ fontSize: 50 }} />
+          <br />
+          {isRetrying
+            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+            : `Uploading Dataset ${form.getFieldValue("name")}.`}
+          <br />
+          {isRetrying ? "Retrying to continue the upload..." : null}
+          <br />
+          <Progress
+            strokeColor={{
+              from: "#108ee9",
+              to: "#87d068",
+            }}
+            // Round to 1 digit after the comma.
+            percent={Math.round(uploadProgress * 1000) / 10}
+            status="active"
+          />
+        </React.Fragment>
+      );
+    }
+    return modalContent;
+  };
+
   render() {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
-    const { isUploading, isRetrying, isFinished, uploadProgress } = this.state;
-    let tooltip;
-    if (isFinished) {
-      tooltip = "Converting Dataset...";
-    } else {
-      tooltip = `${isRetrying ? "Retrying... - " : ""}${Math.round(
-        uploadProgress * 100,
-      )}% completed`;
-    }
+    const { isUploading } = this.state;
+    const uploadableDatastores = datastores.filter(datastore => datastore.allowsUpload);
+    const hasOnlyOneDatastore = uploadableDatastores.length === 1;
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
-        <Spin spinning={isUploading} tip={tooltip} size="large">
-          <CardContainer withoutCard={withoutCard} title="Upload Dataset">
-            <Form onSubmit={this.handleSubmit} layout="vertical">
-              <Row gutter={8}>
-                <Col span={12}>
-                  <DatasetNameFormItem form={form} activeUser={activeUser} />
-                </Col>
-                <Col span={12}>
-                  <DatastoreFormItem
-                    form={form}
-                    datastores={datastores.filter(datastore => datastore.allowsUpload)}
+        <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <Row gutter={8}>
+              <Col span={hasOnlyOneDatastore ? 24 : 12}>
+                <DatasetNameFormItem form={form} activeUser={activeUser} />
+              </Col>
+              <Col span={hasOnlyOneDatastore ? 0 : 12}>
+                <DatastoreFormItem
+                  form={form}
+                  datastores={uploadableDatastores}
+                  hidden={hasOnlyOneDatastore}
+                />
+              </Col>
+            </Row>
+            <FormItem label="Teams allowed to access this dataset" hasFeedback>
+              {getFieldDecorator("initialTeams", {
+                rules: [
+                  {
+                    required: !isDatasetManagerOrAdmin,
+                    message: !isDatasetManagerOrAdmin
+                      ? messages["dataset.import.required.initialTeam"]
+                      : null,
+                  },
+                ],
+                initialValue: [],
+              })(
+                <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                  <TeamSelectionComponent
+                    mode="multiple"
+                    onChange={selectedTeams => form.setFieldsValue({ initialTeams: selectedTeams })}
                   />
-                </Col>
-              </Row>
-              <FormItem label="Teams allowed to access this dataset" hasFeedback>
-                {getFieldDecorator("initialTeams", {
-                  rules: [
-                    {
-                      required: !isDatasetManagerOrAdmin,
-                      message: !isDatasetManagerOrAdmin
-                        ? messages["dataset.import.required.initialTeam"]
-                        : null,
-                    },
-                  ],
-                  initialValue: [],
-                })(
-                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                    <TeamSelectionComponent
-                      mode="multiple"
-                      onChange={selectedTeams =>
-                        form.setFieldsValue({ initialTeams: selectedTeams })
-                      }
-                    />
-                  </Tooltip>,
-                )}
-              </FormItem>
-              {features().jobsEnabled && (
-                <FormItemWithInfo
-                  label="Convert"
-                  info="If your dataset is not yet in WKW or KNOSSOS format, it needs to be converted."
-                >
-                  {getFieldDecorator("needsConversion", {
-                    initialValue: false,
-                  })(
-                    <Checkbox
-                      checked={this.state.needsConversion}
-                      onChange={evt => {
-                        this.handleCheckboxChange(evt);
-                        form.setFieldsValue({ needsConversion: this.state.needsConversion });
-                      }}
-                    >
-                      Needs Conversion
-                    </Checkbox>,
-                  )}
-                </FormItemWithInfo>
+                </Tooltip>,
               )}
-              {this.state.needsConversion && (
-                <FormItemWithInfo
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                  disabled={this.state.needsConversion}
-                >
-                  {getFieldDecorator("scale", {
-                    rules: [
-                      {
-                        required: this.state.needsConversion,
-                        message: "Please provide a scale for the dataset.",
-                      },
-                      {
-                        validator: syncValidator(
-                          value => value && value.every(el => el > 0),
-                          "Each component of the scale must be larger than 0.",
-                        ),
-                      },
-                    ],
-                  })(
-                    <Vector3Input
-                      style={{ width: 400 }}
-                      allowDecimals
-                      onChange={scale => form.setFieldsValue({ scale })}
-                    />,
-                  )}
-                </FormItemWithInfo>
-              )}
-              <FormItem label="Dataset ZIP File" hasFeedback>
-                {getFieldDecorator("zipFile", {
-                  rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
-                  valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
+            </FormItem>
+            {features().jobsEnabled && (
+              <FormItemWithInfo
+                label="Convert"
+                info="If your dataset is not yet in WKW or KNOSSOS format, it needs to be converted."
+              >
+                {getFieldDecorator("needsConversion", {
+                  initialValue: false,
                 })(
-                  <Upload.Dragger
-                    name="files"
-                    beforeUpload={file => {
-                      if (!form.getFieldValue("name")) {
-                        const filename = file.name
-                          .split(".")
-                          .slice(0, -1)
-                          .join(".");
-                        form.setFieldsValue({ name: filename });
-                        form.validateFields(["name"]);
-                      }
-                      form.setFieldsValue({ zipFile: [file] });
-
-                      return false;
+                  <Checkbox
+                    checked={this.state.needsConversion}
+                    onChange={evt => {
+                      this.handleCheckboxChange(evt);
+                      form.setFieldsValue({ needsConversion: this.state.needsConversion });
                     }}
                   >
-                    <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" style={{ margin: 0 }} />
-                    </p>
-                    <p className="ant-upload-text">
-                      Click or Drag your ZIP File to this Area to Upload
-                    </p>
-                  </Upload.Dragger>,
+                    Needs Conversion
+                  </Checkbox>,
                 )}
-              </FormItem>
+              </FormItemWithInfo>
+            )}
+            {this.state.needsConversion && (
+              <FormItemWithInfo
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                disabled={this.state.needsConversion}
+              >
+                {getFieldDecorator("scale", {
+                  rules: [
+                    {
+                      required: this.state.needsConversion,
+                      message: "Please provide a scale for the dataset.",
+                    },
+                    {
+                      validator: syncValidator(
+                        value => value && value.every(el => el > 0),
+                        "Each component of the scale must be larger than 0.",
+                      ),
+                    },
+                  ],
+                })(
+                  <Vector3Input
+                    style={{ width: 400 }}
+                    allowDecimals
+                    onChange={scale => form.setFieldsValue({ scale })}
+                  />,
+                )}
+              </FormItemWithInfo>
+            )}
+            <FormItem label="Dataset ZIP File" hasFeedback>
+              {getFieldDecorator("zipFile", {
+                rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
+                valuePropName: "fileList",
+                getValueFromEvent: this.normFile,
+              })(
+                <Upload.Dragger
+                  name="files"
+                  beforeUpload={file => {
+                    if (!form.getFieldValue("name")) {
+                      const filename = file.name
+                        .split(".")
+                        .slice(0, -1)
+                        .join(".");
+                      form.setFieldsValue({ name: filename });
+                      form.validateFields(["name"]);
+                    }
+                    file.thumbUrl = "/assets/images/folder.svg";
+                    form.setFieldsValue({ zipFile: [file] });
 
-              <FormItem style={{ marginBottom: 0 }}>
-                <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
-                  Upload
-                </Button>
-              </FormItem>
-            </Form>
-          </CardContainer>
-        </Spin>
+                    return false;
+                  }}
+                  listType="picture"
+                >
+                  <p className="ant-upload-drag-icon">
+                    <Icon type="inbox" style={{ margin: 0 }} />
+                  </p>
+                  <p className="ant-upload-text">
+                    Click or Drag your ZIP File to this Area to Upload
+                  </p>
+                </Upload.Dragger>,
+              )}
+            </FormItem>
+
+            <FormItem style={{ marginBottom: 0 }}>
+              <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
+                Upload
+              </Button>
+            </FormItem>
+          </Form>
+        </CardContainer>
+        <Modal
+          title={`Uploading to ${form.getFieldValue("datastore")}`}
+          visible={isUploading}
+          cancelButtonProps={{ style: { display: "none" } }}
+          okButtonProps={{ disabled: true }}
+        >
+          {this.getUploadModalContent()}
+        </Modal>
       </div>
     );
   }

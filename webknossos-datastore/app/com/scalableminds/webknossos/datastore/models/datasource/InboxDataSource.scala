@@ -35,7 +35,10 @@ package object inbox {
       }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String, scale: Option[Scale] = None)
+  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId,
+                                                     status: String,
+                                                     scale: Option[Scale] = None,
+                                                     existingDataSourceProperties: Option[JsValue] = None)
       extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
 
@@ -53,4 +56,5 @@ package object inbox {
 
   type InboxDataSource = GenericInboxDataSource[DataLayer]
   type InboxDataSourceLike = GenericInboxDataSource[DataLayerLike]
+  type UnusableInboxDataSource = UnusableDataSource[DataLayer]
 }

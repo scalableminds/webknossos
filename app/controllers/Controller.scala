@@ -30,14 +30,12 @@ trait Controller
       })
     )
 
-  def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A],
-                                             request: Request[JsValue],
-                                             m: MessagesProvider,
-                                             ec: ExecutionContext): Fox[Result] =
+  def withJsonBodyAs[A](
+      f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue], ec: ExecutionContext): Fox[Result] =
     withJsonBodyUsing(rds)(f)
 
-  def withJsonBodyUsing[A](reads: Reads[A])(
-      f: A => Fox[Result])(implicit request: Request[JsValue], m: MessagesProvider, ec: ExecutionContext): Fox[Result] =
+  def withJsonBodyUsing[A](reads: Reads[A])(f: A => Fox[Result])(implicit request: Request[JsValue],
+                                                                 ec: ExecutionContext): Fox[Result] =
     withJsonUsing(request.body, reads)(f)
 
   def withJsonAs[A](json: JsReadable)(
@@ -56,9 +54,9 @@ trait Controller
   implicit def userToDBAccess(user: User): DBAccessContext =
     AuthorizedAccessContext(user)
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]) =
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]): DBAccessContext =
     DBAccessContext(request.identity)
 
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]) =
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]): DBAccessContext =
     DBAccessContext(Some(request.identity))
 }

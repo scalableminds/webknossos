@@ -59,7 +59,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
-  def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
+  def createToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] = {
     val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
     tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
     tokenAuthenticator.map(CombinedAuthenticator(_))

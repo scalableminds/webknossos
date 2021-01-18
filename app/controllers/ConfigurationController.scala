@@ -1,6 +1,7 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.binary.{DataSetDAO, DataSetService}
 import models.configuration.{DataSetConfigurationService, UserConfiguration}
 import models.user.UserService
@@ -9,8 +10,8 @@ import play.api.i18n.Messages
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json._
 import play.api.mvc.PlayBodyParsers
-
 import javax.inject.Inject
+
 import scala.concurrent.ExecutionContext
 
 class ConfigurationController @Inject()(
@@ -42,9 +43,11 @@ class ConfigurationController @Inject()(
   def readDataSetViewConfiguration(organizationName: String, dataSetName: String) =
     sil.UserAwareAction.async(validateJson[List[String]]) { implicit request =>
       request.identity.toFox
-        .flatMap(user =>
-          dataSetConfigurationService
-            .getDataSetViewConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName))
+        .flatMap(
+          user =>
+            dataSetConfigurationService
+              .getDataSetViewConfigurationForUserAndDataset(request.body, user, dataSetName, organizationName)(
+                GlobalAccessContext))
         .orElse(
           dataSetConfigurationService.getDataSetViewConfigurationForDataset(request.body, dataSetName, organizationName)
         )

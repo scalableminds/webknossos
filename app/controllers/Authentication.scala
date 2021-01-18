@@ -560,8 +560,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       organization
     }
 
-  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(
-      implicit request: RequestHeader) = {
+  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) =
       rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .addQueryString("token" -> token, "organizationName" -> organizationName)

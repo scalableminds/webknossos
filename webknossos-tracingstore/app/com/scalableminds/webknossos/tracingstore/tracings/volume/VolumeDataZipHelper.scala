@@ -12,12 +12,10 @@ import net.liftweb.common.Box
 import org.apache.commons.io.IOUtils
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
 
 trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
 
-  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit)(
-      implicit ec: ExecutionContext): Box[Unit] = {
+  protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Unit): Box[Unit] = {
     val unzipResult = ZipIO.withUnziped(zipFile) {
       case (fileName, is) =>
         WKWFile.read(is) {
@@ -37,7 +35,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     unzipResult.map(_ => ())
   }
 
-  protected def resolutionSetFromZipfile(zipFile: File)(implicit ec: ExecutionContext): Set[Point3D] = {
+  protected def resolutionSetFromZipfile(zipFile: File): Set[Point3D] = {
     val resolutionSet = new mutable.HashSet[Point3D]()
     ZipIO.withUnziped(zipFile) {
       case (fileName, _) =>
@@ -48,8 +46,7 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ByteUtils {
     resolutionSet.toSet
   }
 
-  protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => T)(
-      implicit ec: ExecutionContext): Box[Unit] = {
+  protected def withZipsFromMultiZip[T](multiZip: File)(block: (Int, File) => T): Box[Unit] = {
     var index: Int = 0
     val unzipResult = ZipIO.withUnziped(multiZip) {
       case (_, is) =>

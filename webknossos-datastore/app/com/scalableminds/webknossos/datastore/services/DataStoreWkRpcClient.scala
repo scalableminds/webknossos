@@ -82,6 +82,9 @@ class DataStoreWkRpcClient @Inject()(
   def validateDataSourceUpload(id: DataSourceId): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload").addQueryString("key" -> dataStoreKey).post(id)
 
+  def deleteErroneousDataSource(id: DataSourceId): Fox[_] =
+    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/deleteErroneous").addQueryString("key" -> dataStoreKey).post(id)
+
   override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)

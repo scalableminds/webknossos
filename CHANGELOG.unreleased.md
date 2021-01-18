@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added a cleanup procedure for erroneous uploads, so failed uploads can be retried without changing the dataset name. [#4999](https://github.com/scalableminds/webknossos/pull/4999)
 
 ### Changed
+- Suggestions for the datasource settings of a dataset are no longer applied automatically. They can be applied optionally now. [#4944](https://github.com/scalableminds/webknossos/pull/4944)
 - The brush tool is disabled in low magnifications (magnification 16 and lower) to avoid performance problems when annotating. [#5017](https://github.com/scalableminds/webknossos/pull/5017)
 - The fill tool is disabled in low magnifications (magnification 2 and lower) to avoid producing spotty annotations (caused by needing too much main memory). [#5050](https://github.com/scalableminds/webknossos/pull/5050)
 - Users can now join multiple organizations, admins can now invite users by email address, skipping the manual user activation step. [#4984](https://github.com/scalableminds/webknossos/4984)

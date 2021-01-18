@@ -50,7 +50,7 @@ package object inbox {
   }
 
   object UnusableDataSource {
-    implicit def unusableDataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[UnusableDataSource[T]] =
+    implicit def unusableDataSourceFormat[T <: DataLayerLike]: Format[UnusableDataSource[T]] =
       Json.format[UnusableDataSource[T]]
   }
 

@@ -1,7 +1,6 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import javax.inject.Inject
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -11,13 +10,14 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessAnswer,
   UserAccessRequest
 }
+import javax.inject.Inject
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetService, DataStoreRpcClient, DataStoreService}
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security._
 import play.api.libs.json.Json
-import play.api.mvc.{PlayBodyParsers, Result}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
@@ -35,10 +35,9 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+  private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def generateTokenForDataStore = sil.UserAwareAction.async { implicit request =>
-    val context = userAwareRequestToDBAccess(request)
+  def generateTokenForDataStore: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
         bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false).toFox
@@ -51,16 +50,16 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  def validateAccessViaDatastore(name: String, token: Option[String]) = Action.async(validateJson[UserAccessRequest]) {
-    implicit request =>
-      dataStoreService.validateAccess(name) { dataStore =>
+  def validateAccessViaDatastore(name: String, token: Option[String]): Action[UserAccessRequest] =
+    Action.async(validateJson[UserAccessRequest]) { implicit request =>
+      dataStoreService.validateAccess(name) { _ =>
         validateUserAccess(request.body, token)
       }
-  }
+    }
 
-  def validateAccessViaTracingstore(name: String, token: Option[String]) =
+  def validateAccessViaTracingstore(name: String, token: Option[String]): Action[UserAccessRequest] =
     Action.async(validateJson[UserAccessRequest]) { implicit request =>
-      tracingStoreService.validateAccess(name) { tracingStore =>
+      tracingStoreService.validateAccess(name) { _ =>
         validateUserAccess(request.body, token)
       }
     }
@@ -68,7 +67,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
     if (token.contains(DataStoreRpcClient.webKnossosToken)) {
-      Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
+      Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token)(GlobalAccessContext).futureBox
@@ -80,7 +79,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)(ctx)
           case _ =>
-            Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
+            Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
       } yield {
         Ok(Json.toJson(answer))
@@ -96,8 +95,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         dataSourceBox <- dataSetDAO.findOneByNameAndOrganizationName(dataSourceId.name, dataSourceId.team).futureBox
       } yield
         dataSourceBox match {
-          case Full(_) => UserAccessAnswer(true)
-          case _       => UserAccessAnswer(false, Some("No read access on dataset"))
+          case Full(_) => UserAccessAnswer(granted = true)
+          case _       => UserAccessAnswer(granted = false, Some("No read access on dataset"))
         }
 
     def tryWrite: Fox[UserAccessAnswer] =
@@ -115,7 +114,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
           for {
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
-        case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
+        case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
       }
 
     def tryDelete: Fox[UserAccessAnswer] =
@@ -131,7 +130,7 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       case AccessMode.write        => tryWrite
       case AccessMode.administrate => tryAdministrate
       case AccessMode.delete       => tryDelete
-      case _                       => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
+      case _                       => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))
     }
   }
 
@@ -163,7 +162,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
         AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
       allowed <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
     } yield {
-      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
+      if (allowed) UserAccessAnswer(granted = true)
+      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
 }

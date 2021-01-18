@@ -6,6 +6,7 @@
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
+import ErrorHandling from "libs/error_handling";
 import {
   type Bucket,
   DataBucket,
@@ -46,7 +47,7 @@ class CubeEntry {
 }
 
 class DataCube {
-  MAXIMUM_BUCKET_COUNT = 5000;
+  MAXIMUM_BUCKET_COUNT = constants.MAXIMUM_BUCKET_COUNT_PER_LAYER;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
@@ -259,7 +260,7 @@ class DataCube {
 
   addBucketToGarbageCollection(bucket: DataBucket): void {
     if (this.bucketCount >= this.MAXIMUM_BUCKET_COUNT) {
-      for (let i = 0; i < 2 * this.bucketCount; i++) {
+      for (let i = 0; i < this.bucketCount; i++) {
         this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
         if (this.buckets[this.bucketIterator].shouldCollect()) {
           break;
@@ -267,9 +268,14 @@ class DataCube {
       }
 
       if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        console.error(
-          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.",
-        );
+        const errorMessage =
+          "A bucket was forcefully garbage-collected. This indicates that too many buckets are currently in RAM.";
+        console.error(errorMessage);
+        ErrorHandling.notify(new Error(errorMessage), {
+          elementClass: this.elementClass,
+          isSegmentation: this.isSegmentation,
+          resolutionInfo: this.resolutionInfo,
+        });
       }
 
       this.collectBucket(this.buckets[this.bucketIterator]);
@@ -506,6 +512,19 @@ class DataCube {
 
   hasDataAtPositionAndZoomStep(voxel: Vector3, zoomStep: number = 0) {
     return this.getBucket(this.positionToZoomedAddress(voxel, zoomStep)).hasData();
+  }
+
+  getNextUsableZoomStepForPosition(position: Vector3, zoomStep: number): number {
+    const resolutions = getResolutions(Store.getState().dataset);
+    let usableZoomStep = zoomStep;
+    while (
+      position &&
+      usableZoomStep < resolutions.length - 1 &&
+      !this.hasDataAtPositionAndZoomStep(position, usableZoomStep)
+    ) {
+      usableZoomStep++;
+    }
+    return usableZoomStep;
   }
 
   getDataValue(voxel: Vector3, mapping: ?Mapping, zoomStep: number = 0): number {

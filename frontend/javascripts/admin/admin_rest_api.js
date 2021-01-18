@@ -1270,6 +1270,37 @@ export async function getDefaultOrganization(): Promise<?APIOrganization> {
   return Request.receiveJSON("/api/organizations/default");
 }
 
+export function joinOrganization(inviteToken: string): Promise<void> {
+  return Request.triggerRequest(`/api/auth/joinOrganization/${inviteToken}`, { method: "POST" });
+}
+
+export async function switchToOrganization(organizationName: string): Promise<void> {
+  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+    method: "POST",
+  });
+  location.reload();
+}
+
+export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
+  return Request.receiveJSON("/api/organizations");
+}
+
+export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
+  return Request.receiveJSON(`/api/organizations/byInvite/${inviteToken}`, {
+    showErrorToast: false,
+  });
+}
+
+export function sendInvitesForOrganization(
+  recipients: Array<string>,
+  autoActivate: boolean,
+): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/auth/sendInvites", {
+    method: "POST",
+    data: { recipients, autoActivate },
+  });
+}
+
 export function getOrganization(organizationName: string): Promise<APIOrganization> {
   return Request.receiveJSON(`/api/organizations/${organizationName}`);
 }
@@ -1395,4 +1426,23 @@ export function computeIsosurface(
 
     return { buffer, neighbors };
   });
+}
+
+export function getAgglomerateSkeleton(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  agglomerateId: number,
+): Promise<ArrayBuffer> {
+  return doWithToken(token =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`,
+      // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      // In this case, the server sends an error json instead of an array buffer sometimes. Therefore, don't use the webworker code.
+      { useWebworkerForArrayBuffer: false },
+    ),
+  );
 }

@@ -38,6 +38,7 @@ import {
   shuffleTreeColorAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import messages from "messages";
 import { formatNumberToLength } from "libs/format_utils";
 import api from "oxalis/api/internal_api";
 
@@ -48,6 +49,7 @@ type OwnProps = {|
   activeTreeId: ?number,
   activeGroupId: ?number,
   treeGroups: Array<TreeGroup>,
+  // eslint-disable-next-line react/no-unused-prop-types
   sortBy: string,
   trees: TreeMap,
   selectedTrees: Array<number>,
@@ -290,7 +292,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
     const length = api.tracing.measureTreeLength(treeId);
     notification.open({
-      message: `The tree ${treeName} has a total length of ${formatNumberToLength(length)}.`,
+      message: messages["tracing.tree_length_notification"](treeName, formatNumberToLength(length)),
       icon: <i className="fas fa-ruler" />,
     });
   };

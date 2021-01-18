@@ -37,6 +37,7 @@ import {
 import {
   findTreeByNodeId,
   getNodeAndTree,
+  getNodeAndTreeOrNull,
   getActiveNode,
   getActiveTree,
   getTree,
@@ -49,7 +50,11 @@ import {
   getLayerByName,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getRotation,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import {
@@ -100,6 +105,7 @@ import Store, {
   type VolumeTracing,
 } from "oxalis/store";
 import Toast, { type ToastStyle } from "libs/toast";
+import PriorityQueue from "js-priority-queue";
 import UrlManager from "oxalis/controller/url_manager";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
@@ -601,20 +607,12 @@ class TracingApi {
     const datasetScale = Store.getState().dataset.dataSource.scale;
 
     // Pre-allocate vectors
-    const currentScaledPositionA = new Float32Array([0, 0, 0]);
-    const currentScaledPositionB = new Float32Array([0, 0, 0]);
-    const diffVector = new Float32Array([0, 0, 0]);
 
     let lengthAcc = 0;
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-
-      V3.scale3(sourceNode.position, datasetScale, currentScaledPositionA);
-      V3.scale3(targetNode.position, datasetScale, currentScaledPositionB);
-      V3.sub(currentScaledPositionA, currentScaledPositionB, diffVector);
-
-      lengthAcc += V3.length(diffVector);
+      lengthAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
     }
 
     return lengthAcc;
@@ -629,6 +627,52 @@ class TracingApi {
     );
 
     return totalLength;
+  }
+
+  measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): number {
+    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const { node: sourceNode, tree: sourceTree } = getNodeAndTreeOrNull(
+      skeletonTracing,
+      sourceNodeId,
+    );
+    const { node: targetNode, tree: targetTree } = getNodeAndTreeOrNull(
+      skeletonTracing,
+      targetNodeId,
+    );
+    if (sourceNode == null || targetNode == null) {
+      throw new Error(`The node with id ${sourceNodeId} or ${targetNodeId} does not exist.`);
+    }
+    if (sourceTree == null || sourceTree !== targetTree) {
+      throw new Error("The nodes are not within the same tree.");
+    }
+    const datasetScale = Store.getState().dataset.dataSource.scale;
+    // We use the Dijkstra algorithm to get the shortest path between the nodes.
+    const distanceMap = {};
+    const getDistance = nodeId =>
+      distanceMap[nodeId] != null ? distanceMap[nodeId] : Number.POSITIVE_INFINITY;
+    distanceMap[sourceNode.id] = 0;
+    // The priority queue saves node id and distance tuples.
+    const priorityQueue = new PriorityQueue<[number, number]>({
+      comparator: ([_first, firstDistance], [_second, secondDistance]) =>
+        firstDistance <= secondDistance ? -1 : 1,
+    });
+    priorityQueue.queue([sourceNodeId, 0]);
+    while (priorityQueue.length > 0) {
+      const [nextNodeId, distance] = priorityQueue.dequeue();
+      const nextNodePosition = sourceTree.nodes.get(nextNodeId).position;
+      // Calculate the distance to all neighbours and update the distances.
+      for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
+        const neighbourNodeId = source === nextNodeId ? target : source;
+        const neightbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        const neighbourDistance =
+          distance + V3.scaledDist(nextNodePosition, neightbourPosition, datasetScale);
+        if (neighbourDistance < getDistance(neighbourNodeId)) {
+          distanceMap[neighbourNodeId] = neighbourDistance;
+          priorityQueue.queue([neighbourNodeId, neighbourDistance]);
+        }
+      }
+    }
+    return distanceMap[targetNodeId];
   }
 
   /**
@@ -980,6 +1024,25 @@ class DataApi {
     }
     // Bucket has been loaded by now or was loaded already
     return cube.getDataValue(position, null, zoomStep);
+  }
+
+  getRenderedZoomStepAtPosition(layerName: string, position: ?Vector3): number {
+    const state = Store.getState();
+    const zoomStep = getRequestLogZoomStep(state);
+
+    if (position == null) return zoomStep;
+
+    const { renderMissingDataBlack } = state.datasetConfiguration;
+    const cube = this.model.getCubeByLayerName(layerName);
+
+    // While render missing data black is not active and there is no segmentation for the current zoom step,
+    // the segmentation of a higher zoom step is shown. Here we determine the next zoom step of the
+    // displayed segmentation data to get the correct segment ids of the cell that was clicked on.
+    const renderedZoomStep = renderMissingDataBlack
+      ? zoomStep
+      : cube.getNextUsableZoomStepForPosition(position, zoomStep);
+
+    return renderedZoomStep;
   }
 
   async getLoadedBucket(layerName: string, bucketAddress: Vector4): Promise<Bucket> {

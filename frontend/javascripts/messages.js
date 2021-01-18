@@ -103,6 +103,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.tree_length_notification": (treeName: string, length: string) =>
+    `The tree ${treeName} has a total path length of ${length}.`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
@@ -161,6 +163,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Note that this action also removes segments which were already annotated manually. This step cannot be undone.",
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
+  "tracing.agglomerate_skeleton.no_cell":
+    "Clicked on the background. Please click on a cell to load a skeleton.",
+  "tracing.agglomerate_skeleton.no_mapping":
+    "Please activate an agglomerate file mapping to load a skeleton for a cell.",
+  "tracing.agglomerate_skeleton.no_agglomerate_file":
+    "Loading a skeleton for a cell only works with agglomerate file mappings.",
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

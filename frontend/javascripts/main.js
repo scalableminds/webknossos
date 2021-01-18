@@ -3,9 +3,6 @@
  * @flow
  */
 
-import "es6-promise";
-import "whatwg-fetch";
-
 import "../stylesheets/main.less";
 
 import { Provider } from "react-redux";

@@ -49,7 +49,10 @@ import type { Edge, Tree, Node } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
-import isosurfaceLeftClick from "oxalis/controller/combinations/segmentation_plane_controller";
+import {
+  isosurfaceLeftClick,
+  agglomerateSkeletonMiddleClick,
+} from "oxalis/controller/combinations/segmentation_plane_controller";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -69,11 +72,14 @@ function simulateTracing(nodesPerTree: number = -1, nodesAlreadySet: number = 0)
   }
 
   const [x, y, z] = getPosition(Store.getState().flycam);
-  setWaypoint([x + 1, y + 1, z], false);
+  setWaypoint([x + 1, y + 1, z], OrthoViews.PLANE_XY, false);
   _.defer(() => simulateTracing(nodesPerTree, nodesAlreadySet + 1));
 }
 
-export function getPlaneMouseControls(planeView: PlaneView) {
+export function getPlaneMouseControls(
+  planeView: PlaneView,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+) {
   return {
     leftDownMove: (delta: Point2, pos: Point2, _id: ?string, event: MouseEvent) => {
       const { tracing } = Store.getState();
@@ -85,24 +91,21 @@ export function getPlaneMouseControls(planeView: PlaneView) {
     },
     leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
       onClick(planeView, pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch, event),
-    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-      const state = Store.getState();
-      if (isMagRestrictionViolated(state)) {
-        // The current zoom value violates the specified magnification-restriction in the
-        // task type. Therefore, we abort the action here.
-        // Actually, one would need to handle more skeleton actions (e.g., deleting a node),
-        // but not all (e.g., deleting a tree from the tree tab should be allowed). Therefore,
-        // this solution is a bit of a shortcut. However, it should cover 90% of the use case
-        // for restricting the rendered magnification.
-        // See https://github.com/scalableminds/webknossos/pull/4891 for context and
-        // https://github.com/scalableminds/webknossos/issues/4838 for the follow-up issue.
-        return;
-      }
-
-      const { volume } = state.tracing;
-      if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
-        // We avoid creating nodes when in brushing mode.
-        setWaypoint(calculateGlobalPos(pos), event.ctrlKey);
+    rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) =>
+      onRightClick(
+        planeView,
+        pos,
+        event.shiftKey,
+        event.altKey,
+        event.ctrlKey,
+        plane,
+        isTouch,
+        event,
+        showNodeContextMenuAt,
+      ),
+    middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      if (event.shiftKey) {
+        agglomerateSkeletonMiddleClick(pos);
       }
     },
   };
@@ -279,20 +282,12 @@ export function getLoopedKeyboardControls() {
   };
 }
 
-function onClick(
+function maybeGetNodeIdFromPosition(
   planeView: PlaneView,
   position: Point2,
-  shiftPressed: boolean,
-  altPressed: boolean,
-  ctrlPressed: boolean,
   plane: OrthoView,
   isTouch: boolean,
-  event?: MouseEvent,
-): void {
-  if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
-    // do nothing
-    return;
-  }
+): ?number {
   const SceneController = getSceneController();
 
   // render the clicked viewport with picking enabled
@@ -320,10 +315,28 @@ function onClick(
 
   // prevent flickering sometimes caused by picking
   planeView.renderFunction(true);
+  return nodeId > 0 ? nodeId : null;
+}
+
+function onClick(
+  planeView: PlaneView,
+  position: Point2,
+  shiftPressed: boolean,
+  altPressed: boolean,
+  ctrlPressed: boolean,
+  plane: OrthoView,
+  isTouch: boolean,
+  event?: MouseEvent,
+): void {
+  if (!shiftPressed && !isTouch && !(ctrlPressed && event != null)) {
+    // do nothing
+    return;
+  }
+  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
 
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   // otherwise we have hit the background and do nothing
-  if (nodeId > 0) {
+  if (nodeId != null && nodeId > 0) {
     if (altPressed) {
       getActiveNode(skeletonTracing).map(activeNode =>
         Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
@@ -340,13 +353,57 @@ function onClick(
   }
 }
 
-function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
+function onRightClick(
+  planeView: PlaneView,
+  position: Point2,
+  shiftPressed: boolean,
+  altPressed: boolean,
+  ctrlPressed: boolean,
+  plane: OrthoView,
+  isTouch: boolean,
+  event: MouseEvent,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
+) {
+  const state = Store.getState();
+  if (isMagRestrictionViolated(state)) {
+    // The current zoom value violates the specified magnification-restriction in the
+    // task type. Therefore, we abort the action here.
+    // Actually, one would need to handle more skeleton actions (e.g., deleting a node),
+    // but not all (e.g., deleting a tree from the tree tab should be allowed). Therefore,
+    // this solution is a bit of a shortcut. However, it should cover 90% of the use case
+    // for restricting the rendered magnification.
+    // See https://github.com/scalableminds/webknossos/pull/4891 for context and
+    // https://github.com/scalableminds/webknossos/issues/4838 for the follow-up issue.
+    return;
+  }
   const { activeViewport } = Store.getState().viewModeData.plane;
   if (activeViewport === OrthoViews.TDView) {
     return;
   }
+
+  const { volume } = state.tracing;
+  if (!volume || volume.activeTool === VolumeToolEnum.MOVE) {
+    // We avoid creating nodes when in brushing mode.
+    const nodeId = event.shiftKey
+      ? maybeGetNodeIdFromPosition(planeView, position, plane, isTouch)
+      : null;
+    const globalPosition = calculateGlobalPos(position);
+    if (event.shiftKey) {
+      showNodeContextMenuAt(event.pageX, event.pageY, nodeId, globalPosition, activeViewport);
+    } else {
+      setWaypoint(globalPosition, activeViewport, ctrlPressed);
+    }
+  }
+}
+
+export function setWaypoint(
+  position: Vector3,
+  activeViewport: OrthoView,
+  ctrlPressed: boolean,
+): void {
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   const activeNodeMaybe = getActiveNode(skeletonTracing);
+  const rotation = getRotationOrtho(activeViewport);
 
   // set the new trace direction
   activeNodeMaybe.map(activeNode =>
@@ -359,7 +416,6 @@ function setWaypoint(position: Vector3, ctrlPressed: boolean): void {
     ),
   );
 
-  const rotation = getRotationOrtho(activeViewport);
   addNode(position, rotation, !ctrlPressed);
 
   // Ctrl + right click to set new not active branchpoint

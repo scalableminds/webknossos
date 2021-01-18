@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.tracingstore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.tracingstore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.tracingstore.geometry.{Color, NamedBoundingBox => ProtoBox}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.geometry.{Color, NamedBoundingBox => ProtoBox}
 import net.liftweb.common.Full
 import scalapb.{GeneratedMessage, Message}
 

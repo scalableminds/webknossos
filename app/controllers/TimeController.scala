@@ -3,7 +3,7 @@ package controllers
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.time.TimeSpanDAO
@@ -38,7 +38,11 @@ class TimeController @Inject()(userService: UserService,
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) =
     sil.SecuredAction.async { implicit request =>
       for {
-        users <- Fox.combined(userString.split(",").toList.map(email => userService.findOneByEmail(email))) ?~> "user.email.invalid"
+        users <- Fox.combined(
+          userString
+            .split(",")
+            .toList
+            .map(email => userService.findOneByEmailAndOrganization(email, request.identity._organization))) ?~> "user.email.invalid"
         _ <- Fox.combined(users.map(user => Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, user)))) ?~> "user.notAuthorised" ~> FORBIDDEN
         js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
       } yield {

@@ -26,7 +26,7 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
-const BATCH_SIZE = 3;
+const BATCH_SIZE = 6;
 
 // $FlowIssue[cannot-resolve-name] Flow doesn't know DOMException (https://developer.mozilla.org/en-US/docs/Web/API/DOMException/DOMException)
 const PULL_ABORTION_ERROR = new DOMException("Pull aborted.", "AbortError");

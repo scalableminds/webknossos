@@ -22,7 +22,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
         val isSuperUser = get[Boolean]("application.authentication.defaultUser.isSuperUser")
       }
       val ssoKey = get[String]("application.authentication.ssoKey")
-      val enableDevAutoLogin = get[Boolean]("application.authentication.enableDevAutoLogin")
+      val inviteExpiry = get[Duration]("application.authentication.inviteExpiry")
       val children = List(DefaultUser)
     }
     val children = List(Authentication)
@@ -35,6 +35,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
 
   object Mail {
     val enabled = get[Boolean]("mail.enabled")
+    val logToStdout = get[Boolean]("mail.logToStdout")
     object Smtp {
       val host = get[String]("mail.smtp.host")
       val port = get[Int]("mail.smtp.port")

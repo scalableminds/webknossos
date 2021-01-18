@@ -75,12 +75,12 @@ declare module "antd" {
     static SubMenu: typeof MenuSubMenu;
   }
   declare export var message: {
-    success(content: string | React$Node, duration?: number, onClose?: Function): void,
-    error(content: string | React$Node, duration?: number, onClose?: Function): void,
-    info(content: string | React$Node, duration?: number, onClose?: Function): void,
-    warning(content: string | React$Node, duration?: number, onClose?: Function): void,
-    warn(content: string | React$Node, duration?: number, onClose?: Function): void,
-    loading(content: string | React$Node, duration?: number, onClose?: Function): void,
+    success(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    error(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    info(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    warning(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    warn(content: string | React$Node, duration?: number, onClose?: Function): Function,
+    loading(content: string | React$Node, duration?: number, onClose?: Function): Function,
   };
   declare export class Modal<P> extends React$Component<P> {
     static confirm: Function;
@@ -103,6 +103,7 @@ declare module "antd" {
     static Option: typeof SelectOption;
     static OptGroup: typeof SelectOptGroup;
   }
+  declare export class Result<P> extends React$Component<P> {}
   declare export class Slider<P> extends React$Component<P> {}
   declare export class Spin<P> extends React$Component<P> {}
   declare export class Switch<P> extends React$Component<P> {}

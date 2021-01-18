@@ -644,7 +644,7 @@ export function mergeTrees(
   sourceNodeId: number,
   targetNodeId: number,
   restrictions: RestrictionsAndSettings,
-): Maybe<[Tree, number, number]> {
+): Maybe<[TreeMap, number, number]> {
   const { allowUpdate } = restrictions;
   const { trees } = skeletonTracing;
   const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();

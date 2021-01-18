@@ -22,6 +22,6 @@ case class FilterColl[T](filters: Seq[Filter[_, T]]) {
 }
 
 trait WithFilters {
-  def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R)(implicit ec: ExecutionContext): R =
+  def UsingFilters[T, R](filters: Filter[_, T]*)(block: FilterColl[T] => R): R =
     block(FilterColl(filters))
 }

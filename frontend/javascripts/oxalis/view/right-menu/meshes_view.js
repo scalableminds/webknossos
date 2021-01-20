@@ -229,25 +229,6 @@ class MeshesView extends React.Component<
         </Upload>
       </React.Fragment>
     );
-    const getIsosurfacesHeader = () => (
-      <React.Fragment>
-        Isosurfaces{" "}
-        <Tooltip title="Isosurfaces are the 3D representation of a cell.">
-          <Icon type="info-circle" />
-        </Tooltip>
-        {getImportButton()} <br />
-      </React.Fragment>
-    );
-    const getMeshesHeader = () => (
-      <div style={{ marginTop: 10 }}>
-        Meshes{" "}
-        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport.">
-          <Icon type="info-circle" />
-        </Tooltip>
-        {getImportButton()}
-      </div>
-    );
-
     const getLoadIsosurfaceCellButton = () => (
       <Button
         onClick={() => {
@@ -255,9 +236,31 @@ class MeshesView extends React.Component<
           const id = getIdForPos(pos);
           this.props.changeActiveIsosurfaceId(id, pos);
         }}
+        size="small"
+        type="primary"
       >
         Load Isosurface for centered Cell
       </Button>
+    );
+    const getIsosurfacesHeader = () => (
+      <React.Fragment>
+        Isosurfaces{" "}
+        <Tooltip title="Isosurfaces are the 3D representation of a cell. They are computed ad-hoc by webKnossos.">
+          <Icon type="info-circle" />
+        </Tooltip>
+        {getImportButton()}
+        {getLoadIsosurfaceCellButton()}
+        <br />
+      </React.Fragment>
+    );
+    const getMeshesHeader = () => (
+      <div style={{ marginTop: 10 }}>
+        Meshes{" "}
+        <Tooltip title="Meshes are rendered alongside the actual data in the 3D viewport. They are imported from STL files.">
+          <Icon type="info-circle" />
+        </Tooltip>
+        {getImportButton()}
+      </div>
     );
 
     const renderIsosurfaceListItem = (isosurface: Object) => {
@@ -266,13 +269,6 @@ class MeshesView extends React.Component<
       const actionVisibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
         <List.Item
-          actions={[
-            <div key="actions" style={{ visibility: actionVisibility }}>
-              {getDownloadButton(segmentId)}
-              {getRefreshButton(segmentId, isLoading)}
-              {getDeleteButton(segmentId)}
-            </div>,
-          ]}
           style={{
             padding: 0,
             cursor: "pointer",
@@ -284,25 +280,34 @@ class MeshesView extends React.Component<
             this.setState({ hoveredListItem: null });
           }}
         >
-          <div
-            style={{
-              paddingLeft: 5,
-              paddingRight: 5,
-              backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
-            }}
-            onClick={() => {
-              this.props.changeActiveIsosurfaceId(segmentId);
-              moveTo(seedPosition);
-            }}
-          >
-            <span
-              className="circle"
+          <div style={{ display: "flex" }}>
+            <div
+              className="isosurface-list-item"
               style={{
-                paddingLeft: "10px",
-                backgroundColor: convertCellIdToCSS(segmentId),
+                paddingLeft: 5,
+                paddingRight: 5,
+                backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
+                borderRadius: 2,
               }}
-            />{" "}
-            Segment {segmentId}
+              onClick={() => {
+                this.props.changeActiveIsosurfaceId(segmentId);
+                moveTo(seedPosition);
+              }}
+            >
+              <span
+                className="circle"
+                style={{
+                  paddingLeft: "10px",
+                  backgroundColor: convertCellIdToCSS(segmentId),
+                }}
+              />{" "}
+              Segment {segmentId}
+            </div>
+            <div style={{ visibility: actionVisibility, marginLeft: 6 }}>
+              {getDownloadButton(segmentId)}
+              {getRefreshButton(segmentId, isLoading)}
+              {getDeleteButton(segmentId)}
+            </div>
           </div>
         </List.Item>
       );
@@ -343,11 +348,11 @@ class MeshesView extends React.Component<
     return (
       <div className="padded-tab-content">
         {getIsosurfacesHeader()}
-        {getLoadIsosurfaceCellButton()}
         <List
           dataSource={Object.values(this.props.isosurfaces)}
           size="small"
           split={false}
+          style={{ marginTop: 12 }}
           renderItem={renderIsosurfaceListItem}
           locale={{
             emptyText: "There are no Isosurfaces.",

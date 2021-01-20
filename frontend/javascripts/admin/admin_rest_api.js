@@ -919,7 +919,8 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
         query: datasetId,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
-        simultaneousUploads: 3,
+        // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed
+        simultaneousUploads: 1,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
         generateUniqueIdentifier: getRandomString,

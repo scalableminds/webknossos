@@ -24,7 +24,6 @@ class TracingStoreWkRpcClient @Inject()(
 
   private val tracingStoreKey: String = config.Tracingstore.key
   private val tracingStoreName: String = config.Tracingstore.name
-  private val tracingStoreUrl: String = config.Http.uri
 
   private val webKnossosUrl: String = config.Tracingstore.WebKnossos.uri
 
@@ -41,7 +40,7 @@ class TracingStoreWkRpcClient @Inject()(
                  "userToken" -> userToken))
 
   def getDataSource(organizationNameOpt: Option[String], dataSetName: String): Fox[DataSourceLike] =
-    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/${dataSetName}")
+    rpc(s"$webKnossosUrl/api/tracingstores/$tracingStoreName/dataSource/$dataSetName")
       .addQueryStringOptional("organizationName", organizationNameOpt)
       .addQueryString("key" -> tracingStoreKey)
       .getWithJsonResponse[DataSourceLike]

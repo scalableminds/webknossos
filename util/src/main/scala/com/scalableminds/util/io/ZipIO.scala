@@ -1,5 +1,9 @@
 package com.scalableminds.util.io
 
+import java.io._
+import java.nio.file.{Files, Path, Paths}
+import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
+
 import akka.stream.ActorMaterializer
 import akka.stream.javadsl.StreamConverters
 import akka.stream.scaladsl.Source
@@ -12,9 +16,6 @@ import org.apache.commons.io.IOUtils
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 
-import java.io._
-import java.nio.file.{Files, Path, Paths}
-import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -70,7 +71,7 @@ object ZipIO extends LazyLogging {
       * @param f input
       * @return future, completes when file is added
       */
-    def withFile(name: String)(f: OutputStream => Future[_])(implicit ec: ExecutionContext) = {
+    def withFile(name: String)(f: OutputStream => Future[_])(implicit ec: ExecutionContext): Future[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       f(stream).map(_ => stream.closeEntry())
     }
@@ -78,7 +79,7 @@ object ZipIO extends LazyLogging {
     /**
       * Close the zip file
       */
-    def close() =
+    def close(): Unit =
       stream.close()
   }
 
@@ -110,16 +111,16 @@ object ZipIO extends LazyLogging {
         val s = sources.next
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
-        case e: Exception => {
-          logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e)); throw new Exception(e.getMessage)
-        }
+        case e: Exception =>
+          logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e))
+          throw new Exception(e.getMessage)
       }
     }
 
-  def startZip(out: OutputStream)(implicit ec: ExecutionContext) =
+  def startZip(out: OutputStream): OpenZip =
     OpenZip(new ZipOutputStream(out))
 
-  def gzip(source: InputStream, out: OutputStream)(implicit ec: ExecutionContext) = {
+  def gzip(source: InputStream, out: OutputStream): Unit = {
     val gout = new GZIPOutputStream(out, Deflater.BEST_COMPRESSION)
     try {
       val buffer = new Array[Byte](1024)
@@ -135,13 +136,7 @@ object ZipIO extends LazyLogging {
     }
   }
 
-  def gzipToTempFile(f: File)(implicit ec: ExecutionContext) = {
-    val gzipped = File.createTempFile("temp", System.nanoTime().toString + "_" + f.getName)
-    gzip(new FileInputStream(f), new FileOutputStream(gzipped))
-    gzipped
-  }
-
-  def zipToTempFile(files: List[File])(implicit ec: ExecutionContext): File = {
+  def zipToTempFile(files: List[File]): File = {
     val outfile = File.createTempFile("data", System.nanoTime().toString + ".zip")
     val zip: OpenZip = startZip(new FileOutputStream(outfile))
     files.foreach { file =>
@@ -156,14 +151,13 @@ object ZipIO extends LazyLogging {
   def forallZipEntries(zip: ZipFile, includeHiddenFiles: Boolean = false)(f: ZipEntry => Boolean): Boolean =
     zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).forall(f(_))
 
-  def withUnziped[A](file: File)(f: (Path, InputStream) => A)(implicit ec: ExecutionContext): Box[List[A]] =
+  def withUnziped[A](file: File)(f: (Path, InputStream) => A): Box[List[A]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(withUnziped(_)((name, is) => Full(f(name, is))))
 
   def withUnziped[A](zip: ZipFile,
                      includeHiddenFiles: Boolean = false,
                      truncateCommonPrefix: Boolean = false,
-                     excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A])(
-      implicit ec: ExecutionContext): Box[List[A]] = {
+                     excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
     def isFileNameInPrefix(prefix: Path, fileName: String) = prefix.endsWith(Paths.get(fileName).getFileName)
 
@@ -236,7 +230,7 @@ object ZipIO extends LazyLogging {
                     targetDir: Path,
                     includeHiddenFiles: Boolean,
                     truncateCommonPrefix: Boolean,
-                    excludeFromPrefix: Option[List[String]])(implicit ec: ExecutionContext): Box[List[Path]] =
+                    excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
     tryo(new java.util.zip.ZipFile(file))
       .flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix))
 
@@ -244,7 +238,7 @@ object ZipIO extends LazyLogging {
                     targetDir: Path,
                     includeHiddenFiles: Boolean,
                     truncateCommonPrefix: Boolean,
-                    excludeFromPrefix: Option[List[String]])(implicit ec: ExecutionContext): Box[List[Path]] =
+                    excludeFromPrefix: Option[List[String]]): Box[List[Path]] =
     withUnziped(zip, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {

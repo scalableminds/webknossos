@@ -232,7 +232,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                     issuingUser: User,
                                     skeletonVersion: Option[Long],
                                     volumeVersion: Option[Long],
-                                    skipVolumeData: Boolean)(implicit ctx: DBAccessContext, m: MessagesProvider) = {
+                                    skipVolumeData: Boolean)(implicit ctx: DBAccessContext) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String, organizationName: String) =
       for {
@@ -341,8 +341,8 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
     }
   }
 
-  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(implicit ctx: DBAccessContext,
-                                                                                        m: MessagesProvider) = {
+  private def downloadTaskType(taskTypeId: String, user: User, skipVolumeData: Boolean)(
+      implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)

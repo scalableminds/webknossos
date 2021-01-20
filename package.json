@@ -149,7 +149,6 @@
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^1.0.2",
-    "es6-promise": "^3.0.2",
     "file-saver": "^2.0.1",
     "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
     "golden-layout": "^1.5.9",
@@ -189,7 +188,6 @@
     "three": "^0.106.0",
     "tween.js": "^16.3.1",
     "url-join": "^4.0.0",
-    "whatwg-fetch": "^1.1.0",
     "worker-loader": "^2.0.0"
   },
   "resolutions": {

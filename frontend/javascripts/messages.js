@@ -103,6 +103,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.out_of_task_bounds": "The current position is outside of the task's bounding box.",
   "tracing.copy_position": "Copy position to clipboard.",
   "tracing.copy_rotation": "Copy rotation to clipboard.",
+  "tracing.tree_length_notification": (treeName: string, length: string) =>
+    `The tree ${treeName} has a total path length of ${length}.`,
   "tracing.sharing_modal_basic_information": (sharingActiveNode?: boolean) =>
     `This link includes the ${
       sharingActiveNode ? "active tree node," : ""
@@ -210,7 +212,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
     "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.import_complete":

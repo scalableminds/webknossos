@@ -120,7 +120,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def collectionName: String
-  def existingCollectionName = collectionName + "_"
+  def existingCollectionName: String = collectionName + "_"
 
   def anonymousReadAccessQ(sharingToken: Option[String]): String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"

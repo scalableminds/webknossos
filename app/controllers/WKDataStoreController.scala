@@ -58,7 +58,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
             dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
               "dataSet.notFound",
               dataSetName) ~> NOT_FOUND
-            _ <- dataSetService.addInitialTeams(dataSet, user, teams)(AuthorizedAccessContext(user))
+            _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user))
           } yield Ok
         }
       }

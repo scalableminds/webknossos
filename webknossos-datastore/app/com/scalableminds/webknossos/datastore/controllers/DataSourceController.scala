@@ -79,44 +79,45 @@ class DataSourceController @Inject()(
     }
   }
 
-  def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) { implicit request =>
-    val uploadForm = Form(
-      tuple(
-        "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "owningOrganization" -> nonEmptyText,
-        "resumableChunkNumber" -> number,
-        "resumableChunkSize" -> number,
-        "resumableTotalChunks" -> longNumber,
-        "resumableIdentifier" -> nonEmptyText
-      )).fill(("", "", -1, -1, -1, ""))
+  def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) {
+    implicit request =>
+      val uploadForm = Form(
+        tuple(
+          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
+          "owningOrganization" -> nonEmptyText,
+          "resumableChunkNumber" -> number,
+          "resumableChunkSize" -> number,
+          "resumableTotalChunks" -> longNumber,
+          "resumableIdentifier" -> nonEmptyText
+        )).fill(("", "", -1, -1, -1, ""))
 
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        uploadForm
-          .bindFromRequest(request.body.dataParts)
-          .fold(
-            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-            success = {
-              case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
-                val id = DataSourceId(name, organization)
-                val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
-                for {
-                  _ <- if (!uploadService.isKnownUpload(uploadId))
-                    webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
-                  else Fox.successful(())
-                  chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
-                  _ <- uploadService.handleUploadChunk(uploadId,
-                                                       id,
-                                                       resumableUploadInformation,
-                                                       chunkNumber,
-                                                       new File(chunkFile.ref.path.toString))
-                } yield {
-                  Ok
-                }
-            }
-          )
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+        AllowRemoteOrigin {
+          uploadForm
+            .bindFromRequest(request.body.dataParts)
+            .fold(
+              hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+              success = {
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
+                  val id = DataSourceId(name, organization)
+                  val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
+                  for {
+                    _ <- if (!uploadService.isKnownUpload(uploadId))
+                      webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
+                    else Fox.successful(())
+                    chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ <- uploadService.handleUploadChunk(uploadId,
+                                                         id,
+                                                         resumableUploadInformation,
+                                                         chunkNumber,
+                                                         new File(chunkFile.ref.path.toString))
+                  } yield {
+                    Ok
+                  }
+              }
+            )
+        }
       }
-    }
   }
 
   def finishUpload: Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>

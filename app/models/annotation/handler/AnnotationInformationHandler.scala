@@ -8,6 +8,7 @@ import models.annotation._
 import models.user.User
 import utils.ObjectId
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
 class AnnotationInformationHandlerSelector @Inject()(projectInformationHandler: ProjectInformationHandler,
@@ -35,6 +36,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
   def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
+    @tailrec
     def allOnSameDatasetIter(annotations: List[Annotation], _dataSet: ObjectId): Boolean =
       annotations match {
         case List()       => true
@@ -42,12 +44,11 @@ trait AnnotationInformationHandler extends FoxImplicits {
       }
     annotations match {
       case List() => Fox.successful(true)
-      case head :: _ => {
+      case head :: _ =>
         if (allOnSameDatasetIter(annotations, head._dataSet))
           Fox.successful(true)
         else
           Fox.failure("Cannot create compound annotation spanning multiple datasets")
-      }
     }
   }
 

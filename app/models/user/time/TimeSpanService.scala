@@ -183,7 +183,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      task <- annotationService.taskFor(annotation)
+      task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"

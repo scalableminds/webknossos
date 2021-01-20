@@ -11,10 +11,8 @@ import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
 import play.api.libs.json.{Json, OFormat}
 
-import scala.collection.convert.ImplicitConversions.`enumeration AsScalaIterator`
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -84,11 +82,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String], Boolean)] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
+    val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
+    val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
     for {
-      datasetNeedsConversion <- detectNeedsConversion(zipFile)
-      dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
       _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
       _ <- ensureDirectoryBox(dataSourceDir) ?~> "dataSet.import.fileAccessDenied"
       unzipResult = this.synchronized {
@@ -133,14 +131,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
     logger.info(s"Unpacking dataset to $dataSourceDir")
     dataSourceDir
-  }
-
-  private def detectNeedsConversion(datasetZip: File): Fox[Boolean] = {
-    for {
-      zipFile <- tryo(new java.util.zip.ZipFile(datasetZip)) ?~> "zip.file.notFound"
-      fileList = zipFile.entries().map(_.getName())
-      needsConversion = !fileList.exists(_.toLowerCase().endsWith(".wkw"))
-    } yield needsConversion
   }
 
   def cleanUpOrphanFileChunks(): Box[Unit] =

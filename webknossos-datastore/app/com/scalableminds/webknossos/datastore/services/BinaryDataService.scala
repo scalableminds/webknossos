@@ -1,5 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.nio.file.Path
+
 import com.scalableminds.util.geometry.{Point3D, Vector3I}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -9,10 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataL
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedCube, DataCubeCache}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Full
 
-import java.io.File
-import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerateService: AgglomerateService)
@@ -172,7 +171,7 @@ class BinaryDataService(val dataBaseDir: Path, maxCacheSize: Int, val agglomerat
     result
   }
 
-  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]) = {
+  def clearCache(organizationName: String, dataSetName: String, layerName: Option[String]): Int = {
     def matchingPredicate(cubeKey: CachedCube) =
       cubeKey.dataSourceName == dataSetName && cubeKey.organization == organizationName && layerName.forall(
         _ == cubeKey.dataLayerName)

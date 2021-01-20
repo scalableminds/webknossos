@@ -233,7 +233,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption.toFox
     } yield firstResult
 
-  def countAllOpenInstancesForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+  def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       result <- run(
         sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where $organizationId in (select _organization from webknossos.users_ where _id = p._owner)"

@@ -91,7 +91,7 @@ trait PathUtils extends LazyLogging {
     path
   }
 
-  def ensureDirectoryBox(dir: Path): Box[Path]=
+  def ensureDirectoryBox(dir: Path): Box[Path] =
     try {
       Full(PathUtils.ensureDirectory(dir))
     } catch {

@@ -17,9 +17,7 @@ import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FilenameUtils
 import spire.math.{UByte, UInt, ULong, UShort}
 
-class AgglomerateService @Inject()(config: DataStoreConfig)
-    extends DataConverter
-    with LazyLogging {
+class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
   private val agglomerateDir = "agglomerates"
   private val agglomerateFileExtension = "hdf5"
   private val datasetName = "/segment_to_agglomerate"

@@ -205,7 +205,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
     if (conf.Application.insertInitialData) {
-      dataSetDAO.isEmpty(GlobalAccessContext).map { isEmpty =>
+      dataSetDAO.isEmpty.map { isEmpty =>
         if (isEmpty)
           Some(ObjectId("5c766bec6c01006c018c7459"))
         else
@@ -217,23 +217,18 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     dataSetDAO.deactivateUnreported(existingDataSetIds, dataStore.name, unreportedStatus)
 
-  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
+  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
-    def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) =
+    def createAndSaveSharingToken(dataSetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
         tokenValue <- new CompactRandomIDGenerator().generate
         _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
 
-    val tokenFoxOfFox: Fox[Fox[String]] = dataSetDAO.getSharingTokenByName(dataSetName, organizationId).map {
+    dataSetDAO.getSharingTokenByName(dataSetName, organizationId).flatMap {
       case Some(oldToken) => Fox.successful(oldToken)
-      case None           => createSharingToken(dataSetName)
+      case None           => createAndSaveSharingToken(dataSetName)
     }
-
-    for {
-      tokenFox <- tokenFoxOfFox
-      token <- tokenFox
-    } yield token
   }
 
   def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None, skipResolutions: Boolean = false)(
@@ -313,7 +308,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
@@ -322,6 +317,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       userTeamIds = userTeams.map(_._id)
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
     } yield ()
 

@@ -276,7 +276,7 @@ class UserController @Inject()(userService: UserService,
       true
     else issuingUser.isAdminOf(user)
 
-  private def checkNoSelfDeactivate(isActive: Boolean, user: User)(issuingUser: User): Boolean =
+  private def checkNoSelfDeactivate(user: User, isActive: Boolean)(issuingUser: User): Boolean =
     issuingUser._id != user._id || isActive || user.isDeactivated
 
   private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(

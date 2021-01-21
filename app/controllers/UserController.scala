@@ -276,6 +276,9 @@ class UserController @Inject()(userService: UserService,
       true
     else issuingUser.isAdminOf(user)
 
+  private def checkNoSelfDeactivate(isActive: Boolean, user: User)(issuingUser: User): Boolean =
+    issuingUser._id != user._id || isActive || user.isDeactivated
+
   private def checkSuperUserOnlyUpdates(user: User, oldEmail: String, email: String)(issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) Fox.successful(())
@@ -325,6 +328,7 @@ class UserController @Inject()(userService: UserService,
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- bool2Fox(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager, oldEmail, email)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- bool2Fox(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
           _ <- checkSuperUserOnlyUpdates(user, oldEmail, email)(issuingUser)
           _ <- preventZeroAdmins(user, isAdmin)
           teams <- Fox.combined(assignedMemberships.map(t =>

@@ -100,12 +100,13 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllWithTaskType(taskTypeId: String)(implicit ctx: DBAccessContext): Fox[List[Project]] =
+  // Does not use access query (because they dont support prefixes). Use only after separate access check!
+  def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =
     for {
       r <- run(
         sql"""select distinct #${columnsWithPrefix("p.")}
               from webknossos.projects_ p
-              join webknossos.tasks_ t on t._project = p._id 
+              join webknossos.tasks_ t on t._project = p._id
               join webknossos.taskTypes_ tt on t._taskType = tt._id
               where tt._id = ${taskTypeId}
            """.as[ProjectsRow]
@@ -141,7 +142,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   // write operations
 
-  def insertOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(p: Project): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
@@ -197,7 +198,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userService
-        .findOneById(project._owner, useCache = true)(GlobalAccessContext)
+        .findOneById(project._owner, useCache = true)
         .flatMap(u => userService.compactWrites(u))
         .futureBox
       teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption

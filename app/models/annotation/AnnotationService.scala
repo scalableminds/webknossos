@@ -86,7 +86,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
       datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
@@ -448,7 +448,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                  volumeTracingId: Option[String],
                  annotationType: AnnotationType,
                  name: Option[String],
-                 description: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
+                 description: String): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(ObjectId.generate,

@@ -42,8 +42,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
-  def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(
-      implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+  def loggedTimeOfUser[T](user: User,
+                          groupingF: TimeSpan => T,
+                          start: Option[Long] = None,
+                          end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
@@ -58,7 +60,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def loggedTimeOfAnnotation[T](annotationId: ObjectId,
                                 groupingF: TimeSpan => T,
                                 start: Option[Long] = None,
-                                end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+                                end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
@@ -67,19 +69,6 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
           timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
         case _ =>
           Map.empty[T, Duration]
-      }
-    }
-
-  def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(
-      implicit ctx: DBAccessContext): Fox[Duration] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.foldLeft(0L)(_ + _.time).millis
-        case _ =>
-          0.millis
       }
     }
 

@@ -125,9 +125,7 @@ class DataSetController @Inject()(userService: UserService,
         .reverse ?~> "dataSet.name.alreadyTaken"
       organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
-    } yield {
-      Ok
-    }
+    } yield Ok
   }
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -299,7 +297,7 @@ class DataSetController @Inject()(userService: UserService,
       for {
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
         _ <- dataSetService
-          .assertNewDataSetName(dataSetName, request.identity._organization)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+          .assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
   }
 

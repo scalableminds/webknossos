@@ -2,7 +2,11 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  InboxDataSource,
+  InboxDataSourceLike,
+  UnusableInboxDataSource
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
@@ -160,11 +164,19 @@ class DataSourceController @Inject()(
             "dataSource.notFound") ~> 404
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
                                                                         previousDataSource.toUsable)
+          previousDataSourceJson = previousDataSource match {
+            case usableDataSource: DataSource => Json.toJson(usableDataSource)
+            case unusableDataSource: UnusableInboxDataSource =>
+              unusableDataSource.existingDataSourceProperties match {
+                case Some(existingConfig) => existingConfig
+                case None                 => Json.toJson(unusableDataSource)
+              }
+          }
         } yield {
           Ok(
             Json.obj(
               "dataSource" -> dataSource,
-              "previousDataSource" -> previousDataSource,
+              "previousDataSource" -> previousDataSourceJson,
               "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
             ))
         }

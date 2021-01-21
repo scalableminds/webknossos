@@ -181,15 +181,14 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       removalSuccessBox <- projectDAO.deleteOne(projectId).futureBox
     } yield {
       removalSuccessBox match {
-        case Full(_) => {
+        case Full(_) =>
           for {
             _ <- taskDAO.removeAllWithProjectAndItsAnnotations(projectId)
+            _ = logger.info(s"Project $projectId was deleted.")
           } yield true
-        }
-        case _ => {
-          logger.warn("Tried to remove project without permission.")
+        case _ =>
+          logger.warn(s"Tried to remove project $projectId without permission.")
           Fox.successful(false)
-        }
       }
     }
     futureFox.toFox.flatten

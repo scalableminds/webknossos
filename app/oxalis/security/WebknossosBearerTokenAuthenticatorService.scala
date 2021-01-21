@@ -10,7 +10,7 @@ import com.mohiva.play.silhouette.impl.authenticators.{
   BearerTokenAuthenticatorService,
   BearerTokenAuthenticatorSettings
 }
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType
@@ -53,7 +53,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true): Future[String] =
     repository
-      .add(authenticator, tokenType, deleteOld)(GlobalAccessContext)
+      .add(authenticator, tokenType, deleteOld)
       .map { a =>
         a.id
       }
@@ -83,6 +83,6 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   def remove(tokenValue: String): Fox[Unit] =
     repository.remove(tokenValue)
 
-  def removeExpiredTokens(implicit ctx: DBAccessContext): Fox[Unit] =
-    repository.deleteAllExpired
+  def removeExpiredTokens(): Fox[Unit] =
+    repository.deleteAllExpired()
 }

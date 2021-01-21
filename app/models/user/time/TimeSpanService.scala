@@ -227,7 +227,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.updateOne"
+      _ <- timeSpanDAO.updateOne(updated) ?~> "FAILED: TimeSpanDAO.updateOne"
       _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
       annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"

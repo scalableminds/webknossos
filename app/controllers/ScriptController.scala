@@ -9,6 +9,7 @@ import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
+import play.api.mvc.{Action, AnyContent}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -21,25 +22,24 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     extends Controller
     with FoxImplicits {
 
-  val scriptPublicReads =
+  private val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
       (__ \ 'owner).read[String](ObjectId.stringObjectIdReads("owner")))(Script.fromForm _)
 
-  def create = sil.SecuredAction.async(parse.json) { implicit request =>
+  def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
         _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- bool2Fox(script._owner == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"
-      } yield {
-        Ok(js)
-      }
+      } yield Ok(js)
     }
   }
 
-  def get(scriptId: String) = sil.SecuredAction.async { implicit request =>
+  def get(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
       script <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
@@ -49,7 +49,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def list = sil.SecuredAction.async { implicit request =>
+  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       scripts <- scriptDAO.findAll
       js <- Fox.serialCombined(scripts)(s => scriptService.publicWrites(s))
@@ -58,7 +58,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def update(scriptId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(scriptId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
         scriptIdValidated <- ObjectId.parse(scriptId)
@@ -73,7 +73,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     }
   }
 
-  def delete(scriptId: String) = sil.SecuredAction.async { implicit request =>
+  def delete(scriptId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       scriptIdValidated <- ObjectId.parse(scriptId)
       oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND

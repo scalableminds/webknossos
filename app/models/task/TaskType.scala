@@ -39,7 +39,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO, taskTypeDAO: TaskTypeDAO)(impl
   ): TaskType =
     TaskType(ObjectId.generate, ObjectId(team), summary, description, settings, recommendedConfiguration, tracingType)
 
-  def publicWrites(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
     } yield
@@ -121,7 +121,7 @@ class TaskTypeDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
     } yield parsed
 
-  def insertOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(t: TaskType): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.taskTypes(_id, _team, summary, description, settings_allowedModes, settings_preferredMode,

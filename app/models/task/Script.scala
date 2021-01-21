@@ -65,7 +65,7 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  def insertOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(s: Script): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
                          values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${new java.sql.Timestamp(s.created)}, ${s.isDeleted})""")

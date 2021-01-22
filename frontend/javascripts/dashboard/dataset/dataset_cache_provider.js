@@ -72,6 +72,9 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
       // for some wk instances while the localStorage quota is at 5 MB for Chrome).
       UserLocalStorage.removeItem(oldWkDatasetsCacheKey);
       UserLocalStorage.removeItem(oldWkDatasetsCacheKey, false);
+      // Previously, the datasets key was used globally. Now, it's tied to the current organization,
+      // which is why we can clear the global key (isOrganizationSpecific==false).
+      UserLocalStorage.removeItem(wkDatasetsCacheKey, false);
       datasetCache.set(newDatasets);
       if (applyUpdatePredicate(newDatasets)) {
         setDatasets(newDatasets);
@@ -122,7 +125,6 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
             dataset.owningOrganization === datasetId.owningOrganization
           ) {
             const { lastUsedByUser } = dataset;
-            // $FlowFixMe[incompatible-type]
             return {
               ...updatedDataset,
               lastUsedByUser,

@@ -14089,3 +14089,8 @@ yauzl@^2.10.0:
   dependencies:
     buffer-crc32 "~0.2.3"
     fd-slicer "~1.1.0"
+
+zip-js-webpack@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/zip-js-webpack/-/zip-js-webpack-1.0.0.tgz#553dd15c76a9b2cfb4de97f338f4eb0fe0e2a897"
+  integrity sha512-epPHhnoh3nxrpEzM07yLZZtKANIubMeWUH2bslUIPMGo/vBDKJhdYqoupsfI6uT24i8tR9i7+y/ajC3Sa4R21A==

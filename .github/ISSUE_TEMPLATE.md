@@ -31,7 +31,6 @@
 
 ## Your Environment (for bugs)
 <!--- If you bug only occurs in a special environment, please list as many relevant details about the environment as possible. -->
-* Version used:
 * Environment name and version (e.g. Chrome 39):
 * Operating System and version (e.g. Windows 10):
 * Version of WebKnossos (eg. Release or Commit):

@@ -15,10 +15,6 @@
 <!--- If your are suggesting a new feature just check the box below -->
 - [ ] This is a new feature so there isn't any current behavior.
 
-## Possible Solution
-<!--- Not obligatory, but suggest a fix/reason for the bug, -->
-<!--- or ideas how to implement the addition or change -->
-
 ## Steps to Reproduce (for bugs)
 <!-- If the bug is hard to reproduce check the following: -->
 - [ ] Cannot reproduce anymore / needs deeper investigation.

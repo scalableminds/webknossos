@@ -81,7 +81,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           }
           key="1"
         >
-          <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
+          <DatasetUploadView datastores={datastores.own} />
         </TabPane>
         {datastores.wkConnect.length > 0 && (
           <TabPane

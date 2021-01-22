@@ -1,5 +1,5 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
+import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -12,6 +12,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
+import { createReader, BlobReader } from "zip-js-webpack";
 import {
   CardContainer,
   DatasetNameFormItem,
@@ -66,10 +67,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       return e.slice(-1);
     }
     return e && e.fileList.slice(-1);
-  };
-
-  handleCheckboxChange = evt => {
-    this.setState({ needsConversion: evt.target.checked });
   };
 
   handleSubmit = evt => {
@@ -156,7 +153,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
-    const { isUploading, isRetrying, isFinished, uploadProgress } = this.state;
+    const { isUploading, isRetrying, isFinished, uploadProgress, needsConversion } = this.state;
     let tooltip;
     if (isFinished) {
       tooltip = "Converting Dataset...";
@@ -204,54 +201,40 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                   </Tooltip>,
                 )}
               </FormItem>
-              {features().jobsEnabled && (
-                <FormItemWithInfo
-                  label="Convert"
-                  info="If your dataset is not yet in WKW or KNOSSOS format, it needs to be converted."
-                >
-                  {getFieldDecorator("needsConversion", {
-                    initialValue: false,
-                  })(
-                    <Checkbox
-                      checked={this.state.needsConversion}
-                      onChange={evt => {
-                        this.handleCheckboxChange(evt);
-                        form.setFieldsValue({ needsConversion: this.state.needsConversion });
-                      }}
-                    >
-                      Needs Conversion
-                    </Checkbox>,
-                  )}
-                </FormItemWithInfo>
-              )}
-              {this.state.needsConversion && (
-                <FormItemWithInfo
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
-                  disabled={this.state.needsConversion}
-                >
-                  {getFieldDecorator("scale", {
-                    rules: [
-                      {
-                        required: this.state.needsConversion,
-                        message: "Please provide a scale for the dataset.",
-                      },
-                      {
-                        validator: syncValidator(
-                          value => value && value.every(el => el > 0),
-                          "Each component of the scale must be larger than 0.",
-                        ),
-                      },
-                    ],
-                  })(
-                    <Vector3Input
-                      style={{ width: 400 }}
-                      allowDecimals
-                      onChange={scale => form.setFieldsValue({ scale })}
-                    />,
-                  )}
-                </FormItemWithInfo>
-              )}
+              {features().jobsEnabled && needsConversion ? (
+                <React.Fragment>
+                  <FormItemWithInfo
+                    label="Voxel Size"
+                    info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                    disabled={this.state.needsConversion}
+                  >
+                    {getFieldDecorator("scale", {
+                      initialValue: [0, 0, 0],
+                      rules: [
+                        {
+                          required: this.state.needsConversion,
+                          message: "Please provide a scale for the dataset.",
+                        },
+                        {
+                          validator: syncValidator(
+                            value => value && value.every(el => el > 0),
+                            "Each component of the scale must be larger than 0.",
+                          ),
+                        },
+                      ],
+                    })(
+                      <Vector3Input
+                        style={{ width: 400 }}
+                        allowDecimals
+                        onChange={scale => form.setFieldsValue({ scale })}
+                      />,
+                    )}
+                  </FormItemWithInfo>
+                  <br />
+                  Your dataset is not yet in WKW Format. Therefore you need to define the voxel
+                  size.
+                </React.Fragment>
+              ) : null}
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
@@ -270,7 +253,24 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                         form.validateFields(["name"]);
                       }
                       form.setFieldsValue({ zipFile: [file] });
-
+                      const findFileNameWithExtension = (fileName: string, ext: string) =>
+                        _.last(fileName.split(".")).toLowerCase() === ext;
+                      const a = async () => {
+                        const blobReader = new BlobReader(file);
+                        createReader(blobReader, reader => {
+                          // get all entries from the zip
+                          reader.getEntries(entries => {
+                            const wkwFile = entries.find(entry =>
+                              findFileNameWithExtension(entry.filename, "wkw"),
+                            );
+                            const isNotWkwFormat = wkwFile == null;
+                            this.setState({
+                              needsConversion: isNotWkwFormat,
+                            });
+                          });
+                        });
+                      };
+                      a();
                       return false;
                     }}
                   >

@@ -45,6 +45,7 @@ type State = {
   needsConversion: boolean,
   isRetrying: boolean,
   isFinished: boolean,
+  showAfterUploadModal: boolean,
   uploadProgress: number,
 };
 
@@ -54,6 +55,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     needsConversion: false,
     isRetrying: false,
     isFinished: false,
+    showAfterUploadModal: false,
     uploadProgress: 0,
   };
 
@@ -62,7 +64,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       props.datastores.length === 1 &&
       props.form.getFieldValue("datastore") !== props.datastores[0].url
     ) {
-      console.log("updating", props.form.getFieldValue("datastore"), props.datastores[0].url);
       props.form.setFieldsValue({ datastore: props.datastores[0].url });
     }
     return null;
@@ -105,7 +106,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
         resumableUpload.on("fileSuccess", file => {
-          return;
           this.setState({ isFinished: true });
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
@@ -120,12 +120,20 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               Toast.success(messages["dataset.upload_success"]);
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-              this.props.onUploaded(
+              this.setState({ showAfterUploadModal: true });
+              /* this.props.onUploaded(
                 activeUser.organization,
                 formValues.name,
                 this.state.needsConversion,
                 formValues.scale,
-              );
+              ); 
+              Questions: The behaviour of onUploaded is not the same. 
+              In the onboarding after upload the dataset setting are opened in a modal.
+              In the add dataset view the user gets redirected to the jobs view if conversion needs to be done 
+              or to the dataset settings of the just uploaded dataset.
+              Doesn't the onboarding case also need the conversion job?
+              I would like to overwrite the behaviour for the add dataset view: open a modal and ask the user what he wants to do.
+              */
             },
             () => {
               Toast.error(messages["dataset.upload_failed"]);
@@ -205,46 +213,48 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     const { form, activeUser, withoutCard, datastores } = this.props;
     const { getFieldDecorator } = form;
     const isDatasetManagerOrAdmin = this.isDatasetManagerOrAdmin();
-    const { isUploading, needsConversion } = this.state;
+    const { isUploading, needsConversion, showAfterUploadModal } = this.state;
     const uploadableDatastores = datastores.filter(datastore => datastore.allowsUpload);
-    const hasOnlyOneDatastore = uploadableDatastores.length === 1;
+    const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <Row gutter={8}>
-              <Col span={hasOnlyOneDatastore ? 24 : 12}>
+              <Col span={12}>
                 <DatasetNameFormItem form={form} activeUser={activeUser} />
               </Col>
-              <Col span={hasOnlyOneDatastore ? 0 : 12}>
-                <DatastoreFormItem
-                  form={form}
-                  datastores={uploadableDatastores}
-                  hidden={hasOnlyOneDatastore}
-                />
+              <Col span={12}>
+                <FormItem label="Teams allowed to access this dataset" hasFeedback>
+                  {getFieldDecorator("initialTeams", {
+                    rules: [
+                      {
+                        required: !isDatasetManagerOrAdmin,
+                        message: !isDatasetManagerOrAdmin
+                          ? messages["dataset.import.required.initialTeam"]
+                          : null,
+                      },
+                    ],
+                    initialValue: [],
+                  })(
+                    <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
+                      <TeamSelectionComponent
+                        mode="multiple"
+                        onChange={selectedTeams =>
+                          form.setFieldsValue({ initialTeams: selectedTeams })
+                        }
+                      />
+                    </Tooltip>,
+                  )}
+                </FormItem>
               </Col>
             </Row>
-            <FormItem label="Teams allowed to access this dataset" hasFeedback>
-              {getFieldDecorator("initialTeams", {
-                rules: [
-                  {
-                    required: !isDatasetManagerOrAdmin,
-                    message: !isDatasetManagerOrAdmin
-                      ? messages["dataset.import.required.initialTeam"]
-                      : null,
-                  },
-                ],
-                initialValue: [],
-              })(
-                <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                  <TeamSelectionComponent
-                    mode="multiple"
-                    onChange={selectedTeams => form.setFieldsValue({ initialTeams: selectedTeams })}
-                  />
-                </Tooltip>,
-              )}
-            </FormItem>
+            <DatastoreFormItem
+              form={form}
+              datastores={uploadableDatastores}
+              hidden={hasOnlyOneDatastoreOrNone}
+            />
             {features().jobsEnabled && needsConversion ? (
               <React.Fragment>
                 <FormItemWithInfo
@@ -338,6 +348,28 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           okButtonProps={{ disabled: true }}
         >
           {this.getUploadModalContent()}
+        </Modal>
+        {/* TODO: unify the modals */}
+        <Modal
+          title={`Uploading of Dataset ${form.getFieldValue("name")} succeeded`}
+          visible={showAfterUploadModal}
+          cancelButtonProps={{ style: { display: "none" } }}
+          okButtonProps={{ disabled: true }}
+        >
+          The dataset was successfully uploaded.
+          <br />
+          You can now:
+          <ul>
+            <li>
+              Edit the Settings of the Dataset <Button>Settings</Button>
+            </li>
+            <li>
+              Go back to the dataset list in the dashboard <Button>Dashboard</Button>
+            </li>
+            <li>
+              View the dataset and start a tracing from there <Button>View</Button>
+            </li>
+          </ul>
         </Modal>
       </div>
     );

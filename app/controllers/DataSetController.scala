@@ -205,7 +205,8 @@ class DataSetController @Inject()(userService: UserService,
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-          dataStore <- dataSetService.dataStoreFor(dataSet)
+          // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
+          dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
         } yield {
           Ok(Json.toJson(js))

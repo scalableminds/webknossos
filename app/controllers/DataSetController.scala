@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.controllers.RemoteOriginHelpers
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
@@ -31,7 +32,8 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with RemoteOriginHelpers {
 
   private val DefaultThumbnailWidth = 400
   private val DefaultThumbnailHeight = 400
@@ -129,23 +131,26 @@ class DataSetController @Inject()(userService: UserService,
   }
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    UsingFilters(
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
-      Filter(
-        "isEditable",
-        (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
-            isEditable && value || !isEditable && !value
+    AllowRemoteOrigin {
+      UsingFilters(
+        Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+        Filter("isUnreported",
+               (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+        Filter(
+          "isEditable",
+          (value: Boolean, el: DataSet) =>
+            for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
+              isEditable && value || !isEditable && !value
+          }
+        )
+      ) { filter =>
+        for {
+          dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+          filtered <- filter.applyOn(dataSets)
+          js <- listGrouped(filtered, request.identity)
+        } yield {
+          Ok(Json.toJson(js))
         }
-      )
-    ) { filter =>
-      for {
-        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        js <- listGrouped(filtered, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
       }
     }
   }

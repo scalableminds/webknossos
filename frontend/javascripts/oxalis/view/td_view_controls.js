@@ -9,12 +9,11 @@ import api from "oxalis/api/internal_api";
 const ButtonGroup = Button.Group;
 
 type Props = {|
-  renderIsosurfaces: boolean,
   isRefreshingIsosurfaces: boolean,
   volumeTracing: ?VolumeTracing,
 |};
 
-function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces, volumeTracing }: Props) {
+function TDViewControls({ isRefreshingIsosurfaces, volumeTracing }: Props) {
   let refreshIsosurfaceTooltip = "Load Isosurface of centered cell from segmentation layer.";
   if (volumeTracing != null) {
     if (volumeTracing.fallbackLayer != null) {
@@ -40,23 +39,20 @@ function TDViewControls({ renderIsosurfaces, isRefreshingIsosurfaces, volumeTrac
         <span className="colored-dot" />
         XZ
       </Button>
-      {renderIsosurfaces ? (
-        <Tooltip title={refreshIsosurfaceTooltip}>
-          <Button
-            size="small"
-            icon="reload"
-            loading={isRefreshingIsosurfaces}
-            onClick={api.data.refreshIsosurfaces}
-          />
-        </Tooltip>
-      ) : null}
+      <Tooltip title={refreshIsosurfaceTooltip}>
+        <Button
+          size="small"
+          icon="reload"
+          loading={isRefreshingIsosurfaces}
+          onClick={api.data.refreshIsosurfaces}
+        />
+      </Tooltip>
     </ButtonGroup>
   );
 }
 
 export function mapStateToProps(state: OxalisState): Props {
   return {
-    renderIsosurfaces: state.datasetConfiguration.renderIsosurfaces,
     isRefreshingIsosurfaces: state.uiInformation.isRefreshingIsosurfaces,
     volumeTracing: state.tracing.volume,
   };

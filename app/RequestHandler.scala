@@ -30,7 +30,6 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with LazyLogging {
 
   override def routeRequest(request: RequestHeader): Option[Handler] = {
-    logger.info(s"request.uri: ${request.uri}")
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {

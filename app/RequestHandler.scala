@@ -1,7 +1,7 @@
 import com.typesafe.scalalogging.LazyLogging
-import controllers.{Assets, SitemapController}
+import controllers.{Assets, DemoProxyController, SitemapController}
 import javax.inject.Inject
-import play.api.{Environment, OptionalDevContext}
+import play.api.OptionalDevContext
 import play.api.http.{DefaultHttpRequestHandler, HttpConfiguration, HttpErrorHandler, HttpFilters}
 import play.api.mvc.{Handler, InjectedController, RequestHeader}
 import play.api.routing.Router
@@ -13,10 +13,10 @@ class RequestHandler @Inject()(webCommands: WebCommands,
                                router: Router,
                                errorHandler: HttpErrorHandler,
                                httpConfiguration: HttpConfiguration,
+                               demoProxyController: DemoProxyController,
                                filters: HttpFilters,
                                conf: WkConf,
                                assets: Assets,
-                               env: Environment,
                                sitemapController: SitemapController)
     extends DefaultHttpRequestHandler(
       webCommands,
@@ -29,7 +29,8 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with InjectedController
     with LazyLogging {
 
-  override def routeRequest(request: RequestHeader): Option[Handler] =
+  override def routeRequest(request: RequestHeader): Option[Handler] = {
+    logger.info(s"request.uri: ${request.uri}")
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
@@ -37,7 +38,8 @@ class RequestHandler @Inject()(webCommands: WebCommands,
       Some(assets.at(path = "/public", file = path))
     } else if (request.uri.matches("""^/sitemap.xml$""") && conf.Features.isDemoInstance) {
       Some(sitemapController.getSitemap(Some(conf.Http.uri)))
-    } else {
-      Some(Action { Ok(views.html.main(conf)) })
-    }
+    } else if (request.uri == "/favicon.ico") {
+      Some(Action { NotFound })
+    } else Some(demoProxyController.proxyPageOrMainView)
+  }
 }

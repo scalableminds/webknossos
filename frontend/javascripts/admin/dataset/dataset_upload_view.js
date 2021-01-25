@@ -99,7 +99,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
 
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
-        resumableUpload.on("fileSuccess", file => {
+        resumableUpload.on("complete", file => {
           this.setState({ isFinished: true });
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
@@ -152,7 +152,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
 
         console.log("addFiles", formValues.zipFile);
 
-        //resumableUpload.addFiles(formValues.zipFile);
+        resumableUpload.addFiles(formValues.zipFile);
       }
     });
   };

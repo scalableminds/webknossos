@@ -79,12 +79,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     Fox.successful(())
   }
 
-  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String], Boolean)] = {
+  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
     val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+
+    logger.info(s"Unzipping uploaded dataset to $dataSourceDir")
 
     for {
       _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
@@ -114,7 +116,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
-    } yield (dataSourceId, uploadInformation.initialTeams, datasetNeedsConversion)
+    } yield (dataSourceId, uploadInformation.initialTeams)
   }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = savedUploadChunks.get(uploadId) match {

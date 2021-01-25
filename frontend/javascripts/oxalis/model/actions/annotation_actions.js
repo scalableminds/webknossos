@@ -6,6 +6,7 @@ import type {
   RemoteMeshMetaData,
   APIAnnotationVisibility,
 } from "types/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
 import type { UserBoundingBox } from "oxalis/store";
 
 type InitializeAnnotationAction = {
@@ -71,8 +72,13 @@ export type CreateMeshFromBufferAction = {
   name: string,
 };
 
+export type TriggerActiveIsosurfaceDownloadAction = {
+  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
+};
+
 export type TriggerIsosurfaceDownloadAction = {
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellId: number,
 };
 
 export type RefreshIsosurfacesAction = {
@@ -81,6 +87,18 @@ export type RefreshIsosurfacesAction = {
 
 export type FinishedRefreshingIsosurfacesAction = {
   type: "FINISHED_REFRESHING_ISOSURFACES",
+};
+export type RefreshIsosurfaceAction = {
+  type: "REFRESH_ISOSURFACE",
+  cellId: number,
+};
+export type StartRefreshingIsosurfaceAction = {
+  type: "START_REFRESHING_ISOSURFACE",
+  cellId: number,
+};
+export type FinishedRefreshingIsosurfaceAction = {
+  type: "FINISHED_REFRESHING_ISOSURFACE",
+  cellId: number,
 };
 
 export type ImportIsosurfaceFromStlAction = {
@@ -91,6 +109,12 @@ export type ImportIsosurfaceFromStlAction = {
 export type RemoveIsosurfaceAction = {
   type: "REMOVE_ISOSURFACE",
   cellId: number,
+};
+
+export type AddIsosurfaceAction = {
+  type: "ADD_ISOSURFACE",
+  cellId: number,
+  seedPosition: Vector3,
 };
 
 export type AnnotationActionTypes =
@@ -106,11 +130,16 @@ export type AnnotationActionTypes =
   | DeleteMeshAction
   | CreateMeshFromBufferAction
   | UpdateLocalMeshMetaDataAction
+  | TriggerActiveIsosurfaceDownloadAction
   | TriggerIsosurfaceDownloadAction
   | RefreshIsosurfacesAction
   | FinishedRefreshingIsosurfacesAction
+  | RefreshIsosurfaceAction
+  | StartRefreshingIsosurfaceAction
+  | FinishedRefreshingIsosurfaceAction
   | ImportIsosurfaceFromStlAction
-  | RemoveIsosurfaceAction;
+  | RemoveIsosurfaceAction
+  | AddIsosurfaceAction;
 
 export const initializeAnnotationAction = (
   annotation: APIAnnotation,
@@ -198,8 +227,15 @@ export const createMeshFromBufferAction = (
   name,
 });
 
-export const triggerIsosurfaceDownloadAction = (): TriggerIsosurfaceDownloadAction => ({
+export const triggerActiveIsosurfaceDownloadAction = (): TriggerActiveIsosurfaceDownloadAction => ({
+  type: "TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD",
+});
+
+export const triggerIsosurfaceDownloadAction = (
+  cellId: number,
+): TriggerIsosurfaceDownloadAction => ({
   type: "TRIGGER_ISOSURFACE_DOWNLOAD",
+  cellId,
 });
 
 export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
@@ -208,6 +244,25 @@ export const refreshIsosurfacesAction = (): RefreshIsosurfacesAction => ({
 
 export const finishedRefreshingIsosurfacesAction = (): FinishedRefreshingIsosurfacesAction => ({
   type: "FINISHED_REFRESHING_ISOSURFACES",
+});
+
+export const refreshIsosurfaceAction = (cellId: number): RefreshIsosurfaceAction => ({
+  type: "REFRESH_ISOSURFACE",
+  cellId,
+});
+
+export const startRefreshingIsosurfaceAction = (
+  cellId: number,
+): StartRefreshingIsosurfaceAction => ({
+  type: "START_REFRESHING_ISOSURFACE",
+  cellId,
+});
+
+export const finishedRefreshingIsosurfaceAction = (
+  cellId: number,
+): FinishedRefreshingIsosurfaceAction => ({
+  type: "FINISHED_REFRESHING_ISOSURFACE",
+  cellId,
 });
 
 export const importIsosurfaceFromStlAction = (
@@ -220,4 +275,13 @@ export const importIsosurfaceFromStlAction = (
 export const removeIsosurfaceAction = (cellId: number): RemoveIsosurfaceAction => ({
   type: "REMOVE_ISOSURFACE",
   cellId,
+});
+
+export const addIsosurfaceAction = (
+  cellId: number,
+  seedPosition: Vector3,
+): AddIsosurfaceAction => ({
+  type: "ADD_ISOSURFACE",
+  cellId,
+  seedPosition,
 });

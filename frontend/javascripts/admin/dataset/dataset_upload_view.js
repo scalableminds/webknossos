@@ -272,13 +272,15 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         );
       }
     }
-    const title = showAfterUploadContent
+    /* const title = showAfterUploadContent
       ? `Uploading of Dataset ${form.getFieldValue("name")} succeeded`
-      : `Uploading to ${form.getFieldValue("datastore")}`;
+      : `Uploading to ${form.getFieldValue("datastore")}`; */
     return (
       <Modal
-        title={title}
         visible={isUploading}
+        closable={showAfterUploadContent}
+        keyboard={showAfterUploadContent}
+        maskClosable={showAfterUploadContent}
         cancelButtonProps={{ style: { display: "none" } }}
         okButtonProps={{ disabled: !showAfterUploadContent }}
         onOk={() => {
@@ -289,6 +291,68 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         {modalContent}
       </Modal>
     );
+  };
+
+  handleFileDrop = file => {
+    const { form } = this.props;
+    if (!form.getFieldValue("name")) {
+      const filename = file.name
+        .split(".")
+        .slice(0, -1)
+        .join(".");
+      form.setFieldsValue({ name: filename });
+      form.validateFields(["name"]);
+    }
+    file.thumbUrl = "/assets/images/folder.svg";
+    const blobReader = new BlobReader(file);
+    createReader(
+      blobReader,
+      async reader => {
+        // get all entries from the zip
+        reader.getEntries(entries => {
+          const wkwFile = entries.find(entry =>
+            Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
+          );
+          const isNotWkwFormat = wkwFile == null;
+          this.setState({
+            needsConversion: isNotWkwFormat,
+          });
+          if (isNotWkwFormat && !features().jobsEnabled) {
+            Modal.info({
+              content: (
+                <div>
+                  The selected dataset does not seem to be in the WKW format. Please convert the
+                  dataset using{" "}
+                  <a
+                    target="_blank"
+                    href="https://github.com/scalableminds/webknossos-cuber/"
+                    rel="noopener noreferrer"
+                  >
+                    webknossos-cuber
+                  </a>{" "}
+                  or use a webKnossos instance which integrates a conversion service, such as{" "}
+                  <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
+                    webknossos.org
+                  </a>
+                  .
+                </div>
+              ),
+            });
+            form.setFieldsValue({ zipFile: null });
+          } else {
+            form.setFieldsValue({ zipFile: [file] });
+          }
+        });
+      },
+      () => {
+        Modal.error({
+          content:
+            "It looks like your selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
+        });
+        form.setFieldsValue({ zipFile: null });
+      },
+    );
+    return false;
   };
 
   render() {
@@ -376,36 +440,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 valuePropName: "fileList",
                 getValueFromEvent: this.normFile,
               })(
-                <Upload.Dragger
-                  name="files"
-                  beforeUpload={file => {
-                    if (!form.getFieldValue("name")) {
-                      const filename = file.name
-                        .split(".")
-                        .slice(0, -1)
-                        .join(".");
-                      form.setFieldsValue({ name: filename });
-                      form.validateFields(["name"]);
-                    }
-                    file.thumbUrl = "/assets/images/folder.svg";
-                    form.setFieldsValue({ zipFile: [file] });
-                    const blobReader = new BlobReader(file);
-                    createReader(blobReader, reader => {
-                      // get all entries from the zip
-                      reader.getEntries(entries => {
-                        const wkwFile = entries.find(entry =>
-                          Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-                        );
-                        const isNotWkwFormat = wkwFile == null;
-                        this.setState({
-                          needsConversion: isNotWkwFormat,
-                        });
-                      });
-                    });
-                    return false;
-                  }}
-                  listType="picture"
-                >
+                <Upload.Dragger name="files" beforeUpload={this.handleFileDrop} listType="picture">
                   <p className="ant-upload-drag-icon">
                     <Icon type="inbox" style={{ margin: 0 }} />
                   </p>

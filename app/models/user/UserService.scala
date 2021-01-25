@@ -249,10 +249,10 @@ class UserService @Inject()(conf: WkConf,
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
 
   def experiencesFor(_user: ObjectId): Fox[Map[String, Int]] =
-    userExperiencesDAO.findAllExperiencesForUser(_user)(GlobalAccessContext)
+    userExperiencesDAO.findAllExperiencesForUser(_user)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userTeamRolesDAO.findTeamMembershipsForUser(_user)(GlobalAccessContext)
+    userTeamRolesDAO.findTeamMembershipsForUser(_user)
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {

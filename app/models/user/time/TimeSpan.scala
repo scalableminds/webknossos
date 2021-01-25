@@ -1,6 +1,5 @@
 package models.user.time
 
-import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
@@ -148,7 +147,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def insertOne(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(t: TimeSpan): Fox[Unit] =
     for {
       r <- run(
         sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
@@ -156,7 +155,7 @@ class TimeSpanDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
           t.lastUpdate)}, ${t.numberOfUpdates}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
 
-  def updateOne(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(t: TimeSpan): Fox[Unit] =
     for { //note that t.created is skipped
       r <- run(sqlu"""update webknossos.timespans
                 set

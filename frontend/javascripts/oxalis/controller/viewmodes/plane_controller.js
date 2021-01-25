@@ -50,7 +50,6 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;
@@ -198,12 +197,7 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
-      leftClick: this.createToolDependentHandler(
-        maybeSkeletonLeftClick,
-        maybeVolumeLeftClick,
-        // The isosurfaceLeftClick handler should only be used in view mode.
-        isosurfaceLeftClick,
-      ),
+      leftClick: this.createToolDependentHandler(maybeSkeletonLeftClick, maybeVolumeLeftClick),
       leftDownMove: this.createToolDependentHandler(
         maybeSkeletonLeftDownMove,
         maybeVolumeLeftDownMove,

@@ -38,7 +38,7 @@ test("getUser()", async t => {
 
 test("updateUser()", async t => {
   const activeUser = await api.getActiveUser();
-  const newUser = Object.assign({}, activeUser, { isActive: false });
+  const newUser = Object.assign({}, activeUser, { firstName: "UpdatedFirstName" });
 
   const updatedUser = await api.updateUser(newUser);
   t.snapshot(updatedUser, { id: "users-updatedUser" });

@@ -1,7 +1,6 @@
 package controllers
 
 import com.mohiva.play.silhouette.api.Silhouette
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationType}
@@ -134,6 +133,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
   def projectProgressOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
+      _ <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
       entries <- reportDAO.projectProgress(teamIdValidated)
     } yield Ok(Json.toJson(entries))
   }
@@ -141,8 +141,8 @@ class ReportController @Inject()(reportDAO: ReportDAO,
   def openTasksOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
-      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
+      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
+      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)
       nonAdminUsers <- Fox.filterNot(users)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)
     } yield Ok(Json.toJson(entries))

@@ -93,19 +93,12 @@ export function isosurfaceLeftClick(pos: Point2, plane: OrthoView, event: MouseE
 
   let cellId = 0;
   const position = calculateGlobalPos(pos);
-  const volumeTracingMaybe = Store.getState().tracing.volume;
-  if (volumeTracingMaybe) {
-    cellId = volumeTracingMaybe.activeCellId;
-  } else {
-    const segmentation = Model.getSegmentationLayer();
-    if (!segmentation) {
-      return;
-    }
-    cellId = segmentation.cube.getMappedDataValue(
-      position,
-      getRequestLogZoomStep(Store.getState()),
-    );
+  const segmentation = Model.getSegmentationLayer();
+  if (!segmentation) {
+    return;
   }
+  cellId = segmentation.cube.getMappedDataValue(position, getRequestLogZoomStep(Store.getState()));
+
   if (cellId > 0) {
     Store.dispatch(changeActiveIsosurfaceCellAction(cellId, position));
   }

@@ -125,9 +125,7 @@ class DataSetController @Inject()(userService: UserService,
         .reverse ?~> "dataSet.name.alreadyTaken"
       organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
-    } yield {
-      Ok
-    }
+    } yield Ok
   }
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
@@ -207,7 +205,8 @@ class DataSetController @Inject()(userService: UserService,
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-          dataStore <- dataSetService.dataStoreFor(dataSet)
+          // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
+          dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
         } yield {
           Ok(Json.toJson(js))
@@ -299,7 +298,7 @@ class DataSetController @Inject()(userService: UserService,
       for {
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
         _ <- dataSetService
-          .assertNewDataSetName(dataSetName, request.identity._organization)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+          .assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
   }
 

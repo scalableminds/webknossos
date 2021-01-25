@@ -53,6 +53,7 @@ user.activated={0} has been activated
 user.notFound=User not found
 user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account hasn’t been activated yet
+user.noSelfDeactivate=You cannot deactivate yourself. Please contact an admin to do it for you.
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
 user.lastAdmin=Cannot remove admin privileges from the only admin in the organization

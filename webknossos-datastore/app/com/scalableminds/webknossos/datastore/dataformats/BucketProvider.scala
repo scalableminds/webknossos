@@ -6,19 +6,18 @@ import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Empty}
 
 import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube]
+  // To be defined in subclass.
+  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = Empty
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(
-      _.cutOutBucket(readInstruction.bucket))
-  }
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
 
   private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[WKWCube] = {
     val t = System.currentTimeMillis

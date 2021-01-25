@@ -10,14 +10,12 @@ import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosDataFormat
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import net.liftweb.util.Helpers.tryo
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
@@ -39,7 +37,6 @@ class DataSourceService @Inject()(
   override protected lazy val enabled: Boolean = config.Braingames.Binary.ChangeHandler.enabled
   protected lazy val tickerInterval: FiniteDuration = config.Braingames.Binary.ChangeHandler.tickerInterval
 
-  private val MaxNumberOfFilesForDataFormatGuessing = 50
   val dataBaseDir: Path = Paths.get(config.Braingames.Binary.baseFolder)
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
@@ -111,11 +108,8 @@ class DataSourceService @Inject()(
     val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
-      dataFormat <- guessDataFormat(path)
-      result <- dataFormat.exploreDataSource(id, path, previous, report)
-    } yield {
-      (result, report.messages.toList)
-    }
+      dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
+    } yield (dataSource, report.messages.toList)
   }
 
   def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
@@ -223,12 +217,4 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def guessDataFormat(path: Path): Box[DataSourceImporter] = {
-    val dataFormats = List(WKWDataFormat, KnossosDataFormat)
-
-    PathUtils.lazyFileStreamRecursive(path) { files =>
-      val fileNames = files.take(MaxNumberOfFilesForDataFormatGuessing).map(_.getFileName.toString).toList
-      tryo(dataFormats.maxBy(format => fileNames.count(_.endsWith(format.dataFileExtension))))
-    }
-  }
 }

@@ -17,14 +17,14 @@ trait IntervalScheduler {
 
   protected def tickerInterval: FiniteDuration
 
-  protected def tick: Unit
+  protected def tick(): Unit
 
   private var scheduled: Cancellable = _
 
   lifecycle.addStopHook(stop _)
 
   if (enabled) {
-    scheduled = system.scheduler.schedule(10.seconds, tickerInterval)(tick)
+    scheduled = system.scheduler.schedule(10.seconds, tickerInterval)(tick())
   }
 
   private def stop(): Future[Unit] = {

@@ -179,8 +179,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       _ <- bool2Fox(volumes.forall(_.organizationName == organizationName))
     } yield organizationName
 
-  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet)(
-      implicit ctx: DBAccessContext): Fox[VolumeTracing] =
+  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing, dataSet: DataSet): Fox[VolumeTracing] =
     for {
       dataSource <- dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable)
       fallbackLayer = dataSource.dataLayers.flatMap {

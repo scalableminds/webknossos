@@ -22,6 +22,7 @@ class ProjectController @Inject()(projectService: ProjectService,
                                   annotationService: AnnotationService,
                                   annotationDAO: AnnotationDAO,
                                   taskDAO: TaskDAO,
+                                  taskTypeDAO: TaskTypeDAO,
                                   userService: UserService,
                                   taskService: TaskService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
@@ -123,6 +124,8 @@ class ProjectController @Inject()(projectService: ProjectService,
 
   def projectsForTaskType(taskTypeId: String) = sil.SecuredAction.async { implicit request =>
     for {
+      taskTypeIdValidated <- ObjectId.parse(taskTypeId)
+      _ <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound" ~> NOT_FOUND
       projects <- projectDAO.findAllWithTaskType(taskTypeId) ?~> "project.list.failed"
       allCounts <- taskDAO.countAllOpenInstancesGroupedByProjects
       js <- Fox.serialCombined(projects) { project =>

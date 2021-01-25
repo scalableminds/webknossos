@@ -213,9 +213,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                inviteBox: Box[Invite] <- inviteService
-                  .findInviteByTokenOpt(signUpData.inviteToken)(GlobalAccessContext)
-                  .futureBox
+                inviteBox: Box[Invite] <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).futureBox
                 organizationName = Option(signUpData.organization).filter(_.trim.nonEmpty)
                 organization <- organizationService.findOneByInviteByNameOrDefault(
                   inviteBox.toOption,
@@ -315,7 +313,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
 
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      invite <- inviteDAO.findOneByTokenValue(inviteToken)(GlobalAccessContext) ?~> "invite.invalidToken"
+      invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> "invite.invalidToken"
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
@@ -553,8 +551,8 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- organizationDAO.insertOne(organization)(GlobalAccessContext)
-      _ <- teamDAO.insertOne(organizationTeam)(GlobalAccessContext)
+      _ <- organizationDAO.insertOne(organization)
+      _ <- teamDAO.insertOne(organizationTeam)
       _ <- initialDataService.insertLocalDataStoreIfEnabled
     } yield {
       organization

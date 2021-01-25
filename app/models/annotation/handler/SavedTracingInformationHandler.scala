@@ -34,11 +34,9 @@ class SavedTracingInformationHandler @Inject()(annotationDAO: AnnotationDAO,
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext) =
+  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       annotation <- provideAnnotation(identifier, None)
-    } yield {
-      annotationRestrictionDefults.defaultsFor(annotation)
-    }
+    } yield annotationRestrictionDefults.defaultsFor(annotation)
 
 }

@@ -42,8 +42,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
-  def loggedTimeOfUser[T](user: User, groupingF: TimeSpan => T, start: Option[Long] = None, end: Option[Long] = None)(
-      implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+  def loggedTimeOfUser[T](user: User,
+                          groupingF: TimeSpan => T,
+                          start: Option[Long] = None,
+                          end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
@@ -58,7 +60,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   def loggedTimeOfAnnotation[T](annotationId: ObjectId,
                                 groupingF: TimeSpan => T,
                                 start: Option[Long] = None,
-                                end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
+                                end: Option[Long] = None): Fox[Map[T, Duration]] =
     for {
       timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
     } yield {
@@ -67,19 +69,6 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
           timeSpans.groupBy(groupingF).mapValues(_.foldLeft(0L)(_ + _.time).millis)
         case _ =>
           Map.empty[T, Duration]
-      }
-    }
-
-  def totalTimeOfUser[T](user: User, start: Option[Long], end: Option[Long])(
-      implicit ctx: DBAccessContext): Fox[Duration] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.foldLeft(0L)(_ + _.time).millis
-        case _ =>
-          0.millis
       }
     }
 
@@ -183,7 +172,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneById(annotation._user, useCache = true)(GlobalAccessContext)
-      task <- annotationService.taskFor(annotation)
+      task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
@@ -238,7 +227,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     val updated = timeSpan.addTime(duration, timestamp)
 
     for {
-      _ <- timeSpanDAO.updateOne(updated)(ctx) ?~> "FAILED: TimeSpanDAO.updateOne"
+      _ <- timeSpanDAO.updateOne(updated) ?~> "FAILED: TimeSpanDAO.updateOne"
       _ <- logTimeToAnnotation(duration, updated._annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
       annotation <- getAnnotation(updated._annotation)
       _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"

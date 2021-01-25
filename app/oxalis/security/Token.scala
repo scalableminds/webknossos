@@ -77,15 +77,14 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       )
     }
 
-  def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Token] =
+  def findOneByValue(value: String): Fox[Token] =
     for {
       rOpt <- run(Tokens.filter(r => notdel(r) && r.value === value).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield parsed
 
-  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType)(
-      implicit ctx: DBAccessContext): Fox[Token] =
+  def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType): Fox[Token] =
     for {
       rOpt <- run(Tokens
         .filter(r =>
@@ -96,7 +95,7 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       parsed <- parse(r)
     } yield parsed
 
-  def insertOne(t: Token)(implicit ctx: DBAccessContext) =
+  def insertOne(t: Token): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
@@ -115,29 +114,29 @@ class TokenDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       _ <- assertUpdateAccess(id)
       _ <- run(sqlu"""update webknossos.tokens
                       set
-                        value = ${value},
+                        value = $value,
                         lastUsedDateTime = ${new java.sql.Timestamp(lastUsedDateTime.getMillis)},
                         expirationDateTime = ${new java.sql.Timestamp(expirationDateTime.getMillis)},
                         idleTimeout = ${idleTimeout.map(_.toMillis)}
                       where _id = ${id.id}""")
     } yield ()
 
-  def deleteOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def deleteOneByValue(value: String): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
     for { _ <- run(q.update(true)) } yield ()
   }
 
-  def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def deleteAllExpired(): Fox[Unit] = {
     val q = for {
       row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
     } yield isDeletedColumn(row)
     for { _ <- run(q.update(true)) } yield ()
   }
 
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.tokens set
-        logininfo_providerkey = ${newEmail}
-        where logininfo_providerkey = ${oldEmail}""")
+        logininfo_providerkey = $newEmail
+        where logininfo_providerkey = $oldEmail""")
     } yield ()
 }

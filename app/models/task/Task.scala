@@ -130,8 +130,9 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
            limit 1
       """
 
-  def assignNext(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[(Task, ObjectId)] = {
+  def assignNext(userId: ObjectId,
+                 teamIds: List[ObjectId],
+                 isTeamManagerOrAdmin: Boolean = false): Fox[(Task, ObjectId)] = {
 
     val annotationId = ObjectId.generate
     val dummyTracingId = Random.alphanumeric.take(36).mkString
@@ -169,8 +170,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield (parsed, annotationId)
   }
 
-  def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[Task] =
+  def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId], isTeamManagerOrAdmin: Boolean = false): Fox[Task] =
     for {
       rList <- run(sql"#${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)}".as[TasksRow])
       r <- rList.headOption.toFox
@@ -233,7 +233,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption.toFox
     } yield firstResult
 
-  def countAllOpenInstancesForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+  def countAllOpenInstancesForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       result <- run(
         sql"select sum(t.openInstances) from webknossos.tasks_ t join webknossos.projects_ p on t._project = p._id where $organizationId in (select _organization from webknossos.users_ where _id = p._owner)"
@@ -250,7 +250,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       firstResult <- result.headOption
     } yield firstResult
 
-  def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[Map[ObjectId, Int]] =
+  def countAllOpenInstancesGroupedByProjects: Fox[Map[ObjectId, Int]] =
     for {
       rowsRaw <- run(sql"""select _project, sum(openInstances)
               from webknossos.tasks_
@@ -260,7 +260,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       rowsRaw.toList.map(r => (ObjectId(r._1), r._2)).toMap
     }
 
-  def listExperienceDomains(implicit ctx: DBAccessContext): Fox[List[String]] =
+  def listExperienceDomains: Fox[List[String]] =
     for {
       rowsRaw <- run(sql"select domain from webknossos.experienceDomains".as[String])
     } yield rowsRaw.toList
@@ -302,7 +302,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       )
     } yield ()
 
-  def removeScriptFromAllTasks(scriptId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def removeScriptFromAllTasks(scriptId: ObjectId): Fox[Unit] =
     for {
       _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
     } yield ()
@@ -324,7 +324,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield ()
   }
 
-  def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId): Fox[Unit] = {
     val queries = List(
       sqlu"update webknossos.tasks set isDeleted = true where _taskType = ${taskTypeId.id}",
       sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _taskType = ${taskTypeId.id})"
@@ -334,7 +334,7 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
     } yield ()
   }
 
-  def removeAllWithProjectAndItsAnnotations(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def removeAllWithProjectAndItsAnnotations(projectId: ObjectId): Fox[Unit] = {
     val queries = List(
       sqlu"update webknossos.tasks set isDeleted = true where _project = ${projectId.id}",
       sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _project = ${projectId.id})"

@@ -101,7 +101,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
     } yield resultsParsed
 
-  def insertOne(m: MeshInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(m: MeshInfo): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
                    values(${m._id.id}, ${m._annotation.id}, ${m.description}, '#${writeStructTuple(

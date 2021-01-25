@@ -68,19 +68,13 @@ class InviteService @Inject()(conf: WkConf,
           .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.displayName, sender.name))
     } yield ()
 
-  def removeExpiredInvites(implicit ctx: DBAccessContext): Fox[Unit] =
+  def removeExpiredInvites(): Fox[Unit] =
     inviteDAO.deleteAllExpired
-
-  def assertValidInvite(tokenValue: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      invite <- inviteDAO.findOneByTokenValue(tokenValue)
-      _ <- bool2Fox(invite._organization == organizationId)
-    } yield ()
 
   def deactivateUsedInvite(invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteOne(invite._id)
 
-  def findInviteByTokenOpt(tokenValueOpt: Option[String])(implicit ctx: DBAccessContext): Fox[Invite] =
+  def findInviteByTokenOpt(tokenValueOpt: Option[String]): Fox[Invite] =
     tokenValueOpt match {
       case Some(tokenValue) => inviteDAO.findOneByTokenValue(tokenValue)
       case None             => Fox.failure("No invite Token")
@@ -108,14 +102,14 @@ class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  def findOneByTokenValue(tokenValue: String)(implicit ctx: DBAccessContext): Fox[Invite] =
+  def findOneByTokenValue(tokenValue: String): Fox[Invite] =
     for {
       rOpt <- run(Invites.filter(r => notdel(r) && r.tokenvalue === tokenValue).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield parsed
 
-  def insertOne(i: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(i: Invite): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
@@ -123,7 +117,7 @@ class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                     ${new java.sql.Timestamp(i.expirationDateTime.getMillis)}, ${new java.sql.Timestamp(i.created)}, ${i.isDeleted})""")
     } yield ()
 
-  def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def deleteAllExpired: Fox[Unit] = {
     val q = for {
       row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
     } yield isDeletedColumn(row)

@@ -1,20 +1,19 @@
+import java.io.File
+
 import akka.actor.{ActorSystem, Props}
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mail.{Mailer, MailerConfig}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
 import io.apigee.trireme.core.NodeEnvironment
+import javax.inject._
 import models.annotation.AnnotationDAO
+import models.user.InviteService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WkSilhouetteEnvironment
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.inject.ApplicationLifecycle
 import utils.{SQLClient, WkConf}
-import java.io.File
-
-import javax.inject._
-import models.user.InviteService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -36,18 +35,18 @@ class Startup @Inject()(actorSystem: ActorSystem,
   logger.info("Executing Startup")
   startActors(actorSystem)
 
-  val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+  private val tokenAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
   cleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-    tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+    tokenAuthenticatorService.removeExpiredTokens()
   }
 
   cleanUpService.register("deletion of expired invites", 1 day) {
-    inviteService.removeExpiredInvites(GlobalAccessContext)
+    inviteService.removeExpiredInvites()
   }
 
   cleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-    annotationDAO.deleteOldInitializingAnnotations
+    annotationDAO.deleteOldInitializingAnnotations()
   }
 
   ensurePostgresDatabase.onComplete { _ =>
@@ -86,7 +85,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
       Array("tools/postgres/schema.sql", "DB")
     )
     val status = script.execute().get()
-    if (status.getExitCode() == 0) {
+    if (status.getExitCode == 0) {
       logger.info("Schema is up to date.")
     } else {
       val errorMessage = new StringBuilder("Database schema does not fit to schema.sql!")

@@ -1,6 +1,6 @@
 // @flow
 import { Link, withRouter, type RouterHistory } from "react-router-dom";
-import { Spin, Layout, Row, Col, Card, Input } from "antd";
+import { Spin, Layout, Row, Col, Card, Input, Icon } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
@@ -27,6 +27,24 @@ export const SimpleHeader = () => (
   </div>
 );
 
+// const HeroHeader = ({ children }) => (
+//   <div
+//     style={{
+//       backgroundImage: "url(/assets/images/cover.jpg)",
+//       backgroundSize: "cover",
+//     }}
+//   >
+//     <div
+//       style={{
+//         backgroundColor: "rgba(88, 88, 88, 0.4)",
+//         backgroundImage: "linear-gradient(0deg, #222222 0%, rgba(23, 103, 139, 0.73) 70%)",
+//       }}
+//     >
+//       <div className="welcome-header-content">{children}</div>
+//     </div>
+//   </div>
+// );
+
 const WelcomeHeader = ({ history }) => (
   <div
     style={{
@@ -37,16 +55,10 @@ const WelcomeHeader = ({ history }) => (
     <div
       style={{
         backgroundColor: "rgba(88, 88, 88, 0.4)",
-        backgroundImage: "linear-gradient(to bottom, #449efd7a 0%, #041a4abf 85%, #00050fc2 100%)",
+        backgroundImage: "linear-gradient(0deg, #222222 0%, rgba(23, 103, 139, 0.73) 70%)",
       }}
     >
-      <div
-        style={{
-          maxWidth: 1300,
-          margin: "auto",
-          padding: "80px 0px",
-        }}
-      >
+      <div className="welcome-header-content">
         <Row type="flex" align="middle" style={{ color: "white" }}>
           <Col xs={{ span: 0 }} xl={{ span: 4 }}>
             <img
@@ -111,13 +123,7 @@ const WelcomeHeader = ({ history }) => (
             </div>
           </Col>
           <Col xs={{ span: 24 }} lg={{ span: 7 }} xl={{ span: 6 }}>
-            <div
-              style={{
-                backgroundColor: "white",
-                padding: 20,
-                boxShadow: "0 0 10px rgba(0, 0, 0, 0.38)",
-              }}
-            >
+            <div className="spotlight-registration-form">
               <SpotlightRegistrationForm
                 onRegistered={() => {
                   history.push("/dashboard?showWhatsNextBanner");
@@ -129,6 +135,103 @@ const WelcomeHeader = ({ history }) => (
             </div>
           </Col>
         </Row>
+      </div>
+    </div>
+  </div>
+);
+
+const WhatsNextAction = ({ title, description, icon, onClick }) => {
+  return (
+    <li onClick={onClick}>
+      {icon}
+      <div className="label">
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+      <Icon type="right" className="chevron" />
+    </li>
+  );
+};
+
+export const WhatsNextHeader = ({ history }) => (
+  <div>
+    <div
+      style={{
+        backgroundColor: "rgba(88, 88, 88, 0.4)",
+        backgroundImage: "linear-gradient(0deg, rgb(255, 255, 255) 0%, rgb(246, 252, 255) 70%)",
+      }}
+    >
+      <div className="welcome-header-content">
+        <div style={{ maxWidth: 1000, margin: "auto" }}>
+          <h1
+            style={{
+              color: "#1F2937",
+              marginLeft: 56,
+              fontWeight: 200,
+              fontSize: 64,
+              lineHeight: "150%",
+              marginBottom: 0,
+            }}
+          >
+            Welcome to webKnossos!
+          </h1>
+          <div
+            style={{
+              margin: "0 20px 0px 60px",
+              fontWeight: 300,
+              fontSize: 20,
+              lineHeight: "150%",
+              color: "#6B7280",
+            }}
+          >
+            <p
+              style={{
+                fontSize: 20,
+                lineHeight: 1.5,
+                marginTop: 0,
+                marginBottom: 30,
+              }}
+            >
+              Congratulations on your new webKnossos account! To hit the ground running, we
+              recommend the following steps for you:
+            </p>
+            <ul className="whats-next-actions-grid">
+              {/*
+                - import your own data -> öffnet data upload
+                - learn how to create annotations -> modal mit erklärbär-video
+                - invite colleagues -> user page oder besser modal mit email-eingabe
+                - open a demo dataset -> paper_l4 segmentation
+
+                */}
+
+              <WhatsNextAction
+                title="Open a Demo Dataset"
+                description="This guide should answer all your burning questions around webKnossos."
+                icon={<Icon type="play-circle" className="action-icon" />}
+                onClick={() => console.log("open paper l4 segmentation")}
+              />
+
+              <WhatsNextAction
+                title="Import your own data"
+                description="This guide should answer all your burning questions around webKnossos."
+                icon={<Icon type="cloud-upload" className="action-icon" />}
+                onClick={() => console.log("open data upload")}
+              />
+              <WhatsNextAction
+                title="Learn how to create annotations"
+                description="This guide should answer all your burning questions around webKnossos."
+                icon={<Icon type="plus-circle" className="action-icon" />}
+                onClick={() => console.log("open modal with explanation video")}
+              />
+              <WhatsNextAction
+                title="Invite your Colleagues"
+                description="This guide should answer all your burning questions around webKnossos."
+                icon={<Icon type="mail" className="action-icon" />}
+                onClick={() => console.log("open user page with invite-modal")}
+              />
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -6,6 +6,7 @@ import React, { PureComponent } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
 
+import { WhatsNextHeader } from "dashboard/spotlight_view";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -154,7 +155,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const onTabChange = activeTabKey => {
+    const onTabChange = (activeTabKey) => {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
       const url = tabKeyToURLMap[activeTabKey];
       if (url) {
@@ -178,7 +179,8 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
-        <div className="container" style={{ paddingBottom: 50 }}>
+        <WhatsNextHeader />
+        <div className="container">
           {whatsNextBanner}
           {userHeader}
           <DatasetCacheProvider>

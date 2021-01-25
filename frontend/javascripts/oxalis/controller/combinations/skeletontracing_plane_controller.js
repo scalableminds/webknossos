@@ -415,8 +415,8 @@ export function setWaypoint(
       ]),
     ),
   );
-
-  addNode(position, rotation, !ctrlPressed);
+  const centerNewNode = !ctrlPressed && Store.getState().userConfiguration.centerNewNode;
+  addNode(position, rotation, centerNewNode);
 
   // Ctrl + right click to set new not active branchpoint
   const { newNodeNewTree } = Store.getState().userConfiguration;
@@ -434,7 +434,7 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
     Store.dispatch(createTreeAction());
   }
 
-  if (activeNodeMaybe.isNothing) {
+  if (activeNodeMaybe.isNothing && !newNodeNewTree) {
     // when placing very first node of a tracing
     centered = true;
   }
@@ -446,7 +446,7 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
       null,
-      !centered,
+      //! centered,
     ),
   );
 

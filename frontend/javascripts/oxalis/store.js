@@ -301,6 +301,7 @@ export type UserConfiguration = {|
   +moveValue3d: number,
   +moveValue: number,
   +newNodeNewTree: boolean,
+  +centerNewNode: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
   +rotateValue: number,

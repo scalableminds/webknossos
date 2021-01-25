@@ -45,6 +45,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         resumableUploadInformation: ResumableUploadInformation,
                         currentChunkNumber: Int,
                         chunkFile: File): Fox[Unit] = {
+    logger.info(s"handleUploadChunk uploadId ${uploadId} ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
     val isChunkNew = savedUploadChunks.synchronized {
       savedUploadChunks.get(uploadId) match {
         case Some((_, set)) =>
@@ -85,8 +86,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
     val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
-
-    logger.info(s"Unzipping uploaded dataset to $dataSourceDir")
 
     for {
       _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }

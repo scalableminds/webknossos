@@ -36,7 +36,7 @@ trait FoxImplicits {
     case scala.util.Failure(e) => Fox.failure(e.getMessage)
   }
 
-  implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =
+  implicit def fox2FutureBox[T](f: Fox[T]): Future[Box[T]] =
     f.futureBox
 
   def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =

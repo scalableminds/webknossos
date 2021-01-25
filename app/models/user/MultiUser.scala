@@ -40,7 +40,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         r.isdeleted
       ))
 
-  def insertOne(u: MultiUser)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(u: MultiUser): Fox[Unit] =
     for {
       _ <- run(
         sqlu"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher, passwordInfo_password, isSuperUser, created, isDeleted)

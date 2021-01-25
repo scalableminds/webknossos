@@ -86,7 +86,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  private def selectSuitableTeam(user: User, dataSet: DataSet): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
       datasetAllowedTeamIds <- dataSetService.allowedTeamIdsFor(dataSet._id)
@@ -448,7 +448,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
                  volumeTracingId: Option[String],
                  annotationType: AnnotationType,
                  name: Option[String],
-                 description: String)(implicit m: MessagesProvider, ctx: DBAccessContext): Fox[Annotation] =
+                 description: String): Fox[Annotation] =
     for {
       teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(ObjectId.generate,
@@ -464,7 +464,8 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
-  def sharedAnnotationsFor(userTeams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+  // Does not use access query (because they dont support prefixes). Use only after separate access check!
+  def sharedAnnotationsFor(userTeams: List[ObjectId]): Fox[List[Annotation]] =
     sharedAnnotationsDAO.findAllSharedForTeams(userTeams)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
@@ -479,7 +480,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     } yield teams
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String, skipVolumeData: Boolean)(
-      implicit m: MessagesProvider,
+      implicit
       ctx: DBAccessContext): Fox[TemporaryFile] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData)
@@ -658,7 +659,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
       Fox.successful(AnnotationSettings.defaultFor(annotation.tracingType))
 
   def taskFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Task] =
-    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId)(GlobalAccessContext))
+    annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
 
   def publicWrites(annotation: Annotation,
                    requestingUser: Option[User] = None,
@@ -716,7 +717,7 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
     for {
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation"
       organization <- organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
-      user <- userDAO.findOne(annotation._user)(GlobalAccessContext) ?~> "user.notFound"
+      userBox <- userDAO.findOne(annotation._user).futureBox
     } yield {
       Json.obj(
         "modified" -> annotation.modified,
@@ -733,7 +734,9 @@ class AnnotationService @Inject()(annotationInformationProvider: AnnotationInfor
         "visibility" -> annotation.visibility,
         "tracingTime" -> annotation.tracingTime,
         "tags" -> (annotation.tags ++ Set(dataSet.name, annotation.tracingType.toString)),
-        "owner" -> s"${user.firstName} ${user.lastName}"
+        "owner" -> userBox.toOption.map { user =>
+          s"${user.firstName} ${user.lastName}"
+        }
       )
     }
 }

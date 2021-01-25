@@ -1,21 +1,21 @@
 package controllers
 
-import javax.inject.Inject
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.{Action, AnyContent}
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLClient, SimpleSQLDAO, WkConf}
+import utils.{ObjectId, SQLClient, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
-object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
+object OpenTasksEntry { implicit val jsonFormat: OFormat[OpenTasksEntry] = Json.format[OpenTasksEntry] }
 
 case class ProjectProgressEntry(projectName: String,
                                 paused: Boolean,
@@ -26,12 +26,14 @@ case class ProjectProgressEntry(projectName: String,
                                 finishedInstances: Int,
                                 activeInstances: Int,
                                 billedMilliseconds: Long)
-object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
+object ProjectProgressEntry {
+  implicit val jsonFormat: OFormat[ProjectProgressEntry] = Json.format[ProjectProgressEntry]
+}
 
 class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] =
+  def projectProgress(teamId: ObjectId): Fox[List[ProjectProgressEntry]] =
     for {
       r <- run(sql"""
           with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId.id})
@@ -95,7 +97,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
       r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7, row._8, row._9))
     }
 
-  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] =
+  def getAssignmentsByProjectsFor(userId: ObjectId): Fox[Map[String, Int]] =
     for {
       r <- run(sql"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
@@ -115,7 +117,7 @@ class ReportDAO @Inject()(sqlClient: SQLClient, annotationDAO: AnnotationDAO)(im
       """.as[(String, String, String, Int, Int)])
     } yield {
       val formattedList = r.toList.map(row => (row._2 + "/" + row._3 + ": " + row._4, row._5))
-      formattedList.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
+      formattedList.toMap.filter(_ match { case (_: String, openTaskCount: Int) => openTaskCount > 0 })
     }
 
 }
@@ -124,30 +126,29 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
-                                 conf: WkConf,
                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
-  def projectProgressOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
+  def projectProgressOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
-      entries <- reportDAO.projectProgress(teamIdValidated)(GlobalAccessContext)
+      _ <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
+      entries <- reportDAO.projectProgress(teamIdValidated)
     } yield Ok(Json.toJson(entries))
   }
 
-  def openTasksOverview(teamId: String) = sil.SecuredAction.async { implicit request =>
+  def openTasksOverview(teamId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       teamIdValidated <- ObjectId.parse(teamId)
-      team <- teamDAO.findOne(teamIdValidated)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND
-      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)(GlobalAccessContext)
+      team <- teamDAO.findOne(teamIdValidated) ?~> "team.notFound" ~> NOT_FOUND
+      users <- userDAO.findAllByTeams(List(team._id), includeDeactivated = false)
       nonAdminUsers <- Fox.filterNot(users)(u => userService.isTeamManagerOrAdminOf(u, teamIdValidated))
-      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)
     } yield Ok(Json.toJson(entries))
   }
 
-  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(
-      implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
+  private def getAllAvailableTaskCountsAndProjects(users: Seq[User]): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
         assignmentCountsByProject <- reportDAO.getAssignmentsByProjectsFor(user._id)

@@ -19,9 +19,9 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
-import org.joda.time.format.ISODateTimeFormat
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -211,9 +211,12 @@ class DataSourceService @Inject()(
       JsonHelper.validatedJsonFromFile[DataSource](propertiesFile, path) match {
         case Full(dataSource) =>
           if (dataSource.dataLayers.nonEmpty) dataSource.copy(id)
-          else UnusableDataSource(id, "Error: Zero layer Dataset")
+          else
+            UnusableDataSource(id, "Error: Zero layer Dataset", Some(dataSource.scale), Some(Json.toJson(dataSource)))
         case e =>
-          UnusableDataSource(id, s"Error: Invalid json format in $propertiesFile: $e")
+          UnusableDataSource(id,
+                             s"Error: Invalid json format in $propertiesFile: $e",
+                             existingDataSourceProperties = JsonHelper.jsonFromFile(propertiesFile, path).toOption)
       }
     } else {
       UnusableDataSource(id, "Not imported yet.")

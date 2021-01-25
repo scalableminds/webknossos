@@ -85,7 +85,7 @@ class DataSetConfigurationService @Inject()(dataSetService: DataSetService,
   def getLayerConfigurations(dataSetLayers: List[DataLayerLike],
                              requestedVolumeIds: List[String],
                              dataSet: DataSet,
-                             userOpt: Option[User] = None)(implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] = {
+                             userOpt: Option[User] = None): Fox[Map[String, JsValue]] = {
     val allLayerNames = dataSetLayers.map(_.name) ++ requestedVolumeIds
     (userOpt match {
       case Some(user) =>

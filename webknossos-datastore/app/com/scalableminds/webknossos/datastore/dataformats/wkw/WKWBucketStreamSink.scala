@@ -16,7 +16,7 @@ class WKWBucketStreamSink(val layer: DataLayer) extends WKWDataFormatHelper {
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])]): Iterator[NamedStream] = {
     val (voxelType, numChannels) = WKWDataFormat.elementClassToVoxelType(layer.elementClass)
     val header = WKWHeader(1, DataLayer.bucketLength, BlockType.LZ4, voxelType, numChannels)
-    var resolutions = new mutable.HashSet[Point3D]()
+    val resolutions = new mutable.HashSet[Point3D]()
     bucketStream.map {
       case (bucket, data) =>
         val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength)).toString

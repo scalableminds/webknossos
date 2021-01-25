@@ -48,6 +48,7 @@ export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode
 const MAG_THRESHOLDS_FOR_ZOOM: { [VolumeTool]: number } = {
   [VolumeToolEnum.TRACE]: 1,
   [VolumeToolEnum.BRUSH]: 3,
+  [VolumeToolEnum.FILL_CELL]: 1,
 };
 export function isVolumeAnnotationDisallowedForZoom(tool: VolumeTool, state: OxalisState) {
   if (state.tracing.volume == null) {

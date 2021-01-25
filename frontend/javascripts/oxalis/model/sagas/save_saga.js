@@ -423,7 +423,7 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       } else {
         // Still log the error to airbrake. Also compactedSaveQueue needs to be within an object
         // as otherwise the entries would be spread by the notify function.
-        ErrorHandling.notify(error, { compactedSaveQueue });
+        yield* call([ErrorHandling, ErrorHandling.notify], error, { compactedSaveQueue });
       }
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state

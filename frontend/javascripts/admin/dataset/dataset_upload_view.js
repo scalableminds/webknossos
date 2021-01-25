@@ -60,12 +60,15 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     this.props.activeUser &&
     (this.props.activeUser.isAdmin || this.props.activeUser.isDatasetManager);
 
-  normFile = e => {
-    // Ensure that only one dataset can be uploaded simultaneously
+
+  normFile = (e) => {
+    console.log('Upload event:', e);
+
     if (Array.isArray(e)) {
-      return e.slice(-1);
+      return e;
     }
-    return e && e.fileList.slice(-1);
+
+    return e && e.fileList;
   };
 
   handleCheckboxChange = evt => {
@@ -130,7 +133,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           );
         });
 
-        resumableUpload.on("fileAdded", () => {
+        resumableUpload.on("filesAdded", () => {
           resumableUpload.upload();
         });
 
@@ -147,7 +150,9 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           this.setState({ isRetrying: true });
         });
 
-        resumableUpload.addFiles(formValues.zipFile);
+        console.log("addFiles", formValues.zipFile);
+
+        //resumableUpload.addFiles(formValues.zipFile);
       }
     });
   };
@@ -256,11 +261,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
                   valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
+                  //getValueFromEvent: this.normFile,
                 })(
                   <Upload.Dragger
+                    multiple
                     name="files"
                     beforeUpload={file => {
+                      console.log("beforeUpload for", file);
                       if (!form.getFieldValue("name")) {
                         const filename = file.name
                           .split(".")

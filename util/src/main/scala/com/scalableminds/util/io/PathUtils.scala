@@ -1,10 +1,11 @@
 package com.scalableminds.util.io
 
+import java.io.File
+import java.nio.file.{Path, _}
+
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 
-import java.io.File
-import java.nio.file.{Path, _}
 import scala.collection.JavaConverters._
 
 object PathUtils extends PathUtils
@@ -89,6 +90,13 @@ trait PathUtils extends LazyLogging {
       Files.createDirectories(path)
     path
   }
+
+  def ensureDirectoryBox(dir: Path): Box[Path] =
+    try {
+      Full(PathUtils.ensureDirectory(dir))
+    } catch {
+      case _: AccessDeniedException => Failure("Could not create directory: Access denied")
+    }
 
   // not following symlinks
   def listDirectoriesRaw(directory: Path) = Box[List[Path]] {

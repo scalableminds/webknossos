@@ -1,15 +1,16 @@
 package models.annotation
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
-import slick.jdbc.PostgresProfile.api._
+import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.binary.DataSet
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Request, Result, Results}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{SQLClient, SQLDAO}
 
@@ -24,12 +25,13 @@ case class TracingStore(
 )
 
 object TracingStore {
-  def fromUpdateForm(name: String, url: String, publicUrl: String) =
+  def fromUpdateForm(name: String, url: String, publicUrl: String): TracingStore =
     TracingStore(name, url, publicUrl, "")
 }
 
 class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
     extends FoxImplicits
+    with LazyLogging
     with Results {
 
   def publicWrites(tracingStore: TracingStore): Fox[JsObject] =
@@ -39,14 +41,17 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
         "url" -> tracingStore.publicUrl
       ))
 
-  def validateAccess[A](name: String)(block: (TracingStore) => Future[Result])(implicit request: Request[A],
-                                                                               m: MessagesProvider): Fox[Result] =
+  def validateAccess[A](name: String)(block: TracingStore => Future[Result])(implicit request: Request[A],
+                                                                             m: MessagesProvider): Fox[Result] =
     request
       .getQueryString("key")
       .toFox
-      .flatMap(key => tracingStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+      .flatMap(key => tracingStoreDAO.findOneByKey(key)) // Check if key is valid
       .flatMap(tracingStore => block(tracingStore)) // Run underlying action
-      .getOrElse(Forbidden(Messages("tracingStore.notFound"))) // Default error
+      .getOrElse {
+        logger.info(s"Denying tracing store request from $name due to unknown key.")
+        Forbidden(Messages("tracingStore.notFound"))
+      } // Default error
 
   def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingStoreRpcClient] =
     for {
@@ -71,7 +76,7 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
         r.isdeleted
       ))
 
-  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findOneByKey(key: String): Fox[TracingStore] =
     for {
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
@@ -80,7 +85,7 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       parsed
     }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findOneByName(name: String): Fox[TracingStore] =
     for {
       rOpt <- run(Tracingstores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
@@ -94,11 +99,6 @@ class TracingStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       all <- findAll
       first <- all.headOption.toFox
     } yield first
-
-  def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- Tracingstores if notdel(row) && row.name === name } yield row.url
-    for { _ <- run(q.update(url)) } yield ()
-  }
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {

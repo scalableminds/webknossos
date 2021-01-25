@@ -64,6 +64,11 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
       }
     }
 
+  /* token may be
+       - the global webKnossosToken (allow everything)
+       - a user token (allow what that user may do)
+       - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
+   */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
       implicit ec: ExecutionContext): Fox[Result] =
     if (token.contains(DataStoreRpcClient.webKnossosToken)) {
@@ -71,13 +76,12 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token)(GlobalAccessContext).futureBox
-        ctxFromUserBox = DBAccessContext(userBox)
-        ctx = URLSharing.fallbackTokenAccessContext(token)(ctxFromUserBox)
+        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
-            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
+            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)(ctx)
+            handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(granted = false, Some("Invalid access token.")))
         }
@@ -88,7 +92,8 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
 
   private def handleDataSourceAccess(dataSourceId: DataSourceId, mode: AccessMode.Value, userBox: Box[User])(
       implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
-    //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext
+    // Write access is explicitly handled here depending on userBox,
+    // Read access is ensured in findOneBySourceName, depending on the implicit DBAccessContext (to allow sharingTokens)
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
@@ -134,8 +139,10 @@ class UserTokenController @Inject()(dataSetDAO: DataSetDAO,
     }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(
-      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+  private def handleTracingAccess(tracingId: String,
+                                  mode: AccessMode.Value,
+                                  userBox: Box[User]): Fox[UserAccessAnswer] = {
+    // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
 
     def findAnnotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
       val annotationFox = annotationDAO.findOneByTracingId(tracingId)

@@ -155,7 +155,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const onTabChange = (activeTabKey) => {
+    const onTabChange = activeTabKey => {
       const tabKeyToURLMap = _.invert(urlTokenToTabKeyMap);
       const url = tabKeyToURLMap[activeTabKey];
       if (url) {
@@ -179,7 +179,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
-        <WhatsNextHeader />
+        <WhatsNextHeader activeUser={this.props.activeUser} history={this.props.history} />
         <div className="container">
           {whatsNextBanner}
           {userHeader}

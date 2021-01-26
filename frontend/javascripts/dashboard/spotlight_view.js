@@ -4,6 +4,7 @@ import { Spin, Layout, Row, Col, Card, Input, Icon } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 
+import renderIndependently from "libs/render_independently";
 import type { APIMaybeUnimportedDataset, APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { checkAnyOrganizationExists, getDatasets } from "admin/admin_rest_api";
@@ -12,6 +13,7 @@ import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
 import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
+import { InviteUsersModal } from "admin/onboarding";
 
 const { Content } = Layout;
 const { Search } = Input;
@@ -26,24 +28,6 @@ export const SimpleHeader = () => (
     webKnossos
   </div>
 );
-
-// const HeroHeader = ({ children }) => (
-//   <div
-//     style={{
-//       backgroundImage: "url(/assets/images/cover.jpg)",
-//       backgroundSize: "cover",
-//     }}
-//   >
-//     <div
-//       style={{
-//         backgroundColor: "rgba(88, 88, 88, 0.4)",
-//         backgroundImage: "linear-gradient(0deg, #222222 0%, rgba(23, 103, 139, 0.73) 70%)",
-//       }}
-//     >
-//       <div className="welcome-header-content">{children}</div>
-//     </div>
-//   </div>
-// );
 
 const WelcomeHeader = ({ history }) => (
   <div
@@ -140,20 +124,51 @@ const WelcomeHeader = ({ history }) => (
   </div>
 );
 
-const WhatsNextAction = ({ title, description, icon, onClick }) => {
-  return (
-    <li onClick={onClick}>
+type WhatsNextActionProps = {
+  title: string,
+  description: string,
+  icon: React.Node,
+  onClick?: Function,
+  href?: string,
+  to?: string,
+};
+
+const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsNextActionProps) => {
+  const content = (
+    <React.Fragment>
       {icon}
       <div className="label">
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
       <Icon type="right" className="chevron" />
-    </li>
+    </React.Fragment>
   );
+
+  if (to != null) {
+    return <Link to={to}>{content}</Link>;
+  }
+
+  const linkProps =
+    href != null
+      ? {
+          href,
+          target: "_blank",
+        }
+      : {
+          href: "#",
+          onClick,
+        };
+
+  return <a {...linkProps}>{content}</a>;
 };
 
-export const WhatsNextHeader = ({ history }) => (
+type WhatsNextHeaderProps = {
+  history: RouterHistory,
+  activeUser: APIUser,
+};
+
+export const WhatsNextHeader = ({ history, activeUser }: WhatsNextHeaderProps) => (
   <div>
     <div
       style={{
@@ -189,47 +204,47 @@ export const WhatsNextHeader = ({ history }) => (
                 fontSize: 20,
                 lineHeight: 1.5,
                 marginTop: 0,
-                marginBottom: 30,
+                marginBottom: 8,
               }}
             >
               Congratulations on your new webKnossos account! To hit the ground running, we
               recommend the following steps for you:
             </p>
-            <ul className="whats-next-actions-grid">
-              {/*
-                - import your own data -> öffnet data upload
-                - learn how to create annotations -> modal mit erklärbär-video
-                - invite colleagues -> user page oder besser modal mit email-eingabe
-                - open a demo dataset -> paper_l4 segmentation
-
-                */}
-
+            <div className="whats-next-actions-grid">
               <WhatsNextAction
                 title="Open a Demo Dataset"
-                description="This guide should answer all your burning questions around webKnossos."
+                description="Have a look at a public dataset to experience webKnossos in action."
+                href="https://webknossos.org/datasets/MPI_Brain_Research/2012-09-28_ex145_07x2_ROI2017_connectome/view#2807,4313,1726,0,0.450"
                 icon={<Icon type="play-circle" className="action-icon" />}
-                onClick={() => console.log("open paper l4 segmentation")}
+                // onClick={() => ()}
               />
 
               <WhatsNextAction
-                title="Import your own data"
-                description="This guide should answer all your burning questions around webKnossos."
+                title="Import Your Own Data"
+                description="Directly upload your data as a zip file."
+                to="/datasets/upload"
                 icon={<Icon type="cloud-upload" className="action-icon" />}
-                onClick={() => console.log("open data upload")}
               />
               <WhatsNextAction
-                title="Learn how to create annotations"
-                description="This guide should answer all your burning questions around webKnossos."
+                title="Learn How To Create Annotations"
+                description="Watch a short video to see how data can be annotated with webKnossos."
                 icon={<Icon type="plus-circle" className="action-icon" />}
-                onClick={() => console.log("open modal with explanation video")}
+                href="https://youtu.be/W-dosptovEU?t=52"
               />
               <WhatsNextAction
-                title="Invite your Colleagues"
-                description="This guide should answer all your burning questions around webKnossos."
+                title="Invite Your Colleagues"
+                description="Send invites to your colleagues that they can join your organization."
                 icon={<Icon type="mail" className="action-icon" />}
-                onClick={() => console.log("open user page with invite-modal")}
+                onClick={() => {
+                  renderIndependently(destroy => (
+                    <InviteUsersModal
+                      organizationName={activeUser.organization}
+                      destroy={destroy}
+                    />
+                  ));
+                }}
               />
-            </ul>
+            </div>
           </div>
         </div>
       </div>

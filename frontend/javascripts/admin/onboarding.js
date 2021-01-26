@@ -174,7 +174,8 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
 export class InviteUsersModal extends React.Component<
   {
     visible?: boolean,
-    handleVisibleChange: Function,
+    handleVisibleChange?: Function,
+    destroy?: Function,
   },
   { inviteesString: string },
 > {
@@ -196,7 +197,8 @@ export class InviteUsersModal extends React.Component<
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
     this.setState({ inviteesString: "" });
-    this.props.handleVisibleChange(false);
+    if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
+    if (this.props.destroy != null) this.props.destroy();
   };
 
   getContent() {
@@ -220,7 +222,7 @@ export class InviteUsersModal extends React.Component<
   render() {
     return (
       <Modal
-        visible={this.props.visible}
+        visible={this.props.visible == null ? true : this.props.visible}
         title="Invite Users"
         width={600}
         footer={
@@ -228,7 +230,10 @@ export class InviteUsersModal extends React.Component<
             Send Invites
           </Button>
         }
-        onCancel={() => this.props.handleVisibleChange(false)}
+        onCancel={() => {
+          if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
+          if (this.props.destroy != null) this.props.destroy();
+        }}
       >
         {this.getContent()}
       </Modal>

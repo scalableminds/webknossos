@@ -343,6 +343,9 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
   const handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
+    if (features().isDemoInstance) {
+      location.reload();
+    }
   };
 
   const version = useFetch(getAndTrackVersion, null, []);

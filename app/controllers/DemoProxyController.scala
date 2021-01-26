@@ -6,13 +6,12 @@ import com.mohiva.play.silhouette.api.actions.UserAwareRequest
 import com.scalableminds.util.tools.Fox
 import oxalis.security.WkEnv
 import play.api.libs.ws.WSClient
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent}
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext,
-                                                                                        bodyParsers: PlayBodyParsers)
+class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller {
 
   def matchesProxyPage(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =

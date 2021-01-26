@@ -20,4 +20,4 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Removed
--
+- Support for KNOSSOS cubes data format was removed. Use the [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) tool to convert existing datasets saved as KNOSSOS cubes. [#5085](https://github.com/scalableminds/webknossos/pull/5085)

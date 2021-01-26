@@ -76,6 +76,7 @@ function RegistrationViewNotDemo() {
 }
 
 function RegistrationViewDemo() {
+  const history = useHistory();
   return (
     <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
       <Col span={8}>

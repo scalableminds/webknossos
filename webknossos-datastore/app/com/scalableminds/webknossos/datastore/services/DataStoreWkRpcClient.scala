@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataS
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -19,7 +19,7 @@ import scala.concurrent.duration._
 case class DataStoreStatus(ok: Boolean, url: String)
 
 object DataStoreStatus {
-  implicit val dataStoreStatusFormat = Json.format[DataStoreStatus]
+  implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
 
 trait WkRpcClient {
@@ -44,7 +44,7 @@ class DataStoreWkRpcClient @Inject()(
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingIntervalMinutes
 
-  def tick: Unit = reportStatus(ok = true)
+  def tick(): Unit = reportStatus(ok = true)
 
   def reportStatus(ok: Boolean): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/status")

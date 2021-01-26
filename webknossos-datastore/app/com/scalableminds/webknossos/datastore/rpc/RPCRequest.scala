@@ -37,7 +37,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
 
   def addQueryStringOptional(key: String, valueOptional: Option[String]): RPCRequest = {
     valueOptional match {
-      case Some(value: String) => { request = request.addQueryStringParameters((key, value)) }
+      case Some(value: String) => request = request.addQueryStringParameters((key, value))
       case _                   =>
     }
     this
@@ -244,11 +244,10 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       try {
         Full(companion.parseFrom(response.bodyAsBytes.toArray))
       } catch {
-        case e: Exception => {
+        case e: Exception =>
           val errorMsg = s"Request returned invalid Protocol Buffer Data (ID: $id): $e"
           logger.error(errorMsg)
           Failure(errorMsg)
-        }
       }
     }
 
@@ -260,7 +259,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient) extends FoxIm
       case body: InMemoryBody =>
         body.bytes.take(100).utf8String + (if (body.bytes.size > 100) s"... <omitted ${body.bytes.size - 100} bytes>"
                                            else "")
-      case body: SourceBody =>
+      case _: SourceBody =>
         s"<streaming source>"
       case _ =>
         ""

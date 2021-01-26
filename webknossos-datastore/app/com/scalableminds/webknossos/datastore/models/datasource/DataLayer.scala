@@ -172,8 +172,8 @@ object DataLayer {
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: WKWDataLayer         => WKWDataLayer.wkwDataLayerFormat.writes(l)
-        case l: WKWSegmentationLayer => WKWSegmentationLayer.wkwSegmentationLayerFormat.writes(l)
+        case l: WKWDataLayer         => WKWDataLayer.jsonFormat.writes(l)
+        case l: WKWSegmentationLayer => WKWSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat

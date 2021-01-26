@@ -45,7 +45,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         resumableUploadInformation: ResumableUploadInformation,
                         currentChunkNumber: Int,
                         chunkFile: File): Fox[Unit] = {
-    logger.info(s"handleUploadChunk uploadId ${uploadId} ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
     val isChunkNew = savedUploadChunks.synchronized {
       savedUploadChunks.get(uploadId) match {
         case Some((_, set)) =>

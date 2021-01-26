@@ -1,10 +1,11 @@
 // @flow
-import { type ContextRouter, Redirect, Route, Router, Switch } from "react-router-dom";
+import { type ContextRouter, Redirect, Route, Router, Switch, Link } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
+import { Col, Row } from "antd";
 
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";
@@ -407,6 +408,7 @@ class ReactRouter extends React.Component<Props> {
                 component={ChangePasswordView}
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
+              <Route path="/signup" render={() => <Redirect to="/auth/signup" />} />
 
               <Route
                 path="/invite/:token"
@@ -427,10 +429,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <Route
                 path="/auth/register"
-                render={({ location }: ContextRouter) => {
-                  const params = Utils.getUrlParamsObjectFromString(location.search);
-                  return <RegistrationView organizationName={params.organizationName} />;
-                }}
+                render={() => (isAuthenticated ? <Redirect to="/" /> : <RegistrationView />)}
               />
 
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />

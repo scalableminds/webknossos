@@ -177,7 +177,8 @@ export const WhatsNextHeader = ({ history, activeUser }: WhatsNextHeaderProps) =
       }}
     >
       <div className="welcome-header-content">
-        <div style={{ maxWidth: 1000, margin: "auto" }}>
+        <img className="wk-logo" src="/assets/images/oxalis.svg" alt="webKnossos Logo" />
+        <div className="text-and-button-container">
           <h1
             style={{
               color: "#1F2937",

@@ -81,7 +81,7 @@ class DataSetController @Inject()(userService: UserService,
               val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
                 c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
               dataSetService
-                .clientFor(dataSet)
+                .clientFor(dataSet)(GlobalAccessContext)
                 .flatMap(
                   _.requestDataLayerThumbnail(organizationName,
                                               dataLayerName,

@@ -26,7 +26,7 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * User and task management for high-throughput crowdsourcing
 * Sharing and collaboration features
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* [Supported dataset formats: WKW, KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
+* [Supported dataset formats: WKW](https://github.com/scalableminds/webknossos/wiki/Datasets), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
 * [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/guides/mesh_visualization)
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
@@ -35,8 +35,8 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * [Detailed Documentation](https://docs.webknossos.org)
 
 ## Publication
-> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
-> webKnossos: efficient online 3D data annotation for connectomics.  
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter
+> webKnossos: efficient online 3D data annotation for connectomics.
 > [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
 [Read more about the original publication.](https://publication.webknossos.org)
@@ -125,7 +125,7 @@ sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt 
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 ```
 
-If you already have a different Java version installed, set the default version to Java 8: 
+If you already have a different Java version installed, set the default version to Java 8:
 - run `sudo update-alternatives --config java`
 - when prompted, select the desired version
 

@@ -8,7 +8,6 @@ import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
-import features from "features";
 
 const FormItem = Form.Item;
 const { Password } = Input;

@@ -4,10 +4,10 @@ import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
+import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
-import RegistrationForm from "./registration_form";
 import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import RegistrationForm from "admin/auth/registration_form";
 
 function RegistrationViewNotDemo() {
   const history = useHistory();

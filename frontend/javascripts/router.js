@@ -1,11 +1,10 @@
 // @flow
-import { type ContextRouter, Redirect, Route, Router, Switch, Link } from "react-router-dom";
+import { type ContextRouter, Redirect, Route, Router, Switch } from "react-router-dom";
 import { Layout, Alert } from "antd";
 import { connect } from "react-redux";
 import Enum from "Enumjs";
 import React from "react";
 import { createBrowserHistory } from "history";
-import { Col, Row } from "antd";
 
 import AcceptInviteView from "admin/auth/accept_invite_view";
 import { APIAnnotationTypeEnum, type APIUser, TracingTypeEnum } from "types/api_flow_types";

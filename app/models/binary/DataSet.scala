@@ -241,6 +241,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                       where _id = $datasetId""")
     } yield ()
 
+  def updateUploader(datasetId: ObjectId, uploaderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(sqlu"""update webknossos.dataSets
+                      set _uploader = #${optionLiteral(uploaderId.map(_.id))}
+                      where _id = $datasetId""")
+    } yield ()
+
   def insertOne(d: DataSet): Fox[Unit] = {
     val adminViewConfiguration: Option[String] = d.adminViewConfiguration.map(Json.toJson(_).toString)
     val defaultViewConfiguration: Option[String] = d.defaultViewConfiguration.map(Json.toJson(_).toString)

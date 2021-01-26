@@ -408,7 +408,6 @@ class ReactRouter extends React.Component<Props> {
                 component={ChangePasswordView}
               />
               <Route path="/login" render={() => <Redirect to="/auth/login" />} />
-              <Route path="/signup" render={() => <Redirect to="/auth/signup" />} />
 
               <Route
                 path="/invite/:token"

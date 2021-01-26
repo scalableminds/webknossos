@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(60);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(62);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -92,6 +92,7 @@ CREATE TABLE webknossos.dataSets(
   _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
+  _uploader CHAR(24),
   inboxSourceHash INT,
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,

@@ -1,6 +1,6 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Spin, Tabs } from "antd";
+import { Spin, Tabs, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
@@ -136,7 +136,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
             userId={this.props.userId}
           />
         </TabPane>,
-        <TabPane tab="Shared Annotations" key="sharedAnnotations">
+        <TabPane
+          tab={
+            <div>
+              Shared Annotations
+              <Tooltip title="This is the Shared Annotations tab. Annotations that are shared with teams you are a member of are displayed here. You can share your own annotations in the sharing modal in the annotation view.">
+                <Icon type="info-circle-o" style={{ color: "gray", marginLeft: 6 }} />
+              </Tooltip>
+            </div>
+          }
+          key="sharedAnnotations"
+        >
           <SharedAnnotationsView />
         </TabPane>,
       ];
@@ -179,7 +189,7 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
-        <WhatsNextHeader activeUser={this.props.activeUser} history={this.props.history} />
+        <WhatsNextHeader activeUser={this.props.activeUser} />
         <div className="container">
           {whatsNextBanner}
           {userHeader}

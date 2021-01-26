@@ -241,7 +241,6 @@ function DatasetView(props: Props) {
   return (
     <div>
       {adminHeader}
-      <h3 className="TestDatasetHeadline">My Datasets</h3>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
 
       <Spin size="large" spinning={context.datasets.length === 0 && context.isLoading}>

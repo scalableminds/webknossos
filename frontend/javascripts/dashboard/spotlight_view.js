@@ -164,11 +164,10 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
 };
 
 type WhatsNextHeaderProps = {
-  history: RouterHistory,
   activeUser: APIUser,
 };
 
-export const WhatsNextHeader = ({ history, activeUser }: WhatsNextHeaderProps) => (
+export const WhatsNextHeader = ({ activeUser }: WhatsNextHeaderProps) => (
   <div>
     <div
       style={{

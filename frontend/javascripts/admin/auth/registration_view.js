@@ -7,7 +7,7 @@ import Toast from "libs/toast";
 import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationForm from "./registration_form";
-import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
+import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
 
 function RegistrationViewNotDemo() {
   const history = useHistory();

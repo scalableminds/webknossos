@@ -15,19 +15,14 @@ class DemoProxyController @Inject()(ws: WSClient, conf: WkConf, sil: Silhouette[
                                                                                         bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  private lazy val proxyMap: Map[String, String] = Map(
-    "/" -> "https://example.org",
-    "/faq" -> "https://example.org",
-    "/features" -> "https://example.org",
-    "/pricing" -> "https://example.org",
-  )
-
   def matchesProxyPage(request: UserAwareRequest[WkEnv, AnyContent]): Boolean =
-    conf.Features.isDemoInstance && proxyMap.contains(request.uri) && (request.identity.isEmpty || request.uri != "/")
+    conf.Features.isDemoInstance && conf.Proxy.routes
+      .contains(request.uri) && (request.identity.isEmpty || request.uri != "/")
 
   def proxyPageOrMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesProxyPage(request)) {
-      ws.url(proxyMap(request.uri)).get().map(resp => Ok(resp.body).as("text/html"))
+      ws.url(conf.Proxy.prefix + request.uri).get().map(resp => Ok(resp.body).as("text/html"))
     } else Fox.successful(Ok(views.html.main(conf)))
   }
+
 }

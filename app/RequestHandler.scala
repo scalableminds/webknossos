@@ -29,7 +29,7 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     with InjectedController
     with LazyLogging {
 
-  override def routeRequest(request: RequestHeader): Option[Handler] = {
+  override def routeRequest(request: RequestHeader): Option[Handler] =
     if (request.uri.matches("^(/api/|/data/|/tracings/).*$")) {
       super.routeRequest(request)
     } else if (request.uri.matches("^(/assets/).*$")) {
@@ -40,5 +40,4 @@ class RequestHandler @Inject()(webCommands: WebCommands,
     } else if (request.uri == "/favicon.ico") {
       Some(Action { NotFound })
     } else Some(demoProxyController.proxyPageOrMainView)
-  }
 }

@@ -173,7 +173,6 @@ export const WhatsNextHeader = ({ activeUser }: WhatsNextHeaderProps) => (
       style={{
         backgroundColor: "rgba(88, 88, 88, 0.4)",
         backgroundImage: "linear-gradient(0deg, rgb(255 255 255) 0%, rgb(231 247 255) 70%)",
-        borderBottom: "1px solid #e8e8e8",
       }}
     >
       <div className="welcome-header-content">

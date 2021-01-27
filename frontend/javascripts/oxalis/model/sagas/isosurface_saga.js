@@ -354,7 +354,11 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const geometry = yield* call(parseStlBuffer, buffer);
   getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
   yield* put(setImportingMeshStateAction(false));
-  yield* put(addIsosurfaceAction(segmentId, [0, 0, 0])); // TODO: use good position as seed
+
+  // TODO: Ideally, persist the seed position in the STL file. As a workaround,
+  // we simply use the current position as a seed position.
+  const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
+  yield* put(addIsosurfaceAction(segmentId, seedPosition));
 }
 
 function* removeIsosurface(

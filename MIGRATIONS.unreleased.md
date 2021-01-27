@@ -9,4 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - Support for KNOSSOS cubes data format was removed. Use the [webKnossos cuber](https://github.com/scalableminds/webknossos-cuber) tool to convert existing datasets saved as KNOSSOS cubes.
 
 ### Postgres Evolutions:
--
+- [061-userinfos-view.sql](conf/evolutions/061-userinfos-view)

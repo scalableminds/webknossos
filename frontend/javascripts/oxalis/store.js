@@ -453,11 +453,11 @@ type UiInformation = {
   +isRefreshingIsosurfaces: boolean,
 };
 
-type IsosurfaceInformation = {
+export type IsosurfaceInformation = {|
   +segmentId: number,
   +seedPosition: Vector3,
   +isLoading: boolean,
-};
+|};
 
 export type OxalisState = {|
   +datasetConfiguration: DatasetConfiguration,

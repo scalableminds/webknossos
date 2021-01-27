@@ -1,6 +1,8 @@
 // @flow
 import { saveAs } from "file-saver";
 
+import { sleep } from "libs/utils";
+import ErrorHandling from "libs/error_handling";
 import type { APIDataset } from "types/api_flow_types";
 import { ResolutionInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -45,6 +47,9 @@ import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_acces
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
+
+const MAX_RETRY_COUNT = 5;
+const RETRY_WAIT_TIME = 5000;
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -207,9 +212,10 @@ function* loadIsosurfaceWithNeighbors(
     seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
-  if (seedPosition) {
-    yield* put(addIsosurfaceAction(segmentId, seedPosition));
-  }
+
+  yield* put(addIsosurfaceAction(segmentId, position));
+  yield* put(startRefreshingIsosurfaceAction(segmentId));
+
   while (positionsToRequest.length > 0) {
     const currentPosition = positionsToRequest.shift();
     const neighbors = yield* call(
@@ -225,6 +231,8 @@ function* loadIsosurfaceWithNeighbors(
     isInitialRequest = false;
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
+
+  yield* put(finishedRefreshingIsosurfaceAction(segmentId));
 }
 
 function hasBatchCounterExceededLimit(segmentId: number): boolean {
@@ -267,34 +275,46 @@ function* maybeLoadIsosurface(
   const volumeTracing = yield* select(state => state.tracing.volume);
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
-  const { buffer: responseBuffer, neighbors } = yield* call(
-    computeIsosurface,
-    useDataStore ? dataStoreUrl : tracingStoreUrl,
-    layer,
-    {
-      position: clippedPosition,
-      zoomStep,
-      segmentId,
-      voxelDimensions,
-      cubeSize,
-      scale,
-    },
-  );
 
-  // Check again whether the limit was exceeded, since this variable could have been
-  // set in the mean time by ctrl-clicking the segment to remove it
-  if (hasBatchCounterExceededLimit(segmentId)) {
-    return [];
-  }
-  const vertices = new Float32Array(responseBuffer);
-  if (removeExistingIsosurface) {
-    getSceneController().removeIsosurfaceById(segmentId);
-  }
-  getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+  let retryCount = 0;
+  while (retryCount < MAX_RETRY_COUNT) {
+    try {
+      const { buffer: responseBuffer, neighbors } = yield* call(
+        computeIsosurface,
+        useDataStore ? dataStoreUrl : tracingStoreUrl,
+        layer,
+        {
+          position: clippedPosition,
+          zoomStep,
+          segmentId,
+          voxelDimensions,
+          cubeSize,
+          scale,
+        },
+      );
 
-  return neighbors.map(neighbor =>
-    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
-  );
+      // Check again whether the limit was exceeded, since this variable could have been
+      // set in the mean time by ctrl-clicking the segment to remove it
+      if (hasBatchCounterExceededLimit(segmentId)) {
+        return [];
+      }
+      const vertices = new Float32Array(responseBuffer);
+      if (removeExistingIsosurface) {
+        getSceneController().removeIsosurfaceById(segmentId);
+      }
+      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+
+      return neighbors.map(neighbor =>
+        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
+      );
+    } catch (exception) {
+      retryCount++;
+      ErrorHandling.notify(exception);
+      console.warn("Retrying isosurface generation...");
+      yield* call(sleep, RETRY_WAIT_TIME);
+    }
+  }
+  return [];
 }
 
 function* downloadIsosurfaceCellById(cellId: number): Saga<void> {

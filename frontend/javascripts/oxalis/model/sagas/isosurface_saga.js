@@ -311,7 +311,7 @@ function* maybeLoadIsosurface(
       retryCount++;
       ErrorHandling.notify(exception);
       console.warn("Retrying isosurface generation...");
-      yield* call(sleep, RETRY_WAIT_TIME);
+      yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
     }
   }
   return [];

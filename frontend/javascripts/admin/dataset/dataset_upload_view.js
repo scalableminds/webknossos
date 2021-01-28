@@ -103,7 +103,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 // restore the event handler in case a user chose to stay on the page
                 window.onbeforeunload = beforeUnload;
               }, 500);
-              return messages["save.leave_page_unfinished"];
+              return messages["dataset.leave_during_upload"];
             }
           }
           return null;

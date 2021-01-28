@@ -153,6 +153,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   return (
     <div style={{ padding: 12 }}>
       <Card
+        bordered={false}
         bodyStyle={{
           textAlign: "center",
           height,
@@ -160,11 +161,40 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-around",
+          boxShadow: "0px 0px 4px rgba(0, 0, 0, 0.25)",
+          borderRadius: 3,
+          border: 0,
         }}
       >
-        <div style={{ fontSize: 30 }}>{icon}</div>
-        <p style={{ fontWeight: "bold" }}>{header}</p>
-        <p style={{ color: "gray" }}>{children}</p>
+        <div
+          className="withoutIconMargin"
+          style={{
+            fontSize: 32,
+            background: "#1790ff",
+            borderRadius: "30px",
+            padding: "6px 14px",
+            color: "white",
+            textAlign: "center",
+            display: "inline-block",
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}
+        >
+          {icon}
+        </div>
+        <h1
+          style={{
+            fontSize: 20,
+            lineHeight: "22px",
+            color: "#0d232d",
+            marginBottom: 0,
+          }}
+        >
+          {header}
+        </h1>
+        <p style={{ color: "gray", fontSize: 14, lineHeight: "18px", color: "#6b7280", margin: 0 }}>
+          {children}
+        </p>
         <p>{action}</p>
       </Card>
     </div>

@@ -471,7 +471,7 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
-  +isosurfaces: { [segmentId: string]: IsosurfaceInformation },
+  +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

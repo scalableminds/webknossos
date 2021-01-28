@@ -214,9 +214,8 @@ export const WhatsNextHeader = ({ activeUser }: WhatsNextHeaderProps) => (
               <WhatsNextAction
                 title="Open a Demo Dataset"
                 description="Have a look at a public dataset to experience webKnossos in action."
-                href="https://webknossos.org/datasets/MPI_Brain_Research/2012-09-28_ex145_07x2_ROI2017_connectome/view#2807,4313,1726,0,0.450"
+                href={features().publicDemoDatasetUrl}
                 icon={<Icon type="play-circle" className="action-icon" />}
-                // onClick={() => ()}
               />
 
               <WhatsNextAction

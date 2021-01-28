@@ -96,36 +96,52 @@ function DatasetView(props: Props) {
     const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
     const noDatasetsPlaceholder =
       "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
+
+    const addSampleDatasetCard = (
+      <OptionCard
+        header="Add Sample Dataset"
+        icon={<Icon type="rocket" />}
+        action={<Button onClick={renderSampleDatasetsModal}>Add Sample Dataset</Button>}
+        height={350}
+      >
+        This is the easiest way to try out webKnossos. Add one of our sample datasets and start
+        exploring in less than a minute.
+      </OptionCard>
+    );
+
+    const openPublicDatasetCard = (
+      <OptionCard
+        header="Open Demo Dataset"
+        icon={<Icon type="rocket" />}
+        action={
+          <a href={features().publicDemoDatasetUrl} target="_blank" rel="noopener noreferrer">
+            <Button>Open Dataset</Button>
+          </a>
+        }
+        height={350}
+      >
+        Have a look at a public dataset to experience webKnossos in action.
+      </OptionCard>
+    );
+
     const uploadPlaceholder = (
       <React.Fragment>
         <Row type="flex" gutter={16} justify="center" align="bottom">
-          <OptionCard
-            header="Add Sample Dataset"
-            icon={<Icon type="rocket" />}
-            action={
-              <Button type="primary" onClick={renderSampleDatasetsModal}>
-                Add Sample Dataset
-              </Button>
-            }
-            height={350}
-          >
-            This is the easiest way to try out webKnossos. Add one of our sample datasets and start
-            exploring in less than a minute.
-          </OptionCard>
+          {features().isDemoInstance ? openPublicDatasetCard : addSampleDatasetCard}
           <OptionCard
             header="Upload Dataset"
             icon={<Icon type="cloud-upload-o" />}
             action={
               <Link to="/datasets/upload">
-                <Button>Upload your dataset</Button>
+                <Button>Open Import Dialog</Button>
               </Link>
             }
             height={350}
           >
-            You can also copy it directly onto the hosting server.{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
-              Learn more about supported data formats.
-            </a>
+            webKnossos supports a variety of{" "}
+            <a href="https://docs.webknossos.org/reference/data_formats">file formats</a> and is
+            also able to convert them when necessary. Simply drop your dataset into the import
+            dialog.
           </OptionCard>
         </Row>
         <div style={{ marginTop: 24 }}>There are no datasets available yet.</div>

@@ -192,9 +192,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
         >
           {header}
         </h1>
-        <p style={{ color: "gray", fontSize: 14, lineHeight: "18px", color: "#6b7280", margin: 0 }}>
-          {children}
-        </p>
+        <p style={{ fontSize: 14, lineHeight: "18px", color: "#6b7280", margin: 0 }}>{children}</p>
         <p>{action}</p>
       </Card>
     </div>

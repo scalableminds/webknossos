@@ -44,7 +44,7 @@ function getMoveToolHint(activeTool, isShiftPressed, isControlPressed, isAltPres
   }
 
   if (isShiftPressed && !isControlPressed && !isAltPressed) {
-    return "Click to select a node.";
+    return "Click to select a node. Right-click to open a contextmenu.";
   }
 
   if (!isShiftPressed && isControlPressed && !isAltPressed) {
@@ -170,7 +170,7 @@ function OverwriteModeSwitch({ isControlPressed }) {
 }
 
 const mapId = id => {
-  const cube = Model.getSegmentationLayer().cube;
+  const { cube } = Model.getSegmentationLayer();
   return cube.mapId(id);
 };
 
@@ -240,6 +240,7 @@ function useDisabledInfoForTools(
 
   const isZoomStepTooHighForBrushing = isZoomStepTooHighFor(VolumeToolEnum.BRUSH);
   const isZoomStepTooHighForTracing = isZoomStepTooHighFor(VolumeToolEnum.TRACE);
+  const isZoomStepTooHighForFilling = isZoomStepTooHighFor(VolumeToolEnum.FILL_CELL);
 
   return {
     [VolumeToolEnum.MOVE]: {
@@ -255,8 +256,8 @@ function useDisabledInfoForTools(
       explanation: zoomInToUseToolMessage,
     },
     [VolumeToolEnum.FILL_CELL]: {
-      isDisabled: false,
-      explanation: genericDisabledExplanation,
+      isDisabled: isZoomStepTooHighForFilling,
+      explanation: zoomInToUseToolMessage,
     },
     [VolumeToolEnum.PICK_CELL]: {
       isDisabled: false,
@@ -391,7 +392,13 @@ export default function VolumeActionsView() {
           style={narrowButtonStyle}
           value={VolumeToolEnum.FILL_CELL}
         >
-          <i className="fas fa-fill-drip" />
+          <i
+            className="fas fa-fill-drip"
+            style={{
+              opacity: disabledInfosForTools[VolumeToolEnum.FILL_CELL].isDisabled ? 0.5 : 1,
+            }}
+          />
+          {adaptedActiveTool === "FILL_CELL" ? multiSliceAnnotationInfoIcon : null}
         </RadioButtonWithTooltip>
         <RadioButtonWithTooltip
           title="Cell Picker – Click on a voxel to make its cell id the active cell id."

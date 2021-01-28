@@ -2,16 +2,22 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  InboxDataSource,
+  InboxDataSourceLike,
+  UnusableInboxDataSource
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.PlayBodyParsers
-
+import play.api.mvc.{Action, MultipartFormData, PlayBodyParsers}
 import java.io.File
+
+import play.api.libs.Files
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class DataSourceController @Inject()(
@@ -77,47 +83,48 @@ class DataSourceController @Inject()(
     }
   }
 
-  def upload = Action.async(parse.multipartFormData) { implicit request =>
-    val uploadForm = Form(
-      tuple(
-        "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "owningOrganization" -> nonEmptyText,
-        "resumableChunkNumber" -> number,
-        "resumableChunkSize" -> number,
-        "resumableTotalChunks" -> longNumber,
-        "resumableIdentifier" -> nonEmptyText
-      )).fill(("", "", -1, -1, -1, ""))
+  def uploadChunk: Action[MultipartFormData[Files.TemporaryFile]] = Action.async(parse.multipartFormData) {
+    implicit request =>
+      val uploadForm = Form(
+        tuple(
+          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
+          "owningOrganization" -> nonEmptyText,
+          "resumableChunkNumber" -> number,
+          "resumableChunkSize" -> number,
+          "resumableTotalChunks" -> longNumber,
+          "resumableIdentifier" -> nonEmptyText
+        )).fill(("", "", -1, -1, -1, ""))
 
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
-      AllowRemoteOrigin {
-        uploadForm
-          .bindFromRequest(request.body.dataParts)
-          .fold(
-            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-            success = {
-              case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
-                val id = DataSourceId(name, organization)
-                val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
-                for {
-                  _ <- if (!uploadService.isKnownUpload(uploadId))
-                    webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
-                  else Fox.successful(())
-                  chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
-                  _ <- uploadService.handleUploadChunk(uploadId,
-                                                       id,
-                                                       resumableUploadInformation,
-                                                       chunkNumber,
-                                                       new File(chunkFile.ref.path.toString))
-                } yield {
-                  Ok
-                }
-            }
-          )
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
+        AllowRemoteOrigin {
+          uploadForm
+            .bindFromRequest(request.body.dataParts)
+            .fold(
+              hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+              success = {
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
+                  val id = DataSourceId(name, organization)
+                  val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
+                  for {
+                    _ <- if (!uploadService.isKnownUpload(uploadId))
+                      webKnossosServer.validateDataSourceUpload(id) ?~> "dataSet.upload.validation.failed"
+                    else Fox.successful(())
+                    chunkFile <- request.body.file("file") ?~> "zip.file.notFound"
+                    _ <- uploadService.handleUploadChunk(uploadId,
+                                                         id,
+                                                         resumableUploadInformation,
+                                                         chunkNumber,
+                                                         new File(chunkFile.ref.path.toString))
+                  } yield {
+                    Ok
+                  }
+              }
+            )
+        }
       }
-    }
   }
 
-  def finishUpload = Action.async(validateJson[UploadInformation]) { implicit request =>
+  def finishUpload: Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
@@ -157,11 +164,19 @@ class DataSourceController @Inject()(
             "dataSource.notFound") ~> 404
           (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
                                                                         previousDataSource.toUsable)
+          previousDataSourceJson = previousDataSource match {
+            case usableDataSource: DataSource => Json.toJson(usableDataSource)
+            case unusableDataSource: UnusableInboxDataSource =>
+              unusableDataSource.existingDataSourceProperties match {
+                case Some(existingConfig) => existingConfig
+                case None                 => Json.toJson(unusableDataSource)
+              }
+          }
         } yield {
           Ok(
             Json.obj(
               "dataSource" -> dataSource,
-              "previousDataSource" -> previousDataSource,
+              "previousDataSource" -> previousDataSourceJson,
               "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
             ))
         }

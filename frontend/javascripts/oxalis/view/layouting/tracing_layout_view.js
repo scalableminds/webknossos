@@ -11,7 +11,13 @@ import type { RouterHistory } from "react-router-dom";
 import * as React from "react";
 
 import Request from "libs/request";
-import { ArbitraryViewport, type ViewMode, OrthoViews } from "oxalis/constants";
+import {
+  ArbitraryViewport,
+  type ViewMode,
+  OrthoViews,
+  type Vector3,
+  type OrthoView,
+} from "oxalis/constants";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -22,6 +28,7 @@ import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view"
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
 import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import NodeContextMenu from "oxalis/view/node_context_menu";
 import MeshesView from "oxalis/view/right-menu/meshes_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import OxalisController from "oxalis/controller";
@@ -75,6 +82,10 @@ type State = {
   activeLayout: string,
   hasError: boolean,
   status: ControllerStatus,
+  nodeContextMenuPosition: ?[number, number],
+  clickedNodeId: ?number,
+  nodeContextMenuGlobalPosition: Vector3,
+  nodeContextMenuViewport: ?OrthoView,
 };
 
 const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
@@ -120,6 +131,10 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayout: lastActiveLayout,
       hasError: false,
       status: "loading",
+      nodeContextMenuPosition: null,
+      clickedNodeId: null,
+      nodeContextMenuGlobalPosition: [0, 0, 0],
+      nodeContextMenuViewport: null,
     };
   }
 
@@ -143,6 +158,30 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     // collected and all events are canceled, etc.
     location.reload();
   }
+
+  showNodeContextMenuAt = (
+    xPos: number,
+    yPos: number,
+    nodeId: ?number,
+    globalPosition: Vector3,
+    viewport: OrthoView,
+  ) => {
+    this.setState({
+      nodeContextMenuPosition: [xPos, yPos],
+      clickedNodeId: nodeId,
+      nodeContextMenuGlobalPosition: globalPosition,
+      nodeContextMenuViewport: viewport,
+    });
+  };
+
+  hideNodeContextMenu = () => {
+    this.setState({
+      nodeContextMenuPosition: null,
+      clickedNodeId: null,
+      nodeContextMenuGlobalPosition: [0, 0, 0],
+      nodeContextMenuViewport: null,
+    });
+  };
 
   handleSettingsCollapse = () => {
     this.setState(prevState => ({
@@ -193,6 +232,16 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
+    const {
+      clickedNodeId,
+      nodeContextMenuPosition,
+      nodeContextMenuGlobalPosition,
+      nodeContextMenuViewport,
+      status,
+      isSettingsCollapsed,
+      activeLayout,
+    } = this.state;
+
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
@@ -212,144 +261,162 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     };
 
     return (
-      <NmlUploadZoneContainer
-        onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
-        isUpdateAllowed={isUpdateTracingAllowed}
-      >
-        <TabTitle title={this.getTabTitle()} />
-        <OxalisController
-          initialAnnotationType={this.props.initialAnnotationType}
-          initialCommandType={this.props.initialCommandType}
-          controllerStatus={this.state.status}
-          setControllerStatus={(status: ControllerStatus) => this.setState({ status })}
-        />
-        <CrossOriginApi />
-        <Layout className="tracing-layout">
-          <RenderToPortal portalId="navbarTracingSlot">
-            {this.state.status === "loaded" ? (
-              <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
-                <ButtonComponent
-                  className={this.state.isSettingsCollapsed ? "" : "highlight-togglable-button"}
-                  onClick={this.handleSettingsCollapse}
-                  shape="circle"
-                >
-                  <Icon
-                    type="setting"
-                    className="withoutMargin"
-                    style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-                  />
-                </ButtonComponent>
-                <ActionBarView
-                  layoutProps={{
-                    storedLayoutNamesForView: currentLayoutNames,
-                    activeLayout: this.state.activeLayout,
-                    layoutKey: layoutType,
-                    setCurrentLayout: layoutName => {
-                      this.setState({ activeLayout: layoutName });
-                      setActiveLayout(layoutType, layoutName);
-                    },
-                    saveCurrentLayout: this.saveCurrentLayout,
-                    setAutoSaveLayouts: this.props.setAutoSaveLayouts,
-                    autoSaveLayouts: this.props.autoSaveLayouts,
-                  }}
-                />
-                {isDatasetOnScratchVolume ? (
-                  <Tooltip title={messages["dataset.is_scratch"]}>
-                    <Alert
-                      className="hide-on-small-screen"
+      <React.Fragment>
+        {nodeContextMenuPosition != null && nodeContextMenuViewport != null ? (
+          <NodeContextMenu
+            hideNodeContextMenu={this.hideNodeContextMenu}
+            clickedNodeId={clickedNodeId}
+            nodeContextMenuPosition={nodeContextMenuPosition}
+            globalPosition={nodeContextMenuGlobalPosition}
+            viewport={nodeContextMenuViewport}
+          />
+        ) : null}
+        <NmlUploadZoneContainer
+          onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
+          isUpdateAllowed={isUpdateTracingAllowed}
+        >
+          <TabTitle title={this.getTabTitle()} />
+          <OxalisController
+            initialAnnotationType={this.props.initialAnnotationType}
+            initialCommandType={this.props.initialCommandType}
+            controllerStatus={status}
+            setControllerStatus={(newStatus: ControllerStatus) =>
+              this.setState({ status: newStatus })
+            }
+            showNodeContextMenuAt={this.showNodeContextMenuAt}
+          />
+          <CrossOriginApi />
+          <Layout className="tracing-layout">
+            <RenderToPortal portalId="navbarTracingSlot">
+              {status === "loaded" ? (
+                <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
+                  <ButtonComponent
+                    className={isSettingsCollapsed ? "" : "highlight-togglable-button"}
+                    onClick={this.handleSettingsCollapse}
+                    shape="circle"
+                  >
+                    <Icon
+                      type="setting"
+                      className="withoutMargin"
                       style={{
-                        height: 30,
-                        paddingTop: 4,
-                        backgroundColor: "#f17a27",
-                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
-                      message={
-                        <span>
-                          Dataset is on tmpscratch!{" "}
-                          <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
-                        </span>
-                      }
-                      type="error"
                     />
-                  </Tooltip>
-                ) : null}
-              </div>
-            ) : null}
-          </RenderToPortal>
-          <Layout style={{ display: "flex" }}>
-            <Sider
-              collapsible
-              trigger={null}
-              collapsed={this.state.isSettingsCollapsed}
-              collapsedWidth={0}
-              width={360}
-              style={{ zIndex: 100, marginRight: this.state.isSettingsCollapsed ? 0 : 8 }}
-            >
-              <SettingsView dontRenderContents={this.state.isSettingsCollapsed} />
-            </Sider>
-            <MergerModeController />
-            <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
-              <TracingView />
-              <GoldenLayoutAdapter
-                id="layoutContainer"
-                style={GOLDEN_LAYOUT_ADAPTER_STYLE}
-                layoutKey={layoutType}
-                activeLayoutName={this.state.activeLayout}
-                onLayoutChange={this.onLayoutChange}
+                  </ButtonComponent>
+                  <ActionBarView
+                    layoutProps={{
+                      storedLayoutNamesForView: currentLayoutNames,
+                      activeLayout,
+                      layoutKey: layoutType,
+                      setCurrentLayout: layoutName => {
+                        this.setState({ activeLayout: layoutName });
+                        setActiveLayout(layoutType, layoutName);
+                      },
+                      saveCurrentLayout: this.saveCurrentLayout,
+                      setAutoSaveLayouts: this.props.setAutoSaveLayouts,
+                      autoSaveLayouts: this.props.autoSaveLayouts,
+                    }}
+                  />
+                  {isDatasetOnScratchVolume ? (
+                    <Tooltip title={messages["dataset.is_scratch"]}>
+                      <Alert
+                        className="hide-on-small-screen"
+                        style={{
+                          height: 30,
+                          paddingTop: 4,
+                          backgroundColor: "#f17a27",
+                          color: "white",
+                        }}
+                        message={
+                          <span>
+                            Dataset is on tmpscratch!{" "}
+                            <Icon type="warning" theme="filled" style={{ margin: "0 0 0 6px" }} />
+                          </span>
+                        }
+                        type="error"
+                      />
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ) : null}
+            </RenderToPortal>
+            <Layout style={{ display: "flex" }}>
+              <Sider
+                collapsible
+                trigger={null}
+                collapsed={isSettingsCollapsed}
+                collapsedWidth={0}
+                width={360}
+                style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}
               >
-                {/*
-                 * All possible layout panes are passed here. Depending on the actual layout,
-                 *  the components are rendered or not.
-                 */}
-                <InputCatcher
-                  viewportID={OrthoViews.PLANE_XY}
-                  key="xy"
-                  portalKey="xy"
-                  displayScalebars={displayScalebars}
-                />
-                <InputCatcher
-                  viewportID={OrthoViews.PLANE_YZ}
-                  key="yz"
-                  portalKey="yz"
-                  displayScalebars={displayScalebars}
-                />
-                <InputCatcher
-                  viewportID={OrthoViews.PLANE_XZ}
-                  key="xz"
-                  portalKey="xz"
-                  displayScalebars={displayScalebars}
-                />
-                <InputCatcher
-                  viewportID={OrthoViews.TDView}
-                  key="td"
-                  portalKey="td"
-                  displayScalebars={displayScalebars}
-                >
-                  <TDViewControls />
-                </InputCatcher>
-                <InputCatcher
-                  viewportID={ArbitraryViewport}
-                  key="arbitraryViewport"
-                  portalKey="arbitraryViewport"
-                >
-                  {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
-                </InputCatcher>
-                <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
-                <TreesTabView key="TreesTabView" portalKey="TreesTabView" />
-                <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
-                <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
-                <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
-                <MeshesView key="MeshesView" portalKey="MeshesView" />
-              </GoldenLayoutAdapter>
-            </div>
-            {this.props.showVersionRestore ? (
-              <Sider id="version-restore-sider" width={400}>
-                <VersionView allowUpdate={isUpdateTracingAllowed} />
+                <SettingsView dontRenderContents={isSettingsCollapsed} />
               </Sider>
-            ) : null}
+              <MergerModeController />
+              <div id={canvasAndLayoutContainerID} style={{ position: "relative" }}>
+                <TracingView />
+                <GoldenLayoutAdapter
+                  id="layoutContainer"
+                  style={GOLDEN_LAYOUT_ADAPTER_STYLE}
+                  layoutKey={layoutType}
+                  activeLayoutName={activeLayout}
+                  onLayoutChange={this.onLayoutChange}
+                >
+                  {/*
+                   * All possible layout panes are passed here. Depending on the actual layout,
+                   *  the components are rendered or not.
+                   */}
+                  <InputCatcher
+                    viewportID={OrthoViews.PLANE_XY}
+                    key="xy"
+                    portalKey="xy"
+                    displayScalebars={displayScalebars}
+                  />
+                  <InputCatcher
+                    viewportID={OrthoViews.PLANE_YZ}
+                    key="yz"
+                    portalKey="yz"
+                    displayScalebars={displayScalebars}
+                  />
+                  <InputCatcher
+                    viewportID={OrthoViews.PLANE_XZ}
+                    key="xz"
+                    portalKey="xz"
+                    displayScalebars={displayScalebars}
+                  />
+                  <InputCatcher
+                    viewportID={OrthoViews.TDView}
+                    key="td"
+                    portalKey="td"
+                    displayScalebars={displayScalebars}
+                  >
+                    <TDViewControls />
+                  </InputCatcher>
+                  <InputCatcher
+                    viewportID={ArbitraryViewport}
+                    key="arbitraryViewport"
+                    portalKey="arbitraryViewport"
+                  >
+                    {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
+                  </InputCatcher>
+                  <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
+                  <TreesTabView key="TreesTabView" portalKey="TreesTabView" />
+                  <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
+                  <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
+                  <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
+                  <MeshesView key="MeshesView" portalKey="MeshesView" />
+                </GoldenLayoutAdapter>
+              </div>
+              {this.props.showVersionRestore ? (
+                <Sider id="version-restore-sider" width={400}>
+                  <VersionView allowUpdate={isUpdateTracingAllowed} />
+                </Sider>
+              ) : null}
+            </Layout>
           </Layout>
-        </Layout>
-      </NmlUploadZoneContainer>
+        </NmlUploadZoneContainer>
+      </React.Fragment>
     );
   }
 }

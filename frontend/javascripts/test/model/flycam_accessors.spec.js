@@ -20,7 +20,6 @@ const boundingBox = {
 
 const initialState: OxalisState = {
   ...defaultState,
-  // $FlowIssue[prop-missing] Flow thinks dataset.isActive is missing but it is in defaultstate.dataset
   dataset: {
     ...defaultState.dataset,
     dataSource: {

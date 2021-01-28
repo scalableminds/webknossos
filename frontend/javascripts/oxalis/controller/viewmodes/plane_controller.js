@@ -50,7 +50,6 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as skeletonController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import * as volumeController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { isosurfaceLeftClick } from "oxalis/controller/combinations/segmentation_plane_controller";
 
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;
@@ -69,11 +68,17 @@ function ensureNonConflictingHandlers(skeletonControls: Object, volumeControls: 
   }
 }
 
+type OwnProps = {| showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void |};
+
 type StateProps = {|
   tracing: Tracing,
   is2d: boolean,
 |};
-type Props = {| ...StateProps |};
+
+type Props = {|
+  ...StateProps,
+  ...OwnProps,
+|};
 
 export const movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
   const { activeViewport } = Store.getState().viewModeData.plane;
@@ -173,7 +178,7 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls
     } =
       this.props.tracing.skeleton != null
-        ? skeletonController.getPlaneMouseControls(this.planeView)
+        ? skeletonController.getPlaneMouseControls(this.planeView, this.props.showNodeContextMenuAt)
         : emptyDefaultHandler;
 
     const {
@@ -192,12 +197,7 @@ class PlaneController extends React.PureComponent<Props> {
       ...skeletonControls,
       // $FlowIssue[exponential-spread] See https://github.com/facebook/flow/issues/8299
       ...volumeControls,
-      leftClick: this.createToolDependentHandler(
-        maybeSkeletonLeftClick,
-        maybeVolumeLeftClick,
-        // The isosurfaceLeftClick handler should only be used in view mode.
-        isosurfaceLeftClick,
-      ),
+      leftClick: this.createToolDependentHandler(maybeSkeletonLeftClick, maybeVolumeLeftClick),
       leftDownMove: this.createToolDependentHandler(
         maybeSkeletonLeftDownMove,
         maybeVolumeLeftDownMove,
@@ -625,4 +625,4 @@ export function mapStateToProps(state: OxalisState): StateProps {
 }
 
 export { PlaneController as PlaneControllerClass };
-export default connect<Props, {||}, _, _, _, _>(mapStateToProps)(PlaneController);
+export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(PlaneController);

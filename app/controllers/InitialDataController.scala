@@ -135,7 +135,8 @@ Samplecountry
           _ <- multiUserDAO.insertOne(defaultMultiUser)
           _ <- userDAO.insertOne(defaultUser)
           _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
-          _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id, TeamMembership(organizationTeam._id, true))
+          _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
+                                                     TeamMembership(organizationTeam._id, isTeamManager = true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox

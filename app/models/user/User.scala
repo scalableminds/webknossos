@@ -187,7 +187,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       result <- resultList.headOption
     } yield result
 
-  def insertOne(u: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(u: User): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
                                             userConfiguration, isDeactivated, isAdmin, isDatasetManager, created, isDeleted)
@@ -238,7 +238,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
+  def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] = {
     val query = for {
       (teamRoleRow, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams on (_._Team === _._Id)
     } yield (team._Id, team.name, teamRoleRow.isteammanager)
@@ -273,7 +273,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
       _ <- run(insertQuery(userId, teamMembership))
     } yield ()
 
-  def removeTeamFromAllUsers(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def removeTeamFromAllUsers(teamId: ObjectId): Fox[Unit] =
     for {
       r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId}")
     } yield ()
@@ -296,7 +296,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
 class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findAllExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] =
+  def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
     for {
       rows <- run(UserExperiences.filter(_._User === userId.id).result)
     } yield {
@@ -321,8 +321,8 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
 class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO, dataSetDAO: DataSetDAO)(
     implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
-  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DataSetViewConfiguration] =
+
+  def findOneForUserAndDataset(userId: ObjectId, dataSetId: ObjectId): Fox[DataSetViewConfiguration] =
     for {
       rows <- run(sql"""select viewConfiguration
               from webknossos.user_dataSetConfigurations
@@ -354,8 +354,9 @@ class UserDataSetConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserD
 class UserDataSetLayerConfigurationDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findAllByLayerNameForUserAndDataset(layerNames: List[String], userId: ObjectId, dataSetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Map[String, LayerViewConfiguration]] =
+  def findAllByLayerNameForUserAndDataset(layerNames: List[String],
+                                          userId: ObjectId,
+                                          dataSetId: ObjectId): Fox[Map[String, LayerViewConfiguration]] =
     for {
       rows <- run(sql"""select layerName, viewConfiguration
               from webknossos.user_dataSetLayerConfigurations

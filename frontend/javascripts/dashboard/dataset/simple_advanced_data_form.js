@@ -110,6 +110,7 @@ function SimpleDatasetForm({ isReadOnlyDataset, form, dataSource }) {
             info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
           >
             {getFieldDecorator("dataSource.scale", {
+              initialValue: dataSource != null ? dataSource.scale : [0, 0, 0],
               rules: [
                 {
                   required: true,
@@ -147,6 +148,8 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index, form }) {
   const { getFieldDecorator } = form;
   const isSegmentation = layer.category === "segmentation";
   const bitDepth = getBitDepth(layer);
+  const boundingBoxValue =
+    layer.dataFormat === "knossos" ? layer.sections[0].boundingBox : layer.boundingBox;
   return (
     <Row gutter={48} style={{ width: "100%" }}>
       <Col span={5}>
@@ -165,6 +168,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index, form }) {
               ? `dataSource.dataLayers[${index}].sections[0].boundingBox`
               : `dataSource.dataLayers[${index}].boundingBox`,
             {
+              initialValue: boundingBoxValue,
               rules: [
                 {
                   required: true,
@@ -187,6 +191,7 @@ function SimpleLayerForm({ isReadOnlyDataset, layer, index, form }) {
             info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
           >
             {getFieldDecorator(`dataSource.dataLayers[${index}].largestSegmentId`, {
+              initialValue: layer.largestSegmentId,
               rules: [
                 {
                   required: true,

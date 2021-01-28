@@ -39,7 +39,12 @@ import * as Utils from "libs/utils";
 import type { APIUser } from "types/api_flow_types";
 
 import app from "app";
-import constants, { ControlModeEnum, type ViewMode } from "oxalis/constants";
+import constants, {
+  ControlModeEnum,
+  type ViewMode,
+  type Vector3,
+  type OrthoView,
+} from "oxalis/constants";
 import messages from "messages";
 import window, { document } from "libs/window";
 
@@ -49,6 +54,7 @@ type OwnProps = {|
   initialCommandType: TraceOrViewCommand,
   controllerStatus: ControllerStatus,
   setControllerStatus: ControllerStatus => void,
+  showNodeContextMenuAt: (number, number, ?number, Vector3, OrthoView) => void,
 |};
 type StateProps = {|
   viewMode: ViewMode,
@@ -333,7 +339,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (isArbitrary) {
       return <ArbitraryController viewMode={viewMode} />;
     } else if (isPlane) {
-      return <PlaneController />;
+      return <PlaneController showNodeContextMenuAt={this.props.showNodeContextMenuAt} />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

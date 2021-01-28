@@ -1,7 +1,7 @@
 // @flow
 
-import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card, AutoComplete, Alert } from "antd";
-import { type RouterHistory, Link, withRouter } from "react-router-dom";
+import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card, AutoComplete } from "antd";
+import { type RouterHistory, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import React, { type Node } from "react";
 
@@ -33,66 +33,6 @@ type State = {
   isDatasetUploadModalVisible: boolean,
   isInviteModalVisible: boolean,
 };
-
-export function WhatsNextBanner() {
-  const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
-
-  const welcomeHeader = (
-    <Row type="flex" gutter={50}>
-      <Col span={4}>
-        <Icon type="rocket" className="icon-big" />
-      </Col>
-      <Col span={20}>
-        <h2>Welcome to your webKnossos account!</h2>
-        <p>
-          <strong>You are now logged in and ready to go!</strong>
-        </p>
-
-        <Row type="flex" gutter={50}>
-          <Col {...columnSpan} style={{ padding: 12 }}>
-            <Link to="/dashboard/publications?showWhatsNextBanner">
-              <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}>
-                  <Icon type="play-circle-o" />
-                </div>
-                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start To Explore Datasets</p>
-              </Card>
-            </Link>
-          </Col>
-          <Col {...columnSpan} style={{ padding: 12 }}>
-            <Link to="/datasets/upload">
-              <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}>
-                  <Icon type="cloud-upload-o" />
-                </div>
-                <p style={{ fontWeight: "bold", fontSize: 16 }}>Upload your Data</p>
-              </Card>
-            </Link>
-          </Col>
-          <Col {...columnSpan} style={{ padding: 12 }}>
-            <Link to="/users">
-              <Card style={{ textAlign: "center", height: "100%" }}>
-                <div style={{ fontSize: 30 }}>
-                  <Icon type="team" />
-                </div>
-                <p style={{ fontWeight: "bold", fontSize: 16 }}>Start Collaborating</p>
-              </Card>
-            </Link>
-          </Col>
-        </Row>
-      </Col>
-    </Row>
-  );
-
-  return (
-    <Alert
-      description={welcomeHeader}
-      type="info"
-      closable
-      style={{ marginTop: 20, marginBottom: 20, padding: 40, paddingLeft: 60 }}
-    />
-  );
-}
 
 function StepHeader({
   header,

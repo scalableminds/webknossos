@@ -6,7 +6,7 @@ import React, { PureComponent } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
 
-import { WhatsNextHeader } from "dashboard/spotlight_view";
+import { WhatsNextHeader } from "admin/welcome_ui";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -18,7 +18,6 @@ import { PublicationViewWithHeader } from "dashboard/publication_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import SharedAnnotationsView from "dashboard/shared_annotations_view";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
-import { WhatsNextBanner } from "admin/onboarding";
 import Request from "libs/request";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
@@ -184,14 +183,13 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     ) : null;
 
     const whatsNextBanner = this.state.showWhatsNextBanner ? (
-      <WhatsNextBanner activeUser={this.props.activeUser} />
+      <WhatsNextHeader activeUser={this.props.activeUser} />
     ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
-        <WhatsNextHeader activeUser={this.props.activeUser} />
+        {whatsNextBanner}
         <div className="container">
-          {whatsNextBanner}
           {userHeader}
           <DatasetCacheProvider>
             <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange}>

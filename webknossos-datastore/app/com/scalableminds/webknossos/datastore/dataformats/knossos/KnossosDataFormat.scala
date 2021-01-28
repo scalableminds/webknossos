@@ -73,8 +73,7 @@ object KnossosDataFormat extends DataSourceImporter {
       }
       .getOrElse(Nil)
 
-  private def guessElementClass(baseDir: Path)(
-      implicit report: DataSourceImportReport[Path]): Box[ElementClass.Value] = {
+  private def guessElementClass(baseDir: Path): Box[ElementClass.Value] = {
 
     def toInt(d: Double) = if (d.isWhole) Full(d.toInt) else Empty
 

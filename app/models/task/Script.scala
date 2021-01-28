@@ -21,10 +21,10 @@ case class Script(
     isDeleted: Boolean = false
 )
 
-class ScriptService @Inject()(userDAO: UserDAO, userService: UserService)(implicit ec: ExecutionContext) {
+class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
 
   def publicWrites(script: Script): Fox[JsObject] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
       ownerJs <- userService.compactWrites(owner)
@@ -40,7 +40,7 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService)(implic
 }
 
 object Script {
-  def fromForm(name: String, gist: String, _owner: String) =
+  def fromForm(name: String, gist: String, _owner: String): Script =
     Script(ObjectId.generate, ObjectId(_owner), name, gist)
 }
 
@@ -52,7 +52,7 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
   override def readAccessQ(requestingUserId: ObjectId): String =
-    s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '${requestingUserId}')"
+    s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '$requestingUserId')"
 
   def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
@@ -65,7 +65,7 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isdeleted
       ))
 
-  def insertOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(s: Script): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.scripts(_id, _owner, name, gist, created, isDeleted)
                          values(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${new java.sql.Timestamp(s.created)}, ${s.isDeleted})""")
@@ -86,7 +86,7 @@ class ScriptDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns} from webknossos.scripts_ where #${accessQuery}".as[ScriptsRow])
+      r <- run(sql"select #$columns from webknossos.scripts_ where #$accessQuery".as[ScriptsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 }

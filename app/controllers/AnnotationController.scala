@@ -190,6 +190,8 @@ class AnnotationController @Inject()(
   def unlinkFallback(typ: String, id: String) = sil.SecuredAction.async { implicit request =>
     for {
       _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.unlinkFallback.explorationalsOnly"
+      restrictions <- provider.restrictionsFor(typ, id)
+      _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       volumeTracingId <- annotation.volumeTracingId.toFox ?~> "annotation.unlinkFallback.noVolume"
       dataSet <- dataSetDAO
@@ -353,6 +355,7 @@ class AnnotationController @Inject()(
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
+      // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
       dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
       _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
       dataSource <- if (annotation._task.isDefined)

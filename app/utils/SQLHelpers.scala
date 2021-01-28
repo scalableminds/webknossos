@@ -1,5 +1,6 @@
 package utils
 
+import com.github.ghik.silencer.silent
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -8,14 +9,14 @@ import net.liftweb.common.Full
 import oxalis.security.{SharingTokenContainer, UserSharingTokenContainer}
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.Configuration
-import play.api.libs.json.{Json, JsonValidationError, Reads}
+import play.api.libs.json.{Json, JsonValidationError, OFormat, Reads}
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-
 import javax.inject.Inject
+
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success, Try}
 
@@ -29,14 +30,14 @@ case class ObjectId(id: String) {
 }
 
 object ObjectId extends FoxImplicits {
-  implicit val jsonFormat = Json.format[ObjectId]
-  def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String)(implicit ec: ExecutionContext) =
+  implicit val jsonFormat: OFormat[ObjectId] = Json.format[ObjectId]
+  def generate: ObjectId = fromBsonId(BSONObjectID.generate)
+  def parse(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
     parseSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
-  def stringObjectIdReads(key: String) =
+  def stringObjectIdReads(key: String): Reads[String] =
     Reads.filter[String](JsonValidationError("bsonid.invalid", key))(parseSync(_).isDefined)
 }
 
@@ -58,13 +59,12 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
              retryIfErrorContains: List[String] = List()): Fox[R] = {
     val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
-        case Success(res) => {
+        case Success(res) =>
           Fox.successful(res)
-        }
-        case Failure(e: Throwable) => {
+        case Failure(e: Throwable) =>
           val msg = e.getMessage
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
-            logger.debug(s"Retrying SQL Query (${retryCount} remaining) due to ${msg}")
+            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
             Thread.sleep(20)
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
@@ -72,18 +72,17 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
             reportErrorToSlack(e, query)
             Fox.failure("SQL Failure: " + e.getMessage)
           }
-        }
       }
     }
     foxFuture.toFox.flatten
   }
 
-  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
+  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
   }
 
-  private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) =
+  private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
     sqlClient.getSlackNotificationService.noticeError(ex, s"Causing query: ${query.getDumpInfo.mainInfo}")
 
   def writeArrayTuple(elements: List[String]): String = {
@@ -120,7 +119,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
   def collectionName: String
-  def existingCollectionName = collectionName + "_"
+  def existingCollectionName: String = collectionName + "_"
 
   def anonymousReadAccessQ(sharingToken: Option[String]): String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"
@@ -146,7 +145,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(
-          sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${updateAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${updateAccessQ(userId)}"
             .as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "Access denied."
       } yield ()
@@ -158,7 +157,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
       for {
         userId <- userIdFromCtx
         resultList <- run(
-          sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${deleteAccessQ(userId)}"
+          sql"select _id from #$existingCollectionName where _id = ${id.id} and #${deleteAccessQ(userId)}"
             .as[String]) ?~> "Failed to check delete access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "Access denied."
       } yield ()
@@ -205,19 +204,21 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
 abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SecuredSQLDAO(sqlClient) {
   def collection: TableQuery[X]
-  def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
+  def collectionName: String =
+    collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
-  def columnsList = collection.baseTableRow.create_*.map(_.name).toList
-  def columns = columnsList.mkString(", ")
-  def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
+  def columnsList: List[String] = collection.baseTableRow.create_*.map(_.name).toList
+  def columns: String = columnsList.mkString(", ")
+  def columnsWithPrefix(prefix: String): String = columnsList.map(prefix + _).mkString(", ")
 
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 
-  def notdel(r: X) = isDeletedColumn(r) === false
+  def notdel(r: X): Rep[Boolean] = isDeletedColumn(r) === false
 
   def parse(row: X#TableElementType): Fox[C]
 
+  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
       case Some(r) =>
@@ -226,14 +227,12 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
         Fox.failure("sql: could not find object " + id)
     }.flatten
 
+  @silent // suppress warning about unused implicit ctx, as it is used in subclasses
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
       r <- run(collection.filter(row => notdel(row)).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
-
-  def countAll(implicit ctx: DBAccessContext): Fox[Int] =
-    run(collection.filter(row => notdel(row)).length.result)
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield isDeletedColumn(row)
@@ -243,7 +242,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
     } yield ()
   }
 
-  def updateStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String)(
+  def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
@@ -252,10 +251,11 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
     } yield ()
   }
 
-  def updateObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId)(implicit ctx: DBAccessContext) =
+  def updateObjectIdCol(id: ObjectId, column: X => Rep[String], newValue: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     updateStringCol(id, column, newValue.id)
 
-  def updateLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long)(
+  def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {
@@ -264,16 +264,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SQLClien
     } yield ()
   }
 
-  def updateBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newValue))
-    } yield ()
-  }
-
-  def updateTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp)(
+  def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp)(
       implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
     for {

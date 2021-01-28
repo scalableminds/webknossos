@@ -213,7 +213,10 @@ function* loadIsosurfaceWithNeighbors(
   const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
 
-  yield* put(addIsosurfaceAction(segmentId, position));
+  const hasIsosurface = yield* select(state => state.isosurfaces[segmentId] != null);
+  if (!hasIsosurface) {
+    yield* put(addIsosurfaceAction(segmentId, position));
+  }
   yield* put(startRefreshingIsosurfaceAction(segmentId));
 
   while (positionsToRequest.length > 0) {

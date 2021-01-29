@@ -329,9 +329,11 @@ CREATE TABLE webknossos.multiUsers(
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
+  novelUserExperienceInfos JSONB,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
 
 

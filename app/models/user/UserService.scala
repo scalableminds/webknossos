@@ -169,6 +169,7 @@ class UserService @Inject()(conf: WkConf,
              isAdmin: Boolean,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
+             novelUserExperienceInfos: Option[JsObject],
              experiences: Map[String, Int],
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
@@ -178,6 +179,7 @@ class UserService @Inject()(conf: WkConf,
     for {
       oldEmail <- emailFor(user)
       _ <- multiUserDAO.updateEmail(user._multiUser, email)
+      _ <- multiUserDAO.updateNovelUserExperienceInfos(user._multiUser, novelUserExperienceInfos)
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,

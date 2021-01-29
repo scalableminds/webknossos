@@ -208,6 +208,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
+  "dataset.upload_none_zip_error":
+    "It looks like your selected file is not zip file. WebKnossos only supports uploading zip Files. Please ensure that your dataset is zipped to an archive.",
+  "dataset.upload_invalid_zip":
+    "It looks like your selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",

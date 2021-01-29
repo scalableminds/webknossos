@@ -268,9 +268,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         );
       }
     }
-    /* const title = showAfterUploadContent
-      ? `Uploading of Dataset ${form.getFieldValue("name")} succeeded`
-      : `Uploading to ${form.getFieldValue("datastore")}`; */
     return (
       <Modal
         visible={isUploading}
@@ -284,18 +281,26 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           this.setState({ isUploading: false, showAfterUploadContent: false });
         }}
       >
-        {modalContent}
+        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+          {modalContent}
+        </div>
       </Modal>
     );
   };
 
   handleFileDrop = file => {
     const { form } = this.props;
+    const filenameParts = file.name.split(".");
+    if (filenameParts[filenameParts.length - 1] !== "zip") {
+      Modal.error({
+        content: messages["dataset.upload_none_zip_error"],
+      });
+      // Directly setting the zip file to null does not work
+      setTimeout(() => form.setFieldsValue({ zipFile: null }), 500);
+      return false;
+    }
     if (!form.getFieldValue("name")) {
-      const filename = file.name
-        .split(".")
-        .slice(0, -1)
-        .join(".");
+      const filename = filenameParts.slice(0, -1).join(".");
       form.setFieldsValue({ name: filename });
       form.validateFields(["name"]);
     }
@@ -343,8 +348,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       },
       () => {
         Modal.error({
-          content:
-            "It looks like your selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
+          content: messages["dataset.upload_invalid_zip"],
         });
         form.setFieldsValue({ zipFile: null });
       },

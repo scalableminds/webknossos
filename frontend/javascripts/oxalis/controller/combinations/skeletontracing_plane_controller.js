@@ -424,7 +424,7 @@ function addNode(
   position: Vector3,
   rotation: Vector3,
   centered: boolean,
-  branchpoint: boolean,
+  isBranchpoint: boolean,
 ): void {
   const state = Store.getState();
   const { newNodeNewTree } = state.userConfiguration;
@@ -446,7 +446,7 @@ function addNode(
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
       null,
-      branchpoint,
+      isBranchpoint, // don't set the new node active if it's a branchpoint
     ),
   );
 

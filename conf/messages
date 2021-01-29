@@ -40,6 +40,12 @@ team.notAllowed=You are not part of this team. Project can’t be created.
 team.admin.notPossibleBy=User {1} can’t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
 team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
+team.nameInUse=Team name is or was already in use. Please chose a different name.
+team.delete.organizationTeam=Team cannot be deleted as it is the oganization base team
+team.delete.inUse=Team cannot be deleted as it is referenced in an at least one annotation, project or task type
+team.inUse.annotations=Team is referenced by {0} annotations
+team.inUse.projects=Team is referenced by {0} projects
+team.inUse.tasktypes=Team is referenced by {0} task types
 
 organization.create.forbidden=You are not allowed to create a new organization
 organization.create.failed=Failed to create a new organization

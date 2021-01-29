@@ -11,7 +11,7 @@ import { handleGenericError } from "libs/error_handling";
 import PublicationView from "dashboard/publication_view";
 import CreditsFooter from "components/credits_footer";
 import features from "features";
-import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
+import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
 
 const { Content } = Layout;
 const { Search } = Input;

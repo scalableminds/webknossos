@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
 
-import SpotlightRegistrationForm from "dashboard/spotlight_registration_form";
+import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
 import RegistrationForm from "./registration_form";
 import LoginForm from "./login_form";
 

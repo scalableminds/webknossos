@@ -318,7 +318,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
             <Col span={8}>
               <h3>Try logging in to view the dataset.</h3>
-              <LoginForm layout="horizontal" onLoggedIn={() => this.tryFetchingModel()} />
+              <LoginForm
+                layout="horizontal"
+                onLoggedIn={() => {
+                  // Close existing error toasts for "Not Found" errors before trying again.
+                  // If they get relevant again, they will be recreated anyway.
+                  Toast.close("404");
+                  this.tryFetchingModel();
+                }}
+              />
             </Col>
           </Row>
         </div>

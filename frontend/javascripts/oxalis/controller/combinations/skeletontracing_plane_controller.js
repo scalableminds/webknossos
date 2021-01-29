@@ -411,7 +411,7 @@ export function setWaypoint(
     ),
   );
   const centerNewNode = !ctrlPressed && Store.getState().userConfiguration.centerNewNode;
-  addNode(position, rotation, centerNewNode);
+  addNode(position, rotation, centerNewNode, ctrlPressed);
 
   // Ctrl + right click to set new not active branchpoint
   const { newNodeNewTree } = Store.getState().userConfiguration;
@@ -420,7 +420,12 @@ export function setWaypoint(
   }
 }
 
-function addNode(position: Vector3, rotation: Vector3, centered: boolean): void {
+function addNode(
+  position: Vector3,
+  rotation: Vector3,
+  centered: boolean,
+  branchpoint: boolean,
+): void {
   const state = Store.getState();
   const { newNodeNewTree } = state.userConfiguration;
   const activeNodeMaybe = enforce(getActiveNode)(state.tracing.skeleton);
@@ -441,7 +446,7 @@ function addNode(position: Vector3, rotation: Vector3, centered: boolean): void 
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       getRequestLogZoomStep(state),
       null,
-      //! centered,
+      branchpoint,
     ),
   );
 

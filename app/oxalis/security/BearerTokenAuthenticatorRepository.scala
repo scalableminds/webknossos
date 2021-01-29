@@ -13,13 +13,13 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
     extends AuthenticatorRepository[BearerTokenAuthenticator] {
 
   override def find(value: String): Future[Option[BearerTokenAuthenticator]] =
-    findOneByValue(value)(GlobalAccessContext).toFutureOption
+    findOneByValue(value).toFutureOption
 
   override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
-    add(authenticator, TokenType.Authentication)(GlobalAccessContext)
+    add(authenticator, TokenType.Authentication)
 
   override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
-    implicit val ctx = GlobalAccessContext
+    implicit val ctx: DBAccessContext = GlobalAccessContext
     (for {
       oldAuthenticatorSQL <- tokenDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID,
                                                          newAuthenticator.loginInfo.providerKey,
@@ -36,27 +36,27 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
 
   override def remove(value: String): Future[Unit] =
     for {
-      _ <- tokenDAO.deleteOneByValue(value)(GlobalAccessContext).futureBox
+      _ <- tokenDAO.deleteOneByValue(value).futureBox
     } yield ()
 
-  def findOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[BearerTokenAuthenticator] =
+  def findOneByValue(value: String): Fox[BearerTokenAuthenticator] =
     for {
       tokenSQL <- tokenDAO.findOneByValue(value)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator
 
-  def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType)(
-      implicit ctx: DBAccessContext): Future[Option[BearerTokenAuthenticator]] =
+  def findOneByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType): Future[Option[BearerTokenAuthenticator]] =
     (for {
       tokenSQL <- tokenDAO.findOneByLoginInfo(loginInfo.providerID, loginInfo.providerKey, tokenType)
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
-  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(
-      implicit ctx: DBAccessContext): Future[BearerTokenAuthenticator] =
+  def add(authenticator: BearerTokenAuthenticator,
+          tokenType: TokenType,
+          deleteOld: Boolean = true): Future[BearerTokenAuthenticator] =
     for {
       oldAuthenticatorOpt <- findOneByLoginInfo(authenticator.loginInfo, tokenType)
-      _ <- insert(authenticator, tokenType)(GlobalAccessContext).futureBox
+      _ <- insert(authenticator, tokenType).futureBox
     } yield {
       if (deleteOld) {
         oldAuthenticatorOpt.map(a => remove(a.id))
@@ -64,18 +64,13 @@ class BearerTokenAuthenticatorRepository(tokenDAO: TokenDAO)(implicit ec: Execut
       authenticator
     }
 
-  private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  private def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType): Fox[Unit] =
     for {
       tokenSQL <- Token.fromBearerTokenAuthenticator(authenticator, tokenType)
       _ <- tokenDAO.insertOne(tokenSQL)
     } yield ()
 
-  def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] =
-    tokenDAO.deleteAllExpired
+  def deleteAllExpired(): Fox[Unit] =
+    tokenDAO.deleteAllExpired()
 
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- tokenDAO.updateEmail(oldEmail, newEmail)
-    } yield ()
 }

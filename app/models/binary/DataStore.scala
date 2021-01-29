@@ -3,6 +3,7 @@ package models.binary
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
+import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Request, Result, Results}
@@ -10,7 +11,6 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DataStore(
@@ -36,7 +36,7 @@ object DataStore {
                isScratch: Option[Boolean],
                isForeign: Option[Boolean],
                isConnector: Option[Boolean],
-               allowsUpload: Option[Boolean]) =
+               allowsUpload: Option[Boolean]): DataStore =
     DataStore(
       name,
       url,
@@ -113,12 +113,12 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
-      rOpt <- run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
+      accessQuery <- readAccessQuery
+      rList <- run(
+        sql"select #$columns from webknossos.datastores_ where name = $name and #$accessQuery".as[DatastoresRow])
+      r <- rList.headOption.toFox
       parsed <- parse(r)
-    } yield {
-      parsed
-    }
+    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
@@ -127,7 +127,7 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateUrlByName(name: String, url: String): Fox[Unit] = {
     val q = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
     for { _ <- run(q.update(url)) } yield ()
   }
@@ -139,12 +139,12 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
                              values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.isForeign}, ${d.isConnector}, ${d.allowsUpload})""")
     } yield ()
 
-  def deleteOneByName(name: String) =
+  def deleteOneByName(name: String): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.dataStores set isDeleted = true where name = $name""")
     } yield ()
 
-  def updateOne(d: DataStore) =
+  def updateOne(d: DataStore): Fox[Unit] =
     for {
       _ <- run(
         sqlu""" update webknossos.dataStores set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch}, isForeign = ${d.isForeign}, isConnector = ${d.isConnector}, allowsUpload = ${d.allowsUpload} where name = ${d.name}""")

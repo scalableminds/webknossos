@@ -8,22 +8,19 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/21.01.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/21.02.0...HEAD)
 
 ### Added
-- Added a context menu via *Shift & Right Click* that provides easy access to skeleton functionalities and additional information. [#4950](https://github.com/scalableminds/webknossos/pull/4950)
-- Added the possibility to generate skeletons from an HDF5 agglomerate file mapping on-the-fly. With an activated agglomerate file mapping, use `Shift + Middle Mouse Click` to import a skeleton of the cell into the annotation. Alternatively, use the button in the segmentation tab to import a skeleton of the centered cell into the annotation. [#4958](https://github.com/scalableminds/webknossos/pull/4958)
-- Added a cleanup procedure for erroneous uploads, so failed uploads can be retried without changing the dataset name. [#4999](https://github.com/scalableminds/webknossos/pull/4999)
+- The "Meshes" tab was overhauled, so that it displays generated isosurfaces and imported meshes. Generated isosurfaces can be jumped to, reloaded, downloaded and removed. [#4917](https://github.com/scalableminds/webknossos/pull/4917)
+- Added an explicit `/signup` (or `/auth/signup`) route. [#5091](https://github.com/scalableminds/webknossos/pull/5091/files)
 
 ### Changed
-- The brush tool is disabled in low magnifications (magnification 16 and lower) to avoid performance problems when annotating. [#5017](https://github.com/scalableminds/webknossos/pull/5017)
-- Users can now join multiple organizations, admins can now invite users by email address, skipping the manual user activation step. [#4984](https://github.com/scalableminds/webknossos/4984)
-- Dataset Manager role now additionally grants permission to create explorative annotations on all datasets. [#5037](https://github.com/scalableminds/webknossos/pull/5037)
+- Make the isosurface feature in the meshes tab more robust. If a request fails, a retry is initiated. [#5102](https://github.com/scalableminds/webknossos/pull/5102)
+- Support for the old invite links was removed. These contained the organization name in the URL. The new links contain a token (can be generated in the users view). For instances with a single organization the old invite links should still work. [#5091](https://github.com/scalableminds/webknossos/pull/5091/files)
+- Users are no longer allowed to deactivate their own accounts.  [#5070](https://github.com/scalableminds/webknossos/pull/5070)
 
 ### Fixed
-- Fixed a bug where importing NMLs failed if they had unescaped greater-than signs inside of attributes. [#5003](https://github.com/scalableminds/webknossos/pull/5003)
-- Mitigate errors concerning localStorage quotas in the datasets dashboard. [#5039](https://github.com/scalableminds/webknossos/pull/5039)
-- Fixed a bug where viewing a dataset via sharingToken crashed. [#5047](https://github.com/scalableminds/webknossos/pull/5047)
+-
 
 ### Removed
--
+- The isosurface setting was removed. Instead, isosurfaces can be generated via the "Meshes" tab. Also note that the Shift+Click binding for generating an isosurface was removed (for now). Please refer to the "Meshes" tab, too. [#4917](https://github.com/scalableminds/webknossos/pull/4917)

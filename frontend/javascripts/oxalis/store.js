@@ -275,7 +275,6 @@ export type DatasetConfiguration = {|
     [name: string]: DatasetLayerConfiguration,
   },
   +highlightHoveredCellId: boolean,
-  +renderIsosurfaces: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -455,6 +454,12 @@ type UiInformation = {
   +isRefreshingIsosurfaces: boolean,
 };
 
+export type IsosurfaceInformation = {|
+  +segmentId: number,
+  +seedPosition: Vector3,
+  +isLoading: boolean,
+|};
+
 export type OxalisState = {|
   +datasetConfiguration: DatasetConfiguration,
   +userConfiguration: UserConfiguration,
@@ -467,6 +472,7 @@ export type OxalisState = {|
   +viewModeData: ViewModeData,
   +activeUser: ?APIUser,
   +uiInformation: UiInformation,
+  +isosurfaces: { [segmentId: number]: IsosurfaceInformation },
 |};
 
 const sagaMiddleware = createSagaMiddleware();

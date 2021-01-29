@@ -71,20 +71,24 @@ export type APIHistogramData = Array<{
   max: number,
 }>;
 
-type APIDataSourceBase = {
-  +id: {
-    +name: string,
-    +team: string,
+type MutableAPIDataSourceBase = {
+  id: {
+    name: string,
+    team: string,
   },
-  +status?: string,
+  status?: string,
 };
+
+type APIDataSourceBase = $ReadOnly<MutableAPIDataSourceBase>;
 
 type APIUnimportedDatasource = APIDataSourceBase;
 
-export type APIDataSource = APIDataSourceBase & {
-  +dataLayers: Array<APIDataLayer>,
-  +scale: Vector3,
+export type MutableAPIDataSource = MutableAPIDataSourceBase & {
+  dataLayers: Array<APIDataLayer>,
+  scale: Vector3,
 };
+
+export type APIDataSource = $ReadOnly<MutableAPIDataSource>;
 
 export type APIDataStore = {
   +name: string,
@@ -115,10 +119,12 @@ type APIPublication = {
   +title: string,
 };
 
-export type APIDatasetId = {
-  +owningOrganization: string,
-  +name: string,
+export type MutableAPIDatasetId = {
+  owningOrganization: string,
+  name: string,
 };
+
+export type APIDatasetId = $ReadOnly<MutableAPIDatasetId>;
 
 export type APIDatasetDetails = {
   +species?: string,
@@ -126,22 +132,29 @@ export type APIDatasetDetails = {
   +acquisition?: string,
 };
 
-type APIDatasetBase = APIDatasetId & {
-  +isUnreported: boolean,
-  +allowedTeams: Array<APITeam>,
-  +created: number,
-  +dataStore: APIDataStore,
-  +description: ?string,
-  +details: ?APIDatasetDetails,
-  +isEditable: boolean,
-  +isPublic: boolean,
-  +displayName: ?string,
-  +logoUrl: ?string,
-  +lastUsedByUser: number,
-  +isForeign: boolean,
-  +sortingKey: number,
-  +owningOrganization: string,
-  +publication: ?APIPublication,
+type MutableAPIDatasetBase = MutableAPIDatasetId & {
+  isUnreported: boolean,
+  allowedTeams: Array<APITeam>,
+  created: number,
+  dataStore: APIDataStore,
+  description: ?string,
+  details: ?APIDatasetDetails,
+  isEditable: boolean,
+  isPublic: boolean,
+  displayName: ?string,
+  logoUrl: ?string,
+  lastUsedByUser: number,
+  isForeign: boolean,
+  sortingKey: number,
+  owningOrganization: string,
+  publication: ?APIPublication,
+};
+
+type APIDatasetBase = $ReadOnly<MutableAPIDatasetBase>;
+
+export type MutableAPIDataset = MutableAPIDatasetBase & {
+  dataSource: MutableAPIDataSource,
+  isActive: true,
 };
 
 export type APIDataset = APIDatasetBase & {

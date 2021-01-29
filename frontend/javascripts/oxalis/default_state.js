@@ -44,7 +44,6 @@ const defaultState: OxalisState = {
     loadingStrategy: "PROGRESSIVE_QUALITY",
     highlightHoveredCellId: true,
     segmentationPatternOpacity: 40,
-    renderIsosurfaces: false,
     renderMissingDataBlack: true,
   },
   userConfiguration: {
@@ -206,6 +205,7 @@ const defaultState: OxalisState = {
     hasOrganizations: false,
     isRefreshingIsosurfaces: false,
   },
+  isosurfaces: {},
 };
 
 export default defaultState;

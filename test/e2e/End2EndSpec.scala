@@ -1,18 +1,16 @@
 package e2e
 
-import scala.concurrent.{Await, Future}
-import scala.sys.process.ProcessIO
-import play.api.libs.ws.WSClient
-import play.api.test.WithServer
+import com.typesafe.scalalogging.LazyLogging
 import org.scalatestplus.play.guice._
-
-import scala.concurrent.duration._
 import org.specs2.main.Arguments
 import org.specs2.mutable._
-
-import sys.process._
-import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.WSClient
+import play.api.test.WithServer
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.sys.process._
 
 class End2EndSpec (arguments: Arguments) extends Specification with GuiceFakeApplicationFactory with LazyLogging {
 

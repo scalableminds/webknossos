@@ -9,4 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 -
 
 ### Postgres Evolutions:
-- [060-multiusers.sql](conf/evolutions/060-multiusers.sql) (Note that its reversion can only be performed if there are no multiple users per multiuser yet)
+- [061-userinfos-view.sql](conf/evolutions/061-userinfos-view)

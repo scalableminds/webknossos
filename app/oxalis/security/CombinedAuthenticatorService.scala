@@ -5,7 +5,6 @@ import com.mohiva.play.silhouette.api.crypto.{Base64AuthenticatorEncoder, Signer
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, ExtractableRequest, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
-import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.user.UserService
 import play.api.mvc._
 import utils.WkConf
@@ -59,7 +58,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] =
     cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
 
-  def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
+  def createToken(loginInfo: LoginInfo): Future[CombinedAuthenticator] = {
     val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
     tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
     tokenAuthenticator.map(CombinedAuthenticator(_))
@@ -74,10 +73,8 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     }
 
   // only called in token case
-  def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao
-      .findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext)
-      .map(opt => opt.map(CombinedAuthenticator(_)))
+  def findByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] =
+    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

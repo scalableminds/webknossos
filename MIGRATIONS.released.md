@@ -5,6 +5,9 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [21.02.0](https://github.com/scalableminds/webknossos/releases/tag/21.02.0) - 2021-01-20
+- [060-multiusers.sql](conf/evolutions/060-multiusers.sql) (Note that its reversion can only be performed if there are no multiple users per multiuser yet)
+
 ## [21.01.0](https://github.com/scalableminds/webknossos/releases/tag/21.01.0) - 2020-12-21
 No migrations necessary.
 

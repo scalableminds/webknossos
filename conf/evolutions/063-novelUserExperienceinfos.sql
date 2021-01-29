@@ -4,7 +4,7 @@ START TRANSACTION;
 
 DROP VIEW webknossos.multiUsers_;
 
-ALTER TABLE webknossos.multiUsers ADD COLUMN novelUserExperienceInfos JSONB;
+ALTER TABLE webknossos.multiUsers ADD COLUMN novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json;
 
 ALTER TABLE webknossos.multiUsers ADD CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object');
 

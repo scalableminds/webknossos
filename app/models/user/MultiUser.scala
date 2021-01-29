@@ -7,7 +7,7 @@ import javax.inject.Inject
 import slick.jdbc.PostgresProfile.api._
 import com.scalableminds.webknossos.schema.Tables._
 import play.api.libs.json.Format.GenericFormat
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
 import utils.{ObjectId, SQLClient, SQLDAO}
 
@@ -19,7 +19,7 @@ case class MultiUser(
     passwordInfo: PasswordInfo,
     isSuperUser: Boolean,
     _lastLoggedInIdentity: Option[ObjectId] = None,
-    novelUserExperienceInfos: Option[JsObject] = None,
+    novelUserExperienceInfos: JsObject = Json.obj(),
     created: Long = System.currentTimeMillis(),
     isDeleted: Boolean = false
 )
@@ -33,7 +33,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
 
   def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
-      novelUserExperienceInfosOpt <- Fox.runOptional(r.noveluserexperienceinfos)(JsonHelper.parseJsonToFox[JsObject](_))
+      novelUserExperienceInfos <- JsonHelper.parseJsonToFox[JsObject](r.noveluserexperienceinfos)
     } yield {
       MultiUser(
         ObjectId(r._Id),
@@ -41,19 +41,19 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
         r.issuperuser,
         r._Lastloggedinidentity.map(ObjectId(_)),
-        novelUserExperienceInfosOpt,
+        novelUserExperienceInfos,
         r.created.getTime,
         r.isdeleted
       )
     }
 
   def insertOne(u: MultiUser): Fox[Unit] = {
-    val novelUserExperienceInfosString: Option[String] = u.novelUserExperienceInfos.map(_.toString).map(sanitize)
+    val novelUserExperienceInfosString = sanitize(u.novelUserExperienceInfos.toString)
     for {
       _ <- run(sqlu"""insert into webknossos.multiusers(_id, email, passwordInfo_hasher, passwordInfo_password,
                        isSuperUser, novelUserExperienceInfos, created, isDeleted)
                      values(${u._id}, ${u.email}, '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password},
-                      ${u.isSuperUser}, #${optionLiteral(novelUserExperienceInfosString)},
+                      ${u.isSuperUser}, '#$novelUserExperienceInfosString',
                      ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
     } yield ()
@@ -84,13 +84,13 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
                         where _id = $multiUserId""")
     } yield ()
 
-  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: Option[JsObject])(
+  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      novelUserExperienceInfosString = novelUserExperienceInfos.map(_.toString).map(sanitize)
+      novelUserExperienceInfosString = sanitize(novelUserExperienceInfos.toString)
       _ <- run(sqlu"""update webknossos.multiusers set
-                            novelUserExperienceInfos = #${optionLiteral(novelUserExperienceInfosString)}
+                            novelUserExperienceInfos = '#$novelUserExperienceInfosString'
                         where _id = $multiUserId""")
     } yield ()
 

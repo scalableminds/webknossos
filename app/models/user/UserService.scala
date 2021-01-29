@@ -169,8 +169,8 @@ class UserService @Inject()(conf: WkConf,
              isAdmin: Boolean,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
-             novelUserExperienceInfos: Option[JsObject],
              experiences: Map[String, Int],
+             novelUserExperienceInfos: JsObject,
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {

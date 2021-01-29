@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(60);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(63);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -329,7 +329,7 @@ CREATE TABLE webknossos.multiUsers(
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
-  novelUserExperienceInfos JSONB,
+  novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
   isDeleted BOOLEAN NOT NULL DEFAULT false,

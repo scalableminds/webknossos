@@ -308,7 +308,7 @@ class UserController @Inject()(userService: UserService,
             isDatasetManagerOpt,
             assignedMembershipsOpt,
             experiencesOpt,
-            novelUserExperienceInfos,
+            novelUserExperienceInfosOpt,
             lastTaskTypeIdOpt) =>
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -340,6 +340,8 @@ class UserController @Inject()(userService: UserService,
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
+          oldMultiUser <- multiUserDAO.findOne(user._multiUser)
+          novelUserExperienceInfos = novelUserExperienceInfosOpt.getOrElse(oldMultiUser.novelUserExperienceInfos)
           _ <- userService.update(user,
                                   firstName.trim,
                                   lastName.trim,

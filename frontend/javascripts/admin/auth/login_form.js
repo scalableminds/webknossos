@@ -8,7 +8,6 @@ import { loginUser } from "admin/admin_rest_api";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import messages from "messages";
-import features from "features";
 
 const FormItem = Form.Item;
 const { Password } = Input;
@@ -93,21 +92,12 @@ function LoginForm({ layout, form, onLoggedIn, hideFooter, style }: Props) {
         {hideFooter ? null : (
           <FormItem style={{ marginBottom: 4 }}>
             <div style={{ display: "flex" }}>
-              {features().isDemoInstance ? (
-                <Link
-                  to="/"
-                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
-                >
-                  Register Now
-                </Link>
-              ) : (
-                <Link
-                  to="/auth/register"
-                  style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
-                >
-                  Register Now
-                </Link>
-              )}
+              <Link
+                to="/auth/signup"
+                style={{ ...linkStyle, marginRight: 10, flexGrow: 1, whiteSpace: "nowrap" }}
+              >
+                Register Now
+              </Link>
               <Link to="/auth/resetPassword" style={{ ...linkStyle, whiteSpace: "nowrap" }}>
                 Forgot Password
               </Link>

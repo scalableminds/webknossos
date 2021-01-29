@@ -8,7 +8,7 @@ import _ from "lodash";
 
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import Model from "oxalis/model";
 import type { Vector3 } from "oxalis/constants";
@@ -137,7 +137,7 @@ type StateProps = {|
 |};
 type DispatchProps = ExtractReturn<typeof mapDispatchToProps>;
 
-type Props = { ...OwnProps, ...DispatchProps, ...StateProps };
+type Props = {| ...OwnProps, ...DispatchProps, ...StateProps |};
 
 const getCheckboxStyle = isLoaded =>
   isLoaded
@@ -263,10 +263,11 @@ class MeshesView extends React.Component<
       </div>
     );
 
-    const renderIsosurfaceListItem = (isosurface: Object) => {
+    const renderIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
       const centeredCell = getIdForPos(getPosition(this.props.flycam));
-      const actionVisibility = segmentId === this.state.hoveredListItem ? "visible" : "hidden";
+      const actionVisibility =
+        isLoading || segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
         <List.Item
           style={{

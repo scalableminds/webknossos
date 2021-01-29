@@ -300,10 +300,13 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       form.validateFields(["name"]);
     }
     file.thumbUrl = "/assets/images/folder.svg";
+    // Set the file here, as setting it after checking for the wkw format
+    // results in an error: When trying to upload the file it is somehow undefined.
+    form.setFieldsValue({ zipFile: [file] });
     const blobReader = new BlobReader(file);
     createReader(
       blobReader,
-      async reader => {
+      reader => {
         // get all entries from the zip
         reader.getEntries(entries => {
           const wkwFile = entries.find(entry =>
@@ -314,6 +317,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
             needsConversion: isNotWkwFormat,
           });
           if (isNotWkwFormat && !features().jobsEnabled) {
+            form.setFieldsValue({ zipFile: null });
             Modal.info({
               content: (
                 <div>
@@ -334,9 +338,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 </div>
               ),
             });
-            form.setFieldsValue({ zipFile: null });
-          } else {
-            form.setFieldsValue({ zipFile: [file] });
           }
         });
       },

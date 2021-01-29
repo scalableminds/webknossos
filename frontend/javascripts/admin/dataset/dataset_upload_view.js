@@ -205,10 +205,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           {isRetrying ? "Retrying to continue the upload..." : null}
           <br />
           <Progress
-            strokeColor={{
-              from: "#108ee9",
-              to: "#87d068",
-            }}
             // Round to 1 digit after the comma.
             percent={Math.round(uploadProgress * 1000) / 10}
             status="active"

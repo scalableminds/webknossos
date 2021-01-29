@@ -1,7 +1,7 @@
 // @flow
 import { type RouterHistory, withRouter } from "react-router-dom";
-import { Tabs, Icon } from "antd";
-import React from "react";
+import { Tabs, Icon, Modal, Button } from "antd";
+import React, { useState } from "react";
 import { connect } from "react-redux";
 import _ from "lodash";
 
@@ -14,10 +14,9 @@ import DatasetAddBossView from "admin/dataset/dataset_add_boss_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import features from "features";
-import { getDatastores, startJob } from "admin/admin_rest_api";
+import { getDatastores } from "admin/admin_rest_api";
 import renderIndependently from "libs/render_independently";
 import { useFetch } from "libs/react_helpers";
-import { type Vector3 } from "oxalis/constants";
 
 const { TabPane } = Tabs;
 
@@ -52,21 +51,65 @@ const fetchCategorizedDatastores = async (): Promise<{
 
 const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
   const datastores = useFetch(fetchCategorizedDatastores, { own: [], wkConnect: [] }, []);
+  const [datasetName, setDatasetName] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
 
   const handleDatasetAdded = async (
-    organization: string,
-    datasetName: string,
+    datasetOrganization: string,
+    uploadedDatasetName: string,
     needsConversion: ?boolean,
-    scale: ?Vector3,
   ): Promise<void> => {
-    if (needsConversion && scale) {
-      await startJob(datasetName, organization, scale);
-      const url = "/jobs";
-      history.push(url);
-    } else {
-      const url = `/datasets/${organization}/${datasetName}/import`;
-      history.push(url);
+    setOrganization(datasetOrganization);
+    setDatasetName(uploadedDatasetName);
+    setDatasetNeedsConversion(needsConversion);
+  };
+
+  const showAfterUploadContent = datasetName !== "";
+
+  const getAfterUploadModalContent = () => {
+    if (!showAfterUploadContent) {
+      return null;
     }
+    return (
+      <React.Fragment>
+        The dataset was successfully uploaded
+        {datasetNeedsConversion ? " and a conversion job was started." : null}.
+        <br />
+        You can now:
+        <div className="centered-items" style={{ marginTop: 16 }}>
+          {datasetNeedsConversion ? (
+            <React.Fragment>
+              <Button type="primary" size="small" onClick={() => history.push("/jobs")}>
+                Show the Jobs Queue
+              </Button>
+              <Button size="small" onClick={() => history.push("/dashboard/datasets")}>
+                Go to Dashboard
+              </Button>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
+              >
+                View the Dataset
+              </Button>
+              <Button
+                size="small"
+                onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
+              >
+                Got to Dataset Settings
+              </Button>
+              <Button size="small" onClick={() => history.push("/dashboard/datasets")}>
+                Go to Dashboard
+              </Button>
+            </React.Fragment>
+          )}
+        </div>
+      </React.Fragment>
+    );
   };
 
   return (
@@ -81,7 +124,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           }
           key="1"
         >
-          <DatasetUploadView datastores={datastores.own} />
+          <DatasetUploadView datastores={datastores.own} onUploaded={handleDatasetAdded} />
         </TabPane>
         {datastores.wkConnect.length > 0 && (
           <TabPane
@@ -134,6 +177,20 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
           </a>
         </p>
       </div>
+      <Modal
+        visible={showAfterUploadContent}
+        closable={showAfterUploadContent}
+        keyboard={showAfterUploadContent}
+        maskClosable={false}
+        cancelButtonProps={{ style: { display: "none" } }}
+        okButtonProps={{ style: { display: "none" } }}
+        onCancel={() => setDatasetName("")}
+        onOk={() => setDatasetName("")}
+      >
+        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
+          {showAfterUploadContent && getAfterUploadModalContent()}
+        </div>
+      </Modal>
     </React.Fragment>
   );
 };

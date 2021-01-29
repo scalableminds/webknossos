@@ -6,8 +6,7 @@ import _ from "lodash";
 
 import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { Vector3 } from "oxalis/constants";
-import { finishDatasetUpload, createResumableUpload } from "admin/admin_rest_api";
+import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
@@ -19,7 +18,6 @@ import {
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
-import { type RouterHistory, withRouter } from "react-router-dom";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
@@ -30,7 +28,7 @@ const FormItem = Form.Item;
 type OwnProps = {|
   datastores: Array<APIDataStore>,
   withoutCard?: boolean,
-  onUploaded?: (string, string, boolean, ?Vector3) => Promise<void>,
+  onUploaded: (string, string, boolean) => Promise<void> | void,
 |};
 type StateProps = {|
   activeUser: ?APIUser,
@@ -38,7 +36,6 @@ type StateProps = {|
 type Props = {| ...OwnProps, ...StateProps |};
 type PropsWithForm = {|
   ...Props,
-  history: RouterHistory,
   form: Object,
 |};
 
@@ -47,7 +44,6 @@ type State = {
   needsConversion: boolean,
   isRetrying: boolean,
   isFinished: boolean,
-  showAfterUploadContent: boolean,
   uploadProgress: number,
 };
 
@@ -57,7 +53,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     needsConversion: false,
     isRetrying: false,
     isFinished: false,
-    showAfterUploadContent: false,
     uploadProgress: 0,
   };
 
@@ -108,6 +103,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
 
         resumableUpload.on("fileSuccess", file => {
+          const { form } = this.props;
           const uploadInfo = {
             uploadId: file.uniqueIdentifier,
             organization: datasetId.owningOrganization,
@@ -121,15 +117,31 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
               Toast.success(messages["dataset.upload_success"]);
               trackAction("Upload dataset");
               await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-              this.setState({ showAfterUploadContent: true, isFinished: true });
-              if (this.props.onUploaded != null) {
-                this.props.onUploaded(
-                  activeUser.organization,
-                  formValues.name,
-                  this.state.needsConversion,
-                  formValues.scale,
+              if (this.state.needsConversion) {
+                await startJob(formValues.name, activeUser.organization, formValues.scale);
+                Toast.info(
+                  <React.Fragment>
+                    The conversion for the uploaded dataset was started.
+                    <br />
+                    Click{" "}
+                    <a
+                      target="_blank"
+                      href="https://github.com/scalableminds/webknossos-cuber/"
+                      rel="noopener noreferrer"
+                    >
+                      here
+                    </a>{" "}
+                    to see all running jobs.
+                  </React.Fragment>,
                 );
               }
+              form.setFieldsValue({ name: null, zipFile: null });
+              this.setState({ isUploading: false });
+              this.props.onUploaded(
+                activeUser.organization,
+                formValues.name,
+                this.state.needsConversion,
+              );
               /*
               Questions: The behaviour of onUploaded is not the same. 
               In the onboarding after upload the dataset setting are opened in a modal.
@@ -175,15 +187,9 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
 
   getUploadModal = () => {
     let modalContent = null;
-    const { form, history, activeUser } = this.props;
-    const {
-      isRetrying,
-      isFinished,
-      uploadProgress,
-      isUploading,
-      showAfterUploadContent,
-    } = this.state;
-    if (isFinished && !showAfterUploadContent) {
+    const { form } = this.props;
+    const { isRetrying, isFinished, uploadProgress, isUploading, needsConversion } = this.state;
+    if (isFinished && needsConversion) {
       modalContent = (
         <React.Fragment>
           <Icon type="folder" style={{ fontSize: 20 }} />
@@ -193,7 +199,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           <Spin size="large" />
         </React.Fragment>
       );
-    } else if (!showAfterUploadContent) {
+    } else {
       modalContent = (
         <React.Fragment>
           <Icon type="folder" style={{ fontSize: 50 }} />
@@ -211,75 +217,15 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           />
         </React.Fragment>
       );
-    } else {
-      // The content to show upon successful dataset upload.
-      const datasetName = form.getFieldValue("name");
-      if (activeUser != null) {
-        modalContent = (
-          <React.Fragment>
-            The dataset was successfully uploaded.
-            <br />
-            You can now:
-            <table style={{ borderSpacing: 12, borderCollapse: "separate" }}>
-              <tbody>
-                <tr>
-                  <td>• Edit the Settings of the Dataset</td>
-                  <td>
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() =>
-                        history.push(`/datasets/${activeUser.organization}/${datasetName}/import`)
-                      }
-                    >
-                      Settings
-                    </Button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>• Go back to the dataset list in the dashboard</td>
-                  <td>
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() => history.push("/dashboard/datasets")}
-                    >
-                      Dashboard
-                    </Button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>• View the dataset and start a tracing from there</td>
-                  <td>
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={() =>
-                        history.push(`/datasets/${activeUser.organization}/${datasetName}/view`)
-                      }
-                    >
-                      View
-                    </Button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </React.Fragment>
-        );
-      }
     }
     return (
       <Modal
         visible={isUploading}
-        closable={showAfterUploadContent}
-        keyboard={showAfterUploadContent}
-        maskClosable={showAfterUploadContent}
+        closable={false}
+        keyboard={false}
+        maskClosable={false}
         cancelButtonProps={{ style: { display: "none" } }}
-        okButtonProps={{ disabled: !showAfterUploadContent }}
-        onOk={() => {
-          form.setFieldsValue({ name: null, zipFile: null });
-          this.setState({ isUploading: false, showAfterUploadContent: false });
-        }}
+        okButtonProps={{ style: { display: "none" } }}
       >
         <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
           {modalContent}
@@ -470,5 +416,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  withRouter(Form.create()(DatasetUploadView)),
+  Form.create()(DatasetUploadView),
 );

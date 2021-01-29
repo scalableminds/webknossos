@@ -407,11 +407,19 @@ class OnboardingView extends React.PureComponent<Props, State> {
         >
           <DatasetUploadView
             datastores={this.state.datastores}
-            onUploaded={async (_organization: string, datasetName: string) => {
+            onUploaded={async (
+              _organization: string,
+              datasetName: string,
+              needsConversion: boolean,
+            ) => {
               this.setState({
                 datasetNameToImport: datasetName,
                 isDatasetUploadModalVisible: false,
               });
+              if (needsConversion) {
+                // If the dataset needs a conversion, the settings cannot be shown. Thus we skip the settings step.
+                this.advanceStep();
+              }
             }}
             withoutCard
           />

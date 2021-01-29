@@ -86,7 +86,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[ProjectsRow])
+        sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -143,7 +143,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
-                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
+                         values(${p._id}, ${p._team}, ${p._owner}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
           p.created)}, ${p.isDeleted})""")
     } yield ()
 
@@ -160,7 +160,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                             expectedTime = ${p.expectedTime},
                             isblacklistedfromreport = ${p.isBlacklistedFromReport},
                             isDeleted = ${p.isDeleted}
-                          where _id = ${p._id.id}""")
+                          where _id = ${p._id}""")
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =

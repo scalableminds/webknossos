@@ -12,6 +12,7 @@ import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { type UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import messages from "messages";
+import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 
 function* pushUserSettingsAsync(): Saga<void> {
@@ -28,7 +29,19 @@ function* pushDatasetSettingsAsync(): Saga<void> {
 
   const dataset = yield* select(state => state.dataset);
   const datasetConfiguration = yield* select(state => state.datasetConfiguration);
-  yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
+  try {
+    yield* call(updateDatasetConfiguration, dataset, datasetConfiguration);
+  } catch (error) {
+    // We catch errors in view mode as they are not that important here and may annoy the user.
+    const tracing = yield* select(state => state.tracing);
+    const isViewMode = tracing.annotationType === "View";
+    if (!isViewMode) {
+      throw error;
+    } else {
+      // Still log the error to airbrake in view mode.
+      yield* call([ErrorHandling, ErrorHandling.notify], error);
+    }
+  }
 }
 
 function* trackUserSettingsAsync(action: UpdateUserSettingAction): Saga<void> {

@@ -4,7 +4,11 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
+import models.annotation.AnnotationDAO
+import models.project.ProjectDAO
+import models.task.TaskTypeDAO
 import models.user.User
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -26,7 +30,11 @@ case class Team(
 
 }
 
-class TeamService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext) {
+class TeamService @Inject()(organizationDAO: OrganizationDAO,
+                            annotationDAO: AnnotationDAO,
+                            projectDAO: ProjectDAO,
+                            taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext)
+    extends FoxImplicits {
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {
@@ -38,6 +46,17 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: Execu
         "organization" -> organization.name
       )
     }
+
+  def assertNoReferences(teamId: ObjectId)(implicit mp: MessagesProvider): Fox[Unit] =
+    for {
+      projectCount <- projectDAO.countForTeam(teamId)
+      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
+      taskTypeCount <- taskTypeDAO.countForTeam(teamId)
+      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
+      annotationCount <- annotationDAO.countForTeam(teamId)
+      _ <- bool2Fox(projectCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
+    } yield ()
+
 }
 
 class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -73,15 +92,6 @@ class TeamDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[TeamsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
-    } yield parsed
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$columns from #$existingCollectionName where name = $name and #$accessQuery".as[TeamsRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =

@@ -116,22 +116,26 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "ADD_ISOSURFACE": {
       const { cellId, seedPosition } = action;
-      return updateKey2(state, "isosurfaces", cellId.toString(), {
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
         segmentId: cellId,
         seedPosition,
+        isLoading: false,
       });
     }
 
     case "START_REFRESHING_ISOSURFACE": {
       const { cellId } = action;
-      return updateKey2(state, "isosurfaces", cellId.toString(), {
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
         isLoading: true,
       });
     }
 
     case "FINISHED_REFRESHING_ISOSURFACE": {
       const { cellId } = action;
-      return updateKey2(state, "isosurfaces", cellId.toString(), {
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
         isLoading: false,
       });
     }

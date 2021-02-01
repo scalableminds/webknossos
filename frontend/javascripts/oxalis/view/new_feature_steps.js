@@ -1,6 +1,5 @@
 // @flow
-
-export default function getNewFeatureSteps(tour) {
+export default function getNewFeatureSteps(tour: Object) {
   const newFeatureSteps = [
     {
       id: 0,

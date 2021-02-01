@@ -19,6 +19,7 @@ import {
   type OrthoView,
 } from "oxalis/constants";
 import Shepherd from "shepherd.js";
+import getNewFeatureSteps from "oxalis/view/new_feature_steps";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -333,7 +334,38 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         text: "You made it through the tour :hurray:<br>Happy Viewing and Annotating",
       },
     ]);
-    setTimeout(tour.start, 1000);
+    setTimeout(tour.start, 500);
+  };
+
+  startNewFeaturesTour = () => {
+    let tour;
+    // eslint-disable-next-line prefer-const
+    tour = new Shepherd.Tour({
+      defaultStepOptions: {
+        classes: "shadow-md bg-purple-dark",
+        cancelIcon: {
+          enabled: true,
+        },
+        buttons: [
+          {
+            text: "Back",
+            action() {
+              tour.back();
+            },
+          },
+          {
+            text: "Next",
+            action() {
+              tour.next();
+            },
+          },
+        ],
+      },
+      useModalOverlay: true,
+    });
+    const steps = getNewFeatureSteps.bind(this)(tour);
+    tour.addSteps(steps);
+    tour.start();
   };
 
   render() {
@@ -439,6 +471,9 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                       autoSaveLayouts: this.props.autoSaveLayouts,
                     }}
                   />
+                  <ButtonComponent onClick={() => this.startNewFeaturesTour()}>
+                    Start new Features Tour
+                  </ButtonComponent>
                   {isDatasetOnScratchVolume ? (
                     <Tooltip title={messages["dataset.is_scratch"]}>
                       <Alert

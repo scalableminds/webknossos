@@ -501,6 +501,12 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
+
+  def removeTeamFromAllDatasets(teamId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"delete from webknossos.dataSet_allowedTeams where _team = $teamId")
+    } yield ()
+
 }
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

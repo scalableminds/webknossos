@@ -170,6 +170,7 @@ class UserService @Inject()(conf: WkConf,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
              experiences: Map[String, Int],
+             novelUserExperienceInfos: JsObject,
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
@@ -178,6 +179,7 @@ class UserService @Inject()(conf: WkConf,
     for {
       oldEmail <- emailFor(user)
       _ <- multiUserDAO.updateEmail(user._multiUser, email)
+      _ <- multiUserDAO.updateNovelUserExperienceInfos(user._multiUser, novelUserExperienceInfos)
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,
@@ -305,6 +307,8 @@ class UserService @Inject()(conf: WkConf,
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
@@ -323,6 +327,7 @@ class UserService @Inject()(conf: WkConf,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
+        "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )

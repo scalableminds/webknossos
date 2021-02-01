@@ -242,26 +242,27 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  val userUpdateReader =
+  private val userUpdateReader =
     ((__ \ "firstName").readNullable[String] and
       (__ \ "lastName").readNullable[String] and
       (__ \ "email").readNullable[String] and
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
-      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
+      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
       (__ \ "experiences").readNullable[Map[String, Int]] and
+      (__ \ "updateNovelUserExperienceInfos").readNullable[JsObject] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) =
+  private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(
+      implicit m: MessagesProvider) =
     Fox.combined(teams.map {
-      case (TeamMembership(_, true), team) => {
+      case (TeamMembership(_, true), team) =>
         for {
           _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
                                                                         team.name,
                                                                         user.name) ~> FORBIDDEN
         } yield ()
-      }
       case (_, team) =>
         Fox.successful(())
     })
@@ -310,6 +311,7 @@ class UserController @Inject()(userService: UserService,
             isDatasetManagerOpt,
             assignedMembershipsOpt,
             experiencesOpt,
+            novelUserExperienceInfosOpt,
             lastTaskTypeIdOpt) =>
         for {
           userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
@@ -342,6 +344,8 @@ class UserController @Inject()(userService: UserService,
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
+          oldMultiUser <- multiUserDAO.findOne(user._multiUser)
+          novelUserExperienceInfos = novelUserExperienceInfosOpt.getOrElse(oldMultiUser.novelUserExperienceInfos)
           _ <- userService.update(user,
                                   firstName.trim,
                                   lastName.trim,
@@ -351,6 +355,7 @@ class UserController @Inject()(userService: UserService,
                                   isDatasetManager,
                                   updatedTeams,
                                   trimmedExperiences,
+                                  novelUserExperienceInfos,
                                   lastTaskTypeId)
           updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)

@@ -394,7 +394,7 @@ function onRightClick(
 export function setWaypoint(
   position: Vector3,
   activeViewport: OrthoView,
-  ctrlPressed: boolean,
+  ctrlIsPressed: boolean,
 ): void {
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   const activeNodeMaybe = getActiveNode(skeletonTracing);
@@ -410,33 +410,36 @@ export function setWaypoint(
       ]),
     ),
   );
-  const centerNewNode = !ctrlPressed && Store.getState().userConfiguration.centerNewNode;
-  addNode(position, rotation, centerNewNode, ctrlPressed);
 
-  // Ctrl + right click to set new not active branchpoint
-  const { newNodeNewTree } = Store.getState().userConfiguration;
-  if (ctrlPressed && !newNodeNewTree) {
-    Store.dispatch(createBranchPointAction());
-  }
+  const state = Store.getState();
+
+  // Create a new tree automatically if the corresponding setting is true and allowed
+  const createNewTree =
+    state.tracing.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
+  // Center node if the corresponding setting is true. Only pressing CTRL can override this.
+  const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
+  // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
+  const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
+  // Always activate the new node unless CTRL is pressed
+  const activate = !ctrlIsPressed;
+
+  addNode(position, rotation, createNewTree, center, branchpoint, activate);
 }
 
 function addNode(
   position: Vector3,
   rotation: Vector3,
-  centered: boolean,
-  isBranchpoint: boolean,
+  createNewTree: boolean,
+  center: boolean,
+  branchpoint: boolean,
+  activate: boolean,
 ): void {
-  const state = Store.getState();
-  const { newNodeNewTree } = state.userConfiguration;
-  const activeNodeMaybe = enforce(getActiveNode)(state.tracing.skeleton);
-
-  if (state.tracing.restrictions.somaClickingAllowed && newNodeNewTree) {
-    Store.dispatch(createTreeAction());
+  if (branchpoint) {
+    Store.dispatch(createBranchPointAction());
   }
 
-  if (activeNodeMaybe.isNothing && !newNodeNewTree) {
-    // when placing very first node of a tracing
-    centered = true;
+  if (createNewTree) {
+    Store.dispatch(createTreeAction());
   }
 
   Store.dispatch(
@@ -444,13 +447,13 @@ function addNode(
       position,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
-      getRequestLogZoomStep(state),
+      getRequestLogZoomStep(Store.getState()),
       null,
-      isBranchpoint, // don't set the new node active if it's a branchpoint
+      !activate,
     ),
   );
 
-  if (centered) {
+  if (center) {
     // we created a new node, so get a new reference from the current store state
     const newState = Store.getState();
     enforce(getActiveNode)(newState.tracing.skeleton).map(newActiveNode =>

@@ -251,7 +251,7 @@ class UserController @Inject()(userService: UserService,
       (__ \ "isDatasetManager").readNullable[Boolean] and
       (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
       (__ \ "experiences").readNullable[Map[String, Int]] and
-      (__ \ "updateNovelUserExperienceInfos").readNullable[JsObject] and
+      (__ \ "novelUserExperienceInfos").readNullable[JsObject] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
   private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(

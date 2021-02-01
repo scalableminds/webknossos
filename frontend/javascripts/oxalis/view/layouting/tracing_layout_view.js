@@ -18,6 +18,7 @@ import {
   type Vector3,
   type OrthoView,
 } from "oxalis/constants";
+import Shepherd from "shepherd.js";
 import type { OxalisState, AnnotationType, TraceOrViewCommand } from "oxalis/store";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -223,6 +224,118 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
   getLayoutNamesFromCurrentView = (layoutKey): Array<string> =>
     this.props.storedLayouts[layoutKey] ? Object.keys(this.props.storedLayouts[layoutKey]) : [];
 
+  startTour = () => {
+    let tour;
+    // eslint-disable-next-line prefer-const
+    tour = new Shepherd.Tour({
+      defaultStepOptions: {
+        classes: "shadow-md bg-purple-dark",
+        cancelIcon: {
+          enabled: true,
+        },
+        buttons: [
+          {
+            text: "Back",
+            action() {
+              tour.back();
+            },
+          },
+          {
+            text: "Next",
+            action() {
+              tour.next();
+            },
+          },
+        ],
+      },
+      useModalOverlay: true,
+    });
+    tour.addSteps([
+      {
+        id: "start",
+        title: "Tutorial start",
+        text:
+          "Welcome to the tracing view of WebKnossos. In this view you can <ul><li>View your Dataset</li><li>Annotate your Datasets</li><li>and more</li>",
+      },
+      {
+        id: "actionBar",
+        title: "The Action Bar",
+        text:
+          "This is the action bar. Here you can undo or redo annotation steps, set the exact view position and select an annotation tool. Additionally, you can switch between view modes.",
+        attachTo: {
+          element: ".action-bar",
+          on: "bottom",
+        },
+      },
+      {
+        id: "settingsButton",
+        title: "The Settings Button",
+        text:
+          "This is the settings button. This button opens / closes additional settings on the left side.",
+        attachTo: {
+          element: ".settings-button",
+          on: "bottom",
+        },
+        buttons: [
+          {
+            text: "Back",
+            action() {
+              tour.back();
+            },
+          },
+          {
+            text: "Open the Settings",
+            action: () => {
+              this.setState({ isSettingsCollapsed: false });
+              tour.next();
+            },
+          },
+        ],
+      },
+      {
+        id: "settingsView",
+        title: "The Settings",
+        text:
+          "Here you can adjust additional setting about how the dataset is displayed or other settings that impact e.g. annotating.",
+        attachTo: {
+          element: ".additional-settings",
+          on: "right",
+        },
+        buttons: [
+          {
+            text: "Back",
+            action: () => {
+              this.setState({ isSettingsCollapsed: true });
+              tour.back();
+            },
+          },
+          {
+            text: "Close Settings & Next",
+            action: () => {
+              this.setState({ isSettingsCollapsed: true });
+              tour.next();
+            },
+          },
+        ],
+      },
+      {
+        id: "datasetPanes",
+        title: "The Dataset Panes",
+        text:
+          "These are the dataset panes. They display the dataset from different angles.<br> You can do your annotations in these panes.<br> E.g. to create a skeleton using the skeleton tool or fill the volume of a cell by using the brush tool.",
+        attachTo: {
+          element: "#layoutContainer",
+        },
+      },
+      {
+        id: "end",
+        title: "Finished",
+        text: "You made it through the tour :hurray:<br>Happy Viewing and Annotating",
+      },
+    ]);
+    setTimeout(tour.start, 1000);
+  };
+
   render() {
     if (this.state.hasError) {
       return (
@@ -280,9 +393,12 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialAnnotationType={this.props.initialAnnotationType}
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
-            setControllerStatus={(newStatus: ControllerStatus) =>
-              this.setState({ status: newStatus })
-            }
+            setControllerStatus={(newStatus: ControllerStatus) => {
+              this.setState({ status: newStatus });
+              if (newStatus === "loaded") {
+                this.startTour();
+              }
+            }}
             showNodeContextMenuAt={this.showNodeContextMenuAt}
           />
           <CrossOriginApi />
@@ -291,7 +407,11 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
               {status === "loaded" ? (
                 <div style={{ flex: "0 1 auto", zIndex: 210, display: "flex" }}>
                   <ButtonComponent
-                    className={isSettingsCollapsed ? "" : "highlight-togglable-button"}
+                    className={
+                      isSettingsCollapsed
+                        ? "settings-button"
+                        : "settings-button highlight-togglable-button"
+                    }
                     onClick={this.handleSettingsCollapse}
                     shape="circle"
                   >
@@ -347,6 +467,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                 collapsible
                 trigger={null}
                 collapsed={isSettingsCollapsed}
+                className="additional-settings"
                 collapsedWidth={0}
                 width={360}
                 style={{ zIndex: 100, marginRight: isSettingsCollapsed ? 0 : 8 }}

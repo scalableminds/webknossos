@@ -72,7 +72,7 @@ test("teams_delete_user_D", async t => {
   t.plan(1);
 
   await api.deleteTeam("69882b370d889b84020efd4f").catch(err => {
-    t.is(err.messages[0].error, "Access denied.");
+    t.is(err.messages[0].error, "Access denied. Only admin users can execute this operation.");
   });
 });
 

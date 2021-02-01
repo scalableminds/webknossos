@@ -4,15 +4,12 @@ import { Link, useHistory } from "react-router-dom";
 import { Spin, Row, Col, Card } from "antd";
 import messages from "messages";
 import Toast from "libs/toast";
-import { getOrganization, getDefaultOrganization } from "admin/admin_rest_api";
+import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
-import RegistrationForm from "./registration_form";
+import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import RegistrationForm from "admin/auth/registration_form";
 
-type Props = {
-  organizationName?: string,
-};
-
-function RegistrationView({ organizationName }: Props) {
+function RegistrationViewNotDemo() {
   const history = useHistory();
   const [organization, setOrganization] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,17 +18,13 @@ function RegistrationView({ organizationName }: Props) {
     (async () => {
       setIsLoading(true);
       try {
-        if (organizationName != null) {
-          setOrganization(await getOrganization(organizationName));
-        } else {
-          const defaultOrg = await getDefaultOrganization();
-          setOrganization(defaultOrg);
-        }
+        const defaultOrg = await getDefaultOrganization();
+        setOrganization(defaultOrg);
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [organizationName]);
+  }, []);
 
   let content = null;
   if (isLoading) {
@@ -61,20 +54,10 @@ function RegistrationView({ organizationName }: Props) {
   } else {
     content = (
       <Card style={{ marginBottom: 24 }}>
-        {organizationName != null
-          ? "We could not find your organization."
-          : "We could not find a default organization to sign up for."}
-        <br /> Please check your link or{" "}
-        {features().isDemoInstance ? (
-          <>
-            <Link to="/">create a new organization</Link>.
-          </>
-        ) : (
-          <>
-            contact <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on
-            setting up webKnossos.
-          </>
-        )}
+        We could not find a default organization to sign up for.
+        <br /> Please check your link or contact{" "}
+        <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> for help on setting up
+        webKnossos.
       </Card>
     );
   }
@@ -83,13 +66,38 @@ function RegistrationView({ organizationName }: Props) {
     <Spin spinning={isLoading}>
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
-          <h3>Registration</h3>
+          <h3>Sign Up</h3>
           {content}
           <Link to="/auth/login">Already have an account? Login instead.</Link>
         </Col>
       </Row>
     </Spin>
   );
+}
+
+function RegistrationViewDemo() {
+  const history = useHistory();
+  return (
+    <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+      <Col span={8}>
+        <div>
+          <h3>Sign Up</h3>
+          <SpotlightRegistrationForm
+            onRegistered={() => {
+              history.push("/dashboard?showWhatsNextBanner");
+            }}
+          />
+          <p style={{ textAlign: "center" }}>
+            <Link to="/auth/login">Log in to existing account</Link>
+          </p>
+        </div>
+      </Col>
+    </Row>
+  );
+}
+
+function RegistrationView() {
+  return features().isDemoInstance ? <RegistrationViewDemo /> : <RegistrationViewNotDemo />;
 }
 
 export default RegistrationView;

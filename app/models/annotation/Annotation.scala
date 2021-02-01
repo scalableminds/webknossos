@@ -151,6 +151,12 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     } yield parsed
   }
 
+  def countForTeam(teamId: ObjectId): Fox[Int] =
+    for {
+      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      count <- countList.headOption
+    } yield count
+
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllFinishedForProject(projectId: ObjectId): Fox[List[Annotation]] =
     for {

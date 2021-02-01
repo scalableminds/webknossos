@@ -56,20 +56,17 @@ class DataStoreWkRpcClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
+  // the initial teams request also sets the uploader info, hence it is also sent if the teams list is empty.
   def postInitialTeams(dataSourceId: DataSourceId, initialTeams: List[String], userTokenOpt: Option[String]): Fox[_] = {
     val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
-      _ <- if (initialTeams.isEmpty) Fox.successful(())
-      else {
-        Fox.successful(Thread.sleep(sleepDuration)).map { _ =>
-          rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/addInitialTeams")
-            .addQueryString("key" -> dataStoreKey)
-            .addQueryString("dataSetName" -> dataSourceId.name)
-            .addQueryString("token" -> userToken)
-            .post(initialTeams)
-        }
-      }
+      _ = Thread.sleep(sleepDuration)
+      _ <- rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/addInitialTeams")
+        .addQueryString("key" -> dataStoreKey)
+        .addQueryString("dataSetName" -> dataSourceId.name)
+        .addQueryString("token" -> userToken)
+        .post(initialTeams)
     } yield ()
   }
 

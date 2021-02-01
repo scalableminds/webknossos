@@ -31,6 +31,7 @@ case class DataSet(
     _dataStore: String,
     _organization: ObjectId,
     _publication: Option[ObjectId],
+    _uploader: Option[ObjectId],
     inboxSourceHash: Option[Int],
     defaultViewConfiguration: Option[DataSetViewConfiguration] = None,
     adminViewConfiguration: Option[DataSetViewConfiguration] = None,
@@ -88,6 +89,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r._Datastore.trim,
         ObjectId(r._Organization),
         r._Publication.map(ObjectId(_)),
+        r._Uploader.map(ObjectId(_)),
         r.inboxsourcehash,
         defaultViewConfigurationOpt,
         adminViewConfigurationOpt,
@@ -239,15 +241,24 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
                       where _id = $datasetId""")
     } yield ()
 
+  def updateUploader(datasetId: ObjectId, uploaderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(sqlu"""update webknossos.dataSets
+                      set _uploader = #${optionLiteral(uploaderId.map(_.id))}
+                      where _id = $datasetId""")
+    } yield ()
+
   def insertOne(d: DataSet): Fox[Unit] = {
     val adminViewConfiguration: Option[String] = d.adminViewConfiguration.map(Json.toJson(_).toString)
     val defaultViewConfiguration: Option[String] = d.defaultViewConfiguration.map(Json.toJson(_).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
+               #${optionLiteral(d._uploader.map(_.id))},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
           defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
@@ -501,6 +512,12 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
+
+  def removeTeamFromAllDatasets(teamId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"delete from webknossos.dataSet_allowedTeams where _team = $teamId")
+    } yield ()
+
 }
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)

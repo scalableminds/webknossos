@@ -10,3 +10,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [061-userinfos-view.sql](conf/evolutions/061-userinfos-view)
+- [062-dataset-uploader.sql](conf/evolutions/062-dataset-uploader.sql)

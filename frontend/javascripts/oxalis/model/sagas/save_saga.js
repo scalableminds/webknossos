@@ -415,7 +415,16 @@ export function* sendRequestToServer(tracingType: "skeleton" | "volume"): Saga<v
       yield* call(toggleErrorHighlighting, false);
       return;
     } catch (error) {
-      yield* call(toggleErrorHighlighting, true);
+      const annotationType = yield* select(state => state.tracing.annotationType);
+      const isViewMode = annotationType === "View";
+      if (!isViewMode) {
+        // In view only mode we do not need to show the error as it is not so important and distracts the user.
+        yield* call(toggleErrorHighlighting, true);
+      } else {
+        // Still log the error to airbrake. Also compactedSaveQueue needs to be within an object
+        // as otherwise the entries would be spread by the notify function.
+        yield* call([ErrorHandling, ErrorHandling.notify], error, { compactedSaveQueue });
+      }
       if (error.status === 409) {
         // HTTP Code 409 'conflict' for dirty state
         window.onbeforeunload = null;

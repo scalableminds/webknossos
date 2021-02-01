@@ -275,7 +275,7 @@ class UserTeamRolesDAO @Inject()(userDAO: UserDAO, sqlClient: SQLClient)(implici
 
   def removeTeamFromAllUsers(teamId: ObjectId): Fox[Unit] =
     for {
-      r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId}")
+      _ <- run(sqlu"delete from webknossos.user_team_roles where _team = $teamId")
     } yield ()
 
   def findMemberDifference(potentialSubteam: ObjectId, superteams: List[ObjectId]): Fox[List[User]] =

@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 -
 
 ### Changed
+- Before uploading a dataset wk automatically checks whether a conversion and scale are needed. Additionally, the Upload UI was improved. [#5081](https://github.com/scalableminds/webknossos/issues/5081)
 - Users are no longer allowed to deactivate their own accounts.  [#5070](https://github.com/scalableminds/webknossos/pull/5070)
 
 ### Fixed

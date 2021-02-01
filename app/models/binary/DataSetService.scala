@@ -73,6 +73,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           dataStore.name,
           organization._id,
           publication,
+          None,
           Some(dataSource.hashCode()),
           dataSource.defaultViewConfiguration,
           adminViewConfiguration = None,
@@ -101,12 +102,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
-    rpc(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
+    rpc(s"$dataStoreUrl/data/datasets/$dataSetName/readInboxDataSourceLike")
       .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
 
   def addForeignDataStore(name: String, url: String): Fox[Unit] = {
-    val dataStore = DataStore(name, url, url, "", isForeign = true, isConnector = false) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+    val dataStore = DataStore(name, url, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
       _ <- dataStoreDAO.insertOne(dataStore)
     } yield ()
@@ -318,6 +319,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
       _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+    } yield ()
+
+  def addUploader(dataSet: DataSet, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(dataSet._uploader.isEmpty) ?~> "dataSet.uploader.notEmpty"
+      _ <- dataSetDAO.updateUploader(dataSet._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
   def publicWrites(dataSet: DataSet,

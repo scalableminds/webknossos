@@ -58,6 +58,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
               "dataSet.notFound",
               dataSetName) ~> NOT_FOUND
             _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user))
+            _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
           } yield Ok
         }
       }

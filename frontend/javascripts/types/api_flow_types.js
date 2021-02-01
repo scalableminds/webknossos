@@ -210,6 +210,7 @@ export type APIUser = APIUserBase & {
   +lastActivity: number,
   +lastTaskTypeId: ?string,
   +organization: string,
+  +novelUserExperienceInfos: { +[string]: boolean },
 };
 
 export type APITimeInterval = {

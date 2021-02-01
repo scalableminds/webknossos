@@ -2,15 +2,17 @@
 import { type RouterHistory, withRouter } from "react-router-dom";
 import { Spin, Tabs, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
+import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
 import * as Utils from "libs/utils";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
 import { WhatsNextHeader } from "admin/welcome_ui";
 import type { APIUser } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import { getUser } from "admin/admin_rest_api";
+import { getUser, updateNovelUserExperienceInfos } from "admin/admin_rest_api";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import DatasetView from "dashboard/dataset_view";
 import DatasetCacheProvider from "dashboard/dataset/dataset_cache_provider";
@@ -32,13 +34,15 @@ type OwnProps = {|
 type StateProps = {|
   activeUser: APIUser,
 |};
-type Props = {| ...OwnProps, ...StateProps |};
+type DispatchProps = {|
+  updateActiveUser: APIUser => void,
+|};
+type Props = {| ...OwnProps, ...StateProps, ...DispatchProps |};
 type PropsWithRouter = {| ...Props, history: RouterHistory |};
 
 type State = {
   activeTabKey: string,
   user: ?APIUser,
-  showWhatsNextBanner: boolean,
 };
 
 export const urlTokenToTabKeyMap = {
@@ -71,7 +75,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     this.state = {
       activeTabKey,
       user: null,
-      showWhatsNextBanner: Utils.getUrlParamValue("showWhatsNextBanner") === "true",
     };
   }
 
@@ -154,8 +157,17 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
     }
   }
 
+  onDismissWelcomeBanner = () => {
+    const [newUserSync] = updateNovelUserExperienceInfos(this.props.activeUser, {
+      hasSeenDashboardWelcomeBanner: true,
+    });
+
+    this.props.updateActiveUser(newUserSync);
+  };
+
   render() {
     const { user } = this.state;
+    const { activeUser } = this.props;
     if (!user) {
       return (
         <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
@@ -182,9 +194,12 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
       </h3>
     ) : null;
 
-    const whatsNextBanner = this.state.showWhatsNextBanner ? (
-      <WhatsNextHeader activeUser={this.props.activeUser} />
-    ) : null;
+    const whatsNextBanner =
+      !this.props.isAdminView &&
+      Utils.isUserAdminOrDatasetManager(activeUser) &&
+      !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
+        <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
+      ) : null;
 
     return (
       <NmlUploadZoneContainer onImport={this.uploadNmls} isUpdateAllowed>
@@ -206,4 +221,13 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
-export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(withRouter(DashboardView));
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  updateActiveUser(activeUser: APIUser) {
+    dispatch(setActiveUserAction(activeUser));
+  },
+});
+
+export default connect<Props, OwnProps, _, _, _, _>(
+  mapStateToProps,
+  mapDispatchToProps,
+)(withRouter(DashboardView));

@@ -84,7 +84,7 @@ function RegistrationViewDemo() {
           <h3>Sign Up</h3>
           <SpotlightRegistrationForm
             onRegistered={() => {
-              history.push("/dashboard?showWhatsNextBanner");
+              history.push("/dashboard");
             }}
           />
           <p style={{ textAlign: "center" }}>

@@ -93,7 +93,6 @@ function DatasetView(props: Props) {
   }
 
   function renderPlaceholder() {
-    const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
     const noDatasetsPlaceholder =
       "There are no datasets available yet. Please ask an admin or dataset manager to upload a dataset or to grant you permissions to add datasets.";
 
@@ -140,8 +139,7 @@ function DatasetView(props: Props) {
           >
             webKnossos supports a variety of{" "}
             <a href="https://docs.webknossos.org/reference/data_formats">file formats</a> and is
-            also able to convert them when necessary. Simply drop your dataset into the import
-            dialog.
+            also able to convert them when necessary.
           </OptionCard>
         </Row>
         <div style={{ marginTop: 24 }}>There are no datasets available yet.</div>
@@ -152,7 +150,7 @@ function DatasetView(props: Props) {
       <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
         <Col span={18}>
           <div style={{ paddingBottom: 32, textAlign: "center" }}>
-            {isUserAdminOrDatasetManager ? uploadPlaceholder : noDatasetsPlaceholder}
+            {Utils.isUserAdminOrDatasetManager(user) ? uploadPlaceholder : noDatasetsPlaceholder}
           </div>
         </Col>
       </Row>
@@ -209,7 +207,7 @@ function DatasetView(props: Props) {
     />
   );
 
-  const isUserAdminOrDatasetManager = Utils.isUserAdmin(user) || Utils.isUserDatasetManager(user);
+  const isUserAdminOrDatasetManager = Utils.isUserAdminOrDatasetManager(user);
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (

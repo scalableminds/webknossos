@@ -1,6 +1,6 @@
 // @flow
 
-import { Icon } from "antd";
+import { Icon, Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";
 
@@ -51,16 +51,23 @@ const WhatsNextAction = ({ title, description, icon, onClick, href, to }: WhatsN
 
 type WhatsNextHeaderProps = {
   activeUser: APIUser,
+  onDismiss: () => void,
 };
 
-export const WhatsNextHeader = ({ activeUser }: WhatsNextHeaderProps) => (
+export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps) => (
   <div>
     <div
       style={{
         backgroundColor: "rgba(88, 88, 88, 0.4)",
         backgroundImage: "linear-gradient(0deg, rgb(255 255 255) 0%, rgb(231 247 255) 70%)",
+        position: "relative",
       }}
     >
+      <div style={{ position: "absolute", right: 0, top: 0, margin: 8 }}>
+        <Tooltip title="Don't show this again" placement="left">
+          <Icon type="close" onClick={onDismiss} />
+        </Tooltip>
+      </div>
       <div className="welcome-header-content">
         <img className="wk-logo" src="/assets/images/oxalis.svg" alt="webKnossos Logo" />
         <div className="text-and-button-container">

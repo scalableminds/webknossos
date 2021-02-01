@@ -108,7 +108,7 @@ const WelcomeHeader = ({ history }) => (
             <div className="spotlight-registration-form">
               <SpotlightRegistrationForm
                 onRegistered={() => {
-                  history.push("/dashboard?showWhatsNextBanner");
+                  history.push("/dashboard");
                 }}
               />
               <p style={{ textAlign: "center" }}>

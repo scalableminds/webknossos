@@ -170,6 +170,26 @@ export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   });
 }
 
+export function updateNovelUserExperienceInfos(
+  user: APIUser,
+  novelUserExperienceShape: Object,
+): [APIUser, Promise<APIUser>] {
+  const updateShape = {
+    id: user.id,
+    novelUserExperienceInfos: {
+      ...user.novelUserExperienceInfos,
+      ...novelUserExperienceShape,
+    },
+  };
+  const newUserSync = {
+    ...user,
+    ...updateShape,
+  };
+  const newUserAsync = updateUser(updateShape);
+
+  return [newUserSync, newUserAsync];
+}
+
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,

@@ -11,7 +11,6 @@ const CORRECT_DATASET_CONFIGURATION = {
   fourBit: false,
   interpolation: true,
   highlightHoveredCellId: true,
-  renderIsosurfaces: false,
   renderMissingDataBlack: true,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,

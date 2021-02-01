@@ -107,6 +107,39 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       return updateKey(state, "tracing", { meshes: newMeshes });
     }
 
+    case "REMOVE_ISOSURFACE": {
+      const { cellId } = action;
+      return update(state, {
+        isosurfaces: { $unset: [cellId] },
+      });
+    }
+
+    case "ADD_ISOSURFACE": {
+      const { cellId, seedPosition } = action;
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
+        segmentId: cellId,
+        seedPosition,
+        isLoading: false,
+      });
+    }
+
+    case "START_REFRESHING_ISOSURFACE": {
+      const { cellId } = action;
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
+        isLoading: true,
+      });
+    }
+
+    case "FINISHED_REFRESHING_ISOSURFACE": {
+      const { cellId } = action;
+      // $FlowIgnore[incompatible-call] updateKey has problems with updating Objects as Dictionaries
+      return updateKey2(state, "isosurfaces", cellId, {
+        isLoading: false,
+      });
+    }
+
     default:
       return state;
   }

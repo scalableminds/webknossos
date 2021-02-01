@@ -47,10 +47,10 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
-  def assertNewDataSetName(name: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def assertNewDataSetName(name: String, organizationId: ObjectId): Fox[Boolean] =
     dataSetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore) = {
+  def reserveDataSetName(dataSetName: String, organizationName: String, dataStore: DataStore): Fox[ObjectId] = {
     val unreportedDatasource = UnusableDataSource(DataSourceId(dataSetName, organizationName), unreportedStatus)
     createDataSet(dataStore, organizationName, unreportedDatasource)
   }
@@ -73,6 +73,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
           dataStore.name,
           organization._id,
           publication,
+          None,
           Some(dataSource.hashCode()),
           dataSource.defaultViewConfiguration,
           adminViewConfiguration = None,
@@ -101,12 +102,12 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def getForeignDataSet(dataStoreUrl: String, dataSetName: String): Fox[InboxDataSource] =
-    rpc(s"${dataStoreUrl}/data/datasets/${dataSetName}/readInboxDataSourceLike")
+    rpc(s"$dataStoreUrl/data/datasets/$dataSetName/readInboxDataSourceLike")
       .addQueryString("token" -> "") // we don't need a valid token because the DataSet is public, but we have to add the parameter token because it is a TokenSecuredAction
       .getWithJsonResponse[InboxDataSource]
 
-  def addForeignDataStore(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val dataStore = DataStore(name, url, url, "", isForeign = true, isConnector = false) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
+  def addForeignDataStore(name: String, url: String): Fox[Unit] = {
+    val dataStore = DataStore(name, url, url, "", isForeign = true) // the key can be "" because keys are only important for own DataStore. Own Datastores have a key that is not ""
     for {
       _ <- dataStoreDAO.insertOne(dataStore)
     } yield ()
@@ -169,7 +170,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
                                                                   dataStore.name,
                                                                   dataSource.hashCode,
                                                                   dataSource,
-                                                                  dataSource.isUsable)(GlobalAccessContext)
+                                                                  dataSource.isUsable)
       } yield foundDataSet._id
 
   private def updateDataSourceDifferentDataStore(
@@ -205,7 +206,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def publicationForFirstDataset: Fox[Option[ObjectId]] =
     if (conf.Application.insertInitialData) {
-      dataSetDAO.isEmpty(GlobalAccessContext).map { isEmpty =>
+      dataSetDAO.isEmpty.map { isEmpty =>
         if (isEmpty)
           Some(ObjectId("5c766bec6c01006c018c7459"))
         else
@@ -213,31 +214,26 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       }
     } else Fox.successful(None)
 
-  def deactivateUnreportedDataSources(existingDataSetIds: List[ObjectId], dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def deactivateUnreportedDataSources(existingDataSetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
     dataSetDAO.deactivateUnreported(existingDataSetIds, dataStore.name, unreportedStatus)
 
-  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext) = {
+  def getSharingToken(dataSetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
-    def createSharingToken(dataSetName: String)(implicit ctx: DBAccessContext) =
+    def createAndSaveSharingToken(dataSetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
         tokenValue <- new CompactRandomIDGenerator().generate
         _ <- dataSetDAO.updateSharingTokenByName(dataSetName, organizationId, Some(tokenValue))
       } yield tokenValue
 
-    val tokenFoxOfFox: Fox[Fox[String]] = dataSetDAO.getSharingTokenByName(dataSetName, organizationId).map {
+    dataSetDAO.getSharingTokenByName(dataSetName, organizationId).flatMap {
       case Some(oldToken) => Fox.successful(oldToken)
-      case None           => createSharingToken(dataSetName)
+      case None           => createAndSaveSharingToken(dataSetName)
     }
-
-    for {
-      tokenFox <- tokenFoxOfFox
-      token <- tokenFox
-    } yield token
   }
 
-  def dataSourceFor(dataSet: DataSet, organization: Option[Organization] = None, skipResolutions: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[InboxDataSource] =
+  def dataSourceFor(dataSet: DataSet,
+                    organization: Option[Organization] = None,
+                    skipResolutions: Boolean = false): Fox[InboxDataSource] =
     (for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataSet._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -260,15 +256,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
         Fox.fillOption(organization)(organizationDAO.findOne(dataSet._organization)(GlobalAccessContext)).map(_.logoUrl)
     }
 
-  def dataStoreFor(dataSet: DataSet): Fox[DataStore] =
-    dataStoreDAO.findOneByName(dataSet._dataStore.trim)(GlobalAccessContext) ?~> "datastore.notFound"
+  def dataStoreFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStore] =
+    dataStoreDAO.findOneByName(dataSet._dataStore.trim) ?~> "datastore.notFound"
 
   def clientFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[DataStoreRpcClient] =
     for {
       dataStore <- dataStoreFor(dataSet)
     } yield new DataStoreRpcClient(dataStore, dataSet, rpc)
 
-  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Long] =
+  def lastUsedTimeFor(_dataSet: ObjectId, userOpt: Option[User]): Fox[Long] =
     userOpt match {
       case Some(user) =>
         (for {
@@ -277,7 +273,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       case _ => Fox.successful(0L)
     }
 
-  def allowedTeamIdsFor(_dataSet: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def allowedTeamIdsFor(_dataSet: ObjectId): Fox[List[ObjectId]] =
     dataSetAllowedTeamsDAO.findAllForDataSet(_dataSet) ?~> "allowedTeams.notFound"
 
   def allowedTeamsFor(_dataSet: ObjectId, requestingUser: Option[User])(
@@ -288,16 +284,15 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       teamsFiltered = teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
     } yield teamsFiltered
 
-  def allLayersFor(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] =
+  def allLayersFor(dataSet: DataSet): Fox[List[DataLayer]] =
     for {
       dataSource <- dataSourceFor(dataSet)
       dataSetLayers = dataSource.toUsable.map(d => d.dataLayers).getOrElse(List())
     } yield dataSetLayers
 
-  def isEditableBy(
-      dataSet: DataSet,
-      userOpt: Option[User],
-      userTeamManagerMemberships: Option[List[TeamMembership]] = None)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditableBy(dataSet: DataSet,
+                   userOpt: Option[User],
+                   userTeamManagerMemberships: Option[List[TeamMembership]] = None): Fox[Boolean] =
     userOpt match {
       case Some(user) =>
         for {
@@ -313,7 +308,7 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
 
   def isUnreported(dataSet: DataSet): Boolean = dataSet.status == unreportedStatus
 
-  def addInitialTeams(dataSet: DataSet, user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addInitialTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- bool2Fox(dataSet.created > System.currentTimeMillis() - initialTeamsTimeoutMs) ?~> "dataset.initialTeams.timeout"
       previousDatasetTeams <- allowedTeamIdsFor(dataSet._id)
@@ -322,7 +317,14 @@ class DataSetService @Inject()(organizationDAO: OrganizationDAO,
       userTeamIds = userTeams.map(_._id)
       teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.parse(_))
       _ <- bool2Fox(teamIdsValidated.forall(team => userTeamIds.contains(team))) ?~> "dataset.initialTeams.invalidTeams"
+      _ <- dataSetDAO.assertUpdateAccess(dataSet._id) ?~> "dataset.initialTeams.forbidden"
       _ <- dataSetAllowedTeamsDAO.updateAllowedTeamsForDataSet(dataSet._id, teamIdsValidated)
+    } yield ()
+
+  def addUploader(dataSet: DataSet, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- bool2Fox(dataSet._uploader.isEmpty) ?~> "dataSet.uploader.notEmpty"
+      _ <- dataSetDAO.updateUploader(dataSet._id, Some(_uploader)) ?~> "dataset.uploader.forbidden"
     } yield ()
 
   def publicWrites(dataSet: DataSet,

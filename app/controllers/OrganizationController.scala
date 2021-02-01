@@ -32,7 +32,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
   def get(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      js <- organizationService.publicWrites(org)(GlobalAccessContext)
+      js <- organizationService.publicWrites(org)
     } yield {
       Ok(Json.toJson(js))
     }
@@ -49,7 +49,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     for {
       allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
       org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
-      js <- organizationService.publicWrites(org)(GlobalAccessContext)
+      js <- organizationService.publicWrites(org)
     } yield {
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
         Ok(JsNull)

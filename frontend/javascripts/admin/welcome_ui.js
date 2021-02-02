@@ -101,7 +101,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               }}
             >
               Congratulations on your new webKnossos account! To hit the ground running, we
-              recommend the following steps for you:
+              recommend the following steps to you:
             </p>
             <div className="whats-next-actions-grid">
               <WhatsNextAction
@@ -125,7 +125,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               />
               <WhatsNextAction
                 title="Invite Your Colleagues"
-                description="Send invites to your colleagues that they can join your organization."
+                description="Send invites to your colleagues and ask them to join your organization."
                 icon={<Icon type="mail" className="action-icon" />}
                 onClick={() => {
                   renderIndependently(destroy => (

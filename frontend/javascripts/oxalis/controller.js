@@ -119,8 +119,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       .then(() => this.modelFetchDone())
       .catch(error => {
         this.props.setControllerStatus("failedLoading");
-        // Don't throw errors for errors already handled by the model.
-        if (error !== HANDLED_ERROR) {
+        const isNotFoundError = error.status === 404;
+        // Don't throw errors for errors already handled by the model
+        // or "Not Found" errors because they are already handled elsewhere.
+        if (error !== HANDLED_ERROR && !isNotFoundError) {
           Toast.error(`${messages["tracing.unhandled_initialization_error"]} ${error.toString()}`, {
             sticky: true,
           });
@@ -316,7 +318,15 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
           <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
             <Col span={8}>
               <h3>Try logging in to view the dataset.</h3>
-              <LoginForm layout="horizontal" onLoggedIn={() => this.tryFetchingModel()} />
+              <LoginForm
+                layout="horizontal"
+                onLoggedIn={() => {
+                  // Close existing error toasts for "Not Found" errors before trying again.
+                  // If they get relevant again, they will be recreated anyway.
+                  Toast.close("404");
+                  this.tryFetchingModel();
+                }}
+              />
             </Col>
           </Row>
         </div>

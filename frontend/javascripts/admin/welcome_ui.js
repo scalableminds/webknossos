@@ -5,7 +5,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 
 import type { APIUser } from "types/api_flow_types";
-import features from "features";
+import { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 
 import { InviteUsersModal } from "admin/onboarding";
@@ -107,7 +107,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               <WhatsNextAction
                 title="Open a Demo Dataset"
                 description="Have a look at a public dataset to experience webKnossos in action."
-                href={features().publicDemoDatasetUrl}
+                href={getDemoDatasetUrl()}
                 icon={<Icon type="play-circle" className="action-icon" />}
               />
 

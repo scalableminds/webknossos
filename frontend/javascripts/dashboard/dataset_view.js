@@ -11,7 +11,7 @@ import DatasetTable from "dashboard/advanced_dataset/dataset_table";
 import SampleDatasetsModal from "dashboard/dataset/sample_datasets_modal";
 import { DatasetCacheContext } from "dashboard/dataset/dataset_cache_provider";
 import * as Utils from "libs/utils";
-import features from "features";
+import features, { getDemoDatasetUrl } from "features";
 import renderIndependently from "libs/render_independently";
 import Persistence from "libs/persistence";
 
@@ -113,7 +113,7 @@ function DatasetView(props: Props) {
         header="Open Demo Dataset"
         icon={<Icon type="rocket" />}
         action={
-          <a href={features().publicDemoDatasetUrl} target="_blank" rel="noopener noreferrer">
+          <a href={getDemoDatasetUrl()} target="_blank" rel="noopener noreferrer">
             <Button>Open Dataset</Button>
           </a>
         }

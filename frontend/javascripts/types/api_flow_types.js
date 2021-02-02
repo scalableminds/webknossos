@@ -200,6 +200,10 @@ export type APIUserBase = {
   +teams: Array<APITeamMembership>,
 };
 
+export type NovelUserExperienceInfoType = {|
+  hasSeenDashboardWelcomeBanner?: boolean,
+|};
+
 export type APIUser = APIUserBase & {
   +created: number,
   +experiences: ExperienceMap,
@@ -210,7 +214,7 @@ export type APIUser = APIUserBase & {
   +lastActivity: number,
   +lastTaskTypeId: ?string,
   +organization: string,
-  +novelUserExperienceInfos: { +[string]: boolean },
+  +novelUserExperienceInfos: NovelUserExperienceInfoType,
 };
 
 export type APITimeInterval = {

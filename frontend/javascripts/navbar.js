@@ -309,9 +309,9 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
         <Menu.Item key="logout">
-          <Link to="/" onClick={handleLogout}>
+          <a href="/" onClick={handleLogout}>
             Logout
-          </Link>
+          </a>
         </Menu.Item>
       </SubMenu>
     </NavbarMenuItem>
@@ -340,12 +340,12 @@ async function getAndTrackVersion() {
 
 function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizations }: Props) {
   const history = useHistory();
-  const handleLogout = async () => {
+  const handleLogout = async (event: SyntheticInputEvent<>) => {
+    event.preventDefault();
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
-    if (features().isDemoInstance) {
-      location.reload();
-    }
+    // Hard navigation
+    window.location.href = "/";
   };
 
   const version = useFetch(getAndTrackVersion, null, []);
@@ -445,7 +445,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       >
         {[
           <Menu.Item key="0">
-            <Link to="/" style={{ fontWeight: 400 }}>
+            <Link to="/dashboard" style={{ fontWeight: 400 }}>
               <CollapsibleMenuTitle
                 title="webKnossos"
                 icon={<span className="logo" />}

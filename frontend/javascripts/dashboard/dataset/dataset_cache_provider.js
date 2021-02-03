@@ -159,7 +159,6 @@ export default function DatasetCacheProvider({ children }: { children: Node }) {
     }
   }
 
-  console.log("datasets", datasets);
   return (
     <DatasetCacheContext.Provider
       value={{ datasets, isLoading, checkDatasets, fetchDatasets, updateDataset }}

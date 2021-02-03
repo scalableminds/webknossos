@@ -289,7 +289,12 @@ class Request {
                 json.status = error.status;
               }
 
-              if (showErrorToast) Toast.messages(json.messages);
+              const messages = json.messages.map(message => ({
+                ...message,
+                key: json.status.toString(),
+              }));
+
+              if (showErrorToast) Toast.messages(messages);
 
               // Check whether the error chain mentions an url which belongs
               // to a datastore. Then, ping the datastore

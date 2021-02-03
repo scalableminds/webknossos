@@ -13,7 +13,7 @@ module.exports = function(env = {}) {
   var nodePath = "node_modules";
   var protoPath = path.join(__dirname, "webknossos-datastore/proto/");
 
-  fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
+  fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), String(process.pid), "utf8");
 
   const plugins = [
     new webpack.DefinePlugin({

@@ -170,7 +170,7 @@ datasetNames.map(async datasetName => {
 
 test.serial("it should render a dataset with mappings correctly", async t => {
   const datasetName = "ROI2017_wkw";
-  const mappingName = "axons";
+  const mappingName = "astrocyte";
   await withRetry(
     3,
     async () => {

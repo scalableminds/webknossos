@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWCube
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
@@ -11,30 +12,28 @@ import scala.concurrent.ExecutionContext
 
 trait BucketProvider extends FoxImplicits with LazyLogging {
 
-  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[Cube] = Empty
+  // To be defined in subclass.
+  def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCube] = Empty
 
   def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+      implicit ec: ExecutionContext): Fox[Array[Byte]] =
+    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(_.cutOutBucket(readInstruction.bucket))
 
-    def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[Cube] = {
-      val t = System.currentTimeMillis
-      val result = loadFromUnderlying(readInstruction)
-      val duration = System.currentTimeMillis - t
-      if (duration > 500) {
-        val className = this.getClass.getName.split("\\.").last
-        logger.warn(
-          s"loading file in $className took ${if (duration > 3000) "really " else ""}long.\n"
-            + s"  duration: $duration\n"
-            + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
-            + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
-            + s"  cube: ${readInstruction.cube}"
-        )
-      }
-      result
+  private def loadFromUnderlyingWithTimeout(readInstruction: DataReadInstruction): Box[WKWCube] = {
+    val t = System.currentTimeMillis
+    val result = loadFromUnderlying(readInstruction)
+    val duration = System.currentTimeMillis - t
+    if (duration > 500) {
+      val className = this.getClass.getName.split("\\.").last
+      logger.warn(
+        s"oading file in $className took ${if (duration > 3000) "really " else ""}long.\n"
+          + s"  duration: $duration\n"
+          + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
+          + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
+          + s"  cube: ${readInstruction.cube}"
+      )
     }
-
-    cache.withCache(readInstruction)(loadFromUnderlyingWithTimeout)(
-      _.cutOutBucket(readInstruction.dataLayer, readInstruction.bucket))
+    result
   }
 
   def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =

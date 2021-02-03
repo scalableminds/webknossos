@@ -41,8 +41,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
         organization <- organizationDAO
           .findOneByName(uploadInfo.team)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
         _ <- bool2Fox(dataSetService.isProperDataSetName(uploadInfo.name)) ?~> "dataSet.name.invalid"
-        _ <- dataSetService
-          .assertNewDataSetName(uploadInfo.name, organization._id)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+        _ <- dataSetService.assertNewDataSetName(uploadInfo.name, organization._id) ?~> "dataSet.name.alreadyTaken"
         _ <- bool2Fox(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataSet.upload.Datastore.restricted"
         _ <- dataSetService.reserveDataSetName(uploadInfo.name, uploadInfo.team, dataStore)
       } yield Ok
@@ -58,7 +57,8 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
             dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
               "dataSet.notFound",
               dataSetName) ~> NOT_FOUND
-            _ <- dataSetService.addInitialTeams(dataSet, user, teams)(AuthorizedAccessContext(user))
+            _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user))
+            _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
           } yield Ok
         }
       }
@@ -69,7 +69,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-          dataStoreDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
+          dataStoreDAO.updateUrlByName(name, status.url).map(_ => Ok)
         case e: JsError =>
           logger.error("Data store '$name' sent invalid update. Error: " + e)
           Future.successful(JsonBadRequest(JsError.toJson(e)))
@@ -86,7 +86,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
               logger.info(s"Received dataset list from datastore '${dataStore.name}': " +
                 s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive datasets"))
             existingIds <- dataSetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
-            _ <- dataSetService.deactivateUnreportedDataSources(existingIds, dataStore)(GlobalAccessContext)
+            _ <- dataSetService.deactivateUnreportedDataSources(existingIds, dataStore)
           } yield {
             JsonOk
           }

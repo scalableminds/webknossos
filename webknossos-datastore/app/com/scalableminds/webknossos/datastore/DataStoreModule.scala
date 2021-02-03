@@ -8,9 +8,9 @@ import play.api.{Configuration, Environment}
 
 class DataStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
 
-  val system = ActorSystem("webknossos-datastore")
+  val system: ActorSystem = ActorSystem("webknossos-datastore")
 
-  override def configure() = {
+  override def configure(): Unit = {
     bind(classOf[DataStoreConfig]).asEagerSingleton()
     bind(classOf[DataStoreAccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)

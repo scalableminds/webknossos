@@ -1,6 +1,10 @@
 package com.scalableminds.webknossos.datastore.services
 
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Path}
+
 import com.google.inject.Inject
+import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
@@ -9,8 +13,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.libs.json.{Json, OFormat}
 
-import java.io.{File, RandomAccessFile}
-import java.nio.file.{AccessDeniedException, Files, Path}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -81,33 +83,12 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
-
-    def ensureDirectory(dir: Path) =
-      try {
-        Fox.successful(PathUtils.ensureDirectory(dir))
-      } catch {
-        case _: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
-      }
-
-    def ensureAllChunksUploaded = savedUploadChunks.get(uploadId) match {
-      case Some((totalChunkNumber, set)) =>
-        if (set.size != totalChunkNumber) Fox.failure("dataSet.import.incomplete") else Fox.successful(())
-      case None => Fox.failure("dataSet.import.unknownUpload")
-    }
-
-    val dataSourceDir =
-      if (datasetNeedsConversion)
-        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
-      else
-        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
-
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
-
-    logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
+    val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
     for {
-      _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded }
-      _ <- ensureDirectory(dataSourceDir)
+      _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
+      _ <- ensureDirectoryBox(dataSourceDir) ?~> "dataSet.import.fileAccessDenied"
       unzipResult = this.synchronized {
         ZipIO.unzipToFolder(
           zipFile,
@@ -134,6 +115,22 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           Fox.failure(errorMsg)
       }
     } yield (dataSourceId, uploadInformation.initialTeams)
+  }
+
+  private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = savedUploadChunks.get(uploadId) match {
+    case Some((totalChunkNumber, set)) =>
+      if (set.size != totalChunkNumber) Fox.failure("dataSet.import.incomplete") else Fox.successful(())
+    case None => Fox.failure("dataSet.import.unknownUpload")
+  }
+
+  private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
+    val dataSourceDir =
+      if (datasetNeedsConversion)
+        dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
+      else
+        dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
+    logger.info(s"Unpacking dataset to $dataSourceDir")
+    dataSourceDir
   }
 
   def cleanUpOrphanFileChunks(): Box[Unit] =

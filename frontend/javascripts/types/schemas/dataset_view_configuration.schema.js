@@ -32,7 +32,6 @@ export const defaultDatasetViewConfiguration = {
   fourBit: false,
   interpolation: true,
   highlightHoveredCellId: true,
-  renderIsosurfaces: false,
   renderMissingDataBlack: true,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
@@ -54,7 +53,6 @@ export const baseDatasetViewConfiguration = {
 
 export const datasetViewConfiguration = {
   ...baseDatasetViewConfiguration,
-  renderIsosurfaces: { type: "boolean" },
   position: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 },
   rotation: { type: "array", items: { type: "number" }, minItems: 3, maxItems: 3 },
   layers: { type: "object" },
@@ -76,7 +74,6 @@ export default {
         "fourBit",
         "interpolation",
         "highlightHoveredCellId",
-        "renderIsosurfaces",
         "renderMissingDataBlack",
         "loadingStrategy",
         "segmentationPatternOpacity",

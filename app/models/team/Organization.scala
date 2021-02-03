@@ -28,7 +28,7 @@ case class Organization(
 class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  def publicWrites(organization: Organization)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(organization: Organization): Fox[JsObject] =
     Fox.successful(
       Json.obj(
         "id" -> organization._id.toString,
@@ -107,7 +107,7 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
       parsed <- parse(r)
     } yield parsed
 
-  def insertOne(o: Organization)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(o: Organization): Fox[Unit] =
     for {
       r <- run(
         sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, displayName, newUserMailingList, overTimeMailingList, enableAutoVerify, created, isDeleted)

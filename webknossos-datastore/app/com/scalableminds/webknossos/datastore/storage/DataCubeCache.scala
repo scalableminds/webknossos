@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import com.scalableminds.webknossos.datastore.dataformats.Cube
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWCube
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.geometry.Point3D
@@ -33,17 +33,17 @@ object CachedCube {
     )
 }
 
-class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[Cube]] with FoxImplicits {
+class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, Fox[WKWCube]] with FoxImplicits {
 
   /**
     * Loads the due to x,y and z defined block into the cache array and
     * returns it.
     */
-  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[Cube])(
-      f: Cube => Box[T]): Fox[T] = {
+  def withCache[T](readInstruction: DataReadInstruction)(loadF: DataReadInstruction => Fox[WKWCube])(
+      f: WKWCube => Box[T]): Fox[T] = {
     val cachedCubeInfo = CachedCube.from(readInstruction)
 
-    def handleUncachedCube() = {
+    def handleUncachedCube(): Fox[T] = {
       val cubeFox = loadF(readInstruction).futureBox.map {
         case Full(cube) =>
           if (cube.tryAccess()) Full(cube)
@@ -79,6 +79,6 @@ class DataCubeCache(val maxEntries: Int) extends LRUConcurrentCache[CachedCube, 
     }
   }
 
-  override def onElementRemoval(key: CachedCube, value: Fox[Cube]): Unit =
+  override def onElementRemoval(key: CachedCube, value: Fox[WKWCube]): Unit =
     value.map(_.scheduleForRemoval())
 }

@@ -21,6 +21,7 @@ import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
+import slick.sql.SqlAction
 import utils.{ObjectId, SQLClient, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.ExecutionContext
@@ -30,6 +31,7 @@ case class DataSet(
     _dataStore: String,
     _organization: ObjectId,
     _publication: Option[ObjectId],
+    _uploader: Option[ObjectId],
     inboxSourceHash: Option[Int],
     defaultViewConfiguration: Option[DataSetViewConfiguration] = None,
     adminViewConfiguration: Option[DataSetViewConfiguration] = None,
@@ -87,6 +89,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
         r._Datastore.trim,
         ObjectId(r._Organization),
         r._Publication.map(ObjectId(_)),
+        r._Uploader.map(ObjectId(_)),
         r.inboxsourcehash,
         defaultViewConfigurationOpt,
         adminViewConfigurationOpt,
@@ -106,7 +109,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       )
     }
 
-  override def anonymousReadAccessQ(sharingToken: Option[String]) =
+  override def anonymousReadAccessQ(sharingToken: Option[String]): String =
     "isPublic" + sharingToken.map(t => s" or sharingToken = '$t'").getOrElse("")
 
   override def readAccessQ(requestingUserId: ObjectId) =
@@ -121,8 +124,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
-          .as[DatasetsRow])
+        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[DatasetsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -130,20 +132,19 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[DatasetsRow])
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery".as[DatasetsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def isEmpty(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEmpty: Fox[Boolean] =
     for {
-      r <- run(sql"select count(*) from #${existingCollectionName} limit 1".as[Int])
+      r <- run(sql"select count(*) from #$existingCollectionName limit 1".as[Int])
       firstRow <- r.headOption
     } yield firstRow == 0
 
-  def countAllForOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
-      rList <- run(
-        sql"select count(_id) from #${existingCollectionName} where _organization = ${organizationId}".as[Int])
+      rList <- run(sql"select count(_id) from #$existingCollectionName where _organization = $organizationId".as[Int])
       r <- rList.headOption
     } yield r
 
@@ -159,7 +160,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where name = ${name} and _organization = ${organizationId} and #${accessQuery}"
+        sql"select #$columns from #$existingCollectionName where name = $name and _organization = $organizationId and #$accessQuery"
           .as[DatasetsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
@@ -169,8 +170,8 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
       implicit ctx: DBAccessContext): Fox[List[DataSet]] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(sql"select #${columns} from #${existingCollectionName} where name in #${writeStructTupleWithQuotes(
-        names.map(sanitize))} and _organization = ${organizationId} and #${accessQuery}".as[DatasetsRow]).map(_.toList)
+      rows <- run(sql"select #$columns from #$existingCollectionName where name in #${writeStructTupleWithQuotes(
+        names.map(sanitize))} and _organization = $organizationId and #$accessQuery".as[DatasetsRow]).map(_.toList)
       parsed <- Fox.combined(rows.map(parse))
     } yield parsed
 
@@ -180,7 +181,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select _organization from #${existingCollectionName} where name = ${dataSetName} and #${accessQuery} order by created asc"
+        sql"select _organization from #$existingCollectionName where name = $dataSetName and #$accessQuery order by created asc"
           .as[String])
       r <- rList.headOption.toFox
       parsed <- ObjectId.parse(r)
@@ -189,14 +190,14 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select _id from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[String])
+      rList <- run(sql"select _id from #$existingCollectionName where name = $name and #$accessQuery".as[String])
       r <- rList.headOption.toFox
     } yield ObjectId(r)
 
   def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select name from #${existingCollectionName} where _id = ${id} and #${accessQuery}".as[String])
+      rList <- run(sql"select name from #$existingCollectionName where _id = $id and #$accessQuery".as[String])
       r <- rList.headOption.toFox
     } yield r
 
@@ -205,19 +206,17 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select sharingToken from webknossos.datasets_ where name = ${name} and _organization = ${organizationId} and #${accessQuery}"
+        sql"select sharingToken from webknossos.datasets_ where name = $name and _organization = $organizationId and #$accessQuery"
           .as[Option[String]])
       r <- rList.headOption.toFox
-    } yield {
-      r
-    }
+    } yield r
 
   def updateSharingTokenByName(name: String, organizationId: ObjectId, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
       _ <- run(
-        sqlu"update webknossos.datasets_ set sharingToken = ${sharingToken} where name = ${name} and _organization = ${organizationId} and #${accessQuery}")
+        sqlu"update webknossos.datasets_ set sharingToken = $sharingToken where name = $name and _organization = $organizationId and #$accessQuery")
     } yield ()
 
   def updateFields(_id: ObjectId,
@@ -228,6 +227,7 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
     val q = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
       (row.description, row.displayname, row.sortingkey, row.ispublic)
     for {
+      _ <- assertUpdateAccess(_id)
       _ <- run(q.update(description, displayName, new java.sql.Timestamp(sortingKey), isPublic))
     } yield ()
   }
@@ -235,20 +235,30 @@ class DataSetDAO @Inject()(sqlClient: SQLClient,
   def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DataSetViewConfiguration)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(datasetId)
       _ <- run(sqlu"""update webknossos.dataSets
                       set adminViewConfiguration = '#${sanitize(Json.toJson(configuration).toString)}'
                       where _id = $datasetId""")
     } yield ()
 
-  def insertOne(d: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateUploader(datasetId: ObjectId, uploaderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(sqlu"""update webknossos.dataSets
+                      set _uploader = #${optionLiteral(uploaderId.map(_.id))}
+                      where _id = $datasetId""")
+    } yield ()
+
+  def insertOne(d: DataSet): Fox[Unit] = {
     val adminViewConfiguration: Option[String] = d.adminViewConfiguration.map(Json.toJson(_).toString)
     val defaultViewConfiguration: Option[String] = d.defaultViewConfiguration.map(Json.toJson(_).toString)
     val details: Option[String] = d.details.map(_.toString)
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, _publication, _uploader, inboxSourceHash, defaultViewConfiguration, adminViewConfiguration, description, displayName,
                                                              isPublic, isUsable, name, scale, status, sharingToken, sortingKey, details, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d._publication.map(_.id))},
+               #${optionLiteral(d._uploader.map(_.id))},
                 #${optionLiteral(d.inboxSourceHash.map(_.toString))}, #${optionLiteral(
           defaultViewConfiguration.map(sanitize))}, #${optionLiteral(adminViewConfiguration.map(sanitize))},
                 ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
@@ -406,8 +416,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
     result.flatten
   }
 
-  def findAllForDataSet(dataSetId: ObjectId, skipResolutions: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[List[DataLayer]] =
+  def findAllForDataSet(dataSetId: ObjectId, skipResolutions: Boolean = false): Fox[List[DataLayer]] =
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId, skipResolutions)))
@@ -415,8 +424,7 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       rowsParsed
     }
 
-  def findOneByNameForDataSet(dataLayerName: String, dataSetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DataLayer] =
+  def findOneByNameForDataSet(dataLayerName: String, dataSetId: ObjectId): Fox[DataLayer] =
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).filter(_.name === dataLayerName).result)
         .map(_.toList)
@@ -426,22 +434,21 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
       parsed
     }
 
-  def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer) =
+  private def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer): SqlAction[Int, NoStream, Effect] =
     layer match {
-      case s: AbstractSegmentationLayer => {
+      case s: AbstractSegmentationLayer =>
         val mappings = s.mappings.getOrElse(Set())
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
                      '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(
-          mappings.map(sanitize(_)).toList)}', #${optionLiteral(
+          mappings.map(sanitize).toList)}', #${optionLiteral(
           s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}, #${optionLiteral(
           s.adminViewConfiguration.map(d => Json.toJson(d).toString))})
           on conflict (_dataSet, name) do update set category = '#${s.category.toString}', elementClass = '#${s.elementClass.toString}',
                      boundingBox = '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', largestSegmentId = ${s.largestSegmentId},
-                     mappings = '#${writeArrayTuple(mappings.map(sanitize(_)).toList)}',
+                     mappings = '#${writeArrayTuple(mappings.map(sanitize).toList)}',
             defaultViewConfiguration = #${optionLiteral(s.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
-      }
-      case d: AbstractDataLayer => {
+      case d: AbstractDataLayer =>
         sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, defaultViewConfiguration, adminViewConfiguration)
                     values(${_dataSet.id}, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
                      '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}', #${optionLiteral(
@@ -450,11 +457,10 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
           on conflict (_dataSet, name) do update set category = '#${d.category.toString}', elementClass = '#${d.elementClass.toString}',
                      boundingBox = '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}',
             defaultViewConfiguration = #${optionLiteral(d.defaultViewConfiguration.map(d => Json.toJson(d).toString))}"""
-      }
       case _ => throw new Exception("DataLayer type mismatch")
     }
 
-  def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateLayers(_dataSet: ObjectId, source: InboxDataSource): Fox[Unit] = {
     def getSpecificClearQuery(dataLayers: List[DataLayer]) =
       sqlu"delete from webknossos.dataset_layers where _dataSet = ${_dataSet} and name not in #${writeStructTupleWithQuotes(
         dataLayers.map(d => sanitize(d.name)))}"
@@ -485,16 +491,15 @@ class DataSetDataLayerDAO @Inject()(sqlClient: SQLClient, dataSetResolutionsDAO:
 class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+  def findAllForDataSet(dataSetId: ObjectId): Fox[List[ObjectId]] = {
     val query = for {
-      (allowedteam, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
+      (_, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams on (_._Team === _._Id)
     } yield team._Id
 
     run(query.result).flatMap(rows => Fox.serialCombined(rows.toList)(ObjectId.parse(_)))
   }
 
-  def updateAllowedTeamsForDataSet(_id: ObjectId, allowedTeams: List[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateAllowedTeamsForDataSet(_id: ObjectId, allowedTeams: List[ObjectId]): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.dataSet_allowedTeams where _dataSet = ${_id}"
 
     val insertQueries = allowedTeams.map(teamId => sqlu"""insert into webknossos.dataSet_allowedTeams(_dataSet, _team)
@@ -507,6 +512,12 @@ class DataSetAllowedTeamsDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execut
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
+
+  def removeTeamFromAllDatasets(teamId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"delete from webknossos.dataSet_allowedTeams where _team = $teamId")
+    } yield ()
+
 }
 
 class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
@@ -514,16 +525,16 @@ class DataSetLastUsedTimesDAO @Inject()(sqlClient: SQLClient)(implicit ec: Execu
   def findForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Long] =
     for {
       rList <- run(
-        sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}"
+        sql"select lastUsedTime from webknossos.dataSet_lastUsedTimes where _dataSet = $dataSetId and _user = $userId"
           .as[java.sql.Timestamp])
       r <- rList.headOption.toFox
-    } yield (r.getTime)
+    } yield r.getTime
 
   def updateForDataSetAndUser(dataSetId: ObjectId, userId: ObjectId): Fox[Unit] = {
     val clearQuery =
-      sqlu"delete from webknossos.dataSet_lastUsedTimes where _dataSet = ${dataSetId} and _user = ${userId}"
+      sqlu"delete from webknossos.dataSet_lastUsedTimes where _dataSet = $dataSetId and _user = $userId"
     val insertQuery =
-      sqlu"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values(${dataSetId}, ${userId}, NOW())"
+      sqlu"insert into webknossos.dataSet_lastUsedTimes(_dataSet, _user, lastUsedTime) values($dataSetId, $userId, NOW())"
     val composedQuery = DBIO.sequence(List(clearQuery, insertQuery))
     for {
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),

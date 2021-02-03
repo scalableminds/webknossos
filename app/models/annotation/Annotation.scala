@@ -111,8 +111,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
-          .as[AnnotationsRow])
+        sql"select #$columns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[AnnotationsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -132,9 +131,9 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     val stateQuery = getStateQuery(isFinished)
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select #${columns} from #${existingCollectionName}
-                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
-                     order by _id desc limit ${limit} offset ${pageNumber * limit}""".as[AnnotationsRow])
+      r <- run(sql"""select #$columns from #$existingCollectionName
+                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #$stateQuery and #$accessQuery
+                     order by _id desc limit $limit offset ${pageNumber * limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -145,35 +144,39 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        sql"""select count(*) from #${existingCollectionName}
-                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}"""
+        sql"""select count(*) from #$existingCollectionName
+                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #$stateQuery and #$accessQuery"""
           .as[Int])
       parsed <- r.headOption
     } yield parsed
   }
 
-  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
-  def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+  def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      accessQuery <- readAccessQuery
+      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      count <- countList.headOption
+    } yield count
+
+  // Does not use access query (because they dont support prefixes). Use only after separate access check!
+  def findAllFinishedForProject(projectId: ObjectId): Fox[List[Annotation]] =
+    for {
       r <- run(
-        sql"""select #${columnsWithPrefix("a.")} from #${existingCollectionName} a
+        sql"""select #${columnsWithPrefix("a.")} from #$existingCollectionName a
                      join webknossos.tasks_ t on a._task = t._id
                      where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'"""
           .as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
-  def findAllActiveForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  // Does not use access query (because they dont support prefixes). Use only after separate access check!
+  def findAllActiveForProject(projectId: ObjectId): Fox[List[ObjectId]] =
     for {
-      accessQuery <- readAccessQuery
       r <- run(sql""" select a._id from
                         webknossos.annotations_ a
                         join webknossos.tasks_ t on a._task = t._id
                         join webknossos.projects_ p on t._project = p._id
                         join webknossos.users_ u on a._user = u._id
-                        where p._id = ${projectId}
+                        where p._id = $projectId
                         and a.state = '#${AnnotationState.Active.toString}'
                         and a.typ = '#${AnnotationType.Task}' """.as[String])
     } yield r.map(ObjectId(_)).toList
@@ -181,14 +184,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationType)(
       implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     for {
-      r <- run(Annotations
-        .filter(r =>
-          notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString)
-        .result)
       accessQuery <- readAccessQuery
       r <- run(
-        sql"""select #${columns} from #${existingCollectionName}
-                     where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #${accessQuery}"""
+        sql"""select #$columns from #$existingCollectionName
+                     where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #$accessQuery"""
           .as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -197,7 +196,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where (skeletonTracingId = ${tracingId} or volumeTracingId = ${tracingId}) and #${accessQuery}"
+        sql"select #$columns from #$existingCollectionName where (skeletonTracingId = $tracingId or volumeTracingId = $tracingId) and #$accessQuery"
           .as[AnnotationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
@@ -215,10 +214,10 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
       else s"(not t._id in ${writeStructTupleWithQuotes(excludedTeamIds.map(t => sanitize(t.id)))})"
       countList <- run(sql"""select count(*)
                          from (select a._id from
-                                  (select #${columns}
-                                   from #${existingCollectionName}
-                                   where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
-                                  join webknossos.teams t on a._team = t._id where #${excludeTeamsQ}) q
+                                  (select #$columns
+                                   from #$existingCollectionName
+                                   where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #$accessQuery) a
+                                  join webknossos.teams t on a._team = t._id where #$excludeTeamsQ) q
                          """.as[Int])
       count <- countList.headOption
     } yield count
@@ -227,7 +226,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       accessQuery <- readAccessQuery
       countList <- run(
-        sql"""select count(*) from (select _id from #${existingCollectionName} where _task = ${taskId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) q"""
+        sql"""select count(*) from (select _id from #$existingCollectionName where _task = ${taskId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #$accessQuery) q"""
           .as[Int])
       count <- countList.headOption
     } yield count
@@ -235,7 +234,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
     for {
       countList <- run(
-        sql"select count(*) from (select a._id from #${existingCollectionName} a join webknossos.users_ u on a._user = u._id where u._organization = ${organizationId}) q"
+        sql"select count(*) from (select a._id from #$existingCollectionName a join webknossos.users_ u on a._user = u._id where u._organization = $organizationId) q"
           .as[Int])
       count <- countList.headOption
     } yield count
@@ -310,7 +309,7 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       _ <- run(
-        sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}"
+        sqlu"update webknossos.annotations set state = '#$state' where _id = ${id.id}"
           .withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)
@@ -320,13 +319,20 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateStringCol(id, _.description, description)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- updateStringCol(id, _.description, description)
+    } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateStringCol(id, _.name, name)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- updateStringCol(id, _.name, name)
+    } yield ()
 
   def updateVisibility(id: ObjectId, visibilityString: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- AnnotationVisibility.fromString(visibilityString).toFox
       _ <- run(sqlu"update webknossos.annotations_ set visibility = '#$visibilityString' where _id = $id")
     } yield ()
@@ -348,13 +354,13 @@ class AnnotationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContex
   def updateSkeletonTracingId(id: ObjectId, newSkeletonTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = ${newSkeletonTracingId} where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set skeletonTracingId = $newSkeletonTracingId where _id = ${id.id}")
     } yield ()
 
   def updateVolumeTracingId(id: ObjectId, newVolumeTracingId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set volumeTracingId = ${newVolumeTracingId} where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set volumeTracingId = $newVolumeTracingId where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -373,10 +379,11 @@ class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQ
 
   def sharedTeamsFor(annotationId: ObjectId): Fox[List[String]] =
     for (result <- run(
-           sql"select _team from webknossos.annotation_sharedTeams where _annotation = ${annotationId}".as[String]))
+           sql"select _team from webknossos.annotation_sharedTeams where _annotation = $annotationId".as[String]))
       yield result.toList
 
-  def findAllSharedForTeams(teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+  // Does not use access query (because they dont support prefixes). Use only after separate access check!
+  def findAllSharedForTeams(teams: List[ObjectId]): Fox[List[Annotation]] =
     for {
       result <- run(
         sql"""select distinct #${annotationDAO.columnsWithPrefix("a.")} from webknossos.annotations_ a
@@ -386,14 +393,16 @@ class SharedAnnotationsDAO @Inject()(annotationDAO: AnnotationDAO, sqlClient: SQ
       parsed <- Fox.combined(result.toList.map(annotationDAO.parse))
     } yield parsed
 
-  def updateTeamsForSharedAnnotation(_id: ObjectId, teams: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.annotation_sharedTeams where _annotation = ${_id}"
+  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
+      implicit ctx: DBAccessContext): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.annotation_sharedTeams where _annotation = $annotationId"
 
     val insertQueries = teams.map(teamId => sqlu"""insert into webknossos.annotation_sharedTeams(_annotation, _team)
-                                                              values(${_id}, $teamId)""")
+                                                              values($annotationId, $teamId)""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
+      _ <- annotationDAO.assertUpdateAccess(annotationId)
       _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable),
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))

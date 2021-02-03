@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.mvc.Filter
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper, Math}
+import com.scalableminds.webknossos.datastore.controllers.RemoteOriginHelpers
 import models.binary._
 import models.team.{OrganizationDAO, TeamDAO}
 import models.user.{User, UserDAO, UserService}
@@ -31,7 +32,8 @@ class DataSetController @Inject()(userService: UserService,
                                   teamDAO: TeamDAO,
                                   dataSetDAO: DataSetDAO,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with RemoteOriginHelpers {
 
   private val DefaultThumbnailWidth = 400
   private val DefaultThumbnailHeight = 400
@@ -65,48 +67,50 @@ class DataSetController @Inject()(userService: UserService,
                 w: Option[Int],
                 h: Option[Int]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
-      def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
-        val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
-        val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-        dataSetService.thumbnailCache.find(
-          thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height)) match {
-          case Some(a) =>
-            Fox.successful(a)
-          case _ =>
-            val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
-              c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
-            val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
-              c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
-            dataSetService
-              .clientFor(dataSet)
-              .flatMap(
-                _.requestDataLayerThumbnail(organizationName,
-                                            dataLayerName,
-                                            width,
-                                            height,
-                                            defaultZoomOpt,
-                                            defaultCenterOpt))
-              .map { result =>
-                // We don't want all images to expire at the same time. Therefore, we add some random variation
-                dataSetService.thumbnailCache.insert(
-                  thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height),
-                  result,
-                  Some((ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
-                )
-                result
-              }
+      AllowRemoteOrigin {
+        def imageFromCacheIfPossible(dataSet: DataSet): Fox[Array[Byte]] = {
+          val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
+          val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+          dataSetService.thumbnailCache.find(
+            thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height)) match {
+            case Some(a) =>
+              Fox.successful(a)
+            case _ =>
+              val defaultCenterOpt = dataSet.adminViewConfiguration.flatMap(c =>
+                c.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
+              val defaultZoomOpt = dataSet.adminViewConfiguration.flatMap(c =>
+                c.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Double])))
+              dataSetService
+                .clientFor(dataSet)(GlobalAccessContext)
+                .flatMap(
+                  _.requestDataLayerThumbnail(organizationName,
+                                              dataLayerName,
+                                              width,
+                                              height,
+                                              defaultZoomOpt,
+                                              defaultCenterOpt))
+                .map { result =>
+                  // We don't want all images to expire at the same time. Therefore, we add some random variation
+                  dataSetService.thumbnailCache.insert(
+                    thumbnailCacheKey(organizationName, dataSetName, dataLayerName, width, height),
+                    result,
+                    Some((ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds) seconds)
+                  )
+                  result
+                }
+          }
         }
-      }
 
-      for {
-        dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
-          dataSetName) ~> NOT_FOUND
-        _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
-          "dataLayer.notFound",
-          dataLayerName) ~> NOT_FOUND
-        image <- imageFromCacheIfPossible(dataSet)
-      } yield {
-        Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+        for {
+          dataSet <- dataSetDAO.findOneByNameAndOrganizationName(dataSetName, organizationName) ?~> notFoundMessage(
+            dataSetName) ~> NOT_FOUND
+          _ <- dataSetDataLayerDAO.findOneByNameForDataSet(dataLayerName, dataSet._id) ?~> Messages(
+            "dataLayer.notFound",
+            dataLayerName) ~> NOT_FOUND
+          image <- imageFromCacheIfPossible(dataSet)
+        } yield {
+          Ok(image).as("image/jpeg").withHeaders(CACHE_CONTROL -> "public, max-age=86400")
+        }
       }
     }
 
@@ -125,29 +129,30 @@ class DataSetController @Inject()(userService: UserService,
         .reverse ?~> "dataSet.name.alreadyTaken"
       organizationName <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext).map(_.name)
       _ <- dataSetService.addForeignDataSet(dataStoreName, dataSetName, organizationName)
-    } yield {
-      Ok
-    }
+    } yield Ok
   }
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    UsingFilters(
-      Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
-      Filter("isUnreported", (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
-      Filter(
-        "isEditable",
-        (value: Boolean, el: DataSet) =>
-          for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
-            isEditable && value || !isEditable && !value
+    AllowRemoteOrigin {
+      UsingFilters(
+        Filter("isActive", (value: Boolean, el: DataSet) => Fox.successful(el.isUsable == value)),
+        Filter("isUnreported",
+               (value: Boolean, el: DataSet) => Fox.successful(dataSetService.isUnreported(el) == value)),
+        Filter(
+          "isEditable",
+          (value: Boolean, el: DataSet) =>
+            for { isEditable <- dataSetService.isEditableBy(el, request.identity) } yield {
+              isEditable && value || !isEditable && !value
+          }
+        )
+      ) { filter =>
+        for {
+          dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
+          filtered <- filter.applyOn(dataSets)
+          js <- listGrouped(filtered, request.identity) ?~> "dataSet.list.failed"
+        } yield {
+          Ok(Json.toJson(js))
         }
-      )
-    ) { filter =>
-      for {
-        dataSets <- dataSetDAO.findAll ?~> "dataSet.list.failed"
-        filtered <- filter.applyOn(dataSets)
-        js <- listGrouped(filtered, request.identity)
-      } yield {
-        Ok(Json.toJson(js))
       }
     }
   }
@@ -164,7 +169,7 @@ class DataSetController @Inject()(userService: UserService,
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[DataSet]) =>
             for {
-              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)
+              dataStore <- dataStoreDAO.findOneByName(byDataStoreTuple._1.trim)(GlobalAccessContext)
               resultByDataStore: Seq[JsObject] <- Fox.serialCombined(byDataStoreTuple._2) { d =>
                 dataSetService.publicWrites(d,
                                             requestingUser,
@@ -207,7 +212,8 @@ class DataSetController @Inject()(userService: UserService,
             dataSetName) ~> NOT_FOUND
           _ <- Fox.runOptional(request.identity)(user =>
             dataSetLastUsedTimesDAO.updateForDataSetAndUser(dataSet._id, user._id))
-          dataStore <- dataSetService.dataStoreFor(dataSet)
+          // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
+          dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
         } yield {
           Ok(Json.toJson(js))
@@ -299,7 +305,7 @@ class DataSetController @Inject()(userService: UserService,
       for {
         _ <- bool2Fox(dataSetService.isProperDataSetName(dataSetName)) ?~> "dataSet.name.invalid"
         _ <- dataSetService
-          .assertNewDataSetName(dataSetName, request.identity._organization)(GlobalAccessContext) ?~> "dataSet.name.alreadyTaken"
+          .assertNewDataSetName(dataSetName, request.identity._organization) ?~> "dataSet.name.alreadyTaken"
       } yield Ok
   }
 

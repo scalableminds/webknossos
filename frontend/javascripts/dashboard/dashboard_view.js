@@ -196,7 +196,6 @@ class DashboardView extends PureComponent<PropsWithRouter, State> {
 
     const whatsNextBanner =
       !this.props.isAdminView &&
-      Utils.isUserAdminOrDatasetManager(activeUser) &&
       !activeUser.novelUserExperienceInfos.hasSeenDashboardWelcomeBanner ? (
         <WhatsNextHeader activeUser={activeUser} onDismiss={this.onDismissWelcomeBanner} />
       ) : null;

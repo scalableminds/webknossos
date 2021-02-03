@@ -3,6 +3,7 @@
 import { Icon, Tooltip } from "antd";
 import * as React from "react";
 import { Link } from "react-router-dom";
+import { isUserAdminOrTeamManager, isUserAdminOrDatasetManager } from "libs/utils";
 
 import type { APIUser } from "types/api_flow_types";
 import { getDemoDatasetUrl } from "features";
@@ -111,31 +112,36 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 icon={<Icon type="play-circle" className="action-icon" />}
               />
 
-              <WhatsNextAction
-                title="Import Your Own Data"
-                description="Directly upload your data as a zip file."
-                to="/datasets/upload"
-                icon={<Icon type="cloud-upload" className="action-icon" />}
-              />
+              {isUserAdminOrDatasetManager(activeUser) ? (
+                <WhatsNextAction
+                  title="Import Your Own Data"
+                  description="Directly upload your data as a zip file."
+                  to="/datasets/upload"
+                  icon={<Icon type="cloud-upload" className="action-icon" />}
+                />
+              ) : null}
+
               <WhatsNextAction
                 title="Learn How To Create Annotations"
                 description="Watch a short video to see how data can be annotated with webKnossos."
                 icon={<Icon type="plus-circle" className="action-icon" />}
                 href="https://youtu.be/W-dosptovEU?t=52"
               />
-              <WhatsNextAction
-                title="Invite Your Colleagues"
-                description="Send invites to your colleagues and ask them to join your organization."
-                icon={<Icon type="mail" className="action-icon" />}
-                onClick={() => {
-                  renderIndependently(destroy => (
-                    <InviteUsersModal
-                      organizationName={activeUser.organization}
-                      destroy={destroy}
-                    />
-                  ));
-                }}
-              />
+              {isUserAdminOrTeamManager(activeUser) ? (
+                <WhatsNextAction
+                  title="Invite Your Colleagues"
+                  description="Send invites to your colleagues and ask them to join your organization."
+                  icon={<Icon type="mail" className="action-icon" />}
+                  onClick={() => {
+                    renderIndependently(destroy => (
+                      <InviteUsersModal
+                        organizationName={activeUser.organization}
+                        destroy={destroy}
+                      />
+                    ));
+                  }}
+                />
+              ) : null}
             </div>
           </div>
         </div>

@@ -48,11 +48,7 @@ export const DatasetCacheContext = createContext<Context>({
 });
 
 export default function DatasetCacheProvider({ children }: { children: Node }) {
-  // TODO: revert these changes
-  // const [datasets, setDatasets] = useState(datasetCache.get());
-  const [datasets, setDatasetsInner] = useState([]);
-  const setDatasets = _ds => setDatasetsInner([]);
-
+  const [datasets, setDatasets] = useState(datasetCache.get());
   const [isLoading, setIsLoading] = useState(false);
   async function fetchDatasets(options?: Options = {}): Promise<void> {
     const isCalledFromCheckDatasets = options.isCalledFromCheckDatasets || false;

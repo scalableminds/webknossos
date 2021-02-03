@@ -905,10 +905,10 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string): Promise<*> {
+export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string, myUploadId: string): Promise<*> {
   const getRandomString = () => {
     const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
-    return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+    return myUploadId + "/" + Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
   };
 
   return doWithToken(

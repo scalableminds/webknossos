@@ -96,13 +96,19 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
           name: formValues.name,
           owningOrganization: activeUser.organization,
         };
+        const getRandomString = () => {
+          const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
+          return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
+        };
 
-        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore);
+        const uploadId = getRandomString();
 
-        resumableUpload.on("complete", file => {
+        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore, uploadId);
+
+        resumableUpload.on("complete", () => {
           this.setState({ isFinished: true });
           const uploadInfo = {
-            uploadId: file.uniqueIdentifier,
+            uploadId: uploadId,
             organization: datasetId.owningOrganization,
             name: datasetId.name,
             initialTeams: formValues.initialTeams.map(team => team.id),

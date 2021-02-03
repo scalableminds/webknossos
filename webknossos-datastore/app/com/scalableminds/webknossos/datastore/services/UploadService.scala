@@ -45,7 +45,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         resumableUploadInformation: ResumableUploadInformation,
                         currentChunkNumber: Int,
                         chunkFile: File): Fox[Unit] = {
-    logger.info(s"handleUploadChunk uploadId ${uploadId} ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
+    logger.info(s"handleUploadChunk uploadId $uploadId ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
     val isChunkNew = savedUploadChunks.synchronized {
       savedUploadChunks.get(uploadId) match {
         case Some((_, set)) =>
@@ -60,9 +60,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     if (isChunkNew) {
       try {
         val bytes = Files.readAllBytes(chunkFile.toPath)
+        val directory = uploadId.split("/").headOption.getOrElse("dummy")
+        new File(dataBaseDir.resolve(directory).toString).mkdirs()
 
         this.synchronized {
-          val tempFile = new RandomAccessFile(dataBaseDir.resolve(s".$uploadId.temp").toFile, "rw")
+          val tempFile = new RandomAccessFile(dataBaseDir.resolve(s"$uploadId.temp").toFile, "rw")
           tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
           tempFile.write(bytes)
           tempFile.close()
@@ -82,6 +84,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
     val uploadId = uploadInformation.uploadId
+    logger.info(s"finishUpload, uploadId $uploadId")
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile

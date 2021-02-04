@@ -10,6 +10,9 @@ ALTER TABLE webknossos.multiUsers ADD COLUMN novelUserExperienceInfos JSONB NOT 
 
 ALTER TABLE webknossos.multiUsers ADD CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object');
 
+-- users that already existed *before* this change should not get the welcome banner
+UPDATE webknossos.multiUsers SET novelUserExperienceInfos = '{"hasSeenDashboardWelcomeBanner": true}'::json
+
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 
 

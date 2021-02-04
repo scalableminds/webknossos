@@ -69,22 +69,19 @@ test.beforeEach(async t => {
 // These are the datasets that are available on our dev instance
 const datasetNames = [
   "ROI2017_wkw",
-  "Cortex_knossos",
   "2017-05-31_mSEM_aniso-test",
-  "e2006_knossos",
-  "confocal-multi_knossos",
-  "fluro-rgb_knossos",
   "dsA_2",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso",
   "ROI2017_wkw_fallback",
   "float_test_dataset",
+  "Multi-Channel-Test",
 ];
 
 const viewOverrides: { [key: string]: string } = {
-  e2006_knossos: "4736,4992,2176,0,0.6",
   "2017-05-31_mSEM_scMS109_bk_100um_v01-aniso": "4608,4543,386,0,4.00",
   ROI2017_wkw_fallback: "535,536,600,0,1.18",
   dsA_2: "1024,1024,64,0,0.424",
+  "Multi-Channel-Test": "1201,1072,7,0,0.683",
 };
 
 const datasetConfigOverrides: { [key: string]: DatasetConfiguration } = {

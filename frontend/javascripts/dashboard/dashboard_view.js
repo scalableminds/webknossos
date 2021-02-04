@@ -5,7 +5,6 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
 import _ from "lodash";
-import * as Utils from "libs/utils";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
 import { WhatsNextHeader } from "admin/welcome_ui";

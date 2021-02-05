@@ -305,13 +305,10 @@ class OnboardingView extends React.PureComponent<Props, State> {
   componentDidMount() {
     if (this.props.activeUser != null) {
       this.props.history.push("/dashboard");
-      return;
     }
-
-    this.fetchData();
   }
 
-  async fetchData() {
+  async fetchDatastores() {
     const datastores = (await getDatastores()).filter(ds => !ds.isForeign && !ds.isConnector);
     this.setState({ datastores });
   }
@@ -378,6 +375,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
           const { activeUser } = Store.getState();
           if (activeUser) {
             this.setState({ organizationName: activeUser.organization });
+            // A user can only see the available datastores when he is logged in.
+            // Thus we can fetch the datastores only after the registration.
+            this.fetchDatastores();
           }
           this.advanceStep();
         }}

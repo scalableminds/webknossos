@@ -170,12 +170,17 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
 
-              <SecuredRoute
+              <Route
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
-                render={() => (
-                  <DashboardView userId={null} isAdminView={false} initialTabKey={null} />
-                )}
+                render={() => {
+                  if (isAuthenticated) {
+                    return <DashboardView userId={null} isAdminView={false} initialTabKey={null} />;
+                  }
+                  // Hard navigate
+                  window.location.href = "/";
+                  return null;
+                }}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -418,7 +423,9 @@ class ReactRouter extends React.Component<Props> {
                 )}
               />
 
-              <Route path="/register" render={() => <Redirect to="/auth/register" />} />
+              <Route path="/signup" render={() => <Redirect to="/auth/signup" />} />
+              <Route path="/register" render={() => <Redirect to="/auth/signup" />} />
+              <Route path="/auth/register" render={() => <Redirect to="/auth/signup" />} />
               <Route
                 path="/auth/login"
                 render={() =>
@@ -426,11 +433,8 @@ class ReactRouter extends React.Component<Props> {
                 }
               />
               <Route
-                path="/auth/register"
-                render={({ location }: ContextRouter) => {
-                  const params = Utils.getUrlParamsObjectFromString(location.search);
-                  return <RegistrationView organizationName={params.organizationName} />;
-                }}
+                path="/auth/signup"
+                render={() => (isAuthenticated ? <Redirect to="/" /> : <RegistrationView />)}
               />
 
               <Route path="/auth/resetPassword" component={StartResetPasswordView} />

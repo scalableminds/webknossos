@@ -111,6 +111,7 @@
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --cache --quiet frontend/javascripts/ tools/",
+    "lint-no-cache": "node_modules/.bin/eslint --quiet frontend/javascripts/ tools/",
     "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",
     "pretty-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"frontend/javascripts/**/*.js\" \"tools/**/*.js\"",

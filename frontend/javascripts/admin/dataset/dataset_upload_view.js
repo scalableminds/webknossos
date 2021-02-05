@@ -4,6 +4,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
+import { type RouterHistory, withRouter } from "react-router-dom";
 import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
@@ -34,8 +35,9 @@ type StateProps = {|
   activeUser: ?APIUser,
 |};
 type Props = {| ...OwnProps, ...StateProps |};
-type PropsWithForm = {|
+type PropsWithFormAndRouter = {|
   ...Props,
+  history: RouterHistory,
   form: Object,
 |};
 
@@ -46,7 +48,7 @@ type State = {
   uploadProgress: number,
 };
 
-class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
+class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, State> {
   state = {
     isUploading: false,
     needsConversion: false,
@@ -92,6 +94,27 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
         this.setState({
           isUploading: true,
         });
+
+        const beforeUnload = action => {
+          // Only show the prompt if this is a proper beforeUnload event from the browser
+          // or the pathname changed
+          // This check has to be done because history.block triggers this function even if only the url hash changed
+          if (action === undefined || evt.pathname !== window.location.pathname) {
+            const { isUploading } = this.state;
+            if (isUploading) {
+              window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+              window.setTimeout(() => {
+                // restore the event handler in case a user chose to stay on the page
+                window.onbeforeunload = beforeUnload;
+              }, 500);
+              return messages["dataset.leave_during_upload"];
+            }
+          }
+          return null;
+        };
+
+        this.props.history.block(beforeUnload);
+        window.onbeforeunload = beforeUnload;
 
         const datasetId: APIDatasetId = {
           name: formValues.name,
@@ -386,5 +409,5 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect<Props, OwnProps, _, _, _, _>(mapStateToProps)(
-  Form.create()(DatasetUploadView),
+  withRouter(Form.create()(DatasetUploadView)),
 );

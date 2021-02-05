@@ -31,7 +31,7 @@ case class Project(
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
-  def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
+  def isDeletableBy(user: User): Boolean = user._id == _owner || user.isAdmin
 
 }
 
@@ -86,8 +86,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"
-          .as[ProjectsRow])
+        sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -95,8 +94,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #${columns} from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
+      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[ProjectsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -108,7 +106,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
               from webknossos.projects_ p
               join webknossos.tasks_ t on t._project = p._id
               join webknossos.taskTypes_ tt on t._taskType = tt._id
-              where tt._id = ${taskTypeId}
+              where tt._id = $taskTypeId
            """.as[ProjectsRow]
       )
       parsed <- Fox.combined(r.toList.map(parse))
@@ -118,25 +116,25 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       rList <- run(
-        sql"select #${columns} from #${existingCollectionName} where name = '#${sanitize(name)}' and #${accessQuery}"
+        sql"select #$columns from #$existingCollectionName where name = '#${sanitize(name)}' and #$accessQuery"
           .as[ProjectsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
 
-  def findUsersWithActiveTasks(name: String)(implicit ctx: DBAccessContext): Fox[List[(String, String, String, Int)]] =
+  def findUsersWithActiveTasks(name: String): Fox[List[(String, String, String, Int)]] =
     for {
-      accessQuery <- readAccessQuery
-      rSeq <- run(sql"""select u.email, u.firstName, u.lastName, count(a._id)
+      rSeq <- run(sql"""select m.email, u.firstName, u.lastName, count(a._id)
                          from
                          webknossos.annotations_ a
                          join webknossos.tasks_ t on a._task = t._id
                          join webknossos.projects_ p on t._project = p._id
                          join webknossos.users_ u on a._user = u._id
-                         where p.name = ${name}
+                         join webknossos.multiusers_ m on u._multiUser = m._id
+                         where p.name = $name
                          and a.state = '#${AnnotationState.Active.toString}'
                          and a.typ = '#${AnnotationType.Task}'
-                         group by u.email, u.firstName, u.lastName
+                         group by m.email, u.firstName, u.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 
@@ -146,7 +144,7 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
     for {
       _ <- run(
         sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, isblacklistedfromreport, created, isDeleted)
-                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
+                         values(${p._id}, ${p._team}, ${p._owner}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport}, ${new java.sql.Timestamp(
           p.created)}, ${p.isDeleted})""")
     } yield ()
 
@@ -163,11 +161,17 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
                             expectedTime = ${p.expectedTime},
                             isblacklistedfromreport = ${p.isBlacklistedFromReport},
                             isDeleted = ${p.isDeleted}
-                          where _id = ${p._id.id}""")
+                          where _id = ${p._id}""")
     } yield ()
 
-  def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+  def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateBooleanCol(id, _.paused, isPaused)
+
+  def countForTeam(teamId: ObjectId): Fox[Int] =
+    for {
+      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      count <- countList.headOption
+    } yield count
 
 }
 

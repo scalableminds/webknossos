@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.webknossos.datastore.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -10,16 +9,16 @@ import play.api.libs.json._
 
 object DataFormat extends Enumeration {
 
-  val knossos, wkw, tracing = Value
+  val wkw, tracing = Value
 
-  implicit val dataLayerFormatFormat = Format(Reads.enumNameReads(DataFormat), Writes.enumNameWrites)
+  implicit val jsonFormat: Format[DataFormat.Value] = Format(Reads.enumNameReads(DataFormat), Writes.enumNameWrites)
 }
 
 object Category extends Enumeration {
 
   val color, mask, segmentation = Value
 
-  implicit val categoryFormat = Format(Reads.enumNameReads(Category), Writes.enumNameWrites)
+  implicit val jsonFormat: Format[Category.Value] = Format(Reads.enumNameReads(Category), Writes.enumNameWrites)
 
   def fromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
@@ -36,7 +35,7 @@ object ElementClass extends Enumeration {
 
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
-  implicit val dataLayerElementClassFormat = Format(Reads.enumNameReads(ElementClass), Writes.enumNameWrites)
+  implicit val jsonFormat: Format[ElementClass.Value] = Format(Reads.enumNameReads(ElementClass), Writes.enumNameWrites)
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
@@ -76,7 +75,7 @@ object ElementClass extends Enumeration {
 object LayerViewConfiguration {
   type LayerViewConfiguration = Map[String, JsValue]
 
-  implicit val layerViewConfigurationFormat = Format.of[LayerViewConfiguration]
+  implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 
 trait DataLayerLike {
@@ -109,14 +108,12 @@ object DataLayerLike {
 
   implicit object dataLayerLikeFormat extends Format[DataLayerLike] {
     override def reads(json: JsValue): JsResult[DataLayerLike] =
-      AbstractSegmentationLayer.abstractSegmentationLayerFormat
-        .reads(json)
-        .orElse(AbstractDataLayer.abstractDataLayerFormat.reads(json))
+      AbstractSegmentationLayer.jsonFormat.reads(json).orElse(AbstractDataLayer.jsonFormat.reads(json))
 
     override def writes(layer: DataLayerLike): JsValue = layer match {
       case layer: SegmentationLayerLike =>
-        AbstractSegmentationLayer.abstractSegmentationLayerFormat.writes(AbstractSegmentationLayer.from(layer))
-      case _ => AbstractDataLayer.abstractDataLayerFormat.writes(AbstractDataLayer.from(layer))
+        AbstractSegmentationLayer.jsonFormat.writes(AbstractSegmentationLayer.from(layer))
+      case _ => AbstractDataLayer.jsonFormat.writes(AbstractDataLayer.from(layer))
     }
   }
 }
@@ -143,12 +140,12 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProvider: BucketProvider
 
-  def containsResolution(resolution: Point3D) = resolutions.contains(resolution)
+  def containsResolution(resolution: Point3D): Boolean = resolutions.contains(resolution)
 
-  def doesContainBucket(bucket: BucketPosition) =
+  def doesContainBucket(bucket: BucketPosition): Boolean =
     boundingBox.intersects(bucket.toHighestResBoundingBox)
 
-  lazy val bytesPerElement =
+  lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
 }
 
@@ -165,11 +162,9 @@ object DataLayer {
         dataFormat <- json.validate((JsPath \ "dataFormat").read[DataFormat.Value])
         category <- json.validate((JsPath \ "category").read[Category.Value])
         layer <- (dataFormat, category) match {
-          case (DataFormat.knossos, Category.segmentation) => json.validate[KnossosSegmentationLayer]
-          case (DataFormat.knossos, _)                     => json.validate[KnossosDataLayer]
-          case (DataFormat.wkw, Category.segmentation)     => json.validate[WKWSegmentationLayer]
-          case (DataFormat.wkw, _)                         => json.validate[WKWDataLayer]
-          case _                                           => json.validate[WKWDataLayer]
+          case (DataFormat.wkw, Category.segmentation) => json.validate[WKWSegmentationLayer]
+          case (DataFormat.wkw, _)                     => json.validate[WKWDataLayer]
+          case _                                       => json.validate[WKWDataLayer]
         }
       } yield {
         layer
@@ -177,10 +172,8 @@ object DataLayer {
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: KnossosDataLayer         => KnossosDataLayer.knossosDataLayerFormat.writes(l)
-        case l: KnossosSegmentationLayer => KnossosSegmentationLayer.knossosSegmentationLayerFormat.writes(l)
-        case l: WKWDataLayer             => WKWDataLayer.wkwDataLayerFormat.writes(l)
-        case l: WKWSegmentationLayer     => WKWSegmentationLayer.wkwSegmentationLayerFormat.writes(l)
+        case l: WKWDataLayer         => WKWDataLayer.jsonFormat.writes(l)
+        case l: WKWSegmentationLayer => WKWSegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
@@ -190,7 +183,7 @@ object DataLayer {
 
 trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
 
-  val category = Category.segmentation
+  val category: Category.Value = Category.segmentation
 
   lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
@@ -222,7 +215,7 @@ object AbstractDataLayer {
       layer.adminViewConfiguration
     )
 
-  implicit val abstractDataLayerFormat = Json.format[AbstractDataLayer]
+  implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
 }
 
 case class AbstractSegmentationLayer(
@@ -252,7 +245,7 @@ object AbstractSegmentationLayer {
       layer.adminViewConfiguration
     )
 
-  implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
+  implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]
 }
 
 trait ResolutionFormatHelper {

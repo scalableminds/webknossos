@@ -209,6 +209,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "task.no_tasks_to_download": "There are no tasks available to download.",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
+  "dataset.leave_during_upload":
+    "WARNING: The upload is still in progress and will be aborted when hitting OK. Please click cancel and wait until the upload is finished before leaving the page.",
   "dataset.add_success": "The dataset was added successfully.",
   "dataset.add_error": "Could not reach the datastore.",
   "dataset.segmentationlayer_not_existing": "This tracing has no segmentation layer.",

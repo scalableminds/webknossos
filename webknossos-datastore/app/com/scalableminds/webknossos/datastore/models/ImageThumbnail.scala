@@ -2,12 +2,12 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayerLike
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 case class ImageThumbnail(mimeType: String, value: String)
 
 object ImageThumbnail {
-  implicit val imageThumbnailFormat = Json.format[ImageThumbnail]
+  implicit val jsonFormat: OFormat[ImageThumbnail] = Json.format[ImageThumbnail]
 
   def bestResolutionExponent(dataLayer: DataLayerLike, width: Int, height: Int, zoom: Option[Double]): Int =
     // We're either using the supplied zoom value (higher = zoomed out) or we're using the best resolution

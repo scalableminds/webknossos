@@ -124,16 +124,17 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def findUsersWithActiveTasks(name: String): Fox[List[(String, String, String, Int)]] =
     for {
-      rSeq <- run(sql"""select u.email, u.firstName, u.lastName, count(a._id)
+      rSeq <- run(sql"""select m.email, u.firstName, u.lastName, count(a._id)
                          from
                          webknossos.annotations_ a
                          join webknossos.tasks_ t on a._task = t._id
                          join webknossos.projects_ p on t._project = p._id
                          join webknossos.users_ u on a._user = u._id
+                         join webknossos.multiusers_ m on u._multiUser = m._id
                          where p.name = $name
                          and a.state = '#${AnnotationState.Active.toString}'
                          and a.typ = '#${AnnotationType.Task}'
-                         group by u.email, u.firstName, u.lastName
+                         group by m.email, u.firstName, u.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 

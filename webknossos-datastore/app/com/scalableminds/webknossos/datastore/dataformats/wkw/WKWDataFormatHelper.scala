@@ -11,7 +11,7 @@ import com.scalableminds.util.tools.ExtendedTypes._
 
 trait WKWDataFormatHelper {
 
-  val dataFileExtension = "wkw"
+  val dataFileExtension: String = "wkw"
 
   def wkwFilePath(
       cube: CubePosition,
@@ -27,7 +27,7 @@ trait WKWDataFormatHelper {
       .resolve(formatResolution(cube.resolution, resolutionAsTriple))
       .resolve(s"z${cube.z}")
       .resolve(s"y${cube.y}")
-      .resolve(s"x${cube.x}.${dataFileExtension}")
+      .resolve(s"x${cube.x}.$dataFileExtension")
 
   private def formatResolution(resolution: Point3D, resolutionAsTripleOpt: Option[Boolean] = None): String =
     resolutionAsTripleOpt.map { resolutionAsTriple =>
@@ -48,10 +48,10 @@ trait WKWDataFormatHelper {
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
       .resolve(formatResolution(resolution))
-      .resolve(s"header.${dataFileExtension}")
+      .resolve(s"header.$dataFileExtension")
 
   def parseWKWFilePath(path: String): Option[BucketPosition] = {
-    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).${dataFileExtension}".r
+    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
     path match {
       case CubeRx(_, resolutionStr, z, y, x) =>
         val resolutionOpt = parseResolution(resolutionStr)

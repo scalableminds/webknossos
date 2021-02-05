@@ -434,10 +434,6 @@ function addNode(
   branchpoint: boolean,
   activate: boolean,
 ): void {
-  if (branchpoint) {
-    Store.dispatch(createBranchPointAction());
-  }
-
   if (createNewTree) {
     Store.dispatch(createTreeAction());
   }
@@ -461,5 +457,9 @@ function addNode(
       // This is important because otherwise the user cannot continue to trace until the animation is over
       api.tracing.centerPositionAnimated(newActiveNode.position, true),
     );
+  }
+
+  if (branchpoint) {
+    Store.dispatch(createBranchPointAction());
   }
 }

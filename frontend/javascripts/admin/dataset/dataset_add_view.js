@@ -80,31 +80,25 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
         <div className="centered-items" style={{ marginTop: 16 }}>
           {datasetNeedsConversion ? (
             <React.Fragment>
-              <Button type="primary" size="small" onClick={() => history.push("/jobs")}>
+              <Button type="primary" onClick={() => history.push("/jobs")}>
                 Show the Jobs Queue
               </Button>
-              <Button size="small" onClick={() => history.push("/dashboard/datasets")}>
-                Go to Dashboard
-              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
             </React.Fragment>
           ) : (
             <React.Fragment>
               <Button
                 type="primary"
-                size="small"
                 onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
               >
                 View the Dataset
               </Button>
               <Button
-                size="small"
                 onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
               >
                 Got to Dataset Settings
               </Button>
-              <Button size="small" onClick={() => history.push("/dashboard/datasets")}>
-                Go to Dashboard
-              </Button>
+              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
             </React.Fragment>
           )}
         </div>

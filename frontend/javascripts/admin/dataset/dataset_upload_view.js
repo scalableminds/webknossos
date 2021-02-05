@@ -1,5 +1,5 @@
 // @flow
-import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Modal, Progress } from "antd";
+import { Form, Button, Upload, Icon, Col, Row, Tooltip, Modal, Progress } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";

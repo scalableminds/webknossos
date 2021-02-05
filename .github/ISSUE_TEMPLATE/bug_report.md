@@ -7,32 +7,28 @@ assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Context
+<!--- In what context did your bug occur? -->
+<!--- Providing context helps us come up with a solution that is most useful. -->
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## Expected Behavior
+<!--- What should should happen instead of the bug / error message. -->
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Current Behavior
+<!--- What happens instead of the expected behavior? -->
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+## Steps to Reproduce the bug
+<!-- If the bug is hard to reproduce check the following: -->
+- [ ] Cannot reproduce the bug anymore / needs deeper investigation.
+<!--- If you can reproduce the bug, provide a list of actions to reproduce the bug. -->
+1.
+2.
+3.
+4.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+## Your Environment for bug
+<!--- In what environment did the bug occur? -->
+* Browser name and version: e.g. Chrome 39
+* Operating System and version: e.g. Windows 10
+* Version of WebKnossos (Release or Commit):

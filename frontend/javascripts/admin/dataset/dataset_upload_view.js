@@ -43,7 +43,6 @@ type State = {
   isUploading: boolean,
   needsConversion: boolean,
   isRetrying: boolean,
-  isFinished: boolean,
   uploadProgress: number,
 };
 
@@ -52,7 +51,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     isUploading: false,
     needsConversion: false,
     isRetrying: false,
-    isFinished: false,
     uploadProgress: 0,
   };
 
@@ -142,20 +140,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
                 formValues.name,
                 this.state.needsConversion,
               );
-              /*
-              Questions: The behaviour of onUploaded is not the same. 
-              In the onboarding after upload the dataset setting are opened in a modal.
-              In the add dataset view the user gets redirected to the jobs view if conversion needs to be done 
-              or to the dataset settings of the just uploaded dataset.
-              Doesn't the onboarding case also need the conversion job?
-              I would like to overwrite the behaviour for the add dataset view: open a modal and ask the user what he wants to do.
-              */
             },
             () => {
               Toast.error(messages["dataset.upload_failed"]);
               this.setState({
                 isUploading: false,
-                isFinished: false,
                 isRetrying: false,
                 uploadProgress: 0,
               });
@@ -186,22 +175,18 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
   };
 
   getUploadModal = () => {
-    let modalContent = null;
     const { form } = this.props;
-    const { isRetrying, isFinished, uploadProgress, isUploading, needsConversion } = this.state;
-    if (isFinished && needsConversion) {
-      modalContent = (
-        <React.Fragment>
-          <Icon type="folder" style={{ fontSize: 20 }} />
-          <br />
-          Converting Dataset {form.getFieldValue("name")}.
-          <br />
-          <Spin size="large" />
-        </React.Fragment>
-      );
-    } else {
-      modalContent = (
-        <React.Fragment>
+    const { isRetrying, uploadProgress, isUploading } = this.state;
+    return (
+      <Modal
+        visible={isUploading}
+        closable={false}
+        keyboard={false}
+        maskClosable={false}
+        cancelButtonProps={{ style: { display: "none" } }}
+        okButtonProps={{ style: { display: "none" } }}
+      >
+        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
           <Icon type="folder" style={{ fontSize: 50 }} />
           <br />
           {isRetrying
@@ -215,20 +200,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
             percent={Math.round(uploadProgress * 1000) / 10}
             status="active"
           />
-        </React.Fragment>
-      );
-    }
-    return (
-      <Modal
-        visible={isUploading}
-        closable={false}
-        keyboard={false}
-        maskClosable={false}
-        cancelButtonProps={{ style: { display: "none" } }}
-        okButtonProps={{ style: { display: "none" } }}
-      >
-        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-          {modalContent}
         </div>
       </Modal>
     );
@@ -241,7 +212,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
       Modal.error({
         content: messages["dataset.upload_none_zip_error"],
       });
-      // Directly setting the zip file to null does not work
+      // Directly setting the zip file to null does not work.
       setTimeout(() => form.setFieldsValue({ zipFile: null }), 500);
       return false;
     }
@@ -258,7 +229,6 @@ class DatasetUploadView extends React.PureComponent<PropsWithForm, State> {
     createReader(
       blobReader,
       reader => {
-        // get all entries from the zip
         reader.getEntries(entries => {
           const wkwFile = entries.find(entry =>
             Utils.isFileExtensionEqualTo(entry.filename, "wkw"),

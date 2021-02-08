@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added an explicit `/signup` (or `/auth/signup`) route. [#5091](https://github.com/scalableminds/webknossos/pull/5091/files)
 
 ### Changed
-- Before uploading a dataset wk automatically checks whether a conversion and scale are needed. Additionally, the Upload UI was improved. [#5081](https://github.com/scalableminds/webknossos/issues/5081)
+- Before uploading a dataset webKnossos automatically checks whether a conversion and scale are needed. Additionally, the Upload UI was improved. [#5081](https://github.com/scalableminds/webknossos/issues/5081)
 - Make the isosurface feature in the meshes tab more robust. If a request fails, a retry is initiated. [#5102](https://github.com/scalableminds/webknossos/pull/5102)
 - Support for the old invite links was removed. These contained the organization name in the URL. The new links contain a token (can be generated in the users view). For instances with a single organization the old invite links should still work. [#5091](https://github.com/scalableminds/webknossos/pull/5091/files)
 - Users are no longer allowed to deactivate their own accounts.  [#5070](https://github.com/scalableminds/webknossos/pull/5070)

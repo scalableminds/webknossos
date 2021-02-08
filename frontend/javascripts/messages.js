@@ -209,7 +209,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
   "dataset.upload_none_zip_error":
-    "It looks like your selected file is not zip file. WebKnossos only supports uploading zip files. Please ensure that your dataset is zipped to an archive.",
+    "It looks like the selected file is not a zip file. WebKnossos only supports uploading zipped datasets. Please ensure that your dataset is compressed to a zip archive.",
   "dataset.upload_invalid_zip":
     "It looks like your selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":

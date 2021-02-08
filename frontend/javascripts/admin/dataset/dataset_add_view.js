@@ -81,7 +81,7 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
             {datasetNeedsConversion ? (
               <React.Fragment>
                 <Button type="primary" onClick={() => history.push("/jobs")}>
-                  Show the Jobs Queue
+                  View the Jobs Queue
                 </Button>
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
               </React.Fragment>

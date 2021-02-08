@@ -185,7 +185,13 @@ export function updateNovelUserExperienceInfos(
     ...user,
     ...updateShape,
   };
-  const newUserAsync = updateUser(updateShape);
+  const newUserAsync = Request.sendJSONReceiveJSON(
+    `/api/users/${user.id}/novelUserExperienceInfos`,
+    {
+      method: "PUT",
+      data: updateShape.novelUserExperienceInfos,
+    },
+  );
 
   return [newUserSync, newUserAsync];
 }

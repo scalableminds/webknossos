@@ -170,7 +170,6 @@ class UserService @Inject()(conf: WkConf,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
              experiences: Map[String, Int],
-             novelUserExperienceInfos: JsObject,
              lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
@@ -179,7 +178,6 @@ class UserService @Inject()(conf: WkConf,
     for {
       oldEmail <- emailFor(user)
       _ <- multiUserDAO.updateEmail(user._multiUser, email)
-      _ <- multiUserDAO.updateNovelUserExperienceInfos(user._multiUser, novelUserExperienceInfos)
       _ <- userDAO.updateValues(user._id,
                                 firstName,
                                 lastName,

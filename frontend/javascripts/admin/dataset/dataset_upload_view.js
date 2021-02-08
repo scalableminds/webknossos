@@ -206,6 +206,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         closable={false}
         keyboard={false}
         maskClosable={false}
+        className="no-footer-modal"
         cancelButtonProps={{ style: { display: "none" } }}
         okButtonProps={{ style: { display: "none" } }}
       >

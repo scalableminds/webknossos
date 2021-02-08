@@ -72,37 +72,38 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
       return null;
     }
     return (
-      <React.Fragment>
-        The dataset was successfully uploaded
+      <div style={{ fontSize: 20, paddingTop: 13, textAlign: "center" }}>
+        The dataset was uploaded successfully
         {datasetNeedsConversion ? " and a conversion job was started." : null}.
         <br />
-        You can now:
-        <div className="centered-items" style={{ marginTop: 16 }}>
-          {datasetNeedsConversion ? (
-            <React.Fragment>
-              <Button type="primary" onClick={() => history.push("/jobs")}>
-                Show the Jobs Queue
-              </Button>
-              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-            </React.Fragment>
-          ) : (
-            <React.Fragment>
-              <Button
-                type="primary"
-                onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
-              >
-                View the Dataset
-              </Button>
-              <Button
-                onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
-              >
-                Got to Dataset Settings
-              </Button>
-              <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-            </React.Fragment>
-          )}
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div className="centered-items" style={{ marginTop: 10 }}>
+            {datasetNeedsConversion ? (
+              <React.Fragment>
+                <Button type="primary" onClick={() => history.push("/jobs")}>
+                  Show the Jobs Queue
+                </Button>
+                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <Button
+                  type="primary"
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
+                >
+                  View the Dataset
+                </Button>
+                <Button
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
+                >
+                  Got to Dataset Settings
+                </Button>
+                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              </React.Fragment>
+            )}
+          </div>
         </div>
-      </React.Fragment>
+      </div>
     );
   };
 
@@ -176,14 +177,14 @@ const DatasetAddView = ({ history, activeUser }: PropsWithRouter) => {
         closable={showAfterUploadContent}
         keyboard={showAfterUploadContent}
         maskClosable={false}
+        className="no-footer-modal"
         cancelButtonProps={{ style: { display: "none" } }}
         okButtonProps={{ style: { display: "none" } }}
         onCancel={() => setDatasetName("")}
         onOk={() => setDatasetName("")}
+        width={580}
       >
-        <div style={{ display: "flex", alignItems: "center", flexDirection: "column" }}>
-          {showAfterUploadContent && getAfterUploadModalContent()}
-        </div>
+        {showAfterUploadContent && getAfterUploadModalContent()}
       </Modal>
     </React.Fragment>
   );

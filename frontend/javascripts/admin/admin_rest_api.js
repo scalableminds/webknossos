@@ -174,22 +174,19 @@ export function updateNovelUserExperienceInfos(
   user: APIUser,
   novelUserExperienceShape: Object,
 ): [APIUser, Promise<APIUser>] {
-  const updateShape = {
-    id: user.id,
-    novelUserExperienceInfos: {
-      ...user.novelUserExperienceInfos,
-      ...novelUserExperienceShape,
-    },
+  const novelUserExperienceInfos = {
+    ...user.novelUserExperienceInfos,
+    ...novelUserExperienceShape,
   };
   const newUserSync = {
     ...user,
-    ...updateShape,
+    novelUserExperienceInfos: novelUserExperienceInfos,
   };
   const newUserAsync = Request.sendJSONReceiveJSON(
     `/api/users/${user.id}/novelUserExperienceInfos`,
     {
       method: "PUT",
-      data: updateShape.novelUserExperienceInfos,
+      data: novelUserExperienceInfos,
     },
   );
 

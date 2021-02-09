@@ -305,6 +305,8 @@ class UserService @Inject()(conf: WkConf,
       isEditable <- isEditableBy(user, requestingUser)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       email <- emailFor(user)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       experiences <- experiencesFor(user._id)
@@ -323,6 +325,7 @@ class UserService @Inject()(conf: WkConf,
         "isAnonymous" -> false,
         "isEditable" -> isEditable,
         "organization" -> organization.name,
+        "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString)
       )

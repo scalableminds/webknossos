@@ -35,7 +35,6 @@ export function PublicationViewWithHeader() {
   return (
     <div>
       <div className="pull-right">{context.datasets.length > 0 && search}</div>
-      <h3>Featured Publications</h3>
       <div className="clearfix" style={{ margin: "20px 0px" }} />
       <Spin size="large" spinning={context.isLoading}>
         <div style={{ minHeight: "100px", paddingLeft: 10, paddingRight: 10 }}>

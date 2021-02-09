@@ -913,7 +913,7 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
 
   const generateUniqueIdentifier = (file, event) => {
     console.log(file);
-    return myUploadId + "/" + file.name;
+    return myUploadId + "/" + (file.webkitRelativePath || file.relativePath);
   }
 
   return doWithToken(

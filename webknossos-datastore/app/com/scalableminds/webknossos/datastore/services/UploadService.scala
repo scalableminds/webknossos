@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.{File, RandomAccessFile}
-import java.nio.file.{Files, Path}
+import java.nio.file.{Files, Path, Paths}
 
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
@@ -34,45 +34,59 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
 
-  val savedUploadChunks: mutable.HashMap[String, (Long, mutable.HashSet[Int])] = mutable.HashMap.empty
+  // structure: uploadId → (fileName → (totalChunkCount, receivedChunkIndices))
+  val allSavedChunkIds: mutable.HashMap[String, mutable.HashMap[String, (Long, mutable.HashSet[Int])]] = mutable.HashMap.empty
 
   cleanUpOrphanFileChunks()
 
-  def isKnownUpload(uploadId: String): Boolean = savedUploadChunks.synchronized(savedUploadChunks.contains(uploadId))
+  def isKnownUpload(uploadId: String): Boolean = allSavedChunkIds.synchronized(allSavedChunkIds.contains(uploadId))
 
-  def handleUploadChunk(uploadId: String,
+  private def uploadDirectory(organizationName: String, uploadId: String): String =
+    dataBaseDir.resolve(organizationName).resolve(".uploading").resolve(uploadId).toString
+
+  def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
                         resumableUploadInformation: ResumableUploadInformation,
                         currentChunkNumber: Int,
                         chunkFile: File): Fox[Unit] = {
-    logger.info(s"handleUploadChunk uploadId $uploadId ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
-    val isChunkNew = savedUploadChunks.synchronized {
-      savedUploadChunks.get(uploadId) match {
-        case Some((_, set)) =>
-          set.add(currentChunkNumber)
+    val uploadId = uploadFileId.split("/").headOption.getOrElse("dummy")
+    val uploadDir = uploadDirectory(datasourceId.team, uploadId)
+    val fileName = uploadFileId.split("/").tail.headOption.getOrElse("aFile")
+    logger.info(s"handleUploadChunk uploadId $uploadFileId ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
+    val isNewChunk = allSavedChunkIds.synchronized {
+      allSavedChunkIds.get(uploadId) match {
+        case Some(savedChunkIdsForUpload) =>
+          savedChunkIdsForUpload.get(fileName) match {
+            case Some((_, set)) =>
+              set.add(currentChunkNumber)  // returns true if isNewChunk
 
+            case None =>
+              savedChunkIdsForUpload.put(fileName,
+                (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
+              true // isNewChunk
+          }
         case None =>
-          savedUploadChunks.put(uploadId,
-                                (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
-          true
+          val uploadChunksForUpload: mutable.HashMap[String, (Long, mutable.HashSet[Int])] = mutable.HashMap.empty
+          uploadChunksForUpload.put(fileName,
+            (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
+          allSavedChunkIds.put(uploadId, uploadChunksForUpload)
+          true // isNewChunk
       }
     }
-    if (isChunkNew) {
+    if (isNewChunk) {
       try {
         val bytes = Files.readAllBytes(chunkFile.toPath)
-        val directory = uploadId.split("/").headOption.getOrElse("dummy")
-        new File(dataBaseDir.resolve(directory).toString).mkdirs()
-
         this.synchronized {
-          val tempFile = new RandomAccessFile(dataBaseDir.resolve(s"$uploadId.temp").toFile, "rw")
+          new File(uploadDir).mkdirs()
+          val tempFile = new RandomAccessFile(Paths.get(uploadDir).resolve(fileName).toFile, "rw")
           tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
           tempFile.write(bytes)
           tempFile.close()
         }
       } catch {
         case e: Exception =>
-          savedUploadChunks.synchronized {
-            savedUploadChunks(uploadId)._2.remove(currentChunkNumber)
+          allSavedChunkIds.synchronized {
+            allSavedChunkIds(uploadId)(fileName)._2.remove(currentChunkNumber)
           }
           val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
           logger.warn(errorMsg)
@@ -87,22 +101,23 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     logger.info(s"finishUpload, uploadId $uploadId")
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
+    val uploadDir = uploadDirectory(uploadInformation.organization, uploadId)
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
-    val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
+    val unpackToDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
     for {
-      _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
-      _ <- ensureDirectoryBox(dataSourceDir) ?~> "dataSet.import.fileAccessDenied"
+      _ <- allSavedChunkIds.synchronized { ensureAllChunksUploaded(uploadId) }
+      _ <- ensureDirectoryBox(unpackToDir) ?~> "dataSet.import.fileAccessDenied"
       unzipResult = this.synchronized {
         ZipIO.unzipToFolder(
           zipFile,
-          dataSourceDir,
+          unpackToDir,
           includeHiddenFiles = false,
           truncateCommonPrefix = true,
           Some(Category.values.map(_.toString).toList)
         )
       }
-      _ = savedUploadChunks.synchronized { savedUploadChunks.remove(uploadId) }
+      _ = allSavedChunkIds.synchronized { allSavedChunkIds.remove(uploadId) }
       _ = this.synchronized { zipFile.delete() }
       _ <- unzipResult match {
         case Full(_) =>
@@ -110,21 +125,25 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             Fox.successful(())
           else
             dataSourceRepository.updateDataSource(
-              dataSourceService.dataSourceFromFolder(dataSourceDir, dataSourceId.team))
+              dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
         case e =>
           deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
           dataSourceRepository.cleanUpDataSource(dataSourceId)
-          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
+          val errorMsg = s"Error unzipping uploaded dataset to $unpackToDir: $e"
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
     } yield (dataSourceId, uploadInformation.initialTeams)
   }
 
-  private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = savedUploadChunks.get(uploadId) match {
-    case Some((totalChunkNumber, set)) =>
-      if (set.size != totalChunkNumber) Fox.failure("dataSet.import.incomplete") else Fox.successful(())
-    case None => Fox.failure("dataSet.import.unknownUpload")
+  private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = allSavedChunkIds.get(uploadId) match {
+    case Some(savedChunkIdsForUpload) =>
+      val allUploaded = savedChunkIdsForUpload.forall{ entry: (String, (Long, mutable.HashSet[Int])) =>
+        val chunkNumber = entry._2._1
+        val savedChunksSet = entry._2._2
+        savedChunksSet.size != chunkNumber
+      }
+      bool2Fox(allUploaded) ?~> "dataSet.import.incomplete"
   }
 
   private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {

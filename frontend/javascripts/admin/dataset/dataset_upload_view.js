@@ -2,6 +2,7 @@
 import { Form, Button, Spin, Upload, Icon, Col, Row, Tooltip, Checkbox } from "antd";
 import { connect } from "react-redux";
 import React from "react";
+import moment from "moment";
 import _ from "lodash";
 
 import { type RouterHistory, withRouter } from "react-router-dom";
@@ -120,11 +121,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
           owningOrganization: activeUser.organization,
         };
         const getRandomString = () => {
-          const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
+          const randomBytes = window.crypto.getRandomValues(new Uint8Array(6));
           return Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
         };
 
-        const uploadId = getRandomString();
+        const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
 
         const resumableUpload = await createResumableUpload(datasetId, formValues.datastore, uploadId);
 
@@ -295,6 +296,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                 })(
                   <Upload.Dragger
                     multiple
+                    directory
                     name="files"
                     beforeUpload={(file) => {
                       console.log("beforeUpload for", file);

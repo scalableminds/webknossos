@@ -297,7 +297,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
                   >
                     <Icon
                       type="setting"
-                      className="withoutMargin"
+                      className="withoutIconMargin"
                       style={{
                         display: "flex",
                         alignItems: "center",

@@ -63,6 +63,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(User, Tasks)
   }
 
+  object Proxy {
+    val prefix = get[String]("proxy.prefix")
+    val routes = getList[String]("proxy.routes")
+  }
+
   object Datastore {
     val enabled = get[Boolean]("datastore.enabled")
     val key = get[String]("datastore.key")
@@ -94,6 +99,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val jobsEnabled = get[Boolean]("features.jobsEnabled")
     val taskReopenAllowed = get[Int]("features.taskReopenAllowedInSeconds") seconds
     val allowDeleteDatasets = get[Boolean]("features.allowDeleteDatasets")
+    val publicDemoDatasetUrl = get[String]("features.publicDemoDatasetUrl")
   }
 
   val operatorData = get[String]("operatorData")

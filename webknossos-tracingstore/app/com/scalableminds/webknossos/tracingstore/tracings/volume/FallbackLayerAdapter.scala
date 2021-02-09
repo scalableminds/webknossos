@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
@@ -49,7 +50,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   override lazy val mappingProvider: MappingProvider = fallback.mappingProvider
 
-  val defaultViewConfiguration = primary.defaultViewConfiguration
+  val defaultViewConfiguration: Option[LayerViewConfiguration] = primary.defaultViewConfiguration
 
-  val adminViewConfiguration = primary.adminViewConfiguration
+  val adminViewConfiguration: Option[LayerViewConfiguration] = primary.adminViewConfiguration
 }

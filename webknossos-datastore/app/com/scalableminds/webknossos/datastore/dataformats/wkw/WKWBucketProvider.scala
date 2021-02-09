@@ -1,16 +1,15 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Cube}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, SafeCachable}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty}
 
-class WKWCube(wkwFile: WKWFile) extends Cube {
+class WKWCube(wkwFile: WKWFile) extends SafeCachable {
 
-  def cutOutBucket(dataLayer: DataLayer, bucket: BucketPosition): Box[Array[Byte]] = {
+  def cutOutBucket(bucket: BucketPosition): Box[Array[Byte]] = {
     val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
     val blockOffsetX = bucket.x % numBlocksPerCubeDimension
     val blockOffsetY = bucket.y % numBlocksPerCubeDimension

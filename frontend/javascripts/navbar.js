@@ -219,11 +219,19 @@ function HelpSubMenu({ isAdminOrTeamManager, version, collapse, ...other }) {
           Keyboard Shortcuts
         </a>
       </Menu.Item>
-      <Menu.Item key="credits">
-        <a target="_blank" href="https://publication.webknossos.org" rel="noopener noreferrer">
-          About & Credits
-        </a>
-      </Menu.Item>
+      {features().isDemoInstance ? (
+        <Menu.Item key="contact">
+          <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+            Contact
+          </a>
+        </Menu.Item>
+      ) : (
+        <Menu.Item key="credits">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
+            About & Credits
+          </a>
+        </Menu.Item>
+      )}
       {version !== "" ? (
         <Menu.Item disabled key="version">
           Version: {version}
@@ -309,9 +317,9 @@ function LoggedInAvatar({ activeUser, handleLogout, ...other }) {
           <Link to="/auth/token">Auth Token</Link>
         </Menu.Item>
         <Menu.Item key="logout">
-          <Link to="/" onClick={handleLogout}>
+          <a href="/" onClick={handleLogout}>
             Logout
-          </Link>
+          </a>
         </Menu.Item>
       </SubMenu>
     </NavbarMenuItem>
@@ -340,9 +348,12 @@ async function getAndTrackVersion() {
 
 function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizations }: Props) {
   const history = useHistory();
-  const handleLogout = async () => {
+  const handleLogout = async (event: SyntheticInputEvent<>) => {
+    event.preventDefault();
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
+    // Hard navigation
+    window.location.href = "/";
   };
 
   const version = useFetch(getAndTrackVersion, null, []);
@@ -442,7 +453,7 @@ function Navbar({ activeUser, isAuthenticated, isInAnnotationView, hasOrganizati
       >
         {[
           <Menu.Item key="0">
-            <Link to="/" style={{ fontWeight: 400 }}>
+            <Link to="/dashboard" style={{ fontWeight: 400 }}>
               <CollapsibleMenuTitle
                 title="webKnossos"
                 icon={<span className="logo" />}

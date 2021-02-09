@@ -494,7 +494,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
           </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
-          My {this.state.showFinishedTasks ? "Finished" : null} Tasks
+          {this.state.showFinishedTasks ? "My Finished Tasks" : null}
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         {this.renderTaskList()}

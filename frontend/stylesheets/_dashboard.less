@@ -276,3 +276,96 @@
     color: rgba(255, 255, 255, 1);
   }
 }
+
+.welcome-header-content {
+  max-width: 1600px;
+  margin: auto;
+  padding: 80px 0px 20px;
+
+  .wk-logo {
+    width: 100%;
+    max-width: 250px;
+    margin-right: 25px;
+    margin-left: 25px;
+    display: none;
+
+    @media (min-width: 1400px) {
+      display: inline-block;
+    }
+  }
+
+  .text-and-button-container {
+    max-width: 1000px;
+    margin: auto;
+    display: inline-block;
+
+    .whats-next-actions-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: left;
+      padding-inline-start: 0;
+
+      a {
+        color: rgb(107, 114, 128);
+        flex: 0 1 400px; /*  No stretching: */
+        margin: 20px;
+        margin-left: 0;
+        margin-right: 40px;
+
+        list-style: none;
+        padding: 14px;
+        cursor: pointer;
+
+        // Align contents:
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+
+        .label {
+          margin-left: 12px;
+        }
+
+        h1 {
+          font-size: 16px;
+          line-height: 18px;
+          color: #0d232d;
+          margin-bottom: 4px;
+        }
+
+        p {
+          font-size: 14px;
+          line-height: 18px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .chevron,
+        .action-icon {
+          font-size: 32px;
+          margin: 8px;
+        }
+
+        background: #ffffff;
+        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+        border-radius: 3px;
+      }
+
+      a:hover {
+        background: #3b82f6;
+
+        .chevron,
+        .action-icon {
+          color: #eff6ff;
+        }
+
+        h1 {
+          color: #eff6ff;
+        }
+
+        p {
+          color: #bfdbfe;
+        }
+      }
+    }
+  }
+}

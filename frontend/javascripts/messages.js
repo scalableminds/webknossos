@@ -248,7 +248,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to reset and cancel this annotation?",
   "annotation.was_edited": "Successfully updated annotation",
-  "annotation.shared_teams_edited": "Successfully updated the shared teams for the annotation",
+  "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",

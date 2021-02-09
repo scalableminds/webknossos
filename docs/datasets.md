@@ -8,7 +8,7 @@
 ## Importing Datasets
 
 ### Convert Datasets
-If your dataset is not yet in WKW or KNOSSOS format, you need to convert it.
+If your dataset is not yet in WKW format, you need to convert it.
 The [webKnossos Cuber](https://github.com/scalableminds/webknossos-cuber) is a tool that can convert many formats to WKW in order to be used with webKnossos.
 Read more in the [Data Formats documentation](./data_formats.md).
 
@@ -45,7 +45,7 @@ services:
 To quickly import a dataset, you may use the upload functionality from webKnossos.
 This is only recommended for datasets up to 1 GB.
 
-In order to upload the datasets, create a ZIP file that contains the WKW or KNOSSOS cubes in the folder structure as described in the [Data Formats guide](./data_formats.md).
+In order to upload the datasets, create a ZIP file that contains the WKW cubes in the folder structure as described in the [Data Formats guide](./data_formats.md).
 Once the data is uploaded you need to complete the [Import screen](#importing-in-webknossos).
 
 ### Importing in webKnossos
@@ -140,4 +140,4 @@ This may be useful when dealing with large datasets that should remain in your d
 scalable minds also offers a dataset alignment tool called **Voxelytics Align**.
 [Learn more.](https://scalableminds.com/voxelytics-align)
 
-{% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%} 
+{% embed url="https://www.youtube.com/watch?v=yYauIHZcI_4 "%}

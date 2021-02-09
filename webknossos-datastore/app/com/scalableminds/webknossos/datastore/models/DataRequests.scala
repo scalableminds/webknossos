@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.models
 import com.scalableminds.util.geometry.{Point3D, Vector3D, Vector3I}
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 
 trait AbstractDataRequest {
 
@@ -20,7 +20,7 @@ case class DataRequest(
     settings: DataServiceRequestSettings = DataServiceRequestSettings.default
 ) extends AbstractDataRequest {
 
-  def cuboid(dataLayer: DataLayer) = Cuboid(position, width, height, depth)
+  def cuboid(dataLayer: DataLayer): Cuboid = Cuboid(position, width, height, depth)
 }
 
 case class WebKnossosDataRequest(
@@ -32,17 +32,18 @@ case class WebKnossosDataRequest(
     version: Option[Long]
 ) extends AbstractDataRequest {
 
-  def cuboid(dataLayer: DataLayer) =
+  def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
            cubeSize,
            cubeSize,
            cubeSize)
 
-  def settings = DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
+  def settings: DataServiceRequestSettings =
+    DataServiceRequestSettings(halfByte = fourBit.getOrElse(false), applyAgglomerate, version)
 }
 
 object WebKnossosDataRequest {
-  implicit val format = Json.format[WebKnossosDataRequest]
+  implicit val jsonFormat: OFormat[WebKnossosDataRequest] = Json.format[WebKnossosDataRequest]
 }
 
 case class WebKnossosIsosurfaceRequest(
@@ -55,7 +56,7 @@ case class WebKnossosIsosurfaceRequest(
     mapping: Option[String] = None,
     mappingType: Option[String] = None
 ) {
-  def cuboid(dataLayer: DataLayer) =
+  def cuboid(dataLayer: DataLayer): Cuboid =
     Cuboid(new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
            cubeSize.x,
            cubeSize.y,
@@ -63,7 +64,7 @@ case class WebKnossosIsosurfaceRequest(
 }
 
 object WebKnossosIsosurfaceRequest {
-  implicit val format = Json.format[WebKnossosIsosurfaceRequest]
+  implicit val jsonFormat: OFormat[WebKnossosIsosurfaceRequest] = Json.format[WebKnossosIsosurfaceRequest]
 }
 
 object DataRequestCollection {

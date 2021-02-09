@@ -4,9 +4,10 @@ import com.google.gson.JsonParseException
 import com.google.gson.stream.JsonReader
 import com.typesafe.scalalogging.LazyLogging
 import spire.math.ULong
-
 import java.io._
 import java.util
+
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 object CumsumParser extends LazyLogging {
@@ -88,6 +89,7 @@ object CumsumParser extends LazyLogging {
       positionSets._3.add(bb._3)
     }
 
+    @tailrec
     def iter(list: List[(Long, Long, Long, Long, Long, Long)],
              hashMap: mutable.HashMap[(Long, Long, Long), BoundingBoxValues],
              prevEnd: Long): Unit =

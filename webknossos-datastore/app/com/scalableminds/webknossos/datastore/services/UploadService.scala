@@ -86,8 +86,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     val zipFile = dataBaseDir.resolve(s".$uploadId.temp").toFile
     val dataSourceDir = dataSourceDirFor(dataSourceId, datasetNeedsConversion)
 
-    logger.info(s"Unzipping uploaded dataset to $dataSourceDir")
-
     for {
       _ <- savedUploadChunks.synchronized { ensureAllChunksUploaded(uploadId) }
       _ <- ensureDirectoryBox(dataSourceDir) ?~> "dataSet.import.fileAccessDenied"

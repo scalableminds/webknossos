@@ -63,7 +63,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         WKWHeader(resolutionDir.resolve("header.wkw").toFile).map { header =>
           (header, resolutionIntOrPoint3)
         }.passFailure { f =>
-          report.error(section => s"Error processing resolution '$resolutionIntOrPoint3' - ${f.msg}")
+          report.error(_ => s"Error processing resolution '$resolutionIntOrPoint3' - ${f.msg}")
         }
       }
 

@@ -120,6 +120,15 @@ class DataStoreDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
       parsed <- parse(r)
     } yield parsed
 
+  def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(
+        sql"select #$columns from webknossos.datastores_ where url = $url and #$accessQuery".as[DatastoresRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield parsed
+
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery

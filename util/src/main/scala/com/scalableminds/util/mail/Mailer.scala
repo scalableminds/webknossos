@@ -58,6 +58,8 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
       multiPartMail.setStartTLSEnabled(conf.smtpTls)
       multiPartMail.setAuthenticator(new DefaultAuthenticator(conf.smtpUser, conf.smtpPass))
       multiPartMail.setDebug(false)
+      multiPartMail.getMailSession.getProperties.put("mail.smtp.ssl.protocols", "TLSv1.2")
+
       multiPartMail.send
     } else {
       ""

@@ -33,14 +33,6 @@ trait RemoteOriginHelpers {
   def addHeadersToResult(result: Result): Result =
     result.withHeaders("Access-Control-Allow-Origin" -> "*", "Access-Control-Max-Age" -> "600")
 
-  case class AllowRemoteOrigin[A](action: Action[A])(implicit val executionContext: ExecutionContext)
-      extends Action[A] {
-
-    lazy val parser: BodyParser[A] = action.parser
-
-    def apply(request: Request[A]): Future[Result] =
-      AllowRemoteOrigin(action(request))
-  }
 }
 
 trait ValidationHelpers {
@@ -63,4 +55,5 @@ trait ValidationHelpers {
           .toRight[Result](BadRequest("invalid request body"))
       }
     }
+
 }

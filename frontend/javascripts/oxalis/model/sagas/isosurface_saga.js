@@ -1,6 +1,8 @@
 // @flow
 import { saveAs } from "file-saver";
 
+import { sleep } from "libs/utils";
+import ErrorHandling from "libs/error_handling";
 import type { APIDataset } from "types/api_flow_types";
 import { ResolutionInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -11,9 +13,14 @@ import { type Vector3 } from "oxalis/constants";
 import { type FlycamAction, FlycamActions } from "oxalis/model/actions/flycam_actions";
 import {
   removeIsosurfaceAction,
+  addIsosurfaceAction,
   finishedRefreshingIsosurfacesAction,
+  startRefreshingIsosurfaceAction,
+  finishedRefreshingIsosurfaceAction,
   type ImportIsosurfaceFromStlAction,
   type RemoveIsosurfaceAction,
+  type RefreshIsosurfaceAction,
+  type TriggerIsosurfaceDownloadAction,
 } from "oxalis/model/actions/annotation_actions";
 import {
   type Saga,
@@ -40,6 +47,9 @@ import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_acces
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import Toast from "libs/toast";
 import messages from "messages";
+
+const MAX_RETRY_COUNT = 5;
+const RETRY_WAIT_TIME = 5000;
 
 const isosurfacesMap: Map<number, ThreeDMap<boolean>> = new Map();
 const cubeSize = [256, 256, 256];
@@ -111,7 +121,8 @@ function getNeighborPosition(
 // (active cell id is only defined in volume annotations, mapping support
 // for datasets is limited in volume tracings etc.), we use another state
 // variable for the "active cell" in view mode. The cell can be changed via
-// shift+click (similar to the volume tracing mode).
+// shift + click on the isosurface, by clicking on its list entry in the
+// meshes tab or by clicking on the "load isosurface for centered cell" button.
 let currentViewIsosurfaceCellId = 0;
 // The calculation of an isosurface is spread across multiple requests.
 // In order to avoid, that too many chunks are computed for one user interaction,
@@ -121,7 +132,6 @@ const MAXIMUM_BATCH_SIZE = 50;
 
 function* changeActiveIsosurfaceCell(action: ChangeActiveIsosurfaceCellAction): Saga<void> {
   currentViewIsosurfaceCellId = action.cellId;
-
   yield* call(ensureSuitableIsosurface, null, action.seedPosition, currentViewIsosurfaceCellId);
 }
 
@@ -146,23 +156,34 @@ function* ensureSuitableIsosurface(
   if (segmentId === 0) {
     return;
   }
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
-    return;
-  }
+  yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
+}
+
+function* getInfoForIsosurfaceLoading(): Saga<{
+  dataset: APIDataset,
+  layer: ?DataLayer,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+}> {
   const dataset = yield* select(state => state.dataset);
   const layer = Model.getSegmentationLayer();
-  if (!layer) {
-    return;
-  }
-  const position =
-    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
   const resolutionInfo = getResolutionInfo(layer.resolutions);
 
   const preferredZoomStep = window.__isosurfaceZoomStep != null ? window.__isosurfaceZoomStep : 1;
   const zoomStep = resolutionInfo.getClosestExistingIndex(preferredZoomStep);
+  return { dataset, layer, zoomStep, resolutionInfo };
+}
 
-  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
+function* loadIsosurfaceForSegmentId(
+  segmentId: number,
+  seedPosition: ?Vector3,
+  removeExistingIsosurface: boolean = false,
+): Saga<void> {
+  const { dataset, layer, zoomStep, resolutionInfo } = yield* call(getInfoForIsosurfaceLoading);
+
+  if (!layer) {
+    return;
+  }
 
   batchCounterPerSegment[segmentId] = 0;
   yield* call(
@@ -170,7 +191,7 @@ function* ensureSuitableIsosurface(
     dataset,
     layer,
     segmentId,
-    clippedPosition,
+    seedPosition,
     zoomStep,
     resolutionInfo,
     removeExistingIsosurface,
@@ -181,21 +202,31 @@ function* loadIsosurfaceWithNeighbors(
   dataset: APIDataset,
   layer: DataLayer,
   segmentId: number,
-  clippedPosition: Vector3,
+  seedPosition: ?Vector3,
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
   removeExistingIsosurface: boolean,
 ): Saga<void> {
   let isInitialRequest = true;
+  const position =
+    seedPosition != null ? seedPosition : yield* select(state => getFlooredPosition(state.flycam));
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   let positionsToRequest = [clippedPosition];
+
+  const hasIsosurface = yield* select(state => state.isosurfaces[segmentId] != null);
+  if (!hasIsosurface) {
+    yield* put(addIsosurfaceAction(segmentId, position));
+  }
+  yield* put(startRefreshingIsosurfaceAction(segmentId));
+
   while (positionsToRequest.length > 0) {
-    const position = positionsToRequest.shift();
+    const currentPosition = positionsToRequest.shift();
     const neighbors = yield* call(
       maybeLoadIsosurface,
       dataset,
       layer,
       segmentId,
-      position,
+      currentPosition,
       zoomStep,
       resolutionInfo,
       removeExistingIsosurface && isInitialRequest,
@@ -203,6 +234,8 @@ function* loadIsosurfaceWithNeighbors(
     isInitialRequest = false;
     positionsToRequest = positionsToRequest.concat(neighbors);
   }
+
+  yield* put(finishedRefreshingIsosurfaceAction(segmentId));
 }
 
 function hasBatchCounterExceededLimit(segmentId: number): boolean {
@@ -245,40 +278,51 @@ function* maybeLoadIsosurface(
   const volumeTracing = yield* select(state => state.tracing.volume);
   // Fetch from datastore if no volumetracing exists or if the tracing has a fallback layer.
   const useDataStore = volumeTracing == null || volumeTracing.fallbackLayer != null;
-  const { buffer: responseBuffer, neighbors } = yield* call(
-    computeIsosurface,
-    useDataStore ? dataStoreUrl : tracingStoreUrl,
-    layer,
-    {
-      position: clippedPosition,
-      zoomStep,
-      segmentId,
-      voxelDimensions,
-      cubeSize,
-      scale,
-    },
-  );
 
-  // Check again whether the limit was exceeded, since this variable could have been
-  // set in the mean time by ctrl-clicking the segment to remove it
-  if (hasBatchCounterExceededLimit(segmentId)) {
-    return [];
-  }
-  const vertices = new Float32Array(responseBuffer);
-  if (removeExistingIsosurface) {
-    getSceneController().removeIsosurfaceById(segmentId);
-  }
-  getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+  let retryCount = 0;
+  while (retryCount < MAX_RETRY_COUNT) {
+    try {
+      const { buffer: responseBuffer, neighbors } = yield* call(
+        computeIsosurface,
+        useDataStore ? dataStoreUrl : tracingStoreUrl,
+        layer,
+        {
+          position: clippedPosition,
+          zoomStep,
+          segmentId,
+          voxelDimensions,
+          cubeSize,
+          scale,
+        },
+      );
 
-  return neighbors.map(neighbor =>
-    getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
-  );
+      // Check again whether the limit was exceeded, since this variable could have been
+      // set in the mean time by ctrl-clicking the segment to remove it
+      if (hasBatchCounterExceededLimit(segmentId)) {
+        return [];
+      }
+      const vertices = new Float32Array(responseBuffer);
+      if (removeExistingIsosurface) {
+        getSceneController().removeIsosurfaceById(segmentId);
+      }
+      getSceneController().addIsosurfaceFromVertices(vertices, segmentId);
+
+      return neighbors.map(neighbor =>
+        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
+      );
+    } catch (exception) {
+      retryCount++;
+      ErrorHandling.notify(exception);
+      console.warn("Retrying isosurface generation...");
+      yield* call(sleep, RETRY_WAIT_TIME * 2 ** retryCount);
+    }
+  }
+  return [];
 }
 
-function* downloadActiveIsosurfaceCell(): Saga<void> {
-  const currentId = yield* call(getCurrentCellId);
+function* downloadIsosurfaceCellById(cellId: number): Saga<void> {
   const sceneController = getSceneController();
-  const geometry = sceneController.getIsosurfaceGeometry(currentId);
+  const geometry = sceneController.getIsosurfaceGeometry(cellId);
   if (geometry == null) {
     const errorMessages = messages["tracing.not_isosurface_available_to_download"];
     Toast.error(errorMessages[0], { sticky: false }, errorMessages[1]);
@@ -291,10 +335,19 @@ function* downloadActiveIsosurfaceCell(): Saga<void> {
   isosurfaceMarker.forEach((marker, index) => {
     stl.setUint8(index, marker);
   });
-  stl.setUint32(cellIdIndex, currentId, true);
+  stl.setUint32(cellIdIndex, cellId, true);
 
   const blob = new Blob([stl]);
-  yield* call(saveAs, blob, `isosurface-${currentId}.stl`);
+  yield* call(saveAs, blob, `isosurface-${cellId}.stl`);
+}
+
+function* downloadIsosurfaceCell(action: TriggerIsosurfaceDownloadAction): Saga<void> {
+  yield* call(downloadIsosurfaceCellById, action.cellId);
+}
+
+function* downloadActiveIsosurfaceCell(): Saga<void> {
+  const currentId = yield* call(getCurrentCellId);
+  yield* call(downloadIsosurfaceCellById, currentId);
 }
 
 function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<void> {
@@ -304,6 +357,11 @@ function* importIsosurfaceFromStl(action: ImportIsosurfaceFromStlAction): Saga<v
   const geometry = yield* call(parseStlBuffer, buffer);
   getSceneController().addIsosurfaceFromGeometry(geometry, segmentId);
   yield* put(setImportingMeshStateAction(false));
+
+  // TODO: Ideally, persist the seed position in the STL file. As a workaround,
+  // we simply use the current position as a seed position.
+  const seedPosition = yield* select(state => getFlooredPosition(state.flycam));
+  yield* put(addIsosurfaceAction(segmentId, seedPosition));
 }
 
 function* removeIsosurface(
@@ -337,10 +395,6 @@ function* markEditedCellAsDirty(): Saga<void> {
 }
 
 function* refreshIsosurfaces(): Saga<void> {
-  const renderIsosurfaces = yield* select(state => state.datasetConfiguration.renderIsosurfaces);
-  if (!renderIsosurfaces) {
-    return;
-  }
   yield* put(saveNowAction());
   // We reload all cells that got modified till the start of reloading.
   // By that we avoid that removing cells that got annotated during reloading from the modifiedCells set.
@@ -377,13 +431,39 @@ function* refreshIsosurfaces(): Saga<void> {
   yield* put(finishedRefreshingIsosurfacesAction());
 }
 
+function* refreshIsosurface(action: RefreshIsosurfaceAction): Saga<void> {
+  const { cellId } = action;
+
+  const threeDMap = isosurfacesMap.get(cellId);
+  const isosurfacePositions = threeDMap
+    ? threeDMap.entries().filter(([value, _position]) => value)
+    : [];
+  if (isosurfacePositions.length === 0) {
+    return;
+  }
+  yield* put(startRefreshingIsosurfaceAction(cellId));
+  // Removing Isosurface from cache.
+  yield* call(removeIsosurface, removeIsosurfaceAction(cellId), false);
+  // The isosurface should only be removed once after re-fetching the isosurface first position.
+  let shouldBeRemoved = true;
+  for (const [, position] of isosurfacePositions) {
+    // Reload the Isosurface at the given position if it isn't already loaded there.
+    // This is done to ensure that every voxel of the isosurface is reloaded.
+    yield* call(ensureSuitableIsosurface, null, position, cellId, shouldBeRemoved);
+    shouldBeRemoved = false;
+  }
+  yield* put(finishedRefreshingIsosurfaceAction(cellId));
+}
+
 export default function* isosurfaceSaga(): Saga<void> {
   yield* take("WK_READY");
   yield _takeEvery(FlycamActions, ensureSuitableIsosurface);
   yield _takeEvery("CHANGE_ACTIVE_ISOSURFACE_CELL", changeActiveIsosurfaceCell);
-  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("TRIGGER_ACTIVE_ISOSURFACE_DOWNLOAD", downloadActiveIsosurfaceCell);
+  yield _takeEvery("TRIGGER_ISOSURFACE_DOWNLOAD", downloadIsosurfaceCell);
   yield _takeEvery("IMPORT_ISOSURFACE_FROM_STL", importIsosurfaceFromStl);
   yield _takeEvery("REMOVE_ISOSURFACE", removeIsosurface);
   yield _takeEvery("REFRESH_ISOSURFACES", refreshIsosurfaces);
+  yield _takeEvery("REFRESH_ISOSURFACE", refreshIsosurface);
   yield _takeEvery(["START_EDITING", "COPY_SEGMENTATION_LAYER"], markEditedCellAsDirty);
 }

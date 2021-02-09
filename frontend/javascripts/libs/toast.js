@@ -5,7 +5,7 @@ import React from "react";
 const { Panel } = Collapse;
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
-export type Message = { success?: string, error?: string, chain?: string };
+export type Message = { success?: string, error?: string, chain?: string, key?: string };
 export type ToastConfig = {
   sticky?: boolean,
   timeout?: number,
@@ -22,7 +22,7 @@ const Toast = {
         this.success(singleMessage.success);
       }
       if (singleMessage.error != null) {
-        this.error(singleMessage.error, { sticky: true }, errorChainString);
+        this.error(singleMessage.error, { sticky: true, key: singleMessage.key }, errorChainString);
       }
     });
   },

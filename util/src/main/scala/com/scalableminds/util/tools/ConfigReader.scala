@@ -10,4 +10,7 @@ trait ConfigReader {
 
   def getOptional[A](path: String)(implicit loader: ConfigLoader[A]): Option[A] =
     raw.getOptional[A](path)
+
+  def getList[A](path: String)(implicit loader: ConfigLoader[Seq[A]]): List[A] =
+    raw.get[Seq[A]](path).toList
 }

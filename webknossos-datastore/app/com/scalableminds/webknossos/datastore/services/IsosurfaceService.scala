@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.routing.RoundRobinPool
 import akka.util.Timeout
@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 }
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import net.liftweb.common.{Box, Failure}
-
 import java.nio._
+
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
@@ -41,7 +41,7 @@ case class DataTypeFunctors[T, B](
 
 class IsosurfaceActor(val service: IsosurfaceService, val timeout: FiniteDuration) extends Actor {
 
-  def receive = {
+  def receive: Receive = {
     case request: IsosurfaceRequest =>
       sender() ! Await.result(service.requestIsosurface(request).futureBox, timeout)
     case _ =>
@@ -56,11 +56,11 @@ class IsosurfaceService(binaryDataService: BinaryDataService,
                         isosurfaceActorPoolSize: Int)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
+  private val agglomerateService: AgglomerateService = binaryDataService.agglomerateService
 
   implicit val timeout: Timeout = Timeout(isosurfaceTimeout)
 
-  val actor = actorSystem.actorOf(
+  private val actor: ActorRef = actorSystem.actorOf(
     RoundRobinPool(isosurfaceActorPoolSize).props(Props(new IsosurfaceActor(this, timeout.duration))))
 
   def requestIsosurfaceViaActor(request: IsosurfaceRequest): Fox[(Array[Float], List[Int])] =

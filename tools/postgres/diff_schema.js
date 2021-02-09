@@ -146,7 +146,7 @@ try {
 
   // diff
   try {
-    execSync("diff -r " + dir1 + " " + dir2);
+    execSync("diff --strip-trailing-cr -r " + dir1 + " " + dir2);
     exitCode = 0;
     console.log("[SUCCESS] Schemas do match");
   } catch (err) {

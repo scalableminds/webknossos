@@ -63,6 +63,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val children = List(User, Tasks)
   }
 
+  object Proxy {
+    val prefix = get[String]("proxy.prefix")
+    val routes = getList[String]("proxy.routes")
+  }
+
   object Datastore {
     val enabled = get[Boolean]("datastore.enabled")
     val key = get[String]("datastore.key")

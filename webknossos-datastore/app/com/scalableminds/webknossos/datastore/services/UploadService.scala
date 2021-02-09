@@ -45,7 +45,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   def isKnownUpload(uploadId: String): Boolean = allSavedChunkIds.synchronized(allSavedChunkIds.contains(uploadId))
 
-  private def uploadDirectory(organizationName: String, uploadId: String): Path =
+  def uploadDirectory(organizationName: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationName).resolve(".uploading").resolve(uploadId)
 
   def handleUploadChunk(uploadFileId: String,
@@ -85,7 +85,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       try {
         val bytes = Files.readAllBytes(chunkFile.toPath)
         this.synchronized {
-          makedirs(uploadDir.resolve(filePath).getParent)
+          PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
           val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
           tempFile.seek((currentChunkNumber - 1) * resumableUploadInformation.chunkSize)
           tempFile.write(bytes)
@@ -104,10 +104,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     Fox.successful(())
   }
 
-  private def makedirs(path: Path): Boolean =
-    new File(path.toString).mkdirs()
-
-  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
+  def finishUpload(uploadInformation: UploadInformation,
+                   checkCompletion: Boolean = true): Fox[(DataSourceId, List[String])] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
@@ -117,7 +115,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     logger.info(s"finishUpload, uploadId $uploadId")
 
     for {
-      _ <- ensureAllChunksUploaded(uploadId)
+      _ <- Fox.runIf(checkCompletion)(ensureAllChunksUploaded(uploadId))
       _ <- ensureDirectoryBox(unpackToDir.getParent) ?~> "dataSet.import.fileAccessDenied"
       unpackResult <- unpackDataset(uploadDir, unpackToDir).futureBox
       _ = cleanUpUploadedDataset(uploadDir, uploadId)
@@ -129,7 +127,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
             dataSourceRepository.updateDataSource(
               dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team))
         case Empty =>
-          Fox.failure("dataset upload unknown error")
+          Fox.failure(s"Unknown error while unpacking dataset ${dataSourceId.name}")
+          deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
         case Failure(msg, e, _) =>
           deleteOnDisk(dataSourceId.team, dataSourceId.name, datasetNeedsConversion, Some("the upload failed"))
           dataSourceRepository.cleanUpDataSource(dataSourceId)
@@ -161,7 +160,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
         dataBaseDir.resolve(dataSourceId.team).resolve(".forConversion").resolve(dataSourceId.name)
       else
         dataBaseDir.resolve(dataSourceId.team).resolve(dataSourceId.name)
-    logger.info(s"Unpacking dataset to $dataSourceDir")
     dataSourceDir
   }
 

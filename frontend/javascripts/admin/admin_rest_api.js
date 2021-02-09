@@ -911,6 +911,10 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
     return myUploadId + "/" + Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
   };
 
+  const generateUniqueIdentifier = (file, event) => {
+    return myUploadId + "/" + file.name;
+  }
+
   return doWithToken(
     token =>
       new ResumableJS({
@@ -923,7 +927,7 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
         simultaneousUploads: 1,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
-        generateUniqueIdentifier: getRandomString,
+        generateUniqueIdentifier: generateUniqueIdentifier,
       }),
   );
 }

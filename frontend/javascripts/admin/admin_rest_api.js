@@ -180,7 +180,7 @@ export function updateNovelUserExperienceInfos(
   };
   const newUserSync = {
     ...user,
-    novelUserExperienceInfos: novelUserExperienceInfos,
+    novelUserExperienceInfos,
   };
   const newUserAsync = Request.sendJSONReceiveJSON(
     `/api/users/${user.id}/novelUserExperienceInfos`,

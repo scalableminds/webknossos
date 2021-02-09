@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(63);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(64);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -237,7 +237,9 @@ CREATE TABLE webknossos.tasks(
 );
 
 CREATE TABLE webknossos.experienceDomains(
-  domain VARCHAR(256) PRIMARY KEY
+  domain VARCHAR(256) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  CONSTRAINT primarykey__domain_orga PRIMARY KEY (domain,_organization)
 );
 
 CREATE TABLE webknossos.teams(

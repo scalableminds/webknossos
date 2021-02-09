@@ -905,7 +905,7 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string, myUploadId: string): Promise<*> {
+export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string, totalFileCount: number, myUploadId: string): Promise<*> {
   const getRandomString = () => {
     const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
     return myUploadId + "/" + Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
@@ -916,12 +916,17 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
     return myUploadId + "/" + (file.webkitRelativePath || file.relativePath);
   }
 
+  const additionalParameters = {
+    ...datasetId,
+    totalFileCount,
+  }
+
   return doWithToken(
     token =>
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        query: datasetId,
+        query: additionalParameters,
         chunkSize: 10 * 1024 * 1024, // set chunk size to 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         // Only increase this value when https://github.com/scalableminds/webknossos/issues/5056 is fixed

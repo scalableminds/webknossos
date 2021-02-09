@@ -127,7 +127,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
 
         const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
 
-        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore, uploadId);
+        const resumableUpload = await createResumableUpload(datasetId, formValues.datastore, formValues.zipFile.length, uploadId);
 
         resumableUpload.on("complete", () => {
           this.setState({ isFinished: true });

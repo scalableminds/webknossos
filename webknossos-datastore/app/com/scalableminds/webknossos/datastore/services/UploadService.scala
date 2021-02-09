@@ -37,8 +37,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
 
-  // structure: uploadId → (fileName → (totalChunkCount, receivedChunkIndices))
-  val allSavedChunkIds: mutable.HashMap[String, mutable.HashMap[String, (Long, mutable.HashSet[Int])]] =
+  // structure: uploadId → (fileCount, fileName → (totalChunkCount, receivedChunkIndices))
+  val allSavedChunkIds: mutable.HashMap[String, (Long, mutable.HashMap[String, (Long, mutable.HashSet[Int])])] =
     mutable.HashMap.empty
 
   cleanUpOrphanFileChunks()
@@ -52,15 +52,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         datasourceId: DataSourceId,
                         resumableUploadInformation: ResumableUploadInformation,
                         currentChunkNumber: Int,
+                        totalFileCount: Int,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = uploadFileId.split("/").headOption.getOrElse("")
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
     val filePath = uploadFileId.split("/").tail.mkString("/")
     logger.info(
-      s"handleUploadChunk uploadId $uploadFileId ${datasourceId.name}, currentChunkNumber $currentChunkNumber")
+      s"handleUploadChunk uploadId $uploadFileId ${datasourceId.name}, currentChunkNumber $currentChunkNumber, totalFileCount: $totalFileCount")
     val isNewChunk = allSavedChunkIds.synchronized {
       allSavedChunkIds.get(uploadId) match {
-        case Some(savedChunkIdsForUpload) =>
+        case Some((_, savedChunkIdsForUpload)) =>
           savedChunkIdsForUpload.get(filePath) match {
             case Some((_, set)) =>
               set.add(currentChunkNumber) // returns true if isNewChunk
@@ -76,7 +77,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           uploadChunksForUpload.put(
             filePath,
             (resumableUploadInformation.totalChunkCount, mutable.HashSet[Int](currentChunkNumber)))
-          allSavedChunkIds.put(uploadId, uploadChunksForUpload)
+          allSavedChunkIds.put(uploadId, (totalFileCount, uploadChunksForUpload))
           true // isNewChunk
       }
     }
@@ -93,7 +94,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       } catch {
         case e: Exception =>
           allSavedChunkIds.synchronized {
-            allSavedChunkIds(uploadId)(filePath)._2.remove(currentChunkNumber)
+            allSavedChunkIds(uploadId)._2(filePath)._2.remove(currentChunkNumber)
           }
           val errorMsg = s"Error receiving chunk $currentChunkNumber for upload ${datasourceId.name}: ${e.getMessage}"
           logger.warn(errorMsg)
@@ -142,13 +143,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] =
     allSavedChunkIds.synchronized {
       allSavedChunkIds.get(uploadId) match {
-        case Some(savedChunkIdsForUpload) =>
-          val allUploaded = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
+        case Some((fileCountForUpload, savedChunkIdsForUpload)) =>
+          val allFilesPresent = fileCountForUpload == savedChunkIdsForUpload.keySet.size
+          val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
             val chunkNumber = entry._2._1
             val savedChunksSet = entry._2._2
             savedChunksSet.size == chunkNumber
           }
-          bool2Fox(allUploaded) ?~> "dataSet.import.incomplete"
+          bool2Fox(allFilesPresent && allFilesComplete) ?~> "dataSet.import.incomplete"
         case None => Fox.failure("dataSet.import.incomplete")
       }
     }

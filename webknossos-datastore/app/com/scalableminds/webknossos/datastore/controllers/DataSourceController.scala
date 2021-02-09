@@ -92,8 +92,9 @@ class DataSourceController @Inject()(
           "resumableChunkNumber" -> number,
           "resumableChunkSize" -> number,
           "resumableTotalChunks" -> longNumber,
+          "totalFileCount" -> number,
           "resumableIdentifier" -> nonEmptyText
-        )).fill(("", "", -1, -1, -1, ""))
+        )).fill(("", "", -1, -1, -1, -1, ""))
 
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         AllowRemoteOrigin {
@@ -102,7 +103,7 @@ class DataSourceController @Inject()(
             .fold(
               hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
               success = {
-                case (name, organization, chunkNumber, chunkSize, totalChunkCount, uploadId) =>
+                case (name, organization, chunkNumber, chunkSize, totalChunkCount, totalFileCount, uploadId) =>
                   val id = DataSourceId(name, organization)
                   val resumableUploadInformation = ResumableUploadInformation(chunkSize, totalChunkCount)
                   for {
@@ -114,6 +115,7 @@ class DataSourceController @Inject()(
                                                          id,
                                                          resumableUploadInformation,
                                                          chunkNumber,
+                                                         totalFileCount,
                                                          new File(chunkFile.ref.path.toString))
                   } yield {
                     Ok

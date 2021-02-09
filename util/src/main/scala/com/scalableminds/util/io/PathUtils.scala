@@ -7,6 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
 
 import scala.collection.JavaConverters._
+import scala.reflect.io.Directory
 
 object PathUtils extends PathUtils
 
@@ -102,7 +103,7 @@ trait PathUtils extends LazyLogging {
     }
 
   // not following symlinks
-  def listDirectoriesRaw(directory: Path) = Box[List[Path]] {
+  def listDirectoriesRaw(directory: Path): Box[List[Path]] =
     try {
       val directoryStream = Files.walk(directory, 1)
       val r = directoryStream.iterator().asScala.toList
@@ -115,7 +116,6 @@ trait PathUtils extends LazyLogging {
         logger.error(ex.getClass.getCanonicalName)
         Failure(errorMsg)
     }
-  }
 
   /*
    * removes the end of a path, after the last occurence of any of excludeFromPrefix
@@ -150,6 +150,14 @@ trait PathUtils extends LazyLogging {
         prefix.subpath(0, prefix.getNameCount - 1)
       case _ => prefix
     }
+  }
+
+  def deleteDirectoryRecursively(path: Path): Box[Unit] = {
+    val directory = new Directory(new File(path.toString))
+    if (!directory.exists) return Full(())
+    if (directory.deleteRecursively()) {
+      Full(())
+    } else Failure(f"Failed to delete directory $path")
   }
 
 }

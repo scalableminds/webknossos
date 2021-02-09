@@ -10,14 +10,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
 import net.liftweb.common._
+import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.io.Directory
 
 case class ResumableUploadInformation(chunkSize: Int, totalChunkCount: Long)
 
@@ -36,17 +35,18 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     with FoxImplicits {
 
   val dataBaseDir: Path = dataSourceService.dataBaseDir
+  private val uploadingDir: String = ".uploading"
 
   // structure: uploadId → (fileCount, fileName → (totalChunkCount, receivedChunkIndices))
   val allSavedChunkIds: mutable.HashMap[String, (Long, mutable.HashMap[String, (Long, mutable.HashSet[Int])])] =
     mutable.HashMap.empty
 
-  cleanUpOrphanFileChunks()
+  cleanUpOrphanUploads()
 
   def isKnownUpload(uploadId: String): Boolean = allSavedChunkIds.synchronized(allSavedChunkIds.contains(uploadId))
 
   def uploadDirectory(organizationName: String, uploadId: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(".uploading").resolve(uploadId)
+    dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)
 
   def handleUploadChunk(uploadFileId: String,
                         datasourceId: DataSourceId,
@@ -163,16 +163,16 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     dataSourceDir
   }
 
-  private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] = {
-    val uploadDirectory = new Directory(new File(uploadDir.toString))
-    val shallowFileList = uploadDirectory.list.toList
-    val shallowFileCount = shallowFileList.length
-    val excludeFromPrefix = Category.values.map(_.toString).toList
-    if (shallowFileCount == 1 && shallowFileList.headOption.exists(_.path.toLowerCase().endsWith(".zip"))) {
-      shallowFileList.headOption.map { file =>
+  private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
+    for {
+      shallowFileList <- PathUtils.listFiles(uploadDir).toFox
+      shallowFileCount = shallowFileList.length
+      excludeFromPrefix = Category.values.map(_.toString).toList
+      firstFile <- shallowFileList.headOption.toFox ?~> "dataSet.import.incomplete"
+      _ <- if (shallowFileCount == 1 && firstFile.toString.toLowerCase.endsWith(".zip")) {
         ZipIO
           .unzipToFolder(
-            new File(file.toString()),
+            new File(firstFile.toString),
             unpackToDir,
             includeHiddenFiles = false,
             truncateCommonPrefix = true,
@@ -180,48 +180,49 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           )
           .toFox
           .map(_ => ())
-      }.getOrElse(Fox.successful(()))
-    } else {
-      for {
-        deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, maxDepth = 10).toFox
-        commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
-        strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
-        commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
-                                                                deepFileList.map(_.getFileName.toString))
-        _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString)))
-      } yield ()
-    }
-  }
+      } else {
+        for {
+          deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, maxDepth = 10).toFox
+          commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
+          strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
+          commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
+                                                                  deepFileList.map(_.getFileName.toString))
+          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString)))
+        } yield ()
+      }
+    } yield ()
 
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String): Unit = {
     allSavedChunkIds.synchronized {
       allSavedChunkIds.remove(uploadId)
     }
     this.synchronized {
-      val directory = new Directory(new File(uploadDir.toString))
-      if (directory.exists)
-        directory.deleteRecursively()
-      ()
+      PathUtils.deleteDirectoryRecursively(uploadDir)
     }
   }
 
-  def cleanUpOrphanFileChunks(): Box[Unit] =
-    PathUtils
-      .listFiles(dataBaseDir, PathUtils.fileExtensionFilter("temp"))
-      .map { tempUploadFiles =>
-        val uploadIds = tempUploadFiles.map { uploadFile =>
-          // file name format is .${uploadId}.temp
-          val uploadId = uploadFile.getFileName.toString.drop(1).dropRight(5)
-          if (!isKnownUpload(uploadId)) {
-            try {
-              uploadFile.toFile.delete()
-            } catch {
-              case _: Exception => println(s"Could not delete file $uploadId")
-            }
+  private def cleanUpOrphanUploads(): Fox[Unit] =
+    for {
+      organizationDirs <- PathUtils.listDirectories(dataBaseDir).toFox
+      _ <- Fox.serialCombined(organizationDirs)(cleanUpOrphanUploadsForOrga)
+    } yield ()
+
+  private def cleanUpOrphanUploadsForOrga(organizationDir: Path): Fox[Unit] = {
+    val orgaUploadingDir: Path = organizationDir.resolve(uploadingDir)
+    if (!Files.exists(orgaUploadingDir)) return Fox.successful(())
+    for {
+      uploadDirs <- PathUtils.listDirectories(orgaUploadingDir).toFox
+      _ = uploadDirs.foreach { uploadDir =>
+        if (!isKnownUpload(uploadDir.getFileName.toString)) {
+          val deleteResult = PathUtils.deleteDirectoryRecursively(uploadDir)
+          if (deleteResult.isDefined) {
+            logger.info(f"Deleted orphan dataset upload at $uploadDir")
+          } else {
+            logger.warn(f"Failed to delete orphan dataset upload at $uploadDir")
           }
-          uploadId
-        }.mkString(", ")
-        if (uploadIds != "") println(s"Deleted the following $uploadIds")
+        }
       }
-      .map(_ => ())
+    } yield ()
+  }
+
 }

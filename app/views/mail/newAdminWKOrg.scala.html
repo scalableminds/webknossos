@@ -1,4 +1,4 @@
-@(name: String, demoDatasetUrl: String)
+@(name: String, demoDatasetUrl: String, tutorialVideoUrl: String)
 
 @emailBaseTemplate() {
   <p>Hi @name,</p>
@@ -15,7 +15,7 @@
       <a href="https://webknossos.org/datasets/upload">Upload your own dataset</a>. Datasets are private by default and you can securely share them with your collaborators.
     </li>
     <li>
-      Watch a short video to <a href="https://webknossos.org/datasets/upload">learn how to create annotations</a> in webKnossos.
+      Watch a short video to <a href="@tutorialVideoUrl">learn how to create annotations</a> in webKnossos.
     </li>
     <li>
       <a href="https://webknossos.org/users">Invite colleagues</a> from your lab or external collaborators to securely work with your data.

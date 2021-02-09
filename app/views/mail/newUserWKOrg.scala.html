@@ -1,4 +1,4 @@
-@(name: String, enableAutoVerify: Boolean, demoDatasetUrl: String) 
+@(name: String, enableAutoVerify: Boolean, demoDatasetUrl: String, tutorialVideoUrl: String) 
 
 @emailBaseTemplate() {
 
@@ -22,7 +22,7 @@
       There are <a href="https://webknossos.org/publications">many published datasets</a> from the scientific community ready to be explored.
     </li>
     <li>
-      Watch a short video to <a href="https://webknossos.org/datasets/upload">learn how to create annotations</a> in webKnossos.
+      Watch a short video to <a href="@tutorialVideoUrl">learn how to create annotations</a> in webKnossos.
     </li>
   </ul>
 

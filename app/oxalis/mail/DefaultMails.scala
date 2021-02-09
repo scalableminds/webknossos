@@ -19,6 +19,7 @@ class DefaultMails @Inject()(conf: WkConf) {
   private val wkOrgSender = conf.Mail.demoSender
   private val newOrganizationMailingList = conf.WebKnossos.newOrganizationMailingList
   private val demoDatasetUrl = conf.Features.publicDemoDatasetUrl
+  private val tutorialVideoUrl = "https://youtu.be/W-dosptovEU?t=52"
 
   def registerAdminNotifyerMail(name: String,
                                 email: String,
@@ -58,7 +59,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = wkOrgSender,
       subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify, demoDatasetUrl).body,
+      bodyHtml = html.mail.newUserWKOrg(name, enableAutoVerify, demoDatasetUrl, tutorialVideoUrl).body,
       recipients = List(receiver)
     )
 
@@ -66,7 +67,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = wkOrgSender,
       subject = "Welcome to webKnossos",
-      bodyHtml = html.mail.newAdminWKOrg(name, demoDatasetUrl).body,
+      bodyHtml = html.mail.newAdminWKOrg(name, demoDatasetUrl, tutorialVideoUrl).body,
       recipients = List(receiver)
     )
 

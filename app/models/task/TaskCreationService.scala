@@ -12,7 +12,15 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationState, AnnotationType, TracingStoreRpcClient, TracingStoreService}
+import models.annotation.{
+  Annotation,
+  AnnotationDAO,
+  AnnotationService,
+  AnnotationState,
+  AnnotationType,
+  TracingStoreRpcClient,
+  TracingStoreService
+}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}

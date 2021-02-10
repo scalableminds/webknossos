@@ -303,8 +303,7 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
       rows.map(r => (r.domain, r.value)).toMap
     }
 
-  def updateExperiencesForUser(user: User, experiences: Map[String, Int])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateExperiencesForUser(user: User, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${user._id}"
     val insertQueries = experiences.map {
       case (domain, value) =>
@@ -313,14 +312,14 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
     for {
       _ <- userDAO.assertUpdateAccess(user._id)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
-      _ <- Fox.serialCombined(experiences.keySet.toList)(domain => insertExperienceToListing(domain, user._organization))
+      _ <- Fox.serialCombined(experiences.keySet.toList)(domain =>
+        insertExperienceToListing(domain, user._organization))
     } yield ()
   }
 
   def insertExperienceToListing(experienceDomain: String, organizationId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(
-        sqlu"""INSERT INTO webknossos.experienceDomains(domain, _organization)
+      _ <- run(sqlu"""INSERT INTO webknossos.experienceDomains(domain, _organization)
               values($experienceDomain, $organizationId) ON CONFLICT DO NOTHING;""")
     } yield ()
 

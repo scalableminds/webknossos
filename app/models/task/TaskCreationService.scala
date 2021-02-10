@@ -12,19 +12,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import javax.inject.Inject
 import models.annotation.nml.NmlResults.TracingBoxContainer
-import models.annotation.{
-  Annotation,
-  AnnotationDAO,
-  AnnotationService,
-  AnnotationState,
-  AnnotationType,
-  TracingStoreRpcClient,
-  TracingStoreService
-}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationState, AnnotationType, TracingStoreRpcClient, TracingStoreService}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.team.{Team, TeamDAO}
-import models.user.{User, UserService, UserTeamRolesDAO}
+import models.user.{User, UserExperiencesDAO, UserService, UserTeamRolesDAO}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import oxalis.telemetry.SlackNotificationService.SlackNotificationService
 import play.api.i18n.{Messages, MessagesProvider}
@@ -44,6 +36,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                                     slackNotificationService: SlackNotificationService,
                                     projectDAO: ProjectDAO,
                                     annotationDAO: AnnotationDAO,
+                                    userExperiencesDAO: UserExperiencesDAO,
                                     scriptDAO: ScriptDAO,
                                     dataSetDAO: DataSetDAO,
                                     tracingStoreService: TracingStoreService,
@@ -521,6 +514,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
         creationInfo = params.creationInfo
       )
       _ <- taskDAO.insertOne(task)
+      _ <- userExperiencesDAO.insertExperienceToListing(params.neededExperience.domain, requestingUser._organization)
     } yield task
 
   private def taskToJsonWithOtherFox(taskFox: Fox[Task], otherFox: Fox[Unit])(

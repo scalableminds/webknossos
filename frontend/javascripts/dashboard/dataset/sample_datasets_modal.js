@@ -24,7 +24,7 @@ function useSampleDatasets(
   const [failedDatasets, setFailedDatasets] = useState([]);
   const [pendingDatasets, setPendingDatasets] = useState([]);
   // Pick any non-wk-connect datastore - This feature will almost always be used if there is only one datastore anyways
-  const datastore = useFetch(getDatastores, [], []).find(ds => !ds.isConnector);
+  const datastore = useFetch(getDatastores, [], []).find(ds => !ds.isConnector && ds.allowsUpload);
 
   const updateFailedDatasets = sampleDatasets => {
     // Datasets that were pending, but are now available again, failed to download

@@ -12,3 +12,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [061-userinfos-view.sql](conf/evolutions/061-userinfos-view)
 - [062-dataset-uploader.sql](conf/evolutions/062-dataset-uploader.sql)
 - [063-novelUserExperienceinfos.sql](conf/evolutions/063-novelUserExperienceinfos.sql)
+- [065-unlisted-superusers.sql](conf/evolutions/065-unlisted-superusers.sql)

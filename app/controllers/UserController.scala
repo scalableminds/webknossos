@@ -342,7 +342,6 @@ class UserController @Inject()(userService: UserService,
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          oldMultiUser <- multiUserDAO.findOne(user._multiUser)
           _ <- userService.update(user,
                                   firstName.trim,
                                   lastName.trim,

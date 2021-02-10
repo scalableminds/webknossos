@@ -34,6 +34,7 @@ case class User(
     isAdmin: Boolean,
     isDatasetManager: Boolean,
     isDeactivated: Boolean,
+    isUnlisted: Boolean,
     created: Long = System.currentTimeMillis(),
     lastTaskTypeId: Option[ObjectId] = None,
     isDeleted: Boolean = false
@@ -80,6 +81,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isadmin,
         r.isdatasetmanager,
         r.isdeactivated,
+        r.isunlisted,
         r.created.getTime,
         r.lasttasktypeid.map(ObjectId(_)),
         r.isdeleted

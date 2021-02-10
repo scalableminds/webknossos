@@ -3,7 +3,7 @@
 
 START TRANSACTION;
 
-ALTER TABLE webknossos.experienceDomains DROP CONSTRAINT experiencedomains_pkey;
+ALTER TABLE webknossos.experienceDomains DROP CONSTRAINT primarykey__domain_orga;
 ALTER TABLE webknossos.experienceDomains DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.experienceDomains DROP COLUMN _organization;
 ALTER TABLE webknossos.experienceDomains ADD CONSTRAINT experiencedomains_pkey PRIMARY KEY (domain);

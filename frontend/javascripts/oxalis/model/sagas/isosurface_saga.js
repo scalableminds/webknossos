@@ -153,9 +153,11 @@ function* ensureSuitableIsosurface(
   removeExistingIsosurface: boolean = false,
 ): Saga<void> {
   const segmentId = cellId != null ? cellId : currentViewIsosurfaceCellId;
-  if (segmentId === 0) {
+  const layer = Model.getSegmentationLayer();
+  if (segmentId === 0 || layer == null) {
     return;
   }
+
   yield* call(loadIsosurfaceForSegmentId, segmentId, seedPosition, removeExistingIsosurface);
 }
 

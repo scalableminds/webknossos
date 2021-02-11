@@ -59,13 +59,13 @@ function* restartableSaga(): Saga<void> {
       _call(watchMaximumRenderableLayers),
     ]);
   } catch (err) {
-    console.error(err);
+    console.error("The sagas crashed because of the following error:", err);
     ErrorHandling.notify(err, {});
     toggleErrorHighlighting(true);
     alert(`\
 Internal error.
 Please reload the page to avoid losing data.
 
-${err} ${err.stack}`);
+${JSON.stringify(err)} ${err.stack || ""}`);
   }
 }

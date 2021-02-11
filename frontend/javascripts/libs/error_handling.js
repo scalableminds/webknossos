@@ -144,8 +144,10 @@ class ErrorHandling {
     };
   }
 
-  notify(error: Error, optParams: Object = {}) {
+  notify(maybeError: Object | Error, optParams: Object = {}) {
     const actionLog = getActionLog();
+    const error = maybeError instanceof Error ? maybeError : new Error(JSON.stringify(maybeError));
+
     this.airbrake.notify({ error, params: { ...optParams, actionLog } });
   }
 

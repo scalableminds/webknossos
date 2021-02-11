@@ -191,7 +191,7 @@ class UserService @Inject()(conf: WkConf,
                                 isDeactivated = !activated,
                                 lastTaskTypeId)
       _ <- userTeamRolesDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
-      _ <- userExperiencesDAO.updateExperiencesForUser(user._id, experiences)
+      _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = userCache.invalidateUser(user._id)
       _ <- if (oldEmail == email) Fox.successful(()) else tokenDAO.updateEmail(oldEmail, email)
       updated <- userDAO.findOne(user._id)

@@ -88,6 +88,11 @@ function* handleLocalUpdateMesh(action: UpdateLocalMeshMetaDataAction): Saga<voi
 
 function* createMeshFromBuffer(action: CreateMeshFromBufferAction): Saga<void> {
   const annotationId = yield* select(store => store.tracing.annotationId);
+  const allowUpdate = yield* select(store => store.tracing.restrictions.allowUpdate);
+  if (!allowUpdate) {
+    return;
+  }
+
   // Parse and persist STL in parallel
   const [geometry, meshMetaData] = yield _all([
     _call(parseStlBuffer, action.buffer),

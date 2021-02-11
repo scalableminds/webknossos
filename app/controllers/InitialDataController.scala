@@ -87,6 +87,7 @@ Samplecountry
     userService.createLoginInfo(userId),
     isAdmin = true,
     isDatasetManager = true,
+    isUnlisted = false,
     isDeactivated = false,
     lastTaskTypeId = None
   )

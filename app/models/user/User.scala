@@ -34,6 +34,7 @@ case class User(
     isAdmin: Boolean,
     isDatasetManager: Boolean,
     isDeactivated: Boolean,
+    isUnlisted: Boolean,
     created: Long = System.currentTimeMillis(),
     lastTaskTypeId: Option[ObjectId] = None,
     isDeleted: Boolean = false
@@ -80,6 +81,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.isadmin,
         r.isdatasetmanager,
         r.isdeactivated,
+        r.isunlisted,
         r.created.getTime,
         r.lasttasktypeid.map(ObjectId(_)),
         r.isdeleted
@@ -104,7 +106,9 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
+      r <- run(
+        sql"select #${columns} from #${existingCollectionName} where isUnlisted = false and #${accessQuery}"
+          .as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -117,6 +121,7 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r <- run(sql"""select #${columnsWithPrefix("u.")}
                          from (select #${columns} from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
+                               and u.isUnlisted = false
                                and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})
                          order by _id""".as[UsersRow])
         parsed <- Fox.combined(r.toList.map(parse))
@@ -190,11 +195,12 @@ class UserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(u: User): Fox[Unit] =
     for {
       _ <- run(sqlu"""insert into webknossos.users(_id, _multiUser, _organization, firstName, lastName, lastActivity,
-                                            userConfiguration, isDeactivated, isAdmin, isDatasetManager, created, isDeleted)
+                                            userConfiguration, isDeactivated, isAdmin, isDatasetManager, isUnlisted, created, isDeleted)
                      values(${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
                             ${new java.sql.Timestamp(u.lastActivity)}, '#${sanitize(
         Json.toJson(u.userConfiguration).toString)}',
-                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+                     ${u.isDeactivated}, ${u.isAdmin}, ${u.isDatasetManager}, ${u.isUnlisted}, ${new java.sql.Timestamp(
+        u.created)}, ${u.isDeleted})
           """)
     } yield ()
 

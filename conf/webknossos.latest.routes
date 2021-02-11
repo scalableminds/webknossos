@@ -47,6 +47,7 @@ GET           /user/loggedTime                                                  
 GET           /users/:id                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                             controllers.UserController.updateLastTaskTypeId(id: String)
+PUT           /users/:id/novelUserExperienceInfos                               controllers.UserController.updateNovelUserExperienceInfos(id: String)
 GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                 controllers.UserController.usersLoggedTime

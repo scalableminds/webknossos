@@ -90,7 +90,7 @@ class StatisticView extends React.PureComponent<{}, State> {
 
   selectDataPoint = ({ chartWrapper }: GoogleCharts) => {
     const chart = chartWrapper.getChart();
-    const indicies = chart.getSelection().selection[0];
+    const indicies = chart.getSelection()[0];
     const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {

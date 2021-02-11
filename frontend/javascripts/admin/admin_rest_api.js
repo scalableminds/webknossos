@@ -170,6 +170,29 @@ export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   });
 }
 
+export function updateNovelUserExperienceInfos(
+  user: APIUser,
+  novelUserExperienceShape: Object,
+): [APIUser, Promise<APIUser>] {
+  const novelUserExperienceInfos = {
+    ...user.novelUserExperienceInfos,
+    ...novelUserExperienceShape,
+  };
+  const newUserSync = {
+    ...user,
+    novelUserExperienceInfos,
+  };
+  const newUserAsync = Request.sendJSONReceiveJSON(
+    `/api/users/${user.id}/novelUserExperienceInfos`,
+    {
+      method: "PUT",
+      data: novelUserExperienceInfos,
+    },
+  );
+
+  return [newUserSync, newUserAsync];
+}
+
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,

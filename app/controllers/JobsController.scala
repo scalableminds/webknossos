@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.rpc.{RPC, RPCRequest}
 import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, RunJobEvent}
 import models.team.OrganizationDAO
 import models.user.User
 import net.liftweb.common.{Failure, Full}
@@ -76,7 +77,7 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 }
 
-class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec: ExecutionContext)
+class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsService: AnalyticsService)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 
@@ -124,6 +125,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC)(implicit ec
       celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
       job = Job(ObjectId.generate, owner._id, command, commandArgs, celeryJobId)
       _ <- jobDAO.insertOne(job)
+      _ = analyticsService.note(RunJobEvent(owner, command))
     } yield job
 
   private def flowerRpc(route: String): RPCRequest =

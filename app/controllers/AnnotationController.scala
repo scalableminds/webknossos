@@ -18,8 +18,9 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, _}
 import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
-
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -41,6 +42,7 @@ class AnnotationController @Inject()(
     tracingStoreService: TracingStoreService,
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
+    analyticsService: AnalyticsService,
     conf: WkConf,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -65,6 +67,9 @@ class AnnotationController @Inject()(
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
             timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
           } else Fox.successful(())
+        }
+        _ <- request.identity.map { user =>
+          analyticsService.note(OpenAnnotationEvent(user, annotation))
         }
       } yield {
         Ok(js)
@@ -156,6 +161,7 @@ class AnnotationController @Inject()(
           dataSet._id,
           tracingType,
           request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
+        _ = analyticsService.note(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
       } yield {
         JsonOk(json)

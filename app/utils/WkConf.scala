@@ -102,6 +102,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val publicDemoDatasetUrl = get[String]("features.publicDemoDatasetUrl")
   }
 
+  object BackendAnalytics {
+    val uri = get[String]("backendAnalytics.uri")
+    val key = get[String]("backendAnalytics.key")
+  }
+
   val operatorData = get[String]("operatorData")
 
   object Silhouette {
@@ -162,5 +167,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
          Silhouette,
          Airbrake,
          Google,
+         BackendAnalytics,
          Jobs)
 }

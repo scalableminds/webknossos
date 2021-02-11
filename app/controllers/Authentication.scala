@@ -31,6 +31,7 @@ import java.net.URLEncoder
 import com.mohiva.play.silhouette.api.actions.SecuredRequest
 import com.mohiva.play.silhouette.api.services.AuthenticatorResult
 import javax.inject.Inject
+import models.analytics.{AnalyticsService, SignupEvent}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -124,6 +125,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                inviteDAO: InviteDAO,
                                brainTracing: BrainTracing,
                                organizationDAO: OrganizationDAO,
+                               analyticsService: AnalyticsService,
                                userDAO: UserDAO,
                                multiUserDAO: MultiUserDAO,
                                defaultMails: DefaultMails,
@@ -225,6 +227,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            lastName,
                                            autoActivate,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
+                _ = analyticsService.note(SignupEvent(user, inviteBox.isDefined))
                 _ <- Fox.runOptional(inviteBox.toOption)(i =>
                   inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox

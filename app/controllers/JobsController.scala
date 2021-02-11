@@ -77,7 +77,8 @@ class JobDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
 }
 
-class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsService: AnalyticsService)(implicit ec: ExecutionContext)
+class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsService: AnalyticsService)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
 

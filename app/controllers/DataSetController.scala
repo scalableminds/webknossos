@@ -217,7 +217,9 @@ class DataSetController @Inject()(userService: UserService,
           // Access checked above via dataset. In case of shared dataset/annotation, show datastore even if not otherwise accessible
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
-          _ = request.identity.map { user => analyticsService.note(OpenDatasetEvent(user, dataSet)) }
+          _ = request.identity.map { user =>
+            analyticsService.note(OpenDatasetEvent(user, dataSet))
+          }
         } yield {
           Ok(Json.toJson(js))
         }

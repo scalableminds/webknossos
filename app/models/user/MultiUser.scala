@@ -108,7 +108,7 @@ class MultiUserDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
-      idList <- run(sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[Int])
+      idList <- run(sql"select _id from #$existingCollectionName where email = $email and #$accessQuery".as[String])
     } yield idList.isEmpty
 
 }

@@ -303,18 +303,25 @@ class UserExperiencesDAO @Inject()(sqlClient: SQLClient, userDAO: UserDAO)(impli
       rows.map(r => (r.domain, r.value)).toMap
     }
 
-  def updateExperiencesForUser(userId: ObjectId, experiences: Map[String, Int])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId}"
+  def updateExperiencesForUser(user: User, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${user._id}"
     val insertQueries = experiences.map {
       case (domain, value) =>
-        sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId}, ${domain}, ${value})"
+        sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${user._id}, ${domain}, ${value})"
     }
     for {
-      _ <- userDAO.assertUpdateAccess(userId)
+      _ <- userDAO.assertUpdateAccess(user._id)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
+      _ <- Fox.serialCombined(experiences.keySet.toList)(domain =>
+        insertExperienceToListing(domain, user._organization))
     } yield ()
   }
+
+  def insertExperienceToListing(experienceDomain: String, organizationId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""INSERT INTO webknossos.experienceDomains(domain, _organization)
+              values($experienceDomain, $organizationId) ON CONFLICT DO NOTHING;""")
+    } yield ()
 
 }
 

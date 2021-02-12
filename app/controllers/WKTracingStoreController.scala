@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, IsosurfaceRequestEvent}
+import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UpdateAnnotationEvent}
 import models.annotation.AnnotationState._
 import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
@@ -47,7 +47,7 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
         userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
         _ <- Fox.runOptional(userBox)(user =>
           timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
-        _ <- Fox.runOptional(userBox)(user => analyticsService.track(UpdateAnnotationEvent(user, annotation)))
+        _ = userBox.map(user => analyticsService.track(UpdateAnnotationEvent(user, annotation)))
       } yield {
         Ok
       }

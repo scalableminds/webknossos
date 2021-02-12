@@ -2,12 +2,11 @@ package models.analytics
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.Annotation
-import models.binary.{DataSet, DataSetService, DataStore}
+import models.binary.{DataSet, DataStore}
 import models.team.Organization
 import models.user.{User, UserDAO}
 import org.joda.time.DateTime
@@ -40,13 +39,13 @@ class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpServic
 
 }
 
-class AnalyticsLookUpService @Inject()(userDAO: UserDAO, dataSetService: DataSetService) extends LazyLogging {
+class AnalyticsLookUpService @Inject()(userDAO: UserDAO, wkConf: WkConf) extends LazyLogging {
   def multiUserIdFor(userId: ObjectId): Fox[String] =
     for {
       user <- userDAO.findOne(userId)(GlobalAccessContext)
     } yield user._multiUser.id
 
-  def dataSourceFor(dataSet: DataSet): Fox[InboxDataSource] = dataSetService.dataSourceFor(dataSet)
+  def webknossos_uri: String = wkConf.Http.uri
 }
 
 trait AnalyticsEvent {
@@ -66,6 +65,8 @@ trait AnalyticsEvent {
       Json.obj(
         "event_type" -> eventType,
         "user_id" -> userId,
+        "time" -> timestamp,
+        "webknossos_uri" -> analyticsLookUpService.webknossos_uri,
         "user_properties" -> userProperties,
         "event_properties" -> eventProperties,
       )

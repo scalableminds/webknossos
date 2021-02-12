@@ -218,7 +218,7 @@ class DataSetController @Inject()(userService: UserService,
           dataStore <- dataSetService.dataStoreFor(dataSet)(GlobalAccessContext)
           js <- dataSetService.publicWrites(dataSet, request.identity, organization, dataStore)
           _ = request.identity.map { user =>
-            analyticsService.note(OpenDatasetEvent(user, dataSet))
+            analyticsService.track(OpenDatasetEvent(user, dataSet))
           }
         } yield {
           Ok(Json.toJson(js))

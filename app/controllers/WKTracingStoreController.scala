@@ -3,15 +3,15 @@ package controllers
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
-import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
-import models.user.time.TimeSpanService
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
-import com.mohiva.play.silhouette.api.Silhouette
-import play.api.libs.json.{JsObject, Json}
+import models.analytics.{AnalyticsService, IsosurfaceRequestEvent}
 import models.annotation.AnnotationState._
+import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
 import models.binary.{DataSetDAO, DataSetService}
 import models.team.OrganizationDAO
+import models.user.time.TimeSpanService
+import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
@@ -21,15 +21,16 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
                                          timeSpanService: TimeSpanService,
                                          dataSetService: DataSetService,
                                          organizationDAO: OrganizationDAO,
+                                         analyticsService: AnalyticsService,
                                          dataSetDAO: DataSetDAO,
-                                         annotationDAO: AnnotationDAO,
-                                         sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                         annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
-  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+  val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
+    wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def handleTracingUpdateReport(name: String) = Action.async(parse.json) { implicit request =>
+  def handleTracingUpdateReport(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     tracingStoreService.validateAccess(name) { _ =>
       for {
         tracingId <- (request.body \ "tracingId").asOpt[String].toFox
@@ -46,10 +47,21 @@ class WKTracingStoreController @Inject()(tracingStoreService: TracingStoreServic
         userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
         _ <- Fox.runOptional(userBox)(user =>
           timeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
+        _ <- Fox.runOptional(userBox)(user => analyticsService.track(UpdateAnnotationEvent(user, annotation)))
       } yield {
         Ok
       }
     }
+  }
+
+  def reportIsosurfaceRequest(name: String, token: Option[String]): Action[AnyContent] = Action.async {
+    implicit request =>
+      tracingStoreService.validateAccess(name) { _ =>
+        for {
+          userOpt <- Fox.runOptional(token)(bearerTokenService.userForToken(_)(GlobalAccessContext))
+          _ = userOpt.map(user => analyticsService.track(IsosurfaceRequestEvent(user, "annotation")))
+        } yield Ok
+      }
   }
 
   private def ensureAnnotationNotFinished(annotation: Annotation) =

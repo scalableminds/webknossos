@@ -227,7 +227,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                            lastName,
                                            autoActivate,
                                            passwordHasher.hash(signUpData.password)) ?~> "user.creation.failed"
-                _ = analyticsService.note(SignupEvent(user, inviteBox.isDefined))
+                _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
                 _ <- Fox.runOptional(inviteBox.toOption)(i =>
                   inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
                 brainDBResult <- brainTracing.registerIfNeeded(user, signUpData.password).toFox
@@ -320,7 +320,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
-      _ = analyticsService.note(JoinOrganizationEvent(request.identity, organization))
+      _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       _ = Mailer ! Send(
         defaultMails
@@ -334,7 +334,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
       for {
         _ <- Fox.serialCombined(request.body.recipients)(recipient =>
           inviteService.inviteOneRecipient(recipient, request.identity, request.body.autoActivate))
-        _ = analyticsService.note(InviteEvent(request.identity, request.body.recipients.length))
+        _ = analyticsService.track(InviteEvent(request.identity, request.body.recipients.length))
       } yield Ok
   }
 
@@ -516,7 +516,7 @@ class Authentication @Inject()(actorSystem: ActorSystem,
                                                isActive = true,
                                                passwordHasher.hash(signUpData.password),
                                                isAdmin = true) ?~> "user.creation.failed"
-                    _ = analyticsService.note(SignupEvent(user, hadInvite = false))
+                    _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     _ <- createOrganizationFolder(organization.name, user.loginInfo) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(

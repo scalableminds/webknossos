@@ -2,11 +2,12 @@ package models.analytics
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.annotation.Annotation
-import models.binary.DataSet
+import models.binary.{DataSet, DataSetService, DataStore}
 import models.team.Organization
 import models.user.{User, UserDAO}
 import org.joda.time.DateTime
@@ -18,32 +19,34 @@ import scala.concurrent.ExecutionContext
 class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpService: AnalyticsLookUpService)(
     implicit ec: ExecutionContext)
     extends LazyLogging {
-  def note(analyticsEvent: AnalyticsEvent): Unit = {
-    noteBlocking(analyticsEvent)
-    ()
-  }
 
-  private def noteBlocking(analyticsEvent: AnalyticsEvent): Fox[Unit] =
+  def track(analyticsEvent: AnalyticsEvent): Unit = {
     for {
       analyticsJson <- analyticsEvent.toJson(analyticsLookUpService)
       _ <- send(analyticsJson)
     } yield ()
+    () // Do not return the Future, so as to not block caller
+  }
 
-  private def send(analyticsJson: JsObject): Fox[Unit] = {
+  private def send(analyticsEventJson: JsObject): Fox[Unit] = {
     if (wkConf.BackendAnalytics.uri == "") {
-      logger.info(s"Not sending Analytics event, since uri is not configured. Event was: $analyticsJson")
+      logger.info(s"Not sending Analytics event, since uri is not configured. Event was: $analyticsEventJson")
     } else {
-      // TODO: send POST request
+      val wrappedJson = Json.obj("api_key" -> wkConf.BackendAnalytics.key, "events" -> List(analyticsEventJson))
+      rpc(wkConf.BackendAnalytics.uri).postJson(wrappedJson)
     }
     Fox.successful(())
   }
+
 }
 
-class AnalyticsLookUpService @Inject()(userDAO: UserDAO) extends LazyLogging {
+class AnalyticsLookUpService @Inject()(userDAO: UserDAO, dataSetService: DataSetService) extends LazyLogging {
   def multiUserIdFor(userId: ObjectId): Fox[String] =
     for {
       user <- userDAO.findOne(userId)(GlobalAccessContext)
     } yield user._multiUser.id
+
+  def dataSourceFor(dataSet: DataSet): Fox[InboxDataSource] = dataSetService.dataSourceFor(dataSet)
 }
 
 trait AnalyticsEvent {
@@ -122,6 +125,13 @@ case class DownloadAnnotationEvent(user: User, annotationId: String, annotationT
     Fox.successful(Json.obj("annotation_id" -> annotationId, "annotation_type" -> annotationType))
 }
 
+case class UpdateAnnotationEvent(user: User, annotation: Annotation)(implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "update_annotation"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("annotation_id" -> annotation._id.id))
+}
+
 case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext) extends AnalyticsEvent {
   def eventType: String = "open_dataset"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
@@ -130,7 +140,7 @@ case class OpenDatasetEvent(user: User, dataSet: DataSet)(implicit ec: Execution
         analyticsLookUpService.multiUserIdFor(uploader))
     } yield {
       Json.obj(
-        "dataset_id" -> dataSet._id,
+        "dataset_id" -> dataSet._id.id,
         "dataset_name" -> dataSet.name,
         "dataset_organization_id" -> dataSet._organization.id,
         "dataset_uploader_multiuser_id" -> uploader_multiuser_id
@@ -142,4 +152,25 @@ case class RunJobEvent(user: User, command: String)(implicit ec: ExecutionContex
   def eventType: String = "run_job"
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("command" -> command))
+}
+
+case class UploadDatasetEvent(user: User, dataSet: DataSet, dataStore: DataStore, dataSetSizeBytes: Long)(
+    implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "upload_dataset"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(
+      Json.obj(
+        "dataset_id" -> dataSet._id.id,
+        "dataset_name" -> dataSet.name,
+        "dataset_size_bytes" -> dataSetSizeBytes,
+        "datastore_uri" -> dataStore.publicUrl,
+        "dataset_organization_id" -> dataSet._organization.id
+      ))
+}
+
+case class IsosurfaceRequestEvent(user: User, mode: String)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+  def eventType: String = "request_isosurface"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("mode" -> mode))
 }

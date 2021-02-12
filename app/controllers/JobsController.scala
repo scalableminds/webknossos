@@ -126,7 +126,7 @@ class JobService @Inject()(wkConf: WkConf, jobDAO: JobDAO, rpc: RPC, analyticsSe
       celeryJobId <- result("task-id").validate[String].toFox ?~> "Could not parse job submit answer"
       job = Job(ObjectId.generate, owner._id, command, commandArgs, celeryJobId)
       _ <- jobDAO.insertOne(job)
-      _ = analyticsService.note(RunJobEvent(owner, command))
+      _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
   private def flowerRpc(route: String): RPCRequest =

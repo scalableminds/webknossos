@@ -108,7 +108,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
                                                        AnnotationType.Explorational,
                                                        name,
                                                        description)
-            _ = analyticsService.note(UploadAnnotationEvent(request.identity, annotation))
+            _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
           } yield
             JsonOk(
               Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
@@ -212,7 +212,7 @@ class AnnotationIOController @Inject()(nmlWriter: NmlWriter,
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
         identifier <- AnnotationIdentifier.parse(typ, id)
-        _ = analyticsService.note(DownloadAnnotationEvent(request.identity, id, typ))
+        _ = analyticsService.track(DownloadAnnotationEvent(request.identity, id, typ))
         result <- identifier.annotationType match {
           case AnnotationType.View            => Fox.failure("Cannot download View annotation")
           case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))

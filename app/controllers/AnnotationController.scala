@@ -69,7 +69,7 @@ class AnnotationController @Inject()(
           } else Fox.successful(())
         }
         _ <- request.identity.map { user =>
-          analyticsService.note(OpenAnnotationEvent(user, annotation))
+          analyticsService.track(OpenAnnotationEvent(user, annotation))
         }
       } yield {
         Ok(js)
@@ -161,7 +161,7 @@ class AnnotationController @Inject()(
           dataSet._id,
           tracingType,
           request.body.withFallback.getOrElse(true)) ?~> "annotation.create.failed"
-        _ = analyticsService.note(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
+        _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
         json <- annotationService.publicWrites(annotation, Some(request.identity)) ?~> "annotation.write.failed"
       } yield {
         JsonOk(json)

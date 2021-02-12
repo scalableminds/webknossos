@@ -1,40 +1,37 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.typesafe.scalalogging.LazyLogging
+import javax.inject.Inject
+import models.analytics.{AnalyticsService, IsosurfaceRequestEvent, UploadDatasetEvent}
 import models.binary._
-import models.team.{OrganizationDAO, TeamDAO}
-import models.user.UserService
+import models.team.OrganizationDAO
 import net.liftweb.common.Full
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
+import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsError, JsSuccess, JsValue}
-import play.api.mvc.Action
+import play.api.mvc.{Action, AnyContent}
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKDataStoreController @Inject()(dataSetService: DataSetService,
                                       dataStoreService: DataStoreService,
                                       dataStoreDAO: DataStoreDAO,
-                                      userService: UserService,
+                                      analyticsService: AnalyticsService,
                                       organizationDAO: OrganizationDAO,
                                       dataSetDAO: DataSetDAO,
-                                      teamDAO: TeamDAO,
-                                      dataSetAllowedTeamsDAO: DataSetAllowedTeamsDAO,
-                                      wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                      sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                      wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext)
     extends Controller
     with LazyLogging {
 
-  val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+  val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
+    wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def validateDataSetUpload(name: String) = Action.async(parse.json) { implicit request =>
+  def validateDataSetUpload(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
       for {
         uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
@@ -48,7 +45,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     }
   }
 
-  def addDataSetInitialTeams(name: String, token: String, dataSetName: String): Action[JsValue] =
+  def reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
       dataStoreService.validateAccess(name) { dataStore =>
         withJsonBodyAs[List[String]] { teams =>
@@ -57,6 +54,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
             dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, user._organization)(GlobalAccessContext) ?~> Messages(
               "dataSet.notFound",
               dataSetName) ~> NOT_FOUND
+            _ = analyticsService.track(UploadDatasetEvent(user, dataSet, dataStore, dataSetSizeBytes))
             _ <- dataSetService.addInitialTeams(dataSet, teams)(AuthorizedAccessContext(user))
             _ <- dataSetService.addUploader(dataSet, user._id)(AuthorizedAccessContext(user))
           } yield Ok
@@ -64,8 +62,18 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
       }
     }
 
-  def statusUpdate(name: String) = Action.async(parse.json) { implicit request =>
-    dataStoreService.validateAccess(name) { dataStore =>
+  def reportIsosurfaceRequest(name: String, token: Option[String]): Action[AnyContent] = Action.async {
+    implicit request =>
+      dataStoreService.validateAccess(name) { _ =>
+        for {
+          userOpt <- Fox.runOptional(token)(bearerTokenService.userForToken(_)(GlobalAccessContext))
+          _ = userOpt.map(user => analyticsService.track(IsosurfaceRequestEvent(user, "view")))
+        } yield Ok
+      }
+  }
+
+  def statusUpdate(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    dataStoreService.validateAccess(name) { _ =>
       request.body.validate[DataStoreStatus] match {
         case JsSuccess(status, _) =>
           logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
@@ -77,7 +85,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     }
   }
 
-  def updateAll(name: String) = Action.async(parse.json) { implicit request =>
+  def updateAll(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
       request.body.validate[List[InboxDataSource]] match {
         case JsSuccess(dataSources, _) =>
@@ -98,7 +106,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     }
   }
 
-  def updateOne(name: String) = Action.async(parse.json) { implicit request =>
+  def updateOne(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { dataStore =>
       request.body.validate[InboxDataSource] match {
         case JsSuccess(dataSource, _) =>
@@ -114,7 +122,7 @@ class WKDataStoreController @Inject()(dataSetService: DataSetService,
     }
   }
 
-  def deleteErroneous(name: String) = Action.async(parse.json) { implicit request =>
+  def deleteErroneous(name: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
     dataStoreService.validateAccess(name) { _ =>
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"

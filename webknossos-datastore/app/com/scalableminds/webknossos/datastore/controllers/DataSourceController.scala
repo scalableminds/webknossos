@@ -128,9 +128,10 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       AllowRemoteOrigin {
         for {
-          (dataSourceId, initialTeams) <- uploadService.finishUpload(request.body)
+          (dataSourceId, initialTeams, dataSetSizeBytes) <- uploadService.finishUpload(request.body)
           userTokenOpt = accessTokenService.tokenFromRequest(request)
-          _ <- webKnossosServer.postInitialTeams(dataSourceId, initialTeams, userTokenOpt) ?~> "setInitialTeams.failed"
+          _ <- webKnossosServer
+            .reportUpload(dataSourceId, initialTeams, dataSetSizeBytes, userTokenOpt) ?~> "setInitialTeams.failed"
         } yield Ok
       }
     }

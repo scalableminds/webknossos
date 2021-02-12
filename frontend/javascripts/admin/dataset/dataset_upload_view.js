@@ -5,7 +5,7 @@ import React from "react";
 import _ from "lodash";
 
 import { type RouterHistory, withRouter } from "react-router-dom";
-import type { APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
+import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { finishDatasetUpload, createResumableUpload, startJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
@@ -46,6 +46,7 @@ type State = {
   needsConversion: boolean,
   isRetrying: boolean,
   uploadProgress: number,
+  selectedTeams: APITeam | Array<APITeam>,
 };
 
 class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, State> {
@@ -54,6 +55,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
     needsConversion: false,
     isRetrying: false,
     uploadProgress: 0,
+    selectedTeams: [],
   };
 
   static getDerivedStateFromProps(props) {
@@ -328,9 +330,23 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                     <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
                       <TeamSelectionComponent
                         mode="multiple"
-                        onChange={selectedTeams =>
-                          form.setFieldsValue({ initialTeams: selectedTeams })
-                        }
+                        value={this.state.selectedTeams}
+                        onChange={selectedTeams => {
+                          form.setFieldsValue({ initialTeams: selectedTeams });
+                          this.setState({ selectedTeams });
+                        }}
+                        afterFetchedTeams={fetchedTeams => {
+                          if (!features().isDemoInstance) {
+                            return;
+                          }
+                          const teamOfOrganisation = fetchedTeams.find(
+                            team => team.name === team.organization,
+                          );
+                          this.setState({ selectedTeams: teamOfOrganisation });
+                          form.setFieldsValue({
+                            initialTeams: teamOfOrganisation,
+                          });
+                        }}
                       />
                     </Tooltip>,
                   )}

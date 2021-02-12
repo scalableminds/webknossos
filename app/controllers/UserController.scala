@@ -242,26 +242,26 @@ class UserController @Inject()(userService: UserService,
     }
   }
 
-  val userUpdateReader =
+  private val userUpdateReader =
     ((__ \ "firstName").readNullable[String] and
       (__ \ "lastName").readNullable[String] and
       (__ \ "email").readNullable[String] and
       (__ \ "isActive").readNullable[Boolean] and
       (__ \ "isAdmin").readNullable[Boolean] and
       (__ \ "isDatasetManager").readNullable[Boolean] and
-      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads)) and
+      (__ \ "teams").readNullable[List[TeamMembership]](Reads.list(teamMembershipService.publicReads())) and
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
-  def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(implicit m: MessagesProvider) =
+  private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(
+      implicit m: MessagesProvider) =
     Fox.combined(teams.map {
-      case (TeamMembership(_, true), team) => {
+      case (TeamMembership(_, true), team) =>
         for {
           _ <- bool2Fox(team.couldBeAdministratedBy(user)) ?~> Messages("team.admin.notPossibleBy",
                                                                         team.name,
                                                                         user.name) ~> FORBIDDEN
         } yield ()
-      }
       case (_, team) =>
         Fox.successful(())
     })
@@ -299,7 +299,7 @@ class UserController @Inject()(userService: UserService,
       Fox.successful(())
     }
 
-  def update(userId: String) = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
       case (firstNameOpt,
@@ -354,26 +354,34 @@ class UserController @Inject()(userService: UserService,
                                   lastTaskTypeId)
           updatedUser <- userDAO.findOne(userIdValidated)
           updatedJs <- userService.publicWrites(updatedUser, request.identity)
-        } yield {
-          Ok(updatedJs)
-        }
-    }
-  }
-
-  def updateLastTaskTypeId(id: String) = sil.SecuredAction.async(parse.json) { implicit request =>
-    val issuingUser = request.identity
-    withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) {
-      case lastTaskTypeId =>
-        for {
-          userIdValidated <- ObjectId.parse(id) ?~> "user.id.invalid"
-          user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
-          isEditable <- userService.isEditableBy(user, request.identity) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- bool2Fox(isEditable | user._id == issuingUser._id)
-          _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
-          updatedUser <- userDAO.findOne(userIdValidated)
-          updatedJs <- userService.publicWrites(updatedUser, request.identity)
         } yield Ok(updatedJs)
     }
   }
+
+  def updateLastTaskTypeId(userId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+    val issuingUser = request.identity
+    withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        user <- userDAO.findOne(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+        isEditable <- userService.isEditableBy(user, request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- bool2Fox(isEditable | user._id == issuingUser._id)
+        _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
+        updatedUser <- userDAO.findOne(userIdValidated)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
+    }
+  }
+
+  def updateNovelUserExperienceInfos(userId: String): Action[JsObject] =
+    sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
+      for {
+        userIdValidated <- ObjectId.parse(userId) ?~> "user.id.invalid"
+        _ <- bool2Fox(request.identity._id == userIdValidated) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
+        updatedUser <- userDAO.findOne(userIdValidated)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
+    }
 
 }

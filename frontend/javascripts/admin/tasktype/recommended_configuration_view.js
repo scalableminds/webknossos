@@ -18,6 +18,7 @@ const recommendedConfigByCategory = {
     moveValue: 500,
     displayScalebars: false,
     newNodeNewTree: false,
+    centerNewNode: true,
     tdViewDisplayPlanes: false,
   },
   all: {

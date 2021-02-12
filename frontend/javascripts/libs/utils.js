@@ -367,6 +367,10 @@ export function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
 
+export function isUserAdminOrDatasetManager(user: APIUser): boolean {
+  return isUserAdmin(user) || isUserDatasetManager(user);
+}
+
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);
 }

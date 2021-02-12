@@ -6,6 +6,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 
+import Toast from "libs/toast";
 import type { ExtractReturn } from "libs/type_helpers";
 import type { MeshMetaData, RemoteMeshMetaData } from "types/api_flow_types";
 import type { OxalisState, IsosurfaceInformation } from "oxalis/store";
@@ -91,6 +92,7 @@ const mapStateToProps = (state: OxalisState) => ({
   activeCellId: state.tracing.volume ? state.tracing.volume.activeCellId : null,
   segmentationLayer: getSegmentationLayer(state.dataset),
   zoomStep: getRequestLogZoomStep(state),
+  allowUpdate: state.tracing.restrictions.allowUpdate,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
@@ -157,6 +159,7 @@ class MeshesView extends React.Component<
   };
 
   render() {
+    const hasSegmentation = Model.getSegmentationLayer() != null;
     const getSegmentationCube = () => {
       const layer = Model.getSegmentationLayer();
       if (!layer) {
@@ -219,7 +222,7 @@ class MeshesView extends React.Component<
           }}
           showUploadList={false}
           style={{ fontSize: 16, color: "#2a3a48", cursor: "pointer" }}
-          disabled={this.props.isImporting}
+          disabled={!this.props.allowUpdate || this.props.isImporting}
         >
           <Tooltip
             title={this.props.isImporting ? "The import is still in progress." : "Import STL"}
@@ -234,8 +237,12 @@ class MeshesView extends React.Component<
         onClick={() => {
           const pos = getPosition(this.props.flycam);
           const id = getIdForPos(pos);
+          if (id === 0) {
+            Toast.info("No cell found at centered position");
+          }
           this.props.changeActiveIsosurfaceId(id, pos);
         }}
+        disabled={!hasSegmentation}
         size="small"
         type="primary"
       >
@@ -265,7 +272,7 @@ class MeshesView extends React.Component<
 
     const renderIsosurfaceListItem = (isosurface: IsosurfaceInformation) => {
       const { segmentId, seedPosition, isLoading } = isosurface;
-      const centeredCell = getIdForPos(getPosition(this.props.flycam));
+      const isCenteredCell = hasSegmentation ? getIdForPos(getPosition(this.props.flycam)) : false;
       const actionVisibility =
         isLoading || segmentId === this.state.hoveredListItem ? "visible" : "hidden";
       return (
@@ -287,7 +294,7 @@ class MeshesView extends React.Component<
               style={{
                 paddingLeft: 5,
                 paddingRight: 5,
-                backgroundColor: segmentId === centeredCell ? "#91d5ff" : "white",
+                backgroundColor: segmentId === isCenteredCell ? "#91d5ff" : "white",
                 borderRadius: 2,
               }}
               onClick={() => {
@@ -356,7 +363,11 @@ class MeshesView extends React.Component<
           style={{ marginTop: 12 }}
           renderItem={renderIsosurfaceListItem}
           locale={{
-            emptyText: "There are no Isosurfaces.",
+            emptyText: `There are no Isosurfaces.${
+              this.props.allowUpdate
+                ? " You can render an isosurface for the currently centered cell by clicking the button above."
+                : ""
+            }`,
           }}
         />
         {this.state.currentlyEditedMesh != null ? (
@@ -376,7 +387,9 @@ class MeshesView extends React.Component<
           split={false}
           renderItem={renderMeshListItem}
           locale={{
-            emptyText: "There are no meshes. You can import an STL file to change this. ",
+            emptyText: `There are no meshes.${
+              this.props.allowUpdate ? " You can import an STL file to change this." : ""
+            } `,
           }}
         />
       </div>

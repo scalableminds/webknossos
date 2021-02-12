@@ -260,9 +260,10 @@ class TaskDAO @Inject()(sqlClient: SQLClient, projectDAO: ProjectDAO)(implicit e
       rowsRaw.toList.map(r => (ObjectId(r._1), r._2)).toMap
     }
 
-  def listExperienceDomains: Fox[List[String]] =
+  def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =
     for {
-      rowsRaw <- run(sql"select domain from webknossos.experienceDomains".as[String])
+      rowsRaw <- run(
+        sql"select domain from webknossos.experienceDomains where _organization = $organizationId".as[String])
     } yield rowsRaw.toList
 
   def insertOne(t: Task): Fox[Unit] =

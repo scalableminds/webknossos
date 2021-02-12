@@ -21,7 +21,7 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(63);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(65);
 COMMIT TRANSACTION;
 
 CREATE TABLE webknossos.analytics(
@@ -237,7 +237,9 @@ CREATE TABLE webknossos.tasks(
 );
 
 CREATE TABLE webknossos.experienceDomains(
-  domain VARCHAR(256) PRIMARY KEY
+  domain VARCHAR(256) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  CONSTRAINT primarykey__domain_orga PRIMARY KEY (domain,_organization)
 );
 
 CREATE TABLE webknossos.teams(
@@ -288,6 +290,7 @@ CREATE TABLE webknossos.users(
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
+  isUnlisted BOOLEAN NOT NULL DEFAULT FALSE,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (_multiUser, _organization),
   CONSTRAINT userConfigurationIsJsonObject CHECK(jsonb_typeof(userConfiguration) = 'object')
@@ -489,6 +492,8 @@ ALTER TABLE webknossos.user_dataSetLayerConfigurations
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
+ALTER TABLE webknossos.experienceDomains
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
   BEGIN
@@ -561,26 +566,3 @@ CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
-
-CREATE FUNCTION webknossos.onInsertTask() RETURNS trigger AS $$
-  BEGIN
-    INSERT INTO webknossos.experienceDomains(domain) values(NEW.neededExperience_domain) ON CONFLICT DO NOTHING;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE FUNCTION webknossos.onInsertUserExperience() RETURNS trigger AS $$
-  BEGIN
-    INSERT INTO webknossos.experienceDomains(domain) values(NEW.domain) ON CONFLICT DO NOTHING;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE TRIGGER onDeleteAnnotationTrigger
-AFTER INSERT ON webknossos.tasks
-FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertTask();
-
-CREATE TRIGGER onInsertUserExperienceTrigger
-AFTER INSERT ON webknossos.user_experiences
-FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertUserExperience();

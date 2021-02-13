@@ -1,5 +1,5 @@
 // @flow
-import { Form, Button, Upload, Icon, Col, Row, Tooltip, Modal, Progress } from "antd";
+import { Form, Button, Upload, Icon, Col, Row, Tooltip, Modal, Progress, Alert } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
@@ -310,6 +310,21 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
       <div className="dataset-administration" style={{ padding: 5 }}>
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
           <Form onSubmit={this.handleSubmit} layout="vertical">
+            {features().isDemoInstance && (
+              <Alert
+                message={
+                  <>
+                    We are happy to help!
+                    <br />
+                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    trouble uploading your data or the uploader doesn&apos;t support your format
+                    yet.
+                  </>
+                }
+                type="info"
+                style={{ marginBottom: 50 }}
+              />
+            )}
             <Row gutter={8}>
               <Col span={12}>
                 <DatasetNameFormItem form={form} activeUser={activeUser} />

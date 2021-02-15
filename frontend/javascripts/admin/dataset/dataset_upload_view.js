@@ -347,6 +347,10 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                         mode="multiple"
                         value={this.state.selectedTeams}
                         onChange={selectedTeams => {
+                          if (!Array.isArray(selectedTeams)) {
+                            // Making sure that we always have an array even when only one team is selected.
+                            selectedTeams = [selectedTeams];
+                          }
                           form.setFieldsValue({ initialTeams: selectedTeams });
                           this.setState({ selectedTeams });
                         }}
@@ -357,9 +361,12 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
                           const teamOfOrganisation = fetchedTeams.find(
                             team => team.name === team.organization,
                           );
-                          this.setState({ selectedTeams: teamOfOrganisation });
+                          if (teamOfOrganisation == null) {
+                            return;
+                          }
+                          this.setState({ selectedTeams: [teamOfOrganisation] });
                           form.setFieldsValue({
-                            initialTeams: teamOfOrganisation,
+                            initialTeams: [teamOfOrganisation],
                           });
                         }}
                       />

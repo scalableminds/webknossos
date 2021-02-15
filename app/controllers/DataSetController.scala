@@ -16,7 +16,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import utils.ObjectId
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, OpenDatasetEvent}
+import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.duration._
@@ -260,6 +260,7 @@ class DataSetController @Inject()(userService: UserService,
                                          sortingKey.getOrElse(dataSet.created),
                                          isPublic)
             updated <- dataSetDAO.findOneByNameAndOrganization(dataSetName, request.identity._organization)
+            _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             organization <- organizationDAO.findOne(updated._organization)(GlobalAccessContext)
             dataStore <- dataSetService.dataStoreFor(updated)
             js <- dataSetService.publicWrites(updated, Some(request.identity), organization, dataStore)

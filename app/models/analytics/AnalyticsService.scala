@@ -175,3 +175,10 @@ case class IsosurfaceRequestEvent(user: User, mode: String)(implicit ec: Executi
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
     Fox.successful(Json.obj("mode" -> mode))
 }
+
+case class ChangeDatasetSettingsEvent(user: User, dataSet: DataSet)(implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "change_dataset_settings"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("dataset_id" -> dataSet._id.id))
+}

@@ -1426,7 +1426,15 @@ export function computeIsosurface(
   layer: DataLayer,
   isosurfaceRequest: IsosurfaceRequest,
 ): Promise<{ buffer: ArrayBuffer, neighbors: Array<number> }> {
-  const { position, zoomStep, segmentId, voxelDimensions, cubeSize, scale, isInitialRequest } = isosurfaceRequest;
+  const {
+    position,
+    zoomStep,
+    segmentId,
+    voxelDimensions,
+    cubeSize,
+    scale,
+    isInitialRequest,
+  } = isosurfaceRequest;
   return doWithToken(async token => {
     const { buffer, headers } = await Request.sendJSONReceiveArraybufferWithHeaders(
       `${requestUrl}/isosurface?token=${token}`,

@@ -105,6 +105,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
   object BackendAnalytics {
     val uri = get[String]("backendAnalytics.uri")
     val key = get[String]("backendAnalytics.key")
+    val verboseLoggingEnabled = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
   }
 
   val operatorData = get[String]("operatorData")

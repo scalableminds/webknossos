@@ -28,15 +28,19 @@ class AnalyticsService @Inject()(rpc: RPC, wkConf: WkConf, analyticsLookUpServic
   }
 
   private def send(analyticsEventJson: JsObject): Fox[Unit] = {
-    if (wkConf.BackendAnalytics.uri == "") {
-      logger.info(s"Not sending Analytics event, since uri is not configured. Event was: $analyticsEventJson")
+    if (wkConf.BackendAnalytics.uri == "" || wkConf.BackendAnalytics.key == "") {
+      if (wkConf.BackendAnalytics.verboseLoggingEnabled) {
+        logger.info(s"Not sending analytics event, since uri/key is not configured. Event was: $analyticsEventJson")
+      }
     } else {
+      if (wkConf.BackendAnalytics.verboseLoggingEnabled) {
+        logger.info(s"Sending analytics event: $analyticsEventJson")
+      }
       val wrappedJson = Json.obj("api_key" -> wkConf.BackendAnalytics.key, "events" -> List(analyticsEventJson))
-      rpc(wkConf.BackendAnalytics.uri).postJson(wrappedJson)
+      rpc(wkConf.BackendAnalytics.uri).silent.postJson(wrappedJson)
     }
     Fox.successful(())
   }
-
 }
 
 class AnalyticsLookUpService @Inject()(userDAO: UserDAO, wkConf: WkConf) extends LazyLogging {
@@ -52,8 +56,10 @@ trait AnalyticsEvent {
   def eventType: String
   def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject]
   def userId: String = user._multiUser.toString
-  def userProperties: JsObject =
-    Json.obj("organization_id" -> user._organization.id, "is_organization_admin" -> user.isAdmin)
+  def userProperties(analyticsLookUpService: AnalyticsLookUpService): JsObject =
+    Json.obj("organization_id" -> user._organization.id,
+             "is_organization_admin" -> user.isAdmin,
+             "webknossos_uri" -> analyticsLookUpService.webknossos_uri)
   def timestamp: String = DateTime.now().getMillis.toString
 
   def user: User
@@ -66,8 +72,7 @@ trait AnalyticsEvent {
         "event_type" -> eventType,
         "user_id" -> userId,
         "time" -> timestamp,
-        "webknossos_uri" -> analyticsLookUpService.webknossos_uri,
-        "user_properties" -> userProperties,
+        "user_properties" -> userProperties(analyticsLookUpService),
         "event_properties" -> eventProperties,
       )
     }

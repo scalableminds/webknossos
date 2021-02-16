@@ -222,8 +222,11 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
           {isRetrying ? "Retrying to continue the upload..." : null}
           <br />
           <Progress
-            // Round to 1 digit after the comma.
-            percent={Math.round(uploadProgress * 1000) / 10}
+            // Round to 1 digit after the comma. Don't show 100%, since there is
+            // some additional delay until the UI shows the next screen.
+            // Otherwise, the user might think that nothing will happen after 100%
+            // was reached.
+            percent={Math.min(99.9, Math.round(uploadProgress * 1000) / 10)}
             status="active"
           />
         </div>

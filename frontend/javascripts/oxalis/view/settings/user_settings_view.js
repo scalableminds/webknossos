@@ -314,6 +314,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             onChange={this.onChangeUser.newNodeNewTree}
           />
           <SwitchSetting
+            label={settingsLabels.centerNewNode}
+            value={this.props.userConfiguration.centerNewNode}
+            onChange={this.onChangeUser.centerNewNode}
+          />
+          <SwitchSetting
             label={settingsLabels.highlightCommentedNodes}
             value={this.props.userConfiguration.highlightCommentedNodes}
             onChange={this.onChangeUser.highlightCommentedNodes}

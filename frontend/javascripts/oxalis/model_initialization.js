@@ -126,6 +126,7 @@ export async function initialize(
   const initialDatasetSettings = await getDatasetViewConfiguration(
     dataset,
     displayedVolumeTracings,
+    getSharingToken(),
   );
   initializeSettings(initialUserSettings, initialDatasetSettings);
 

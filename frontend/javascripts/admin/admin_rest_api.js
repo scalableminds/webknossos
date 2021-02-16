@@ -170,6 +170,29 @@ export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   });
 }
 
+export function updateNovelUserExperienceInfos(
+  user: APIUser,
+  novelUserExperienceShape: Object,
+): [APIUser, Promise<APIUser>] {
+  const novelUserExperienceInfos = {
+    ...user.novelUserExperienceInfos,
+    ...novelUserExperienceShape,
+  };
+  const newUserSync = {
+    ...user,
+    novelUserExperienceInfos,
+  };
+  const newUserAsync = Request.sendJSONReceiveJSON(
+    `/api/users/${user.id}/novelUserExperienceInfos`,
+    {
+      method: "PUT",
+      data: novelUserExperienceInfos,
+    },
+  );
+
+  return [newUserSync, newUserAsync];
+}
+
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,
@@ -850,9 +873,11 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
 export async function getDatasetViewConfiguration(
   dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
+  sharingToken?: ?string,
 ): Promise<DatasetConfiguration> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",

@@ -1,25 +1,25 @@
-@( name: String )
+@(name: String, demoDatasetUrl: String, tutorialVideoUrl: String)
 
 @emailBaseTemplate() {
   <p>Hi @name,</p>
   <p>
-    welcome to your new webKnossos account. You are ready to start exploring and to collaboratively
-    annotate large 3D datasets.
+    welcome to your new webKnossos account. You are ready to share and annotate your large 3D datasets.
   </p>
   <h2 style="font-size: 1rem;">Get started</h2>
   <ul style="font-size: 1rem;">
     <li>
-      Use webKnossos for free with any of the public datasets on
-      <a href="https://webknossos.org">webknossos.org</a>. All webKnossos features can be used
-      with your new free account.
+      <a href="@demoDatasetUrl">Open a demo dataset</a> to experience webKnossos in action. 
+      There are <a href="https://webknossos.org/publications">many published datasets</a> from the scientific community ready to be explored.
     </li>
     <li>
-      Upload your own dataset into your own space private workspace. If desired, you can
-      publish your dataset into our public gallery.
+      <a href="https://webknossos.org/datasets/upload">Upload your own dataset</a>. Datasets are private by default and you can securely share them with your collaborators.
     </li>
     <li>
-      Invite colleagues from your lab or external collaborators to work with your data.
-      webKnossos works great for small teams and supports management of large annotator crowds.
+      Watch a short video to <a href="@tutorialVideoUrl">learn how to create annotations</a> in webKnossos.
+    </li>
+    <li>
+      <a href="https://webknossos.org/users">Invite colleagues</a> from your lab or external collaborators to securely work with your data.
+      webKnossos works great for teams of any size and even supports management of large annotator crowds.
     </li>
   </ul>
 

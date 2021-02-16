@@ -1,6 +1,6 @@
 [ignore]
 <PROJECT_ROOT>/buildtools/.*
-<PROJECT_ROOT>/doc/.*
+<PROJECT_ROOT>/docs/.*
 <PROJECT_ROOT>/errorShots/.*
 <PROJECT_ROOT>/logs/.*
 <PROJECT_ROOT>/project/.*

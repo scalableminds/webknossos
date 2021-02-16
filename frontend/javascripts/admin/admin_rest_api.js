@@ -873,9 +873,11 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
 export async function getDatasetViewConfiguration(
   dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
+  sharingToken?: ?string,
 ): Promise<DatasetConfiguration> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",

@@ -76,20 +76,23 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
   def parse(r: OrganizationsRow): Fox[Organization] =
-    Fox.successful(
+    for {
+      pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
+    } yield {
       Organization(
         ObjectId(r._Id),
         r.name,
         r.additionalinformation,
         r.logourl,
         r.displayname,
+        pricingPlan,
         r.newusermailinglist,
         r.overtimemailinglist,
         r.enableautoverify,
         r.created.getTime,
         r.isdeleted
       )
-    )
+    }
 
   override def readAccessQ(requestingUserId: ObjectId): String =
     s"((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = '${requestingUserId}')))" +

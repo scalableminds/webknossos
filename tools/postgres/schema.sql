@@ -273,7 +273,7 @@ CREATE TABLE webknossos.organizations(
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
-  pricingPlan webknossos.PRICING_PLANS DEFAULT 'Custom',
+  pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

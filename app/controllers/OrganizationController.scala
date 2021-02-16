@@ -97,6 +97,7 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                    organizationName) ~> NOT_FOUND
       _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+      _ = logger.info(s"Deleting organizaion ${organization._id}")
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
       _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)

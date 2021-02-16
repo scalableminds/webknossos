@@ -30,7 +30,7 @@ case class Organization(
 class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  def publicWrites(organization: Organization, requestingUser: Option[User]): Fox[JsObject] = {
+  def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
         "newUserMailingList" -> organization.newUserMailingList,
@@ -142,5 +142,14 @@ class OrganizationDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionCont
               where a._id = ${annotationId}""".as[String])
       r <- rList.headOption.toFox
     } yield r
+
+  def updateFields(organizationId: ObjectId, displayName: String, newUserMailingList: String)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(organizationId)
+      _ <- run(sqlu"""update webknossos.organizations
+                      set displayName = $displayName, newUserMailingList = $newUserMailingList
+                      where _id = $organizationId""")
+    } yield ()
 
 }

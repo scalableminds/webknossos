@@ -29,10 +29,10 @@ class OrganizationController @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def get(organizationName: String): Action[AnyContent] = Action.async { implicit request =>
+  def get(organizationName: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      js <- organizationService.publicWrites(org)
+      js <- organizationService.publicWrites(org, request.identity)
     } yield {
       Ok(Json.toJson(js))
     }

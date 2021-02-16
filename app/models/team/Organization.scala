@@ -4,7 +4,8 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import javax.inject.Inject
-import models.user.Invite
+import models.team.PricingPlan.PricingPlan
+import models.user.{Invite, User}
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
@@ -18,6 +19,7 @@ case class Organization(
     additionalInformation: String,
     logoUrl: String,
     displayName: String,
+    pricingPlan: PricingPlan,
     newUserMailingList: String = "",
     overTimeMailingList: String = "",
     enableAutoVerify: Boolean = false,
@@ -28,7 +30,13 @@ case class Organization(
 class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
-  def publicWrites(organization: Organization): Fox[JsObject] =
+  def publicWrites(organization: Organization, requestingUser: Option[User]): Fox[JsObject] = {
+    val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
+      Json.obj(
+        "newUserMailingList" -> organization.newUserMailingList,
+        "pricingPlan" -> organization.pricingPlan
+      )
+    } else Json.obj()
     Fox.successful(
       Json.obj(
         "id" -> organization._id.toString,
@@ -36,7 +44,9 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO)(implicit e
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
         "displayName" -> organization.displayName
-      ))
+      ) ++ adminOnlyInfo
+    )
+  }
 
   def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizatioNameOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =

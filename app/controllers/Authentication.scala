@@ -549,14 +549,18 @@ class Authentication @Inject()(actorSystem: ActorSystem,
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
-      organization = Organization(ObjectId.generate, organizationName, "", "", organizationDisplayName)
+      initialPricingPlan = if (conf.Features.isDemoInstance) PricingPlan.Basic else PricingPlan.Custom
+      organization = Organization(ObjectId.generate,
+                                  organizationName,
+                                  "",
+                                  "",
+                                  organizationDisplayName,
+                                  initialPricingPlan)
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
-      _ <- initialDataService.insertLocalDataStoreIfEnabled
-    } yield {
-      organization
-    }
+      _ <- initialDataService.insertLocalDataStoreIfEnabled()
+    } yield organization
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo) = {
     def sendRPCToDataStore(dataStore: DataStore, token: String) =

@@ -85,6 +85,7 @@ declare module "antd" {
   declare export class Modal<P> extends React$Component<P> {
     static confirm: Function;
     static info: Function;
+    static error: Function;
   }
   declare export var notification: Object;
   declare export class Pagination<P> extends React$Component<P> {}

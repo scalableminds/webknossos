@@ -30,7 +30,7 @@ POST          /auth/createOrganizationWithAdmin                                 
 # Configurations
 GET           /user/userConfiguration                                           controllers.ConfigurationController.read
 PUT           /user/userConfiguration                                           controllers.ConfigurationController.update
-POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String)
+POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
 GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
 PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
@@ -47,6 +47,7 @@ GET           /user/loggedTime                                                  
 GET           /users/:id                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                             controllers.UserController.updateLastTaskTypeId(id: String)
+PUT           /users/:id/novelUserExperienceInfos                               controllers.UserController.updateNovelUserExperienceInfos(id: String)
 GET           /users/:id/tasks                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /users/:id/loggedTime                                             controllers.UserController.userLoggedTime(id: String)
 POST          /users/loggedTime                                                 controllers.UserController.usersLoggedTime

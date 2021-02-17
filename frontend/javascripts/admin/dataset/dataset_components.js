@@ -66,13 +66,15 @@ export function DatasetNameFormItem({ form, activeUser }: { form: Object, active
 export function DatastoreFormItem({
   form,
   datastores,
+  hidden,
 }: {
   form: Object,
   datastores: Array<APIDataStore>,
+  hidden?: boolean,
 }) {
   const { getFieldDecorator } = form;
   return (
-    <FormItem label="Datastore" hasFeedback>
+    <FormItem label="Datastore" hasFeedback hidden={hidden || false}>
       {getFieldDecorator("datastore", {
         rules: [{ required: true, message: messages["dataset.import.required.datastore"] }],
         initialValue: datastores.length ? datastores[0].url : null,

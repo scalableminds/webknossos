@@ -367,6 +367,10 @@ export function isUserDatasetManager(user: APIUser): boolean {
   return user.isDatasetManager;
 }
 
+export function isUserAdminOrDatasetManager(user: APIUser): boolean {
+  return isUserAdmin(user) || isUserDatasetManager(user);
+}
+
 export function getUrlParamsObject(): UrlParams {
   return getUrlParamsObjectFromString(location.search);
 }
@@ -419,6 +423,10 @@ export function sleep(timeout: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, timeout);
   });
+}
+
+export function isFileExtensionEqualTo(fileName: string, extension: string) {
+  return _.last(fileName.split(".")).toLowerCase() === extension;
 }
 
 // Only use this function if you really need a busy wait (useful

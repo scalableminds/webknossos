@@ -170,6 +170,29 @@ export function updateUser(newUser: $Shape<APIUser>): Promise<APIUser> {
   });
 }
 
+export function updateNovelUserExperienceInfos(
+  user: APIUser,
+  novelUserExperienceShape: Object,
+): [APIUser, Promise<APIUser>] {
+  const novelUserExperienceInfos = {
+    ...user.novelUserExperienceInfos,
+    ...novelUserExperienceShape,
+  };
+  const newUserSync = {
+    ...user,
+    novelUserExperienceInfos,
+  };
+  const newUserAsync = Request.sendJSONReceiveJSON(
+    `/api/users/${user.id}/novelUserExperienceInfos`,
+    {
+      method: "PUT",
+      data: novelUserExperienceInfos,
+    },
+  );
+
+  return [newUserSync, newUserAsync];
+}
+
 export function updateLastTaskTypeIdOfUser(
   userId: string,
   lastTaskTypeId: string,
@@ -850,9 +873,11 @@ export function updateDataset(datasetId: APIDatasetId, dataset: APIDataset): Pro
 export async function getDatasetViewConfiguration(
   dataset: APIDataset,
   displayedVolumeTracings: Array<string>,
+  sharingToken?: ?string,
 ): Promise<DatasetConfiguration> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}`,
+    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
@@ -905,21 +930,19 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
   );
 }
 
-export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: string, totalFileCount: number, myUploadId: string): Promise<*> {
-  const getRandomString = () => {
-    const randomBytes = window.crypto.getRandomValues(new Uint8Array(20));
-    return myUploadId + "/" + Array.from(randomBytes, byte => `0${byte.toString(16)}`.slice(-2)).join("");
-  };
-
-  const generateUniqueIdentifier = (file, event) => {
-    console.log(file);
-    return myUploadId + "/" + (file.webkitRelativePath || file.relativePath);
-  }
+export function createResumableUpload(
+  datasetId: APIDatasetId,
+  datastoreUrl: string,
+  totalFileCount: number,
+  myUploadId: string,
+): Promise<*> {
+  const generateUniqueIdentifier = file =>
+    `${myUploadId}/${file.webkitRelativePath || file.relativePath || file.name}`;
 
   const additionalParameters = {
     ...datasetId,
     totalFileCount,
-  }
+  };
 
   return doWithToken(
     token =>
@@ -933,7 +956,7 @@ export function createResumableUpload(datasetId: APIDatasetId, datastoreUrl: str
         simultaneousUploads: 1,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
-        generateUniqueIdentifier: generateUniqueIdentifier,
+        generateUniqueIdentifier,
       }),
   );
 }

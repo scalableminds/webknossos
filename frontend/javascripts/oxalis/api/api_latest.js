@@ -1342,6 +1342,7 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree
+    - centerNewNode
     - highlightCommentedNodes
     - keyboardDelay
     - particleSize

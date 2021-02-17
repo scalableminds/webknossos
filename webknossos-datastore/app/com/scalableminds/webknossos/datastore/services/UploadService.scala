@@ -43,7 +43,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
 
   cleanUpOrphanUploads()
 
-  def isKnownUpload(uploadId: String): Boolean = allSavedChunkIds.synchronized(allSavedChunkIds.contains(uploadId))
+  def isKnownUpload(uploadFileId: String): Boolean =
+    allSavedChunkIds.synchronized(allSavedChunkIds.contains(extractDatasetUploadId(uploadFileId)))
+
+  private def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
   def uploadDirectory(organizationName: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)
@@ -54,7 +57,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
                         currentChunkNumber: Int,
                         totalFileCount: Int,
                         chunkFile: File): Fox[Unit] = {
-    val uploadId = uploadFileId.split("/").headOption.getOrElse("")
+    val uploadId = extractDatasetUploadId(uploadFileId)
     val uploadDir = uploadDirectory(datasourceId.team, uploadId)
     val filePath = uploadFileId.split("/").tail.mkString("/")
     logger.info(

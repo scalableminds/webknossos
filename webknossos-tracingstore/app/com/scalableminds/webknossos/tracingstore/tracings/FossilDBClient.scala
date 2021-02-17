@@ -50,6 +50,7 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
 
   def checkHealth: Fox[Unit] =
     try {
+      logger.info(s"checking fossildb health, channel ${channel}")
       val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance)
       val replyString = reply.getStatus.toString
       if (!(replyString == "SERVING")) throw new Exception(replyString)
@@ -65,9 +66,13 @@ class FossilDBClient(collection: String, config: TracingStoreConfig) extends Fox
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
       implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     try {
+      logger.info(s"getting from fossildb, channel ${channel}, collection ${collection}")
       val reply: GetReply = blockingStub.get(GetRequest(collection, key, version, mayBeEmpty))
       if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      fromByteArray(reply.value.toByteArray).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+      val res =
+        fromByteArray(reply.value.toByteArray).map(VersionedKeyValuePair(VersionedKey(key, reply.actualVersion), _))
+      logger.info(s"GOT from fossildb, channel ${channel}, collection ${collection}")
+      res
     } catch {
       case statusRuntimeException: StatusRuntimeException =>
         if (statusRuntimeException.getStatus == Status.UNAVAILABLE) Fox.failure("FossilDB is unavailable") ~> 500

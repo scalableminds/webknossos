@@ -37,6 +37,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
   }
 
   object Datastore {
+    val healthSleep = get[Duration]("datastore.healthSleep")
+    val testGetSleep = get[Duration]("datastore.testGetSleep")
+    val testGetBusyWait = get[Duration]("datastore.testGetBusyWait")
     val key = get[String]("datastore.key")
     val name = get[String]("datastore.name")
     object WebKnossos {

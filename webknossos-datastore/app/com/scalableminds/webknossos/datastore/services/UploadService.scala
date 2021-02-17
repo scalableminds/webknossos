@@ -147,12 +147,17 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
       allSavedChunkIds.get(uploadId) match {
         case Some((fileCountForUpload, savedChunkIdsForUpload)) =>
           val allFilesPresent = fileCountForUpload == savedChunkIdsForUpload.keySet.size
+          logger.info(s"expected ${fileCountForUpload} files, found ${savedChunkIdsForUpload.keySet.size}")
           val allFilesComplete = savedChunkIdsForUpload.forall { entry: (String, (Long, mutable.HashSet[Int])) =>
             val chunkNumber = entry._2._1
             val savedChunksSet = entry._2._2
+            logger.info(s"for file ${entry._1} expected ${chunkNumber} chunks, found ${savedChunksSet.size}")
             savedChunksSet.size == chunkNumber
           }
-          bool2Fox(allFilesPresent && allFilesComplete) ?~> "dataSet.import.incomplete"
+          for {
+            _ <- bool2Fox(allFilesPresent) ?~> "dataSet.import.incomplete.missingFiles"
+            _ <- bool2Fox(allFilesComplete) ?~> "dataSet.import.incomplete.missingChunks"
+          } yield ()
         case None => Fox.failure("dataSet.import.incomplete")
       }
     }
@@ -169,20 +174,19 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
   private def unpackDataset(uploadDir: Path, unpackToDir: Path): Fox[Unit] =
     for {
       shallowFileList <- PathUtils.listFiles(uploadDir).toFox
-      shallowFileCount = shallowFileList.length
       excludeFromPrefix = Category.values.map(_.toString).toList
-      firstFile <- shallowFileList.headOption.toFox ?~> "dataSet.import.incomplete"
-      _ <- if (shallowFileCount == 1 && firstFile.toString.toLowerCase.endsWith(".zip")) {
-        ZipIO
-          .unzipToFolder(
-            new File(firstFile.toString),
+      firstFile = shallowFileList.headOption
+      _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
+                 _.toString.toLowerCase.endsWith(".zip"))) {
+        firstFile.toFox.flatMap { file =>
+          ZipIO.unzipToFolder(
+            new File(file.toString),
             unpackToDir,
             includeHiddenFiles = false,
             truncateCommonPrefix = true,
             Some(excludeFromPrefix)
           )
-          .toFox
-          .map(_ => ())
+        }.toFox.map(_ => ())
       } else {
         for {
           deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, maxDepth = 10).toFox
@@ -190,7 +194,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
                                                                   deepFileList.map(_.getFileName.toString))
-          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString)))
+          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))) ?~> "dataset.upload.moveToTarget.failed"
         } yield ()
       }
     } yield ()

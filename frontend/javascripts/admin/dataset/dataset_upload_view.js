@@ -254,7 +254,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
   };
 
   handleFileDrop = file => {
-    const { form } = this.props;
+    /*const { form } = this.props;
 
     const filenameParts = file.name.split(".");
     if (filenameParts[filenameParts.length - 1] !== "zip") {
@@ -317,7 +317,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
         });
         form.setFieldsValue({ zipFile: null });
       },
-    );
+    );*/
     return false;
   };
 
@@ -444,6 +444,7 @@ class DatasetUploadView extends React.PureComponent<PropsWithFormAndRouter, Stat
               })(
                 <Upload.Dragger
                   multiple
+                  directory
                   name="files"
                   beforeUpload={this.handleFileDrop}
                   listType="picture"

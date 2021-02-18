@@ -11,6 +11,8 @@ import com.scalableminds.webknossos.datastore.helpers.DataSetDeleter
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
+import net.liftweb.util.Helpers.tryo
+import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
 
 import scala.collection.mutable
@@ -79,7 +81,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
     Fox.successful(())
   }
 
-  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String])] = {
+  def finishUpload(uploadInformation: UploadInformation): Fox[(DataSourceId, List[String], Long)] = {
     val uploadId = uploadInformation.uploadId
     val dataSourceId = DataSourceId(uploadInformation.name, uploadInformation.organization)
     val datasetNeedsConversion = uploadInformation.needsConversion.getOrElse(false)
@@ -114,7 +116,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository, dataSo
           logger.warn(errorMsg)
           Fox.failure(errorMsg)
       }
-    } yield (dataSourceId, uploadInformation.initialTeams)
+      dataSetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(dataSourceDir.toString)).longValue)
+    } yield (dataSourceId, uploadInformation.initialTeams, dataSetSizeBytes)
   }
 
   private def ensureAllChunksUploaded(uploadId: String): Fox[Unit] = savedUploadChunks.get(uploadId) match {

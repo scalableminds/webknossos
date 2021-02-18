@@ -30,7 +30,7 @@ POST          /auth/createOrganizationWithAdmin                                 
 # Configurations
 GET           /user/userConfiguration                                           controllers.ConfigurationController.read
 PUT           /user/userConfiguration                                           controllers.ConfigurationController.update
-POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String)
+POST          /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.readDataSetViewConfiguration(organizationName: String, dataSetName: String, sharingToken: Option[String])
 PUT           /dataSetConfigurations/:organizationName/:dataSetName             controllers.ConfigurationController.updateDataSetViewConfiguration(organizationName: String, dataSetName: String)
 GET           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.readDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
 PUT           /dataSetConfigurations/default/:organizationName/:dataSetName     controllers.ConfigurationController.updateDataSetAdminViewConfiguration(organizationName: String, dataSetName: String)
@@ -83,8 +83,9 @@ PUT           /datastores/:name/datasource                                      
 PUT           /datastores/:name/datasources                                     controllers.WKDataStoreController.updateAll(name: String)
 PATCH         /datastores/:name/status                                          controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /datastores/:name/verifyUpload                                    controllers.WKDataStoreController.validateDataSetUpload(name: String)
-POST          /datastores/:name/addInitialTeams                                 controllers.WKDataStoreController.addDataSetInitialTeams(name: String, token: String, dataSetName: String)
+POST          /datastores/:name/reportDatasetUpload                             controllers.WKDataStoreController.reportDatasetUpload(name: String, token: String, dataSetName: String, dataSetSizeBytes: Long)
 POST          /datastores/:name/deleteErroneous                                 controllers.WKDataStoreController.deleteErroneous(name: String)
+POST          /datastores/:name/reportIsosurfaceRequest                         controllers.WKDataStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
 POST          /datastores/:name/validateUserAccess                              controllers.UserTokenController.validateAccessViaDatastore(name: String, token: Option[String])
 POST          /datastores                                                       controllers.DataStoreController.create
 DELETE        /datastores/:name                                                 controllers.DataStoreController.delete(name: String)
@@ -93,6 +94,7 @@ PUT           /datastores/:name                                                 
 # Tracingstores
 GET           /tracingstore                                                     controllers.TracingStoreController.listOne
 POST          /tracingstores/:name/handleTracingUpdateReport                    controllers.WKTracingStoreController.handleTracingUpdateReport(name: String)
+POST          /tracingstores/:name/reportIsosurfaceRequest                      controllers.WKTracingStoreController.reportIsosurfaceRequest(name: String, token: Option[String])
 POST          /tracingstores/:name/validateUserAccess                           controllers.UserTokenController.validateAccessViaTracingstore(name: String, token: Option[String])
 PUT           /tracingstores/:name                                              controllers.TracingStoreController.update(name: String)
 GET           /tracingstores/:name/dataSource/:dataSetName                      controllers.WKTracingStoreController.dataSource(name: String, organizationName: Option[String], dataSetName: String)

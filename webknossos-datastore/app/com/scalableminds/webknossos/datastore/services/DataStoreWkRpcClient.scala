@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
+import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -56,19 +57,28 @@ class DataStoreWkRpcClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  // the initial teams request also sets the uploader info, hence it is also sent if the teams list is empty.
-  def postInitialTeams(dataSourceId: DataSourceId, initialTeams: List[String], userTokenOpt: Option[String]): Fox[_] = {
+  def reportUpload(dataSourceId: DataSourceId,
+                   initialTeams: List[String],
+                   dataSetSizeBytes: Long,
+                   userTokenOpt: Option[String]): Fox[_] = {
     val sleepDuration = 1000 // sleep for 1 second to give wk time to properly register the dataset
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "initialTeams.noUserToken"
       _ = Thread.sleep(sleepDuration)
-      _ <- rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/addInitialTeams")
+      _ <- rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
+        .addQueryString("dataSetSizeBytes" -> dataSetSizeBytes.toString)
         .addQueryString("token" -> userToken)
         .post(initialTeams)
     } yield ()
   }
+
+  def reportIsosurfaceRequest(userToken: Option[String]): Fox[WSResponse] =
+    rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/reportIsosurfaceRequest")
+      .addQueryString("key" -> dataStoreKey)
+      .addQueryStringOptional("token", userToken)
+      .post()
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
     rpc(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")

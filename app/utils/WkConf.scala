@@ -84,7 +84,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader {
     val cacheTimeoutInMinutes: FiniteDuration = get[Int]("user.cacheTimeoutInMinutes") minutes
   }
 
-    object Braintracing {
+  object Braintracing {
     val active: Boolean = get[Boolean]("braintracing.active")
     val organizationName: String = get[String]("braintracing.organizationName")
     val url: String = get[String]("braintracing.url")

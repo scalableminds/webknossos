@@ -10,7 +10,7 @@ import models.annotation._
 import models.binary.{DataSetDAO, DataSetService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.team.{OrganizationDAO, TeamService}
+import models.team.TeamService
 import models.user.time._
 import models.user.{User, UserService}
 import oxalis.security.WkEnv
@@ -20,6 +20,7 @@ import play.api.mvc.PlayBodyParsers
 import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
+import models.organization.OrganizationDAO
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

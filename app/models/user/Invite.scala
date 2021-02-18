@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.team.OrganizationDAO
+import models.organization.OrganizationDAO
 import org.joda.time.DateTime
 import oxalis.mail.DefaultMails
 import oxalis.security.CompactRandomIDGenerator

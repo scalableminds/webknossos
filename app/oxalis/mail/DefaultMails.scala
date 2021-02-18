@@ -4,8 +4,8 @@ import java.net.URL
 
 import com.scalableminds.util.mail.Mail
 import javax.inject.Inject
+import models.organization.Organization
 import models.user.User
-import models.team.Organization
 import play.api.i18n.Messages
 import utils.WkConf
 import views._

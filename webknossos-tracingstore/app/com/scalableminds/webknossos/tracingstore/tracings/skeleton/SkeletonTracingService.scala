@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -22,8 +22,7 @@ class SkeletonTracingService @Inject()(tracingDataStore: TracingDataStore,
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
-    with FoxImplicits
-    with TextUtils {
+    with FoxImplicits {
 
   val tracingType = TracingType.skeleton
 

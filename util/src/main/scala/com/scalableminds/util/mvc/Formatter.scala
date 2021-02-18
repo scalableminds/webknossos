@@ -11,7 +11,7 @@ trait Formatter {
   def formatDate(timestamp: Long): String =
     formatDate(new Date(timestamp))
 
-  def formatDate(date: Date) = {
+  def formatDate(date: Date): String = {
     val sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm")
     sdf.format(date)
   }
@@ -19,7 +19,7 @@ trait Formatter {
   def formatHash(id: String): String =
     id.takeRight(6)
 
-  def formatTimeHumanReadable(time: Duration) =
+  def formatTimeHumanReadable(time: Duration): String =
     if (time == Duration.Inf)
       "unknown"
     else {
@@ -34,7 +34,7 @@ trait Formatter {
       }
     }
 
-  def formatShortText(text: String, maxLength: Int = 100) =
+  def formatShortText(text: String, maxLength: Int = 100): String =
     if (text.length() > maxLength && maxLength > 4) {
       text.substring(0, maxLength - 4) + " ..."
     } else {

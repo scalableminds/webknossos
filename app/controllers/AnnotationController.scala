@@ -68,7 +68,7 @@ class AnnotationController @Inject()(
             timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
-        _ <- request.identity.map { user =>
+        _ = request.identity.map { user =>
           analyticsService.track(OpenAnnotationEvent(user, annotation))
         }
       } yield {
